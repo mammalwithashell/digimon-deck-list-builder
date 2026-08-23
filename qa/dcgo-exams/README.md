@@ -91,6 +91,23 @@ The scripted-step vocabulary is 13 kinds: the 10 selection prompts
 `MultipleSkills`, `OptionalSkill`, `generic_int`, `generic_bool`) plus
 `mulligan`, `breeding_action`, and `main_phase`.
 
+Two DCGO surfaces are FOLDED from our single-surface vocabulary at emit time
+(task_69f10a66; full detail in `docs/DCGO_EXAM.md` "Surface mappings"):
+
+- **End-of-turn attack gate** (`<Execute>` printed or granted, `<Engage>`,
+  Vortex, MayAttack): our engine parks the `EndOfTurnAction` phase, so the
+  scenario answers it with ordinary `pass:` (decline) or `attack:` (spend)
+  steps — conventionally annotated `expect: {prompt: OptionalSkill}`. The
+  emitter maps a decline to OptionalSkill "no", an attack to OptionalSkill
+  "yes" + the `SelectAttackEffect` answer, and the post-attack phase-exit
+  `pass` (no gate left) to NOTHING on the wire.
+- **OptionalSkill+pick fold** (`<Raid>`-family): where DCGO gates an optional
+  keyword window behind OptionalSkill before the pick and our engine
+  surfaces one declinable pick, author the pick row with
+  `expect: {prompt: OptionalSkill}` — the fold marker. Picks emit
+  OptionalSkill "yes" + the pick row; a `decline:` emits only
+  OptionalSkill "no".
+
 ### `do` is symbolic, lowered to an action id
 
 Both engines share the 2192-slot action space (`ActionSpace.cs` is codegen'd

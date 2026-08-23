@@ -248,6 +248,19 @@ pub(crate) fn try_replace_impl(
         return ReplacementOutcome::None;
     }
 
+    // Refresh declarative materialization before enumerating candidates.
+    // `collect_candidates` reads `ModifierRegistry::granted_keywords`, whose
+    // declarative entries (auras / conditional ESS `grant_keyword` clauses)
+    // exist only after `tick_declarative_effects()` materializes them. Any
+    // fire-site reached with a stale materialization (staged states,
+    // `Game::attack_digimon` / `delete_permanent_with_effects` outside the
+    // ticking `decode_action` wrapper) would otherwise see
+    // `granted_keywords() == []` and silently skip the prevention prompt
+    // (task_8f063aa6). Mirrors the existing staleness-guard ticks at the
+    // combat gates (`fire_piercing_or_finish`, security-strike recompute).
+    // Idempotent and cheap via the declarative fingerprint memo.
+    game.tick_declarative_effects();
+
     // §7.5: at the outermost entry, clear the fired-set so a fresh call chain
     // starts clean. EXCEPT when `in_replacement_commit` is set — that marks a
     // callback-commit continuation (the original top-level fire-site unwound

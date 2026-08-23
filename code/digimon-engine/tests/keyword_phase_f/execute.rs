@@ -294,3 +294,55 @@ fn execute_attack_target_filter_includes_unsuspended() {
         "PASS must remain legal in EndOfTurnAction"
     );
 }
+
+// ─── Test 4 (task_69f10a66): a MAIN-phase attack must NOT self-delete ───────
+
+/// §16-37 scopes the self-delete to "the end of THAT attack" — the attack
+/// Execute itself granted at end of turn. DCGO registers the delete inside
+/// `ExecuteProcess` (`UntilEndAttackEffects`), so an ordinary Main-phase
+/// attack by a Digimon that merely HAS `<Execute>` survives its attack.
+/// Regression pin for the phase gate on the `EndOfAttack` observer
+/// (exam witness: EX12-036-effect3 — a granted-Execute carrier attacked
+/// security in its Main phase and was wrongly self-deleted, cascading a
+/// spurious `<Decode>` window).
+#[test]
+fn execute_main_phase_attack_does_not_self_delete() {
+    let mut r = DebugRunner::builder()
+        .add_card(execute_card("EXEC", 5000))
+        .add_card({
+            let mut c = plain_digimon("DEF");
+            c.dp = Some(2000);
+            c
+        })
+        .start();
+
+    let exec = r.place_on_field(0, "EXEC", Some(0));
+    // Suspended defender — an ordinary Main-phase attack target.
+    let def = r.place_on_field(1, "DEF", Some(0));
+    if let Some(perm) = r.game.player_mut(1).battle_area.get_mut(def.index as usize) {
+        perm.is_suspended = true;
+    }
+
+    assert_eq!(r.game.current_phase, GamePhase::Main);
+    let result = r.attack_digimon(exec, def, /*vortex=*/ false);
+    let _ = result;
+
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        0,
+        "DEF loses the battle (5000 > 2000)"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "EXEC must SURVIVE its Main-phase attack — §16-37's self-delete \
+         applies only to the end-of-turn attack Execute granted"
+    );
+    assert!(
+        !r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "EXEC"),
+        "no self-delete: EXEC must not be in the trash"
+    );
+}

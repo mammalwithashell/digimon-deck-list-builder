@@ -10,14 +10,14 @@
 # Wankomon EX12-009 [TB] via its cost-0 alt circle, move); P1's copy never
 # attacks and sits unsuspended as the target. The battle is 2000 vs 2000.
 #
-# ENGINE-GAP NOTE (same as EX12-004-effect1): our engine omits keyword
-# auto-effects for CONDITIONAL declarative grants (game/mod.rs
-# build_effects_for_card), so no EndOfTurnAction window parks sim-side and
-# both select rows answer no live prompt -- they ride the wire for DCGO's
-# OptionalSkill + SelectAttackEffect prompts, which DCGO asserts strictly.
-# The sim board therefore keeps both Wankomon; the oracle side resolves the
-# attack. An oracle-pass board divergence here localizes the sim gap, which
-# is exactly what this exam should surface.
+# RESOLVED (task_69f10a66 Family 1): conditionally granted keywords now
+# synthesize their triggered auto-effects, so the EndOfTurnAction park is
+# LIVE sim-side. Moved stacks can attack the move turn (DCGO's
+# MovePermanent never stamps EnterFieldTurnCount; our engine agrees), so
+# the gate opens at the end of EVERY owner turn with an attack-capable
+# carrier: P0's T3 (declined), P1's T4 (declined), and P0's T5 -- the
+# exam's acceptance, authored as our `attack` row, which the emitter maps
+# to DCGO's OptionalSkill(yes) + SelectAttackEffect pair.
 card: EX12-004
 clause: EX12-004#inherited#0
 seed: 424242
@@ -53,22 +53,29 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Turn 3 (P0): move to battle (no attack this turn, so no window at T3 end).
+  # Turn 3 (P0): move to battle. The granted <Execute> gate opens at T3's
+  # end (moved stacks can attack the move turn) -- decline it; the exam
+  # spends T5's gate.
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Turn 4 (P1): move the target to battle; it stays unsuspended for good.
-  # (Moved-this-turn: P1's carrier cannot attack at T4's end, so P1 gets no
-  # <Execute> dialog of its own on this line.)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 4 (P1): move the target to battle; it stays unsuspended for good
+  # (P1 declines its own T4-end gate).
   - actor: 1
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 5 (P0): pass everything -- the granted <Execute> window opens.
   - actor: 0
     do: { pass: {} }
@@ -76,26 +83,27 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Accept the optional end-of-turn attack...
+  # Spend the gate: attack the opponent's UNSUSPENDED Wankomon -- the pick
+  # that only <Execute>'s widened defender condition makes legal. On the
+  # wire this one row becomes OptionalSkill(yes) + a SelectAttackEffect
+  # carrying the target's top-card identity (EX12-009).
   - actor: 0
-    do: { select: { yes: true } }
+    do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: OptionalSkill }
-  # ...and aim it at the opponent's UNSUSPENDED Wankomon -- the pick that only
-  # <Execute>'s widened defender condition makes legal. The wire carries the
-  # target's top-card identity (EX12-009) for DCGO's candidate list.
+  # Sim-only phase exit (no wire row): our engine stays parked until a PASS.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectAttackEffect }
+    do: { pass: {} }
   # Trailing pass: P1's next breeding decision.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # Pre-attack setup, at the T5 main-phase pass (turn 5, P0's turn): both
-  # carriers fielded with Onibimon under them, the defender UNSUSPENDED.
-  # (Wankomon reads printed 2000 DP: its own +2000 inherited only applies
-  # while it is a SOURCE, and Onibimon grants only <Execute>.)
-  - at: 11
+  # Pre-attack setup, at the T5 main-phase pass (turn 5, P0's turn; step 13
+  # after the two gate rows): both carriers fielded with Onibimon under
+  # them, the defender UNSUSPENDED. (Wankomon reads printed 2000 DP: its
+  # own +2000 inherited only applies while it is a SOURCE, and Onibimon
+  # grants only <Execute>.)
+  - at: 13
     that:
       turn: 5
       p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]

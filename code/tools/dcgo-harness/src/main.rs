@@ -1368,11 +1368,11 @@ fn build_exam_job(
         .steps
         .iter()
         .zip(lowered)
-        .map(|(step, l)| {
-            use dcgo_harness::exam::adapter::LoweredStep;
+        .flat_map(|(step, l)| {
+            use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep};
             let expect_prompt = step.expect.as_ref().and_then(|e| e.prompt.clone());
             match l {
-                LoweredStep::Action(id) => ScriptedInput {
+                LoweredStep::Action(id) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: Some(*id),
                     expect_prompt,
@@ -1381,8 +1381,58 @@ fn build_exam_job(
                     select_has_bool: false,
                     select_bool: false,
                     select_cancel: false,
-                },
-                LoweredStep::Select(w) => ScriptedInput {
+                }],
+                // task_69f10a66 (ruling item 5) — the OptionalSkill+pick
+                // FOLD: DCGO gates some optional keyword windows (<Raid>,
+                // …) behind an OptionalSkill yes/no BEFORE the pick, while
+                // our engine surfaces one declinable pick. A folded row
+                // (authored `expect: {prompt: OptionalSkill}` over the live
+                // pick) splits on the wire:
+                //   picks   -> OptionalSkill(yes) + the pick row
+                //   decline -> OptionalSkill(no) only (DCGO never opens the
+                //              pick after a declined gate).
+                LoweredStep::Select(w) if w.optional_gate_fold => {
+                    if w.cancel {
+                        vec![ScriptedInput {
+                            actor: step.actor,
+                            action_id: None,
+                            expect_prompt: Some("OptionalSkill".to_string()),
+                            select_card_ids: Vec::new(),
+                            select_value: None,
+                            select_has_bool: true,
+                            select_bool: false,
+                            select_cancel: false,
+                        }]
+                    } else {
+                        vec![
+                            ScriptedInput {
+                                actor: step.actor,
+                                action_id: None,
+                                expect_prompt: Some("OptionalSkill".to_string()),
+                                select_card_ids: Vec::new(),
+                                select_value: None,
+                                select_has_bool: true,
+                                select_bool: true,
+                                select_cancel: false,
+                            },
+                            ScriptedInput {
+                                actor: step.actor,
+                                action_id: None,
+                                // The pick's own DCGO prompt class varies
+                                // (SelectPermanentEffect / SelectHandEffect /
+                                // SelectCardEffect …) — leave it unasserted
+                                // rather than guess wrong.
+                                expect_prompt: None,
+                                select_card_ids: w.card_ids.clone(),
+                                select_value: w.value,
+                                select_has_bool: false,
+                                select_bool: false,
+                                select_cancel: false,
+                            },
+                        ]
+                    }
+                }
+                LoweredStep::Select(w) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: None,
                     expect_prompt,
@@ -1391,7 +1441,67 @@ fn build_exam_job(
                     select_has_bool: w.bool_answer.is_some(),
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,
-                },
+                }],
+                // task_69f10a66 Family 1 surface mapping: our EndOfTurnAction
+                // phase park (the §16-37-3 "may attack at end of turn" for
+                // printed/granted <Execute>, <Engage>, Vortex, MayAttack) is
+                // DCGO's OptionalSkill gate (+ SelectAttackEffect on yes).
+                //   PASS   -> one row: OptionalSkill answered "no".
+                //   attack -> two rows: OptionalSkill "yes", then the
+                //             SelectAttackEffect target pick (permanent
+                //             targets by top-card id, the player as
+                //             select_value -1 — the SelectAttackEffect.cs
+                //             harness contract).
+                // A sim-side-only action (e.g. the PASS that exits our
+                // EndOfTurnAction park after the last gate was spent) —
+                // DCGO has no prompt for it, so it contributes NO wire row.
+                LoweredStep::SimOnlyAction(_) => Vec::new(),
+                LoweredStep::EndOfTurnGate { attack, .. } => {
+                    let gate_prompt =
+                        Some(expect_prompt.unwrap_or_else(|| "OptionalSkill".to_string()));
+                    match attack {
+                        None => vec![ScriptedInput {
+                            actor: step.actor,
+                            action_id: None,
+                            expect_prompt: gate_prompt,
+                            select_card_ids: Vec::new(),
+                            select_value: None,
+                            select_has_bool: true,
+                            select_bool: false,
+                            select_cancel: false,
+                        }],
+                        Some(target) => {
+                            let (ids, value) = match target {
+                                EotAttackTarget::Player => (Vec::new(), Some(-1)),
+                                EotAttackTarget::Permanent { top_card_id } => {
+                                    (vec![top_card_id.clone()], None)
+                                }
+                            };
+                            vec![
+                                ScriptedInput {
+                                    actor: step.actor,
+                                    action_id: None,
+                                    expect_prompt: gate_prompt,
+                                    select_card_ids: Vec::new(),
+                                    select_value: None,
+                                    select_has_bool: true,
+                                    select_bool: true,
+                                    select_cancel: false,
+                                },
+                                ScriptedInput {
+                                    actor: step.actor,
+                                    action_id: None,
+                                    expect_prompt: Some("SelectAttackEffect".to_string()),
+                                    select_card_ids: ids,
+                                    select_value: value,
+                                    select_has_bool: false,
+                                    select_bool: false,
+                                    select_cancel: false,
+                                },
+                            ]
+                        }
+                    }
+                }
             }
         })
         .collect();
@@ -1422,7 +1532,7 @@ fn build_exam_job(
 #[cfg(test)]
 mod emit_job_tests {
     use super::*;
-    use dcgo_harness::exam::adapter::{LoweredStep, SelectWire};
+    use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep, SelectWire};
     use dcgo_harness::exam::scenario::Scenario;
 
     /// Shorthand: a lowered line of plain action ids.
@@ -1634,5 +1744,92 @@ steps:
         let v = job_json(&s, &lowered);
         assert_eq!(v["inputs"][2]["select_cancel"], true);
         assert!(v["inputs"][2].get("select_bool").is_none());
+    }
+
+    // ── task_69f10a66 surface mappings on the wire ──────────────────────
+
+    /// The end-of-turn attack-keyword gate (our `EndOfTurnAction` park; DCGO
+    /// OptionalSkill + SelectAttackEffect). PASS = one OptionalSkill "no"
+    /// row; an attack = OptionalSkill "yes" + the SelectAttackEffect answer
+    /// (permanent by top-card id / the player as select_value -1); a
+    /// sim-only phase-exit pass = NO wire row at all.
+    #[test]
+    fn end_of_turn_gate_maps_to_optional_skill_rows() {
+        // Decline: one OptionalSkill(no) row.
+        let s = select_line("{ cards: [ST1-03] }"); // 3-step line; payloads below drive the shape
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::EndOfTurnGate {
+            action_id: 62,
+            attack: None,
+        });
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
+        assert_eq!(v["inputs"][2]["select_has_bool"], true);
+        assert!(v["inputs"][2].get("select_bool").is_none()); // false is skip-serialized
+        assert!(v["inputs"][2].get("action_id").is_none());
+
+        // Accept + attack a permanent: OptionalSkill(yes) then the pick.
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::EndOfTurnGate {
+            action_id: 100,
+            attack: Some(EotAttackTarget::Permanent {
+                top_card_id: "ST1-07".to_string(),
+            }),
+        });
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"].as_array().unwrap().len(), 4, "one step -> two rows");
+        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
+        assert_eq!(v["inputs"][2]["select_bool"], true);
+        assert_eq!(v["inputs"][3]["expect_prompt"], "SelectAttackEffect");
+        assert_eq!(v["inputs"][3]["select_card_ids"], serde_json::json!(["ST1-07"]));
+
+        // Accept + attack the player: select_value -1 on the pick row.
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::EndOfTurnGate {
+            action_id: 113,
+            attack: Some(EotAttackTarget::Player),
+        });
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][3]["select_value"], -1);
+
+        // Sim-only phase exit: contributes NOTHING to the wire.
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::SimOnlyAction(62));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"].as_array().unwrap().len(), 2, "no third row");
+    }
+
+    /// The OptionalSkill+pick FOLD (ruling item 5, `<Raid>`-family): a
+    /// folded pick splits into OptionalSkill(yes) + the pick row; a folded
+    /// decline emits ONLY OptionalSkill(no).
+    #[test]
+    fn optional_gate_fold_splits_the_wire_rows() {
+        let s = select_line("{ targets: [opp.field.0] }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["ST1-07".to_string()],
+            optional_gate_fold: true,
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"].as_array().unwrap().len(), 4, "one step -> two rows");
+        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
+        assert_eq!(v["inputs"][2]["select_bool"], true);
+        assert!(v["inputs"][3].get("expect_prompt").is_none());
+        assert_eq!(v["inputs"][3]["select_card_ids"], serde_json::json!(["ST1-07"]));
+
+        let s = select_line("{ decline: true }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            cancel: true,
+            optional_gate_fold: true,
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"].as_array().unwrap().len(), 3, "decline folds to one row");
+        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
+        assert_eq!(v["inputs"][2]["select_has_bool"], true);
+        assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
+        assert!(v["inputs"][2].get("select_cancel").is_none());
     }
 }

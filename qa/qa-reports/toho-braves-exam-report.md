@@ -118,9 +118,12 @@ is two independent implementations agreeing about what actually happened.
   formula the DSL cannot express (`G-DSL-SOURCE-STACK-UNION-COLOR-COUNT`,
   logged in `qa/dsl-vocab-gaps.md` with tripwire tests that fail on any
   future approximation).
-- **Scenario-comment trap:** nearly every EX12 Toho card prints `[TB]`
-  (verified on card faces); one authoring pass assumed otherwise from a stale
-  reading and produced a line DCGO rightly refused.
+- **[TB] trait data hole (corrected 2026-08-22):** EX12-036 and EX12-047 print
+  `[TB]` on their faces (EX12-036 also carries a `Rule: Trait: Has [Aquatic]
+  Type.` grant) but `cards.json` had dropped both — the scenario author's
+  original claim was right, and an earlier campaign note calling it false was
+  itself wrong (a truncated diagnostic hid exactly these two long trait
+  lines). Fixed durably in `card_overrides.json` + patched in `cards.json`.
 
 ## Tooling shipped by this campaign (all exam-general, not Toho-specific)
 

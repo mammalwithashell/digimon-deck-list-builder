@@ -1,0 +1,162 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #1 -- "<Evade> (When this
+# Digimon would be deleted, you may suspend it to prevent that deletion.)" --
+# ACCEPTED: the prevention fires against an opponent's EFFECT deletion and
+# Ryugumon survives, suspended.
+#
+# Authored after the task_8f063aa6 engine fix (declarative grant_keyword
+# clauses now materialize before the WhenWouldBe* replacement window ticks) --
+# Ryugumon's <Barrier>/<Evade> are face DECLARATIVE `grant_keyword` clauses,
+# the exact shape the fixed staleness bug used to hide from this window.
+#
+# Isolation: the deletion is an opponent-EFFECT deletion of an UNSUSPENDED,
+# SOURCE-FREE Ryugumon, so of its three exits only <Evade> is live:
+#   - <Barrier> replaces only BATTLE deletions -- inactive here.
+#   - <Decode> is a non-battle-exit replacement and WOULD be live, but its
+#     whole body is "play 1 matching digivolution source" -- hard-playing
+#     Ryugumon leaves it source-free, so Decode has no candidate and its
+#     window never opens. (Digivolving it over a [TB] base instead makes the
+#     engine offer Decode's cancelable material pick FIRST, and today a
+#     declined Decode swallows the follow-on Evade offer via the
+#     replacement-commit once-per-subject guard -- a separate finding, kept
+#     out of this clause's line on purpose.)
+#   - <Evade> is payable: Ryugumon has not attacked, so suspending is a
+#     legal cost. Accepting suspends it and cancels the deletion.
+#
+# Line: T3 p0 hard-plays Ryugumon from hand (cost 12, memory 3 -> -9 --
+# inside the -10 overshoot floor; from memory 0 the same play is ILLEGAL,
+# which is why the play waits for T3). T4 p1 hard-plays Amaterasumon
+# (EX12-047, cost 12, the handed-over memory 9 -> -3); its [On Play] "delete
+# your opponent's lowest-DP Digimon" has exactly one candidate -- Ryugumon,
+# p0's lone Digimon -- and the mandatory pick row answers it. The deletion
+# parks THE CLAUSE's prompt for p0; `yes: true` accepts. Amaterasumon's
+# follow-on "return 2 cards from your opponent's trash" finds p0's trash
+# EMPTY (nothing was trashed all game -- the prevention kept it that way) so
+# the pick never opens, and the -5000 DP rider is gated off (0 returned
+# cards). The overshoot ends p1's turn.
+#
+# Prompt engineering kept closed:
+#   - T3 play: Ryugumon's [OP] hand-placement (clause #3) finds NO candidate
+#     -- the remaining hand is EX12-047 x2 (no [Aqua]/[Sea Animal]/[TB]
+#     trait), EX12-076 x2 (level 7 > 6), and the T3 draw EX12-036 #2 (traits
+#     miss the filter) -- so the optional pick never opens. The
+#     play/digivolve lock (clause #4) fires on Ryugumon's own play but
+#     fizzles on p1's empty board; T4's Amaterasumon is p1's Digimon, so the
+#     [All Turns] lock ("your Digimon") does not re-trigger.
+#
+# Stack layout (p0): hand [0..4], security [5..9], [10] the T3 draw.
+card: EX12-036
+clause: EX12-036#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Ryugumon + filler that can never match clause #3's hand
+      # filter (see header).
+      - EX12-036
+      - EX12-047
+      - EX12-047
+      - EX12-076
+      - EX12-076
+      # security (5-9): untouched all game.
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-046
+      - EX12-046
+      # T3 draw (10): filter-proof (EX12-036 lacks [Aqua]/[Sea Animal]/[TB]).
+      - EX12-036
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): Amaterasumon (played T4) + never-acted-on filler.
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9): untouched all game.
+      - EX12-076
+      - EX12-076
+      - EX12-031
+      - EX12-031
+      - EX12-046
+      # T2 draw (10) and T4 draw (11).
+      - EX12-020
+      - EX12-020
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): nothing affordable worth doing; pass the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Ryugumon (3 -> -9), source-free and
+  # prompt-free (see header); the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-036, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Ryugumon's own play queues BOTH of its mandatory triggers (clause #3's
+  # hand-placement body and clause #4's lock body) and our engine asks their
+  # order even though each is candidate-starved (see header); resolve slot 3
+  # first -- both fizzle silently. ORACLE CAVEAT: this TriggerOrder row is
+  # expected to be ENGINE-ONLY -- DCGO does not stack candidate-starved
+  # skills (the EX12-070-effect3 header documents the same asymmetry), and
+  # the MultipleSkills value-space bridge is the known-blocked one from the
+  # EX12-047-effect2 review. The oracle pass must adjudicate this row; the
+  # sim-only run is clean.
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: MultipleSkills }
+  # With the corrected [TB] data (task_69f10a66 EX12-070 triage) the
+  # hand-placement body now HAS candidates (the EX12-047 copies in hand),
+  # so after the order pick its optional select parks -- decline it (this
+  # exam is <Evade>).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T4 (p1, memory 9): hard-play Amaterasumon (9 -> -3); its [On Play]
+  # deletes p0's lowest-DP Digimon -- Ryugumon, the lone candidate.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-047, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: p0 accepts <Evade> -- suspend Ryugumon, cancel the deletion.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+assert:
+  # Evade resolved: Ryugumon SURVIVES the effect deletion (still fielded,
+  # source-free as played), p0's trash is still empty -- the deletion would
+  # have put EX12-036 there AND fed Amaterasumon's return-2 rider, so the
+  # empty trash is the prevention's witness -- and Amaterasumon stands on
+  # p1's field. Neither security stack was touched. NOTE on suspension: the
+  # Evade cost DID suspend Ryugumon, but p1's overshoot ends its turn the
+  # moment the line ends, and the harness advances to p0's next prompt --
+  # THROUGH p0's unsuspend phase -- before this assert evaluates, so the
+  # only observable suspension state here is the post-unsuspend `false`.
+  - at: 12
+    that:
+      p0.field:
+        - { card_id: EX12-036, dp: 12000, suspended: false, sources: [] }
+      p0.trash: []
+      p0.security: 5
+      p1.field:
+        - { card_id: EX12-047, dp: 12000, suspended: false, sources: [] }
+      p1.security: 5

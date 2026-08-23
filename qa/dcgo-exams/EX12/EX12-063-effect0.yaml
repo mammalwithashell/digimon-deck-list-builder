@@ -85,6 +85,12 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of T4: decline p1's granted <Execute> gate (task_69f10a66 Family 1 --
+  # Onibimon under the moved [TB] Hanimon; moved stacks can attack the move
+  # turn). Our EndOfTurnAction PASS; OptionalSkill "no" on the wire.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 5 (p0): the clause -- play Karakurumon (cost 7, memory 3 -> -4).
   - actor: 0
     do: { pass: {} }
@@ -107,12 +113,12 @@ steps:
     expect: { prompt: breeding_action }
 assert:
   # After both picks: Hanimon is suspended and Karakurumon is on p0's field.
-  - at: 13
+  - at: 14
     that:
       p1.field: [{ card_id: EX12-061, dp: 2000, suspended: true, sources: [EX12-004] }]
       p0.field: [{ card_id: EX12-063, dp: 7000, suspended: false, sources: [] }]
   # The lock half: p1's own turn has started (unsuspend phase done) and the
   # Hanimon is STILL suspended.
-  - at: 14
+  - at: 15
     that:
       p1.field: [{ card_id: EX12-061, dp: 2000, suspended: true, sources: [EX12-004] }]

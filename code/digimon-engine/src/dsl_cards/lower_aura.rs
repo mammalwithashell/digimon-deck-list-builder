@@ -346,6 +346,21 @@ pub fn lower(
 
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
+        // task_69f10a66 Family 1: a SELF-aura keyword grant is semantically a
+        // (possibly conditional) `grant_keyword` clause — advertise the
+        // granted keyword on the Effect exactly like `lower_grant_keyword`
+        // does, so `Game::build_effects_for_card` can synthesize the
+        // keyword's triggered/replacement auto-effects (with the aura's
+        // `active_when` condition attached) and `has_keyword`'s effect scan
+        // can see the grant without a declarative tick. EX12-004 Onibimon's
+        // inherited "[Your Turn] this [TB] Digimon gains <Execute>" is the
+        // motivating card: without the marker the granted <Execute> never
+        // installs its end-of-your-turn trigger (rule-17 violation).
+        // Filtered-target auras (grants landing on OTHER permanents) must
+        // NOT set this — the auto-effects would wrongly key on the grantor.
+        if let Some(kw) = gk {
+            builder = builder.granted_keyword(kw);
+        }
         builder = builder
             .materializes_declarative_state()
             .process(move |ctx| {

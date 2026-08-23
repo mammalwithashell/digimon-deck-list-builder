@@ -1942,6 +1942,35 @@ impl Game {
         }
     }
 
+    /// Borrow the `CardSource` a `CardSourceRef` currently points at, without
+    /// removing it. Sibling of `card_source_ref_snapshot` for callers that
+    /// need the full card (e.g. the digivolve-route machinery in
+    /// `effect_initiated_digivolve_from_source_inner`) rather than the
+    /// `(handle, data_index, zone)` tuple.
+    pub(crate) fn card_source_ref_peek(
+        &self,
+        source: crate::enums::CardSourceRef,
+    ) -> Option<&crate::card_source::CardSource> {
+        use crate::enums::CardSourceRef;
+        match source {
+            CardSourceRef::Hand(p, i) => self.player(p).hand.get(i),
+            CardSourceRef::Trash(p, i) => self.player(p).trash.get(i),
+            CardSourceRef::DeckTop(p) => self.player(p).deck.last(),
+            CardSourceRef::Security(p, i) => self.player(p).security.get(i),
+            CardSourceRef::PendingSecurity => self
+                .pending_security
+                .as_ref()
+                .filter(|pending| !pending.played)
+                .map(|pending| &pending.card),
+            CardSourceRef::Material(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.card_sources.get(i)),
+            CardSourceRef::Reveal(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
+        }
+    }
+
     fn card_source_ref_snapshot(
         &self,
         source: crate::enums::CardSourceRef,

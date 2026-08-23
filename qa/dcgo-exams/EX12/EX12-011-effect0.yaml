@@ -27,13 +27,14 @@
 #
 # Stack layout: hand [0..4], security [5..9], then per-seat draws
 # ([10] = the seat's first turn-start draw).
-# REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict): DCGO's Raid is
-# isOptional=true (Raid.cs) -> an OptionalSkill "activate Raid?" gate parks
-# BEFORE the switch-target SelectPermanentEffect. This line has no `yes:` row
-# (our engine models Raid as one declinable target pick, live sim-side), and
-# one cannot be inserted (it would answer the sim's pending target prompt).
-# The oracle run will kind-mismatch at the Raid window. Needs engine/harness
-# alignment of optional-keyword gate shapes.
+# RESOLVED (task_69f10a66 ruling item 5, the OptionalSkill+pick FOLD):
+# DCGO's Raid is isOptional=true (Raid.cs) -> an OptionalSkill "activate
+# Raid?" gate parks BEFORE the switch-target SelectPermanentEffect, while
+# our engine surfaces ONE declinable target pick. The switch row below is
+# authored with `expect: {prompt: OptionalSkill}` -- the FOLD marker: the
+# emitter splits it on the wire into OptionalSkill(yes) + the pick row
+# (a `decline:` payload would emit only OptionalSkill(no) and PASS our
+# live pick). Sim-side the row still answers our single live prompt.
 card: EX12-011
 clause: EX12-011#effect#0
 seed: 424242
@@ -74,9 +75,10 @@ steps:
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # The Raid window: switch the attack onto the unsuspended Gasamon.
+  # (`expect: OptionalSkill` = the fold marker -- see the header note.)
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
+    expect: { prompt: OptionalSkill }
   # Attacking costs no memory; P0 keeps the turn after the battle.
   - actor: 0
     do: { pass: {} }

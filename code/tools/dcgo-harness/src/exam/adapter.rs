@@ -47,6 +47,28 @@ pub struct SelectWire {
     pub value: Option<i32>,
     pub bool_answer: Option<bool>,
     pub cancel: bool,
+    /// task_69f10a66 (ruling item 5, `<Raid>`-family fold): DCGO splits some
+    /// optional keyword windows into an `OptionalSkill` yes/no gate FOLLOWED
+    /// by the pick, while our engine surfaces ONE declinable pick
+    /// (PASS = decline). A select row authored with
+    /// `expect: {prompt: OptionalSkill}` over a live non-bool pick prompt
+    /// sets this flag: the emitter prepends OptionalSkill(yes) before the
+    /// pick row (payload picks = accept), or emits ONLY OptionalSkill(no)
+    /// for a `decline:` payload (the pick never opens DCGO-side).
+    pub optional_gate_fold: bool,
+}
+
+/// The target of an end-of-turn-gate attack, carried symbolically for the
+/// DCGO wire (task_69f10a66 Family 1 surface mapping).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EotAttackTarget {
+    /// Attack the opponent player / security — DCGO `SelectAttackEffect`
+    /// answers this as `select_value: -1`.
+    Player,
+    /// Attack a defending permanent, identified by its TOP-CARD id resolved
+    /// against the live game at lowering time (identity matching on DCGO's
+    /// side, same convention as `targets:` picks).
+    Permanent { top_card_id: String },
 }
 
 /// One lowered scenario step, as the job emitter consumes it: either a
@@ -55,6 +77,32 @@ pub struct SelectWire {
 pub enum LoweredStep {
     Action(u16),
     Select(SelectWire),
+    /// task_69f10a66 Family 1 — an action lowered while OUR engine is parked
+    /// in `GamePhase::EndOfTurnAction`: the sim surface for the end-of-turn
+    /// attack keywords (`<Execute>` — printed OR granted — `<Engage>`,
+    /// Vortex, MayAttack). Our engine surfaces the §16-37-3 "may" as the
+    /// phase park's mask (attack bits + PASS); DCGO surfaces the SAME choice
+    /// as an `OptionalSkill` yes/no followed (on yes) by a
+    /// `SelectAttackEffect` target pick. The gates are 1:1 — DCGO's
+    /// `CanActivateExecute` requires `CanAttack`, exactly the condition our
+    /// `has_end_of_turn_keywords` park requires — so the emitter maps:
+    ///   PASS   -> OptionalSkill(select_bool: false)
+    ///   attack -> OptionalSkill(select_bool: true) + SelectAttackEffect row
+    /// Known limitation: with SEVERAL gate carriers on one board, one PASS
+    /// declines our whole park while DCGO asks one OptionalSkill per
+    /// carrier; scenarios with more than one end-of-turn attacker must
+    /// answer each DCGO gate (extra select rows) explicitly.
+    EndOfTurnGate {
+        action_id: u16,
+        /// `None` = PASS (decline the gate); `Some(t)` = take the attack.
+        attack: Option<EotAttackTarget>,
+    },
+    /// An action our engine needs that has NO DCGO counterpart — emitted as
+    /// NOTHING on the wire. Today: the PASS that exits the `EndOfTurnAction`
+    /// phase AFTER the last gate was spent (e.g. after the Execute attack
+    /// resolved and the carrier self-deleted, our phase still parks until a
+    /// PASS, while DCGO simply rotates — no prompt exists to consume a row).
+    SimOnlyAction(u16),
 }
 
 #[derive(Debug)]
@@ -143,7 +191,7 @@ impl ScenarioAdapter {
                         board_p0: None,
                         board_p1: None,
                     });
-                    lowered.push(LoweredStep::Action(action_id));
+                    lowered.push(classify_lowered_action(&game, actor, action_id, &step.act)?);
 
                     // `Game::decode_action` returns unit and SILENTLY IGNORES an
                     // illegal or out-of-range id, so there is no error to propagate
@@ -206,6 +254,8 @@ impl ScenarioAdapter {
             .iter()
             .filter_map(|l| match l {
                 LoweredStep::Action(id) => Some(*id),
+                LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
+                LoweredStep::SimOnlyAction(id) => Some(*id),
                 LoweredStep::Select(_) => None,
             })
             .collect()
@@ -235,6 +285,22 @@ fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
     }
 }
 
+/// True when our live prompt is a pick-shaped selection that DCGO may split
+/// into `OptionalSkill` + pick (the `<Raid>`-family fold — see
+/// `SelectWire::optional_gate_fold`).
+fn kind_is_pick_shaped(kind: &SelectionKind) -> bool {
+    matches!(
+        kind,
+        SelectionKind::Hand
+            | SelectionKind::OwnField
+            | SelectionKind::OppField
+            | SelectionKind::AnyField
+            | SelectionKind::Trash
+            | SelectionKind::Reveal
+            | SelectionKind::Material
+    )
+}
+
 /// Sim-side `expect.prompt` on a select step: assert loosely against the
 /// parked prompt's kind where the kind->DCGO mapping is unambiguous, and say
 /// so out loud where it is not.
@@ -249,6 +315,19 @@ fn check_select_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> 
         );
         return Ok(());
     };
+    // task_69f10a66 (ruling item 5): `expect.prompt: OptionalSkill` over a
+    // live PICK prompt is the declared OptionalSkill+pick FOLD, not a
+    // mismatch — DCGO gates the same choice behind a yes/no first (e.g.
+    // `<Raid>`'s isOptional gate before its switch-target pick), while our
+    // engine's single declinable pick IS both the gate and the pick.
+    if want == "OptionalSkill" && kind_is_pick_shaped(&pending.kind) {
+        println!(
+            "  note: step {i} folds DCGO's OptionalSkill gate into our live {:?} pick \
+             (the emitter splits the wire rows)",
+            pending.kind
+        );
+        return Ok(());
+    }
     match dcgo_prompt_name(&pending.kind) {
         Some(name) if name == want => Ok(()),
         Some(name) => Err(format!(
@@ -264,6 +343,85 @@ fn check_select_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> 
             );
             Ok(())
         }
+    }
+}
+
+/// Classify a lowered action for the wire (task_69f10a66 Family 1). An
+/// action lowered while our engine is parked in `EndOfTurnAction` is the
+/// end-of-turn attack-keyword gate — DCGO's surface for the same choice is
+/// `OptionalSkill` (+ `SelectAttackEffect` on yes), so the emitter must not
+/// pass the raw action id through. Everything else stays `Action(id)`.
+fn classify_lowered_action(
+    game: &Game,
+    actor: PlayerId,
+    action_id: u16,
+    act: &StepAction,
+) -> Result<LoweredStep, String> {
+    use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
+    if game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
+        return Ok(LoweredStep::Action(action_id));
+    }
+    // The park belongs to the turn player; a step someone else answers at
+    // this phase is not the gate.
+    if actor != game.turn_player() {
+        return Ok(LoweredStep::Action(action_id));
+    }
+    let e = explain_action(game, actor, action_id);
+    match e.kind {
+        ActionKind::Pass => {
+            // A PASS while a gate is still live declines it — DCGO's
+            // OptionalSkill answered "no". A PASS with NO live gate (the
+            // phase-exit after the last end-of-turn attack was already
+            // spent) has no DCGO counterpart: DCGO rotates on its own, so
+            // the row must not reach the wire at all.
+            if game.has_end_of_turn_keywords(actor) {
+                Ok(LoweredStep::EndOfTurnGate {
+                    action_id,
+                    attack: None,
+                })
+            } else {
+                Ok(LoweredStep::SimOnlyAction(action_id))
+            }
+        }
+        ActionKind::Attack => {
+            let attack = match e.target_zone {
+                Some(ActionZone::Security) => EotAttackTarget::Player,
+                Some(ActionZone::Battle) => {
+                    let slot = e.target_index.ok_or_else(|| {
+                        "end-of-turn attack explanation names a battle target with no slot"
+                            .to_string()
+                    })? as usize;
+                    let defender = (1 - actor) as usize;
+                    let top_card_id = game
+                        .player(defender as PlayerId)
+                        .battle_area
+                        .get(slot)
+                        .map(|p| p.top_card().card_id(&game.card_data).to_string())
+                        .ok_or_else(|| {
+                            format!(
+                                "end-of-turn attack targets opponent slot {slot}, but the \
+                                 opponent has {} permanent(s)",
+                                game.player(defender as PlayerId).battle_area.len()
+                            )
+                        })?;
+                    EotAttackTarget::Permanent { top_card_id }
+                }
+                other => {
+                    return Err(format!(
+                        "end-of-turn attack explanation has unexpected target zone {other:?}"
+                    ))
+                }
+            };
+            Ok(LoweredStep::EndOfTurnGate {
+                action_id,
+                attack: Some(attack),
+            })
+        }
+        // Any other kind at this phase (Overclock cost picks etc.) keeps the
+        // raw id — extending the wire mapping for those surfaces is future
+        // work, and passing the id through is at worst the pre-mapping
+        // behavior, not a regression.
+        _ => Ok(LoweredStep::Action(action_id)),
     }
 }
 
@@ -358,6 +516,17 @@ fn build_selection_row(
         zone: None,
     };
     let mut wire = SelectWire::default();
+
+    // task_69f10a66 (ruling item 5): mark the OptionalSkill+pick fold —
+    // authored as `expect: {prompt: OptionalSkill}` over a live pick-shaped
+    // prompt. See `SelectWire::optional_gate_fold` / the emitter's split.
+    if expect.and_then(|e| e.prompt.as_deref()) == Some("OptionalSkill") {
+        if let Some(pending) = game.pending_selection.as_ref() {
+            if kind_is_pick_shaped(&pending.kind) {
+                wire.optional_gate_fold = true;
+            }
+        }
+    }
 
     match payload {
         SelectPayload::Cards(ids) => {

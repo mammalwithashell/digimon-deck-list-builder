@@ -1,0 +1,136 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #0 -- "<Barrier> (When this
+# Digimon would be deleted in battle, by trashing the top card of your
+# security stack, prevent that deletion.)" -- ACCEPTED: the prevention fires
+# and Ryugumon survives its losing security battle.
+#
+# Authored after the task_8f063aa6 engine fix (declarative grant_keyword
+# clauses now materialize before the WhenWouldBe* replacement window ticks) --
+# Ryugumon's <Barrier>/<Evade> are face DECLARATIVE `grant_keyword` clauses,
+# the exact shape the fixed staleness bug used to hide from this window.
+#
+# Line (the proven EX12-063-inherited0 spine, minus its trash-seeding
+# detour): T1 play Karakurumon (overshoot 0 -> -7, empty trash keeps its
+# Assembly prompt closed, its suspend fizzles on p1's empty board). T3
+# Ryugumon digivolves over it -- the printed BLUE/YELLOW Lv.5 circles miss
+# the purple/green base, so only the alt [Aquatic]/[Shambala] route (cost 3)
+# matches and the cost-choice prompt stays closed -- then attacks security
+# the same turn at memory 0. The flip is p1's LAST stacked security slot,
+# EX12-036 (12000 DP, blank security), a 12000 tie -- attacker deleted. That
+# parks EXACTLY ONE prevention prompt, the clause under exam:
+#   - <Evade> is unpayable (the attacker suspended to attack) -- never
+#     offered (same isolation EX12-063-inherited0 relied on).
+#   - <Decode> is battle-cause-gated OFF (it replaces only NON-battle exits).
+# `yes: true` accepts: the top card of p0's security (slot 9, EX12-046) is
+# trashed and the deletion is prevented -- Ryugumon stays, suspended.
+#
+# Prompt notes (corrected, task_69f10a66 EX12-070 triage): the card faces
+# print [TB] on EX12-047 AND EX12-036 (dropped by the stale cards.json this
+# line was first drafted against), so Ryugumon's [WD] hand-placement
+# (clause #3) DOES find candidates (EX12-047 x2, the drawn EX12-036 #2) and
+# its optional pick opens on both engines -- DECLINED below. The shared
+# [Once Per Turn] then keeps the [WA] copy at the attack closed only if the
+# declined [WD] consumed the OPT; if a second pick parks at the attack the
+# line answers it too. The play/digivolve lock (clause #4) fires on
+# Ryugumon's own digivolve but fizzles on p1's empty board.
+#   - Karakurumon's inherited [On Deletion] never fires: Barrier PREVENTS
+#     the deletion.
+#
+# Stack layout (p0): hand [0..4], security [5..9] (slot 9 = top, trashed by
+# Barrier), [10] the T3 turn-draw, [11] the T3 digivolve-draw.
+card: EX12-036
+clause: EX12-036#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the spine pair + filler that can never match clause #3's
+      # hand filter (see header).
+      - EX12-063
+      - EX12-036
+      - EX12-047
+      - EX12-047
+      - EX12-076
+      # security (5-9): slot 9 (EX12-046) is the top card Barrier trashes.
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-046
+      - EX12-046
+      # T3 turn-draw (10) and digivolve-draw (11): both filter-proof
+      # (EX12-076 is level 7; EX12-036 lacks [Aqua]/[Sea Animal]/[TB]).
+      - EX12-076
+      - EX12-036
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon; the flip is the LAST stacked
+      # slot, EX12-036 -- a 12000 tie that deletes the attacker. Deliberately
+      # free of EX12-074 (its [Security]-area passive).
+      - EX12-076
+      - EX12-076
+      - EX12-047
+      - EX12-047
+      - EX12-036
+      # T2 draw (10).
+      - EX12-020
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): play Karakurumon (overshoot 0 -> -7); no prompts open
+  # (empty trash, empty opposing board); the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Ryugumon over Karakurumon via the alt route (cost 3,
+  # 3 -> 0), prompt-free (see header), then attack security at memory 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  # Clause #3's optional [WD] hand-placement now opens (corrected [TB]
+  # data); decline it -- this exam is about <Barrier>.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: accept <Barrier> on the losing 12000-vs-12000 check.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Still p0's turn at memory 0; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Barrier resolved: Ryugumon SURVIVES its lost battle (still fielded,
+  # suspended from the attack, Karakurumon beneath it), p0 paid the top of
+  # security (5 -> 4, EX12-046 in trash), and the flipped EX12-036 is in
+  # p1's trash with p1 down to 4 security.
+  - at: 9
+    that:
+      p0.field:
+        - { card_id: EX12-036, dp: 12000, suspended: true,
+            sources: [EX12-063] }
+      p0.security: 4
+      p0.trash: [EX12-046]
+      p1.security: 4
+      p1.trash: [EX12-036]

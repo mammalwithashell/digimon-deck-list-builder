@@ -71,6 +71,13 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (task_69f10a66 Family 1): Onibimon
+  # under P1's moved Wankomon grants it <Execute>, and moved stacks can
+  # attack the move turn -- decline P1's gate (our EndOfTurnAction PASS;
+  # DCGO OptionalSkill "no" on the wire).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 5 (P0, memory 3): play Shellmon; the On Play arm fires.
   - actor: 0
     do: { pass: {} }
@@ -95,7 +102,7 @@ assert:
   # THE clause observables, at the second pick that closes the effect: the
   # Wankomon lost its single (bottom) digivolution card to the trash -- the
   # hatched Onibimon EX12-004 -- and stays on the field, source-less.
-  - at: 13
+  - at: 14
     that:
       p1.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [] }]
       p1.trash: [EX12-004]

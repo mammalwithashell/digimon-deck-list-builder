@@ -19,6 +19,18 @@
 # The attack targets security; p1's pinned security is all blank-security
 # Digimon under 5000 DP, so the 5000 DP attacker survives the check and the
 # only selection in the attack window is the clause's forced hand-trash.
+#
+# GRANTED-<Execute> GATE (task_69f10a66 Family 1): Onibimon EX12-004 under
+# the stack grants its [TB] carrier <Execute> on the owner's turn, so ending
+# T3 (the stack moved to the battle area that turn and can attack) parks the
+# end-of-turn attack gate — our engine's EndOfTurnAction phase (attack bits +
+# PASS in the mask), DCGO's OptionalSkill yes/no (+ SelectAttackEffect on
+# yes). The surfaces are gate-for-gate equivalent (DCGO's CanActivateExecute
+# requires CanAttack, exactly our park condition), and the emitter maps our
+# `pass` row to OptionalSkill(select_bool: false) on the wire. The gate is
+# DECLINED here: the clause under exam is Hanimon's inherited
+# [When Attacking], not the granted Execute. T5's turn end parks no gate on
+# either side — the carrier is suspended from its attack, so CanAttack fails.
 card: EX12-061
 clause: EX12-061#inherited#0
 seed: 424242
@@ -87,6 +99,12 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (see header): decline it. Our side:
+  # PASS out of the EndOfTurnAction park. DCGO side: the emitter maps this
+  # row to OptionalSkill(select_bool: false).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 4 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
@@ -121,7 +139,9 @@ steps:
 assert:
   # After the clause: the <Draw 1> pulled EX12-047 (deck 14) and the forced
   # trash removed EX12-075; Kokeshimon's cost-2 digivolve left memory at 1.
-  - at: 14
+  # (Step index 15, not 14: the T3 granted-Execute gate row shifted the tail
+  # of the line by one.)
+  - at: 15
     that:
       memory: 1
       p0.hand: [EX12-074, EX12-070, EX12-026, EX12-065, EX12-011, EX12-020, EX12-047]

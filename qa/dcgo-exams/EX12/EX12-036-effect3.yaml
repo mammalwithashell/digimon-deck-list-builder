@@ -39,17 +39,14 @@
 # Stack layout (P0): hand [0..4], security [5..9], draws [10..16] as in the
 # effect#6 exam, [17] the T9 draw, [18] the T11 draw (pinned EX12-047 copies
 # so the hand's lone EX12-009 stays unique).
-# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
-# the `decline:` payload serializes as select_cancel, but DCGO's
-# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
-# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
-# scenario schema has no bool-no form (`yes:` must be true). Every
-# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
-# at that row until the bridge maps Decline -> select_bool=false for
-# OptionalSkill (or the hook accepts cancel as "don't use").
-# Here: the T11-end Execute-window decline row added in review. Without
-# it the line desyncs anyway (DCGO's window would meet the trailing pass),
-# so it stays as the semantically correct answer.
+# GATES (task_69f10a66 Family 1): Ryugumon's face prints [TB] (now fixed in
+# cards.json/overrides/YAML), so the Onibimon egg under the spine grants it
+# <Execute>. The end-of-turn gate opens LIVE on both engines at T9's end
+# (moved stacks can attack the move turn) and again at T11's end (the
+# clause's unsuspend makes it attack-capable after its own attack). Both
+# declined via our EndOfTurnAction PASS; the emitter maps each to DCGO's
+# OptionalSkill "no" (the select_cancel decline bridge in OptionalSkill.cs
+# is landed).
 card: EX12-036
 clause: EX12-036#effect#3
 seed: 424242
@@ -146,6 +143,10 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of T9: decline the granted <Execute> gate (see header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # T10 (P1)
   - actor: 1
     do: { pass: {} }
@@ -174,14 +175,11 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T11 (added in review): Ryugumon's card face prints [TB] (cards.json
-  # is stale there), so DCGO's Onibimon grant (EX12-004, the egg under the
-  # spine) gives it <Execute> -- and having been UNSUSPENDED by the clause
-  # under exam, it CanAttack again at its own turn end, so DCGO parks the
-  # optional end-of-turn attack dialog. Decline it (sim-side this row answers
-  # no live prompt -- conditional-grant engine gap, as in EX12-004-effect1).
+  # End of T11: having been UNSUSPENDED by the clause under exam, Ryugumon
+  # CanAttack again at its own turn end, so the granted-<Execute> gate opens
+  # once more (LIVE sim-side since the Family-1 fix). Decline it.
   - actor: 0
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Trailing pass: p1's next breeding decision closes the line.
   - actor: 1
@@ -192,7 +190,7 @@ assert:
   # Wankomon as a 5th digivolution card (whose aura lifts it to 16000 on the
   # owner's turn); the placed card left the hand; P1 lost the checked
   # EX12-009 from security to trash.
-  - at: 28
+  - at: 29
     that:
       p0.memory: 3
       p0.security: 5

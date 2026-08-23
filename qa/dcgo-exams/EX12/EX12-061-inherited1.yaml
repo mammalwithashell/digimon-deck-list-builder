@@ -76,6 +76,13 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (task_69f10a66 Family 1): Onibimon
+  # under the moved [TB] stack grants <Execute>; the gate opens at T3's end
+  # (moved stacks can attack the move turn). Decline -- the exam's attack
+  # is T5's. Our EndOfTurnAction PASS; DCGO OptionalSkill "no".
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 4 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
@@ -110,7 +117,7 @@ steps:
 assert:
   # After the clause: the <Draw 1> pulled EX12-047 (deck 14) and the forced
   # trash removed EX12-075; Kokeshimon's cost-2 digivolve left memory at 1.
-  - at: 14
+  - at: 15
     that:
       memory: 1
       p0.hand: [EX12-074, EX12-070, EX12-026, EX12-065, EX12-011, EX12-020, EX12-047]

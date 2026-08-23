@@ -188,6 +188,23 @@ pub fn payload_pick_count(payload: &SelectionRow) -> usize {
         t.len()
     } else if let Some(c) = &payload.card_ids {
         c.len()
+    } else if payload.cancel.unwrap_or(false)
+        && payload.int_value.is_none()
+        && payload.count.is_none()
+        && payload.bool_value.is_none()
+    {
+        // task_69f10a66 Family 3a root cause: a PURE-cancel payload is a
+        // single decline delivered by the picks_done == 0 PASS — it carries
+        // ZERO picks. Counting it as 1 made the `picks_done == n_picks`
+        // trailing-PASS branch fire a PHANTOM SECOND PASS after the decline
+        // resolved, and when the decline's resolution parks a NEW optional
+        // prompt (exam witness EX12-063-inherited0: the declined mid-battle
+        // <Barrier> commits the deletion, whose inherited [On Deletion]
+        // "you may play" gate parks immediately), that phantom PASS silently
+        // declined the new prompt — a choice the row never answered. The
+        // engine's own trigger handling is sound (five DebugRunner
+        // differentials pin it); the drop was this resolver's.
+        0
     } else {
         // count / int / bool payloads are single decisions.
         1
@@ -231,6 +248,16 @@ pub fn resolve_next(
         if picks_done > n_picks {
             // Trailing PASS already sent once; never loop.
             return Ok(None);
+        }
+        // A pure-cancel payload (n_picks == 0) aimed at a NON-optional
+        // prompt is an honest divergence, not a silent stop — preserves the
+        // error the dedicated cancel branch below used to raise before
+        // pure-cancel payloads counted 0 picks (task_69f10a66 Family 3a).
+        if declined && n_picks == 0 && picks_done == 0 && !pass_legal {
+            return Err(format!(
+                "recorded cancel on a non-optional {:?} prompt",
+                pending.kind
+            ));
         }
         if (multiselectish || declined || n_picks == 0) && pass_legal {
             return Ok(Some(PASS));

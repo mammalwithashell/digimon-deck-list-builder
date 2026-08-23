@@ -526,6 +526,44 @@ evidence supports.
   line reaching it) — considered and set aside, not ruled out. The `unreachable`
   verdict class exists partly so this shows up as **data rather than quiet gaps.**
 
+- **DCGO parks vacuous optional-cost gates our engine skips (EX12-047#effect#3
+  class).** §15-7-4 of `general_rule.pdf` entitles the player to choose an
+  optional cost "regardless of whether the content of the conditions can be
+  executed", so DCGO opening the "by returning 2 cards from their trash …" gate
+  with only 1 card in the trash is rules-supported, not over-asking; but §15-7-3
+  (no partial execution) + §15-7-2 make the choice outcome-void — accepting it
+  changes no reachable state. Our engine auto-skips the underfunded gate (no
+  action-space entry), so a scripted line has nothing to answer sim-side while
+  DCGO asks. Decision (task_69f10a66 ruling): documented, not surfaced — a
+  vacuous prompt adds an action-space entry no policy can ever exploit, and the
+  observable state after decline/accept is identical on both engines. A wire-only
+  `select: {decline:}` row (which our adapter tolerates as "answered no live
+  prompt") covers the DCGO side when a line crosses one of these gates. If strict
+  prompt parity is ever wanted, the engine change is to park the gate whenever
+  §15-7-4 does, and let the body void itself under §15-7-3.
+
+- **Surface mappings the emitter performs (task_69f10a66).** Two DCGO prompt
+  shapes are folded from OUR single-surface vocabulary at emit time, so
+  scenarios are authored against our engine and still answer DCGO's prompts:
+  1. *End-of-turn attack gate* (`<Execute>` — printed or granted — `<Engage>`,
+     Vortex, MayAttack): our engine parks the `EndOfTurnAction` phase (attack
+     bits + PASS); DCGO asks `OptionalSkill` then `SelectAttackEffect`. A `pass`
+     step at the park emits OptionalSkill(no); an `attack` step emits
+     OptionalSkill(yes) + the SelectAttackEffect answer (permanent by top-card
+     id, the player as `select_value: -1`); the post-attack phase-exit `pass`
+     (no gate left) emits **nothing**. The gates are 1:1 — DCGO's
+     `CanActivateExecute` requires `CanAttack`, exactly our park condition —
+     with one known limit: several gate carriers on one board still need one
+     answer per DCGO gate, while a single PASS declines our whole park.
+  2. *OptionalSkill+pick fold* (`<Raid>`-family): DCGO gates some optional
+     keyword windows behind an OptionalSkill yes/no before the pick; our engine
+     surfaces one declinable pick. A select row authored with
+     `expect: {prompt: OptionalSkill}` over the live pick is the fold marker:
+     picks emit OptionalSkill(yes) + the pick row, `decline:` emits only
+     OptionalSkill(no).
+  The DCGO-side decline bridge (a `select_cancel` answer to an OptionalSkill
+  prompt means "no" — `OptionalSkill.cs`) is landed in the base-repo mod.
+
 ## Gotchas found the hard way
 
 These are inherited from phase 1 and apply unchanged to every scripted job. Full

@@ -1,10 +1,17 @@
 //! Phase 7 Task 6 — native-keyword auto-install replacement tests.
 //!
 //! When a card's `CardData::keywords` contains one of the Phase-7 replacement
-//! keywords (`Barrier`, `Evade`, `Fragment(N)`, `Decode`), the engine should
+//! keywords (`Barrier`, `Evade`, `Fragment(N)`), the engine should
 //! auto-install a matching `WhenWouldBe*` replacement effect at
 //! `Game::effects_for_card` so the card behaves as printed without needing a
 //! hand-authored `CardEffect` script.
+//!
+//! `Decode` is the deliberate exception (task_69f10a66 Family 2): its rule
+//! 16-35 behavior is per-card parameterized (play a matching Digimon from the
+//! carrier's own digivolution cards on a non-battle leave), so no
+//! keyword-generic auto-effect exists — real Decode lives in each card's
+//! self-scoped YAML replacement clauses, and a bare `Keyword::Decode` marker
+//! installs nothing (pinned below).
 //!
 //! Partition / ArmorPurge are explicitly **deferred** from this task —
 //! see TODO(phase-7-followup) in `cards/keyword_effects.rs`.
@@ -184,103 +191,65 @@ fn printed_evade_keyword_suspends_and_cancels_deletion() {
     );
 }
 
-/// Printed `<Decode>` auto-installs an optional
-/// `WhenWouldBeReturnedToDeck` replacement that redirects the return to the
-/// owner's hand. Decode also installs a `WhenWouldBeReturnedToHand`
-/// replacement (symmetric route). Pre-§7.5 guard, the deck→hand redirect
-/// cascaded into a second selection for the hand-timing Decode replacement;
-/// post-guard, the once-per-event guard suppresses the second prompt so the
-/// redirect commits cleanly with exactly one accept.
+/// task_69f10a66 Family 2 — printed `<Decode>` installs NO keyword-generic
+/// auto-effect. The retired legacy pair ("would be returned to deck/hand →
+/// return to hand instead") was not rule 16-35 Decode: per §16-35-1 Decode
+/// triggers on the CARRIER's own non-battle leave and plays a per-card-
+/// parameterized Digimon from the carrier's digivolution cards — the
+/// parameter is unknowable at the keyword layer, so real Decode is authored
+/// per-card as self-scoped YAML replacement clauses (EX12-031 / BT22-015 /
+/// P-213). This test replaces the two retired tests that pinned the legacy
+/// redirect: a bare `Keyword::Decode` card returned to deck goes to the deck,
+/// with no replacement window.
 #[test]
-fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
+fn printed_decode_keyword_installs_no_generic_replacement() {
     let mut r = DebugRunner::builder()
         .add_card(card_with_keywords("DECODE_CARD", vec![Keyword::Decode]))
         .start();
     let handle = r.place_on_field(0, "DECODE_CARD", Some(0));
 
     let deck_before = r.game.player(0).deck.len();
-    assert_eq!(r.game.player(0).hand.len(), 0);
 
-    // Drive a return-to-deck flow; Decode should redirect into hand.
+    // Return-to-deck completes synchronously — no fabricated window.
     let ok = r
         .game
         .return_to_deck(handle, digimon_engine::enums::StackPosition::Bottom);
-    assert!(!ok, "return_to_deck short-circuits while selection pending");
-    assert!(
-        r.game.pending_selection.is_some(),
-        "optional Decode (deck) replacement should install selection"
-    );
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Decode (deck) replacement");
-
-    // Post-§7.5 guard: the `return_to_hand` commit path does NOT re-install a
-    // second Decode replacement prompt — the once-per-event guard blocks a
-    // same-subject refire during the commit continuation. The redirect
-    // completes in a single accept.
+    assert!(ok, "return_to_deck commits with no replacement window");
     assert!(
         r.game.pending_selection.is_none(),
-        "§7.5 guard must suppress the cascading Decode (hand) prompt during \
-         the deck→hand commit continuation"
+        "bare Keyword::Decode must not park any replacement prompt (16-35 \
+         Decode is per-card YAML, not a keyword-generic redirect)"
     );
-
-    assert_eq!(
-        r.battle_area_size(0),
-        0,
-        "Decode Digimon left the battle area via the redirect"
-    );
-    assert_eq!(
-        r.game.player(0).hand.len(),
-        1,
-        "permanent ended up in hand via the deck→hand redirect"
-    );
+    assert_eq!(r.battle_area_size(0), 0, "Digimon left the battle area");
     assert_eq!(
         r.game.player(0).deck.len(),
-        deck_before,
-        "deck unchanged — redirect bypassed the deck route"
+        deck_before + 1,
+        "the card went to the DECK — the legacy deck→hand redirect is retired"
     );
+    assert_eq!(r.game.player(0).hand.len(), 0, "nothing landed in hand");
 }
 
-/// Decode installs both `WhenWouldBeReturnedToDeck` and
-/// `WhenWouldBeReturnedToHand` effects — printed rules cover both routes.
-/// This test drives a direct `return_to_hand` on a Decode Digimon and verifies
-/// that a replacement selection actually installs (proving the hand-timing
-/// effect is present). The previous Task 6 commit only installed the deck
-/// timing, so `return_to_hand` would have completed synchronously with no
-/// pending selection — failing the installation assertion below.
-///
-/// Post-§7.5 guard (Task 7): the `(Zone::Hand, Redirected(Zone::Hand))` arm
-/// in `commit_deferred_outcome` now calls `return_to_hand(perm)` directly —
-/// safe because the once-per-event guard blocks the re-entry from re-firing
-/// the just-resolved Decode replacement for the same subject. The end state
-/// is the Digimon moving to hand as expected.
+/// Companion to the test above for the hand route: a bare `Keyword::Decode`
+/// card returned to hand goes to hand synchronously — the legacy symmetric
+/// `WhenWouldBeReturnedToHand` window (which even fired for OTHER
+/// permanents' leaves — the EX12-031#effect#1 exam divergence) is retired.
 #[test]
-fn printed_decode_keyword_also_handles_return_to_hand() {
+fn printed_decode_keyword_return_to_hand_commits_without_window() {
     let mut r = DebugRunner::builder()
         .add_card(card_with_keywords("DECODE_CARD", vec![Keyword::Decode]))
         .start();
     let handle = r.place_on_field(0, "DECODE_CARD", Some(0));
 
-    // Drive a return-to-hand flow directly. Because Decode installs a
-    // `WhenWouldBeReturnedToHand` replacement, the call should short-circuit
-    // while a PendingSelection::Replacement is installed for P0 to resolve.
     let result = r.game.return_to_hand(handle);
     assert!(
-        result.is_none(),
-        "return_to_hand short-circuits while selection pending"
+        result.is_some(),
+        "return_to_hand commits synchronously with no replacement window"
     );
     assert!(
-        r.game.pending_selection.is_some(),
-        "Decode's WhenWouldBeReturnedToHand replacement should install a selection \
-         (regression guard: Task-6 previously only installed the deck-timing effect)"
+        r.game.pending_selection.is_none(),
+        "bare Keyword::Decode must not park any replacement prompt"
     );
-
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Decode replacement (hand route)");
-
-    // After resolving accept, the permanent should be in P0's hand.
-    assert_eq!(r.battle_area_size(0), 0, "Decode Digimon left battle area");
+    assert_eq!(r.battle_area_size(0), 0, "Digimon left battle area");
     assert_eq!(r.game.player(0).hand.len(), 1, "ended up in hand");
 }
 

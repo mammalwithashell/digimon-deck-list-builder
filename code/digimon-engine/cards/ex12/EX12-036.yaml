@@ -5,7 +5,9 @@ level: 6
 color: [blue, yellow]
 cost: 12
 dp: 12000
-traits: [Mollusk, Sanmyojin, Tentei Hachibushu, Shambala]
+# Card face prints .../Shambala/TB plus "Rule- Trait: Has [Aquatic] Type."
+# (both dropped by the cards.json API ingest; task_69f10a66 EX12-070 triage).
+traits: [Mollusk, Sanmyojin, Tentei Hachibushu, Shambala, TB, Aquatic]
 attribute: Data
 
 alt_paths:

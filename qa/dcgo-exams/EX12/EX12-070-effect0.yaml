@@ -11,13 +11,13 @@
 # use requirement alone (the paid path is EX12-070-effect1/effect2's exam).
 # A prior version of this scenario asserted the prompt would never OPEN,
 # reasoning that EX12-036/EX12-047 are not [TB] -- that is FALSE: both card
-# faces print the [TB] trait (this repo's cards.json is stale there, so our
-# engine sees no [TB] in the hand and auto-skips, while DCGO opens its
-# SelectHandEffect). The select row rides the wire either way: DCGO answers
-# its prompt with the cancel, our engine has nothing parked and skips the
-# row. Declined, the "By trashing..." cost is unpaid, so there is no draw
-# and the option is NOT placed -- it lands in the trash, which the assert
-# pins.
+# faces print the [TB] trait. The stale trait data is FIXED
+# (task_69f10a66 EX12-070 triage: cards.json + card_overrides.json + the
+# card YAMLs now carry [TB], and EX12-036 additionally the Rule-granted
+# [Aquatic]), so our engine now parks the same discard prompt DCGO opens
+# and the decline row answers it LIVE on both sides. Declined, the "By
+# trashing..." cost is unpaid, so there is no draw and the option is NOT
+# placed -- it lands in the trash, which the assert pins.
 #
 #   T1 (memory 0): pass breeding, hard-cast Gasamon (3 memory into 0 ->
 #       overshoot, memory -3, TURN ENDS -- no trailing main prompt).

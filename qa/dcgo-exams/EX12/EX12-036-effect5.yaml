@@ -151,6 +151,12 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of T9: decline the granted <Execute> gate (task_69f10a66 Family 1 --
+  # Ryugumon's face prints [TB]; the Onibimon egg under the spine grants it
+  # <Execute>, and the moved stack can attack the move turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # T10 (P1, memory 3): THE CLAUSE UNDER EXAM -- digivolve the LOCKED Gasamon
   # into Seasarmon (trait circle 2, Gasamon's own passive -1 => cost 1,
   # memory 3 -> 2). Seasarmon's [When Digivolving] delete is suppressed by
@@ -171,7 +177,7 @@ assert:
   # (memory 3 -> 2, i.e. -2 from P0's perspective). Ryugumon reads 12000
   # here -- its Seasarmon-source aura is [Your Turn] only and this is P1's
   # turn.
-  - at: 27
+  - at: 28
     that:
       p0.memory: -2
       p0.trash: []

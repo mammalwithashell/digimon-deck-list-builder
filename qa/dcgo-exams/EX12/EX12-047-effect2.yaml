@@ -28,13 +28,14 @@
 # yield break), dropping every stacked trigger and desyncing all later
 # rows. Blocked until the bridge translates slot values <-> DCGO skill
 # indices.
-# Also: DCGO WILL park the [On Deletion] trash-return pick (the deleted
-# EX12-047 prints [TB] on its face; EX12_047.cs gates on trash-TB) while the
-# sim stays silent (stale cards.json) -- once the value bridge is fixed, a
-# decline row would be needed between the `value:` row and the Ascension
-# `yes:` row, which conflicts with the sim's pending Ascension prompt;
-# consider resolving Ascension (slot 6) FIRST so the emptied trash silences
-# the On Deletion body on both sides.
+# UPDATE (task_69f10a66 EX12-070 triage): the stale [TB] data is fixed, so
+# the sim ALSO parks the [On Deletion] trash-return pick if the [On
+# Deletion] body resolves while the deleted EX12-047 is still in the trash.
+# Per this header's own advice the line now resolves <Ascension> (slot 6)
+# FIRST -- the accepted placement empties the trash, so the [On Deletion]
+# body's picks are candidate-starved and skip silently on BOTH engines.
+# The MultipleSkills value-space mismatch above still stands for the
+# oracle pass.
 card: EX12-047
 clause: EX12-047#effect#2
 seed: 424242
@@ -112,10 +113,11 @@ steps:
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # The deleted carrier's bundle: [On Deletion] (slot 5) + <Ascension>
-  # (slot 6). Resolve slot 5 first -- both of its optional picks are
-  # candidate-starved and skip without prompting.
+  # (slot 6). Resolve slot 6 (<Ascension>) FIRST: accepting it moves the
+  # deleted card out of the trash, so the [On Deletion] body that fires
+  # next is candidate-starved on both engines and skips silently.
   - actor: 0
-    do: { select: { value: 5 } }
+    do: { select: { value: 6 } }
     expect: { prompt: MultipleSkills }
   # THE CLAUSE: the <Ascension> gate -- accept, placing the deleted card as
   # p0's top security card.

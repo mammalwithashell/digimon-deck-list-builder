@@ -155,6 +155,14 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
+  # The corrected [TB] data (task_69f10a66 EX12-070 triage) makes the
+  # deleted Amaterasumon (Lv6, now [TB]) match the fielded Sanmyojin
+  # Arrival delay-Option's "when your Lv5+ [TB] Digimon would leave"
+  # replacement window on BOTH engines -- decline it (this exam is the
+  # [On Deletion] body, not the Delay).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # Kokeshimon's second delete resolves BEFORE the queued deletion
   # triggers: p1's Gasamon is the one level-4-or-lower candidate.
   - actor: 0
@@ -189,7 +197,7 @@ assert:
   # the differ: our engine trashes the placed Sanmyojin Arrival delay Option
   # at the T7 turn-end boundary, so p0.trash reads [EX12-070] here rather
   # than [] -- the printed Delay text keeps it in the battle area.)
-  - at: 24
+  - at: 25
     that:
       p0.field:
         - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

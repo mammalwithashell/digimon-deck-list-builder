@@ -12,27 +12,22 @@
 # battle, then <Execute> deletes the surviving attacker at the end of that
 # attack -- both deletions are the keyword body's own observables.
 #
-# P1 mirrors the cheap Wankomon build as the target. P1's own carrier
-# becomes attack-capable at the end of P1's T6, so DCGO opens P1's OWN
-# <Execute> dialog there -- the line declines it to keep P1 inert.
+# P1 mirrors the cheap Wankomon build as the target. Both carriers become
+# attack-capable the turn they MOVE out of breeding (DCGO's `MovePermanent`
+# never stamps `EnterFieldTurnCount`, so the moved stack passes the
+# entered-this-turn attack gate; our engine agrees), so the <Execute> gate
+# opens at the end of EVERY owner turn while a carrier can attack:
+# P1's T4/T6 (declined) and P0's T5 (declined) and T7 (the exam's YES).
 #
-# ENGINE-GAP NOTE (same as EX12-004-effect1/-inherited0): our engine omits
-# keyword auto-effects for CONDITIONAL declarative grants (game/mod.rs
-# build_effects_for_card), so no EndOfTurnAction window parks sim-side; all
-# three select rows answer no live prompt and ride the wire for DCGO's
-# OptionalSkill / SelectAttackEffect prompts (asserted strictly there). The
-# sim board keeps everything; the oracle side resolves attack + self-delete.
-# An oracle-pass board divergence localizes the sim gap -- the finding this
-# exam exists to surface.
-# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
-# the `decline:` payload serializes as select_cancel, but DCGO's
-# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
-# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
-# scenario schema has no bool-no form (`yes:` must be true). Every
-# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
-# at that row until the bridge maps Decline -> select_bool=false for
-# OptionalSkill (or the hook accepts cancel as "don't use").
-# Here: P1's T6 Execute-window decline row (the T7 `yes` rows are fine).
+# RESOLVED (task_69f10a66 Family 1): the engine-gap note that used to live
+# here is fixed -- conditionally granted keywords now synthesize their
+# triggered auto-effects (game/mod.rs build_effects_for_card), so the
+# EndOfTurnAction park is LIVE sim-side at each of those boundaries. The
+# gate rows below are authored in OUR vocabulary (`pass` = decline the
+# park, `attack` = spend it); the job emitter maps them to DCGO's surface
+# (OptionalSkill no / OptionalSkill yes + SelectAttackEffect). The
+# OptionalSkill decline bridge in DCGO's harness mod (select_cancel = "no",
+# OptionalSkill.cs) is landed, so declines no longer abort the job.
 card: EX12-004
 clause: EX12-004#effect#2
 seed: 424242
@@ -88,16 +83,23 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Turn 5 (P0): move the Shellmon stack to battle (no attack on the move
-  # turn, so T5's end opens no window).
+  # P1's own <Execute> gate opens at T4's end (moved stacks can attack the
+  # move turn). Decline it to keep P1 inert.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 5 (P0): move the Shellmon stack to battle.
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Turn 6 (P1): pass -- and decline P1's OWN <Execute> dialog (P1's carrier
-  # is [TB] over Onibimon too, fielded since T4, so DCGO prompts here).
+  # P0's <Execute> gate at T5's end -- decline (the exam spends T7's).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 6 (P1): pass -- and decline P1's OWN <Execute> gate again.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -105,7 +107,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Turn 7 (P0): pass everything -- the exam window opens at end of turn.
   - actor: 0
@@ -114,26 +116,28 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Accept the optional end-of-turn attack...
+  # Spend the gate: attack the UNSUSPENDED Wankomon (the keyword's widened
+  # defender set). 7000 vs 2000: the defender is deleted by battle, then
+  # <Execute> deletes the surviving Shellmon at the end of that attack. On
+  # the wire this one row becomes OptionalSkill(yes) + SelectAttackEffect.
   - actor: 0
-    do: { select: { yes: true } }
+    do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: OptionalSkill }
-  # ...into the UNSUSPENDED Wankomon (the keyword's widened defender set).
-  # 7000 vs 2000: the defender is deleted by battle, then <Execute> deletes
-  # the surviving Shellmon at the end of that attack.
+  # Sim-only phase exit: our engine stays parked in EndOfTurnAction until a
+  # PASS even after the carrier self-deleted; DCGO rotates on its own, so
+  # this row emits nothing on the wire.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectAttackEffect }
+    do: { pass: {} }
   # Trailing pass: P1's next breeding decision.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # Pre-attack setup, at the T7 main-phase pass (turn 7, P0's turn): the
-  # attacker reads 7000 DP -- Wankomon's inherited [Your Turn] +2000 over the
-  # printed 5000 -- with both sources under it; the defender sits unsuspended
-  # at its printed 2000.
-  - at: 17
+  # Pre-attack setup, at the T7 main-phase pass (turn 7, P0's turn; step 19
+  # after the three gate rows): the attacker reads 7000 DP -- Wankomon's
+  # inherited [Your Turn] +2000 over the printed 5000 -- with both sources
+  # under it; the defender sits unsuspended at its printed 2000.
+  - at: 19
     that:
       turn: 7
       p0.field: [{ card_id: EX12-026, dp: 7000, suspended: false, sources: [EX12-004, EX12-009] }]

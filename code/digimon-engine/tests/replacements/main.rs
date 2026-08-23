@@ -6,6 +6,7 @@ mod deletion_replacements;
 mod dispatcher_core;
 mod dispatcher_guard;
 mod enum_and_context;
+mod granted_keywords;
 mod native_keywords;
 mod nested_select_decoy;
 mod nested_select_fragment;

@@ -1576,7 +1576,7 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        let (base_level, base_colors) = {
+        let base_level = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
@@ -1585,23 +1585,48 @@ impl Game {
                     .log("[Rejected] effect_initiated_digivolve: target top card has no level");
                 return false;
             };
-            (base_level, identity.colors)
+            base_level
         };
 
-        let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
         let matching_memory_cost = if ignore_requirements {
             Some(0)
         } else {
-            evo_costs
-                .iter()
-                .find(|ec| {
-                    ec.level == base_level
-                        && (ignore_color
-                            || crate::action::mask::evo_color(ec.card_color)
-                                .map(|c| base_colors.contains(&c))
-                                .unwrap_or(false))
-                })
-                .map(|ec| ec.memory_cost)
+            // Route through the SAME machinery as the player main-phase
+            // digivolve action (`all_digivolve_routes_for_card`) so
+            // effect-initiated digivolves honor everything the player action
+            // does: printed evo-cost circles (`collect_rules_digivolve_routes`
+            // performs the identical synth_identity level+color match the old
+            // raw `evo_costs` scan did), trait-gated alternative digivolution
+            // circles authored as DSL `alt_paths: kind: digivolve` (e.g.
+            // EX12-047 "Lv.5 w/[Shambala] trait: Cost 3"), and the
+            // `CanOnlyDigivolveInto` restriction gate. App Fusion is excluded:
+            // it is an alt-PLAY mechanic with its own linked-card consumption
+            // commit path, not a digivolve circle. Costs auto-min (rule-17
+            // cost CHOICE for effect digivolves is a known follow-up).
+            let route_cost = self.card_source_ref_peek(source_ref).and_then(|card| {
+                self.all_digivolve_routes_for_card(card, target)
+                    .into_iter()
+                    .filter(|route| !route.app_fusion)
+                    .map(|route| route.memory_cost)
+                    .min()
+            });
+            if ignore_color {
+                // The alt-path predicate evaluation has no color-waiver hook,
+                // so keep the color-waived printed-circle scan as an
+                // ADDITIONAL candidate and take the min across both.
+                let waived = self.card_data[evo_card_data_index]
+                    .evo_costs
+                    .iter()
+                    .filter(|ec| ec.level == base_level)
+                    .map(|ec| ec.memory_cost)
+                    .min();
+                match (route_cost, waived) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (a, b) => a.or(b),
+                }
+            } else {
+                route_cost
+            }
         };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(

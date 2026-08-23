@@ -163,6 +163,13 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (task_69f10a66 Family 1): Onibimon
+  # under the moved MarineBullmon stack grants the [TB] top <Execute>, so
+  # ending T7 parks the end-of-turn attack gate (our EndOfTurnAction mask;
+  # DCGO OptionalSkill). Decline -- the exam's attack is T9's, not this one.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # T8 (p1)
   - actor: 1
     do: { pass: {} }
@@ -197,12 +204,12 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # After the YES (step 25): Tamer suspended on an otherwise-emptied field,
+  # After the YES (step 26): Tamer suspended on an otherwise-emptied field,
   # memory 3 + 1 from p0's perspective; trash = MarineBullmon's whole stack
   # (Onibimon + the three digivolvers), the Hanimon-inherited trash pick, and
   # the two un-picked T7 reveal cards. The checked security card left p1's
   # stack for their trash (5 -> 4).
-  - at: 25
+  - at: 26
     that:
       p0.memory: 4
       p0.trash: [EX12-004, EX12-011, EX12-031, EX12-061, EX12-063, EX12-070, EX12-074]

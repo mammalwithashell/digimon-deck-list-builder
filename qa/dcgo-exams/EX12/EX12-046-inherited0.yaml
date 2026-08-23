@@ -153,6 +153,13 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of the move turn: decline the granted <Execute> gate
+  # (task_69f10a66 Family 1 -- Amaterasumon EX12-047's face prints [TB]; the Onibimon egg grants <Execute>;
+  # moved stacks can attack the move turn; our EndOfTurnAction PASS maps
+  # to DCGO OptionalSkill "no").
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # T10 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
@@ -183,7 +190,7 @@ assert:
   # Two security cards checked (5 -> 3), the free play landed (Gasamon fresh
   # on the field beside the suspended carrier), and memory still 3 right
   # after the pick -- the play cost nothing.
-  - at: 29
+  - at: 30
     that:
       p1.security: 3
       p0.field:

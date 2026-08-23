@@ -10,7 +10,15 @@ use std::sync::Arc;
 /// Condition closures run during effect evaluation and during tensor-time
 /// inspection (for static DP modifiers / OPT state). They receive a
 /// read-only view of game state; they must not mutate.
-pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
+///
+/// `Arc` (not `Box`) so a condition can be SHARED between effects:
+/// `Game::build_effects_for_card` clones a declarative `grant_keyword`
+/// clause's `active_when` condition onto the keyword auto-effects it
+/// synthesizes for the grant (task_69f10a66 Family 1 — a conditionally
+/// granted `<Execute>` must fire its end-of-your-turn trigger only while the
+/// grant is active). Behaviorally inert for every other caller — the closure
+/// is still immutable and `Send + Sync`.
+pub type ConditionFn = Arc<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
 
 /// Replacement-effect candidate-filter closure. Evaluated in
 /// `replacement::collect_candidates` after `condition` for `WhenWouldBe*`
@@ -878,7 +886,7 @@ impl EffectBuilder {
     where
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
-        self.inner.outer_optional_guard = Some(Box::new(f));
+        self.inner.outer_optional_guard = Some(Arc::new(f));
         self
     }
 
@@ -909,7 +917,7 @@ impl EffectBuilder {
         mut self,
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
-        self.inner.condition = Some(Box::new(f));
+        self.inner.condition = Some(Arc::new(f));
         self
     }
 
@@ -1144,7 +1152,7 @@ impl EffectBuilder {
     where
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
-        self.inner.option_color_requirement_bypass = Some(Box::new(f));
+        self.inner.option_color_requirement_bypass = Some(Arc::new(f));
         self
     }
 

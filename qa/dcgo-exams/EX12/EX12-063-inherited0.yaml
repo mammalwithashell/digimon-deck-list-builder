@@ -24,25 +24,20 @@
 #      is not offered (the attacker is already suspended, so its
 #      suspend-to-prevent cost is unpayable).
 #
-# SIM-SIDE GAP, stated honestly: after the declined Barrier replacement, our
-# engine never fires Karakurumon's INHERITED [On Deletion] (the on-card copy
-# in EX12-063-effect1 fires from the identical battle deletion, and the
-# inherited copy fires from effect deletions in the behavioral suite). The
-# affirm/pick/decline steps below therefore answer no live sim prompt and are
-# carried as wire rows for DCGO, which is expected to ask them -- so the
-# assertions here pin only state both engines agree on (the revival zones are
-# the differ's to adjudicate). If the oracle revives the Hanimon, that is an
-# engine divergence to fix, not a scenario fault.
-# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
-# the `decline:` payload serializes as select_cancel, but DCGO's
-# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
-# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
-# scenario schema has no bool-no form (`yes:` must be true). Every
-# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
-# at that row until the bridge maps Decline -> select_bool=false for
-# OptionalSkill (or the hook accepts cancel as "don't use").
-# Here: the Barrier decline row (DCGO Barrier is isOptional=true ->
-# OptionalSkill). That row is LIVE sim-side and cannot be removed.
+# RESOLVED (task_69f10a66 Family 3): the sim-side gap this header used to
+# document is FIXED at its real root -- NOT an engine trigger bug (five
+# DebugRunner differentials pin the engine's decline paths sound) but the
+# scripted-line resolver: a pure-cancel `decline:` row counted as 1 pick in
+# `payload_pick_count`, so after the decline's PASS the resolver fired a
+# PHANTOM SECOND PASS that silently declined the freshly-parked inherited
+# [On Deletion] gate. With that fix (runners/selection_resolve.rs) plus the
+# 3b surface alignment (EX12-063.yaml's "you may play" trash picks are now
+# declinable picks, matching DCGO's cancelable SelectCardEffect -- no
+# OptionalSkill gate on either side), the affirm/pick rows below answer
+# LIVE sim prompts and the assert pins the revival itself.
+# The OptionalSkill decline bridge (select_cancel = "no", OptionalSkill.cs)
+# is landed in the base-repo DCGO mod, so the Barrier decline row no longer
+# aborts the oracle job.
 card: EX12-063
 clause: EX12-063#inherited#0
 seed: 424242
@@ -140,17 +135,27 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
-  # The clause (inherited): revive the trashed Hanimon, then decline the
-  # revived Hanimon's own [On Play]. Our engine currently asks none of these
-  # (see header); the rows ride the wire for DCGO. REVIEW 2026-08-22: DCGO's
-  # EX12_063.cs [On Deletion] is SetUpActivateClass(..., isOptional: false)
-  # -- there is NO OptionalSkill gate; the optionality lives inside
-  # PlayByEffect's cancelable trash pick (SelectCardEffect, Root.Trash). The
-  # former `yes:` row expecting OptionalSkill would have kind-mismatched and
-  # aborted the job; removed.
+  # The clause (inherited): revive the trashed Hanimon. LIVE sim-side since
+  # task_69f10a66: the Family-3a resolver fix (a pure-cancel row no longer
+  # fires a phantom trailing PASS that swallowed this trigger) plus the
+  # declinable-pick surface (EX12-063.yaml select_trash optional: true —
+  # matching DCGO's EX12_063.cs cancelable SelectCardEffect, no OptionalSkill
+  # gate) make this row answer our engine's own trash pick directly.
   - actor: 0
     do: { select: { cards: [EX12-061] } }
     expect: { prompt: SelectCardEffect }
+  # The revived Hanimon's [On Play] queues alongside a SECOND pending
+  # trigger our engine over-enqueues (dead Ryugumon's [All Turns]
+  # on-ally-played observer scanned from the TRASH — flagged as a separate
+  # engine finding; its body fizzles on p1's empty board). Order Hanimon's
+  # [On Play] (slot 0) first. DCGO stacks only Hanimon's skill, so this
+  # order row is ENGINE-ONLY — the oracle pass must adjudicate (same class
+  # as EX12-036-effect1's TriggerOrder caveat).
+  - actor: 0
+    do: { select: { value: 0 } }
+    expect: { prompt: MultipleSkills }
+  # Decline the revived Hanimon's "By trashing 1 [Puppet]/[TB] card from
+  # hand, draw 2" cost pick; the over-enqueued observer then fizzles.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
@@ -159,11 +164,20 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  # Pinned to state both engines agree on (see the header note): the security
+  # End-of-line state (the revive pick is LIVE mid-battle since the Family-3a
+  # fix, so mid-battle indices no longer pin post-battle state): the security
   # battle happened -- p1 is down to 4 security with the flipped EX12-036 in
-  # trash -- and the digivolve's cost-3 alt route emptied the gauge.
-  - at: 15
+  # trash -- the digivolve's cost-3 alt route emptied the gauge, and THE
+  # CLAUSE's observable: the trashed Hanimon #2 is back on p0's field beside
+  # Hanimon #1 (the deleted stack's other cards stay in trash).
+  - at: 19
     that:
-      memory: 0
+      # -3: the closing pass rotated the turn; a turn ending at 0 hands the
+      # opponent the 3-minimum, read here from p0's perspective.
+      memory: -3
       p1.security: 4
       p1.trash: [EX12-036]
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+      p0.trash: [EX12-036, EX12-063]

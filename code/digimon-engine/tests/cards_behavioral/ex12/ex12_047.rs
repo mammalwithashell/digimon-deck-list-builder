@@ -195,3 +195,88 @@ fn ex12_047_on_deletion_returns_tb_from_trash_and_plays_level5_tb_from_hand() {
     assert!(hand_contains(&runner, 0, "TB-RETURN"));
     assert!(field_contains(&runner, 0, "TB-PLAY"));
 }
+
+// ── Effect-initiated digivolve vs the printed digivolution circles ──────────
+//
+// EX12-047 prints TWO digivolve circles:
+//   1. "Lv.5 from Yellow: Cost 4"            (standard color circle)
+//   2. "Lv.5 w/[Shambala] trait: Cost 3"     (alternative trait circle)
+// Both are authored as `alt_paths: kind: digivolve` in EX12-047.yaml. The
+// player main-phase action honors both via `all_digivolve_routes_for_card`
+// (which folds in `collect_dsl_alt_digivolve_routes`). An EFFECT-initiated
+// digivolve (`Game::effect_initiated_digivolve`, the target of the DSL
+// `effect_initiated_digivolve:` step) must honor the same printed circles.
+
+#[test]
+fn ex12_047_effect_initiated_digivolve_uses_standard_yellow_circle() {
+    // Control: a Lv.5 YELLOW base satisfies the standard circle (Cost 4).
+    let base = super::support::digimon("YELLOW-BASE", CardColor::Yellow, 5, 8, 7000, &[]);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-047 YAML loads")
+        .add_card(base)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    let target = runner.place_on_field(0, "YELLOW-BASE", Some(0));
+
+    let ok = runner.game.effect_initiated_digivolve(
+        0,
+        0,
+        target,
+        digimon_engine::enums::CostDelta::Reduce(0),
+        false,
+        digimon_engine::enums::PlaySource::ByEffect,
+    );
+    assert!(
+        ok,
+        "effect-initiated digivolve over a Lv.5 yellow base must use the standard circle"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID
+    );
+    assert_eq!(runner.memory(), 6, "standard circle costs 4 (10 - 4 = 6)");
+}
+
+#[test]
+fn ex12_047_effect_initiated_digivolve_honors_shambala_trait_circle() {
+    // A RED Lv.5 [Shambala] base satisfies ONLY the alternative trait circle
+    // ("Lv.5 w/[Shambala] trait: Cost 3") — the standard circle requires a
+    // yellow base. The player main-phase digivolve action accepts this base;
+    // an effect-initiated digivolve must too.
+    let base = super::support::digimon("SHAMBALA-BASE", CardColor::Red, 5, 8, 7000, &["Shambala"]);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-047 YAML loads")
+        .add_card(base)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    let target = runner.place_on_field(0, "SHAMBALA-BASE", Some(0));
+
+    let ok = runner.game.effect_initiated_digivolve(
+        0,
+        0,
+        target,
+        digimon_engine::enums::CostDelta::Reduce(0),
+        false,
+        digimon_engine::enums::PlaySource::ByEffect,
+    );
+    assert!(
+        ok,
+        "effect-initiated digivolve must honor the alternative trait circle \
+         (Lv.5 w/[Shambala] trait: Cost 3) — the base qualifies for the player \
+         main-phase action but is rejected by Game::effect_initiated_digivolve, \
+         which only matches printed `evo_costs` (level + color)"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID
+    );
+    assert_eq!(runner.memory(), 7, "trait circle costs 3 (10 - 3 = 7)");
+}

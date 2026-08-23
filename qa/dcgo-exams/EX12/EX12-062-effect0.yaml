@@ -15,28 +15,19 @@
 # (answered with Gasamon, own.field.1), the deletion resolves, then the enemy
 # SelectPermanentEffect (answered with p1's Hanimon, opp.field.0).
 #
-# EXECUTE-WINDOW LEDGER (added in review): both fielded stacks sit on an
-# Onibimon egg, and their tops -- Hanimon and later Kokeshimon -- carry the
-# [TB] trait, so DCGO's EX12-004 grant gives the carrier <Execute> and parks
-# an OPTIONAL end-of-turn attack dialog at every turn end where the carrier
-# CanAttack (EX12_004.cs -> CardEffectFactory ExecuteEffect ->
-# CanActivateExecute gates on CanAttack: not on the move turn, not while
-# suspended). That happens at THREE points on this line: end of p0's T5
-# (Hanimon, fielded T3), end of p1's T6 (Hanimon, fielded T4), end of p0's
-# T7 (Kokeshimon, never attacked). Each is declined. Sim-side these rows
-# answer no live prompt (conditional-grant engine gap, same as
-# EX12-004-effect1) and ride the wire for DCGO's OptionalSkill.
-# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
-# the `decline:` payload serializes as select_cancel, but DCGO's
-# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
-# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
-# scenario schema has no bool-no form (`yes:` must be true). Every
-# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
-# at that row until the bridge maps Decline -> select_bool=false for
-# OptionalSkill (or the hook accepts cancel as "don't use").
-# Here: the three Execute-window decline rows added in review. Without
-# them the line desyncs anyway (DCGO's window would meet an action row),
-# so they stay as the semantically correct answers.
+# EXECUTE-WINDOW LEDGER (corrected, task_69f10a66 Family 1): both fielded
+# stacks sit on an Onibimon egg, and their tops -- Hanimon and later
+# Kokeshimon -- carry the [TB] trait, so the EX12-004 grant gives the
+# carrier <Execute> and the end-of-turn attack gate opens at every turn end
+# where the carrier CanAttack. Moved stacks CAN attack the move turn
+# (DCGO's MovePermanent never stamps EnterFieldTurnCount; our engine
+# agrees), so the gate opens at FIVE points on this line: end of p0's
+# T3 and T5 (Hanimon, moved T3), end of p1's T4 and T6 (Hanimon, moved
+# T4), end of p0's T7 (Kokeshimon, never attacked). Each is declined via
+# our EndOfTurnAction PASS (the engine parks live sim-side since the
+# Family-1 fix); the emitter maps each to OptionalSkill "no" on the wire
+# (the DCGO-side select_cancel decline bridge is landed in
+# OptionalSkill.cs).
 card: EX12-062
 clause: EX12-062#effect#0
 seed: 424242
@@ -111,6 +102,10 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of T3: decline p0's granted <Execute> gate (see the ledger).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 4 (p1): move Hanimon out (the deletion target).
   - actor: 1
     do: { move: {} }
@@ -118,6 +113,10 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # End of T4: decline p1's granted <Execute> gate.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 5 (p0): play Gasamon (cost 3, memory 3 -> 0) as payment fodder.
   - actor: 0
     do: { pass: {} }
@@ -128,10 +127,10 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T5: decline the granted <Execute> dialog on p0's Hanimon (see the
-  # Execute-window ledger above; sim-side this answers no live prompt).
+  # End of T5: decline the granted <Execute> gate on p0's Hanimon (a LIVE
+  # EndOfTurnAction park sim-side; OptionalSkill "no" on the wire).
   - actor: 0
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Turn 6 (p1): all-pass.
   - actor: 1
@@ -140,9 +139,9 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T6: decline the granted <Execute> dialog on p1's OWN Hanimon.
+  # End of T6: decline the granted <Execute> gate on p1's OWN Hanimon.
   - actor: 1
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Turn 7 (p0): the clause -- Kokeshimon over Hanimon (cost 2, memory 3 -> 1).
   - actor: 0
@@ -163,10 +162,10 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T7: decline the granted <Execute> dialog on p0's Kokeshimon (the
+  # End of T7: decline the granted <Execute> gate on p0's Kokeshimon (the
   # [TB] top over the same Onibimon egg; it never attacked, so it CanAttack).
   - actor: 0
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Trailing pass: p1's next breeding decision closes the line.
   - actor: 1
@@ -175,7 +174,7 @@ steps:
 assert:
   # After both deletions: p0's battle area is just the Kokeshimon stack
   # (Gasamon paid), p1's is empty (Hanimon deleted), memory 1.
-  - at: 21
+  - at: 23
     that:
       memory: 1
       p0.field: [{ card_id: EX12-062, dp: 5000, suspended: false, sources: [EX12-004, EX12-061] }]

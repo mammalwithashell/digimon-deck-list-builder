@@ -18,14 +18,12 @@
 # The clause then parks the trash pick. Candidates: only the trashed Hanimon
 # (Karakurumon itself is level 5 and fails the filter). The revived Hanimon's
 # own [On Play] hand-trash prompt is declined.
-# REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict): DCGO's EX12_063
-# [On Deletion] is SetUpActivateClass(..., isOptional: false) -- NO
-# OptionalSkill gate; DCGO goes straight to the cancelable trash pick
-# (SelectCardEffect). Our engine parks a live OptionalSkill gate first, so
-# the `yes:` row is required sim-side but kind-mismatches on the oracle,
-# aborting BEFORE the revive. Needs engine/harness gate-shape alignment.
-# (The inherited copy's exam, EX12-063-inherited0, dodges this: its rows are
-# wire-only there and the gate row was removed in review.)
+# RESOLVED (task_69f10a66 Family 3b): the gate-shape conflict is gone --
+# EX12-063.yaml's "You may play ..." trash pick is now a DECLINABLE pick
+# (select_trash optional: true), matching DCGO's cancelable SelectCardEffect
+# (EX12_063.cs: isOptional false + skippable, NO OptionalSkill gate). Both
+# engines park exactly one prompt, the pick itself; the former `yes:` gate
+# row is removed.
 card: EX12-063
 clause: EX12-063#effect#1
 seed: 424242
@@ -112,12 +110,9 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # The clause is optional ("You may play..."): affirm the trigger.
-  - actor: 0
-    do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
   # The clause: revive the trashed Hanimon (the only level<=4 [Puppet]/[TB]
-  # Digimon card in the trash; Karakurumon itself is level 5 and filtered out).
+  # Digimon card in the trash; Karakurumon itself is level 5 and filtered
+  # out). The printed "You may" is the pick's own PASS -- no gate row.
   - actor: 0
     do: { select: { cards: [EX12-061] } }
     expect: { prompt: SelectCardEffect }
@@ -133,7 +128,7 @@ assert:
   # After the deletion window: Karakurumon is in the trash, and the revived
   # Hanimon stands next to the T3 copy (its own [On Play] was declined, so
   # the hand is untouched by it).
-  - at: 15
+  - at: 14
     that:
       p0.field:
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }

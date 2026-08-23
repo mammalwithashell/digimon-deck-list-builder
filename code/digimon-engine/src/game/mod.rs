@@ -2913,28 +2913,52 @@ impl Game {
 
         // Declarative `grant_keyword` clauses are semantically equivalent to
         // printed keywords for keyword lookups. If the granted keyword carries
-        // replacement behavior (Barrier, Armor Purge, Scapegoat, etc.), also
-        // synthesize the keyword's auto-effect so inherited keyword grants can
-        // participate in replacement scans. Conditional grants are omitted
-        // here for now because `ConditionFn` is boxed and not cloneable; those
-        // cards should lower an explicit conditional replacement until the
-        // condition-composition surface is added.
+        // triggered or replacement behavior (Execute, Barrier, Armor Purge,
+        // Scapegoat, etc.), also synthesize the keyword's auto-effects so
+        // keyword grants participate in the triggered-effect enqueue and the
+        // replacement scans.
+        //
+        // task_69f10a66 Family 1: CONDITIONAL grants (an `active_when` aura
+        // like EX12-004 Onibimon's "[Your Turn] this [TB] Digimon gains
+        // <Execute>") synthesize too — `ConditionFn` is `Arc`-shared, so the
+        // grant's condition is cloned onto each synthesized auto-effect
+        // (AND-composed with any condition the auto-effect already carries,
+        // e.g. Armor Purge's stack-size gate). The condition is EVALUATED at
+        // fire/collect time (`run_queued_effect_inner` / `collect_candidates`),
+        // never here, so the built list stays a pure function of
+        // `(card_id, handle, under_top)` and the `effects_for_card` memo (and
+        // its debug differential oracle) remain valid. Without this, a
+        // conditionally granted trigger keyword installed NO body anywhere:
+        // granted <Execute> never fired at end of turn and the printed "may
+        // attack" choice never reached the action space (rule-17 violation —
+        // §16-37-2/-3, §15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
                 let Some(kw) = grant.granted_keyword else {
                     continue;
                 };
-                if !grant.declarative || grant.condition.is_some() {
+                if !grant.declarative {
                     continue;
                 }
                 if !grant.inherited && native_keywords.contains(&kw) {
                     continue;
                 }
+                let grant_condition = grant.condition.clone();
                 auto_effects.extend(
                     crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
                         .into_iter()
                         .map(|mut effect| {
                             effect.inherited = grant.inherited;
+                            if let Some(gc) = grant_condition.clone() {
+                                effect.condition = Some(match effect.condition.take() {
+                                    Some(own) => {
+                                        std::sync::Arc::new(move |rctx: &crate::effect_context::EffectReadContext| {
+                                            gc(rctx) && own(rctx)
+                                        })
+                                    }
+                                    None => gc,
+                                });
+                            }
                             effect
                         }),
                 );
