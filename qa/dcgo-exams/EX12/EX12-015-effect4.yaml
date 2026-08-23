@@ -1,0 +1,139 @@
+# Exam scenario: EX12-015 (Gokuumon), clause effect#4 --
+# "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3".
+#
+# The witness is the digivolve itself plus the memory it costs. Gokuumon's
+# PRINTED digivolve circle is "red Lv.4: Cost 4" (cards.json evo_costs); the
+# clause under exam is the ALTERNATE circle, "Lv.4 w/[Shambala] trait: Cost 3".
+# Seasarmon (EX12-011) is a red Lv.4 WITH the [Shambala] trait, so both circles
+# are open at T5 and the engine must offer -- and this line must take -- the
+# cost-3 one. p0 enters T5 on 3 memory, so the cost-3 path lands on 0 while the
+# cost-4 path would land on -1 and END THE TURN: the assert at step 12
+# (p0.memory: 0, and a T5 main_phase still to answer) is only satisfiable by
+# the alternate circle.
+#
+# Highway: the proven single-route red breeding line from
+# EX12-047-effect1.yaml, truncated one level lower --
+#   T1 hatch + Wankomon over the Onibimon egg (alt [Shambala], cost 0)
+#   T3 Seasarmon over Wankomon (cost 2)
+#   T5 Gokuumon over Seasarmon (THE CLAUSE, alt [Shambala], cost 3)
+# Everything happens in the BREEDING area, so no attack, no blocker window and
+# no end-of-turn gate opens (Onibimon's [TB] <Execute> grant needs a battle-area
+# attacker; Gokuumon has <Raid>, not <Engage>).
+#
+# p1 all-passes and never has a Digimon, so BOTH of the [When Digivolving]
+# effects on the way up fizzle symmetrically: Seasarmon's "delete 1 opponent
+# Digimon with 5000 DP or less" (T3) and Gokuumon's own "1 of your opponent's
+# Digimon gets -4000 DP" (T5) each guard on an opponent battle-area Digimon --
+# DCGO with `HasMatchConditionPermanent` / `IsPermanentExistsOnOpponent...`,
+# ours with an empty candidate set -- so neither engine opens a prompt. That
+# keeps this file about the DIGIVOLVE COST and nothing else; the -4000 DP body
+# is exercised by EX12-015-effect1.yaml, which gives p1 a board on purpose.
+#
+# p0's stack pins hand (0-4), security (5-9, never checked: p1 never attacks)
+# and every draw (10-14: T1 digivolve, T3 turn + digivolve, T5 turn +
+# digivolve). No draw repeats a card this line names in a `using:` intent --
+# a second EX12-009/011/015 in hand would make the intent AMBIGUOUS and
+# lowering would (correctly) refuse.
+card: EX12-015
+clause: EX12-015#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-015
+      - EX12-070
+      - EX12-075
+      # security (5-9) -- never checked; Digimon only, no [Security] text
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14)
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4), inert -- p1 all-passes
+      - EX12-070
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9) -- never checked
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon (cost 2 -> 1). Its
+  # [When Digivolving] delete fizzles: p1 has no Digimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): THE CLAUSE -- Gokuumon over the red Lv.4 [Shambala]
+  # Seasarmon on the alternate circle, cost 3 -> memory 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-015 } }
+    expect: { prompt: main_phase }
+  # BOTH circles are open from Seasarmon, so BOTH engines ask which cost to
+  # pay -- ours as an `EffectChoice` ("Choose which digivolution cost to pay"),
+  # DCGO as a `SelectCountEffect` over the DISTINCT cost list
+  # (CardController.cs:668-742, "Which digivolution cost do you pay?"). The
+  # answer is the VALUE, not a branch index: `count` payloads resolve by
+  # matching the number against the engine's own branch LABELS. `3` names the
+  # alternate [Shambala] circle -- the clause under exam.
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL and prefix-pinned: memory is a pure function of the scripted line.
+  # 0 == the cost-3 circle was taken (cost 4 would be -1, which also ends the
+  # turn and would make the trailing step 12 unanswerable).
+  - at: 13
+    that: { p0.memory: 0 }

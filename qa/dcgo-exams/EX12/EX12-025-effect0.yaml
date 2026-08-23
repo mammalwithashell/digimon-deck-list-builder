@@ -1,0 +1,107 @@
+# Exam scenario: EX12-025 Gawappamon effect clause #0 -- "<Blocker> (This
+# Digimon can block in the blocker timing.)"
+#
+# The keyword is only measurable by actually BLOCKING: the witness is that
+# P1's declared attack on the security stack is redirected into Gawappamon
+# (P1's security is untouched, Gawappamon ends the step suspended, and the
+# 2000 DP attacker dies to Gawappamon's 5000 DP).
+#
+# Both engines surface the block as ONE declinable pick over the defender's
+# own field, so the step is an ordinary `targets:` select, not a fold:
+#   - DCGO: AttackProcess.cs `BlockTiming()` -> SelectPermanentEffect
+#     (`canNoSelect: !HasCollision`, message "Select 1 Digimon that will
+#     block."), gated by `permanent.HasBlocker && permanent.CanBlock(...)`.
+#   - ours: combat/mod.rs `try_enter_block` -> PendingSelection
+#     { kind: OwnField, is_optional: true, prompt: "Declare a blocker" }.
+#
+# Board hygiene -- everything on the table is there to keep the block window
+# the ONLY prompt in the line:
+#   - No egg is ever hatched, on either seat, so Onibimon's <Execute> grant
+#     never exists and no end-of-turn gate opens.
+#   - P0 reaches Gawappamon by OVERSPENDING on T1 (memory 0 -> -5, which
+#     legally ends the turn). Its [On Play] bounce arm is vacuous against
+#     P1's empty board -- DCGO guards the prompt with
+#     `HasMatchConditionPermanent`, so neither engine asks.
+#   - P1's attacker is Gasamon (EX12-020): no [On Play], no attack-time
+#     trigger of its own, and NO digivolution sources under it, so the
+#     [When Attacking] inherited draws that live on this archetype's Lv.3s
+#     cannot fire. It is played on T2 and attacks on T4 (summoning sickness).
+#   - Gawappamon is the TOP card, so its own inherited [When Attacking] is
+#     inactive; it never attacks anyway.
+#
+#   T1 (P0, memory 0): overspend-play Gawappamon; the turn ends on resolution.
+#   T2 (P1, memory 5): play Gasamon (5 -> 2), then pass (P0 gets 3).
+#   T3 (P0, memory 3): all-pass (P1 gets 3).
+#   T4 (P1, memory 3): attack the security stack with Gasamon. THE CLAUSE:
+#       P0 declares Gawappamon as the blocker; the attack is redirected and
+#       the 2000-vs-5000 battle deletes Gasamon. Attacking costs no memory,
+#       so P1 keeps the turn for the trailing step.
+#
+# Deck: `sw-shambala` for P0 (appended for this batch -- toho-braves has no
+# Gawappamon); P1 keeps toho-braves.
+card: EX12-025
+clause: EX12-025#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-025, EX12-031, EX12-031, EX12-031, EX12-011,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-046, EX12-046,   # security
+            EX12-046]                                           # T3 draw
+    rest: sw-shambala
+  p1:
+    stack: [EX12-020, EX12-031, EX12-031, EX12-031, EX12-011,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-046, EX12-046,   # security
+            EX12-046, EX12-026]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): overspend-play Gawappamon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-025, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): play the attacker, then hand the turn over.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): all-pass; Gasamon sheds summoning sickness.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): declare the attack on the security stack.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: P0's block window. Gawappamon is the only candidate --
+  # it is the only unsuspended Digimon P0 controls and the only one with
+  # <Blocker>.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking spends no memory, so P1 still holds the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The block happened: the security check never ran (P0 still on 5), the
+  # blocker is suspended, and the redirected 2000-vs-5000 battle killed the
+  # attacker.
+  - at: 10
+    that:
+      p0.security: 5
+      p0.field: [{ card_id: EX12-025, dp: 5000, suspended: true, sources: [] }]
+      p1.field: []
+      p1.trash: [EX12-020]

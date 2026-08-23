@@ -1,0 +1,177 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #5 -- the <Retaliation> half
+# of "[All Turns] All of your [Puppet] or [TB] trait Digimon gain <Blocker> and
+# <Retaliation>."
+#
+# <Retaliation> reads "(When this Digimon is deleted after losing a battle,
+# delete the Digimon it was battling.)" -- mandatory, no prompt on either side
+# (DCGO `CardEffectFactory.RetaliationEffect`, `isOptional` false; our aura
+# grant lowers to an OnDeletion trigger). So the ONLY observable is the second
+# corpse: the winner of a battle it had no business losing.
+#
+# The line: P0's 2000 DP Gasamon blocks P1's 7000 DP Shishimamon. Gasamon dies
+# in the block battle -- unremarkable -- and SHISHIMAMON SHOULD DIE TOO, with
+# nothing on P0's board that could have deleted it. Gasamon prints no
+# <Retaliation>; it is inside the aura only because it carries [TB].
+#
+# PREDICTED DIVERGENCE (verified sim-side 2026-08-23, see the assert block):
+# our engine does NOT delete Shishimamon on this line. The line itself reaches
+# the clause correctly -- Gasamon blocks, loses the battle and hits P0's trash
+# -- so this is a finding about the aura's grant, not an authoring error.
+#
+# Note the <Blocker> half of the same sentence is doing the load-bearing work
+# of opening the window (that is clause #4/#3's witness) -- unavoidable, since
+# a Digimon must lose a battle to retaliate and blocking is the cheapest way to
+# make a 2000 DP body lose one on the opponent's turn.
+#
+#   T1/T2: both seats pass everything (P0 cannot hard-cast the cost-12
+#       Kaguyamon at memory 0: 0 - 12 = -12 is below the -10 floor).
+#   T3 (P0, memory 3): hard-cast Kaguyamon (3 -> -9) -- the aura switches on.
+#       Its [On Play] revive (clause #2's exam) sees an EMPTY trash, so no
+#       prompt parks; the turn ends on the overshoot.
+#   T4 (P1, memory 9): play Shishimamon (cost 7, 9 -> 2). Its [On Play] "give 1
+#       of your opponent's Digimon <Security A. -1> and -3000 DP until their
+#       turn ends" (EX12-046 clause #0/#1) is MANDATORY and P0's lone Kaguyamon
+#       is its only candidate -- the select answers it. 12000 - 3000 = 9000 is
+#       nowhere near lethal, and the modifier expires at the end of P0's T5, so
+#       Kaguyamon reads a clean 12000 at the T6 block. Pass out (memory 3).
+#   T5 (P0, memory 3): play Gasamon (3 -> 0; only a [Your Turn] passive, no
+#       prompt), pass out.
+#   T6 (P1, memory 3): THE CLAUSE -- Shishimamon attacks security, P0's window
+#       opens, the select blocks with GASAMON (own.field.1), and the granted
+#       <Retaliation> takes the 7000 DP attacker down with it.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP), then the
+# seat's turn draws in order. P1's security deliberately holds NO EX12-074: its
+# "[Security] [Your Turn] [Once Per Turn] when one of your [Shambala] Digimon
+# attacks..." functions FROM the security stack and would bury the blocker
+# window under a TriggerOrder prompt when the [Shambala] Shishimamon declares.
+card: EX12-065
+clause: EX12-065#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): one Kaguyamon (T3), one Gasamon (T5).
+      - EX12-065
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never checked (the attack is blocked).
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Shishimamon.
+      - EX12-046
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9): Digimon only, NO EX12-074 (see the header note).
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
+      - EX12-074
+      - EX12-075
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the aura source lands; empty trash keeps its On Play
+  # silent; the cost-12 overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-065, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 9): the future attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Shishimamon's mandatory give: P0's lone Kaguyamon.
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the retaliator arrives.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the clause under exam.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0's blocker window: block with GASAMON (field.1), not Kaguyamon.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P1 keeps the turn after the battle.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL, and only over facts BOTH engines must agree on regardless of how
+  # the granted <Retaliation> resolves: the block intercepted the attack (P0's
+  # security never checked) and Gasamon lost the 5000-vs-2000 battle.
+  #
+  # The clause's own observable -- Shishimamon dying as the battle's WINNER --
+  # is deliberately NOT asserted, because our engine does not currently produce
+  # it. Verified sim-side on this exact line (2026-08-23): at the block step
+  # Gasamon is in P0's trash but P1 still fields EX12-046 with an empty trash,
+  # i.e. the aura-granted <Retaliation> never fires. The printed keyword IS
+  # wired (`keyword_effects.rs` `Keyword::Retaliation` installs an
+  # `Effect::on_deletion` with a Battle cause gate), and the per-card test
+  # `ex12_065.rs` only asserts `has_keyword(.., Retaliation)` -- the FLAG --
+  # so the suspicion is that the `kind: aura` + `grant_keyword` path grants the
+  # flag without installing the trigger. DCGO's `RetaliationEffect` is
+  # mandatory (`isOptional` false) and general_rule.pdf 16-12 makes it
+  # mandatory too, so the oracle pass is EXPECTED to come back `diverged` here,
+  # with DCGO holding EX12-046 in P1's trash. That divergence is this file's
+  # product; asserting our current behaviour would bake the bug in, and
+  # asserting the correct behaviour would fail the sim-only CI gate before the
+  # oracle has ruled.
+  - at: 16
+    that:
+      p0.security: 5
+      p0.trash: [EX12-020]
+      p0.field:
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }

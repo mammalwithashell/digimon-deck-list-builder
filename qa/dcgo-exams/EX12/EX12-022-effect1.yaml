@@ -1,0 +1,87 @@
+# Exam scenario: EX12-022 Kamemon, clause EX12-022#effect#1 --
+# "Digivolve: Lv.2 w/[Shambala] trait: Cost 0" (the printed ALTERNATE
+#  digivolution requirement in the card's digivolve circle).
+#
+# The witness is that the digivolve is LEGAL AT ALL. Kamemon is BLUE and its
+# standard circle reads "Lv.2 / 0", so a blue Lv.2 base would satisfy it
+# without the alt path. The base here is EX12-002 Mococomon -- a YELLOW Lv.2
+# Digi-Egg with the [Shambala] trait -- so the standard circle's colour
+# requirement fails and only "Lv.2 w/[Shambala]: Cost 0" can license step 1.
+# Exactly one path matches, so neither engine opens a cost EffectChoice, and
+# memory staying at 0 pins that the cost really was 0.
+#
+# A Digi-Egg cannot leave the breeding area at Lv.2, and the projection has no
+# breeding zone, so the digivolve is made VISIBLE by stacking one more level on
+# top of it in breeding and then moving the whole stack out:
+#
+#   T1 (P0, memory 0): hatch Mococomon; digivolve Kamemon over it (THE CLAUSE);
+#       then digivolve Apemon EX12-012 over Kamemon via ITS alt circle
+#       (Lv.3 w/[Shambala]: Cost 2), overshooting 0 -> -2 and ending the turn.
+#   T2 (P1, memory 2): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): move the stack out, where the projection finally shows
+#       it: Apemon over sources [EX12-002, EX12-022].
+#
+# Kamemon's own [On Play] reveal does NOT fire on a digivolve, so no reveal
+# prompt appears. Apemon's "[On Play][When Digivolving] trash 1 [SW] card ->
+# <Draw 2>" is starved: after both digivolves the hand is EX12-009 / EX12-011 /
+# EX12-026 plus the two pinned digivolve-draws, none of them [SW], so both
+# engines skip it on their condition.
+#
+# EVERY DIGIVOLVE DRAWS 1 (the core rule, and it resolves BEFORE any
+# [When Digivolving] effect), so stack[10] and stack[11] are those draws --
+# pinned, and deliberately non-[SW], since an [SW] card arriving there would
+# open Apemon's prompt and desynchronize the line for a reason that is not the
+# clause.
+card: EX12-022
+clause: EX12-022#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-012, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-020, EX12-031, EX12-039, EX12-043, EX12-046,   # security
+            EX12-020,                                           # [10] Kamemon digivolve-draw
+            EX12-031,                                           # [11] Apemon digivolve-draw
+            EX12-026]                                           # [12] T3 turn draw
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): hatch the Digi-Egg.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: Kamemon over the yellow [Shambala] egg for 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-022 } }
+    expect: { prompt: main_phase }
+  # One more level so the stack can legally leave breeding; the cost-2
+  # overshoot ends the turn.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-012 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out, making the digivolution cards
+  # visible in the projection.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Right after the T1 digivolve: cost 0 was paid (memory unchanged at 0).
+  - at: 2
+    that:
+      p0.memory: 0
+  # Pre-step state of the T3 main-phase pass, still P0's turn: the stack the
+  # clause built is on the field -- Apemon over [EX12-002, EX12-022], reading
+  # its printed 4000 (neither source is a DP effect).
+  - at: 6
+    that:
+      p0.memory: 3
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: false, sources: [EX12-002, EX12-022] }]

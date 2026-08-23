@@ -1,0 +1,81 @@
+# Exam scenario: EX12-006 Kakamon, clause EX12-006#effect#1 -- the PAYOFF half of
+# "[Start of Your Main Phase] By trashing 1 card with the [SW] trait from your
+#  hand, <Draw 1> and gain 1 memory."
+# (the extractor splits the printed line at the <Draw 1> keyword; #effect#0 is
+#  the cost half. The two halves cannot be reached independently -- one payment
+#  produces both -- so this line is deliberately the same as
+#  EX12-006-effect0.yaml, and the assertion below is the half that witnesses
+#  THIS clause: hand +1 pinned card and memory 3 -> 4.)
+#
+# Kakamon's trigger only functions while Kakamon is the TOP card of a battle-
+# area permanent (DCGO: IsExistOnBattleAreaTrigger + IsOwnerTurn), so the line
+# hard-casts it and then simply reaches P0's NEXT main phase:
+#
+#   T1 (P0, memory 0): play Kakamon (cost 3 -> -3). The overshoot ends the
+#       turn; Kakamon has no [On Play], so nothing prompts.
+#   T2 (P1, memory 3): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): answer breeding, and the start of the main phase fires
+#       the clause -- a declinable hand pick (DCGO SelectHandEffect, mode
+#       Discard, canNoSelect:true; ours `select_hand optional/cost`). Paying
+#       it trashes EX12-043 Hakubamon, draws stack[11] and takes memory 3 -> 4.
+#
+# WHY EX12-043 IS THE PICK: it is the only [SW] card in hand at the trigger, so
+# the identity answer is unambiguous, and it carries BOTH [Shambala] and [SW].
+# That second trait matters: DCGO's EX12_006.cs filters its hand pick on
+# `EqualsTraits("Shambala")` while the printed text (and our DSL) filter on
+# [SW]. A pick carrying both traits is legal on both sides, so the line runs;
+# the filter deviation itself is a separate finding, NOT something this
+# scenario can settle (it would need an [SW]-without-[Shambala] card, which
+# EX12 does not print).
+#
+# Every card the line names is stacked, and both draws are pinned, so the hand
+# and trash assertions below rest only on the pinned prefix.
+card: EX12-006
+clause: EX12-006#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-006, EX12-043, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-031, EX12-046, EX12-061, EX12-062, EX12-020,   # security
+            EX12-031,                                           # [10] T3 turn draw
+            EX12-020]                                           # [11] the <Draw 1>
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): hard-cast Kakamon; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-006, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing; the pass hands P0 3 memory.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): breeding first...
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # ...then the main phase opens and THE CLAUSE fires: pay the [SW] trash.
+  - actor: 0
+    do: { select: { cards: [EX12-043] } }
+    expect: { prompt: SelectHandEffect }
+  # One step after the clause: the main-phase question it finally hands back.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: the cost was paid (EX12-043 in trash,
+  # gone from hand), the payoff landed (stack[11] EX12-020 drawn, memory
+  # 3 -> 4), and Kakamon is on the field reading its printed 2000 DP (its own
+  # +2000 is an INHERITED effect and applies only while it is a source).
+  - at: 6
+    that:
+      p0.memory: 4
+      p0.trash: [EX12-043]
+      p0.hand: [EX12-009, EX12-011, EX12-020, EX12-026, EX12-031]
+      p0.field: [{ card_id: EX12-006, dp: 2000, suspended: false, sources: [] }]

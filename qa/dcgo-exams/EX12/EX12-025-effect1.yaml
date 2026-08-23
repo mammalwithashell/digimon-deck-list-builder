@@ -1,0 +1,107 @@
+# Exam scenario: EX12-025 Gawappamon, clause EX12-025#effect#1 --
+# "[On Play] [On Deletion] You may return 1 of your opponent's level 4 or
+#  lower Digimon to the hand."
+# Exercised on the ON PLAY arm (DCGO EX12_025.cs routes both timings through
+# one shared coroutine via `ActivateClassesForSharedEffects`, so the arm
+# choice does not change the effect body).
+#
+# Line shape copied verbatim from the confirmed EX12-026-effect1.yaml, whose
+# whole purpose is "give P1 exactly one bounce-able Digimon and no prompts":
+# P1 builds the target entirely in breeding (no triggers fire there): hatch
+# Onibimon (EX12-004, purple Lv2 [Shambala]), digivolve Wankomon (EX12-009)
+# via its alt circle "Lv.2 w/[Shambala]: Cost 0" -- the standard red circle
+# does not match the purple egg, so the intent is single-path -- then move.
+# The fielded Wankomon carries exactly ONE digivolution card (the Onibimon)
+# and is level 3, inside the "level 4 or lower" filter.
+#
+# P0 then plays Gawappamon (cost 5 at the pass-granted 3 memory -> -2, an
+# overshooting play that ends the turn after resolution). The effect asks ONE
+# SelectPermanentEffect question (DCGO mode Bounce, canNoSelect: true; our
+# `select_opponent_permanent optional: true`). DCGO's ActivateClass here is
+# `optional: false`, so there is NO OptionalSkill gate in front of the pick --
+# the declinable pick IS the whole surface on both sides.
+#
+# Bounce semantics are the witness: the TOP card (EX12-009) goes to P1's
+# hand, the digivolution card underneath (EX12-004) goes to P1's trash.
+#
+# Stacks pin hand (0-4), security (5-9), and both draws (10-11) per seat so
+# the play/digivolve intents stay single-copy-unambiguous all line long.
+#
+# Deck: `sw-shambala` for P0 (appended for this batch -- toho-braves has no
+# Gawappamon); P1 keeps toho-braves, exactly as EX12-026-effect1 has it.
+card: EX12-025
+clause: EX12-025#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-025, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-063,   # security
+            EX12-011, EX12-031]                                 # T3 / T5 draws
+    rest: sw-shambala
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): nothing to do yet.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): hatch Onibimon, digivolve Wankomon via the alt circle (cost 0).
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0): still waiting.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1): move the Wankomon stack to the battle area -- the target.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (task_69f10a66 Family 1): Onibimon
+  # under P1's moved Wankomon grants it <Execute> ([TB] trait), and moved
+  # stacks can attack the move turn -- decline P1's gate (our
+  # EndOfTurnAction PASS; DCGO OptionalSkill "no" on the wire).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 5 (P0, memory 3): play Gawappamon; the On Play arm fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-025, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the single bounce pick -- P1's level-3 Wankomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The cost-5 play overshot to -2, so the turn ends after resolution; the
+  # trailing pass is P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # THE clause observables: P1's board is empty again, and the bounce split
+  # the stack -- top card to hand, digivolution card to trash.
+  - at: 13
+    that:
+      p1.field: []
+      p1.trash: [EX12-004]

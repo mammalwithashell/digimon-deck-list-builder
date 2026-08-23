@@ -1,0 +1,98 @@
+# Exam scenario: EX12-012 Apemon, clause EX12-012#effect#0 -- "<Raid> (When
+# this Digimon attacks, you may switch the target of attack to 1 of your
+# opponent's unsuspended Digimon with the highest DP.)"
+#
+# Skeleton copied from the already-authored EX12-011-effect0.yaml, the other
+# <Raid> line in this pool. The observable is the switched attack itself:
+# Apemon declares on P1's SECURITY, the Raid window opens (P1 has exactly one
+# unsuspended Digimon -- the 2000 DP Gasamon, trivially the highest-DP
+# candidate), the `select:` answers the optional switch, and the battle deletes
+# Gasamon while P1's security stays at 5. An unsuspended Digimon is not a legal
+# attack target at all without the keyword, so "opponent's board emptied +
+# security untouched" is explicable ONLY by <Raid>.
+#
+#   T1 (P0, memory 0): hard-cast Apemon (cost 4, 0 -> -4, legal above the -10
+#       floor; the overshoot ends the turn). Its own "[On Play] trash 1 [SW]
+#       card -> <Draw 2>" is starved -- after the play the hand is
+#       EX12-009 / EX12-011 / EX12-026 / EX12-031, none of them [SW] -- so both
+#       engines skip it on their condition and nothing prompts.
+#   T2 (P1, memory 4): play Gasamon EX12-020 (4 -> 1; its only effect is a
+#       [Your Turn] cost-reduction passive, so no prompt), then pass, handing
+#       P0 3 memory.
+#   T3 (P0, memory 3): THE CLAUSE -- Apemon attacks security, the Raid switch
+#       prompt parks, and the select redirects the attack onto Gasamon.
+#       4000 vs 2000 deletes it; Apemon stays suspended. Attacking spends no
+#       memory, so P0 gets a trailing main prompt.
+#
+# Apemon has NO digivolution sources on this line, which is deliberate: a
+# source with a [When Attacking] inherited (EX12-020, EX12-022, EX12-026 all
+# carry one) would race the Raid window and add a prompt that is not the
+# clause.
+#
+# THE FOLD (task_69f10a66 ruling item 5): DCGO's Raid is isOptional=true
+# (Raid.cs) -> an OptionalSkill "activate Raid?" gate parks BEFORE the
+# switch-target SelectPermanentEffect, while our engine surfaces ONE declinable
+# target pick. The switch row is authored with `expect: {prompt: OptionalSkill}`
+# -- the FOLD marker -- so the emitter splits it on the wire into
+# OptionalSkill(yes) + the pick row.
+card: EX12-012
+clause: EX12-012#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-012, EX12-009, EX12-011, EX12-026, EX12-031,   # opening hand
+            EX12-020, EX12-039, EX12-043, EX12-046, EX12-061,   # security
+            EX12-020]                                           # [10] T3 turn draw
+    rest: toho-mococo
+  p1:
+    stack: [EX12-020, EX12-009, EX12-011, EX12-026, EX12-031,   # opening hand
+            EX12-039, EX12-043, EX12-046, EX12-061, EX12-062,   # security
+            EX12-006]                                           # [10] T2 turn draw
+    rest: toho-mococo
+steps:
+  # T1 (P0, memory 0): Apemon into an empty enemy board -- [On Play] starved.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-012, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): the Raid target arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- attack security, Raid switch.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The Raid window: switch the attack onto the unsuspended Gasamon.
+  # (`expect: OptionalSkill` = the fold marker -- see the header note.)
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  # Attacking costs no memory; P0 keeps the turn after the battle.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: the attack was redirected, so BOTH
+  # security stacks are untouched and P1's board is empty with Gasamon in
+  # their trash. Apemon is suspended from the declaration.
+  - at: 8
+    that:
+      p0.memory: 3
+      p0.security: 5
+      p0.trash: []
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: true, sources: [] }]
+      p1.security: 5
+      p1.trash: [EX12-020]
+      p1.field: []

@@ -1,0 +1,108 @@
+# Exam scenario: EX12-011 Seasarmon inherited clause #0 -- "[Your Turn] This
+# Digimon gets +2000 DP."
+#
+# The observable is a DP number that SWINGS WITH THE TURN. Seasarmon is buried
+# as a digivolution source under a 7000 DP Karakurumon; the projection reports
+# EFFECTIVE DP, so the carrier reads 9000 on P0's turn and 7000 on P1's. Only a
+# [Your Turn]-gated +2000 produces that pair -- a mis-scoped "all turns" aura
+# reads 9000 on both, and a missing aura reads 7000 on both. Both halves are
+# asserted, so the file cannot pass by accident.
+#
+# The stack is engineered so Seasarmon is the ONLY DP contributor. Gasamon
+# (EX12-020) is the Lv.3 base: its printed effect is a [Your Turn]
+# would-digivolve cost reduction and its inherited effect is a [When Attacking]
+# draw -- neither touches DP, and nothing in this line ever attacks. Karakurumon
+# (EX12-063, 7000) is the top card. Wankomon (EX12-009) is deliberately NOT the
+# base: its inherited effect is the SAME "[Your Turn] +2000 DP" text and would
+# make the witness unattributable.
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Gasamon (cost 3, 0 -> -3
+#       overshoot -- legal above the -10 floor; the turn ends on it).
+#   T2 (P1): all-pass (memory 3 to P0).
+#   T3 (P0, memory 3): digivolve Seasarmon over Gasamon in the BATTLE area
+#       (alt "Lv.3 w/[Shambala]: Cost 2", 3 -> 1), then Karakurumon over
+#       Seasarmon (alt Lv.4 [Puppet]/[Shambala], cost 3, 1 -> -2; the turn ends
+#       on the overshoot). Both [When Digivolving] effects -- Seasarmon's
+#       "delete 1 opponent Digimon with 5000 DP or less" and Karakurumon's
+#       "suspend 1 of your opponent's Digimon or Tamers" -- have zero
+#       candidates against P1's empty board and stay silent.
+#   T4 (P1): all-pass. THE OFF-TURN HALF is read here: 7000.
+#   T5 (P0): all-pass. THE ON-TURN HALF is read here: 9000.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP; never
+# checked -- neither seat attacks), then P0's turn draws [10] = T3, [11] = T5.
+# No pin puts a second EX12-011 / EX12-063 in hand, so both `using:` intents
+# stay unambiguous.
+card: EX12-011
+clause: EX12-011#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-011
+      - EX12-063
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): the Lv.3 base lands; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): bury Seasarmon, then cap the stack with Karakurumon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # T4 (P1): the OFF-turn reading.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): the ON-turn reading.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # P1's turn: the inherited aura is OFF -- printed 7000.
+  - at: 8
+    that:
+      p0.field:
+        - { card_id: EX12-063, dp: 7000, suspended: false, sources: [EX12-011, EX12-020] }
+  # P0's turn: the inherited aura is ON -- 7000 + 2000.
+  - at: 10
+    that:
+      p0.field:
+        - { card_id: EX12-063, dp: 9000, suspended: false, sources: [EX12-011, EX12-020] }

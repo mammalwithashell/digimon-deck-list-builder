@@ -1,0 +1,84 @@
+# Exam scenario: P-130 Lui Ohwada effect clause #1 --
+# "[Your Turn] When one of your Digimon moves from the breeding area to the
+#  battle area, by suspending this Tamer, gain 1 memory."
+#
+# Same line as P-130-effect0: the Tamer's own [On Play] performs the move
+# that triggers this clause, so the two clauses fire in ONE action and share
+# one legal line, differing only in which clause id the verdict is keyed to.
+# See P-130-effect0.yaml for the full rationale of the board (Takinmon in
+# breeding because it is NOT [TB], so Onibimon grants no <Execute>).
+#
+# The witnesses here are BOTH halves of "by suspending this Tamer, gain 1
+# memory": P-130 ends the line SUSPENDED, and memory runs 3 -> 0 (the play)
+# -> 1 (the gain).
+#
+# PREDICTED DIVERGENCE -- flagged so nobody burns Unity time diagnosing it as
+# an authoring bug. DCGO builds this ActivateClass with `isOptional: true`
+# (P_130.cs, EffectTiming.OnMove, `SetUpActivateClass(..., -1, true, ...)`),
+# so `Activate_Optional_Effect_Execute` opens an `OptionalSkill` yes/no
+# BEFORE suspending. Our DSL fires it unconditionally (no `optional:` on the
+# on_move effect; the suspend is modelled as a pure cost, the BT18-087 Owen
+# Dreadnought shape). The extra `select: {yes: true}` row below therefore
+# answers no live prompt on our side -- the harness logs it and keeps the row
+# for the DCGO wire, which is exactly the documented bridge for this
+# asymmetry. If the oracle disagrees about WHICH side is right, note that
+# `general_rule.pdf` outranks DCGO: a "by <cost>, <effect>" trigger with no
+# "you may" reads as mandatory, so ours may well be the faithful one.
+card: P-130
+clause: P-130#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-039, P-130, EX12-031, EX12-031, EX12-031,     # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-011, EX12-046,  # security
+            EX12-046]                                          # T3 draw
+    rest: sw-support
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): hatch, then the free alt-path digivolve in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-039 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play the Tamer (3 -> 0); the [On Play] opens.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-130, from: hand } }
+    expect: { prompt: main_phase }
+  # Clause #0's optional move: accept it. Takinmon (level 3) is the only
+  # candidate, and the move is what triggers the clause under exam.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: DCGO's optional gate on "by suspending this Tamer, gain 1
+  # memory" -- accepted. Wire-only on our side (see the header).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Both halves of the cost-and-effect: the Tamer is SUSPENDED and memory ran
+  # 3 -> 0 (the cost-3 play) -> 1 (the gain).
+  - at: 9
+    that:
+      p0.memory: 1
+      p0.field:
+        - { card_id: EX12-039, dp: 2000, suspended: false, sources: [EX12-004] }
+        - { card_id: P-130, dp: -1, suspended: true, sources: [] }

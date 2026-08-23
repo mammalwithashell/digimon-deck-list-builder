@@ -1,0 +1,131 @@
+# Exam scenario: EX12-002 Mococomon, clause EX12-002#inherited#0 --
+# "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are
+#  played, this Digimon may digivolve into an [SW] trait Digimon card in the
+#  hand with the cost reduced by 2."
+#
+# Mococomon is a Digi-Egg: it has no main-effect box at all, so this inherited
+# line IS the card, and it functions only while Mococomon sits UNDER a carrier
+# IN THE BATTLE AREA (DCGO EX12_002.cs: IsExistOnBattleAreaTrigger +
+# IsOwnerTurn; the played permanent must be another owner Digimon on the
+# owner's battle area with the [SW] trait).
+#
+#   T1 (P0, memory 0): hatch Mococomon; digivolve Kamemon EX12-022 over it in
+#       breeding (Kamemon's alt circle, Lv.2 w/[Shambala]: Cost 0 -- its
+#       standard blue circle cannot take the yellow egg). Kamemon's [On Play]
+#       does not fire on a digivolve. Pass.
+#   T2 (P1, memory 3): all-pass.
+#   T3 (P0, memory 3): move the stack to the battle area -- Mococomon is now
+#       "in the battle area" for the trigger's purposes. Pass.
+#   T4 (P1): all-pass, handing P0 3 memory.
+#   T5 (P0, memory 3): play Takinmon EX12-039 -- a yellow Lv.3 with the [SW]
+#       trait and no [On Play] of its own (its only effect is a [Your Turn]
+#       self-cost-reduction passive) -- for 3, memory 3 -> 0. THE CLAUSE fires:
+#       the carrier may digivolve into an [SW] Digimon card in hand at cost -2.
+#       The pick is EX12-012 Apemon, whose alt circle (Lv.3 w/[Shambala]:
+#       Cost 2) applies to the blue Kamemon carrier -- so 2 - 2 = 0 and memory
+#       is UNCHANGED at 0. That free digivolve is the observable: Apemon lands
+#       on the carrier while memory does not move.
+#
+# EX12-012 is the only [SW] Digimon card left in hand when the prompt parks, so
+# the identity answer is unambiguous. Apemon's own "[On Play][When Digivolving]
+# trash 1 [SW] card -> <Draw 2>" is then starved -- the hand holds only
+# EX12-009 / EX12-011 and the pinned draws, none of them [SW] -- so both
+# engines skip it on their condition and no second prompt parks.
+#
+# THE FOLD: DCGO builds this as an OPTIONAL ActivateClass
+# (SetUpActivateClass(..., 1, true, ...)), so an OptionalSkill "use it?" gate
+# parks BEFORE the SelectHandEffect pick, while our engine surfaces ONE
+# declinable hand pick. The pick row is therefore authored with
+# `expect: {prompt: OptionalSkill}` -- the declared fold marker -- so the
+# emitter splits it on the wire into OptionalSkill(yes) + the pick row.
+#
+# EVERY DIGIVOLVE DRAWS 1 (general_rule.pdf 8-1-3-3, and docs/digimon-rules/
+# digest.md L48), which is why stack[10] is the T1 digivolve-draw and
+# stack[11]/[12] the T3/T5 turn draws.
+#
+# PREDICTED DIVERGENCE -- READ BEFORE SPENDING UNITY TIME. Our engine does NOT
+# draw on the clause's own digivolve: `effect_initiated_digivolve` skips the
+# 8-1-3-3 draw (verified by probe -- P0's hand is 5 cards at the trailing pass,
+# not 6). DCGO does draw: CardController.cs:1758 runs
+# `new DrawClass(card.Owner, 1, null).Draw()` under `if (isEvolution)` on the
+# shared evolution path that CardEffectCommons.DigivolveIntoHandOrTrashCard
+# feeds. So the oracle is expected to disagree on `p0.hand` at the last step,
+# and the PDF outranks DCGO -- meaning OUR side looks wrong. That is a finding
+# to triage, NOT an authoring error, and NOT this scenario's clause.
+# `p0.hand` is therefore deliberately UNASSERTED here (baking either side's
+# hand in would either encode a suspected engine bug or fail sim-only), while
+# stack[13] stays pinned to a non-[SW] card so that DCGO's extra draw is
+# deterministic and cannot widen any candidate set on the oracle side.
+card: EX12-002
+clause: EX12-002#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-039, EX12-012, EX12-009, EX12-011,   # opening hand
+            EX12-020, EX12-026, EX12-031, EX12-046, EX12-061,   # security
+            EX12-020,                                           # [10] T1 digivolve-draw
+            EX12-026,                                           # [11] T3 turn draw
+            EX12-031,                                           # [12] T5 turn draw
+            EX12-046]                                           # [13] DCGO's draw off the clause's digivolve
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): hatch, then build Kamemon over the egg in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-022 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out -- the inherited effect goes live.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): play another [SW] Digimon -- the trigger's condition.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-039, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: take the offered digivolve into the [SW] card in hand.
+  # (`expect: OptionalSkill` = the fold marker -- see the header note.)
+  - actor: 0
+    do: { select: { cards: [EX12-012] } }
+    expect: { prompt: OptionalSkill }
+  # One step after the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: Takinmon's cost 3 took memory 3 -> 0
+  # and the clause's digivolve was FREE on top of that (Apemon's printed cost 2
+  # reduced by 2), so memory is still 0. Apemon now caps the Mococomon stack;
+  # Takinmon stands beside it, freshly played and unsuspended. `p0.hand` is
+  # left unasserted on purpose -- see the PREDICTED DIVERGENCE note above.
+  - at: 12
+    that:
+      p0.memory: 0
+      p0.field:
+        - { card_id: EX12-012, dp: 4000, suspended: false, sources: [EX12-002, EX12-022] }
+        - { card_id: EX12-039, dp: 2000, suspended: false, sources: [] }

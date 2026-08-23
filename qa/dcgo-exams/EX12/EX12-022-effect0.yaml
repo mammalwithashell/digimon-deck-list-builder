@@ -1,0 +1,99 @@
+# !!! ORACLE-BLOCKED (adversarial review, 2026-08-23) -- DO NOT QUEUE FOR UNITY.
+# This line parks a 1-card `OrderedPermutation` that DCGO never asks for.
+# `CardEffectCommons.ReturnRevealedCardsToLibraryBottom` (RevealLibrary.cs:478)
+# AUTO-PLACES a single leftover with no prompt; our engine parks an ordering
+# prompt anyway, so the scenario puts one row on the wire with no DCGO prompt
+# to consume it and the strict cursor aborts. Identical to the already-recorded
+# blocker on EX12-009#effect#0 / EX12-062#inherited#1 ("1-card
+# OrderedPermutation ... the strict cursor aborts (review finding 3)").
+# The line is otherwise correct and lowers/asserts clean sim-only, so it stays
+# as the CI guard; the CLAUSE verdict should be `unreachable` with that reason
+# until the asymmetry is closed (engine stops parking a 1-candidate ordering,
+# or the emitter classifies it `SimOnlyAction`).
+# NOT fixable by re-authoring THIS clause: EX12-022 reveals 3 and adds 2, so
+# exactly 1 always remains. The only re-author that dodges it makes one
+# add-bucket empty (2 leftovers -> a real prompt on both sides, collapsed
+# into ONE row), at the cost of only half-exercising the clause.
+#
+# Exam scenario: EX12-022 Kamemon, clause EX12-022#effect#0 -- "[On Play]
+# Reveal the top 3 cards of your deck. Add 1 card with the [Shambala] trait and
+# 1 card with the [SW] trait among them to the hand. Return the rest to the
+# bottom of the deck."
+#
+# Skeleton copied from the already-authored EX12-009-effect0.yaml, the [TB]
+# twin of this effect (DCGO builds both from
+# CardEffectCommons.SimplifiedRevealDeckTopCardsAndSelect with two
+# SimplifiedSelectCardConditionClass rows; EX12_022.cs asks [Shambala] first,
+# [SW] second -- verified in the C#, and our DSL's bucket order matches).
+#
+# One turn: P0 plays Kamemon from hand at memory 0 (cost 3 -> -3, an
+# overshooting play that ends the turn after the effect resolves). Nothing
+# digivolves and P0 takes no turn-1 draw, so the reveal is exactly the pinned
+# stack[10..12].
+#
+# THE REVEAL TRIO IS ENGINEERED SO EACH PICK IS PROVABLE AND NEITHER BUCKET
+# COLLAPSES TO A SINGLE CANDIDATE:
+#   EX12-039 Takinmon  -- [Shambala] + [SW]
+#   EX12-043 Hakubamon -- [Shambala] + [SW]
+#   EX12-011 Seasarmon -- [Shambala] + [TB], NOT [SW]
+# The [Shambala] question is answered with EX12-011: it is the one card that
+# cannot belong to the [SW] question, so the answer identifies which prompt it
+# belongs to. The [SW] question then still has TWO candidates (EX12-039 /
+# EX12-043), so it is a real pick on both sides rather than an auto-resolve
+# that one engine might skip and the other might ask.
+#
+# KNOWN ORACLE ABORT, inherited from EX12-009-effect0: the third select --
+# our engine's 1-card OrderedPermutation for the leftover -- has NO DCGO
+# counterpart. ReturnRevealedCardsToLibraryBottom (RevealLibrary.cs) places a
+# SINGLE remaining card automatically and prompts only for 2+, and the DCGO
+# driver's cursor is STRICT, so the unconsumed row aborts the job at the
+# trailing breeding question -- AFTER both witness picks have resolved. The row
+# cannot be dropped (it answers a live sim prompt). Un-blocks when the engine
+# auto-resolves single-card orderings or the wire learns to mark sim-only rows.
+card: EX12-022
+clause: EX12-022#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-009, EX12-011, EX12-026, EX12-031,   # opening hand
+            EX12-020, EX12-046, EX12-061, EX12-062, EX12-063,   # security
+            EX12-039, EX12-043, EX12-011]                       # [10..12] the reveal 3
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): no hatch needed -- straight to the play.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-022, from: hand } }
+    expect: { prompt: main_phase }
+  # First prompt: "Select 1 [Shambala] trait card." -- take the one that has no
+  # [SW], so this pick can only belong to the [Shambala] question.
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: SelectCardEffect }
+  # Second prompt: "Select 1 [SW] trait card." -- two candidates remain.
+  - actor: 0
+    do: { select: { cards: [EX12-039] } }
+    expect: { prompt: SelectCardEffect }
+  # Our engine additionally asks to ORDER the remaining card onto the deck
+  # bottom (OrderedPermutation, 1 card -- only one possible answer). See the
+  # KNOWN ORACLE ABORT note above.
+  - actor: 0
+    do: { select: { cards: [EX12-043] } }
+    expect: { prompt: SelectCardEffect }
+  # The cost-3 play at memory 0 overshot to -3, so the turn ends after the
+  # effect resolves; the trailing pass is P1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # THE clause observable, at the ordering step that closes the effect: the
+  # hand lost the played EX12-022 and gained exactly the two picks -- EX12-011
+  # (the [Shambala] pick, now a second copy alongside the opening-hand one) and
+  # EX12-039 (the [SW] pick). EX12-043 went to the deck bottom, NOT the hand.
+  - at: 4
+    that:
+      p0.hand: [EX12-009, EX12-011, EX12-011, EX12-026, EX12-031, EX12-039]
+      p0.field: [{ card_id: EX12-022, dp: 2000, suspended: false, sources: [] }]

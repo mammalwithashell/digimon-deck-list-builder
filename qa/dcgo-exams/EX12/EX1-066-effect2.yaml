@@ -1,0 +1,152 @@
+# Exam scenario: EX1-066 (Analog Youth), clause EX1-066#effect#2 --
+# "[Security] Play this card without paying its memory cost."
+#
+# THE SECURITY-TRIGGER SKELETON. The stack prefix is a draw-order prefix on
+# BOTH engines, and the security pile is laid AFTER the mulligan from the same
+# ordered deck, so a seat's stack maps:
+#
+#     stack[0..4]  -> the opening hand, drawn in that order
+#     stack[5..9]  -> the SECURITY stack, REVERSED:
+#                        stack[9] = TOP (flipped first) ... stack[5] = bottom
+#     stack[10..]  -> subsequent draws, in order
+#
+# (Both engines are pinned to KEEP under a scripted line -- our ScenarioAdapter
+# `construct()` calls `game.start_game()`; DCGO's `SetRedraw` forces
+# `isRedraw=false` while `InputDriver.IsActive` -- so the security pile is
+# deterministic. A scenario mulligan verb would break this: mulligan is a true
+# reshuffle, §5-2-1-5.)
+#
+# EX1-066 therefore sits at stack[9] and is the FIRST card the one security
+# check of the line flips. Its [Security] plays the Tamer onto P0's field for
+# free; the Tamer's own [On Play] (clause #0, already `confirmed` on its own
+# line) then fires and parks the reveal pick for P0 -- off-turn, since P0 is
+# the defender.
+#
+# EX1-066 is a TAMER, so §13-1-7-3-2 applies: no Security Digimon, no security
+# battle, straight to §13-1-7-4 -- and §13-1-7-4's "unless it belongs to an
+# area" is what keeps the card OUT of the trash on both sides (our
+# `play_pending_security()` raises `pending.played`; DCGO's `ExecutingCards`
+# skip-trash).
+#
+# Reveal engineering: [11]/[12]/[13] are TWO eligible Digimon and one
+# ineligible Option, so both engines park a real pick answerable by identity.
+# A single- or zero-candidate reveal is the trap to avoid: our `select_reveal`
+# fizzles on an empty candidate set via an is_empty early-return while DCGO may
+# still open the prompt, desyncing the line for a reason that is not the clause.
+#
+# Filler discipline: EX12-009 is the safe security filler (no [Security]
+# effect, and it is never flipped -- there is exactly one check). EX12-074 is
+# kept OUT of BOTH seats' security: its "[Security] [Your Turn] [Once Per Turn]
+# When one of your [Shambala] trait Digimon attacks" functions FROM the stack
+# and would park a TriggerOrder on Gasamon's declaration.
+#
+# P1's line is the proven attacker skeleton from EX12-075-security0.yaml:
+# Gasamon (EX12-020, Lv3, cost 3, prompt-free -- its only printed effect is a
+# [Your Turn] would-digivolve cost reduction) is played on P1's first turn at
+# memory 3 (3 -> 0, so the turn continues and P1 passes out), sheds summoning
+# sickness over T3, and attacks security on T4. P0's battle area stays empty
+# until the flip, so no blocker window precedes the check.
+#
+# Deck note: EX1-066 is not in `toho-braves`, so P0 uses `toho-analog` (the
+# same swap EX1-066-effect0.yaml uses). `toho-analog` holds only 4x EX12-009,
+# all four of which are spent on the security fillers, so the third revealed
+# card is EX12-026 (Shellmon) rather than a fifth Wankomon.
+card: EX1-066
+clause: EX1-066#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand [0-4]: cost 12/16 bricks -- unplayable at memory 3, no hand [Main]
+      - EX12-047
+      - EX12-047
+      - EX12-065
+      - EX12-065
+      - EX12-076
+      # security [5-8]: quiet filler, never flipped (one check only)
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      # security [9]: THE TOP CARD -- the clause under exam
+      - EX1-066
+      # [10]: P0's T3 turn draw
+      - EX12-011
+      # [11-13]: the 3 cards EX1-066's [On Play] reveals at T4
+      - EX12-061      # Digimon -- eligible, and the pick
+      - EX12-070      # Option  -- ineligible
+      - EX12-026      # Digimon -- eligible, not picked
+    rest: toho-analog
+  p1:
+    stack:
+      # hand [0-4]: the attacker plus inert filler
+      - EX12-020
+      - EX12-011
+      - EX12-011
+      - EX12-026
+      - EX12-026
+      # security [5-9]: pinned and quiet; never flipped, and EX12-074-free.
+      # Pinned deliberately: an UNPINNED P1 pile is filled by DCGO's shuffle,
+      # and toho-braves runs 4x EX12-074 -- whose "[Security] [Your Turn] [Once
+      # Per Turn] When one of your [Shambala] trait Digimon attacks" functions
+      # FROM the stack. Gasamon IS [Shambala], so ~1 oracle run in 3 would bury
+      # the attack under a TriggerOrder this line does not answer.
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): all-pass; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness. P0 draws stack[10].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE. Gasamon attacks security; the check flips
+  # EX1-066, whose [Security] plays the Tamer onto P0's field for free.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The played Tamer's OWN [On Play] then fires -- reveal 3, add 1 Digimon,
+  # trash the rest -- parked for P0 (the defender, off-turn).
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectCardEffect }
+  # Attacking spends no memory; P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over facts the stack prefix pins. The clause's own
+  # witness is EX1-066 sitting on P0's FIELD (played, not trashed) with P1's
+  # memory untouched at 3 (p0.memory -3) -- "without paying its memory cost".
+  - at: 10
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [EX12-026, EX12-070]
+      p0.field:
+        - { card_id: EX1-066, dp: -1, suspended: false, sources: [] }

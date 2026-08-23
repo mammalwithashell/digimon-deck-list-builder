@@ -1,0 +1,130 @@
+# Exam scenario: EX12-015 (Gokuumon), clause inherited#0 --
+# "[Inherited][When Attacking][Once Per Turn] You may delete 1 of your
+#  opponent's Digimon with 6000 DP or less."
+#
+# An inherited clause needs a CARRIER, so this line digivolves Nezhamon
+# (EX12-019) on top of Gokuumon and attacks with the stack. The witness is that
+# p1's Gasamon (2000 DP) is gone from the board BEFORE the attack resolves:
+# nothing else in the line can delete it -- Nezhamon's attack is declared on
+# p1's SECURITY, so no battle would ever have touched it, and Gokuumon's own
+# face effects are on the card under the top, not on the attacker.
+#
+# The [When Attacking] trigger resolves ahead of the blocker timing, which is
+# why the deletion also removes the only Digimon <Collision> could have forced
+# to block: the attack then reaches security unopposed (5 -> 4, flipping the
+# quiet EX12-062).
+#
+# PREDICTED PROMPT-SHAPE DIVERGENCE -- author's note, so nobody burns Unity
+# time being surprised by it. Our engine parks TWO surfaces here: a
+# `Replacement`-kind gate ("You may activate ...", step 30) and then the pick
+# (step 31). DCGO parks ONE: `EX12_015.cs` builds this ActivateClass with
+# `isOptional: false` plus `SetIsSkippable(true)`, and its `SelectPermanentEffect`
+# carries `canNoSelect: true` -- a single CANCELABLE pick, with no
+# `OptionalSkill` gate in front of it. That is exactly the Family 3b shape the
+# DSL comment in `code/digimon-engine/cards/ex12/EX12-063.yaml` describes, and
+# EX12-063 was authored with `optional:` on the PICK for that reason while
+# EX12-015's inherited clause carries it on the EFFECT. Expect the oracle pass
+# to report a wire-row mismatch at step 30; triage it as a DSL-authoring
+# finding on our side, not as a bad line.
+#
+# Highway (all in the breeding area, where no effect activates, so nothing
+# fires on the way up):
+#   T1 hatch + Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) /
+#   T5 Gokuumon (alt [Shambala], 3) / T7 Nezhamon (alt [Shambala], 3) /
+#   T9 move out / T10 p1 plays the victim / T11 the clause.
+# Both the T5 and the T7 digivolve open a cost choice, because Seasarmon is a
+# red Lv.4 [Shambala] and Gokuumon a red Lv.5 [Shambala] -- each has BOTH a
+# printed red circle and an alternate [Shambala] circle. Ours asks an
+# `EffectChoice`, DCGO a `SelectCountEffect` over the distinct cost list
+# (CardController.cs:668-742); both are answered by the VALUE.
+#
+# The stack under Nezhamon is otherwise silent at attack time: Wankomon and
+# Seasarmon inherit [Your Turn] DP auras (so the attacker swings at 16000) and
+# Onibimon's inherited <Execute> is gated on the carrier having [TB], which
+# Nezhamon does not. Nezhamon's own <Engage> gate is declined at T9 and its
+# [All Turns][OPT] unsuspend (effect#7) is declined at step 32 -- both are
+# measured in their own files.
+card: EX12-015
+clause: EX12-015#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      - EX12-009
+      - EX12-011
+      - EX12-015
+      - EX12-019
+      - EX12-070
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+      - EX12-075
+      - EX12-031
+      - EX12-061
+    rest: toho-sw
+  p1:
+    stack:
+      - EX12-020
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  - { actor: 0, do: { hatch: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-009 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-011 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-015 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { select: { value: 3 } }, expect: { prompt: SelectCountEffect } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-019 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { select: { value: 3 } }, expect: { prompt: SelectCountEffect } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { move: { from: breeding } }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: OptionalSkill } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { play: { card: EX12-020, from: hand.0 } }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { select: { yes: true } }, expect: { prompt: OptionalSkill } }
+  - { actor: 0, do: { select: { targets: [opp.field.0] } }, expect: { prompt: SelectPermanentEffect } }
+  - { actor: 0, do: { select: { decline: true } }, expect: { prompt: OptionalSkill } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+assert:
+  # MINIMAL and prefix-pinned. p1's board is empty because the inherited clause
+  # deleted its only Digimon at attack declaration, and security still fell to
+  # 4 because the attack itself was never stopped. EX12-062 is the flipped
+  # security card, deleted by the 16000 DP attacker in the security battle.
+  - at: 33
+    that:
+      p1.field: []
+      p1.security: 4
+      p1.trash: [EX12-020, EX12-062]

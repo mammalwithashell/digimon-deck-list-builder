@@ -1,0 +1,136 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #3 -- the TARGET-SET head of
+# "[All Turns] All of your [Puppet] or [TB] trait Digimon gain <Blocker> and
+# <Retaliation>."
+#
+# Clause #4's exam (EX12-065-effect4, confirmed) already witnesses the <Blocker>
+# payload -- but it blocks with KAGUYAMON ITSELF, which a self-only grant would
+# also explain. This file measures the half #4 cannot: that the aura reaches
+# ANOTHER Digimon. The blocker here is SEASARMON (EX12-011), which prints no
+# <Blocker> of its own and is not the aura's source; it carries [TB], so it is
+# inside "all of your [Puppet] or [TB] trait Digimon". Without the clause there
+# is no blocker window for it at all and P1's attack would simply check P0's
+# security.
+#
+# The witness is therefore threefold and mutually reinforcing: P0's security
+# stays on 5 (the attack was intercepted), Gasamon is in P1's trash (a
+# 5000-vs-2000 block battle happened), and Seasarmon ends SUSPENDED from having
+# blocked.
+#
+# ORDER IS LOAD-BEARING: Seasarmon lands FIRST, into an empty enemy board. Its
+# [On Play] "delete 1 of your opponent's Digimon with 5000 DP or less"
+# (clause #1's own exam, MANDATORY) would otherwise eat Gasamon on arrival and
+# leave nothing to block. Played into an empty board it has zero candidates and
+# stays silent. Kaguyamon lands LAST and is hard-cast, so its
+# [On Play] trash-revive (clause #2's exam) sees an EMPTY trash and parks no
+# prompt either.
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Seasarmon (cost 5, 0 -> -5
+#       overshoot -- legal above the -10 floor; the turn ends on it).
+#   T2 (P1, memory 5): play Gasamon (5 -> 2; only a [Your Turn] passive, no
+#       prompt), pass out (memory 3 to P0).
+#   T3 (P0, memory 3): hard-cast Kaguyamon (cost 12, 3 -> -9, still above the
+#       floor) -- the aura switches on; the turn ends on the overshoot.
+#   T4 (P1, memory 9): THE CLAUSE -- Gasamon (played T2, summoning sickness
+#       shed) attacks security; the aura opens P0's blocker window and the
+#       select answers it with SEASARMON. Attacking costs no memory, so P1
+#       answers a trailing main prompt.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP), then the
+# seat's turn draws in order. P1's security deliberately holds NO EX12-074: its
+# "[Security] [Your Turn] [Once Per Turn] when one of your [Shambala] Digimon
+# attacks..." functions FROM the security stack and would bury the blocker
+# window under a TriggerOrder prompt when the [Shambala] Gasamon declares.
+card: EX12-065
+clause: EX12-065#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): one Seasarmon, one Kaguyamon -- both play intents pinned
+      # to hand.0 and unambiguous by identity as well.
+      - EX12-011
+      - EX12-065
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never checked (the attack is blocked).
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      # draws: T3 turn (10)
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon.
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9): Digimon only, NO EX12-074 (see the header note).
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the future blocker lands into an empty enemy board.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): the attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the aura source lands (empty trash keeps its On Play
+  # silent); the cost-12 overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-065, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 9): the clause under exam.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0's blocker window: block with SEASARMON -- a [TB] Digimon that prints no
+  # <Blocker> and is not the aura's source.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P1 keeps the turn after the battle.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over stack-pinned facts. Asserted at 10 -- right after
+  # the block resolves and BEFORE the trailing pass hands the turn back to P0,
+  # whose unsuspend phase would clear the blocker's suspended flag.
+  - at: 10
+    that:
+      p0.security: 5
+      p1.field: []
+      p1.trash: [EX12-020]
+      p0.field:
+        - { card_id: EX12-011, dp: 5000, suspended: true, sources: [] }
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }

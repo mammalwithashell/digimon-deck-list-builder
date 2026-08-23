@@ -1,0 +1,133 @@
+# Exam scenario: EX12-075 Kunlun's Imperial Decree effect clause #0 -- the use
+# requirement "<Use Req. ([Shambala] trait)> (Specified cards let you ignore
+# color requirements.)".
+#
+# The observable is the LEGAL PLAY itself, same witness shape as the already-
+# confirmed EX12-070-effect0 / EX12-074-effect0 lines: EX12-075 is WHITE
+# (card_colors [4]; our YAML `color: [white]`) and the only permanent P0 owns
+# is the BLUE Gasamon, so nothing on the board supplies the option's color.
+# The play is explicable only by the use requirement being met by Gasamon's
+# [Shambala] trait -- and by the parenthetical's second half, which says a
+# specified card lets the color requirement be ignored. Gasamon sits in the
+# BATTLE area, not breeding: a breeding-area Digimon does not satisfy a use
+# requirement.
+#
+# Separating the two plays by a full turn cycle (Gasamon T3, the option T5)
+# keeps this file about the requirement rather than about the memory curve:
+# at T5 the board state alone decides whether the option is in the legal set.
+#
+# The [Main] body (clause #1's own exam, EX12-075-effect1) resolves along the
+# way and is answered, not declined -- it is mandatory, there is no decline
+# branch to hide behind:
+#   - the 3-card reveal parks a mandatory [Shambala] pick (DCGO
+#     SimplifiedRevealDeckTopCardsAndSelect, Mode.AddHand; our
+#     `choose_from_reveal`). Every card in toho-braves carries [Shambala], so
+#     [12..14] are pinned to three DISTINCT ids and the identity pick is
+#     unambiguous.
+#   - "Return the rest to the bottom of the deck" parks our ordering prompt
+#     (OrderedPermutation) over the two unpicked cards.
+#   - "Then, place this card in the battle area" runs prompt-free; the option
+#     lands as a DP-less Delay permanent (dp -1), NOT in the trash.
+#
+#   T1/T2: both seats pass everything.
+#   T3 (P0, memory 3): play Gasamon (3 -> 0, turn continues), pass out.
+#   T4 (P1): all-pass.
+#   T5 (P0, memory 3): THE CLAUSE -- play the white EX12-075 (cost 3 -> 0),
+#       answer the reveal, trailing pass one step after.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP, never
+# checked -- neither seat attacks), [10] = T3 draw, [11] = T5 draw, then
+# [12][13][14] = the three revealed cards. Hand tracking: T3 plays hand.0
+# (Gasamon), leaving [075, 070, 070, 070] + the T3 draw; the T5 draw appends,
+# so EX12-075 is still hand.0 at T5.
+card: EX12-075
+clause: EX12-075#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      - EX12-070
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-074
+      - EX12-070
+      # the reveal (12-14): three distinct ids
+      - EX12-062
+      - EX12-063
+      - EX12-036
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the [Shambala] provider lands in the BATTLE area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the clause under exam -- the WHITE option is playable
+  # only because Gasamon's [Shambala] trait meets the use requirement.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-075, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Add EX12-062 to hand; EX12-063 + EX12-036 return to the deck bottom.
+  - actor: 0
+    do: { select: { cards: [EX12-062] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [EX12-063, EX12-036] } }
+    expect: { prompt: SelectCardEffect }
+  # Memory landed on exactly 0, so the same seat answers the trailing pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over stack-pinned facts: the white option reached the
+  # BATTLE AREA (so the play was legal) beside a lone blue Gasamon, with
+  # nothing trashed and security untouched. Asserted at 13 -- one step BEFORE
+  # the trailing pass, which hands the 3 memory to P1 and would read -3.
+  - at: 13
+    that:
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-075, dp: -1, suspended: false, sources: [] }

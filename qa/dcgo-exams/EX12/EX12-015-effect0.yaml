@@ -1,0 +1,156 @@
+# Exam scenario: EX12-015 (Gokuumon), clause effect#0 -- "<Raid>
+# (When this Digimon attacks, you may switch the target of attack to 1 of your
+#  opponent's unsuspended Digimon with the highest DP.)"
+#
+# The witness is the SWITCH: Gokuumon declares an attack on p1's SECURITY, the
+# <Raid> window opens, and the attack lands on p1's unsuspended Gasamon
+# instead -- so p1's security count is untouched (5) while Gasamon is deleted
+# in battle. An attack that was never redirected would show the mirror image
+# (security 4, Gasamon alive), so the two outcomes are not confusable.
+#
+# <Raid> is the OptionalSkill+pick FOLD (docs/DCGO_EXAM.md, "Surface
+# mappings"): DCGO gates the window behind an `OptionalSkill` yes/no and THEN
+# asks for the pick, while our engine surfaces one declinable pick. The pick
+# row is therefore annotated `expect: {prompt: OptionalSkill}` -- the fold
+# marker -- and the emitter expands it to OptionalSkill(yes) + the pick.
+#
+# Timing is arranged so Gokuumon's own mandatory [On Play][When Digivolving]
+# -4000 DP (clause effect#1, exercised by its own file) has NO target when it
+# fires: p1's board is still empty at T5 and Gasamon only arrives at T6. Had
+# Gasamon been out first, the -4000 would have deleted the very Digimon this
+# clause needs to redirect onto.
+#
+# The digivolution stack under Gokuumon is deliberately silent at attack time:
+# Wankomon and Seasarmon inherit DP auras only, and Onibimon's inherited
+# <Execute> grant is gated on the carrier having [TB] -- Gokuumon
+# (Beastkin/Shambala/SW) does not, so no end-of-turn gate opens either. The
+# attacker therefore swings at 7000 + 2000 + 2000 = 11000 DP against a 2000 DP
+# Gasamon, and the battle resolves without a further prompt on either side.
+card: EX12-015
+clause: EX12-015#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-015
+      - EX12-070
+      - EX12-075
+      # security (5-9) -- never checked; Digimon only, no [Security] text
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15). No draw repeats a card this line names in a `using:`
+      # intent -- a second copy in hand would make the intent ambiguous.
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4): Gasamon pinned at slot 0, the only card p1 ever plays
+      - EX12-020
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9) -- NEVER checked, because <Raid> redirects the attack
+      # off the security stack. Digimon only, no [Security] text, so a missed
+      # redirect would fail loudly on the assert rather than quietly resolve.
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon in breeding (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass -- p1's board must still be EMPTY at T5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): move Seasarmon out, then Gokuumon on top of it in the
+  # battle area (alt [Shambala] circle, cost 3 -> 0). Its mandatory -4000 DP
+  # [When Digivolving] fizzles: p1 has no Digimon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): play Gasamon -- the <Raid> redirect target (3 -> 0).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE. Declare on security, then redirect.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL and prefix-pinned: the redirect is exactly "security stayed at 5
+  # AND Gasamon died in battle". Asserted after the trailing pass, not after
+  # the attack step, because the attack step's projection is captured before
+  # the combat state machine drains (see EX12-047-effect1.yaml).
+  - at: 20
+    that:
+      p1.security: 5
+      p1.field: []
+      p1.trash: [EX12-020]

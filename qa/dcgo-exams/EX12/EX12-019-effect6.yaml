@@ -1,0 +1,238 @@
+# Exam scenario: EX12-019 (Nezhamon), clause effect#6 --
+# "[All Turns][Once Per Turn] When attack targets change, until your
+#  opponent's turn ends, their Digimon effects don't affect this Digimon and
+#  it gets +4000 DP."
+#
+# This file's mark is THE +4000 DP. Nezhamon's base 12000 plus its two
+# inherited [Your Turn] +2000 auras (Wankomon, Seasarmon) is 16000; the
+# projection at step 30 reads 20000, and the only source of the difference is
+# this clause.
+#
+# The target change is produced by the BLOCK, not by a redirect effect:
+# <Collision> forces p1's Gasamon to block an attack declared on the player,
+# and interposing a blocker IS a change of attack target -- DCGO agrees, gating
+# the same trigger on
+# `CardEffectCommons.CanTriggerOnPermanentAttackTargetSwitch` (EX12_019.cs,
+# `EffectTiming.OnAttackTargetChanged`). That the two engines route a block
+# into that timing at all is part of what this clause measures.
+#
+# The clause's OTHER half -- "their Digimon effects don't affect this Digimon"
+# until p1's turn ends -- is NOT exercised here: no p1 Digimon effect targets
+# Nezhamon in this line, and manufacturing one would need p1 to build a fresh
+# board after its only Digimon has just died. Recorded as a known partial: the
+# DP half is measured, the immunity half is not.
+#
+# THE LINE, and what it proves. At T11 Nezhamon (12000 + 2000 + 2000 inherited
+# = 16000 DP) declares an attack on p1's SECURITY while p1 has one unsuspended
+# Gasamon. Three of Nezhamon's printed keywords then fire in sequence, and each
+# leaves a separate, non-confusable mark on the board at step 30:
+#
+#   <Collision>  Gasamon gains <Blocker> and MUST block -- our engine parks a
+#                non-declinable "Declare a blocker" prompt for p1, and the
+#                attack that was aimed at the player resolves as a battle
+#                instead. Mark: p1.field empties, p1.trash gains EX12-020.
+#   effect#6     the block CHANGES the attack target, so the [All Turns][OPT]
+#                trigger fires and Nezhamon goes to 20000 DP (16000 + 4000)
+#                with immunity to p1's Digimon effects until p1's turn ends.
+#                Mark: p0.field[0].dp == 20000.
+#   <Piercing>   the blocker is deleted in battle, so security is checked
+#                BEFORE the attack ends -- a blocked attack otherwise checks
+#                nothing. Mark: p1.security 5 -> 4 and the flipped EX12-062
+#                joins p1.trash.
+#
+# The three effects are inseparable on this board -- <Collision> is what
+# produces the block, the block is what changes the target, and the battle is
+# what makes <Piercing> relevant -- so the same line is the natural witness for
+# all three and gets one file per clause, each asserting its OWN mark. It is
+# NOT three files measuring one thing: the marks are independent, and any one
+# of them could fail while the others hold.
+#
+# The stack under Nezhamon is silent at attack time: Wankomon and Seasarmon
+# inherit DP auras, Karakurumon's inherited body is [On Deletion] only, and
+# Onibimon's inherited <Execute> is gated on the carrier having [TB], which
+# Nezhamon does not -- so the only end-of-turn gate in the line is Nezhamon's
+# own <Engage>, declined at T9.
+#
+# Highway: the proven red breeding line from EX12-047-effect1.yaml --
+#   T1 Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) / T5 Karakurumon
+#   (alt, 3) / T7 Nezhamon (alt [Shambala], 3) / T9 move out / T11 the clause.
+card: EX12-019
+clause: EX12-019#effect#6
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-019
+      - EX12-070
+      # security (5-9) -- never checked (p1 all-passes); Digimon only, no
+      # [Security] text
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18). No draw repeats
+      # EX12-009/011/063/019 -- a second copy in hand would make the `using:`
+      # intent ambiguous.
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+      - EX12-075
+      - EX12-031
+      - EX12-061
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9), stack[9] = TOP = the card the T11 attack flips.
+      # Digimon only, no [Security] text, DP well under the 16000 DP attacker,
+      # so the check resolves as a silent security battle.
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): Karakurumon over the red Lv.4 [Shambala] Seasarmon on
+  # its own alternate circle (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE -- Nezhamon over the purple/green Lv.5
+  # [Shambala] Karakurumon. Only the alternate circle can reach it (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-019 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): move Nezhamon to the battle area.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9's end: the <Engage> gate is already open here (Nezhamon is in the battle
+  # area) -- declined, so the clause is measured on a turn where the carrier
+  # has been in play since the start.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T10 (p1, memory 3): play Gasamon (3 -> 0). It is UNSUSPENDED and it is
+  # p1's only Digimon, which is the whole board this clause needs.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (p0, memory 3): Nezhamon declares its attack on p1's SECURITY.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # <Collision> hands p1's Gasamon <Blocker> and makes the block MANDATORY, so
+  # the blocker prompt our engine parks for p1 ("Declare a blocker", OwnField)
+  # carries no decline. Answered by p1 -- actor 1 -- with its only candidate.
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Nezhamon's own [All Turns][OPT] unsuspend (clause effect#7), fired by the
+  # security check <Piercing> forces. Declined so the board at step 30 reads
+  # cleanly; EX12-019-effect7.yaml is where that clause is measured.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The whole permanent, because the DP is the witness and the projection has
+  # no narrower path to it. Every field here is pinned by the scripted prefix:
+  # the digivolution stack is the four cards this line put there, and
+  # `suspended: true` is the attack that has just resolved (its unsuspend
+  # trigger, clause effect#7, is declined at step 29).
+  - at: 30
+    that:
+      p0.field:
+        - card_id: EX12-019
+          dp: 20000
+          suspended: true
+          sources: [EX12-004, EX12-009, EX12-011, EX12-063]

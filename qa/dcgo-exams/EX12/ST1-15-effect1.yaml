@@ -1,0 +1,147 @@
+# Exam scenario: ST1-15 (Giga Destroyer), clause ST1-15#effect#1 --
+# "[Security] Activate this card's [Main] effect."
+#
+# The printed sentence is ONE clause; the extractor splits it at the
+# [Main] marker into #effect#1 ("[Security] Activate this card's") and
+# #effect#2 ("[Main] effect."). This line exercises the whole sentence;
+# #effect#2 is the un-measurable second half of that split.
+#
+# The [Main] body itself -- "Delete up to 2 of your opponent's Digimon
+# with 4000 DP or less" -- is already `confirmed` on its own hand-played
+# line (ST1/ST1-15-effect0.yaml). This scenario asks the different
+# question: does the SECURITY trigger run that same body, off the security
+# stack, for the DEFENDER, in the middle of the attack that flipped it?
+#
+# THE SECURITY-TRIGGER SKELETON (see EX1-066-effect2.yaml for the full
+# derivation). A seat's `stack:` is a draw-order prefix on both engines and the
+# security pile is laid AFTER the mulligan from that same ordered deck, so:
+#
+#     stack[0..4]  -> the opening hand, drawn in that order
+#     stack[5..9]  -> the SECURITY stack, REVERSED:
+#                        stack[9] = TOP (flipped first) ... stack[5] = bottom
+#     stack[10..]  -> subsequent draws, in order
+#
+# Both engines are pinned to KEEP under a scripted line (our ScenarioAdapter
+# `construct()` calls `game.start_game()`; DCGO's `SetRedraw` forces
+# `isRedraw=false` while `InputDriver.IsActive`), so the pile is deterministic.
+# A scenario mulligan verb would break this -- mulligan is a true reshuffle
+# (§5-2-1-5).
+#
+# The card under exam therefore sits at P0's stack[9] and is the FIRST card the
+# single security check of the line flips.
+#
+# P1's line is the proven attacker skeleton (EX12-075-security0.yaml): Gasamon
+# (EX12-020, Lv.3, cost 3) is played on P1's first turn at memory 3 (3 -> 0, so
+# the turn continues and P1 passes out), sheds summoning sickness over T3, and
+# attacks security on T4. Gasamon's only printed effect is a [Your Turn]
+# would-digivolve cost reduction -- passive -- and its inherited [When
+# Attacking] <Draw 1> belongs to whatever digivolves OVER it, not to itself, so
+# neither the play nor the attack opens a prompt. P0's battle area stays empty
+# until the flip, so no blocker window precedes the check.
+#
+# BOTH seats' security stacks are fully pinned. EX12-074 must never sit in
+# either -- its "[Security] [Your Turn] [Once Per Turn] When one of your
+# [Shambala] trait Digimon attacks" functions FROM the security stack and
+# Gasamon IS [Shambala], so an unpinned P1 security pile would bury the line
+# under a TriggerOrder roughly a third of the time under DCGO's shuffle. The
+# EX12-074-free `toho-security-*` decks plus the pinned piles close that off on
+# both sides.
+#
+# `opp.field.0` in the select step is P0's OPPONENT -- P1 -- because the
+# acting seat is P0. The wire carries the targeted permanent's top-card id
+# (EX12-020), so DCGO resolves the same answer against its own candidate
+# list rather than against one of our indices.
+card: ST1-15
+clause: ST1-15#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand [0-4]: cost 12/16 bricks -- unplayable at memory 3, no hand [Main]
+      - EX12-047
+      - EX12-047
+      - EX12-065
+      - EX12-065
+      - EX12-076
+      # security [5-8]: quiet filler, never flipped (one check only)
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      # security [9]: THE TOP CARD -- the clause under exam
+      - ST1-15
+      # [10]: P0's T3 turn draw
+      - EX12-011
+    rest: toho-security-options
+  p1:
+    stack:
+      # hand [0-4]: the attacker plus inert filler
+      - EX12-020
+      - EX12-011
+      - EX12-011
+      - EX12-026
+      - EX12-026
+      # security [5-9]: pinned and quiet; never flipped, and EX12-074-free
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): all-pass; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness. P0 draws stack[10].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE. Gasamon attacks security; the check flips
+  # P0's stack[9].
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE's body: "delete up to 2 of your opponent's Digimon with 4000
+  # DP or less", parked for P0 (the DEFENDER -- an off-turn selection). The
+  # only candidate is P1's attacking Gasamon at 2000 DP; "up to 2" means the
+  # resolver issues the trailing PASS that closes the multi-pick itself.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking spends no memory; P1 keeps the turn. One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over facts the stack prefix pins. The witness is the
+  # ATTACKER dying mid-attack: P1's field empties and Gasamon lands in P1's
+  # trash. ST1-15 is an Option, so no security battle follows
+  # (13-1-7-3-2) and it goes to P0's trash.
+  - at: 10
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [ST1-15]
+      p0.field: []
+      p1.field: []
+      p1.trash: [EX12-020]

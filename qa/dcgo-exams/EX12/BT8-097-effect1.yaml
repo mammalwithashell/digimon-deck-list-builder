@@ -1,0 +1,97 @@
+# Exam scenario: BT8-097 Crimson Blaze effect clause #1 --
+# "[Main] Your opponent's effects can't play Digimon until their turn ends.
+#  Then, delete all of your opponent's Digimon with 6000 DP or less."
+#
+# Same line as BT8-097-effect0 (see that file for the full rationale of the
+# board: the red-Option colour precondition satisfied by a prompt-free
+# Seasarmon, and P1's single 2000 DP Wankomon built in breeding and moved
+# out on T4). The two clauses fire in ONE action, so they share one legal
+# line and differ only in which clause id the verdict is keyed to.
+#
+# The observable HERE is the sweep: P1's Wankomon (2000 DP, inside the
+# "6000 DP or less" filter) is deleted, top card and digivolution card both
+# to P1's trash, leaving P1's board empty. Neither engine prompts -- DCGO
+# filters `GetBattleAreaDigimons()` and hands the whole list to
+# `DestroyPermanentsClass`, ours is a `for_each ... delete_permanent`.
+#
+# TWO HALVES OF THIS CLAUSE ARE NOT WITNESSED BY THIS LINE, stated plainly:
+#   - the floodgate ("your opponent's effects can't play Digimon until
+#     their turn ends") leaves no trace in the normalized projection -- it
+#     would need a follow-on turn in which P1 tries to play a Digimon BY AN
+#     EFFECT and fails; and
+#   - the "6000 DP or less" boundary is not probed (there is no >6000 DP
+#     survivor on the board to prove the filter excludes it).
+# Both are additional lines, not repairs to this one.
+card: BT8-097
+clause: BT8-097#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-011, BT8-097, EX12-031, EX12-031, EX12-031,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-046, EX12-046,  # security
+            EX12-046, EX12-026]                                # T3 / T5 draws
+    rest: sw-support
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): field the red body; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): hatch Onibimon, digivolve Wankomon via the alt circle.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): still waiting.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): move the Wankomon stack out -- the one opponent
+  # Digimon the cost reduction counts.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate: decline (our EndOfTurnAction PASS;
+  # DCGO OptionalSkill "no" on the wire).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T5 (P0, memory 3): THE CLAUSE -- Crimson Blaze costs 6 - 1 = 5.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT8-097, from: hand } }
+    expect: { prompt: main_phase }
+  # The cost-5 play overshot to -2, so the turn ends after resolution; the
+  # trailing pass is P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Sweep witness: P1's board is empty and the whole deleted stack is in
+  # P1's trash. P0's own Seasarmon (5000 DP, also inside the filter) is
+  # untouched -- the clause only reaches the OPPONENT's Digimon.
+  - at: 12
+    that:
+      p1.field: []
+      p1.trash: [EX12-004, EX12-009]
+      p0.field: [{ card_id: EX12-011, dp: 5000, suspended: false, sources: [] }]

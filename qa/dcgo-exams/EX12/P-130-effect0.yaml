@@ -1,0 +1,105 @@
+# Exam scenario: P-130 Lui Ohwada effect clause #0 --
+# "[On Play] You may move 1 of your level 3 or higher Digimon from the
+#  breeding area to the battle area."
+#
+# The witness is the move itself: a Digimon that was in P0's breeding area
+# is in P0's battle area one step later, WITHOUT P0 having spent its
+# once-per-turn breeding move (the line's only breeding actions are the T1
+# hatch and the T1 breeding digivolve).
+#
+# SURFACE NOTE -- the two engines shape this choice differently, and the
+# `select: {yes: true}` row is what bridges them:
+#   - DCGO (P_130.cs, EffectTiming.OnEnterFieldAnyone) builds the
+#     ActivateClass with `isOptional: true`, so it asks ONE `OptionalSkill`
+#     yes/no and then moves `GetBreedingAreaPermanents()[0]` with no further
+#     question -- there is nothing to pick, because a player has at most one
+#     breeding permanent.
+#   - ours parks one declinable `select_own_breeding_permanent`
+#     (SelectionKind::BreedingPermanent, filter level_gte 3), which with a
+#     single candidate has exactly one accept id -- so an affirmative answer
+#     resolves it unambiguously.
+# `expect: {prompt: OptionalSkill}` is therefore the honest label for the
+# DCGO side of that one row.
+#
+# Board hygiene: the breeding body is Takinmon (EX12-039, yellow Lv.3
+# [Beast]/[Shambala]/[SW]), chosen because it is NOT a [TB] card -- so the
+# Onibimon (EX12-004) underneath it does NOT grant <Execute> once the stack
+# reaches the battle area, and no end-of-turn gate ever opens. Takinmon's
+# own printed effect is a static digivolve-cost reduction and its inherited
+# <Barrier> is source-only, so nothing prompts. Its purple Onibimon base
+# cannot match its printed yellow Lv.2 circle, so the T1 digivolve takes the
+# alt "Lv.2 w/[Shambala]: Cost 0" route -- one distinct cost, no cost-choice
+# prompt.
+#
+#   T1 (P0, memory 0): hatch Onibimon, digivolve Takinmon over it in
+#       BREEDING (cost 0), pass (P1 gets 3).
+#   T2 (P1, memory 3): all-pass (P0 gets 3).
+#   T3 (P0, memory 3): THE CLAUSE -- play Lui Ohwada (cost 3, memory 3 -> 0)
+#       and accept the move. Takinmon lands in the battle area, which
+#       immediately triggers this Tamer's OTHER clause (#1: suspend it,
+#       gain 1 memory) -- see P-130-effect1.yaml, the same line keyed there.
+#
+# P1 never acts and is never attacked, so its seat needs no stack.
+#
+# Deck: `sw-support` (appended for this batch) -- it carries P-130 and
+# BT8-097 on the same Shambala shell; toho-braves has neither.
+card: P-130
+clause: P-130#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-039, P-130, EX12-031, EX12-031, EX12-031,     # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-011, EX12-046,  # security
+            EX12-046]                                          # T3 draw
+    rest: sw-support
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): hatch, then the free alt-path digivolve in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-039 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play the Tamer (3 -> 0); the [On Play] opens.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-130, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: accept the move. Takinmon (level 3) is the only candidate.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # The move immediately triggers this Tamer's OTHER clause (#1). DCGO builds
+  # THAT ActivateClass with `isOptional: true` and asks a second OptionalSkill
+  # before suspending; our DSL fires it unconditionally, so this row answers
+  # no live prompt sim-side and rides the wire for DCGO. Carried here as well
+  # as in P-130-effect1.yaml because both files run the SAME line -- omitting
+  # it would leave DCGO's prompt unanswered and abort the oracle job.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The move happened: Takinmon is on the battle area carrying its Onibimon
+  # digivolution card, and P0's breeding area is empty behind it.
+  - at: 9
+    that:
+      p0.field:
+        - { card_id: EX12-039, dp: 2000, suspended: false, sources: [EX12-004] }
+        - { card_id: P-130, dp: -1, suspended: true, sources: [] }

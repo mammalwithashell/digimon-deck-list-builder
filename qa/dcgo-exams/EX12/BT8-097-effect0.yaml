@@ -1,0 +1,123 @@
+# Exam scenario: BT8-097 Crimson Blaze effect clause #0 -- "For each of your
+# opponent's Digimon, reduce this card's use cost in the hand by 1."
+# (Errata face: "Reduce the memory cost of this card in your hand by 1 for
+#  each Digimon your opponent has in play.")
+#
+# MEMORY IS THE WHOLE WITNESS. The line gives P1 exactly ONE Digimon, so the
+# printed cost 6 must be paid as 5: P0 plays at memory 3 and lands on -2.
+# With no reduction the same play would land on -3, so the single assert
+# distinguishes the two outcomes. (One Digimon rather than several because
+# each extra body costs several more turns of line; the per-Digimon SCALING
+# is therefore NOT exercised here -- stated plainly rather than implied.)
+#
+# DCGO: `EffectTiming.None` ChangeCostClass, `CanUseCondition` = card is in
+# hand AND `card.Owner.Enemy.GetBattleAreaDigimons().Count() >= 1`, then
+# `Cost -= count()`. Ours: a `cost_reduction` with
+# `reduction_timing: before_pay_cost`, `when_playing_this: true` and a
+# per-opponent-Digimon count. Neither side prompts for it -- it is priced
+# into the play action, which is exactly why memory is the only observable.
+#
+# THE NON-OBVIOUS PRECONDITION: Crimson Blaze is a RED Option, and an Option
+# may only be used while its controller has a Digimon or Tamer sharing its
+# colour. So P0 must field a red body first, and it has to be one that
+# prompts for nothing. Seasarmon (EX12-011, red Lv.4) played on T1 is that
+# body: its [On Play]/[When Digivolving] delete is vacuous against P1's
+# still-empty board (DCGO guards it with the same
+# `HasMatchConditionPermanent` shape our engine uses), its <Raid> only
+# matters when IT attacks, and playing it from hand puts no Onibimon
+# underneath -- so no <Execute> gate ever opens on P0's side.
+#
+# P1's single Digimon is built by the confirmed EX12-026-effect1 spine:
+# hatch Onibimon, digivolve Wankomon (EX12-009) over it in BREEDING via the
+# alt "Lv.2 w/[Shambala]: Cost 0" circle (the standard red circle cannot
+# match the purple egg, so the intent is single-path and no [On Play] fires
+# in breeding), then MOVE the stack out on T4.
+#
+# Note the two clauses of this card fire in one action: the same play also
+# resolves clause #1's [Main] body (floodgate + sweep, which deletes that
+# 2000 DP Wankomon). That is deliberate -- BT8-097-effect1.yaml is the same
+# line keyed to the other clause id, the same way EX12-026-inherited0/1
+# share one line.
+#
+#   T1 (P0, memory 0): play Seasarmon (0 -> -5, overshoot ends the turn).
+#   T2 (P1, memory 5): hatch + breeding digivolve; pass (P0 gets 3).
+#   T3 (P0, memory 3): all-pass (P1 gets 3).
+#   T4 (P1, memory 3): move the Wankomon stack out, pass, then DECLINE the
+#       granted-<Execute> end-of-turn gate (Onibimon grants it to the [TB]
+#       Wankomon, and moved stacks may attack the move turn).
+#   T5 (P0, memory 3): THE CLAUSE -- play Crimson Blaze for 5 (3 -> -2). The
+#       overshoot ends the turn, so the trailing step is P1's breeding.
+#
+# Deck: `sw-support` for P0 (appended for this batch -- it carries BT8-097
+# and P-130 on the same Shambala shell); P1 keeps toho-braves.
+card: BT8-097
+clause: BT8-097#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-011, BT8-097, EX12-031, EX12-031, EX12-031,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-046, EX12-046,  # security
+            EX12-046, EX12-026]                                # T3 / T5 draws
+    rest: sw-support
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): field the red body; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): hatch Onibimon, digivolve Wankomon via the alt circle.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): still waiting.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): move the Wankomon stack out -- the one opponent
+  # Digimon the cost reduction counts.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate: decline (our EndOfTurnAction PASS;
+  # DCGO OptionalSkill "no" on the wire).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T5 (P0, memory 3): THE CLAUSE -- Crimson Blaze costs 6 - 1 = 5.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT8-097, from: hand } }
+    expect: { prompt: main_phase }
+  # The cost-5 play overshot to -2, so the turn ends after resolution; the
+  # trailing pass is P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Cost witness: memory 3 -> -2 (paid 5, not the printed 6). The Option
+  # itself is in P0's trash after resolving.
+  - at: 12
+    that:
+      p0.memory: -2
+      p0.trash: [BT8-097]

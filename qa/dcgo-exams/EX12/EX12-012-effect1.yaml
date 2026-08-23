@@ -1,0 +1,92 @@
+# Exam scenario: EX12-012 Apemon, clause EX12-012#effect#1 -- the COST half of
+# "[On Play] [When Digivolving] By trashing 1 card with the [SW] trait from
+#  your hand, <Draw 2>."
+# (the extractor splits the printed line at the <Draw 2> keyword; #effect#2 is
+#  the payoff half. The two timings are also split across two lines on purpose:
+#  this file takes the WHEN DIGIVOLVING branch, EX12-012-effect2.yaml takes the
+#  ON PLAY branch, so both printed timings of the clause are exercised.)
+#
+#   T1 (P0, memory 0): hatch Mococomon; digivolve Kamemon EX12-022 over it in
+#       breeding via its alt circle (Lv.2 w/[Shambala]: Cost 0 -- Kamemon is
+#       BLUE, so its standard circle cannot take the yellow egg). Kamemon's
+#       [On Play] does NOT fire on a digivolve, so nothing prompts. Pass.
+#   T2 (P1, memory 3): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): move the stack to the battle area, then digivolve Apemon
+#       over Kamemon via Apemon's own alt circle (Lv.3 w/[Shambala]: Cost 2 --
+#       EX12-012#effect#3's exam), memory 3 -> 1. THE CLAUSE fires on that
+#       digivolve: a declinable hand pick (DCGO SelectHandEffect mode Discard,
+#       canNoSelect:true; ours `select_hand optional/cost`). Paying it trashes
+#       EX12-043 Hakubamon and draws stack[11] + stack[12].
+#
+# EX12-043 is the only [SW] card in hand at the trigger, so the identity answer
+# is unambiguous.
+#
+# EVERY DIGIVOLVE DRAWS 1 (the core rule, and it resolves BEFORE the
+# [When Digivolving] effect), so this 9-step line takes FIVE cards off the top:
+# stack[10] (the T1 digivolve), stack[11] (the T3 turn draw), stack[12] (the T3
+# digivolve, which is why the hand already holds it when the clause's prompt
+# parks) and stack[13..14] (the <Draw 2> payoff). All five are pinned, so the
+# hand/trash assertions rest only on the pinned prefix -- and stack[12] is
+# deliberately a non-[SW] card, since an [SW] card arriving on the digivolve
+# draw would widen the clause's own candidate set.
+#
+# The opponent's board is left empty throughout: Apemon's <Raid> opens no
+# window with no unsuspended enemy Digimon, and this line never attacks.
+card: EX12-012
+clause: EX12-012#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-012, EX12-043, EX12-009, EX12-011,   # opening hand
+            EX12-020, EX12-026, EX12-031, EX12-046, EX12-061,   # security
+            EX12-020,                                           # [10] T1 digivolve-draw
+            EX12-026,                                           # [11] T3 turn draw
+            EX12-031,                                           # [12] T3 digivolve-draw
+            EX12-009, EX12-011]                                 # [13][14] the <Draw 2>
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): build Kamemon over the Digi-Egg in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-022 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out...
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # ...and digivolve Apemon onto it -- THE CLAUSE fires here.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-012 } }
+    expect: { prompt: main_phase }
+  # Pay the cost: trash the only [SW] card in hand.
+  - actor: 0
+    do: { select: { cards: [EX12-043] } }
+    expect: { prompt: SelectHandEffect }
+  # One step after the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: the cost was paid (EX12-043 in trash),
+  # both pinned cards were drawn, and the alt-circle digivolve took memory
+  # 3 -> 1. Apemon reads its printed 4000 -- neither Mococomon nor Kamemon is a
+  # DP source.
+  - at: 8
+    that:
+      p0.memory: 1
+      p0.trash: [EX12-043]
+      p0.hand: [EX12-009, EX12-009, EX12-011, EX12-011, EX12-020, EX12-026, EX12-031]
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: false, sources: [EX12-002, EX12-022] }]
