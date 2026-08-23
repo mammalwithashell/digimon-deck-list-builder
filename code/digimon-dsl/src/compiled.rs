@@ -1145,6 +1145,9 @@ pub enum CompiledScope {
     Both,
     Linked,
     Security,
+    /// Printed `[Trash]` zone scope — active only from the owner's trash.
+    /// Appended LAST to keep the serialized tags of prior variants stable.
+    Trash,
 }
 
 #[derive(

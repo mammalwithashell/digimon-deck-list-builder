@@ -777,6 +777,16 @@ impl Game {
                 if effect.inherited || effect.linked {
                     continue;
                 }
+                // Only clauses PRINTED with a `[Trash]` zone scope operate
+                // from the trash (BT20-084's "[Trash] When any of your
+                // Digimon are played, ..."). An ordinary field observer on a
+                // dead card must stay dormant — DCGO never fires dead cards'
+                // observers, and the phantom trigger inflated TriggerOrder
+                // bundles (EX12-063 exam: dead EX12-036's [All Turns]
+                // on-ally-played observer enqueued from trash).
+                if !effect.trash_zone {
+                    continue;
+                }
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
@@ -2126,6 +2136,13 @@ impl Game {
                     continue;
                 }
                 if effect.linked {
+                    continue;
+                }
+                // A `[Trash]`-scoped clause (BT20-084) is active only while
+                // the card sits in its owner's trash — never from the
+                // battle area. Mirror of the `trash_zone` gate in
+                // `enqueue_from_player_trash`.
+                if effect.trash_zone {
                     continue;
                 }
                 // An inherited effect (the lower portion of a digi card) is

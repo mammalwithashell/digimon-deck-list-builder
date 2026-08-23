@@ -245,6 +245,7 @@ impl Game {
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
+            replacement_commit_fired: false,
             effect_source_player: None,
             effect_source_card: None,
             effect_source_permanent: None,
@@ -383,6 +384,7 @@ impl Game {
         self.pending_cost_reduction_amount_override = None;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;
+        self.replacement_commit_fired = false;
         self.effect_source_player = None;
         self.effect_source_card = None;
         self.effect_source_permanent = None;

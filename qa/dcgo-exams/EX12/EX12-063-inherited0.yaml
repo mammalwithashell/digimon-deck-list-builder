@@ -144,18 +144,14 @@ steps:
   - actor: 0
     do: { select: { cards: [EX12-061] } }
     expect: { prompt: SelectCardEffect }
-  # The revived Hanimon's [On Play] queues alongside a SECOND pending
-  # trigger our engine over-enqueues (dead Ryugumon's [All Turns]
-  # on-ally-played observer scanned from the TRASH — flagged as a separate
-  # engine finding; its body fizzles on p1's empty board). Order Hanimon's
-  # [On Play] (slot 0) first. DCGO stacks only Hanimon's skill, so this
-  # order row is ENGINE-ONLY — the oracle pass must adjudicate (same class
-  # as EX12-036-effect1's TriggerOrder caveat).
-  - actor: 0
-    do: { select: { value: 0 } }
-    expect: { prompt: MultipleSkills }
+  # The revived Hanimon's [On Play] is the ONLY trigger on the play — the
+  # dead Ryugumon's [All Turns] on-ally-played observer no longer enqueues
+  # from the trash (the EnteredField trash scan is gated to `scope: trash`
+  # clauses; the printed clause has no [Trash] scope and DCGO never stacks
+  # it either). The former ENGINE-ONLY MultipleSkills order row is gone:
+  # both engines go straight to Hanimon's cost pick.
   # Decline the revived Hanimon's "By trashing 1 [Puppet]/[TB] card from
-  # hand, draw 2" cost pick; the over-enqueued observer then fizzles.
+  # hand, draw 2" cost pick.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
@@ -170,7 +166,7 @@ assert:
   # trash -- the digivolve's cost-3 alt route emptied the gauge, and THE
   # CLAUSE's observable: the trashed Hanimon #2 is back on p0's field beside
   # Hanimon #1 (the deleted stack's other cards stay in trash).
-  - at: 19
+  - at: 18
     that:
       # -3: the closing pass rotated the turn; a turn ending at 0 hands the
       # opponent the 3-minimum, read here from p0's perspective.

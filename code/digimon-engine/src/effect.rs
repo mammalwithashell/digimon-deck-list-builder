@@ -193,6 +193,14 @@ pub struct Effect {
     pub on_deletion: bool,
     pub inherited: bool,
     pub security: bool,
+    /// Trash-zone clause: the printed text carries an explicit `[Trash]`
+    /// timing scope, so the clause is active ONLY while the card sits in its
+    /// owner's trash (e.g. BT20-084 "[Trash] When any of your Digimon are
+    /// played, ..."). The `EnteredField` dispatch's trash scan
+    /// (`enqueue_from_player_trash`) enqueues ONLY effects with this flag;
+    /// the battle-area top-card scan skips them. Set via
+    /// `EffectBuilder::trash_zone()` / DSL `scope: trash`.
+    pub trash_zone: bool,
     pub counter: bool,
     pub declarative: bool,
     /// True only for process-backed declaratives that materialize static
@@ -711,6 +719,7 @@ impl EffectBuilder {
                 on_deletion: false,
                 inherited: false,
                 security: false,
+                trash_zone: false,
                 counter: false,
                 declarative: false,
                 materializes_declarative_state: false,
@@ -786,6 +795,13 @@ impl EffectBuilder {
     }
     pub fn security_zone(mut self) -> Self {
         self.inner.security = true;
+        self
+    }
+    /// Mark this clause as active ONLY while the card is in its owner's
+    /// trash (printed `[Trash]` timing scope — e.g. BT20-084). See
+    /// `Effect::trash_zone`.
+    pub fn trash_zone(mut self) -> Self {
+        self.inner.trash_zone = true;
         self
     }
     fn declarative_flag(mut self) -> Self {

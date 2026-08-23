@@ -1,8 +1,8 @@
 use digimon_engine::enums::{CardColor, Keyword, ModifierType};
 
 use super::support::{
-    bottom_source_id, hand_index, is_suspended, plain_digimon, select_first_non_pass,
-    select_hand_card, tb_digimon, DebugRunner,
+    bottom_source_id, hand_index, is_suspended, plain_digimon, push_to_trash,
+    select_first_non_pass, select_hand_card, tb_digimon, DebugRunner,
 };
 
 const CARD_ID: &str = "EX12-036";
@@ -64,4 +64,43 @@ fn ex12_036_ally_played_locks_opponent_when_digivolving_and_suspend() {
         .modifiers
         .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
     assert!(runner.game.modifiers.has(opp, ModifierType::CannotSuspend));
+}
+
+#[test]
+fn ex12_036_ally_played_observer_does_not_fire_from_trash() {
+    // Regression for the EX12-063 exam phantom (qa/dcgo-exams/EX12/
+    // EX12-063-inherited0.yaml): a DEAD EX12-036 sitting in the trash must
+    // NOT enqueue its "[All Turns][Once Per Turn] when any of your Digimon
+    // are played..." observer. The printed clause carries no [Trash] scope
+    // (rule 15-14-3: only effects with the {Trash} icon activate from the
+    // trash), and DCGO does not fire dead cards' observers. Before the fix,
+    // the EnteredField
+    // dispatch's trash scan enqueued this clause from the trash, parking a
+    // phantom selection / TriggerOrder entry.
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-036 YAML loads")
+        .add_card(tb_digimon("ALLY", CardColor::Blue, 4, 5000))
+        .add_card(plain_digimon("OPP", CardColor::Blue, 4, 5000))
+        .start();
+    push_to_trash(&mut runner, 0, CARD_ID);
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    let opp = runner.place_on_field(1, "OPP", Some(0));
+
+    runner.fire_play_event_triggers(ally.player, ally.index as usize, true, false);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "dead EX12-036 in trash must not fire its on-ally-played observer \
+         (got pending selection: {:?})",
+        runner.game.pending_selection.as_ref().map(|s| &s.kind)
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects),
+        "phantom trash observer must not have locked the opponent Digimon"
+    );
+    assert!(!runner.game.modifiers.has(opp, ModifierType::CannotSuspend));
 }

@@ -2,6 +2,7 @@ mod attack_cancel;
 mod behavioral_end_to_end;
 mod context_predicates;
 mod cross_permanent;
+mod declined_replacements;
 mod deletion_replacements;
 mod dispatcher_core;
 mod dispatcher_guard;

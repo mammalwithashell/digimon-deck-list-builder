@@ -695,6 +695,25 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) in_replacement_commit: bool,
 
+    /// Companion to `in_replacement_commit`: `true` while the commit being
+    /// continued is for a replacement that actually FIRED (a non-`None`
+    /// outcome — cancel / redirect / substitute / custom). Only meaningful
+    /// while `in_replacement_commit` is set.
+    ///
+    /// `try_replace_impl` consults it to pick the §7.5 guard strictness: a
+    /// FIRED commit blocks ANY prior-fired subject regardless of timing (the
+    /// v1 double-prompt protection for redirect routes — pinned by
+    /// `dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation`),
+    /// while a DECLINED / no-op commit (outcome `None`: the event proceeds
+    /// unchanged) blocks only exact `(timing, subject)` re-dispatch so the
+    /// remaining not-yet-offered Would* windows still open. Rule 15-8-5-4:
+    /// each simultaneous immediate-type effect "can be activated one at a
+    /// time until the cause ... is resolved" — only the already ACTIVATED
+    /// one is spent; an offered-and-declined one must not consume the event
+    /// (declined `<Decode>` must not eat `<Evade>`).
+    #[doc(hidden)]
+    pub(crate) replacement_commit_fired: bool,
+
     /// Controller of the effect whose `process` is currently running, if
     /// any. Set by `run_queued_effect` at dispatch time and cleared at the
     /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's
@@ -3185,6 +3204,7 @@ mod reset_for_replay_tests {
         g.pending_player_digivolve_reduction = 9;
         g.in_counter_window = true;
         g.in_replacement_commit = true;
+        g.replacement_commit_fired = true;
         g.dsl_clause_aborted = true;
         g.draining_deferred = 2;
         g.until_condition_dirty = true;
@@ -3223,6 +3243,7 @@ mod reset_for_replay_tests {
         assert_eq!(g.pending_player_digivolve_reduction, 0);
         assert!(!g.in_counter_window);
         assert!(!g.in_replacement_commit);
+        assert!(!g.replacement_commit_fired);
         assert!(!g.dsl_clause_aborted);
         assert_eq!(g.draining_deferred, 0);
         assert!(!g.until_condition_dirty);

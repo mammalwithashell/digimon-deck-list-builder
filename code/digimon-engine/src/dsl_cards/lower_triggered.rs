@@ -191,6 +191,9 @@ pub fn lower_for_kind_with_clause_index(
         if matches!(scope, CompiledScope::Security) {
             builder = builder.security_zone();
         }
+        if matches!(scope, CompiledScope::Trash) {
+            builder = builder.trash_zone();
+        }
         if let Some(s) = summary {
             builder = builder.name(&s);
         }
