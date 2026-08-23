@@ -44,6 +44,19 @@ const SCENARIO_FIRST_PLAYER: PlayerId = 0;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SelectWire {
     pub card_ids: Vec<String>,
+    /// Which of the SAME identity's candidates DCGO should take, 0-based.
+    /// Only meaningful for DCGO's `MultipleSkills` prompt (our
+    /// `TriggerOrder`), whose candidates are stacked TRIGGERS rather than
+    /// interchangeable copies — see `SelectPayload::Cards`. Rides the wire as
+    /// `select_ordinal`; DCGO's absent sentinel is `int.MinValue`, expressed
+    /// by OMITTING the key.
+    ///
+    /// It is DCGO's own within-card trigger order, resolved against DCGO's own
+    /// candidate list. Our side resolves the same symbolic answer against OUR
+    /// candidate list — see [`match_one_with_ordinal`] — so a cross-engine
+    /// disagreement about that order surfaces as a divergence rather than
+    /// being papered over by one shared index.
+    pub ordinal: Option<i32>,
     pub value: Option<i32>,
     pub bool_answer: Option<bool>,
     pub cancel: bool,
@@ -103,6 +116,38 @@ pub enum LoweredStep {
     /// resolved and the carrier self-deleted, our phase still parks until a
     /// PASS, while DCGO simply rotates — no prompt exists to consume a row).
     SimOnlyAction(u16),
+}
+
+impl LoweredStep {
+    /// How many rows this step contributes to the emitted DCGO job.
+    ///
+    /// This is the SAME dispatch `build_exam_job` performs when it writes the
+    /// wire, stated once so the differ can pair the two traces by step instead
+    /// of by decision count (see
+    /// [`pair_by_wire_rows`](crate::exam::projection::pair_by_wire_rows)).
+    /// `emit_job_tests::wire_row_counts_match_dcgo_wire_rows` pins the two
+    /// against each other, so a new variant cannot drift them apart.
+    pub fn dcgo_wire_rows(&self) -> usize {
+        match self {
+            // No DCGO prompt exists for it — see the variant's own docs.
+            LoweredStep::SimOnlyAction(_) => 0,
+            LoweredStep::Action(_) => 1,
+            // A folded DECLINE is one row (DCGO never opens the pick after a
+            // declined gate); a folded PICK is the gate row plus the pick row.
+            LoweredStep::Select(w) if w.optional_gate_fold => {
+                if w.cancel {
+                    1
+                } else {
+                    2
+                }
+            }
+            LoweredStep::Select(_) => 1,
+            // Declining the end-of-turn gate is one OptionalSkill row; taking
+            // the attack is the gate plus the SelectAttackEffect target pick.
+            LoweredStep::EndOfTurnGate { attack: None, .. } => 1,
+            LoweredStep::EndOfTurnGate { attack: Some(_), .. } => 2,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -191,7 +236,7 @@ impl ScenarioAdapter {
                         board_p0: None,
                         board_p1: None,
                     });
-                    lowered.push(classify_lowered_action(&game, actor, action_id, &step.act)?);
+                    lowered.push(classify_lowered_action(&game, actor, action_id)?);
 
                     // `Game::decode_action` returns unit and SILENTLY IGNORES an
                     // illegal or out-of-range id, so there is no error to propagate
@@ -264,6 +309,12 @@ impl ScenarioAdapter {
     /// One carrier per scenario step: `Action(id)` or `Select(wire)`.
     pub fn lowered_steps(&self) -> &[LoweredStep] {
         &self.lowered
+    }
+
+    /// How many DCGO wire rows each scenario step consumes, in line order —
+    /// the input the differ's step pairing is derived from.
+    pub fn dcgo_wire_rows_per_step(&self) -> Vec<usize> {
+        self.lowered.iter().map(LoweredStep::dcgo_wire_rows).collect()
     }
 }
 
@@ -355,7 +406,6 @@ fn classify_lowered_action(
     game: &Game,
     actor: PlayerId,
     action_id: u16,
-    act: &StepAction,
 ) -> Result<LoweredStep, String> {
     use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
     if game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
@@ -423,6 +473,85 @@ fn classify_lowered_action(
         // behavior, not a regression.
         _ => Ok(LoweredStep::Action(action_id)),
     }
+}
+
+/// Resolve one card identity (+ optional ordinal) against a prompt's candidate
+/// list, returning the index of the pick.
+///
+/// A faithful mirror of DCGO's `SelectionAnswer.MatchOneWithOrdinal`, applied
+/// to OUR candidate list. Both engines answer the same symbolic step by
+/// resolving it themselves; neither is handed the other's index.
+///
+/// The rule, and why each branch refuses instead of guessing:
+/// - **0 matches** — the identity is not on offer. Something upstream already
+///   diverged; taking any candidate would bury it.
+/// - **1 match** — resolves with no ordinal. An ordinal other than 0 is an
+///   author claiming a second trigger that does not exist here, which is a
+///   finding about the stack's SHAPE and must not be silently rounded down.
+/// - **N matches** — an ordinal is REQUIRED. This is the one prompt where
+///   duplicate ids are not interchangeable copies: an `[On Deletion]` and an
+///   `<Ascension>` on one deleted carrier both offer that carrier's identity,
+///   and taking the first would be a confident wrong answer.
+fn match_one_with_ordinal(
+    wanted: &str,
+    ordinal: Option<i32>,
+    candidates: &[String],
+) -> Result<usize, String> {
+    let matches: Vec<usize> = candidates
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.as_str() == wanted)
+        .map(|(i, _)| i)
+        .collect();
+    match matches.len() {
+        0 => Err(format!(
+            "wanted card '{wanted}' is not among the offered candidates [{}]",
+            candidates.join(", ")
+        )),
+        1 => match ordinal {
+            None | Some(0) => Ok(matches[0]),
+            Some(o) => Err(format!(
+                "wanted card '{wanted}' with ordinal {o}, but it is offered exactly \
+                 once by [{}] (only ordinal 0 exists)",
+                candidates.join(", ")
+            )),
+        },
+        n => match ordinal {
+            None => Err(format!(
+                "wanted card '{wanted}' is AMBIGUOUS: it is offered {n} times by \
+                 [{}]. Add `ordinal:`, the 0-based position among that card's own \
+                 candidates (0..{})",
+                candidates.join(", "),
+                n - 1
+            )),
+            Some(o) if o < 0 || o as usize >= n => Err(format!(
+                "wanted card '{wanted}' with ordinal {o}, but it is offered {n} times \
+                 by [{}] (valid ordinals 0..{})",
+                candidates.join(", "),
+                n - 1
+            )),
+            Some(o) => Ok(matches[o as usize]),
+        },
+    }
+}
+
+/// The source-card ids our live `TriggerOrder` prompt is offering, in ITS own
+/// order — the candidate list [`match_one_with_ordinal`] resolves against.
+///
+/// `None` when any entry carries no source card: that is NOT MEASURED, and an
+/// unverifiable match is a wrong answer waiting to happen. Resolved through
+/// `Game::card` rather than by parsing the branch label, so a label-format
+/// change cannot silently break identity matching.
+fn trigger_order_candidate_ids(game: &Game) -> Option<Vec<String>> {
+    let pending = game.pending_selection.as_ref()?;
+    let entries = pending.effect_choices.as_ref()?;
+    entries
+        .iter()
+        .map(|e| {
+            e.source_card
+                .map(|h| game.card(h).card_id.clone())
+        })
+        .collect()
 }
 
 /// Resolve one `own.field.N` / `opp.field.N` slot reference against the live
@@ -529,9 +658,76 @@ fn build_selection_row(
     }
 
     match payload {
-        SelectPayload::Cards(ids) => {
-            row.card_ids = Some(ids.clone());
+        SelectPayload::Cards { ids, ordinal } => {
+            // The wire always carries the SYMBOLIC answer — identities plus,
+            // when the prompt stacks a card's triggers, which of them.
             wire.card_ids = ids.clone();
+            wire.ordinal = *ordinal;
+
+            let live_kind = game.pending_selection.as_ref().map(|p| p.kind.clone());
+            match live_kind {
+                // Our trigger-order prompt is DCGO's MultipleSkills. Its
+                // candidates are stacked TRIGGERS, so `resolve_next`'s
+                // card-identity path (which searches game ZONES) cannot answer
+                // it. Resolve the identity here, against the prompt's own
+                // source cards, with DCGO's own matching rule.
+                Some(SelectionKind::TriggerOrder) => {
+                    if ids.len() != 1 {
+                        return Err(format!(
+                            "step {i}: our TriggerOrder prompt is single-pick but the \
+                             step names {} cards",
+                            ids.len()
+                        ));
+                    }
+                    let candidates = trigger_order_candidate_ids(game).ok_or_else(|| {
+                        format!(
+                            "step {i}: our TriggerOrder prompt offers a branch with no \
+                             source card, so its candidate list is NOT MEASURED and \
+                             identities cannot be matched"
+                        )
+                    })?;
+                    let pick = match_one_with_ordinal(&ids[0], *ordinal, &candidates)
+                        .map_err(|e| format!("step {i}: {e}"))?;
+                    println!(
+                        "  note: step {i} answers our TriggerOrder prompt by identity -- \
+                         '{}'{} is branch {pick} of [{}]. That order is OURS; DCGO \
+                         resolves the same step against its own list, so a \
+                         disagreement surfaces as a divergence.",
+                        ids[0],
+                        ordinal
+                            .map(|o| format!(" ordinal {o}"))
+                            .unwrap_or_default(),
+                        candidates.join(", ")
+                    );
+                    // `int_value` is the branch-index payload `resolve_next`
+                    // maps straight through `effect_choices`.
+                    row.int_value = Some(pick as i64);
+                }
+                // An ordinal over any other live prompt is an author using
+                // MultipleSkills vocabulary on a prompt that has no trigger
+                // stack. Our side would ignore it while DCGO acted on it --
+                // a half-answered step, which is exactly the silent
+                // desynchronization this format refuses everywhere else.
+                Some(kind) if ordinal.is_some() => {
+                    return Err(format!(
+                        "step {i}: `ordinal:` disambiguates a stacked-trigger prompt \
+                         (DCGO MultipleSkills / our TriggerOrder), but our engine's \
+                         live prompt here is {kind:?}"
+                    ))
+                }
+                _ => {
+                    // No live prompt (our engine auto-resolved one DCGO still
+                    // asks about), or an ordinary identity pick: unchanged.
+                    row.card_ids = Some(ids.clone());
+                    if ordinal.is_some() && game.pending_selection.is_none() {
+                        println!(
+                            "  note: step {i} carries `ordinal:` but our engine parks no \
+                             prompt here -- it rides the wire for DCGO and is not \
+                             checked sim-side"
+                        );
+                    }
+                }
+            }
         }
         SelectPayload::Targets(refs) => {
             let mut frames = Vec::with_capacity(refs.len());
@@ -923,6 +1119,167 @@ steps:
         assert_eq!(a.steps().len(), 2);
         assert!(a.steps()[1].selection.is_some(), "the row rides the wire");
         assert!(matches!(a.lowered_steps()[1], LoweredStep::Select(_)));
+    }
+
+    // ── identity + ordinal matching (mirror of DCGO MatchOneWithOrdinal) ─
+
+    #[test]
+    fn one_candidate_resolves_with_or_without_ordinal_zero() {
+        let c = vec!["A".to_string(), "B".to_string()];
+        assert_eq!(match_one_with_ordinal("B", None, &c).unwrap(), 1);
+        assert_eq!(match_one_with_ordinal("B", Some(0), &c).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_nonzero_ordinal_on_a_single_candidate_is_a_finding_not_a_round_down() {
+        // The author claims a second trigger from this card. If the stack does
+        // not have one, that is a disagreement about the stack's SHAPE, and
+        // quietly taking the only candidate would bury it.
+        let c = vec!["A".to_string(), "B".to_string()];
+        let err = match_one_with_ordinal("B", Some(1), &c).unwrap_err();
+        assert!(err.contains("exactly once"), "got: {err}");
+        assert!(err.contains("only ordinal 0"), "got: {err}");
+    }
+
+    #[test]
+    fn duplicate_candidates_require_an_ordinal_and_name_the_valid_range() {
+        // The live case: one deleted carrier offering its [On Deletion] and
+        // its <Ascension>. Those are different decisions.
+        let c = vec!["EX12-047".to_string(), "EX12-047".to_string()];
+        let err = match_one_with_ordinal("EX12-047", None, &c).unwrap_err();
+        assert!(err.contains("AMBIGUOUS"), "got: {err}");
+        assert!(err.contains("0..1"), "must name the range: {err}");
+
+        assert_eq!(match_one_with_ordinal("EX12-047", Some(0), &c).unwrap(), 0);
+        assert_eq!(match_one_with_ordinal("EX12-047", Some(1), &c).unwrap(), 1);
+    }
+
+    #[test]
+    fn an_ordinal_is_a_position_among_that_cards_candidates_not_a_list_index() {
+        // [X, Y, X]: ordinal 1 for X is the THIRD entry, not the second.
+        let c = vec!["X".to_string(), "Y".to_string(), "X".to_string()];
+        assert_eq!(match_one_with_ordinal("X", Some(0), &c).unwrap(), 0);
+        assert_eq!(match_one_with_ordinal("X", Some(1), &c).unwrap(), 2);
+    }
+
+    #[test]
+    fn an_out_of_range_ordinal_refuses_rather_than_wrapping() {
+        let c = vec!["A".to_string(), "A".to_string()];
+        let err = match_one_with_ordinal("A", Some(2), &c).unwrap_err();
+        assert!(err.contains("valid ordinals 0..1"), "got: {err}");
+    }
+
+    #[test]
+    fn an_absent_identity_refuses_rather_than_taking_any_candidate() {
+        let c = vec!["A".to_string(), "B".to_string()];
+        let err = match_one_with_ordinal("Z", None, &c).unwrap_err();
+        assert!(err.contains("not among the offered candidates"), "got: {err}");
+        assert!(err.contains("A, B"), "must show the list: {err}");
+    }
+
+    #[test]
+    fn an_ordinal_over_a_non_trigger_prompt_fails_lowering() {
+        // The ST1-15 gate parks a field-permanent pick -- no trigger stack, so
+        // an ordinal addresses nothing on our side while DCGO would act on it.
+        // A half-answered step is exactly the silent desynchronization this
+        // format refuses everywhere else.
+        let text = SELECT_LINE.replace(
+            "do: { select: { targets: [opp.field.0] } }",
+            "do: { select: { cards: [ST1-03], ordinal: 1 } }",
+        );
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(&text).unwrap();
+        let err = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).unwrap_err();
+        assert!(err.contains("ordinal"), "got: {err}");
+        assert!(err.contains("TriggerOrder"), "must name the prompt it belongs to: {err}");
+    }
+
+    #[test]
+    fn a_cards_pick_without_an_ordinal_still_lowers_the_old_way() {
+        // Backward compat: every already-authored `cards:` step must keep
+        // resolving through `resolve_next`'s zone search.
+        let text = SELECT_LINE.replace(
+            "  - actor: 0\n    do: { select: { targets: [opp.field.0] } }\n    expect: { prompt: SelectPermanentEffect }",
+            "  - actor: 0\n    do: { select: { targets: [opp.field.0] } }\n    expect: { prompt: SelectPermanentEffect }\n  - actor: 0\n    do: { select: { cards: [ST1-04] } }",
+        );
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(&text).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data)
+            .expect("a plain cards: pick must still lower");
+        match &a.lowered_steps()[6] {
+            LoweredStep::Select(w) => {
+                assert_eq!(w.card_ids, vec!["ST1-04".to_string()]);
+                assert_eq!(w.ordinal, None);
+            }
+            other => panic!("expected a Select carrier, got {other:?}"),
+        }
+        assert_eq!(
+            a.steps()[6].selection.as_ref().unwrap().card_ids.as_deref(),
+            Some(["ST1-04".to_string()].as_slice()),
+            "the row still carries the identity for resolve_next's zone search"
+        );
+    }
+
+    // ── wire row counts ─────────────────────────────────────────────────
+
+    #[test]
+    fn each_lowered_step_reports_how_many_wire_rows_it_writes() {
+        use crate::exam::adapter::{EotAttackTarget, LoweredStep, SelectWire};
+        assert_eq!(LoweredStep::Action(62).dcgo_wire_rows(), 1);
+        assert_eq!(LoweredStep::SimOnlyAction(62).dcgo_wire_rows(), 0);
+        assert_eq!(
+            LoweredStep::Select(SelectWire::default()).dcgo_wire_rows(),
+            1
+        );
+        assert_eq!(
+            LoweredStep::Select(SelectWire {
+                card_ids: vec!["X".to_string()],
+                optional_gate_fold: true,
+                ..SelectWire::default()
+            })
+            .dcgo_wire_rows(),
+            2,
+            "a folded pick is OptionalSkill(yes) + the pick"
+        );
+        assert_eq!(
+            LoweredStep::Select(SelectWire {
+                cancel: true,
+                optional_gate_fold: true,
+                ..SelectWire::default()
+            })
+            .dcgo_wire_rows(),
+            1,
+            "a folded decline never opens the pick DCGO-side"
+        );
+        assert_eq!(
+            LoweredStep::EndOfTurnGate {
+                action_id: 62,
+                attack: None
+            }
+            .dcgo_wire_rows(),
+            1
+        );
+        assert_eq!(
+            LoweredStep::EndOfTurnGate {
+                action_id: 100,
+                attack: Some(EotAttackTarget::Player)
+            }
+            .dcgo_wire_rows(),
+            2
+        );
+    }
+
+    #[test]
+    fn the_adapter_reports_one_wire_row_count_per_scenario_step() {
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(SELECT_LINE).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).unwrap();
+        let rows = a.dcgo_wire_rows_per_step();
+        assert_eq!(rows.len(), s.steps.len());
+        assert_eq!(rows, vec![1, 1, 1, 1, 1, 1], "this line has no folds");
     }
 
     #[test]

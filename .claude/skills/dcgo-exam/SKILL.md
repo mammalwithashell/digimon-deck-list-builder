@@ -129,22 +129,32 @@ Rules that are structural, not stylistic:
 - **`expect` is asserted BEFORE the step is answered.** "Our engine expected a choice here
   and DCGO never asked" is a divergence class that never surfaces as an illegal action —
   a prompt mismatch aborts the job and **reports itself as a finding**.
-- **`do` is symbolic** (`hatch` / `pass` / `play` / `digivolve` / `attack` / `select`) and
-  lowered to a 2192-space action id against our engine's live mask. Never hand-write ids.
+- **`do` is symbolic** (`hatch` / `pass` / `move` / `play` / `digivolve` / `attack` /
+  `main` / `select`) and lowered to a 2192-space action id against our engine's live
+  mask. Never hand-write ids. `main: { on: field.0 }` activates a `[Main]` / `<Delay>`
+  on a permanent already in play — `play:` is the from-hand surface, not this one.
 - A clause no legal line can reach is **not skipped silently** — record `unreachable`
   with the reason.
 
 ## Phase 2 — Run: sim first, oracle second
 
+`--root <ROOT>` is a GLOBAL option, required BEFORE the subcommand. `--decks`
+must resolve every scenario's `rest:` name.
+
 ```bash
 # 1. Lowering + assertion check in our engine only. Milliseconds. No Unity.
-cargo run -p dcgo-harness -- exam --scenario qa/dcgo-exams/EX12/ --sim-only --cards-json data/cards.json
+cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario qa/dcgo-exams/EX12 \
+    --sim-only --cards-json data/cards.json --decks qa/dcgo-exams/EX12/toho_pool.json
 
-# 2. The oracle pass — deliberate, local, ~40s of Unity per scenario.
-cargo run -p dcgo-harness -- exam --card EX12-035 --cards-json data/cards.json
+# 2. Same run, emitting one DCGO scripted job per lowered line (--emit-job
+#    requires --sim-only); the phase-1 harness drains them into recordings.
+cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario qa/dcgo-exams/EX12 \
+    --sim-only --cards-json data/cards.json --decks qa/dcgo-exams/EX12/toho_pool.json \
+    --emit-job jobs/
 
-# 3. Regression replay of the whole authored suite against the oracle.
-cargo run -p dcgo-harness -- exam --suite
+# 3. The oracle diff, per scenario, against the sidecar its job produced.
+cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario <scenario>.yaml \
+    --sidecar <recording>.state.jsonl --cards-json data/cards.json
 ```
 
 **Every scenario must lower and pass `--sim-only` before any Unity time is spent.** A

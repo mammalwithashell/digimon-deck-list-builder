@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-23T03:14:40.157023400+00:00",
+  "last_updated": "2026-08-23T15:15:20.503451400+00:00",
   "clauses": {
     "EX1-066#effect#0": {
       "clause_id": "EX1-066#effect#0",
@@ -14,12 +14,11 @@
     "EX1-066#effect#1": {
       "clause_id": "EX1-066#effect#1",
       "card_id": "EX1-066",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "db914dc64761b53ef147ceba156c24a72b8865807447ee20eef634744281e5b5",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect1.yaml",
-      "reason": "DIVERGED at step 19 (compared 28 of 28 ours / 28 dcgo steps)",
-      "recorded_at": "2026-08-23T03:01:55.758901700+00:00"
+      "recorded_at": "2026-08-23T15:14:56.378048500+00:00"
     },
     "EX12-004#effect#0": {
       "clause_id": "EX12-004#effect#0",
@@ -44,22 +43,20 @@
     "EX12-004#effect#2": {
       "clause_id": "EX12-004#effect#2",
       "card_id": "EX12-004",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "1b7faea4ff2532355e393e4a51588b148d790ff067b3115402ff7475732df5c5",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-004-effect2.yaml",
-      "reason": "DIVERGED at step 11 (compared 23 of 23 ours / 23 dcgo steps)",
-      "recorded_at": "2026-08-23T03:02:32.871775800+00:00"
+      "recorded_at": "2026-08-23T15:14:58.595645900+00:00"
     },
     "EX12-004#inherited#0": {
       "clause_id": "EX12-004#inherited#0",
       "card_id": "EX12-004",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "2f8294e6613ee827f4e522a1548d33c057083ea556c682119f8f67cd9f673ae8",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-004-inherited0.yaml",
-      "reason": "DIVERGED at step 8 (compared 17 of 17 ours / 17 dcgo steps)",
-      "recorded_at": "2026-08-23T03:02:57.205062100+00:00"
+      "recorded_at": "2026-08-23T15:15:00.709652600+00:00"
     },
     "EX12-004#security#0": {
       "clause_id": "EX12-004#security#0",
@@ -112,12 +109,11 @@
     "EX12-011#effect#0": {
       "clause_id": "EX12-011#effect#0",
       "card_id": "EX12-011",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-011-effect0.yaml",
-      "reason": "DIVERGED at step 8 (compared 9 of 9 ours / 10 dcgo steps; trace truncated)",
-      "recorded_at": "2026-08-23T03:03:34.247796700+00:00"
+      "recorded_at": "2026-08-23T15:15:03.088297500+00:00"
     },
     "EX12-011#effect#1": {
       "clause_id": "EX12-011#effect#1",
@@ -196,12 +192,11 @@
     "EX12-026#effect#1": {
       "clause_id": "EX12-026#effect#1",
       "card_id": "EX12-026",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "2d4fce0217b240f7266fc6bc2698ac18047e99603a8d1e9978ec46d6b04eea8d",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-026-effect1.yaml",
-      "reason": "DIVERGED at step 9 (compared 15 of 15 ours / 15 dcgo steps)",
-      "recorded_at": "2026-08-23T03:03:58.735759800+00:00"
+      "recorded_at": "2026-08-23T15:15:05.180675600+00:00"
     },
     "EX12-026#effect#2": {
       "clause_id": "EX12-026#effect#2",
@@ -341,12 +336,11 @@
     "EX12-036#effect#5": {
       "clause_id": "EX12-036#effect#5",
       "card_id": "EX12-036",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "4eba17fe177349b57714cc7fe8f9a1ac457508ab2e1f1b9ce820b1ce6f2099c4",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect5.yaml",
-      "reason": "DIVERGED at step 25 (compared 29 of 29 ours / 29 dcgo steps)",
-      "recorded_at": "2026-08-23T03:07:42.200995400+00:00"
+      "recorded_at": "2026-08-23T15:15:07.677581+00:00"
     },
     "EX12-036#effect#6": {
       "clause_id": "EX12-036#effect#6",
@@ -403,7 +397,7 @@
       "text_sha256": "487692e25886594f727d22fa91dcdcbbecbce70d15abd0762d3ce166d6f36712",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect2.yaml",
       "reason": "DIVERGED at step 10 (compared 13 of 13 ours / 13 dcgo steps)",
-      "recorded_at": "2026-08-22T19:21:07.273066600+00:00"
+      "recorded_at": "2026-08-23T15:15:09.855861+00:00"
     },
     "EX12-046#effect#3": {
       "clause_id": "EX12-046#effect#3",
@@ -437,12 +431,11 @@
     "EX12-047#effect#1": {
       "clause_id": "EX12-047#effect#1",
       "card_id": "EX12-047",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "6023e4c1fc29ad27f281823b07e60eac231f2b4c6500dbc8080695cdc3b9ca6f",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect1.yaml",
-      "reason": "DIVERGED at step 22 (compared 28 of 28 ours / 28 dcgo steps)",
-      "recorded_at": "2026-08-23T03:09:31.192476600+00:00"
+      "recorded_at": "2026-08-23T15:15:12.145120200+00:00"
     },
     "EX12-047#effect#2": {
       "clause_id": "EX12-047#effect#2",
@@ -533,22 +526,20 @@
     "EX12-061#inherited#0": {
       "clause_id": "EX12-061#inherited#0",
       "card_id": "EX12-061",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-inherited0.yaml",
-      "reason": "DIVERGED at step 7 (compared 16 of 16 ours / 16 dcgo steps)",
-      "recorded_at": "2026-08-23T03:11:54.883971100+00:00"
+      "recorded_at": "2026-08-23T15:15:14.239368300+00:00"
     },
     "EX12-061#inherited#1": {
       "clause_id": "EX12-061#inherited#1",
       "card_id": "EX12-061",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "b6635794790963847e7cdf33242fd6a31e885de8ed139686cc2aeb84654d2478",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-inherited1.yaml",
-      "reason": "DIVERGED at step 7 (compared 16 of 16 ours / 16 dcgo steps)",
-      "recorded_at": "2026-08-23T03:12:39.383850400+00:00"
+      "recorded_at": "2026-08-23T15:15:16.360779900+00:00"
     },
     "EX12-061#security#0": {
       "clause_id": "EX12-061#security#0",
@@ -612,12 +603,11 @@
     "EX12-063#effect#0": {
       "clause_id": "EX12-063#effect#0",
       "card_id": "EX12-063",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "582c9e9f3181e2a3b80f507ed29f6f08d477a398e12bb006a772cb540158a39e",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect0.yaml",
-      "reason": "DIVERGED at step 9 (compared 15 of 15 ours / 15 dcgo steps)",
-      "recorded_at": "2026-08-23T03:14:40.157023400+00:00"
+      "recorded_at": "2026-08-23T15:15:18.478111200+00:00"
     },
     "EX12-063#effect#1": {
       "clause_id": "EX12-063#effect#1",
@@ -698,12 +688,11 @@
     "EX12-070#effect#0": {
       "clause_id": "EX12-070#effect#0",
       "card_id": "EX12-070",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect0.yaml",
-      "reason": "DIVERGED at step 6 (compared 8 of 8 ours / 8 dcgo steps)",
-      "recorded_at": "2026-08-22T19:28:57.625969500+00:00"
+      "recorded_at": "2026-08-23T15:15:20.503451400+00:00"
     },
     "EX12-070#effect#1": {
       "clause_id": "EX12-070#effect#1",

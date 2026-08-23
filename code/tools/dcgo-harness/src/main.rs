@@ -118,6 +118,13 @@ enum Command {
         /// recording, not the deck book).
         #[arg(long)]
         emit_job: Option<PathBuf>,
+        /// Print EVERY divergence field-by-field, not just the lead plus a
+        /// downstream count. The default is lead-only because a report ranking
+        /// fifty consequences beside one cause is a report nobody finishes -
+        /// but triaging a multi-gate line otherwise means DERIVING which rows
+        /// diverged from that count instead of reading them.
+        #[arg(long, alias = "verbose")]
+        all_diffs: bool,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -338,6 +345,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             verdicts,
             clause_text_json,
             emit_job,
+            all_diffs,
         } => run_exam(
             scenario,
             *sim_only,
@@ -347,6 +355,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             verdicts.as_deref(),
             clause_text_json.as_deref(),
             emit_job.as_deref(),
+            *all_diffs,
         ),
         Command::Build {
             unity,
@@ -458,6 +467,7 @@ fn run_exam(
     verdicts: Option<&Path>,
     clause_text_json: Option<&Path>,
     emit_job: Option<&Path>,
+    all_diffs: bool,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::verdict::{ClauseTextBook, VerdictStore};
 
@@ -546,6 +556,7 @@ fn run_exam(
             &card_data,
             &book,
             emit_job,
+            all_diffs,
             &mut lowered,
             &mut ran,
             &mut diffed,
@@ -656,13 +667,16 @@ fn exam_one(
     card_data: &std::collections::HashMap<String, digimon_engine::CardData>,
     book: &DeckBook,
     emit_job: Option<&Path>,
+    all_diffs: bool,
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
 ) -> Result<(ExamOutcome, Option<VerdictEvent>), String> {
     use dcgo_harness::exam::adapter::ScenarioAdapter;
-    use dcgo_harness::exam::differ::diff;
-    use dcgo_harness::exam::projection::{align_to_scenario_origin, parse_sidecar, StateProjection};
+    use dcgo_harness::exam::differ::diff_paired;
+    use dcgo_harness::exam::projection::{
+        align_to_scenario_origin, pair_by_wire_rows, parse_sidecar, StateProjection,
+    };
     use dcgo_harness::exam::scenario::Scenario;
     use digimon_engine::runners::replay::ReplaySession;
 
@@ -722,6 +736,9 @@ fn exam_one(
     let adapter = ScenarioAdapter::from_scenario(&s, deck_p0, deck_p1, card_data)?;
     *lowered += 1;
     println!("  lowered {} step(s): {:?}", s.steps.len(), adapter.lowered_steps());
+    // Captured BEFORE the adapter moves into the replay session: this is how
+    // the differ pairs our per-STEP rows against DCGO's per-DECISION rows.
+    let wire_rows_per_step = adapter.dcgo_wire_rows_per_step();
 
     // Sim-only path (checked in run_exam): the line lowered cleanly, so emit
     // the DCGO scripted job that runs the same line against the oracle.
@@ -809,10 +826,10 @@ fn exam_one(
     let dcgo = align_to_scenario_origin(dcgo, &recording_text)?;
     // Compare "state at each decision point" on both sides. Ours holds one
     // projection BEFORE each step plus a trailing one AFTER the last, while
-    // StateDumper writes one before each decision and stops -- 14 vs 13 for a
-    // 13-step line. Dropping our trailing entry aligns the two; keeping it made
-    // the differ report TRUNCATED (correctly -- it refuses to call an unequal
-    // comparison clean) on a run that had no divergence at all.
+    // StateDumper writes one before each decision and stops. Dropping our
+    // trailing entry aligns the two ends; keeping it made the differ report
+    // TRUNCATED (correctly -- it refuses to call an unequal comparison clean)
+    // on a run that had no divergence at all.
     //
     // `projections` itself keeps the trailing state, because an `assert:` block
     // legitimately wants to talk about the position AFTER the final step.
@@ -821,9 +838,22 @@ fn exam_one(
         .take(s.steps.len())
         .cloned()
         .collect();
-    let report = diff(&ours_for_diff, &dcgo);
+    // ...and pair the two by LOWERED STEP rather than 1:1, because a step can
+    // consume one, two, or ZERO DCGO decision rows (an OptionalSkill+pick fold
+    // writes two; a sim-only phase exit writes none). A positional pairing
+    // slides apart from the first multi-row step onward and manufactures
+    // divergences out of the offset -- measured on EX12-011#effect#0, where our
+    // post-battle row was compared against DCGO's pre-battle mid-fold row.
+    let pairing = pair_by_wire_rows(&wire_rows_per_step, dcgo.len());
+    let report = diff_paired(&ours_for_diff, &dcgo, &pairing);
     *diffed += 1;
-    println!("  {report}");
+    if all_diffs {
+        for line in report.render_verbose().lines() {
+            println!("  {line}");
+        }
+    } else {
+        println!("  {report}");
+    }
 
     // What this run established about the clause, for the verdict store: a
     // CLEAN oracle diff confirms, anything else (divergence or truncation)
@@ -1277,17 +1307,35 @@ struct ExamDeckOrder {
 /// initializer, so absence is expressed by OMITTING the key). The values are
 /// the scenario's SYMBOLIC identities (card ids, counts, bools), never engine
 /// action ids: DCGO resolves them against its own candidate lists.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 struct ScriptedInput {
     actor: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     action_id: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     expect_prompt: Option<String>,
+    /// Expected number of picks. The C# initializer is `-1` = "do not
+    /// assert", so absence is expressed by OMITTING the key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    expect_count: Option<u16>,
+    /// Expected candidate card ids, order-insensitive. Empty = "do not
+    /// assert". On a `MultipleSkills` row these are the stacked triggers'
+    /// SOURCE-CARD ids, which is the cheapest way to catch "DCGO did not stack
+    /// what we stacked".
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    expect_candidates: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     select_card_ids: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     select_value: Option<i32>,
+    /// Which of the SAME identity's candidates to take, 0-based — DCGO's
+    /// `select_ordinal`. Deliberately NOT `select_value` reused: that field
+    /// stays the raw DCGO-index fallback, and one field meaning "an index into
+    /// DCGO's list" in one step and "an index within one card's own triggers"
+    /// in the next is the value-space confusion the payload exists to end.
+    /// Same `int.MinValue` absent sentinel, so absence OMITS the key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    select_ordinal: Option<i32>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     select_has_bool: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
@@ -1371,16 +1419,23 @@ fn build_exam_job(
         .flat_map(|(step, l)| {
             use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep};
             let expect_prompt = step.expect.as_ref().and_then(|e| e.prompt.clone());
+            // `expect.count` / `expect.candidates` describe the PICK, so on a
+            // step the emitter splits they ride the pick row, never the
+            // OptionalSkill gate that precedes it.
+            let expect_count = step.expect.as_ref().and_then(|e| e.count);
+            let expect_candidates = step
+                .expect
+                .as_ref()
+                .map(|e| e.candidates.clone())
+                .unwrap_or_default();
             match l {
                 LoweredStep::Action(id) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: Some(*id),
                     expect_prompt,
-                    select_card_ids: Vec::new(),
-                    select_value: None,
-                    select_has_bool: false,
-                    select_bool: false,
-                    select_cancel: false,
+                    expect_count,
+                    expect_candidates,
+                    ..ScriptedInput::default()
                 }],
                 // task_69f10a66 (ruling item 5) — the OptionalSkill+pick
                 // FOLD: DCGO gates some optional keyword windows (<Raid>,
@@ -1397,11 +1452,8 @@ fn build_exam_job(
                             actor: step.actor,
                             action_id: None,
                             expect_prompt: Some("OptionalSkill".to_string()),
-                            select_card_ids: Vec::new(),
-                            select_value: None,
                             select_has_bool: true,
-                            select_bool: false,
-                            select_cancel: false,
+                            ..ScriptedInput::default()
                         }]
                     } else {
                         vec![
@@ -1409,11 +1461,9 @@ fn build_exam_job(
                                 actor: step.actor,
                                 action_id: None,
                                 expect_prompt: Some("OptionalSkill".to_string()),
-                                select_card_ids: Vec::new(),
-                                select_value: None,
                                 select_has_bool: true,
                                 select_bool: true,
-                                select_cancel: false,
+                                ..ScriptedInput::default()
                             },
                             ScriptedInput {
                                 actor: step.actor,
@@ -1423,11 +1473,12 @@ fn build_exam_job(
                                 // SelectCardEffect …) — leave it unasserted
                                 // rather than guess wrong.
                                 expect_prompt: None,
+                                expect_count,
+                                expect_candidates,
                                 select_card_ids: w.card_ids.clone(),
                                 select_value: w.value,
-                                select_has_bool: false,
-                                select_bool: false,
-                                select_cancel: false,
+                                select_ordinal: w.ordinal,
+                                ..ScriptedInput::default()
                             },
                         ]
                     }
@@ -1436,8 +1487,11 @@ fn build_exam_job(
                     actor: step.actor,
                     action_id: None,
                     expect_prompt,
+                    expect_count,
+                    expect_candidates,
                     select_card_ids: w.card_ids.clone(),
                     select_value: w.value,
+                    select_ordinal: w.ordinal,
                     select_has_bool: w.bool_answer.is_some(),
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,
@@ -1464,11 +1518,8 @@ fn build_exam_job(
                             actor: step.actor,
                             action_id: None,
                             expect_prompt: gate_prompt,
-                            select_card_ids: Vec::new(),
-                            select_value: None,
                             select_has_bool: true,
-                            select_bool: false,
-                            select_cancel: false,
+                            ..ScriptedInput::default()
                         }],
                         Some(target) => {
                             let (ids, value) = match target {
@@ -1482,21 +1533,19 @@ fn build_exam_job(
                                     actor: step.actor,
                                     action_id: None,
                                     expect_prompt: gate_prompt,
-                                    select_card_ids: Vec::new(),
-                                    select_value: None,
                                     select_has_bool: true,
                                     select_bool: true,
-                                    select_cancel: false,
+                                    ..ScriptedInput::default()
                                 },
                                 ScriptedInput {
                                     actor: step.actor,
                                     action_id: None,
                                     expect_prompt: Some("SelectAttackEffect".to_string()),
+                                    expect_count,
+                                    expect_candidates,
                                     select_card_ids: ids,
                                     select_value: value,
-                                    select_has_bool: false,
-                                    select_bool: false,
-                                    select_cancel: false,
+                                    ..ScriptedInput::default()
                                 },
                             ]
                         }
@@ -1746,6 +1795,129 @@ steps:
         assert!(v["inputs"][2].get("select_bool").is_none());
     }
 
+    // ── select_ordinal + the expect_* assertions on the wire ────────────
+
+    #[test]
+    fn select_ordinal_rides_the_wire_under_the_csharp_field_name() {
+        let s = select_line("{ cards: [EX12-047], ordinal: 1 }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-047".to_string()],
+            ordinal: Some(1),
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["select_card_ids"], serde_json::json!(["EX12-047"]));
+        assert_eq!(v["inputs"][2]["select_ordinal"], 1);
+        // `select_value` stays the raw DCGO-index fallback and must NOT be
+        // written: the C# hook aborts on value+card_ids by design.
+        assert!(v["inputs"][2].get("select_value").is_none());
+    }
+
+    #[test]
+    fn ordinal_zero_is_written_and_an_absent_ordinal_is_omitted() {
+        // 0 is a real answer ("the FIRST of that card's triggers"), and the
+        // C# absent sentinel is int.MinValue -- so 0 must serialize while
+        // absent must omit the key entirely.
+        let s = select_line("{ cards: [EX12-047], ordinal: 0 }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-047".to_string()],
+            ordinal: Some(0),
+            ..SelectWire::default()
+        }));
+        assert_eq!(job_json(&s, &lowered)["inputs"][2]["select_ordinal"], 0);
+
+        let s = select_line("{ cards: [EX12-047] }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-047".to_string()],
+            ..SelectWire::default()
+        }));
+        assert!(job_json(&s, &lowered)["inputs"][2]
+            .get("select_ordinal")
+            .is_none());
+    }
+
+    #[test]
+    fn an_action_step_wears_no_ordinal() {
+        // On the C# side `IsSelection` keys off the selection fields'
+        // presence, and `select_ordinal` is one of them -- a stray one would
+        // turn an action step into a selection answer.
+        let s = Scenario::from_yaml(LINE).unwrap();
+        let v: serde_json::Value = serde_json::from_str(
+            &serde_json::to_string(
+                &build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(v["inputs"][0].get("select_ordinal").is_none());
+    }
+
+    #[test]
+    fn expect_count_and_expect_candidates_ride_the_wire() {
+        // Previously parsed and then DROPPED. On a MultipleSkills row the
+        // candidate set is the stacked TRIGGERS' source-card ids, which is the
+        // cheapest available check that DCGO stacked what we stacked.
+        let text = LINE.replace(
+            "  - actor: 1\n    do: { pass: {} }",
+            "  - actor: 1\n    do: { select: { cards: [EX12-047], ordinal: 1 } }\n    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }",
+        );
+        let s = Scenario::from_yaml(&text).expect("parses");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-047".to_string()],
+            ordinal: Some(1),
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["expect_prompt"], "MultipleSkills");
+        assert_eq!(v["inputs"][2]["expect_count"], 1);
+        assert_eq!(
+            v["inputs"][2]["expect_candidates"],
+            serde_json::json!(["EX12-047", "EX12-047"])
+        );
+    }
+
+    #[test]
+    fn absent_expectations_omit_their_keys() {
+        // The C# initializers (`expect_count = -1`, `expect_candidates =
+        // new string[0]`) ARE the "do not assert" defaults, so writing 0 / []
+        // would turn "no opinion" into a live assertion.
+        let s = Scenario::from_yaml(LINE).unwrap();
+        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
+        assert!(v["inputs"][0].get("expect_count").is_none());
+        assert!(v["inputs"][0].get("expect_candidates").is_none());
+    }
+
+    #[test]
+    fn a_folded_pick_carries_the_expectations_on_the_pick_row_not_the_gate() {
+        // `expect.count` / `expect.candidates` describe the PICK. Putting them
+        // on the OptionalSkill gate would assert a candidate list against a
+        // yes/no prompt that has none.
+        let text = LINE.replace(
+            "  - actor: 1\n    do: { pass: {} }",
+            "  - actor: 1\n    do: { select: { targets: [opp.field.0] } }\n    expect: { prompt: OptionalSkill, count: 1, candidates: [ST1-07] }",
+        );
+        let s = Scenario::from_yaml(&text).expect("parses");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["ST1-07".to_string()],
+            optional_gate_fold: true,
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"].as_array().unwrap().len(), 4);
+        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
+        assert!(v["inputs"][2].get("expect_count").is_none(), "gate row must not assert the pick");
+        assert!(v["inputs"][2].get("expect_candidates").is_none());
+        assert_eq!(v["inputs"][3]["expect_count"], 1);
+        assert_eq!(v["inputs"][3]["expect_candidates"], serde_json::json!(["ST1-07"]));
+    }
+
     // ── task_69f10a66 surface mappings on the wire ──────────────────────
 
     /// The end-of-turn attack-keyword gate (our `EndOfTurnAction` park; DCGO
@@ -1797,6 +1969,76 @@ steps:
         lowered.push(LoweredStep::SimOnlyAction(62));
         let v = job_json(&s, &lowered);
         assert_eq!(v["inputs"].as_array().unwrap().len(), 2, "no third row");
+    }
+
+    /// The differ pairs the two traces by LOWERED STEP, using
+    /// `LoweredStep::dcgo_wire_rows()` to know how many rows each step
+    /// consumes. That number is only trustworthy if it agrees with what this
+    /// emitter actually writes -- if they ever drift, the pairing slides and
+    /// manufactures divergences out of an offset, which is precisely the bug
+    /// the pairing exists to fix. So: pin them against each other, per
+    /// variant, over the real emitter.
+    #[test]
+    fn wire_row_counts_match_dcgo_wire_rows() {
+        let s = select_line("{ cards: [ST1-03] }");
+        let variants: Vec<LoweredStep> = vec![
+            LoweredStep::Action(62),
+            LoweredStep::SimOnlyAction(62),
+            LoweredStep::Select(SelectWire {
+                card_ids: vec!["ST1-03".to_string()],
+                ..SelectWire::default()
+            }),
+            LoweredStep::Select(SelectWire {
+                value: Some(3),
+                ..SelectWire::default()
+            }),
+            LoweredStep::Select(SelectWire {
+                bool_answer: Some(true),
+                ..SelectWire::default()
+            }),
+            LoweredStep::Select(SelectWire {
+                cancel: true,
+                ..SelectWire::default()
+            }),
+            LoweredStep::Select(SelectWire {
+                card_ids: vec!["ST1-03".to_string()],
+                optional_gate_fold: true,
+                ..SelectWire::default()
+            }),
+            LoweredStep::Select(SelectWire {
+                cancel: true,
+                optional_gate_fold: true,
+                ..SelectWire::default()
+            }),
+            LoweredStep::EndOfTurnGate {
+                action_id: 62,
+                attack: None,
+            },
+            LoweredStep::EndOfTurnGate {
+                action_id: 100,
+                attack: Some(EotAttackTarget::Player),
+            },
+            LoweredStep::EndOfTurnGate {
+                action_id: 100,
+                attack: Some(EotAttackTarget::Permanent {
+                    top_card_id: "ST1-07".to_string(),
+                }),
+            },
+        ];
+        for v in variants {
+            // Two known-1-row steps plus the variant under test, so the
+            // baseline is fixed and the delta is the variant's own count.
+            let mut lowered = actions(&[62, 62]);
+            lowered.push(v.clone());
+            let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &lowered).unwrap();
+            assert_eq!(
+                job.inputs.len() - 2,
+                v.dcgo_wire_rows(),
+                "{v:?} claims {} wire row(s) but the emitter wrote {}",
+                v.dcgo_wire_rows(),
+                job.inputs.len() - 2
+            );
+        }
     }
 
     /// The OptionalSkill+pick FOLD (ruling item 5, `<Raid>`-family): a

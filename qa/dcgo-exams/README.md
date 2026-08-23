@@ -61,6 +61,13 @@ reporting a stale `confirmed`.
 You name the first N cards in draw order; the remainder is seeded-shuffled from
 a named deck. Requiring all 50 would make every file unauthorable.
 
+**Sim-only deals a different opening.** The seeded shuffle above is DCGO's
+side. Our sim-only path does not shuffle at all -- it uses the `rest:` list in
+file order with the stack appended -- so a line whose `stack:` does not name
+every card it references can lower in one mode and fail in the other
+(`ST1/ST1-12.yaml` is the live example). **Stack every card the line names.**
+See docs/DCGO_EXAM.md, "`stack:` and sim-only".
+
 Initial-shuffle-only is a *correctness* requirement, not an optimization: if the
 stack applied to every shuffle, a card reading "shuffle your deck" would
 silently re-impose the opening order and the exam would confidently answer a

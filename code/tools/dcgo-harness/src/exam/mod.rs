@@ -50,7 +50,7 @@ pub mod test_support;
 pub use adapter::ScenarioAdapter;
 pub use backfill::{backfill, backfill_from_diff, GENERATED_MARKER};
 pub use dcgo_pool::has_dcgo_script;
-pub use differ::{diff, DiffReport, FieldDiff, StepDivergence};
+pub use differ::{diff, diff_paired, DiffReport, FieldDiff, StepDivergence};
 pub use drafter::{draft_test, Provenance};
 pub use lower::{lower_step, LowerError};
 pub use projection::{

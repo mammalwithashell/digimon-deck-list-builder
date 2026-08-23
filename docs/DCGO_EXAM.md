@@ -36,16 +36,27 @@ Two constraints are forced, not chosen, and they shape everything downstream:
 
 ## Quick start
 
+`--root <ROOT>` is a GLOBAL option on `dcgo-harness`, required BEFORE the
+subcommand -- see `docs/DCGO_HARNESS.md` for what `$ROOT` is. Omitting it is a
+clap error, not a default. `--decks` must resolve every scenario's `rest:`
+name, and the EX12 pool and the starter book are separate books, so a run over
+the whole tree needs a merged one.
+
 ```bash
-# Every committed scenario, our engine only. No Unity. Milliseconds.
-cargo run -p dcgo-harness -- exam --scenario qa/dcgo-exams/ --sim-only \
-    --cards-json data/cards.json
+# Every EX12 scenario, our engine only. No Unity. Milliseconds.
+cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario qa/dcgo-exams/EX12 \
+    --sim-only --cards-json data/cards.json --decks qa/dcgo-exams/EX12/toho_pool.json
 
-# The oracle pass for one card -- deliberate, local, ~40 s of Unity per scenario.
-cargo run -p dcgo-harness -- exam --card EX12-035 --cards-json data/cards.json
+# Same run, also emitting the DCGO scripted job per lowered line (--emit-job
+# requires --sim-only). Drain them with the phase-1 harness.
+cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario qa/dcgo-exams/EX12 \
+    --sim-only --cards-json data/cards.json --decks qa/dcgo-exams/EX12/toho_pool.json \
+    --emit-job jobs/
 
-# Regression replay of the whole scenario suite against the oracle.
-cargo run -p dcgo-harness -- exam --suite
+# The oracle diff for one scenario, against the sidecar its job produced.
+cargo run -p dcgo-harness -- --root "$ROOT" exam \
+    --scenario qa/dcgo-exams/EX12/EX12-011-effect0.yaml \
+    --sidecar <recording>.state.jsonl --cards-json data/cards.json
 ```
 
 The oracle pass submits a `policy: "scripted"` job into the phase-1 queue and is
@@ -92,7 +103,7 @@ cost is a known risk — see "Known gaps".
 | `decks.<seat>.stack` | Prefix of the draw order. See below. |
 | `decks.<seat>.rest` | Named deck the remainder is seeded-shuffled from. |
 | `steps[].actor` | `0` or `1`. Both seats are scripted. |
-| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `play`, `digivolve`, `attack`, `select`. |
+| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `select`. |
 | `steps[].expect` | The prompt this step expects to be answering. Optional per step, asserted **before** answering. |
 | `assert` | `at: <step index>` + `that: {path: value}`. Backfilled from the oracle — see "Assertion backfill". |
 
@@ -156,6 +167,33 @@ free — which is also why it does **not** hook `RandomUtility.ShuffledDeckCards
 a helper that receives no player argument and would have forced the stacker to
 guess the seat from call order.
 
+### `stack:` and sim-only — the two modes deal DIFFERENT hands
+
+The sentence above ("the remainder is seeded-shuffled from the named deck")
+describes the **oracle** side only. `Harness/DeckStacker.cs` applies the stack
+over a deck DCGO has already shuffled, and the remainder keeps that shuffled
+order.
+
+Our side has no such shuffle. In **oracle** mode the decks are taken verbatim
+from the recording's `my_deck_post_shuffle` / `opp_deck_post_shuffle`
+(`decks_from_recording`), so both engines play the same game. In **sim-only**
+mode there is no recording, so `ordered_deck` builds the deck as the `rest:`
+list in FILE ORDER with the stack appended (drawn from the back) — no shuffle
+at all.
+
+Consequence, and it is not cosmetic: **a scenario whose `stack:` does not cover
+every card its line references sees a different opening in the two modes.** A
+line that lowers under the oracle can fail to lower sim-only, and vice versa.
+`qa/dcgo-exams/ST1/ST1-12.yaml` is the live example — `stack: []` plus a pinned
+`from: hand.6` (pinned because the ORACLE hand held two Tai Kamiya at 6 and 7).
+Sim-only deals one copy, at slot 7, and the run reports
+`FAILED: step 11: no legal action matches Play { card: "ST1-12", from: "hand.6" }`.
+Reproduced identically at `dd48d9ab5`, so it is structural, not a regression.
+
+**Author rule: stack every card the line names.** All 66 EX12 scenarios do, and
+all 66 lower sim-only. An empty `stack:` is only safe for a line that touches
+no specific card.
+
 ### `expect:` is asserted BEFORE the step is answered
 
 A driver that answers whatever it is asked will, on one ordering mismatch,
@@ -214,6 +252,41 @@ Unity.
 `Game::decode_action` returns `()` and silently ignores an out-of-range id, so
 the mask bit is the only check there is — lowering asserts it before applying.
 
+### `main:` — field `[Main]` and `<Delay>` activation (added 2026-08-23)
+
+`play:` puts a `[Main]` Option onto the field from hand. `main:` activates a
+`[Main]` effect on a permanent **already in play** — the other half of the
+surface, and the only way to reach a `<Delay>` clause at all:
+
+```yaml
+- actor: 0
+  do: { main: { on: field.0 } }     # a battle-area permanent's [Main] / <Delay>
+- actor: 0
+  do: { main: { on: breeding } }    # the breeding area's <Training> [Main]
+```
+
+`on:` is required and takes the same slot grammar as `attack:` — `field.N`, or
+the bare `breeding` sentinel (the engine encodes the breeding `[Main]` with
+`BREEDING_TARGET`, a place rather than a slot). There is **no default**: `play`'s
+`from: hand` and `move`'s `from: breeding` each have exactly one possible source,
+but a board can hold many permanents, so a defaulted `on:` would silently mean
+"whichever one lowered first".
+
+Matching is on the SLOT, never on `card_id` alone — two copies of the same Option
+on the field are two different decisions, and this format refuses an ambiguous
+intent rather than picking.
+
+Nothing is needed on the DCGO side: `InputDriver` already maps the
+`FIELD_EFFECT_START..FIELD_EFFECT_END` range to `ActivatePermanentAction(slot, 0)`
+(refusing any sub-slot but `FIELD_EFFECT_SLOT_FOR_MAIN`), so a `main:` step
+lowers to a plain `Action(id)` and rides the wire like any other.
+
+`<Delay>` in particular: our engine offers a placed Delay Option's activation on
+the same action bit once `turn_count > placed_on_turn`
+(`Game::delayed_option_main_activation_available`), and DCGO gates its own with
+`CanDeclareOptionDelayEffect` on the same not-the-placing-turn rule. So the line
+is "flip/place it on turn N, `main:` it on turn N+1".
+
 ## Selection steps (`select:`) — added 2026-08-22
 
 Clauses whose resolution prompts a selection are authorable. Five forms, exactly
@@ -233,6 +306,44 @@ one per step:
 - actor: 0
   do: { select: { decline: true } }                 # cancel an optional prompt
 ```
+
+### `ordinal:` — the stacked-trigger disambiguator (added 2026-08-23)
+
+Duplicate ids in a pick list normally mean interchangeable copies, and resolve in
+occurrence order. **One prompt breaks that**: DCGO's `MultipleSkills` (our
+`TriggerOrder`), whose candidates are stacked TRIGGERS. A deleted carrier with an
+`[On Deletion]` **and** an `<Ascension>` offers its own identity twice, and those
+are different decisions — so occurrence order would be a coin flip between two
+different clauses.
+
+```yaml
+- actor: 0
+  do: { select: { cards: [EX12-047], ordinal: 1 } }
+  expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
+```
+
+`ordinal` is the **0-based position among the candidates carrying that same id**,
+not an index into the whole candidate list. It is legal only alongside `cards:`,
+only with a single-card pick, and never alongside `value:` (which stays the raw
+DCGO-index fallback — an index and an identity answering one prompt is exactly
+the value-space confusion this payload exists to end; DCGO's hook aborts on the
+combination by design).
+
+Both engines resolve the same symbolic answer against **their own** candidate
+list, with the same rule — `SelectionAnswer.MatchOneWithOrdinal` on the DCGO
+side, `match_one_with_ordinal` on ours: 0 matches refuses, 1 match resolves
+without an ordinal (and refuses a non-zero one — that is a claim about a trigger
+the stack does not have), N matches REQUIRE one. Neither engine is handed the
+other's index, so **a disagreement about within-card trigger order surfaces as a
+divergence instead of being papered over**. Read DCGO's order off a failed run's
+abort message (`[0:EX12-047 'Ascension' | 1:EX12-047 '<name>']`); do not guess it.
+
+`expect: {count:, candidates: []}` also reach the wire now (`expect_count` /
+`expect_candidates`). On a `MultipleSkills` row the candidate set is the stacked
+triggers' source-card ids — the cheapest available check that DCGO stacked what
+we stacked. Absent expectations OMIT their keys, because the C# initializers
+(`expect_count = -1`, empty `expect_candidates`) ARE the "do not assert"
+defaults.
 
 **The wire carries identities, never engine-internal indices.** Our selection
 encodings and DCGO's `ActiveCardList` CardIndex / frame ids are both internal;
@@ -255,6 +366,18 @@ Phase at a selection boundary is **representation**: our engine parks in a
 `Select*`/`EffectChoice` `GamePhase` while DCGO's `TurnPhase` stays on the
 interrupted phase, so the differ compares every state field but not `phase` on
 those steps (`Breeding`-vs-`Main` still diffs).
+
+The same holds for the **end-of-turn window**, as a PAIR rather than a blanket
+suppression: `ours=EndOfTurnAction` against `dcgo=Main` is one window under two
+spellings. `general_rule.pdf` p.13 §6-6-1 ("the turn will end **with the current
+phase**") and §6-6-2 ("the current phase will continue until all processing has
+been resolved") say the end-of-turn window IS still the Main phase, and DCGO
+implements that literally — `AutoProcessing.cs::EndTurnProcess` runs the whole
+OnEndTurn stack (the `<Execute>` / `<Engage>` gate and any attack it takes) while
+`TurnPhase` is `Main`, reaching `phase.End` only afterwards. Deliberately a pair:
+`EndOfTurnAction` is a phase our engine can linger in across a turn boundary, so
+suppressing it against `Breeding` / `Draw` / `Active` / `End` would hide a real
+desync, and `turn` keeps comparing independently.
 
 Proven end to end on `qa/dcgo-exams/ST1/ST1-15-effect0.yaml` ("Delete up to 2 of
 your opponent's Digimon with 4000 DP or less"): CLEAN, 14/14 steps.
@@ -330,12 +453,54 @@ The projection must treat an absent keyword list as **"not measured", never as
 "no keywords"** — otherwise every non-keyword scenario reports a false keyword
 divergence.
 
+### Alignment is by LOWERED STEP, not by decision count
+
+Every scenario step is one row in our trace (the pre-step snapshot), but a step
+can consume **one, two, or zero** DCGO decision rows — the job emitter is the
+thing that writes them, so it is what the pairing is derived from
+(`LoweredStep::dcgo_wire_rows`, pinned against the emitter by
+`wire_row_counts_match_dcgo_wire_rows`):
+
+| `LoweredStep` | DCGO wire rows |
+|---|---|
+| `Action` | 1 |
+| `Select` (plain, or a folded `decline:`) | 1 |
+| `Select` (folded pick: `OptionalSkill(yes)` + the pick) | 2 |
+| `EndOfTurnGate { attack: None }` | 1 |
+| `EndOfTurnGate { attack: Some(_) }` | 2 |
+| `SimOnlyAction` | 0 |
+
+Our row `i` pairs with the **first** DCGO row step `i` consumes. The 2nd..Nth
+rows of a multi-row step are dropped — both traces are PRE-decision snapshots, so
+a fold's second row is a mid-resolution state our trace never materializes, and
+comparing it can only manufacture a divergence. Our row for a `SimOnlyAction`
+step is dropped for the mirror reason: DCGO has no prompt for it.
+
+Measured witness (EX12-011#effect#0): under 1:1 alignment a 9-step line against a
+10-row DCGO trace put our post-battle step 8 opposite DCGO's *pre*-battle mid-fold
+row and reported `p1.trash: ours=[EX12-020] dcgo=[]`, while DCGO's step 13 — the
+row that step really lands on — read `p1.trash:["EX12-020"]`, identical to ours on
+every projected field. It now reads
+`CLEAN (compared 9 of 9 ours / 10 dcgo steps (1 DCGO intermediate row(s) not comparable))`.
+
+Dropped rows are **counted, never erased**: they are named in the denominator, and
+`is_clean()` requires every row on both sides to be either compared or
+deliberately excluded. So a DCGO trace that ran longer or shorter than the lowered
+line predicts is still not a pass.
+
 ### Differ
 
 Walks aligned step indices and **leads with the first divergence, marking
 everything after it downstream.** Once the two engines part they are playing
 different games; a report ranking fifty consequences beside one cause is a report
 nobody finishes.
+
+`exam --all-diffs` (alias `--verbose`) prints EVERY divergence field by field
+instead of the lead plus `(+N downstream ...)`. The lead-only default is right —
+a report ranking fifty consequences beside one cause is a report nobody finishes —
+but it makes triaging a multi-gate line an exercise in arithmetic ("4 gates + 1
+sim-only row = 5 = lead + 4") about which rows diverged. `--all-diffs` turns the
+derivation back into a reading; the lead stays labelled `LEAD`.
 
 ## The five verdict classes
 
@@ -418,13 +583,26 @@ no-approximations policy is worse than no test.
 | Mode | Needs Unity | Can find a divergence | Where it runs |
 |---|---|---|---|
 | `exam --sim-only` | No | **No** | Every PR, GitHub-hosted, milliseconds |
-| `exam --card` / `exam --suite` | Yes | Yes | Deliberate, local, ~40 s per scenario |
+| `exam --sidecar` | Yes (to produce the sidecar) | Yes | Deliberate, local, ~40 s per scenario |
 
 `--sim-only` replays the scripted line in our engine alone and checks the
 backfilled `assert:` block. **There is no oracle in that job** — nothing observes
 DCGO. A green run means "no regression against previously recorded oracle state",
 never "our engine matches DCGO". Do not describe the gate as if it could discover
 a divergence, and never read a green run as a per-card pass.
+
+> **BROKEN AS COMMITTED (verified 2026-08-23).** The workflow's step runs
+> `cargo run -p dcgo-harness --release -- exam --scenario qa/dcgo-exams/ --sim-only
+> --cards-json data/cards.json`, which exits **2** before any scenario runs:
+> `--root <ROOT>` is a required GLOBAL option with no default and no env
+> fallback, and it has been required since `15aa29753`, i.e. since before the
+> gate was added in `1d4ad01f4`. Supplying `--root` is necessary but not
+> sufficient: `--decks` defaults to `starter_decks.json` beside `--cards-json`,
+> which does not know `toho-braves` / `toho-analog`, so all 66 EX12 scenarios
+> then fail to lower, and `qa/dcgo-exams/ST1/ST1-12.yaml` fails in sim-only
+> regardless (see "`stack:` and sim-only" below). **Until this is fixed the
+> sim-only regression gate is not running at all** -- do not cite it as
+> protection.
 
 `.github/workflows/dcgo-exam-sim.yml` joins the existing `dsl-guards` /
 `engine-clone-safety` gates, and checks out with `submodules: false`. **If that

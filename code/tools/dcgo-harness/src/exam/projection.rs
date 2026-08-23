@@ -343,6 +343,82 @@ pub fn align_to_scenario_origin(
     Ok(kept)
 }
 
+/// Which of our rows pairs with which DCGO row, derived from the LOWERED
+/// LINE rather than from either trace's length.
+///
+/// See [`pair_by_wire_rows`] for why this exists.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct StepPairing {
+    /// `(our row index, DCGO row index)` for every comparable step, in line
+    /// order.
+    pub pairs: Vec<(usize, usize)>,
+    /// Our rows deliberately excluded: steps that put NOTHING on the DCGO
+    /// wire (`LoweredStep::SimOnlyAction`).
+    pub ours_unpairable: u32,
+    /// DCGO rows deliberately excluded: the 2nd..Nth row of a step that
+    /// consumes several. Both traces are PRE-decision snapshots, so a fold's
+    /// second row is a mid-resolution state our trace never materializes.
+    pub dcgo_unpairable: u32,
+}
+
+/// Pair the two traces by LOWERED SCENARIO STEP, not by decision count.
+///
+/// # Why positional alignment is wrong here
+///
+/// Every scenario step is one row in OUR trace (the pre-step snapshot), but a
+/// step can consume one, two, or zero DCGO decision rows — the job emitter
+/// already knows which, because it is the thing that writes them:
+///
+/// | `LoweredStep` | DCGO wire rows |
+/// |---|---|
+/// | `Action` | 1 |
+/// | `Select` (plain, or a folded `decline:`) | 1 |
+/// | `Select` (folded pick: `OptionalSkill(yes)` + the pick) | 2 |
+/// | `EndOfTurnGate { attack: None }` | 1 |
+/// | `EndOfTurnGate { attack: Some(_) }` | 2 |
+/// | `SimOnlyAction` | 0 |
+///
+/// Aligning 1:1 after mulligan-stripping therefore slides the two traces apart
+/// from the first multi-row step onward and manufactures divergences out of an
+/// offset. Measured witness (EX12-011#effect#0): a 9-step line against a
+/// 10-row DCGO trace put our post-battle step 8 opposite DCGO's *pre*-battle
+/// mid-fold row, reporting `p1.trash: ours=[EX12-020] dcgo=[]` — while DCGO's
+/// step 13, the row that step really lands on, read `p1.trash:["EX12-020"]`,
+/// identical to ours on every projected field.
+///
+/// # The rule
+///
+/// Our row `i` pairs with the **first** DCGO row step `i` consumes. The
+/// 2nd..Nth rows of a multi-row step are dropped, and so is our row for a
+/// `SimOnlyAction` step — but both are COUNTED, in
+/// [`StepPairing::dcgo_unpairable`] / [`StepPairing::ours_unpairable`], and
+/// the differ prints them. A dropped row that vanished from the denominator
+/// would turn "we could not compare that row" into "that row agreed".
+///
+/// Rows beyond what the line predicts are left unaccounted on purpose: they
+/// then show up as a denominator shortfall, which is exactly what a DCGO trace
+/// that ran long or short *is*.
+pub fn pair_by_wire_rows(rows_per_step: &[usize], dcgo_len: usize) -> StepPairing {
+    let mut pairing = StepPairing::default();
+    let mut cursor = 0usize;
+    for (i, &rows) in rows_per_step.iter().enumerate() {
+        if rows == 0 {
+            pairing.ours_unpairable += 1;
+            continue;
+        }
+        if cursor < dcgo_len {
+            pairing.pairs.push((i, cursor));
+        }
+        for extra in 1..rows {
+            if cursor + extra < dcgo_len {
+                pairing.dcgo_unpairable += 1;
+            }
+        }
+        cursor += rows;
+    }
+    pairing
+}
+
 pub fn parse_sidecar(text: &str) -> Result<Vec<StateProjection>, String> {
     let stream = serde_json::Deserializer::from_str(text).into_iter::<StateProjection>();
     let mut rows = Vec::new();
@@ -463,6 +539,61 @@ mod tests {
         let out = align_to_scenario_origin(parse_sidecar(side).unwrap(), rec).unwrap();
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].step, 0);
+    }
+
+    // ── pairing by lowered step ─────────────────────────────────────────
+
+    #[test]
+    fn a_one_row_per_step_line_pairs_positionally() {
+        // The common case must stay exactly what it was.
+        let p = pair_by_wire_rows(&[1, 1, 1], 3);
+        assert_eq!(p.pairs, vec![(0, 0), (1, 1), (2, 2)]);
+        assert_eq!(p.ours_unpairable, 0);
+        assert_eq!(p.dcgo_unpairable, 0);
+    }
+
+    #[test]
+    fn a_two_row_step_pairs_with_its_first_row_and_drops_the_intermediate() {
+        // Measured witness EX12-011#effect#0: step 1 is an OptionalSkill+pick
+        // fold, so DCGO writes two rows for it. Our row 1 belongs opposite the
+        // FIRST of them; the second is a mid-resolution state our trace never
+        // materializes, and comparing it can only manufacture a divergence.
+        let p = pair_by_wire_rows(&[1, 2, 1], 4);
+        assert_eq!(p.pairs, vec![(0, 0), (1, 1), (2, 3)]);
+        assert_eq!(p.dcgo_unpairable, 1, "the fold's second row is accounted, not erased");
+        assert_eq!(p.ours_unpairable, 0);
+    }
+
+    #[test]
+    fn a_sim_only_step_drops_our_row_and_consumes_no_dcgo_row() {
+        // Witness EX12-004#effect#2: the author balanced the row counts with a
+        // sim-only step, which put our POST-attack row opposite DCGO's
+        // PRE-attack one. Under the pairing rule the sim-only row simply has
+        // no partner.
+        let p = pair_by_wire_rows(&[1, 0, 1], 2);
+        assert_eq!(p.pairs, vec![(0, 0), (2, 1)]);
+        assert_eq!(p.ours_unpairable, 1);
+        assert_eq!(p.dcgo_unpairable, 0);
+    }
+
+    #[test]
+    fn a_short_dcgo_trace_leaves_our_rows_unpaired_rather_than_inventing_partners() {
+        // Two steps predicted, one row delivered: the second step gets no
+        // pair at all -- it must NOT slide onto a row belonging to another
+        // step.
+        let p = pair_by_wire_rows(&[1, 1, 1], 1);
+        assert_eq!(p.pairs, vec![(0, 0)]);
+        assert_eq!(p.ours_unpairable, 0, "an absent partner is a shortfall, not a deliberate drop");
+    }
+
+    #[test]
+    fn intermediate_rows_are_only_counted_when_they_exist() {
+        // A 2-row step whose second row DCGO never wrote must not be counted
+        // as a deliberately-dropped row -- that would launder a truncated
+        // trace into an accounted one.
+        let p = pair_by_wire_rows(&[2], 1);
+        assert_eq!(p.pairs, vec![(0, 0)]);
+        assert_eq!(p.dcgo_unpairable, 0);
     }
 
     #[test]

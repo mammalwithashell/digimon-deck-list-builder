@@ -49,6 +49,18 @@ pub enum StepAction {
     Play { card: String, from: String },
     Digivolve { from: String, using: String },
     Attack { attacker: String, target: String },
+    /// Activate a `[Main]` effect on a permanent ALREADY in play — the
+    /// field-activation surface, distinct from `play`, which puts a `[Main]`
+    /// Option onto the field from hand.
+    ///
+    /// `on:` is a slot reference in the same grammar `attack:` uses
+    /// (`field.0`, or the bare `breeding` sentinel for the breeding area's
+    /// `<Training>` [Main]). This is also the surface for `<Delay>`: our
+    /// engine gates a placed Delay Option's activation behind
+    /// `turn_count > placed_on_turn` and offers it on the SAME action bit, and
+    /// DCGO's `CanDeclareOptionDelayEffect` gates its own on the same
+    /// not-the-placing-turn rule.
+    Main { on: String },
     Select(SelectPayload),
 }
 
@@ -61,7 +73,18 @@ pub enum StepAction {
 pub enum SelectPayload {
     /// Identity picks, in pick order, resolved in occurrence order against the
     /// prompt's candidate list (documented limitation for duplicate ids).
-    Cards(Vec<String>),
+    ///
+    /// `ordinal` disambiguates the one prompt where duplicate ids are NOT
+    /// interchangeable copies: DCGO's `MultipleSkills` (our `TriggerOrder`),
+    /// whose candidates are stacked TRIGGERS. A deleted carrier with an
+    /// `[On Deletion]` and an `<Ascension>` offers its own identity twice, and
+    /// those are different decisions — so occurrence order must not silently
+    /// pick between them. It is the 0-based position AMONG the candidates
+    /// carrying that same id, NOT an index into the whole candidate list.
+    Cards {
+        ids: Vec<String>,
+        ordinal: Option<i32>,
+    },
     /// Field-permanent picks as OUR slot references (`own.field.N` /
     /// `opp.field.N`), resolved at lowering time against the live game.
     Targets(Vec<String>),
@@ -76,7 +99,8 @@ pub enum SelectPayload {
 
 /// Every verb this format understands, in the order shown to an author whose
 /// spelling was wrong.
-const STEP_VERBS: &[&str] = &["hatch", "pass", "move", "play", "digivolve", "attack", "select"];
+const STEP_VERBS: &[&str] =
+    &["hatch", "pass", "move", "play", "digivolve", "attack", "main", "select"];
 
 fn hand() -> String {
     "hand".to_string()
@@ -115,6 +139,18 @@ struct AttackArgs {
     target: String,
 }
 
+/// `do: { main: { on: field.0 } }`.
+///
+/// `on:` is required and carries no default. `play`'s `from: hand` and
+/// `move`'s `from: breeding` each have exactly one possible source, so
+/// defaulting them is unambiguous; a board can hold many permanents, so a
+/// defaulted `on:` would silently mean "whichever one lowered first".
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MainArgs {
+    on: String,
+}
+
 /// The raw YAML surface of a `select:` step. All five forms are optional here
 /// so the exactly-one rule can be validated with a message that names every
 /// form, instead of serde's opaque "unknown field" refusal.
@@ -123,6 +159,9 @@ struct AttackArgs {
 struct SelectArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     cards: Option<Vec<String>>,
+    /// Only legal alongside `cards:` — see [`SelectPayload::Cards`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ordinal: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     targets: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -136,6 +175,11 @@ struct SelectArgs {
 /// The five select forms, for the exactly-one error message.
 const SELECT_FORMS: &str = "cards: [..] / targets: [..] / value: N / yes: true / decline: true";
 
+/// Rendered in the error an author gets for `ordinal:` without `cards:`.
+const ORDINAL_RULE: &str = "select `ordinal:` is only legal alongside `cards:`: it is the 0-based \
+position among the candidates carrying THAT card id, so without an id it \
+addresses nothing. To answer a prompt by raw DCGO index, use `value: N`";
+
 impl SelectArgs {
     fn into_payload(self) -> Result<SelectPayload, String> {
         let present = [
@@ -148,16 +192,43 @@ impl SelectArgs {
         .iter()
         .filter(|p| **p)
         .count();
+        // Checked BEFORE the exactly-one rule: a bare `ordinal:` carries no
+        // form at all, so the generic "got 0 forms" message would never
+        // mention the key the author actually wrote.
+        if self.ordinal.is_some() && self.cards.is_none() {
+            return Err(ORDINAL_RULE.to_string());
+        }
         if present != 1 {
             return Err(format!(
                 "a select step must carry exactly one of {SELECT_FORMS}, got {present}"
             ));
         }
+        if let Some(ordinal) = self.ordinal {
+            if ordinal < 0 {
+                return Err(format!(
+                    "select `ordinal: {ordinal}` is negative; it is a 0-based position \
+                     among that card's own candidates. To DECLINE the prompt, write \
+                     `decline: true`"
+                ));
+            }
+        }
         if let Some(cards) = self.cards {
             if cards.is_empty() {
                 return Err("select `cards:` must name at least one card id".to_string());
             }
-            return Ok(SelectPayload::Cards(cards));
+            if self.ordinal.is_some() && cards.len() != 1 {
+                return Err(format!(
+                    "select `ordinal:` names WHICH of one card's own candidates to take, \
+                     so it cannot accompany a {}-card pick list -- the prompts that \
+                     accept an ordinal (DCGO MultipleSkills / our TriggerOrder) are \
+                     single-pick",
+                    cards.len()
+                ));
+            }
+            return Ok(SelectPayload::Cards {
+                ids: cards,
+                ordinal: self.ordinal,
+            });
         }
         if let Some(targets) = self.targets {
             if targets.is_empty() {
@@ -190,7 +261,10 @@ impl SelectArgs {
     fn from_payload(p: &SelectPayload) -> SelectArgs {
         let mut a = SelectArgs::default();
         match p {
-            SelectPayload::Cards(c) => a.cards = Some(c.clone()),
+            SelectPayload::Cards { ids, ordinal } => {
+                a.cards = Some(ids.clone());
+                a.ordinal = *ordinal;
+            }
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
             SelectPayload::Value(v) => a.value = Some(*v),
             SelectPayload::Yes => a.yes = Some(true),
@@ -261,6 +335,10 @@ impl<'de> Deserialize<'de> for StepAction {
                     target: a.target,
                 }
             }
+            "main" => {
+                let a: MainArgs = args_of::<MainArgs, D::Error>(verb, args)?;
+                StepAction::Main { on: a.on }
+            }
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
                 StepAction::Select(
@@ -313,6 +391,9 @@ impl Serialize for StepAction {
                     target: target.clone(),
                 },
             )?,
+            StepAction::Main { on } => {
+                map.serialize_entry("main", &MainArgs { on: on.clone() })?
+            }
             StepAction::Select(payload) => {
                 map.serialize_entry("select", &SelectArgs::from_payload(payload))?
             }
@@ -542,6 +623,83 @@ assert:
         assert_eq!(back, s.steps[0].act);
     }
 
+    // ── main: field [Main] / <Delay> activation ─────────────────────────
+
+    #[test]
+    fn main_verb_parses_with_a_pinned_field_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { main: { on: field.0 } }",
+        ))
+        .expect("main step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Main {
+                on: "field.0".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn main_verb_accepts_the_bare_breeding_sentinel() {
+        // The breeding area's `<Training>` [Main] is encoded with the
+        // BREEDING_TARGET sentinel — a place, not a slot — so the bare form
+        // has to be expressible.
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { main: { on: breeding } }",
+        ))
+        .unwrap();
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Main {
+                on: "breeding".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn main_verb_requires_on() {
+        // A board can hold many permanents, so a defaulted `on:` would
+        // silently mean "whichever one lowered first".
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { main: {} }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("main"), "got: {err}");
+        assert!(err.contains("on"), "must name the missing field: {err}");
+    }
+
+    #[test]
+    fn main_verb_rejects_an_unknown_argument() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { main: { on: field.0, effect: Digiburst } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("effect"), "got: {err}");
+    }
+
+    #[test]
+    fn main_verb_round_trips_through_yaml() {
+        // The codec is hand-written, so an asymmetric arm would emit
+        // drafter/backfill output that fails to re-parse.
+        let act = StepAction::Main {
+            on: "field.2".to_string(),
+        };
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act, "round trip of {yaml}");
+    }
+
+    #[test]
+    fn main_is_listed_among_the_verbs_an_author_is_offered() {
+        let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
+        let err = Scenario::from_yaml(&bad).unwrap_err();
+        assert!(err.contains("main"), "the verb list must name `main`: {err}");
+    }
+
     // ── select: the five symbolic forms ─────────────────────────────────
 
     /// Parse GOOD with its select step's args replaced by `args`, returning
@@ -573,8 +731,80 @@ assert:
         let p = select_payload_of("{ cards: [EX12-020, EX12-020] }").unwrap();
         assert_eq!(
             p,
-            SelectPayload::Cards(vec!["EX12-020".to_string(), "EX12-020".to_string()])
+            SelectPayload::Cards {
+                ids: vec!["EX12-020".to_string(), "EX12-020".to_string()],
+                ordinal: None,
+            }
         );
+    }
+
+    // ── select `ordinal:` (the MultipleSkills trigger disambiguator) ────
+
+    #[test]
+    fn select_ordinal_parses_alongside_cards() {
+        let p = select_payload_of("{ cards: [EX12-047], ordinal: 1 }").unwrap();
+        assert_eq!(
+            p,
+            SelectPayload::Cards {
+                ids: vec!["EX12-047".to_string()],
+                ordinal: Some(1),
+            }
+        );
+    }
+
+    #[test]
+    fn select_ordinal_without_cards_is_rejected_loudly() {
+        // An ordinal is a position among the candidates carrying a given id;
+        // without an id it addresses nothing, and quietly treating it as a raw
+        // index is exactly the value-space confusion the field exists to end.
+        let err = select_payload_of("{ ordinal: 1 }").unwrap_err();
+        assert!(err.contains("only legal alongside `cards:`"), "got: {err}");
+        assert!(err.contains("value: N"), "must name the alternative: {err}");
+    }
+
+    #[test]
+    fn select_ordinal_alongside_value_is_rejected() {
+        // `value:` is the raw DCGO-index fallback; combining an index and an
+        // identity in one answer is the abort DCGO's own hook raises.
+        let err = select_payload_of("{ value: 2, ordinal: 1 }").unwrap_err();
+        assert!(err.contains("cards:"), "got: {err}");
+    }
+
+    #[test]
+    fn select_ordinal_with_a_multi_card_pick_is_rejected() {
+        let err = select_payload_of("{ cards: [A, B], ordinal: 0 }").unwrap_err();
+        assert!(err.contains("single-pick"), "got: {err}");
+    }
+
+    #[test]
+    fn a_negative_select_ordinal_is_rejected() {
+        // -1 is DCGO's "decline the stack" sentinel on a DIFFERENT field;
+        // accepting it here would let a scenario decline a trigger stack while
+        // reading as a pick.
+        let err = select_payload_of("{ cards: [A], ordinal: -1 }").unwrap_err();
+        assert!(err.contains("decline: true"), "got: {err}");
+    }
+
+    #[test]
+    fn select_ordinal_round_trips_through_yaml() {
+        let act = StepAction::Select(SelectPayload::Cards {
+            ids: vec!["EX12-047".to_string()],
+            ordinal: Some(1),
+        });
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(yaml.contains("ordinal"), "the key must survive: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act);
+    }
+
+    #[test]
+    fn an_absent_ordinal_is_omitted_from_the_yaml_not_written_as_null() {
+        let act = StepAction::Select(SelectPayload::Cards {
+            ids: vec!["EX12-047".to_string()],
+            ordinal: None,
+        });
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(!yaml.contains("ordinal"), "got: {yaml}");
     }
 
     #[test]
@@ -624,7 +854,10 @@ assert:
         // The drafter serializes StepAction back to YAML; an asymmetric codec
         // would emit scenarios that fail to re-parse.
         for act in [
-            StepAction::Select(SelectPayload::Cards(vec!["ST1-03".to_string()])),
+            StepAction::Select(SelectPayload::Cards {
+                ids: vec!["ST1-03".to_string()],
+                ordinal: None,
+            }),
             StepAction::Select(SelectPayload::Targets(vec!["own.field.1".to_string()])),
             StepAction::Select(SelectPayload::Value(3)),
             StepAction::Select(SelectPayload::Yes),

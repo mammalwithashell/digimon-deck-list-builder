@@ -106,6 +106,20 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
                 && slot_matches(e.source_zone, e.source_index, attacker)
                 && slot_matches(e.target_zone, e.target_index, target)
         }
+        // A `[Main]` effect on a permanent already in play. Matched on the
+        // SLOT, never on `card_id` alone: two copies of the same Option on the
+        // field are two different decisions, and this module's standing rule
+        // is that an ambiguous intent must refuse rather than pick.
+        //
+        // `slot_matches` already handles both forms the engine can emit —
+        // `field.N` for a battle-area permanent (`source_zone = Battle`,
+        // `source_index = slot`) and the bare `breeding` sentinel for the
+        // breeding area's `<Training>` [Main] (`source_zone = Breeding`, no
+        // index).
+        StepAction::Main { on } => {
+            e.kind == ActionKind::FieldEffect
+                && slot_matches(e.source_zone, e.source_index, on)
+        }
         // Selections resolve against the live PendingSelection rather than the
         // main mask; Task 3 threads them through ScenarioAdapter, which is why
         // they never match here.
@@ -446,6 +460,121 @@ mod tests {
         )
         .expect_err("a non-breeding from must not match the move action");
         assert!(matches!(err, LowerError::NoMatch { .. }));
+    }
+
+    // ── main: field [Main] / <Delay> activation ─────────────────────────
+
+    /// A live game whose battle area holds a permanent with a field `[Main]`,
+    /// so the `main:` verb can be lowered against the REAL mask.
+    ///
+    /// The board is staged rather than played to: no ST-1 card has a field
+    /// `[Main]` at all, and every implemented one costs 3+ — more memory than
+    /// a legal ST-1 opening can hold without ending the turn. Staging is
+    /// legitimate HERE because this is a unit test of the lowering function,
+    /// not an exam scenario: what it needs is a live mask with a FieldEffect
+    /// bit set, and the "never stage a board" rule is about oracle lines,
+    /// where a hand-built position could miss wiring the play path sets up.
+    ///
+    /// BT11-061 Vemmon: "[Main] By suspending this Digimon, reveal the top 3
+    /// cards of your deck…".
+    fn game_with_a_field_main() -> digimon_engine::Game {
+        let mut g = game();
+        // Breeding -> Main: field-effect activations only exist in Main.
+        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        g.decode_action(pass, 0);
+        assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
+
+        let mut r = digimon_engine::DebugRunner::wrap(g);
+        // `turn_played_override: Some(0)` — placed before this turn, so a
+        // once-per-turn / not-the-placing-turn gate cannot suppress the bit.
+        r.place_on_field(0, "BT11-061", Some(0));
+        r.game
+    }
+
+    #[test]
+    fn a_field_main_lowers_to_a_field_effect_action_in_the_mask() {
+        let g = game_with_a_field_main();
+        let id = lower_step(
+            &g,
+            0,
+            &StepAction::Main {
+                on: "field.0".to_string(),
+            },
+        )
+        .expect("the staged field [Main] should lower");
+
+        // The load-bearing invariant: never emit an action the mask forbids.
+        let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
+        assert_eq!(mask[id as usize], 1.0, "lowered to a forbidden action");
+
+        let e = digimon_engine::action::explain::explain_action(&g, 0, id);
+        assert_eq!(e.kind, digimon_engine::action::explain::ActionKind::FieldEffect);
+        assert_eq!(
+            e.source_zone,
+            Some(digimon_engine::action::explain::ActionZone::Battle)
+        );
+        assert_eq!(e.source_index, Some(0));
+        assert_eq!(e.card_id.as_deref(), Some("BT11-061"));
+    }
+
+    #[test]
+    fn a_field_main_on_the_wrong_slot_does_not_match() {
+        // Matching on `card_id` alone would make two copies of one Option
+        // interchangeable; the slot is what the step names, so a slot the
+        // board does not have must refuse rather than fall back.
+        let g = game_with_a_field_main();
+        let err = lower_step(
+            &g,
+            0,
+            &StepAction::Main {
+                on: "field.1".to_string(),
+            },
+        )
+        .expect_err("slot 1 is empty");
+        match err {
+            LowerError::NoMatch { legal, .. } => {
+                assert!(!legal.is_empty(), "must report what WAS legal");
+            }
+            other => panic!("expected NoMatch, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_field_main_does_not_match_a_play_from_hand() {
+        // `play` puts a [Main] Option onto the field from hand; `main`
+        // activates one already in play. Conflating them would let a scenario
+        // claim it exercised the field-activation surface while it exercised
+        // the play surface.
+        let g = game_with_a_field_main();
+        let main_id = lower_step(
+            &g,
+            0,
+            &StepAction::Main {
+                on: "field.0".to_string(),
+            },
+        )
+        .unwrap();
+        let play_id = lower_step(
+            &g,
+            0,
+            &StepAction::Play {
+                card: "ST1-15".to_string(),
+                from: "hand".to_string(),
+            },
+        );
+        if let Ok(play_id) = play_id {
+            assert_ne!(main_id, play_id);
+        }
+        // …and a `main:` step naming a HAND slot can never match, whatever is
+        // in hand: the FieldEffect explanation's source zone is Battle.
+        assert!(lower_step(
+            &g,
+            0,
+            &StepAction::Main {
+                on: "hand.0".to_string()
+            }
+        )
+        .is_err());
     }
 
     #[test]
