@@ -26,9 +26,38 @@ traits: [LIBERATOR]
 # engine's condition check (any_permanent...is_unsuspended) prevents a
 # second activation while Owen is already suspended.
 #
-# G-OPT-TRIGGERED: card text has no explicit [Once Per Turn]. The suspend
-# cost naturally limits activation to once per memory cycle (Owen stays
-# suspended until unsuspend phase). The once_per_turn flag is NOT set.
+# OPTIONAL PROCESSING CONDITION (§15-7-1/§15-7-4) — the clause is `optional`.
+#   §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+#   Owen prints exactly that shape: "…, by suspending this Tamer, delete 1 of
+#   your opponent's Digimon with 4000 DP or less." §15-7-4: "A player can
+#   choose whether or not to execute the content of optional processing
+#   conditions, regardless of whether or not the content of the conditions can
+#   be executed." §15-7-2: when the condition's content isn't executed, "the
+#   processing after the conditions can't be executed" — declining skips BOTH
+#   the suspend AND the delete. Rule 17 (no auto-selections) requires that
+#   decline to be reachable from the action space.
+#
+#   DCGO agrees: BT18_087.cs:37 passes isOptional = true as the 4th argument of
+#   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, true, …)`.
+#
+#   `outer_prompt: true` is required because the body's FIRST step is a bare
+#   `suspend: { target: source }` — a mandatory cost step, not a declinable
+#   selection — so without the forced outer confirm there is no PASS for the
+#   player to take and the suspend would auto-pay. Identical treatment to the
+#   worked template P-130 (Lui Ohwada), whose clause 2 has the same
+#   suspend-as-cost shape; this file's earlier comment cited P-130 as
+#   justification for firing unconditionally, and BOTH cards carried the same
+#   auto-pay defect.
+#
+#   Note DCGO shows its yes/no BEFORE checking for a legal delete target
+#   (`HasMatchConditionPermanent` runs after `SuspendPermanentsClass.Tap()`),
+#   so the unguarded forced prompt `outer_prompt: true` installs matches DCGO.
+#
+# G-OPT-TRIGGERED / G-OPT-REFUND-ON-DECLINE: card text has no explicit
+# [Once Per Turn]. The suspend cost naturally limits activation to once per
+# memory cycle (Owen stays suspended until unsuspend phase). The once_per_turn
+# flag is NOT set, so `outer_prompt`'s refund-on-decline semantics are a no-op
+# here — it is present purely to surface the decline.
 #
 # G-PRED-DP-LTE: dp_lte: 4000 filter is authored correctly but the engine's
 # eval_permanent_fields does not evaluate it yet; all opponent Digimon will be
@@ -57,9 +86,17 @@ effects:
   # both "Owen is in play" (zone: battle_area) and "Owen is unsuspended"
   # (can pay the suspend cost). DCGO: CanActivateCondition checks
   # IsExistOnBattleArea + CanActivateSuspendCostEffect.
+  #
+  # §15-7-1/§15-7-4: "by suspending this Tamer" is an optional processing
+  # condition — the player chooses whether to pay it, and §15-7-2 means
+  # declining also skips the delete. DCGO: isOptional = true (BT18_087.cs:37).
+  # `outer_prompt: true` because the body's first step (`suspend: {target:
+  # source}`) is not itself declinable.
   - when: on_opponent_security_removed
     active_when: { all_turns: true }
-    summary: "[All Turns] On opponent security removed: suspend self, delete ≤4000 DP Digimon"
+    optional: true
+    outer_prompt: true
+    summary: "[All Turns] On opponent security removed: MAY suspend self to delete ≤4000 DP Digimon"
     condition:
       any_permanent:
         of: you

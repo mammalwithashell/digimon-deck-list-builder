@@ -265,6 +265,30 @@ fn bt11_089_your_turn_observer_gates_on_suspend_self_activation_cost() {
             .any(|s| matches!(s, CompiledStep::GrantKeyword { keyword, .. } if keyword == "Rush")),
         "the observer body must grant Rush"
     );
+
+    // §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+    // BT11-089 prints "…, by suspending this Tamer, that Digimon gains <Rush>
+    // for the turn" — the "by suspending this Tamer" half IS that condition.
+    // §15-7-4: "A player can choose whether or not to execute the content of
+    // optional processing conditions, regardless of whether or not the content
+    // of the conditions can be executed." The clause must therefore be
+    // `optional`, so `effect_queue.rs`'s `needs_pre_cost_prompt` branch
+    // installs the pre-cost TriggerOrder prompt WITH PASS instead of
+    // auto-paying the suspend (rule 17: no auto-selections).
+    // DCGO agrees: BT11_089.cs:82 passes isOptional = true.
+    assert!(
+        observer.optional,
+        "the suspend cost is an optional processing condition (§15-7-1/§15-7-4): \
+         the player may decline it"
+    );
+    // No `outer_prompt:` — a cost-bearing optional trigger gets its decline
+    // gate from the pre-cost TriggerOrder prompt, which `effect_queue.rs`
+    // documents as mutually exclusive with `needs_outer_optional_prompt`.
+    assert!(
+        !observer.outer_prompt,
+        "the `activation_cost:` pre-cost prompt is the decline gate — a forced \
+         outer confirm would be dead weight"
+    );
 }
 
 // ─── On Play behavioral: reveal 4 / add matching / bottom remainder ────────
@@ -400,6 +424,53 @@ fn observer_runner() -> DebugRunner {
     akiho_runner().memory(10).start()
 }
 
+/// Put RED-AVIAN (or any fixture) alone in P0's hand so an effect can play it.
+fn stage_hand_card(runner: &mut DebugRunner, card_id: &str) {
+    runner.game.players[0].hand.clear();
+    let hand_card = {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap();
+        let next = runner.game.next_card_index();
+        digimon_engine::card_source::CardSource::new(idx, 0, next)
+    };
+    runner.game.players[0].hand.push(hand_card);
+}
+
+/// The ACCEPT half of Akiho's optional processing condition.
+///
+/// §15-7-1 names "by X, Y" an OPTIONAL PROCESSING CONDITION, and §15-7-4 lets
+/// the player choose whether to execute it — so with `optional: true` on an
+/// `activation_cost:` clause the engine installs a `TriggerOrder` prompt WITH
+/// PASS *before* running the cost closure (`effect_queue.rs`
+/// `needs_pre_cost_prompt`). Rule 17 requires that both branches be reachable
+/// from the action space, so the accept path is driven explicitly here rather
+/// than left to `auto_resolve`'s first-action pick.
+fn accept_suspend_cost(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert_eq!(
+        view.kind,
+        SelectionKind::TriggerOrder,
+        "the pre-cost decline gate is a TriggerOrder prompt"
+    );
+    assert!(
+        view.is_optional,
+        "the prompt must accept PASS — §15-7-4 lets the player decline the cost"
+    );
+    let action = *view
+        .valid_action_ids
+        .first()
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the suspend cost");
+}
+
 #[test]
 fn bt11_089_effect_play_of_red_avian_grants_rush_via_suspend_cost() {
     let mut runner = observer_runner();
@@ -425,6 +496,9 @@ fn bt11_089_effect_play_of_red_avian_grants_rush_via_suspend_cost() {
         .play_from_hand_free(0, 0)
         .expect("effect plays RED-AVIAN from hand");
 
+    // ACCEPT the optional processing condition ("by suspending this Tamer").
+    accept_suspend_cost(&mut runner);
+
     runner
         .auto_resolve()
         .expect("resolve suspend-cost + Rush grant");
@@ -436,6 +510,52 @@ fn bt11_089_effect_play_of_red_avian_grants_rush_via_suspend_cost() {
     assert!(
         runner.game.has_keyword(played, Keyword::Rush),
         "the effect-played red [Avian] Digimon must gain <Rush>"
+    );
+}
+
+/// §15-7-4: "A player can choose whether or not to execute the content of
+/// optional processing conditions." Declining "by suspending this Tamer" must
+/// leave BOTH halves undone — Akiho stays unsuspended AND the played Digimon
+/// gains no <Rush> — because §15-7-2 says that when the optional condition's
+/// content isn't executed, "the processing after the conditions can't be
+/// executed".
+///
+/// This is the branch the engine had no way to reach: the clause carried an
+/// `activation_cost:` but no `optional: true`, so `effect_queue.rs`'s
+/// `needs_pre_cost_prompt` gate never fired and the suspend was auto-paid.
+/// DCGO exposes the choice (BT11_089.cs:82, isOptional = true).
+#[test]
+fn bt11_089_suspend_cost_may_be_declined_leaving_akiho_unsuspended_and_no_rush() {
+    let mut runner = observer_runner();
+    let akiho = runner.place_on_field(0, CARD_ID, Some(0));
+    stage_hand_card(&mut runner, "RED-AVIAN");
+
+    let source_card = runner.top_card(akiho);
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(akiho), 0);
+    let played = ctx
+        .play_from_hand_free(0, 0)
+        .expect("effect plays RED-AVIAN from hand");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert!(
+        view.is_optional,
+        "the prompt must accept PASS — §15-7-4 lets the player decline the cost"
+    );
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("declining must be reachable from the action space");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !runner.game.player(0).battle_area[akiho.index as usize].is_suspended,
+        "declining the optional cost must NOT suspend the Tamer"
+    );
+    assert!(
+        !runner.game.has_keyword(played, Keyword::Rush),
+        "with the optional condition declined, the processing after it can't execute — \
+         no <Rush> is granted"
     );
 }
 

@@ -33,20 +33,26 @@
 //!   }] }] }` — same shape as EX7-027/BT22-036 Puppet-trait Overclock cards.
 //! - On Play / When Digivolving / When Attacking (`EffectTiming.
 //!   OnEnterFieldAnyone` x2 shared `ActivateCoroutine` + `OnAllyAttack`):
-//!   `SelectCardEffect` (mandatory — `canNoSelect: () => true` gates a
-//!   **cost**, but once >=1 opponent-trash Digimon exists the pick is forced
-//!   through: DCGO's outer `CanActivateCondition` requires
-//!   `Enemy.TrashCards.Count(IsDigimon) >= 1`, so the clause simply does not
-//!   activate with an empty pool) selects 1 Digimon card from the opponent's
-//!   trash → `AddLibraryTopCards` (returns it to the top of THEIR deck).
-//!   `AfterSelectCardCoroutine` then mandatorily `SelectPermanentEffect`
-//!   (`Mode.PutLibraryBottom`, `maxCount: min(1, opp Digimon count)`) over the
-//!   opponent's battle-area Digimon → bottom-decks 1. → `select_trash: { of:
-//!   opponent, filter: { kind: digimon } }` (mandatory; the pick has no
-//!   `optional: true` per DCGO — with 0 candidates the whole shared clause
-//!   just does not fire, matching the outer gate) → `move_trash_card_to_deck_
-//!   top: { of: opponent }`, then `select_opponent_permanent: { kind: digimon
-//!   }` (mandatory, silently no-ops with 0 opponent Digimon) →
+//!   **OPTIONAL** — `SetUpActivateClass(..., isOptional: true, ...)` at
+//!   `BT19_101.cs:44` / `:161` / `:278`, and the inner `SelectCardEffect` is
+//!   additionally `canNoSelect: () => true`. `general_rule.pdf` §15-7-1 names
+//!   "By X, Y" an OPTIONAL PROCESSING CONDITION and §15-7-4 lets the player
+//!   decline it "regardless of whether or not the content of the conditions
+//!   can be executed"; §15-7-2 makes the decline skip the post-condition
+//!   processing too. The outer `CanActivateCondition`
+//!   (`Enemy.TrashCards.Count(IsDigimon) >= 1`) only decides whether the
+//!   clause activates at all — it does NOT convert the payment into a
+//!   mandatory one. (This doc previously claimed "the pick is forced
+//!   through"; corrected.) Once ACCEPTED: `SelectCardEffect` selects 1 Digimon
+//!   card from the opponent's trash → `AddLibraryTopCards` (returns it to the
+//!   top of THEIR deck); `AfterSelectCardCoroutine` then mandatorily
+//!   `SelectPermanentEffect` (`Mode.PutLibraryBottom`, `maxCount: min(1, opp
+//!   Digimon count)`) over the opponent's battle-area Digimon → bottom-decks
+//!   1. → clause `optional: true` + `outer_prompt: true` (the body's first
+//!   step `select_trash` is not itself declinable), then `select_trash: { of:
+//!   opponent, filter: { kind: digimon } }` → `move_trash_card_to_deck_top: {
+//!   of: opponent }`, then `select_opponent_permanent: { kind: digimon }`
+//!   (mandatory once accepted, silently no-ops with 0 opponent Digimon) →
 //!   `return_to_deck: { position: bottom }`.
 //! - All Turns (`EffectTiming.None` x2 — `CanNotAffectedClass` +
 //!   `CanNotSuspendClass`, both gated on the SHARED
@@ -307,8 +313,9 @@ fn bt19_101_overclock_sacrifice_rejects_non_composite_non_token() {
 // Section 3 — [On Play][When Digivolving][When Attacking] trash-return cost
 // ════════════════════════════════════════════════════════════════════════════
 
-/// POSITIVE: with >=1 opponent-trash Digimon, the shared clause installs a
-/// mandatory Trash-selection cost prompt.
+/// POSITIVE: with >=1 opponent-trash Digimon, the shared clause first surfaces
+/// the OUTER accept/decline confirm for its optional processing condition;
+/// accepting then installs the Trash-selection cost prompt.
 #[test]
 fn bt19_101_on_play_with_opp_trash_digimon_installs_trash_prompt() {
     let mut r = base_runner();
@@ -317,14 +324,42 @@ fn bt19_101_on_play_with_opp_trash_digimon_installs_trash_prompt() {
 
     fire(&mut r, EffectTiming::OnPlay, zeed);
 
+    // §15-7-1: "Optional processing conditions include text such as 'by X,
+    // Y.'" — "By returning 1 Digimon card from your opponent's trash to the
+    // top of the deck, return 1 of their Digimon to the bottom of the deck" is
+    // that shape. §15-7-4: the player "can choose whether or not to execute
+    // the content of optional processing conditions, regardless of whether or
+    // not the content of the conditions can be executed". So the FIRST thing
+    // to surface is the accept/decline confirm, not the cost pick.
+    //
+    // This test used to assert `!view.is_optional` on a Trash-kind prompt,
+    // reasoning that "the pick is mandatory once the clause activates (DCGO
+    // canNoSelect never true here)". Both halves were wrong: DCGO's
+    // `BT19_101.cs` passes `isOptional: true` to `SetUpActivateClass` on all
+    // three timings (:44, :161, :278), and its inner `SelectCardEffect` IS
+    // `canNoSelect: () => true`. A satisfiable outer `CanActivateCondition`
+    // does not convert an optional processing condition into a mandatory one
+    // (§15-7-4's "regardless of whether ... can be executed").
+    let outer = r
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert_eq!(
+        outer.kind,
+        SelectionKind::Replacement,
+        "the outer accept/decline confirm installs before any cost is paid"
+    );
+    assert!(
+        outer.is_optional,
+        "the outer confirm must expose PASS so the player can decline (§15-7-4)"
+    );
+
+    // Accepting reaches the (now committed) cost pick.
+    r.accept_optional_trigger()
+        .expect("accepting the optional processing condition must be reachable");
     let view = r
         .pending_selection_view()
-        .expect("opponent-trash Digimon cost prompt must install");
+        .expect("opponent-trash Digimon cost prompt must install after accept");
     assert_eq!(view.kind, SelectionKind::Trash);
-    assert!(
-        !view.is_optional,
-        "the pick is mandatory once the clause activates (DCGO canNoSelect never true here)"
-    );
 }
 
 /// NEGATIVE: with NO opponent-trash Digimon, the clause does not activate —
@@ -357,6 +392,11 @@ fn bt19_101_on_play_returns_trash_to_top_then_bottom_decks_opp_digimon() {
 
     fire(&mut r, EffectTiming::OnPlay, zeed);
 
+    // §15-7-1/§15-7-4: the optional processing condition prompts first; this
+    // test drives the ACCEPT branch (the decline branch is covered by
+    // `bt19_101_optional_processing_condition_may_be_declined`).
+    r.accept_optional_trigger()
+        .expect("accept the optional 'by returning ...' condition");
     let cost_view = r
         .pending_selection_view()
         .expect("trash-return cost prompt");
@@ -409,6 +449,9 @@ fn bt19_101_on_play_bottom_deck_step_noops_with_no_opp_digimon_on_field() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::OnPlay, zeed);
+    // §15-7-1/§15-7-4: accept the optional processing condition first.
+    r.accept_optional_trigger()
+        .expect("accept the optional 'by returning ...' condition");
     let cost_view = r
         .pending_selection_view()
         .expect("trash-return cost prompt");
@@ -430,6 +473,10 @@ fn bt19_101_when_digivolving_fires_same_clause() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::WhenDigivolving, zeed);
+    // 15-7-1/15-7-4: the outer accept/decline confirm gates every timing
+    // of this shared clause — DCGO passes isOptional=true on all three.
+    r.accept_optional_trigger()
+        .expect("accept the optional 'by returning ...' condition");
     let view = r
         .pending_selection_view()
         .expect("[When Digivolving] also surfaces the trash-return cost");
@@ -444,6 +491,10 @@ fn bt19_101_when_attacking_fires_same_clause() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::WhenAttacking, zeed);
+    // 15-7-1/15-7-4: the outer accept/decline confirm gates every timing
+    // of this shared clause — DCGO passes isOptional=true on all three.
+    r.accept_optional_trigger()
+        .expect("accept the optional 'by returning ...' condition");
     let view = r
         .pending_selection_view()
         .expect("[When Attacking] also surfaces the trash-return cost");
@@ -464,6 +515,9 @@ fn bt19_101_trash_return_cost_does_not_touch_security() {
 
     let cp = r.event_checkpoint();
     fire(&mut r, EffectTiming::OnPlay, zeed);
+    // §15-7-1/§15-7-4: accept the optional processing condition first.
+    r.accept_optional_trigger()
+        .expect("accept the optional 'by returning ...' condition");
     let cost_view = r
         .pending_selection_view()
         .expect("trash-return cost prompt");
@@ -625,5 +679,112 @@ fn bt19_101_locks_and_immunity_turn_on_once_stack_shrinks_to_no_sources() {
         r.game
             .permanent_is_unaffected_by_effect(zeed, 1, EffectSourceKind::Digimon),
         "once the stack shrinks to just the top card, the opponent-effect immunity turns on"
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 5 — the optional processing condition may be DECLINED (§15-7)
+// ════════════════════════════════════════════════════════════════════════════
+
+/// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+/// ZeedMillenniummon's shared clause prints exactly that: "BY RETURNING 1
+/// Digimon card from your opponent's trash to the top of the deck, return 1 of
+/// their Digimon to the bottom of the deck."
+///
+/// §15-7-4: "A player can choose whether or not to execute the content of
+/// optional processing conditions, REGARDLESS of whether or not the content of
+/// the conditions can be executed." So a satisfied clause `condition:` (>=1
+/// opponent-trash Digimon) does NOT make the return mandatory.
+///
+/// §15-7-2: if the condition's content isn't executed, "the processing after
+/// the conditions can't be executed" — so declining must leave BOTH halves
+/// undone: the opponent's trash card stays in the trash AND their Digimon
+/// stays on the field.
+///
+/// DCGO agrees: `BT19_101.cs` passes `isOptional: true` to
+/// `SetUpActivateClass` on all three timings (:44 On Play, :161 When
+/// Digivolving, :278 When Attacking).
+///
+/// This is the branch the engine had no way to reach — the clause fired
+/// unconditionally, so the trash-return cost was auto-paid (rule 17: no
+/// auto-selections).
+#[test]
+fn bt19_101_optional_processing_condition_may_be_declined() {
+    let mut r = base_runner();
+    push_to_trash(&mut r, 1, "OPP-A");
+    let zeed = r.place_on_field(0, CARD_ID, Some(0));
+    let _opp_perm = r.place_on_field(1, "OPP-B", Some(0));
+
+    let opp_trash_before = r.game.players[1].trash.len();
+    let opp_deck_before = r.game.players[1].deck.len();
+    let opp_field_before = r.battle_area_size(1);
+    assert_eq!(opp_field_before, 1, "precondition: 1 opponent Digimon");
+
+    fire(&mut r, EffectTiming::OnPlay, zeed);
+
+    let outer = r
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert!(
+        outer.is_optional,
+        "the outer confirm must be optional so PASS is legal (§15-7-4)"
+    );
+    r.execute_action(outer.selecting_player, PASS)
+        .expect("declining must be reachable from the action space");
+    let _ = r.auto_resolve();
+
+    // §15-7-2, half 1: the COST was not paid.
+    assert_eq!(
+        r.game.players[1].trash.len(),
+        opp_trash_before,
+        "declining must NOT return the opponent's trash Digimon to their deck"
+    );
+    assert_eq!(
+        r.game.players[1].deck.len(),
+        opp_deck_before,
+        "declining must leave the opponent's deck size untouched"
+    );
+
+    // §15-7-2, half 2: "the processing after the conditions can't be executed".
+    assert_eq!(
+        r.battle_area_size(1),
+        opp_field_before,
+        "declining must NOT bottom-deck the opponent's Digimon"
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "declining must resolve cleanly with no leftover prompt"
+    );
+}
+
+/// Declining is reachable on the [When Attacking] timing too — the same shared
+/// clause, the same §15-7-4 choice. (DCGO: `BT19_101.cs:278`, isOptional=true.)
+#[test]
+fn bt19_101_when_attacking_optional_condition_may_be_declined() {
+    let mut r = base_runner();
+    push_to_trash(&mut r, 1, "OPP-A");
+    let zeed = r.place_on_field(0, CARD_ID, Some(0));
+    let _opp_perm = r.place_on_field(1, "OPP-B", Some(0));
+
+    let opp_trash_before = r.game.players[1].trash.len();
+
+    fire(&mut r, EffectTiming::WhenAttacking, zeed);
+
+    let outer = r
+        .pending_selection_view()
+        .expect("[When Attacking] must also surface the accept/decline confirm");
+    r.execute_action(outer.selecting_player, PASS)
+        .expect("declining must be reachable on the [When Attacking] timing");
+    let _ = r.auto_resolve();
+
+    assert_eq!(
+        r.game.players[1].trash.len(),
+        opp_trash_before,
+        "declining on [When Attacking] must not pay the trash-return cost"
+    );
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "declining on [When Attacking] must not bottom-deck the opponent's Digimon"
     );
 }

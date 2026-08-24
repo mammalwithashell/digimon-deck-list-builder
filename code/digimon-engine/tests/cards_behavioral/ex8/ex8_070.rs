@@ -12,7 +12,19 @@
 //! lowest play cost.
 //!
 //! # DCGO C# reference
-//! Absent (DCGO submodule uninitialized).
+//! `DCGO/Assets/Scripts/CardEffect/EX8/Black/EX8_070.cs` (base repo, rule 29).
+//! `[Main]` = lines 16-99; `[Security]` = lines 103+.
+//!
+//! # §15-7 optional processing condition
+//!
+//! "By trashing any 1 digivolution card ..." is an OPTIONAL PROCESSING
+//! CONDITION (§15-7-1), so §15-7-4 lets the player decline it and §15-7-2 then
+//! blocks everything after it. The clause carries `optional: true`, which
+//! installs an outer accept/decline prompt before the target selection — the
+//! tests below accept it via `accept_optional_cost` and exercise the refusal in
+//! `ex8_070_main_optional_cost_may_be_declined`. DCGO reaches the same behavior
+//! through `SelectTrashDigivolutionCards(..., canNoTrash: true, ...)` guarded by
+//! `if (cardsTrashed)` rather than through its `isOptional` flag.
 //!
 //! # Patterns this test covers
 //! - D6 Flood gate / CannotBeReturnedToHand / CannotBeReturnedToDeck modifiers
@@ -68,6 +80,27 @@ fn base_runner() -> DebugRunner {
         .expect("EX8-070 YAML parses and compiles")
         .memory(10)
         .build()
+}
+
+/// Accept the outer accept/decline confirm that the OPTIONAL PROCESSING
+/// CONDITION ("By trashing any 1 digivolution card of 1 of your [Mineral] or
+/// [Rock] Digimon, ...") installs before the clause body runs.
+///
+/// §15-7-1 names this shape ("by X, Y") an optional processing condition and
+/// §15-7-4 gives the player the choice, so the accept and the decline must both
+/// reach the action space (rule 17). See the clause comment in
+/// `cards/ex8/EX8-070.yaml`.
+fn accept_optional_cost(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert!(
+        view.is_optional,
+        "the outer accept/decline prompt must be declinable (§15-7-4)"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the 'by trashing 1 digivolution card' cost");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -159,6 +192,42 @@ fn ex8_070_main_clause_is_own_scope() {
     );
 }
 
+/// The [Main] clause must be marked OPTIONAL.
+///
+/// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
+/// the printed "[Main] By trashing any 1 digivolution card of 1 of your Digimon
+/// with the [Mineral] or [Rock] trait, ..." is exactly that shape. §15-7-4: "A
+/// player can choose whether or not to execute the content of optional
+/// processing conditions." So the trash is declinable, and rule 17 requires the
+/// decline to reach the action space.
+///
+/// DCGO's `EX8_070.cs` passes `isOptional = false` to `SetUpActivateClass`, but
+/// carries the decline inside the coroutine instead —
+/// `SelectTrashDigivolutionCards(..., canNoTrash: true, ...)` with the whole
+/// buff block behind `if (cardsTrashed)`. Same outcome, different plumbing.
+#[test]
+fn ex8_070_main_clause_is_optional() {
+    let runner = base_runner();
+    let card = runner
+        .compiled_card("EX8-070")
+        .expect("EX8-070 in embedded pack");
+
+    let main_clause = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
+        .expect("MainFromHand clause must exist");
+
+    assert!(
+        main_clause.optional,
+        "the [Main] 'By trashing ...' cost is an optional processing condition (§15-7-1/§15-7-4)"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 2 — Condition gating: main clause requires a Mineral/Rock Digimon
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -183,6 +252,11 @@ fn ex8_070_main_prompts_selection_with_mineral_digimon() {
     runner.push_source(host, "SRC-M");
 
     runner.play(0, 0);
+
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
 
     // Should prompt for a target Digimon selection (OwnField).
     let kind = runner
@@ -214,6 +288,11 @@ fn ex8_070_main_prompts_selection_with_rock_digimon() {
     runner.push_source(host, "SRC-R");
 
     runner.play(0, 0);
+
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
 
     let kind = runner
         .pending_kind()
@@ -326,6 +405,11 @@ fn ex8_070_grants_collision_after_trash() {
 
     runner.play(0, 0);
 
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
+
     // Select the Mineral Digimon as target.
     assert!(matches!(
         runner.pending_kind(),
@@ -363,6 +447,10 @@ fn ex8_070_grants_piercing_after_trash() {
     runner.push_source(host, "SRC-PIE");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -397,6 +485,10 @@ fn ex8_070_grants_reboot_after_trash() {
     runner.push_source(host, "SRC-RBT");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -433,6 +525,10 @@ fn ex8_070_grants_plus_3000_dp_to_target() {
     let dp_before = runner.dp_of(host).unwrap_or(0);
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -469,6 +565,10 @@ fn ex8_070_grants_cannot_be_returned_to_hand_modifier() {
     runner.push_source(host, "SRC-RTH");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -506,6 +606,10 @@ fn ex8_070_grants_cannot_be_returned_to_deck_modifier() {
     runner.push_source(host, "SRC-RTD");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -553,6 +657,10 @@ fn ex8_070_trashes_selected_source_card() {
     let trash_before = runner.trash_size(0);
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -575,6 +683,99 @@ fn ex8_070_trashes_selected_source_card() {
     assert!(
         trash_after > trash_before,
         "the trashed source must land in trash (trash before: {trash_before}, after: {trash_after})"
+    );
+}
+
+/// §15-7-4 DECLINE path: the player may refuse the "By trashing ..." optional
+/// processing condition. §15-7-2 then forbids everything after it — no
+/// digivolution card is trashed and the target gains none of the buffs.
+///
+/// DCGO carries the same decline as `canNoTrash: true` on
+/// `CardEffectCommons.SelectTrashDigivolutionCards`, with every buff wrapped in
+/// `if (cardsTrashed)` (`EX8_070.cs`).
+#[test]
+fn ex8_070_main_optional_cost_may_be_declined() {
+    let mineral_digi = make_mineral_digimon("MINERAL-DECLINE");
+    let source_card = make_source_card("SRC-DECLINE");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-070")
+        .expect("EX8-070 YAML parses and compiles")
+        .add_card(mineral_digi)
+        .add_card(source_card)
+        .hand(0, &["EX8-070"])
+        .memory(10)
+        .start();
+
+    let host = runner.place_on_field(0, "MINERAL-DECLINE", None);
+    runner.push_source(host, "SRC-DECLINE");
+
+    let sources_before = runner.game.player(0).battle_area[host.index as usize]
+        .card_sources
+        .len();
+    let trash_before = runner.trash_size(0);
+    let dp_before = runner.dp_of(host).unwrap_or(0);
+
+    runner.play(0, 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert!(
+        view.is_optional,
+        "the outer accept/decline prompt must be declinable (§15-7-4)"
+    );
+    runner
+        .decline_optional_trigger()
+        .expect("declining must be reachable from the action space");
+    let _ = runner.auto_resolve();
+
+    // §15-7-4 — the cost is NOT paid.
+    assert_eq!(
+        runner.game.player(0).battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        sources_before,
+        "declining must NOT trash a digivolution card"
+    );
+    // The played Option itself still goes to the trash, so the trash may only
+    // grow by that one card — never by the un-paid digivolution source.
+    assert!(
+        runner.trash_size(0) <= trash_before + 1,
+        "only the resolved Option may reach the trash when the cost is declined"
+    );
+
+    // §15-7-2 — "the processing after the conditions can't be executed".
+    assert!(
+        !runner.game.has_keyword(host, Keyword::Collision),
+        "declining must not grant Collision"
+    );
+    assert!(
+        !runner.game.has_keyword(host, Keyword::Piercing),
+        "declining must not grant Piercing"
+    );
+    assert!(
+        !runner.game.has_keyword(host, Keyword::Reboot),
+        "declining must not grant Reboot"
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToHand),
+        "declining must not grant CannotBeReturnedToHand"
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToDeck),
+        "declining must not grant CannotBeReturnedToDeck"
+    );
+    assert_eq!(
+        runner.dp_of(host).unwrap_or(0),
+        dp_before,
+        "declining must not give +3000 DP"
     );
 }
 
@@ -602,6 +803,10 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
     runner.push_source(host, "SRC-EXP");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)
@@ -659,6 +864,10 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
     runner.push_source(host, "SRC-EXP2");
 
     runner.play(0, 0);
+    // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
+    // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
+    // target selection. Accept it to reach the OwnField pick.
+    accept_optional_cost(&mut runner);
     assert!(matches!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField)

@@ -41,6 +41,9 @@
 #   `SuspendPermanentsClass(card).Tap()` then `GainRush(EffectDuration.UntilEachTurnEnd)`
 #   on each matched played permanent → `activation_cost: { suspend_self: true }`
 #   then `grant_keyword: { target: event_target, keyword: Rush, expiry: end_of_turn }`.
+#   DCGO passes isOptional = true (BT11_089.cs:82) — the "by suspending this
+#   Tamer" half is an OPTIONAL PROCESSING CONDITION (§15-7-1/§15-7-4), so the
+#   clause carries `optional: true`. See the clause comment below.
 #   DCGO loops `Filter(PermanentCondition).Clone()` over every permanent from the
 #   SAME enter-field hashtable, but the engine's `TriggerSource::EnteredField`
 #   dispatch already fires the observer ONCE PER ENTERED PERMANENT (see
@@ -91,8 +94,35 @@ effects:
           destinations: [deck_bottom]
 
   # ─── [Your Turn] effect-play observer → suspend self, grant Rush ─────────
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # The printed clause reads "…, by suspending this Tamer, that Digimon gains
+  # <Rush> for the turn" — the "by suspending this Tamer" half IS the optional
+  # processing condition. §15-7-4: "A player can choose whether or not to
+  # execute the content of optional processing conditions, regardless of
+  # whether or not the content of the conditions can be executed", and §15-7-2:
+  # if the condition's content isn't executed, "the processing after the
+  # conditions can't be executed" — declining skips BOTH the suspend and the
+  # Rush grant. Rule 17 (no auto-selections) therefore requires the decline to
+  # reach the action space.
+  #
+  # DCGO agrees: BT11_089.cs:82 passes isOptional = true as the 4th argument of
+  # `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, true, …)`.
+  #
+  # `optional: true` alone is sufficient here (no `outer_prompt:` needed): the
+  # clause carries an `activation_cost:` step, and `effect_queue.rs`'s
+  # `needs_pre_cost_prompt` branch installs a TriggerOrder selection WITH PASS
+  # *before* running the cost closure whenever a lone queued effect is
+  # `is_optional` AND has an `activation_cost_fn` whose condition passes. The
+  # `needs_outer_optional_prompt` path is explicitly documented as mutually
+  # exclusive with it, so adding `outer_prompt: true` would be dead weight.
+  # Same shape as BT9-092 / BT24-083 (`optional: true` + `activation_cost:`).
+  #
+  # G-OPT-TRIGGERED: no [Once Per Turn] is printed, so no `once_per_turn:` flag
+  # and no refund-on-decline concern (G-OPT-REFUND-ON-DECLINE is a no-op here).
   - when: on_any_digimon_played
     active_when: { your_turn: true }
+    optional: true
     condition:
       all_of:
         - event_target_owner: you

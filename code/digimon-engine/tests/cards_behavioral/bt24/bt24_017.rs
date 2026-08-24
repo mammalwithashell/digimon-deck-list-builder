@@ -30,6 +30,18 @@
 //!   `EffectContext::return_trash_cards_to_deck_bottom`). The full-sequence
 //!   tests are active.
 //!
+//! # Optional processing condition (general_rule.pdf §15-7)
+//!
+//! "Then, **by returning 2 cards** from their trash to the bottom of the deck,
+//! they play 2 [Petrification] Tokens" is an OPTIONAL PROCESSING CONDITION
+//! (§15-7-1 "text such as 'by X, Y'"). §15-7-4 lets the player refuse it and
+//! §15-7-2 then blocks everything after it (no cards returned, no tokens, no
+//! DP boost). The refusal is surfaced as a sub-clause accept/decline
+//! `select_effect_choice`, NOT as a clause-level `optional: true` — the
+//! clause's leading "Delete 1 of your opponent's lowest DP Digimon" prints no
+//! "by ..." and stays mandatory. See
+//! `bt24_017_return_two_cost_may_be_declined_leaving_tail_unrun`.
+//!
 //! # Patterns this test covers
 //! - H9 (Raid), H3 (Piercing), Progress — declarative keyword grants
 //! - D1-adjacent — dynamic DP modifier (+2000 × opp-Digimon-count) until
@@ -109,6 +121,42 @@ fn token_count(runner: &DebugRunner, p: u8) -> usize {
         .count()
 }
 
+/// Accept the "by returning 2 cards from their trash …" optional processing
+/// condition (§15-7-1). It installs as a 2-branch `EffectChoice`; branch 0 is
+/// the accept ("Return 2 cards …"), branch 1 the decline. Asserts the shape so
+/// a silently-vanished prompt fails loudly instead of shifting the sequence.
+fn accept_return_two_cost(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "the \"by returning 2 cards\" condition must offer accept AND decline \
+         (§15-7-4)"
+    );
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("accept the return-2 cost");
+}
+
+/// Decline the "by returning 2 cards from their trash …" optional processing
+/// condition — branch 1 of the same `EffectChoice`.
+fn decline_return_two_cost(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "the \"by returning 2 cards\" condition must offer accept AND decline \
+         (§15-7-4)"
+    );
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[1])
+        .expect("declining must be reachable from the action space");
+}
+
 /// Resolve the currently-pending selection by submitting its first legal
 /// action ID. Panics if no selection is pending.
 fn resolve_first(runner: &mut DebugRunner) {
@@ -174,9 +222,19 @@ fn bt24_017_structural_three_keywords_one_triggered_clause() {
         "triggered clause must fire on WhenDigivolving"
     );
     // The [When Digivolving] clause is mandatory, not optional.
+    //
+    // This is deliberate and must STAY false. The clause's first printed
+    // sentence — "Delete 1 of your opponent's lowest DP Digimon" — carries no
+    // "by ..." and is mandatory, so a clause-level `optional: true` would
+    // wrongly expose a PASS on the delete. The optional processing condition
+    // (§15-7-1 "by X, Y") lives only in the SECOND sentence, "by returning 2
+    // cards from their trash …", and is surfaced as a sub-clause
+    // accept/decline branch inside the body — see
+    // `bt24_017_return_two_cost_may_be_declined_leaving_tail_unrun`.
     assert!(
         !t.optional,
-        "when-digivolving clause is mandatory (not optional)"
+        "when-digivolving clause is mandatory (not optional): the leading \
+         lowest-DP delete has no optional processing condition"
     );
     assert!(
         !t.once_per_turn,
@@ -340,8 +398,8 @@ fn bt24_017_delete_targets_only_lowest_dp_digimon() {
     runner.place_on_field(1, "OPP-HIGH", None);
 
     // Give the opponent 2 trash cards so resolving the delete advances cleanly
-    // into the (separately gap-gated) trash-return selection and pauses there,
-    // rather than running off the end of the process into the raw_rust step.
+    // into the "by returning 2 cards" accept/decline prompt and pauses there,
+    // rather than running off the end of the process.
     for card_id in ["TRASH-A", "TRASH-B"] {
         let data_idx = runner
             .game
@@ -482,7 +540,11 @@ fn bt24_017_full_sequence_two_trash_two_tokens_dp_boost() {
         "deleted opp Digimon joins the 2 pre-existing trash cards"
     );
 
-    // Step 2 — the trash count-capped multi-select (driven by the ACTIVE
+    // Step 2 — the "by returning 2 cards from their trash …" optional
+    // processing condition (§15-7-1) prompts first; accept it.
+    accept_return_two_cost(&mut runner);
+
+    // Step 3 — the trash count-capped multi-select (driven by the ACTIVE
     // player on behalf of the opponent's trash).
     assert!(
         matches!(
@@ -575,6 +637,7 @@ fn bt24_017_petrification_tokens_have_printed_stats() {
 
     trigger_when_digivolving(&mut runner, bt24_handle);
     resolve_first(&mut runner); // delete
+    accept_return_two_cost(&mut runner); // §15-7 "by returning 2 cards" — accept
     resolve_first(&mut runner); // trash pick 1
     resolve_first(&mut runner); // trash pick 2
 
@@ -647,7 +710,12 @@ fn bt24_017_less_than_two_trash_skips_token_play_and_dp_boost() {
         "only the deleted Digimon is in the opponent's trash"
     );
 
-    // No trash multi-select installs (min: 2 unmet — silent no-op).
+    // Neither the optional accept/decline prompt nor the trash multi-select
+    // installs: the sub-clause's `count_gte >= 2` gate (DCGO
+    // `if (Enemy.TrashCards.Count >= 2)`, BT24_017.cs:91) suppresses the
+    // §15-7 prompt when the cost is structurally unpayable, exactly as
+    // `outer_optional_guard` does for an optional ability with no legal
+    // target. Accepting would pay nothing anyway (`min: 2` no-ops).
     assert!(
         runner.game.pending_selection.is_none(),
         "the return-2 cost cannot be paid with only 1 trash card; no \
@@ -698,6 +766,7 @@ fn bt24_017_exactly_two_trash_pays_cost_and_fires_tail() {
 
     trigger_when_digivolving(&mut runner, bt24_handle);
     resolve_first(&mut runner); // delete
+    accept_return_two_cost(&mut runner); // §15-7 "by returning 2 cards" — accept
     resolve_first(&mut runner); // trash pick 1
     resolve_first(&mut runner); // trash pick 2 (auto-commit)
 
@@ -710,6 +779,86 @@ fn bt24_017_exactly_two_trash_pays_cost_and_fires_tail() {
         runner.effective_dp(bt24_handle),
         Some(11000 + 4000),
         "DP boost fires once the cost is paid"
+    );
+}
+
+/// DECLINE path for the optional processing condition.
+///
+/// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
+/// "by returning 2 cards from their trash to the bottom of the deck, they play
+/// 2 [Petrification] Tokens" is exactly that shape. §15-7-4: "A player can
+/// choose whether or not to execute the content of optional processing
+/// conditions." §15-7-2: when the content isn't executed, "the processing
+/// after the conditions can't be executed".
+///
+/// So declining must leave the cost UNPAID (no card leaves the opponent's
+/// trash, nothing is added to their deck) and the post-condition processing
+/// UNRUN (no Petrification Tokens, no +2000-per-Digimon DP boost).
+///
+/// The MANDATORY leading delete still happens — it prints no "by ..." and is
+/// not part of the optional condition.
+///
+/// Before the fix the multi-select installed unconditionally and the cost was
+/// auto-paid; this branch was unreachable from the action space (rule 17).
+#[test]
+fn bt24_017_return_two_cost_may_be_declined_leaving_tail_unrun() {
+    let mut opp_digimon = make_test_card("OPP-D", "OppD");
+    opp_digimon.dp = Some(4000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML loads")
+        .add_card(opp_digimon)
+        .add_card(make_test_card("TRASH-A", "TrashA"))
+        .add_card(make_test_card("TRASH-B", "TrashB"))
+        .memory(20)
+        .start();
+
+    let bt24_handle = place_bt24_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-D", None);
+    push_to_trash(&mut runner, 1, "TRASH-A");
+    push_to_trash(&mut runner, 1, "TRASH-B");
+    let opp_deck_before = runner.game.player(1).deck.len();
+
+    trigger_when_digivolving(&mut runner, bt24_handle);
+
+    // The mandatory delete resolves first and is NOT declinable.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "delete prompt must install first"
+    );
+    resolve_first(&mut runner);
+    assert_eq!(runner.battle_area_size(1), 0, "the mandatory delete still runs");
+    // 2 pushed + the deleted Digimon = 3 trash cards.
+    assert_eq!(runner.trash_size(1), 3, "deleted Digimon joins the trash");
+
+    // Now refuse the optional processing condition.
+    decline_return_two_cost(&mut runner);
+    let _ = runner.auto_resolve();
+
+    // Cost NOT paid — the trash is untouched and nothing went to the deck.
+    assert_eq!(
+        runner.trash_size(1),
+        3,
+        "declining the optional condition must NOT return any trash card"
+    );
+    assert_eq!(
+        runner.game.player(1).deck.len(),
+        opp_deck_before,
+        "no card is placed on the bottom of the opponent's deck on a decline"
+    );
+
+    // §15-7-2 — the processing after the condition can't be executed.
+    assert_eq!(
+        token_count(&runner, 1),
+        0,
+        "no Petrification Tokens when the return-2 condition is declined"
+    );
+    assert_eq!(
+        runner.effective_dp(bt24_handle),
+        Some(11000),
+        "no DP boost when the return-2 condition is declined"
     );
 }
 
@@ -744,6 +893,8 @@ fn bt24_017_more_than_two_trash_returns_exactly_two() {
     resolve_first(&mut runner); // delete
                                 // 4 pushed + the deleted OPP-D = 5 trash cards.
     assert_eq!(runner.trash_size(1), 5, "4 pushed + deleted Digimon = 5");
+
+    accept_return_two_cost(&mut runner); // §15-7 "by returning 2 cards" — accept
 
     // The multi-select must cap at max=2 even though 5 trash cards exist.
     assert!(

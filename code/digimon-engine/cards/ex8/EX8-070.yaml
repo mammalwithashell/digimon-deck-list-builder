@@ -16,11 +16,13 @@
 # Security Effect [Security] Delete 1 of your opponent's Digimon with the
 # lowest play cost.
 #
-# DCGO C# reference: Absent (DCGO submodule uninitialized).
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Black/EX8_070.cs
+#   (base repo; CLAUDE.md rule 29). [Main] = line 16-99, [Security] = line 103+.
 #
 # ─── Clause layout ────────────────────────────────────────────────────────────
 #
 # Clause 1 — [Main] "By trashing" cost + keyword/modifier/DP buff:
+#   1_0. OPTIONAL accept/decline gate (§15-7-1/§15-7-4) — see the clause comment
 #   1a. select_own_permanent (Mineral/Rock trait + stack_size_gte:2) → target Digimon
 #   1b. select_own_sources (from: target Digimon, any source, 1 card) → chosen_source
 #   1c. trash_selected_sources: chosen_source
@@ -39,6 +41,7 @@
 #
 # | Card-text element                              | Status        |
 # |------------------------------------------------|---------------|
+# | [Main] "By trashing" is DECLINABLE (§15-7-4)   | IMPLEMENTED   |
 # | [Main] target selection (Mineral/Rock + src)   | IMPLEMENTED   |
 # | [Main] trash 1 digivolution source             | IMPLEMENTED   |
 # | [Main] grant Collision until EoOT              | IMPLEMENTED   |
@@ -67,8 +70,46 @@ effects:
   # digivolution sources), the `select_own_permanent` early-return means the
   # effect silently does nothing — matching card behavior where the cost cannot
   # be paid.
+  #
+  # ─── §15-7 OPTIONAL PROCESSING CONDITION (rule 17: no auto-pay) ──────────────
+  #
+  # Printed: "[Main] By trashing any 1 digivolution card of 1 of your Digimon
+  # with the [Mineral] or [Rock] trait, ..."
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # §15-7-4: "A player can choose whether or not to execute the content of
+  #   optional processing conditions, regardless of whether or not the content
+  #   of the conditions can be executed."
+  # §15-7-2: when the condition's content is not executed, "the processing
+  #   after the conditions can't be executed" — declining skips BOTH the
+  #   source trash AND the whole Collision/Piercing/Reboot/+3000 DP/return-
+  #   immunity package.
+  #
+  # DCGO agrees, though not through the flag: `EX8_070.cs` passes
+  # `isOptional = false` as the 4th arg of `SetUpActivateClass` (line 20), but
+  # carries the decline INSIDE the cost selection —
+  # `CardEffectCommons.SelectTrashDigivolutionCards(..., canNoTrash: true, ...)`
+  # — and wraps every buff in `if (cardsTrashed)`. Cancelling the trash there
+  # skips the rest of the coroutine, which is exactly §15-7-2.
+  #
+  # This clause used to auto-pay: its first body step (`select_own_permanent`)
+  # is a MANDATORY selection, so the player was forced into the cost with no
+  # PASS anywhere in the action space. `optional: true` makes the lowering
+  # install the outer accept/decline prompt
+  # (`needs_outer_optional_prompt`, `lower_triggered.rs`: `clause.optional &&
+  # (clause.outer_prompt || !body_first_step_is_declinable(..))`).
+  #
+  # `outer_prompt: true` is deliberately NOT set here. Forcing the prompt drops
+  # the first-step candidate guard (`outer_optional_first_step` is only taken
+  # when `!clause.outer_prompt`), and DCGO does not offer this effect at all
+  # when nothing can pay: its `CanUseCondition` requires
+  # `HasMatchConditionPermanent(DigimonWithProperSource)`. Keeping the guard
+  # preserves "no prompt when no [Mineral]/[Rock] Digimon has a digivolution
+  # card". There is no printed [Once Per Turn] on this clause, so
+  # G-OPT-REFUND-ON-DECLINE does not apply either.
   - when: main_from_hand
-    summary: "[Main] Trash 1 digi-source of a Mineral/Rock Digimon → Collision + Piercing + Reboot + return immunity + +3000 DP until EoOT"
+    optional: true
+    summary: "[Main] MAY trash 1 digi-source of a Mineral/Rock Digimon → Collision + Piercing + Reboot + return immunity + +3000 DP until EoOT"
     process:
       # Step 1a: Select 1 of your Digimon with Mineral or Rock trait that has
       # at least 1 digivolution source (stack_size_gte: 2 = top card + ≥1 source).

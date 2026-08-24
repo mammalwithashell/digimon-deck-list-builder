@@ -18,8 +18,48 @@ alt_paths:
     cost: 2
 
 effects:
+  # ─── Clause 1: [When Digivolving] [On Deletion] ─────────────────────────────
+  #
+  # Printed (official Bandai DB, data/card_bundles/EX9-027.md):
+  #   "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of
+  #    your opponent's Digimon gets -4000 DP for the turn."
+  #
+  # ─── §15-7 OPTIONAL PROCESSING CONDITION (rule 17: no auto-pay) ─────────────
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  #   — and the manual's own worked example is literally the shape printed
+  #   here: "[On Deletion] By trashing 1 card in the hand, gain 1 memory".
+  # §15-7-4: "A player can choose whether or not to execute the content of
+  #   optional processing conditions, regardless of whether or not the content
+  #   of the conditions can be executed."
+  # §15-7-2: if the condition's content is not executed, "the processing after
+  #   the conditions can't be executed" — declining trashes NO hand card AND
+  #   applies NO -4000 DP. The card's own official Q&A says the same thing:
+  #   "If the 'by doing X' condition isn't met, the rest of the effect isn't
+  #   processed."
+  #
+  # DCGO agrees, though not through the flag: `EX9_027.cs` passes
+  # `isOptional = false` as the 4th arg of `SetUpActivateClass` for both the
+  # [When Digivolving] (line 34) and [On Deletion] (line 138) copies, but each
+  # coroutine carries the decline INSIDE the cost selection —
+  # `SelectHandEffect.SetUp(..., canNoSelect: true, ...)` — and guards the
+  # whole -4000 DP block behind `if (cardDiscarded)`. Cancelling the discard
+  # skips the rest of the coroutine, which is exactly §15-7-2.
+  #
+  # This clause used to auto-pay: its first body step (`select_hand`) is a
+  # MANDATORY selection, so the player was forced to trash a card with no PASS
+  # anywhere in the action space. `optional: true` + `outer_prompt: true` install
+  # the explicit outer accept/decline confirm before the body runs
+  # (`lower_triggered.rs`: `needs_outer_optional_prompt`); declining drops the
+  # queued effect, so neither the cost nor the DP debuff happens.
+  # G-OPT-REFUND-ON-DECLINE is moot here — no [Once Per Turn] is printed on
+  # this clause — and the clause `condition` below already suppresses the
+  # prompt when the hand is empty or the opponent has no Digimon, which is the
+  # same gate DCGO applies in `CanActivateCondition`.
   - when: [when_digivolving, on_deletion]
-    summary: "By trashing 1 card in hand, 1 opponent Digimon gets -4000 DP for the turn"
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving] [On Deletion] MAY trash 1 card in hand → 1 opponent Digimon gets -4000 DP for the turn"
     condition:
       all_of:
         - count_gte:
@@ -44,6 +84,27 @@ effects:
           value: -4000
           expiry: end_of_turn
 
+  # ─── Clause 2 (inherited): [Opponent's Turn] [Once Per Turn] ────────────────
+  #
+  # Printed: "When one of your opponent's Digimon attacks, by deleting 1 of
+  # your other Digimon, end that attack."
+  #
+  # §15-7 status: NOT an auto-pay. "by deleting ..." is an optional processing
+  # condition, and the body's FIRST step is already a declinable
+  # `select_effect_choice` whose "Decline" branch skips both the deletion and
+  # `end_attack` (§15-7-2). DCGO shows the same gate through the flag itself —
+  # `EX9_027.cs` line 246 passes `isOptional = true` (with maxCountPerTurn 1).
+  # No `optional:`/`outer_prompt:` change is needed for the auto-pay audit.
+  #
+  # Two known divergences are logged here but deliberately NOT fixed in the
+  # optional-processing-condition pass (out of scope, each needs its own TDD):
+  #   1. Target: the printed cost deletes "1 of your OTHER Digimon"; this body
+  #      deletes `this` (the carrier) instead of prompting for another of your
+  #      Digimon.
+  #   2. G-OPT-REFUND-ON-DECLINE: declining via the inner effect-choice still
+  #      burns the [Once Per Turn] use, whereas DCGO's `isOptional` prompt
+  #      refunds it (`RemoveUse`). Converting this to
+  #      `optional: true` + `outer_prompt: true` would fix that.
   - scope: inherited
     when: on_opponent_attack
     once_per_turn: true

@@ -9,8 +9,43 @@ traits: [Ghost, LIBERATOR]
 attribute: Virus
 
 effects:
+  # ─── [On Play][When Digivolving] — OPTIONAL PROCESSING CONDITION ───────────
+  #
+  # Printed: "[On Play] [When Digivolving] By deleting 1 of your Digimon,
+  #           delete 1 of your opponent's level 4 or lower Digimon."
+  #
+  # "By deleting 1 of your Digimon, …" is an OPTIONAL PROCESSING CONDITION.
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # (its worked example is "[On Deletion] By trashing 1 card in the hand, gain
+  # 1 memory" — the same shape). §15-7-4: "A player can choose whether or not
+  # to execute the content of optional processing conditions, regardless of
+  # whether or not the content of the conditions can be executed." §15-7-2: if
+  # the condition's content is not executed, "the processing after the
+  # conditions can't be executed" — so declining skips BOTH the self-delete
+  # cost AND the opponent delete.
+  #
+  # DCGO agrees that the player may refuse: BT23_064.cs's shared coroutine
+  # installs the own-Digimon pick with `canNoSelect: true`
+  # (Assets/Scripts/CardEffect/BT23/Purple/BT23_064.cs:42) and only runs
+  # `SuccessProcess()` — the opponent delete — when `selectedPermanent != null`
+  # (lines 60-66). (Its `SetUpActivateClass(..., -1, false, ...)` isOptional
+  # arg is `false` at lines 99/128, i.e. DCGO surfaces the decline at the
+  # inner pick rather than as a separate Yes/No; either way the choice exists.)
+  #
+  # Before this fix the body ran unconditionally, so the self-delete was
+  # auto-paid — a rule-17 (no-approximations) violation: the decline branch
+  # never reached the RL action space.
+  #
+  # `outer_prompt: true` because the body's FIRST step (`select_own_permanent`,
+  # not itself `optional`) is a mandatory pick, so without the forced outer
+  # confirm there is no PASS for the player to take
+  # (`body_first_step_is_declinable` → false for a non-optional
+  # `SelectOwnPermanent`). No [Once Per Turn] is printed, so
+  # G-OPT-REFUND-ON-DECLINE is moot here.
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
+    optional: true
+    outer_prompt: true
+    summary: "[On Play][When Digivolving] MAY delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
     condition:
       all_of:
         - any_permanent:
