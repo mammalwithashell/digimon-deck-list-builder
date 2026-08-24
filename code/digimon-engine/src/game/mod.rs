@@ -909,6 +909,17 @@ pub struct Game {
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
+    /// Stable key `(owner, bottom_card_index)` of a turn-scheduled `<Delay>`
+    /// Option whose §16-16-2 cost the controller just DECLINED.
+    ///
+    /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
+    /// after running its body, because the trash IS the Delay's cost. When the
+    /// cost is declined the body never ran, so the trash must not happen either
+    /// (§15-7-2) — this key tells the two delete sites to reschedule the Option
+    /// to its next window instead of deleting it. Cleared as soon as it is
+    /// consumed; only ever holds one key because exactly one Delay is resolved
+    /// at a time.
+    pub(crate) declined_delay_option: Option<(PlayerId, u16)>,
     pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
     /// Continuation for the regular EndTurn state machine when an
     /// EndOfYourTurn effect parks a player selection.

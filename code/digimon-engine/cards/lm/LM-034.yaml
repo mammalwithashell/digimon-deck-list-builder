@@ -208,7 +208,16 @@ effects:
   # behavioural shape as BT22-099's Gain2MemoryOptionDelayEffect helper.
   # No [OPT] — the trash cost self-limits to one fire per LM-034 in play.
   - kind: delay
-    trigger: end_of_your_next_turn
+    # TRIGGER CORRECTION (2026-08-24): was `end_of_your_next_turn`, which
+    # lowers to a turn-keyed AUTO-FIRE at the end of the controller's next
+    # turn. The printed timing is `[Main]`, and DCGO registers this clause at
+    # `EffectTiming.OnDeclaration` -- its [Main] activated-declaration timing --
+    # so it is a player-activated §16-16 Delay, not a schedule. `trigger: delayed`
+    # lowers to `DelayTrigger::MainPhaseActivated`, which surfaces a [Main]
+    # mask bit; NOT activating is the §16-16-2 decline, and the option stays on
+    # the field (§16-16-1: "while a card with this effect is in the battle area").
+    # The old wiring both fired it at the wrong time and gave the player no say.
+    trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       - gain_memory: 2

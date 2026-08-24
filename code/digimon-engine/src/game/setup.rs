@@ -268,6 +268,7 @@ impl Game {
             scheduled_provenance_deletions: Vec::new(),
             scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
+            declined_delay_option: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
             pending_enter_main_after_selection: false,
@@ -406,6 +407,7 @@ impl Game {
         self.scheduled_provenance_deletions = Vec::new();
         self.scheduled_provenance_deletions_opp = Vec::new();
         self.pending_delayed_option_lifecycle = None;
+        self.declined_delay_option = None;
         self.pending_delayed_option_lifecycle_stack = Vec::new();
         self.pending_end_turn_resume = None;
         self.pending_enter_main_after_selection = false;

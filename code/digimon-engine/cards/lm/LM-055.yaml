@@ -37,7 +37,13 @@ effects:
       - place_self_as_delay_option: {}
 
   - kind: delay
-    trigger: on_play
+    # TRIGGER CORRECTION (2026-08-24): was `on_play`, which the old lowering's
+    # `_` catch-all turned into a turn-scheduled auto-fire. The printed timing
+    # is "[Main] <Delay>", so this is the standard player-activated Delay:
+    # `delayed` -> DelayTrigger::MainPhaseActivated, a [Main] mask bit, where
+    # NOT activating is the §16-16-2 decline and §16-16-1 keeps the Option
+    # available while it sits in the battle area.
+    trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a green or red Digimon in hand, cost -2"
     process:
       - select_own_permanent:

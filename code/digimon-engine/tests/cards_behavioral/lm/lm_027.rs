@@ -572,6 +572,7 @@ fn lm_027_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
         .game
         .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(lm027));
     runner.game.drain_effect_queue();
+    accept_scheduled_delay(&mut runner);
 
     assert!(
         runner.game.pending_selection.is_some(),
@@ -643,6 +644,7 @@ fn lm_027_delay_body_returns_red_digimon_to_top_of_deck() {
         .game
         .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(lm027));
     runner.game.drain_effect_queue();
+    accept_scheduled_delay(&mut runner);
 
     // The mandatory return select_trash installs — pick the red Digimon.
     let view = runner
@@ -708,6 +710,7 @@ fn lm_027_delay_body_play_from_trash_only_when_no_field_digimon() {
         .game
         .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(lm027));
     runner.game.drain_effect_queue();
+    accept_scheduled_delay(&mut runner);
 
     // Step 1: mandatory return-to-deck-top selection — return one red Digimon.
     let ret_view = runner
@@ -1078,4 +1081,25 @@ fn lm_027_security_adds_card_to_hand_after_play() {
         played_id, "LM027-SMALL-HAND",
         "the specifically seeded trash Digimon was played"
     );
+}
+
+
+/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+///
+/// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
+/// cost and run the body straight away. It is optional processing, so the
+/// controller is asked first.
+fn accept_scheduled_delay(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the scheduled <Delay> window must offer its optional cost");
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != digimon_engine::action::space::PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the <Delay> cost");
 }

@@ -263,11 +263,19 @@ fn p_206_clause_1_is_delay_end_of_your_next_turn() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     match &compiled.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, .. }) => {
-            assert_eq!(
-                *trigger,
-                CompiledTiming::EndOfYourNextTurn,
-                "Delay trigger must be EndOfYourNextTurn; got {:?}",
-                trigger
+                // TRIGGER CORRECTION (2026-08-24): this assertion used to demand
+                // `EndOfYourNextTurn` and call that "standard <Delay>" -- backwards.
+                // The printed timing is `[Main]`, and DCGO registers the clause at
+                // `EffectTiming.OnDeclaration` (its [Main] activated-declaration
+                // timing), so this is a player-activated §16-16 Delay. `Delayed`
+                // lowers to `DelayTrigger::MainPhaseActivated`, a [Main] mask bit;
+                // NOT activating is the §16-16-2 decline. `EndOfYourNextTurn` both
+                // fired it at the wrong time and gave the player no say.
+                assert_eq!(
+                    *trigger,
+                    CompiledTiming::Delayed,
+                    "[Main] <Delay> must lower to Delayed (player-activated); got {:?}",
+                    trigger
             );
         }
         other => panic!("clause 1 must be Declarative(Delay); got {:?}", other),

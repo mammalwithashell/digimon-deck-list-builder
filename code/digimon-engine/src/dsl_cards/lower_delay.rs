@@ -70,19 +70,31 @@ pub fn lower_with_raw(
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
         CompiledTiming::EndOfYourNextTurn => DelayTrigger::EndOfYourNextTurn,
-        // Event-gated `<Delay>` Options: park indefinitely and fire when the
-        // gating event is observed after the placing turn. `on_ally_played`
-        // closes the engine half of PUPPETS-G004 (see `effect_queue.rs`
-        // `enqueue_triggered` for the `EnteredField` dispatch fan-out).
-        CompiledTiming::OnSuspend
-        | CompiledTiming::OnUnsuspend
-        | CompiledTiming::OnAllyPlayed
-        | CompiledTiming::OnAttack
-        | CompiledTiming::OnAllyAttack
-        | CompiledTiming::OnOpponentAttack => compiled_timing_to_engine(trigger)
+        // EVERY other timing is an event-gated `<Delay>`: park indefinitely and
+        // fire when the gating event is observed after the placing turn.
+        // `on_ally_played` closes the engine half of PUPPETS-G004 (see
+        // `effect_queue.rs` `enqueue_triggered` for the `EnteredField` dispatch
+        // fan-out).
+        //
+        // This used to be a HARDCODED LIST (OnSuspend | OnUnsuspend |
+        // OnAllyPlayed | OnAttack | OnAllyAttack | OnOpponentAttack) with a
+        // `_ => EndOfYourNextTurn` catch-all, and that default was silent and
+        // wrong: any event timing outside the list was lowered into a
+        // turn-scheduled auto-fire at the end of the controller's next turn —
+        // a different trigger, at a different time, with (before 2026-08-24)
+        // no §16-16-2 decline. It caught BT21-093, whose printed trigger is
+        // "[All Turns] When your opponent's security stack is removed from"
+        // and whose `on_opponent_security_removed` timing has existed in
+        // `CompiledTiming` and `timing_map` all along, and LM-055
+        // (`trigger: on_play`).
+        //
+        // The turn-scheduled forms are enumerated ABOVE and are the only ones
+        // that mean "a scan fires this"; anything else that maps to an engine
+        // timing is by definition event-gated. The remaining fallback covers
+        // only a `CompiledTiming` with no engine mapping at all.
+        other => compiled_timing_to_engine(other)
             .map(DelayTrigger::OnEvent)
             .unwrap_or(DelayTrigger::EndOfYourNextTurn),
-        _ => DelayTrigger::EndOfYourNextTurn,
     };
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);
     let runtime = StepRuntime::new(raw);
@@ -109,10 +121,37 @@ pub fn lower_with_raw(
     // the trash is itself the meaningful choice.
     //
     // `MainPhaseActivated` needs no flag (activation IS an explicit player
-    // `[Main]` action — flagging it would double-prompt), and the turn-
-    // scheduled triggers fire through `resolve_delayed_options_matching`
-    // (game_phases.rs), which bypasses the queue's optional machinery.
-    if matches!(delay_trigger, DelayTrigger::OnEvent(_)) {
+    // `[Main]` action — flagging it would double-prompt).
+    //
+    // The TURN-SCHEDULED triggers need the same treatment as `OnEvent`, and
+    // used to be excluded on the grounds that they "fire through
+    // `resolve_delayed_options_matching` (game_phases.rs), which bypasses the
+    // queue's optional machinery" — a description of the bug, not a reason for
+    // it. §16-16-2 makes `<Delay>` optional however its window arrives, so the
+    // scan auto-paid the trash-this-card cost and auto-resolved the body with
+    // no decline anywhere in the action space (rule 17 violation). The scan
+    // now honours the outer prompt and, on a decline, leaves the Option on the
+    // field and RESCHEDULES it to its next window — §16-16-1 keeps the Delay
+    // available "while a card with this effect is in the battle area", and
+    // these are recurring printed windows ([Start of Your Turn] on LM-027/029/
+    // 030/031/032, [End of Your Turn] on BT21-097), not one-shot forfeits.
+    //
+    // An EMPTY process is a structural marker, not an activatable Delay:
+    // ST23-15 (e-Pulse) and ST24-15 (DNA Charge) print no `<Delay>` at all and
+    // carry `kind: delay` with `process: []` purely so `classify_option_modes`
+    // keeps the Option in the battle area for their real
+    // `[Start of Your Main Phase]` clause. Prompting "activate this?" for a
+    // body that does nothing would be a prompt the printed card never offers.
+    let is_marker_only = process_steps.is_empty();
+    if !is_marker_only
+        && matches!(
+            delay_trigger,
+            DelayTrigger::OnEvent(_)
+                | DelayTrigger::EndOfThisTurn
+                | DelayTrigger::EndOfYourNextTurn
+                | DelayTrigger::StartOfYourNextTurn
+        )
+    {
         builder = builder.optional().needs_outer_optional_prompt();
     }
     if let Some(predicate) = active_when {

@@ -707,6 +707,21 @@ fn bt21_097_delay_link_can_be_declined() {
     assert_eq!(runner.game.turn_player(), 0);
     runner.end_turn();
 
+    // The scheduled window now offers the §16-16-2 cost FIRST. Accept it here —
+    // this test is about declining the body's own inner "may", not the cost.
+    let outer = runner
+        .pending_selection_view()
+        .expect("the scheduled window offers the <Delay> cost");
+    let accept = outer
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(outer.selecting_player, accept)
+        .expect("accept the <Delay> cost");
+
     let view = runner
         .pending_selection_view()
         .expect("the <Delay> body offers the optional link");
@@ -721,11 +736,20 @@ fn bt21_097_delay_link_can_be_declined() {
         hand_ids(&runner, 0).contains(&"APP-LINK".to_string()),
         "declined target stays in hand"
     );
-    // Current engine semantics: the scheduled scan still trashes the Option
-    // (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — mandatory fire).
+    // The Option IS trashed — and this is now correct for a stated reason
+    // rather than an engine limitation. The player ACCEPTED the §16-16-2 cost
+    // above; §15-7-2 only bars the processing after a condition when the
+    // condition itself wasn't executed. Declining the body's separate inner
+    // "may" does not refund a cost that was already paid.
+    //
+    // This assertion used to read "under the mandatory scheduled scan the
+    // Option is trashed even on a declined link", citing
+    // G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN. That gap is CLOSED: declining
+    // the cost is covered by
+    // `bt21_097_delay_cost_may_be_declined_leaving_the_option_on_the_field`.
     assert!(
         trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
-        "under the mandatory scheduled scan the Option is trashed even on a declined link"
+        "accepting the cost trashes the Option even when the inner link is declined"
     );
 }
 
@@ -844,4 +868,72 @@ fn bt21_097_security_check_places_self_in_battle_area_as_delay_option() {
         }
         other => panic!("BT21-097 must park as OptionState::Delayed; got {other:?}"),
     }
+}
+
+/// §16-16-2: "The processing from <Delay> is optional." The scheduled window
+/// must OFFER the trash-this-card cost, and declining it must leave the Option
+/// on the field with its window moved forward — §16-16-1 keeps a Delay
+/// available "while a card with this effect is in the battle area", and
+/// BT21-097's printed [End of Your Turn] window comes round every own turn.
+///
+/// Closes G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN: the scheduled scan used to
+/// auto-pay the cost and auto-run the body, with no decline anywhere in the
+/// action space (rule 17).
+#[test]
+fn bt21_097_delay_cost_may_be_declined_leaving_the_option_on_the_field() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT21-097 YAML loads")
+        .add_card(appmon_digimon("APP-FIELD", 5))
+        .add_card(appmon_digimon("APP-LINK", 4))
+        .add_card(plain_digimon("FILL", 3))
+        .hand(0, &["APP-LINK"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "APP-FIELD", Some(0));
+    seat_as_scheduled_end_delay(&mut runner);
+
+    // Advance to the end of the owner's next turn (placing turn → P1's turn
+    // → owner's next turn end, where the scheduled <Delay> fires).
+    runner.end_turn();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.end_turn();
+
+    let outer = runner
+        .pending_selection_view()
+        .expect("the scheduled window must offer the <Delay> cost (rule 17)");
+    assert!(
+        outer.is_optional,
+        "the <Delay> cost confirm must expose PASS (§16-16-2)"
+    );
+    runner
+        .execute_action(outer.selecting_player, PASS)
+        .expect("declining the <Delay> cost must be reachable");
+    runner.auto_resolve().expect("settle the declined delay");
+
+    // (a) the cost is unpaid — the Option is NOT in the trash.
+    assert!(
+        !trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
+        "declining must not trash the Option (the trash IS the unpaid cost)"
+    );
+    // (b) §15-7-2 — the linked effect did not resolve, so the target stays put.
+    assert!(
+        hand_ids(&runner, 0).contains(&"APP-LINK".to_string()),
+        "§15-7-2: with the cost declined, the processing after it can't execute"
+    );
+    // (c) the Option is still a live Delay, not stranded inert on the field.
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|permanent| {
+            permanent.top_card().card_id(&runner.game.card_data) == CARD_ID
+                && matches!(
+                    permanent.option_state,
+                    digimon_engine::permanent::OptionState::Delayed { .. }
+                )
+        }),
+        "the declined Option must remain a Delayed Option for its next window"
+    );
 }

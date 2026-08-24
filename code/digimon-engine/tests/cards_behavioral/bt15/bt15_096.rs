@@ -85,10 +85,42 @@ fn place_bt15_096_as_mature_delay(runner: &mut DebugRunner) {
     runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
         OptionState::Delayed {
             owner: 0,
-            trash_on_turn: runner.game.turn_count,
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            // TRIGGER CORRECTION (2026-08-24): printed timing is [Main] and DCGO
+            // registers this at EffectTiming.OnDeclaration, so the Delay is
+            // player-activated, not turn-scheduled. MainPhaseActivated parks
+            // indefinitely (trash_on_turn = u16::MAX, see
+            // Game::compute_delay_trash_turn) and is offered as a [Main] mask bit.
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
             placed_on_turn: 0,
         };
+}
+
+/// Activate the staged `[Main]` `<Delay>` the way a player does.
+///
+/// TRIGGER CORRECTION (2026-08-24): these lines used to call `end_turn()` and
+/// let the turn-scheduled scan auto-fire the Delay. BT15-096 prints
+/// "[Main] <Delay>" and DCGO registers it at `EffectTiming.OnDeclaration`, so
+/// it is player-activated -- §16-16-1 keeps it available while it sits in the
+/// battle area, and the activation itself is the §16-16-2 opt-in.
+fn activate_staged_delay(runner: &mut DebugRunner) {
+    let handle = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|permanent| {
+            permanent.top_card().card_id(&runner.game.card_data) == "BT15-096"
+        })
+        .map(|index| digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: index as u8,
+        })
+        .expect("BT15-096 waits on the field for its [Main] activation");
+    assert!(
+        runner.game.activate_delayed_option_main(handle),
+        "the [Main] <Delay> activation must be available"
+    );
 }
 
 fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
@@ -161,7 +193,10 @@ fn bt15_096_yaml_compiles_to_printed_main_delay_and_security_clauses() {
             _ => None,
         })
         .expect("[Delay] clause exists");
-    assert_eq!(*delay.0, CompiledTiming::EndOfYourNextTurn);
+    // [Main] <Delay> lowers to `Delayed` -> DelayTrigger::MainPhaseActivated
+    // (§16-16-1/-2: available while the card is in the battle area; activating
+    // it IS the opt-in, so declining is simply not taking the [Main] action).
+    assert_eq!(*delay.0, CompiledTiming::Delayed);
     assert!(
         delay
             .1
@@ -268,7 +303,7 @@ fn bt15_096_delay_filters_source_trait_and_hand_play_cost_cap() {
     runner.place_on_field(0, "SOURCE-MACHINE", Some(0));
     runner.place_on_field(0, "SOURCE-PLAIN", Some(0));
 
-    runner.end_turn();
+    activate_staged_delay(&mut runner);
 
     let source_pick = runner
         .pending_selection_view()
@@ -320,7 +355,7 @@ fn bt15_096_delay_can_decline_the_play_after_paying_delay_cost() {
     place_bt15_096_as_mature_delay(&mut runner);
     runner.place_on_field(0, "SOURCE-CYBORG", Some(0));
 
-    runner.end_turn();
+    activate_staged_delay(&mut runner);
     assert!(
         runner.pending_is_optional(),
         "Delay play effect is printed as may"
@@ -363,7 +398,7 @@ fn bt15_096_security_places_self_in_battle_area() {
             && matches!(
                 perm.option_state,
                 OptionState::Delayed {
-                    trigger: DelayTrigger::EndOfYourNextTurn,
+                    trigger: DelayTrigger::MainPhaseActivated,
                     ..
                 }
             )

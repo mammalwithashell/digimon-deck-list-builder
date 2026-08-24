@@ -3680,6 +3680,8 @@ impl Game {
 
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
+        let declined_timing = qe.timing;
+        let declined_permanent = qe.source_permanent;
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
@@ -3698,10 +3700,19 @@ impl Game {
             callback: Box::new(move |game: &mut Game, _action_id: u16| {
                 game.run_queued_effect(qe);
             }),
-            // DECLINE: do nothing — the QueuedEffect (already removed from
-            // `effect_queue`) is simply dropped; its body never runs. The
-            // generic resolver resumes draining the rest of the queue.
-            on_decline: Some(Box::new(|_game: &mut Game| {})),
+            // DECLINE: the QueuedEffect (already removed from `effect_queue`)
+            // is simply dropped; its body never runs. The generic resolver
+            // resumes draining the rest of the queue.
+            //
+            // One exception has to be recorded rather than dropped: a
+            // turn-scheduled `<Delay>`. Its carrier is trashed by the turn scan
+            // AFTER the body runs, because the trash is the §16-16-2 cost — so a
+            // decline must suppress that trash too (§15-7-2). `note_declined_delay`
+            // leaves the key for `resolve_delayed_options_matching` /
+            // `resume_pending_delayed_option_lifecycle` to reschedule instead.
+            on_decline: Some(Box::new(move |game: &mut Game| {
+                game.note_declined_delay(declined_timing, declined_permanent);
+            })),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::OuterOptionalTrigger(
@@ -3718,9 +3729,62 @@ impl Game {
         state: crate::resume::OuterOptionalTriggerState,
         is_pass: bool,
     ) {
-        if !is_pass {
-            self.run_queued_effect(state.queued_effect);
+        if is_pass {
+            // Mirror the `on_decline` closure above — the resume path is the
+            // one a parked selection actually takes.
+            self.note_declined_delay(state.queued_effect.timing, state.queued_effect.source_permanent);
+            return;
         }
+        self.run_queued_effect(state.queued_effect);
+    }
+
+    /// Record that a turn-scheduled `<Delay>`'s §16-16-2 cost was declined, so
+    /// the turn scan reschedules its carrier instead of trashing it.
+    ///
+    /// A no-op for every other timing: only `DelayEffect` has a carrier the
+    /// scan deletes on the effect's behalf.
+    pub(crate) fn note_declined_delay(
+        &mut self,
+        timing: EffectTiming,
+        source_permanent: Option<crate::permanent::PermanentHandle>,
+    ) {
+        if timing != EffectTiming::DelayEffect {
+            return;
+        }
+        let Some(handle) = source_permanent else {
+            return;
+        };
+        let Some(perm) = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        else {
+            return;
+        };
+        // Same stable key the scan uses: an Option has no digivolution stack,
+        // so its bottom card is the Option itself.
+        // ONLY the turn-scheduled triggers need this. An `OnEvent` Delay already
+        // survives a decline correctly (its carrier is not deleted by a scan),
+        // and a `MainPhaseActivated` one is never auto-resolved at all — setting
+        // the flag for those would leave a STALE key behind, since nothing
+        // consumes it, and the next ACCEPT on the same Option would then be
+        // mistaken for a decline and skip the cost trash.
+        let is_turn_scheduled = matches!(
+            perm.option_state,
+            crate::permanent::OptionState::Delayed {
+                trigger: crate::enums::DelayTrigger::EndOfThisTurn
+                    | crate::enums::DelayTrigger::EndOfYourNextTurn
+                    | crate::enums::DelayTrigger::StartOfYourNextTurn,
+                ..
+            }
+        );
+        if !is_turn_scheduled {
+            return;
+        }
+        let Some(bottom) = perm.card_sources.first() else {
+            return;
+        };
+        self.declined_delay_option = Some((handle.player, bottom.card_index));
     }
 
     fn install_trigger_order_selection(

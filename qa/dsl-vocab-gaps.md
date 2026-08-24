@@ -8248,7 +8248,7 @@ See `qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
 - Consumer status: clause OMITTED from BT8-084.yaml (documented in its header); same tripwire test as above.
 - First reported: 2026-08-22
 
-## `<Delay>` on turn-scheduled triggers auto-pays its §16-16 cost  [G-DSL-DELAY-TURN-TRIGGER-NOT-OPTIONAL]
+## RESOLVED 2026-08-24 — `<Delay>` on turn-scheduled triggers auto-paid its §16-16 cost  [G-DSL-DELAY-TURN-TRIGGER-NOT-OPTIONAL]
 - Effect text: the §16-16 keyword reminder itself — "(By trashing this card after the placing turn, activate the effect below.)". §16-16 classes `<Delay>` as **Optional**: trashing the card is the player's choice, and declining must skip the linked effect (§15-7-2).
 - **This is a live rule-17 defect, not missing vocabulary.** `lower_delay.rs:115-117` makes only ONE of three lowering arms optional:
   `if matches!(delay_trigger, DelayTrigger::OnEvent(_)) { builder = builder.optional().needs_outer_optional_prompt(); }`
@@ -8260,4 +8260,62 @@ See `qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
 - How found: the §16-keyword verification lane of the 2026-08-24 optional-cost audit. 33 of the 60 audit candidates were dismissed as "the cost belongs to a §16 keyword, so it is engine machinery" — that dismissal is SAFE for `<Barrier>` / `<Evade>` / `<Alliance>` / `<Overclock>` / `<Fragment>` / `<Armor Purge>` / `<Training>` (each verified to surface the decline, with file:line evidence) and UNSAFE for `<Delay>` on arm (C).
 - Consumer status: NOT fixed; 14 cards currently auto-pay. No tripwire yet.
 - First reported: 2026-08-24
+
+### Resolution (2026-08-24)
+
+**Fixed.** `lower_delay.rs` now marks the turn-scheduled arm `.optional()
+.needs_outer_optional_prompt()` alongside `OnEvent`, so the scheduled window
+OFFERS the trash-this-card cost. On a decline the scan leaves the carrier on the
+field and RESCHEDULES it via `compute_delay_trash_turn` — mandatory, because the
+scan matches `trash_on_turn == turn`, so an Option left at its spent turn number
+would sit there forever, never offered again (§16-16-1 keeps a Delay available
+"while a card with this effect is in the battle area"). Decline tests on LM-030
+and BT21-097 pin all three post-conditions (§15-7-2: carrier not trashed, body
+not run, Option still schedulable). This also closes
+`G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`, tracked separately in
+`bt21_097.rs`.
+
+**The "14 cards" in the original report were not 14 instances of one bug.**
+Checking each printed face against DCGO's registered timing split them:
+
+| What it really is | Cards | DCGO timing |
+|---|---|---|
+| Genuinely turn-scheduled | 6 — BT21-097, LM-027/029/030/031/032 | `OnEndTurn` / `OnStartTurn` |
+| Mis-authored, prints `[Main]` | 5 — BT15-096, BT22-099, BT24-100, LM-034, P-206 | `OnDeclaration` |
+| Structural marker, `process: []` | 3 — BT21-093, ST23-15, ST24-15 | real behaviour lives in a separate clause |
+
+The five `[Main]` ones carried a WORSE defect than the missing decline: authored
+`end_of_your_next_turn`, they auto-fired on a schedule instead of waiting for a
+player `[Main]` action — wrong timing *and* no choice. Re-authored to
+`trigger: delayed`. LM-055 (`trigger: on_play`, prints `[Main] <Delay>`) was the
+same mistake by a different route.
+
+### The root cause behind the mis-authoring  [G-DSL-DELAY-TRIGGER-SILENT-DEFAULT]
+
+`lower_delay.rs` matched a HARDCODED list of six event timings and sent
+everything else to `_ => EndOfYourNextTurn`. Any Delay on a timing the list did
+not name was silently converted into a turn-scheduled auto-fire. Now:
+`other => compiled_timing_to_engine(other).map(DelayTrigger::OnEvent)`, so the
+turn-scheduled forms enumerated above are the ONLY ones a scan drives and
+anything else that maps to an engine timing is event-gated by construction.
+Note `on_opponent_security_removed` existed end to end all along
+(`CompiledTiming` -> `timing_map` -> `EffectTiming`); only this match arm could
+not reach it.
+
+### Structural markers
+
+A `kind: delay` clause with `process: []` is a persistence marker, not an
+activatable Delay (BT21-093 / ST23-15 / ST24-15 keep their Option in the battle
+area for a separate clause). The lowering now skips the optional prompt for an
+empty body — otherwise the fix above would have made these prompt "activate
+this?" for an effect that does nothing. `st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn`
+pins that the turn scan does not trash such a marker.
+
+### Still open
+
+- **BT21-093 / ST23-15 / ST24-15 rely on an empty-body marker to express "this
+  Option stays in the battle area".** That is an idiom, not vocabulary: a
+  dedicated `persists_in_battle_area: true` (or an explicit
+  `place_self_as_delay_option` in the [Main] body) would say it directly instead
+  of through a Delay clause that means something else.
 
