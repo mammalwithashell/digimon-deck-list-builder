@@ -23,20 +23,42 @@
 # `yes: true` accepts: the top card of p0's security (slot 9, EX12-046) is
 # trashed and the deletion is prevented -- Ryugumon stays, suspended.
 #
-# Prompt notes (corrected, task_69f10a66 EX12-070 triage): the card faces
-# print [TB] on EX12-047 AND EX12-036 (dropped by the stale cards.json this
-# line was first drafted against), so Ryugumon's [WD] hand-placement
-# (clause #3) DOES find candidates (EX12-047 x2, the drawn EX12-036 #2) and
-# its optional pick opens on both engines -- DECLINED below. The shared
-# [Once Per Turn] then keeps the [WA] copy at the attack closed only if the
-# declined [WD] consumed the OPT; if a second pick parks at the attack the
-# line answers it too. The play/digivolve lock (clause #4) fires on
-# Ryugumon's own digivolve but fizzles on p1's empty board.
+# HAND ENGINEERING -- RECONCILED against the recorded DCGO wire (oracle run
+# 20260824T175157Z). The earlier draft let clause #3's [WD] hand-placement
+# find candidates (EX12-047 x2 etc.) and DECLINED it. That decline is not
+# neutral, and the two engines disagree about it:
+#   - DCGO EX12_036.cs `SharedActivateCoroutine` ends with
+#       `if (!isUsed) activateClass.RemoveUse();`
+#     and `isUsed` only flips when the skippable SelectHandEffect comes back
+#     WITH a card -- so a decline REFUNDS the shared [Once Per Turn] and the
+#     [When Attacking] copy re-opens on the attack. The recording shows
+#     precisely that: digivolve -> SelectHandEffect -> attack ->
+#     SelectHandEffect (where the line expected <Barrier>).
+#   - Our engine consumes the once-per-turn on the declined offer, so it
+#     opens the hand pick ONCE and goes straight to <Barrier> at the attack.
+# That refund asymmetry is a real finding about clause #3, not about
+# <Barrier>, and it is measured by the effect#3 exam. To keep THIS line on
+# its own clause, the hand is now built so clause #3 has NO candidate at
+# all -- every card left in p0's hand fails the "level 6 or lower with
+# [Aqua]/[Sea Animal] in any trait or [TB]" filter on BOTH engines:
+#   - EX12-070 / EX12-074 / EX12-075 are Options: no level at all, so DCGO's
+#     `cardSource.HasLevel` guard and our `level_lte: 6` (which rejects a
+#     missing level) both reject them regardless of their [TB] trait.
+#   - EX12-076 Susanoomon is level 7 -- above the cap on both engines.
+#   - EX12-036 itself IS a candidate, but the T3 digivolve consumes it out
+#     of the hand before its own [When Digivolving] leg looks.
+# With no candidate, DCGO's coroutine short-circuits at
+# `HasMatchConditionOwnersHand` and emits no selection row, and our engine
+# never parks the optional select -- so neither the [WD] nor the [WA] copy
+# asks anything, on either engine, and the ONLY prompt in the line is
+# <Barrier>. Clause #4's [All Turns] lock likewise never queues: its
+# `CanActivateCondition` needs an opponent Digimon and p1's board is empty
+# all game, which is also why no trigger-order prompt appears.
 #   - Karakurumon's inherited [On Deletion] never fires: Barrier PREVENTS
 #     the deletion.
 #
 # Stack layout (p0): hand [0..4], security [5..9] (slot 9 = top, trashed by
-# Barrier), [10] the T3 turn-draw, [11] the T3 digivolve-draw.
+# Barrier), [10] the T3 turn-draw, [11] spare.
 card: EX12-036
 clause: EX12-036#effect#0
 seed: 424242
@@ -44,11 +66,11 @@ decks:
   p0:
     stack:
       # hand (0-4): the spine pair + filler that can never match clause #3's
-      # hand filter (see header).
+      # hand filter (see HAND ENGINEERING above).
       - EX12-063
       - EX12-036
-      - EX12-047
-      - EX12-047
+      - EX12-070
+      - EX12-074
       - EX12-076
       # security (5-9): slot 9 (EX12-046) is the top card Barrier trashes.
       - EX12-031
@@ -56,10 +78,10 @@ decks:
       - EX12-031
       - EX12-046
       - EX12-046
-      # T3 turn-draw (10) and digivolve-draw (11): both filter-proof
-      # (EX12-076 is level 7; EX12-036 lacks [Aqua]/[Sea Animal]/[TB]).
+      # T3 turn-draw (10) and spare (11): both filter-proof (an Option has
+      # no level; EX12-076 is level 7).
+      - EX12-075
       - EX12-076
-      - EX12-036
     rest: toho-braves
   p1:
     stack:
@@ -97,18 +119,15 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
   # T3 (p0, memory 3): Ryugumon over Karakurumon via the alt route (cost 3,
-  # 3 -> 0), prompt-free (see header), then attack security at memory 0.
+  # 3 -> 0), prompt-free -- clause #3 is candidate-starved and clause #4's
+  # lock has no opposing Digimon (see header) -- then attack security at
+  # memory 0.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { digivolve: { from: field.0, using: EX12-036 } }
     expect: { prompt: main_phase }
-  # Clause #3's optional [WD] hand-placement now opens (corrected [TB]
-  # data); decline it -- this exam is about <Barrier>.
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
@@ -125,7 +144,7 @@ assert:
   # suspended from the attack, Karakurumon beneath it), p0 paid the top of
   # security (5 -> 4, EX12-046 in trash), and the flipped EX12-036 is in
   # p1's trash with p1 down to 4 security.
-  - at: 9
+  - at: 8
     that:
       p0.field:
         - { card_id: EX12-036, dp: 12000, suspended: true,

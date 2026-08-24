@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-24T03:27:08.827710900+00:00",
+  "last_updated": "2026-08-24T19:51:05.566771700+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -92,6 +92,15 @@
       "scenario_path": "qa/dcgo-exams/EX12/EX12-002-inherited0.yaml",
       "recorded_at": "2026-08-24T02:07:27.089011200+00:00"
     },
+    "EX12-004#effect#0": {
+      "clause_id": "EX12-004#effect#0",
+      "card_id": "EX12-004",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "dbc4f2d4f98ea3a70b6be24d1726bed49e3dd8d2a0cece238760d4ac8ed036a9",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-004-effect0.yaml",
+      "recorded_at": "2026-08-24T17:12:45.214652300+00:00"
+    },
     "EX12-004#effect#1": {
       "clause_id": "EX12-004#effect#1",
       "card_id": "EX12-004",
@@ -169,12 +178,11 @@
     "EX12-009#effect#0": {
       "clause_id": "EX12-009#effect#0",
       "card_id": "EX12-009",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "8339b6188c808a9e3dedbb6faefd2160f6e05718dce1541bcfde09bf48f71938",
-      "reason": "1-card OrderedPermutation: DCGO auto-places a single leftover where our engine parks an ordering prompt; the strict cursor aborts (review finding 3).",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-009-effect0.yaml",
+      "recorded_at": "2026-08-24T17:12:57.775855300+00:00"
     },
     "EX12-009#effect#1": {
       "clause_id": "EX12-009#effect#1",
@@ -403,6 +411,15 @@
       "scenario_path": "qa/dcgo-exams/EX12/EX12-020-effect1.yaml",
       "recorded_at": "2026-08-22T14:48:26.165021500+00:00"
     },
+    "EX12-020#inherited#0": {
+      "clause_id": "EX12-020#inherited#0",
+      "card_id": "EX12-020",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "74e8583b436c1294b36551b93dd066b479c375a211aaeeefabd79bf8b5658f83",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-020-inherited0.yaml",
+      "recorded_at": "2026-08-24T17:13:19.866651300+00:00"
+    },
     "EX12-020#inherited#1": {
       "clause_id": "EX12-020#inherited#1",
       "card_id": "EX12-020",
@@ -494,6 +511,15 @@
       "scenario_path": "qa/dcgo-exams/EX12/EX12-025-inherited1.yaml",
       "recorded_at": "2026-08-23T22:13:09.721697+00:00"
     },
+    "EX12-026#effect#0": {
+      "clause_id": "EX12-026#effect#0",
+      "card_id": "EX12-026",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-026-effect0.yaml",
+      "recorded_at": "2026-08-24T19:03:57.388894500+00:00"
+    },
     "EX12-026#effect#1": {
       "clause_id": "EX12-026#effect#1",
       "card_id": "EX12-026",
@@ -511,6 +537,15 @@
       "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-026-effect2.yaml",
       "recorded_at": "2026-08-22T14:50:00.321501900+00:00"
+    },
+    "EX12-026#inherited#0": {
+      "clause_id": "EX12-026#inherited#0",
+      "card_id": "EX12-026",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "74e8583b436c1294b36551b93dd066b479c375a211aaeeefabd79bf8b5658f83",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-026-inherited0.yaml",
+      "recorded_at": "2026-08-24T17:14:03.957689500+00:00"
     },
     "EX12-026#inherited#1": {
       "clause_id": "EX12-026#inherited#1",
@@ -544,12 +579,11 @@
     "EX12-031#effect#1": {
       "clause_id": "EX12-031#effect#1",
       "card_id": "EX12-031",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "f4269cdd9b62bfdb03d7426efc87a07733fe8795c443f6ce652df461551b7c17",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-031-effect1.yaml",
+      "recorded_at": "2026-08-24T17:14:26.428883200+00:00"
     },
     "EX12-031#effect#2": {
       "clause_id": "EX12-031#effect#2",
@@ -583,22 +617,20 @@
     "EX12-036#effect#0": {
       "clause_id": "EX12-036#effect#0",
       "card_id": "EX12-036",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "a21b668cef733b509ed7fd63595f875b81a6eb29bbf53cf047e8a1d26e2a7558",
-      "reason": "ENGINE GAP task_8f063aa6: DSL grant_keyword keywords never reach the would-be-deleted replacement window -- <Barrier> never fires from a grant.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect0.yaml",
+      "recorded_at": "2026-08-24T19:06:30.578031400+00:00"
     },
     "EX12-036#effect#1": {
       "clause_id": "EX12-036#effect#1",
       "card_id": "EX12-036",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "b34b65b6bc6ea1181e172e54c8e6405d9b72f5e46b6bbb4fa21d9dd20a67e625",
-      "reason": "ENGINE GAP task_8f063aa6: same as #0 for <Evade>.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect1.yaml",
+      "recorded_at": "2026-08-24T19:09:13.866468600+00:00"
     },
     "EX12-036#effect#2": {
       "clause_id": "EX12-036#effect#2",
@@ -733,12 +765,11 @@
     "EX12-046#inherited#0": {
       "clause_id": "EX12-046#inherited#0",
       "card_id": "EX12-046",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "152ee40e0daaecf88292e6000ffd67266bc2c159cbfeaad101983fa0892c9d62",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-inherited0.yaml",
+      "recorded_at": "2026-08-24T17:16:04.711503400+00:00"
     },
     "EX12-046#security#0": {
       "clause_id": "EX12-046#security#0",
@@ -781,12 +812,11 @@
     "EX12-047#effect#3": {
       "clause_id": "EX12-047#effect#3",
       "card_id": "EX12-047",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "a78faada1898dd7dd183fb63b30d9af508a172536979e06d07c735231a6018f7",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect3.yaml",
+      "recorded_at": "2026-08-24T19:17:51.770579700+00:00"
     },
     "EX12-047#effect#4": {
       "clause_id": "EX12-047#effect#4",
@@ -885,12 +915,11 @@
     "EX12-062#effect#0": {
       "clause_id": "EX12-062#effect#0",
       "card_id": "EX12-062",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "c543b9da4154ff844f6f626b6e3cfa2e96c689c8d8ba96e89d9ce92182d94f5e",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-effect0.yaml",
+      "recorded_at": "2026-08-24T19:21:45.955646200+00:00"
     },
     "EX12-062#effect#1": {
       "clause_id": "EX12-062#effect#1",
@@ -914,12 +943,11 @@
     "EX12-062#inherited#1": {
       "clause_id": "EX12-062#inherited#1",
       "card_id": "EX12-062",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "b6635794790963847e7cdf33242fd6a31e885de8ed139686cc2aeb84654d2478",
-      "reason": "1-card OrderedPermutation pre-witness (review finding 3).",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-inherited1.yaml",
+      "recorded_at": "2026-08-24T19:31:24.657973300+00:00"
     },
     "EX12-062#security#0": {
       "clause_id": "EX12-062#security#0",
@@ -943,12 +971,11 @@
     "EX12-063#effect#1": {
       "clause_id": "EX12-063#effect#1",
       "card_id": "EX12-063",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "2edc93086256c26b9116e025ade694e2fa027c0ca9785ff460aafcc139f8ba14",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect1.yaml",
+      "recorded_at": "2026-08-24T19:34:58.481161800+00:00"
     },
     "EX12-063#effect#2": {
       "clause_id": "EX12-063#effect#2",
@@ -1005,6 +1032,16 @@
       "text_sha256": "1330ddf39ae229c330ce69859333a3b7456189d854ff80bea09b89fbdda5bd20",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect2.yaml",
       "recorded_at": "2026-08-23T22:14:01.879862500+00:00"
+    },
+    "EX12-065#effect#3": {
+      "clause_id": "EX12-065#effect#3",
+      "card_id": "EX12-065",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "d65042cd9bb15fc8adc41ef78cadc07736caab126e1fe8be63c37f1592dae575",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect3.yaml",
+      "reason": "DIVERGED at step 16 (compared 17 of 17 ours / 17 dcgo steps)",
+      "recorded_at": "2026-08-24T19:41:35.807671800+00:00"
     },
     "EX12-065#effect#4": {
       "clause_id": "EX12-065#effect#4",
@@ -1101,12 +1138,11 @@
     "EX12-074#effect#1": {
       "clause_id": "EX12-074#effect#1",
       "card_id": "EX12-074",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "b8ebafac725d3b6fbbce06db9c12cf296e6506fb54de515d381f530ce062ddde",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface. (EX12_074 trigger isOptional=true).",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-074-effect1.yaml",
+      "recorded_at": "2026-08-24T17:20:23.607899+00:00"
     },
     "EX12-074#effect#2": {
       "clause_id": "EX12-074#effect#2",
@@ -1147,12 +1183,11 @@
     "EX12-075#effect#2": {
       "clause_id": "EX12-075#effect#2",
       "card_id": "EX12-075",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "b17e7ebacd0a7aa6c17f48ada1d708c1a3bfafb5bf8088dd49b19d6166ee5958",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-075-effect2.yaml",
+      "recorded_at": "2026-08-24T17:21:06.015120100+00:00"
     },
     "EX12-075#security#0": {
       "clause_id": "EX12-075#security#0",
@@ -1186,22 +1221,29 @@
     "EX12-076#effect#2": {
       "clause_id": "EX12-076#effect#2",
       "card_id": "EX12-076",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect2.yaml",
+      "recorded_at": "2026-08-24T19:46:30.887808900+00:00"
     },
     "EX12-076#effect#3": {
       "clause_id": "EX12-076#effect#3",
       "card_id": "EX12-076",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "761d70381bc91f1b0f5383a3158e5ae513698307b7928492906d94f7650609a3",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect3.yaml",
+      "recorded_at": "2026-08-24T17:23:54.349189+00:00"
+    },
+    "EX12-076#effect#4": {
+      "clause_id": "EX12-076#effect#4",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "b4f8ae728b642deae7d7c907759f090ecdf11847e11c12461d6b564915b11d41",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect4.yaml",
+      "recorded_at": "2026-08-24T19:51:05.566771700+00:00"
     },
     "P-130#effect#0": {
       "clause_id": "P-130#effect#0",

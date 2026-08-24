@@ -1,0 +1,265 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#4 -- "[When Attacking]
+# [Once Per Turn] Place 1 of your opponent's Digimon as the top security card.
+# Then, if this Digimon has 4 or more colors in its digivolution cards, trash
+# their top security card and <Recovery +1> (Place the top card of your deck as
+# your top security card.)"
+#
+# DCGO builds it at CardEffect/EX12/Yellow/EX12_076.cs:97-160 as a
+# `CardEffectFactory.WhenAttackingClass(..., optional: false,
+# maxCountPerTurn: 1)` whose coroutine is, in order:
+#   1. `if (HasMatchConditionPermanent(IsOpponentsDigimon))` -> a
+#      `SelectPermanentEffect` with `mode: SelectPermanentEffect.Mode
+#      .PutSecurityTop`, `maxCount: 1`, `canNoSelect: false` (forced pick);
+#   2. recount the DISTINCT colours over
+#      `card.PermanentOfThisCard().DigivolutionCards`;
+#   3. if >= 4: `new IDestroySecurity(player: card.Owner.Enemy,
+#      destroySecurityCount: 1, fromTop: true)` then
+#      `new IRecovery(card.Owner, 1)`.
+# So the trash hits the OPPONENT's top security -- which step 1 just made the
+# placed Digimon -- and the Recovery refills the ATTACKER's own stack.
+#
+# THE FOUR COLOURS ARE PINNED BY THE STACK, not assumed:
+#   EX12-046 Shishimamon  yellow + red     (Lv.5, hard-cast T1)
+#   EX12-065 Kaguyamon    purple + black   (Lv.6, digivolved T3)
+# -> exactly 4 distinct colours, the threshold this clause's second sentence
+# tests. The assertion below pins that `sources:` list.
+#
+# THE LINE, and why the digivolve and the attack are on DIFFERENT turns.
+# Susanoomon's own [On Play]/[When Digivolving] (clause #3) gives EVERY enemy
+# Digimon -3000 DP per source colour -- at 4 colours that is -12000, and no
+# Digimon in this pool has more than 12000 DP. Digivolving into an occupied
+# enemy board therefore WIPES it, leaving this clause with nothing to place.
+# So T5 digivolves into P1's board (killing the two bodies that donated the
+# memory), T6 lands a fresh Gasamon AFTER the -12000 has expired at the end of
+# P0's T5, and T7 attacks.
+#
+# THE ATTACK NAMES P1's DIGIMON, NOT THE SECURITY STACK, and that is the
+# load-bearing correction from the 2026-08-24 oracle run. The first version of
+# this line declared against the player and ABORTED at the very first prompt
+# after the attack: "step 19 expected prompt 'SelectPermanentEffect' but DCGO
+# asked 'MultipleSkills'".
+#
+# The cause is a genuine structural asymmetry, re-derived from the C#. DCGO
+# registers <Raid> as a QUEUED TRIGGER in the same `EffectTiming.OnAllyAttack`
+# batch as this clause (EX12_076.cs:36-40 `RaidSelfEffect`, alongside the
+# WhenAttackingClass at :97), so an attack that can raid stacks TWO effects on
+# one card and DCGO opens `MultipleSkills` to order them. Our engine models the
+# same keyword as an attack-state window (`AttackState::RaidOpen` ->
+# `try_enter_raid_switch`, combat/mod.rs) rather than a trigger, so it parks
+# only this clause's pick and never a `TriggerOrder`. The scenario format has
+# no DCGO-only row to absorb the difference (`optional_gate_fold` is hardwired
+# to `OptionalSkill`, and `ordinal:` is refused when our live prompt is not
+# `TriggerOrder`), so the fix has to come from the LINE.
+#
+# It does, and cheaply: `MultipleSkills` only opens over effects that pass
+# `CanActivate` (MultipleSkills.cs, `skillInfos_active` filter -- a
+# single-survivor stack goes straight to `Activate(true)` with no prompt), and
+# `CardEffectCommons.CanActivateRaid` requires an unsuspended enemy Digimon
+# that is `!= attackProcess.DefendingPermanent`. Declaring the attack ON P1's
+# ONLY Digimon makes that candidate set empty at filter time, so <Raid> drops
+# out of the stack and THIS clause is the lone survivor -- exactly the
+# single-prompt shape our engine produces. Our side agrees by construction:
+# `raid_switch_candidates` excludes the current attack target too. <Raid> is
+# not measured here; it has its own line (EX12-076-effect1.yaml).
+#
+# NO SECURITY CHECK, and that is the point of the new shape. This clause
+# resolves at attack declaration and moves the declared defender into the
+# security stack, so by the battle step the defending permanent is no longer in
+# the battle area: DCGO's `DetermineAttackOutcome` takes neither the
+# "no defender -> DoSecurityCheck" branch (DefendingPermanent is non-null) nor
+# the battle branch (`IsPermanentExistsOnBattleAreaDigimon` is false), and the
+# attack simply ends. Our engine ends it the same way -- verified sim-side:
+# `p1.security` stays 5 and `p1.field` is empty.
+#
+# THE DISCRIMINATOR IS P1's TRASH. With no security check the two readings of
+# "trash their top security card" separate cleanly on trash contents alone:
+# trashing the JUST-PLACED Gasamon leaves EX12-020 in P1's trash and EX12-075
+# (P1's pre-existing top security, pinned at stack[9]) untouched on top of the
+# stack; trashing the PRE-EXISTING top instead would put EX12-075 in the trash
+# and leave Gasamon as P1's top security card. Both readings leave P1 on 5
+# security, so the count cannot tell them apart and `p1.trash` is what does.
+#
+# Security arithmetic on P1: 5 -> 6 (Gasamon placed) -> 5 (clause trashes the
+# top). P0: 5 -> 6 via <Recovery +1>.
+#
+# Stack layout: hand [0..4], security [5..9] REVERSED (9 = TOP), then draws in
+# order. DIGIVOLVING DRAWS A CARD, so P0's draw slots are T3-turn, T3-digivolve,
+# T5-turn, T5-digivolve, T7-turn, and then the <Recovery +1> takes the next
+# deck card straight into security.
+card: EX12-076
+clause: EX12-076#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 base, the Lv.6 base, Susanoomon, inert Options.
+      - EX12-046
+      - EX12-065
+      - EX12-076
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked in this line (P1 never attacks).
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T3 digivolve (11), T5 turn (12), T5 digivolve
+      # (13), T7 turn (14). Options ONLY: Shishimamon's inherited
+      # "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card
+      # with 5000 DP or less from your hand without paying the cost" rides
+      # under Susanoomon, and a small [TB] Digimon in hand would open it on the
+      # very attack under exam.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      # (15) the card <Recovery +1> places as P0's new top security card.
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): the T4 memory donation (Gasamon + Seasarmon), then the
+      # Gasamon this clause places into security on T7.
+      - EX12-020
+      - EX12-011
+      - EX12-020
+      - EX12-020
+      - EX12-075
+      # security (5-9), REVERSED -- [9] is the TOP card. EX12-075 sits on top
+      # so that the header's trash discriminator has a DISTINCT card to name:
+      # if the clause trashed P1's pre-existing top instead of the just-placed
+      # Gasamon, EX12-075 -- not a third EX12-020 -- would show up in
+      # `p1.trash`. It is never flipped in this line (no security check).
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-075
+      # draws: T2 (10), T4 (11), T6 (12).
+      - EX12-070
+      - EX12-074
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base into an empty enemy board -- its [On Play]
+  # has no candidate (cost 7, 0 -> -7 overshoot; the turn ends on it).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon over Shishimamon -- only its
+  # "Lv.5 w/[Puppet]/[Shambala]: Cost 3" route matches a yellow/red Lv.5, so no
+  # cost prompt opens; its [On Play] is silent against an empty trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the donation -- 3 -> 0 -> -5, handing P0 exactly 5.
+  # Seasarmon's [On Play] "delete 1 of your opponent's Digimon with 5000 DP or
+  # less" sees only the 12000 DP Kaguyamon, so it is silent.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 5): Susanoomon arrives (cost choice answered by VALUE --
+  # clause #5's exam) and clause #3's -12000 wipes P1's two bodies. Memory
+  # 5 -> 0, so the turn continues to a closing pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the body this clause will place into security. It
+  # arrives AFTER the -12000 expired at the end of P0's T5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): THE CLAUSE. Susanoomon attacks P1's ONLY Digimon --
+  # naming it as the defender is what keeps <Raid> out of DCGO's OnAllyAttack
+  # stack (see the header), leaving this clause as the single trigger both
+  # engines resolve without an ordering prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # The forced pick: P1's only Digimon becomes their top security card.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Trailing pass so the whole attack -- clause, security trash, Recovery, and
+  # the defender-less end of the attack -- lands in the projection. It is a
+  # main-phase prompt for P0: attacking spends no memory, so P0 still holds the
+  # turn at 3. (Shishimamon's inherited [End of Attack] IS in the attacking
+  # permanent's sources and so passes DCGO's `CanTriggerOnAttack`, but its
+  # `CanActivate` needs a [TB] Digimon with 5000 DP or less in P0's hand, and
+  # the stack pins that hand to Options only -- so it is filtered out of
+  # `skillInfos_active` and opens no prompt on either engine.)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observables, all route-independent:
+  #  * the placed Gasamon left P1's battle area and ended in P1's TRASH -- the
+  #    "place as top security" then "trash their top security card" pair. THIS
+  #    IS THE DISCRIMINATOR: an engine that trashed P1's PRE-EXISTING top
+  #    security instead would put EX12-075 in that trash and leave EX12-020 as
+  #    P1's top security card, so the trash multiset separates the two
+  #    readings on its own (see the header);
+  #  * P0's security went 5 -> 6: <Recovery +1>, which only runs on the
+  #    "4 or more colors" branch, and is the witness for the clause's second
+  #    sentence;
+  #  * P1's security is back to 5 -- the net of +1 placed, -1 trashed -- and
+  #    P1's battle area is EMPTY: the declared defender was moved into the
+  #    security stack before the battle step, so no battle and no security
+  #    check ever ran (see "NO SECURITY CHECK" in the header);
+  #  * Susanoomon still stands on the pinned 4-colour stack, suspended from
+  #    its own attack.
+  - at: 20
+    that:
+      turn: 7
+      memory: 3
+      p0.security: 6
+      p1.security: 5
+      p1.trash: [EX12-011, EX12-020, EX12-020]
+      p1.field: []
+      p0.field:
+        - card_id: EX12-076
+          dp: 16000
+          suspended: true
+          sources: [EX12-046, EX12-065]

@@ -3,31 +3,42 @@
 # level 4 or lower Digimon." -- exercised on the [When Digivolving] side with
 # BOTH selections live.
 #
-# Both seats hatch Onibimon and digivolve Hanimon over it in breeding (cost 0)
-# then move it out: p1's Hanimon is the level-3 deletion target; p0's Hanimon
-# is the digivolution base. On T5 p0 plays Gasamon (EX12-020, cost 3, the
-# pool's promptless Lv.3) as the payment fodder. On T7 Kokeshimon digivolves
-# over the Hanimon stack -- printed purple Lv.3 and alt Puppet/Shambala routes
-# both cost 2, so the rule-17 cost-choice prompt stays closed (Gasamon's -1
-# reduction is self-scoped and does not apply to a digivolve over Hanimon).
+# RECONCILED 2026-08-24 against the failed oracle run
+# (20260824T175338Z_2612e892fa1a4d259af72d315ca6f950.jsonl). The previous
+# line put TWO DIFFERENT permanents on p0's board -- a Hanimon stack moved
+# out of breeding and a Gasamon played from hand -- and named the digivolve
+# base as `field.0`. That is not portable: `field.N` is a COMPACT battle-area
+# index on both sides, but DCGO's compact order is ascending FRAME id and
+# frames are handed out centre-outwards by `CardSource.PreferredFrame()`
+# (4, 3, 5, 2, 6, ...), so with two permanents DCGO's slot 0 is the SECOND
+# one placed while ours is the FIRST. The wire recorded exactly that: DCGO
+# digivolved onto Gasamon (`action_detail step 26: cost_paid 1,
+# alt_path cost_modifier` -- Gasamon's own -1) while our engine digivolved
+# onto Hanimon, so the payment answer `own.field.1` lowered to EX12-020 and
+# DCGO's candidate list was [EX12-062, EX12-061]. `ActionEncoder.cs` states
+# the hazard outright: "Slot N therefore means different permanents on the
+# two sides."
 #
-# DCGO's flow (EX12_062.cs): payment SelectPermanentEffect over OWN Digimon
-# (answered with Gasamon, own.field.1), the deletion resolves, then the enemy
-# SelectPermanentEffect (answered with p1's Hanimon, opp.field.0).
+# The fix removes the ambiguity instead of guessing the mapping: p0's two
+# battle-area Digimon are now TWO IDENTICAL Gasamon (EX12-020), both played
+# from hand, so whichever one each engine picks for `field.0` the resulting
+# board is the same multiset. Nothing is hatched, so no EX12-004 source
+# exists, no <Execute> is granted, and the line has no end-of-turn gates at
+# all. The second Gasamon is DRAWN on T5 rather than dealt, because two
+# copies of one id in hand at once is a refused-as-ambiguous `play:`.
 #
-# EXECUTE-WINDOW LEDGER (corrected, task_69f10a66 Family 1): both fielded
-# stacks sit on an Onibimon egg, and their tops -- Hanimon and later
-# Kokeshimon -- carry the [TB] trait, so the EX12-004 grant gives the
-# carrier <Execute> and the end-of-turn attack gate opens at every turn end
-# where the carrier CanAttack. Moved stacks CAN attack the move turn
-# (DCGO's MovePermanent never stamps EnterFieldTurnCount; our engine
-# agrees), so the gate opens at FIVE points on this line: end of p0's
-# T3 and T5 (Hanimon, moved T3), end of p1's T4 and T6 (Hanimon, moved
-# T4), end of p0's T7 (Kokeshimon, never attacked). Each is declined via
-# our EndOfTurnAction PASS (the engine parks live sim-side since the
-# Family-1 fix); the emitter maps each to OptionalSkill "no" on the wire
-# (the DCGO-side select_cancel decline bridge is landed in
-# OptionalSkill.cs).
+# Cost: over a BLUE Gasamon only the alt [Puppet]/[Shambala] route matches
+# (cost 2), and the base Gasamon's own "[Your Turn] when THIS Digimon would
+# digivolve into a [TB] card, reduce the cost by 1" applies -- self-scoped in
+# both engines (`EX12_020.cs`: `targetPermanent == card.PermanentOfThisCard()`),
+# so the second Gasamon does NOT stack a second reduction. Memory 3 -> 2.
+# One distinct cost, so the rule-17 cost-choice prompt stays closed.
+#
+# DCGO's flow (EX12_062.cs): payment SelectPermanentEffect over OWN
+# battle-area Digimon (candidates [EX12-062, EX12-020]; answered with the
+# surviving Gasamon), the deletion resolves, then -- gated behind the
+# payment's success -- the enemy SelectPermanentEffect over level 4 or lower
+# opponent Digimon (answered with p1's Gasamon).
 card: EX12-062
 clause: EX12-062#effect#0
 seed: 424242
@@ -35,29 +46,29 @@ decks:
   p0:
     stack:
       # hand (0-4)
-      - EX12-061
       - EX12-020
       - EX12-062
       - EX12-070
       - EX12-074
-      # security (5-9)
-      - EX12-031
-      - EX12-031
       - EX12-075
+      # security (5-9) -- never checked, nothing attacks on this line
+      - EX12-031
+      - EX12-031
+      - EX12-070
       - EX12-076
       - EX12-065
-      # draws: T1 digivolve (10), T3 turn (11), T5 turn (12), T7 turn (13),
-      # T7 digivolve (14)
-      - EX12-070
-      - EX12-074
-      - EX12-075
+      # draws: T3 turn (10), T5 turn (11) -- the SECOND Gasamon, drawn rather
+      # than dealt so only one copy is ever in hand at a time -- T7 turn (12),
+      # T7 digivolve (13)
       - EX12-026
+      - EX12-020
       - EX12-047
+      - EX12-046
     rest: toho-braves
   p1:
     stack:
       # hand (0-4)
-      - EX12-061
+      - EX12-020
       - EX12-070
       - EX12-074
       - EX12-075
@@ -68,56 +79,33 @@ decks:
       - EX12-070
       - EX12-074
       - EX12-075
-      # draws: T2 turn (10), T2 digivolve (11), T4 turn (12), T6 turn (13)
-      - EX12-020
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12), T8 turn (13)
       - EX12-026
       - EX12-036
       - EX12-047
+      - EX12-046
     rest: toho-braves
 steps:
-  # Turn 1 (p0): hatch, digivolve Hanimon in breeding (cost 0).
-  - actor: 0
-    do: { hatch: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { digivolve: { from: breeding, using: EX12-061 } }
-    expect: { prompt: main_phase }
+  # Turn 1 (p0): first player opens at memory 0 -- all-pass, no hatch (an egg
+  # would put an EX12-004 <Execute> grant under every later [TB] top).
   - actor: 0
     do: { pass: {} }
-    expect: { prompt: main_phase }
-  # Turn 2 (p1): the same.
-  - actor: 1
-    do: { hatch: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { digivolve: { from: breeding, using: EX12-061 } }
-    expect: { prompt: main_phase }
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # Turn 3 (p0): move Hanimon out (the digivolution base).
-  - actor: 0
-    do: { move: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T3: decline p0's granted <Execute> gate (see the ledger).
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: OptionalSkill }
-  # Turn 4 (p1): move Hanimon out (the deletion target).
+  # Turn 2 (p1): play Gasamon (cost 3, memory 3 -> 0) -- the level-3 body the
+  # clause's second half deletes.
   - actor: 1
-    do: { move: {} }
+    do: { pass: {} }
     expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T4: decline p1's granted <Execute> gate.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: OptionalSkill }
-  # Turn 5 (p0): play Gasamon (cost 3, memory 3 -> 0) as payment fodder.
+  # Turn 3 (p0): play Gasamon #1 (cost 3, memory 3 -> 0).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -127,11 +115,25 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T5: decline the granted <Execute> gate on p0's Hanimon (a LIVE
-  # EndOfTurnAction park sim-side; OptionalSkill "no" on the wire).
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): play Gasamon #2 (the T5 draw; cost 3, memory 3 -> 0). Now
+  # p0's board is two indistinguishable Gasamon, so the digivolve base is
+  # slot-order-independent.
   - actor: 0
     do: { pass: {} }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
   # Turn 6 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
@@ -139,43 +141,36 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T6: decline the granted <Execute> gate on p1's OWN Hanimon.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: OptionalSkill }
-  # Turn 7 (p0): the clause -- Kokeshimon over Hanimon (cost 2, memory 3 -> 1).
+  # Turn 7 (p0): the clause -- Kokeshimon over a Gasamon (alt trait route
+  # cost 2, minus that Gasamon's own -1 for a [TB] digivolve: memory 3 -> 2).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { digivolve: { from: field.0, using: EX12-062 } }
     expect: { prompt: main_phase }
-  # Payment: delete our own Gasamon (own.field.1).
+  # Payment: delete our own surviving Gasamon. Candidates on both sides are
+  # [Kokeshimon, Gasamon]; the answer travels as the identity EX12-020.
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  # The paid-for deletion: p1's level-3 Hanimon (opp.field.0).
+  # The paid-for deletion: p1's level-3 Gasamon, the only opponent Digimon.
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # Turn is still p0's at memory 1; close it.
+  # Turn is still p0's at memory 2; close it.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # End of T7: decline the granted <Execute> gate on p0's Kokeshimon (the
-  # [TB] top over the same Onibimon egg; it never attacked, so it CanAttack).
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: OptionalSkill }
   # Trailing pass: p1's next breeding decision closes the line.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # After both deletions: p0's battle area is just the Kokeshimon stack
-  # (Gasamon paid), p1's is empty (Hanimon deleted), memory 1.
-  - at: 23
+  # After both deletions: p0's battle area is just the Kokeshimon stack (the
+  # second Gasamon paid the cost), p1's is empty, memory 2.
+  - at: 19
     that:
-      memory: 1
-      p0.field: [{ card_id: EX12-062, dp: 5000, suspended: false, sources: [EX12-004, EX12-061] }]
+      memory: 2
+      p0.field: [{ card_id: EX12-062, dp: 5000, suspended: false, sources: [EX12-020] }]
       p1.field: []

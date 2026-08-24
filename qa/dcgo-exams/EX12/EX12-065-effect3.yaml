@@ -1,55 +1,142 @@
-# Exam scenario: EX12-065 Kaguyamon effect clause #3 -- the TARGET-SET head of
-# "[All Turns] All of your [Puppet] or [TB] trait Digimon gain <Blocker> and
-# <Retaliation>."
+# Exam scenario: EX12-065 Kaguyamon, clause effect#3 --
+#   "[All Turns] All of your [Puppet] or [TB] trait Digimon gain <Blocker>
+#    and <Retaliation>."
 #
-# Clause #4's exam (EX12-065-effect4, confirmed) already witnesses the <Blocker>
-# payload -- but it blocks with KAGUYAMON ITSELF, which a self-only grant would
-# also explain. This file measures the half #4 cannot: that the aura reaches
-# ANOTHER Digimon. The blocker here is SEASARMON (EX12-011), which prints no
-# <Blocker> of its own and is not the aura's source; it carries [TB], so it is
-# inside "all of your [Puppet] or [TB] trait Digimon". Without the clause there
-# is no blocker window for it at all and P1's attack would simply check P0's
-# security.
+# Printed face (C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/
+# EX12-065.webp) + data/card_bundles/EX12-065.md: ONE sentence, ONE clause, TWO
+# granted keywords. The clause extractor folds both keyword payloads into this
+# single id (`PYTHONPATH=code python -m tools.clause_coverage.extract
+# --card-ids EX12-065` -> 5 clauses; #3 is this sentence), so a scenario that
+# only witnessed <Blocker> would let clause #3 be recorded `confirmed` while
+# half of what it grants went unmeasured. This line therefore drives BOTH
+# halves through ONE battle.
 #
-# The witness is therefore threefold and mutually reinforcing: P0's security
-# stays on 5 (the attack was intercepted), Gasamon is in P1's trash (a
-# 5000-vs-2000 block battle happened), and Seasarmon ends SUSPENDED from having
-# blocked.
+# THE WITNESS -- a single block by a NON-SOURCE Digimon that LOSES:
+#   * <Blocker> half: Gasamon (EX12-020) prints no <Blocker>, is not the aura's
+#     source, and is inside "all of your [Puppet] or [TB] trait Digimon" only
+#     because it carries [TB]. Without the clause P0 has no blocker window at
+#     all and P1's attack would simply check P0's security. That the block
+#     happens at all -- P0's security still 5, Gasamon in P0's trash off a
+#     2000-vs-7000 battle -- is the payload AND the "the aura reaches another
+#     Digimon" half of the target set, in one observable.
+#   * <Retaliation> half: the same battle is the retaliation window. Gasamon is
+#     the ONLY Digimon deleted in it (7000 beats 2000 cleanly), so the granted
+#     <Retaliation> -- "when only this Digimon is deleted in battle, delete the
+#     Digimon it battled" -- must take Shishimamon (EX12-046) with it.
 #
-# ORDER IS LOAD-BEARING: Seasarmon lands FIRST, into an empty enemy board. Its
-# [On Play] "delete 1 of your opponent's Digimon with 5000 DP or less"
-# (clause #1's own exam, MANDATORY) would otherwise eat Gasamon on arrival and
-# leave nothing to block. Played into an empty board it has zero candidates and
-# stays silent. Kaguyamon lands LAST and is hard-cast, so its
-# [On Play] trash-revive (clause #2's exam) sees an EMPTY trash and parks no
-# prompt either.
+# DCGO reference (base repo, CLAUDE.md rule 29):
+#   Assets/Scripts/CardEffect/EX12/Purple/EX12_065.cs:90-149 is this clause.
+#   :105-109  BlockerStaticEffect over SharedPermanentCondition (own battle
+#             area + top card has [Puppet] or [TB]), gated on Kaguyamon still
+#             being on the battle area (:100-103).
+#   :111-148  a SEPARATE AddSkillClass that installs a real
+#             CardEffectFactory.RetaliationSelfEffect (:144) on every
+#             qualifying permanent at EffectTiming.OnDestroyedAnyone, with the
+#             same [Puppet]/[TB] top-card filter (:126-132) and the same
+#             "Kaguyamon is still out" gate (:138-142).
+#   Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/Retaliation.cs:30-73
+#             -- SetUpActivateClass(..., -1, false, ...): MANDATORY, so DCGO
+#             parks NO prompt for it and the scripted line stays in step.
+#   Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Retaliation.cs:10-40
+#             -- the gate wants a surviving OPPOSING winner of that battle,
+#             which is exactly Shishimamon here.
 #
-#   T1 (P0, memory 0): pass breeding, hard-cast Seasarmon (cost 5, 0 -> -5
-#       overshoot -- legal above the -10 floor; the turn ends on it).
-#   T2 (P1, memory 5): play Gasamon (5 -> 2; only a [Your Turn] passive, no
-#       prompt), pass out (memory 3 to P0).
-#   T3 (P0, memory 3): hard-cast Kaguyamon (cost 12, 3 -> -9, still above the
-#       floor) -- the aura switches on; the turn ends on the overshoot.
-#   T4 (P1, memory 9): THE CLAUSE -- Gasamon (played T2, summoning sickness
-#       shed) attacks security; the aura opens P0's blocker window and the
-#       select answers it with SEASARMON. Attacking costs no memory, so P1
-#       answers a trailing main prompt.
+# KNOWN ENGINE GAP -- deliberately NOT asserted (see the assert block):
+# our engine does not currently delete Shishimamon on this line. Measured
+# sim-side on this exact line: with `p1.field: []` / `p1.trash: [EX12-046]`
+# added, the run reports
+#   ASSERT FAILED: at 16: p1.field expected [] but our engine has
+#                  - card_id: EX12-046   dp: 7000   suspended: true
+#   ASSERT FAILED: at 16: p1.trash expected - EX12-046 but our engine has []
+# i.e. the aura hands out the <Retaliation> FLAG but not its deletion trigger,
+# while the <Blocker> half of the same sentence works (the block window opens
+# and the line lowers). general_rule.pdf 16-12 and the DCGO factory above both
+# make <Retaliation> mandatory, so the oracle pass is EXPECTED to come back
+# `diverged` on this clause, with EX12-046 in P1's trash on DCGO's side.
+# That divergence IS this file's product. Asserting our current behaviour would
+# bake the bug in; asserting the correct behaviour would fail the sim-only gate
+# before the oracle has ruled. The per-step oracle diff compares full state, so
+# the divergence surfaces without an assertion.
 #
-# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP), then the
-# seat's turn draws in order. P1's security deliberately holds NO EX12-074: its
-# "[Security] [Your Turn] [Once Per Turn] when one of your [Shambala] Digimon
-# attacks..." functions FROM the security stack and would bury the blocker
-# window under a TriggerOrder prompt when the [Shambala] Gasamon declares.
+# ORACLE RECONCILIATION (round 2) -- why P1 holds a spare Digimon.
+# The first oracle pass aborted with
+#   "prompt mismatch: step 16 expected actor 1 but DCGO asked actor 0"
+# on recording 20260824T175503Z_5566385f209f4164b19ded266c997f28.jsonl. The
+# clause itself resolved EXACTLY as scripted -- that recording carries
+#   step 19  selection  actor 0  SelectPermanentEffect (the aura's blocker
+#                                window; answered with Gasamon)
+#   step 20  effect_activation  EX12-020  "Retaliation"  executed=true
+# -- so the block AND the granted <Retaliation> both fired on DCGO's side.
+# What desynced was the step AFTER the battle. DCGO's log goes
+#   Active Attack, End Step / CleanUp Step -> Opponent (Player):End Phase
+#   -> You (Player):Start Turn(7th Turn)
+# i.e. DCGO ended P1's turn WITHOUT asking P1 anything, so the next prompt was
+# P0's turn-7 breeding_action -- actor 0, not the actor-1 main_phase the line
+# expected. The cause is TurnStateMachine.MainPhase()'s CanSelect() gate
+# (TurnStateMachine.cs:1252-1276): with no playable hand card, no permanent
+# that can attack or declare a skill, and nothing usable in hand/trash, DCGO
+# calls EndTurnProcess() silently. After <Retaliation> took Shishimamon, P1's
+# board was EMPTY and P1's whole hand was Options -- and an Option needs a
+# colour source (CardSource.MatchColorRequirement, CardSource.cs:255-275; the
+# <Use Req. ([TB]/[Shambala] trait)> escape also wants a permanent), so with
+# an empty board NONE of them was playable and CanSelect() went false.
+# The fix is in the LINE, not the labels: P1's hand slot 1 is now a Gasamon
+# (EX12-020) in place of one of the two Sanmyojin Arrivals. A Digimon needs no
+# colour source, so CanSelect() stays true, DCGO asks P1 the trailing
+# main_phase decision, and the post-battle state is dumped on both sides. P1
+# never plays it and it has no from-hand text, so the exam line is otherwise
+# identical -- same block, same battle, same retaliation. Note this does NOT
+# change P1's deck list: `ordered_deck` REMOVES each stacked id from the
+# `rest:` remainder before appending the stack, so the Gasamon is one of the
+# pool's own four copies moved to the top (and a 5th EX12-009 could not have
+# been stacked at all -- the pool holds four and the security stack takes them
+# all, so the lookup would fail with "stacked card is not in deck").
+#
+# THE LINE (memory in the acting seat's sign; a pass hands the opponent 3):
+#   T1 (P0, 0): all-pass. P0 cannot hard-cast the cost-12 Kaguyamon at 0
+#       (0 - 12 = -12 is below the -10 floor).
+#   T2 (P1, 3): all-pass.
+#   T3 (P0, 3): hard-cast Kaguyamon (3 -> -9) -- the aura switches on. Its
+#       [On Play] trash-play (clause #2) sees an EMPTY trash, so no prompt
+#       parks (the same opening EX12-065-effect4 uses, oracle-confirmed).
+#       The overshoot ends the turn.
+#   T4 (P1, 9): play Shishimamon (7, 9 -> 2). Its [On Play] "give 1 of your
+#       opponent's Digimon <Security A. -1> and -3000 DP until their turn ends"
+#       is MANDATORY (EX12-046#effect#0 is oracle-confirmed WITH a single-
+#       candidate SelectPermanentEffect prompt, so DCGO does ask here too) and
+#       P0's lone Kaguyamon is its only candidate. 12000 - 3000 = 9000 is
+#       nowhere near lethal and the modifier expires at the end of P0's T5, so
+#       Kaguyamon reads a clean 12000 at the T6 block. Pass out.
+#   T5 (P0, 3): play Gasamon (3 -> 0; memory 0 does NOT end a turn, and its
+#       only text is a [Your Turn] cost-reduction passive, so no prompt), pass.
+#       Gasamon MUST land AFTER Shishimamon: a 2000 DP body already on the
+#       field when Shishimamon arrives would eat the mandatory -3000 and be
+#       deleted outright (rule 17-1-3-1).
+#   T6 (P1, 3): THE CLAUSE. Shishimamon (played T4, summoning sickness shed)
+#       attacks security; the aura opens P0's blocker window over TWO granted
+#       blockers (Kaguyamon and Gasamon -- itself evidence the grant is
+#       set-wide); the select answers with GASAMON. Attacking costs no memory,
+#       so P1 answers a trailing main prompt.
+#
+# Stack layout: hand [0..4], security [5..9] REVERSED (stack[9] = TOP), then
+# the seat's turn draws in order (P0 draws T3, T5; P1 draws T2, T4, T6 -- the
+# first player skips their first draw). Every card the line names is stacked,
+# which is what keeps sim-only and oracle mode dealing the same opening.
+# Security holds Digimon with EMPTY [Security] text only, and in particular NO
+# EX12-074: its "[Security] [Your Turn] [Once Per Turn] when one of your
+# [Shambala] trait Digimon attacks ..." functions FROM the security stack and
+# would bury the blocker window under a TriggerOrder prompt when the [Shambala]
+# Shishimamon declares.
 card: EX12-065
 clause: EX12-065#effect#3
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4): one Seasarmon, one Kaguyamon -- both play intents pinned
-      # to hand.0 and unambiguous by identity as well.
-      - EX12-011
+      # hand (0-4): exactly one Kaguyamon (T3) and one Gasamon (T5); the rest
+      # are Options that never act from hand.
       - EX12-065
+      - EX12-020
       - EX12-070
       - EX12-074
       - EX12-075
@@ -58,15 +145,21 @@ decks:
       - EX12-009
       - EX12-009
       - EX12-009
-      - EX12-046
-      # draws: T3 turn (10)
+      - EX12-011
+      # draws: T3 turn (10), T5 turn (11)
       - EX12-070
+      - EX12-074
     rest: toho-braves
   p1:
     stack:
-      # hand (0-4): exactly one Gasamon.
+      # hand (0-4): exactly one Shishimamon, plus ONE never-played Gasamon
+      # (slot 1) that exists only to keep DCGO's CanSelect() true after the
+      # battle -- see "ORACLE RECONCILIATION" in the header. It is a Digimon,
+      # so it needs no colour source to be playable; every Option P1 holds
+      # does, and P1's board is empty once <Retaliation> takes Shishimamon.
+      # It is never played and has no from-hand text, so it is inert.
+      - EX12-046
       - EX12-020
-      - EX12-070
       - EX12-074
       - EX12-075
       - EX12-070
@@ -75,62 +168,107 @@ decks:
       - EX12-009
       - EX12-009
       - EX12-009
-      - EX12-046
-      # draws: T2 turn (10), T4 turn (11)
+      - EX12-011
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
       - EX12-074
       - EX12-075
+      - EX12-074
     rest: toho-braves
 steps:
-  # T1 (P0, memory 0): the future blocker lands into an empty enemy board.
+  # T1 (P0, memory 0): all-pass.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { play: { card: EX12-011, from: hand.0 } }
+    do: { pass: {} }
     expect: { prompt: main_phase }
-  # T2 (P1, memory 5): the attacker arrives.
+  # T2 (P1, memory 3): all-pass.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
-    do: { play: { card: EX12-020, from: hand.0 } }
-    expect: { prompt: main_phase }
-  - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (P0, memory 3): the aura source lands (empty trash keeps its On Play
-  # silent); the cost-12 overshoot ends the turn.
+  # T3 (P0, memory 3): the aura source lands; empty trash keeps its [On Play]
+  # silent; the cost-12 overshoot ends the turn.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { play: { card: EX12-065, from: hand.0 } }
     expect: { prompt: main_phase }
-  # T4 (P1, memory 9): the clause under exam.
+  # T4 (P1, memory 9): the future attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Shishimamon's mandatory give: P0's lone Kaguyamon (12000 -> 9000 until
+  # P0's turn ends -- expired by T6).
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the blocker/retaliator arrives AFTER Shishimamon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the clause under exam.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # P0's blocker window: block with SEASARMON -- a [TB] Digimon that prints no
-  # <Blocker> and is not the aura's source.
+  # P0's blocker window -- opened only by the aura. Two granted blockers are on
+  # offer (field.0 Kaguyamon, field.1 Gasamon); block with GASAMON, the
+  # non-source that loses the battle and should retaliate.
   - actor: 0
-    do: { select: { targets: [own.field.0] } }
+    do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  # Attacking costs no memory; P1 keeps the turn after the battle.
+  # Attacking costs no memory, so P1 still holds 3 and the turn is still
+  # P1's after the battle. This step is what carries the POST-battle state
+  # into the oracle diff (the differ compares the state BEFORE each decision,
+  # so without a decision here nothing after the block is ever compared and
+  # the <Retaliation> half would go unmeasured while the run reported clean).
+  # DCGO only reaches this prompt because P1's hand still holds a playable
+  # Digimon -- see "ORACLE RECONCILIATION" in the header.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  # Minimal, and only over stack-pinned facts. Asserted at 10 -- right after
-  # the block resolves and BEFORE the trailing pass hands the turn back to P0,
-  # whose unsuspend phase would clear the blocker's suspended flag.
-  - at: 10
+  # Asserted at 16 -- the state AFTER the block resolves and BEFORE the
+  # trailing pass hands the turn back to P0 (whose unsuspend would clear the
+  # attacker's suspended flag).
+  #
+  # Everything here is route-independent and holds no matter how the granted
+  # <Retaliation> resolves:
+  #   p0.security 5 + p1.security 5 -- the attack was INTERCEPTED; no security
+  #     card was checked, which is only possible if a block happened.
+  #   p0.trash [EX12-020]           -- the non-source blocker was in the battle
+  #     at all and lost it: the <Blocker> grant reached it.
+  #   p0.field                      -- the aura source itself survived at a
+  #     clean 12000 (the T4 -3000 has expired) and is the only permanent left.
+  #   p0.memory -3                  -- P1 attacked for free and still holds the
+  #     pass-granted 3; nothing on this line moved memory unexpectedly.
+  #
+  # p1.field / p1.trash are DELIBERATELY OMITTED: that pair is the
+  # <Retaliation> observable and the subject of the documented engine gap
+  # above. The oracle diff compares them anyway.
+  - at: 16
     that:
       p0.security: 5
-      p1.field: []
-      p1.trash: [EX12-020]
+      p1.security: 5
+      p0.memory: -3
+      p0.trash: [EX12-020]
       p0.field:
-        - { card_id: EX12-011, dp: 5000, suspended: true, sources: [] }
         - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }

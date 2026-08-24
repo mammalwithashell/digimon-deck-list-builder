@@ -1,59 +1,92 @@
 # Exam scenario: EX12-046 (Shishimamon), clause inherited#0 -- "[End of
 # Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP
-# or less from your hand without paying the cost."
+# or less from your hand without paying the cost." (card face, bottom panel;
+# EX12_046.cs:175-232).
 #
-# The carrier is Amaterasumon (EX12-047) digivolved over Shishimamon in the
-# BREEDING area, so the inherited text is live on the field while every
-# [When Digivolving] along the highway stays suppressed. The blue highway is
-# the same single-route line as the EX12-046-effect3 scenario (Onibimon ->
-# Gasamon alt-Shambala 0 -> Shellmon 2 -> Shishimamon alt-Shambala 3); the
-# ONE new prompt on the way up is Amaterasumon over the yellow/red
-# Shishimamon: its printed yellow-Lv5 circle (cost 4) AND its
-# "Lv.5 w/[Shambala]: Cost 3" alt path both match -- two distinct costs park
-# the engine's cost-choice prompt, answered with the VALUE 3.
+# WHAT THE CLAUSE NEEDS, AND THE SHORTEST LEGAL LINE THAT GIVES IT
+# ----------------------------------------------------------------
+# An inherited effect is live only while its card is NOT the top card
+# (DCGO Permanent.cs:1540 -- `cardEffect.IsInheritedEffect && !isTopCard`;
+# the mirror at :1552 is what silences a buried card's MAIN effects). So the
+# line has to bury EX12-046 under something and then attack with it:
 #
-# T11 attacks security: Amaterasumon's own <Security A. +1> checks 2 cards
-# (both stacked as plain low-DP Digimon -> silent battles the 12000 DP
-# attacker survives), and at END OF ATTACK the clause under exam parks its
-# optional hand pick. The answer plays the second Gasamon (TB, 2000 DP <=
-# 5000) from hand for FREE -- Gasamon has no [On Play], so nothing else fires.
+#   T3 (p0)  play Shishimamon from hand -- cost 7, memory 3 -> -4, turn ends.
+#            Its [On Play] give is silent: p1 has no Digimon to target
+#            (DCGO gates the whole coroutine on HasMatchConditionPermanent,
+#            EX12_046.cs:46).
+#   T5 (p0)  digivolve field.0 into Kaguyamon (EX12-065) -- Shishimamon is now
+#            a digivolution card, so its [Your Turn] security-removal clause
+#            (effect#2) is dead and its inherited text is live.
+#   T5 (p0)  attack security -- ONE check (Kaguyamon prints no <Security A.>
+#            modifier), then at END OF ATTACK the clause under exam parks its
+#            optional hand pick. The answer plays Gasamon (EX12-020: [TB],
+#            2000 DP <= 5000) from hand for FREE.
 #
-# Silence ledger: Gasamon/Shellmon inherited draws are gated on hand <= 7 (p0's
-# hand is 9+ by T11); Onibimon's <Execute> grant DOES land in DCGO --
-# Amaterasumon's card face prints [TB] (cards.json is stale, review
-# 2026-08-22) -- but the dialog's CanAttack gate stays closed at every turn
-# end (moved-this-turn at T9, suspended after the T11 attack), so no window
-# opens; Piercing never fires (no Digimon battle).
+# WHY KAGUYAMON, AND WHY THIS IS SHORTER THAN THE PREVIOUS LINE
+# -------------------------------------------------------------
+# This file previously drove a 31-step breeding highway topped by
+# Amaterasumon (EX12-047). That line reached the position but carried two
+# prompt surfaces this one does not, each an oracle-desync risk rather than a
+# finding about the clause:
+#   - Amaterasumon over Shishimamon matches BOTH its printed yellow-Lv.5
+#     circle (cost 4) AND its "Lv.5 w/[Shambala]: Cost 3" alt path, so our
+#     engine parks a cost-choice prompt whose kind (EffectChoice) the harness
+#     itself reports as having "no unambiguous DCGO prompt mapping".
+#   - hatching the Onibimon (EX12-004) egg grants <Execute>, adding an
+#     end-of-turn OptionalSkill gate to every intervening turn.
+# Kaguyamon removes both: its printed circles are purple-Lv.5 and green-Lv.5,
+# which MISS the yellow/red Shishimamon, so the only matching route is the alt
+# "Lv.5 w/[Puppet]/[Shambala]: Cost 3" -- one distinct cost, no cost-choice
+# prompt -- and no egg is hatched at all, so no <Execute> window ever opens.
+#
+# SILENCE LEDGER (every other effect in the line, and why it stays quiet)
+# ----------------------------------------------------------------------
+# - Kaguyamon's own [On Play][When Digivolving][When Attacking][Once Per Turn]
+#   "play 1 play cost 5 or lower [Puppet]/[Shambala] card from your trash" is
+#   gated on p0's TRASH, which is EMPTY for the whole line (p0 trashes nothing:
+#   no security of p0's is ever checked, no cost is ever discarded). Both the
+#   digivolve window and the attack window therefore offer nothing.
+# - Kaguyamon's <Fortitude> and its [All Turns] Blocker/Retaliation grant are
+#   auras, not prompts; its [On Deletion] never fires (it is never deleted).
+# - p1 all-passes and never has a Digimon, so nothing of p1's triggers.
+# - p1's security stack is plain Digimon with no [Security] text and no
+#   [On Deletion]; the top card (EX12-062, 5000 DP) loses a silent security
+#   battle to the 12000 DP attacker.
+# - Every card drawn into p0's hand after the opening is an Option, so
+#   EX12-020 stays the ONLY candidate the End-of-Attack pick can offer on
+#   either side -- the pick is unambiguous by construction, not by ordinal.
+#
+# PRIOR VERDICT NOTE: this clause was recorded `unreachable` on 2026-08-22
+# with cause "optional-trigger gate asymmetry ... DCGO parks an OptionalSkill/
+# MultipleSkills gate where our engine surfaces no prompt". Re-derived here:
+# the clause's OWN DCGO ActivateClass is built with isOptional = FALSE and
+# SetIsSkippable(true) (EX12_046.cs:180-182), which is the "remove the extra
+# click" shape -- no OptionalSkill row, just a cancellable SelectHandEffect
+# (PlayEffects.cs:36-57, Root.Hand). So the gate the old line desynced on was
+# the granted-<Execute> end-of-turn window, which this line does not contain.
 card: EX12-046
 clause: EX12-046#inherited#0
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4): exactly one copy of each digivolver
-      - EX12-020
-      - EX12-026
+      # hand (0-4): the carrier line + the free-play target + inert Options
       - EX12-046
-      - EX12-047
+      - EX12-065
+      - EX12-020
       - EX12-070
-      # security (5-9) -- never checked
+      - EX12-074
+      # security (5-9) -- never checked; p1 never attacks
       - EX12-009
       - EX12-011
       - EX12-062
       - EX12-063
       - EX12-036
-      # draws: T1 dv (10), T3 turn (11) = the SECOND Gasamon for the free
-      # play (safely after the T1 `using:` intent), T3 dv (12), T5 turn (13),
-      # T5 dv (14), T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18)
-      - EX12-074
-      - EX12-020
+      # draws: T3 turn (10), T5 turn (11), T5 digivolve (12). All Options, so
+      # none of them widens the End-of-Attack candidate list.
       - EX12-075
       - EX12-070
       - EX12-074
-      - EX12-075
-      - EX12-065
-      - EX12-036
-      - EX12-070
     rest: toho-braves
   p1:
     stack:
@@ -63,22 +96,25 @@ decks:
       - EX12-075
       - EX12-065
       - EX12-031
-      # security (5-9): Digimon only, no [Security] text, DP < 12000 -- the
-      # T11 attack checks the top TWO as silent security battles
+      # security (5-9): Digimon only, no [Security] text, no [On Deletion],
+      # DP < 12000. Reversed on setup, so stack[9] = EX12-062 is the TOP card
+      # the single check flips.
       - EX12-009
       - EX12-020
       - EX12-026
       - EX12-011
       - EX12-062
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
+      - EX12-074
+      - EX12-075
+      - EX12-070
     rest: toho-braves
 steps:
-  # T1 (p0): hatch, Gasamon over Onibimon (alt Shambala, cost 0).
+  # T1 (p0): all-pass. Nothing is hatched -- the breeding area stays empty for
+  # the whole line, which is what keeps the Onibimon <Execute> grant out of it.
   - actor: 0
-    do: { hatch: {} }
+    do: { pass: {} }
     expect: { prompt: breeding_action }
-  - actor: 0
-    do: { digivolve: { from: breeding, using: EX12-020 } }
-    expect: { prompt: main_phase }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -89,15 +125,13 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (p0): Shellmon over Gasamon (all matching routes cost 2; 3 -> 1).
+  # T3 (p0): play Shishimamon (cost 7, memory 3 -> -4; the turn ends on the
+  # negative memory). [On Play] is silent -- p1 has no Digimon.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { digivolve: { from: breeding, using: EX12-026 } }
-    expect: { prompt: main_phase }
-  - actor: 0
-    do: { pass: {} }
+    do: { play: { card: EX12-046, from: hand } }
     expect: { prompt: main_phase }
   # T4 (p1): all-pass.
   - actor: 1
@@ -106,79 +140,27 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T5 (p0): Shishimamon over the blue Lv.4 Shellmon (only the alt
-  # "Lv.4 w/[Shambala]: Cost 3" route matches; 3 -> 0).
+  # T5 (p0): bury Shishimamon. Kaguyamon's printed purple/green Lv.5 circles
+  # miss the yellow/red Shishimamon, so the ONLY matching route is the alt
+  # "Lv.5 w/[Puppet]/[Shambala]: Cost 3" -- a single distinct cost, so no
+  # cost-choice prompt parks. Memory 3 -> 0 (0 is still p0's turn).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { digivolve: { from: breeding, using: EX12-046 } }
+    do: { digivolve: { from: field.0, using: EX12-065 } }
     expect: { prompt: main_phase }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T6 (p1): all-pass.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T7 (p0): Amaterasumon over Shishimamon -- printed yellow circle (cost 4)
-  # and the Shambala alt path (cost 3) both match, so the cost-choice prompt
-  # parks; the VALUE 3 picks the alt route (3 -> 0).
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { digivolve: { from: breeding, using: EX12-047 } }
-    expect: { prompt: main_phase }
-  - actor: 0
-    do: { select: { value: 3 } }
-    expect: { prompt: SelectCountEffect }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T8 (p1): all-pass.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T9 (p0): move the stack to the battle area.
-  - actor: 0
-    do: { move: { from: breeding } }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # End of the move turn: decline the granted <Execute> gate
-  # (task_69f10a66 Family 1 -- Amaterasumon EX12-047's face prints [TB]; the Onibimon egg grants <Execute>;
-  # moved stacks can attack the move turn; our EndOfTurnAction PASS maps
-  # to DCGO OptionalSkill "no").
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: OptionalSkill }
-  # T10 (p1): all-pass.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T11 (p0): attack security -- 2 checks (<Security A. +1>), then the clause
-  # under exam parks its optional End of Attack hand pick.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
+  # The attack. Shishimamon has been on the field since T3, so the stack may
+  # attack the turn it digivolves.
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # The answer: play the second Gasamon (TB, 2000 DP) from hand for free.
+  # THE CLAUSE: at end of attack the buried Shishimamon offers its optional
+  # free play. Gasamon ([TB], 2000 DP) is the only legal candidate.
   - actor: 0
     do: { select: { cards: [EX12-020] } }
     expect: { prompt: SelectHandEffect }
+  # Memory is still 0, so p0 holds the turn: pass main.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -187,13 +169,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # Two security cards checked (5 -> 3), the free play landed (Gasamon fresh
-  # on the field beside the suspended carrier), and memory still 3 right
-  # after the pick -- the play cost nothing.
-  - at: 30
+  # One security card checked (5 -> 4), and the free play landed: Gasamon
+  # fresh and unsuspended beside the suspended carrier, with EX12-046 sitting
+  # in the carrier's digivolution cards -- which is what makes the inherited
+  # text live in the first place.
+  - at: 13
     that:
-      p1.security: 3
+      p1.security: 4
       p0.field:
         - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
-        - { card_id: EX12-047, dp: 12000, suspended: true,
-            sources: [EX12-004, EX12-020, EX12-026, EX12-046] }
+        - { card_id: EX12-065, dp: 12000, suspended: true, sources: [EX12-046] }

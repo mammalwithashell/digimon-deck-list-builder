@@ -14,23 +14,80 @@
 # engine auto-skips the underfunded cost without parking -- the decline row
 # stays in the line for the DCGO wire in case DCGO does park it.
 #
-# SELECT-SUPPORT LIMIT (honest, not routed around): the return-2 prompt is
-# a count-capped MULTI-PICK over the opponent's trash; identity picks
-# against that prompt kind are outside the current `select:` vocabulary
-# (only the decline is expressible -- and with 2+ cards in trash our engine
-# parks it as NON-declinable, which no authorable payload can answer). The
-# line therefore measures the delete, the tie choice, and the declined
-# cost, and leaves the +6000/-5000 DP payloads unmeasured here. If DCGO
-# resolves the window differently, the differ owns that finding.
+# NO GATE ASYMMETRY HERE (re-derived 2026-08-24). An earlier verdict blamed
+# an "optional-trigger gate asymmetry" for this clause. Read against the
+# source that decides it, there is none on this line: the shared [On Play]/
+# [When Digivolving] effect is registered `optional: false`
+# (EX12_047.cs:56, so no OptionalSkill wraps it), and the whole return-2
+# SelectCardEffect sits behind `if (card.Owner.Enemy.TrashCards.Count >= 2)`
+# (EX12_047.cs:98). With p1's trash holding exactly ONE card at resolution
+# time (the Hanimon this clause just deleted -- both Hanimon [On Play]
+# trash-costs are declined precisely to keep it there), DCGO never opens the
+# window and our engine's `select_count_capped_multi` (min 2) never parks.
+# Both engines skip, so the line carries no wire row for it, and no
+# `select: {decline:}` bridge row is authored (the DCGO driver's cursor is
+# strict -- an unconsumed row would abort at the next real question).
+#
+# SELECT-SUPPORT LIMIT (honest, not routed around; re-verified 2026-08-24 by
+# authoring the funded variant and reading the failure): if the window IS
+# funded, our engine parks
+#   CountCappedMultiSelect { min: 2, max: 2, picked: 0, distinct: false }
+#   prompt 'Return 2 cards from your opponent's trash to the bottom of their
+#   deck' (zone owner 0, valid [1150, 1151, 1152])
+# and NO payload in the current `select:` vocabulary can answer it:
+#   * `cards:` -- `selection_resolve::resolve_next`'s card-identity match has
+#     arms for Hand / UnionZone / Trash / Reveal / RevealBucket /
+#     OrderedPermutation / Security and `_ => None` for everything else, so a
+#     CountCappedMultiSelect pick fails with "card pick 'X' not found". Even
+#     with an arm it would look in the WRONG trash: `install_multipick_step`
+#     parks `zone_owner: None`, which defaults to the selecting player (p0),
+#     while the candidates are p1's trash.
+#   * `value:` -- the count path needs `payload.candidates`, which the exam
+#     adapter's SelectionRow never populates ("count payload N has no
+#     candidate set").
+#   * `decline:` -- `is_optional = picked(0) >= effective_min(2)` is false,
+#     so a cancel is refused as "recorded cancel on a non-optional prompt".
+# So this line deliberately measures the FIRST sentence only: that the delete
+# is mandatory, that `lowest_dp` leaves a genuine TIE the prompt must expose
+# (two 2000 DP Hanimon), and that neither the +6000 nor the -5000 lands when
+# the cost is unpayable. The second sentence's DP payloads stay UNMEASURED.
+# Unblocking needs a CountCappedMultiSelect arm in `resolve_next` plus a
+# zone_owner on the parked prompt -- an engine/harness change, not an
+# authoring one.
+#
+# TURN-1 DEAD MAIN PHASE (reconciled 2026-08-24 against the failed oracle
+# recording 20260824T175304Z). The first oracle run aborted at line step 1
+# with "expected actor 0 but DCGO asked actor 1": DCGO logged p0's breeding
+# pass and then jumped straight to p1's breeding, never asking p0's turn-1
+# main phase at all. That is not a turn-order bug -- it is
+# TurnStateMachine.MainPhase's `if (!CanSelect()) EndTurnProcess();` guard
+# (~line 1275), which ends the turn WITHOUT consulting InputDriver and
+# without writing a main_phase row. p0's original turn-1 hand could select
+# nothing: Amaterasumon costs 12 while `Player.MaxMemoryCost` is |10 - 0| =
+# 10 at turn 1 (CardSource.CanPlayCardTargetFrame refuses `MaxMemoryCost <
+# cost`), and every other card was an Option carrying
+# `<Use Req. ([TB]/[Shambala] trait)>` with no Digimon in play to satisfy
+# it. Swapping one filler Option for Gasamon (EX12-020, cost 3, a plain
+# [TB]/[Shambala] level 3) gives `CanSelect()` something to say yes to, so
+# DCGO opens the main phase and the scripted pass has a question to answer.
+# Gasamon is never played and never leaves p0's hand -- it is turn-order
+# ballast, not part of the clause.
+#
+# The same guard is satisfied on every later pass on this line without help:
+# p0 is at memory 3 on T3/T5 (MaxMemoryCost 13 >= Amaterasumon's 12), and p1
+# has a fielded Hanimon from T2 onward, which makes its own [TB]/[Shambala]
+# Options playable.
 card: EX12-047
 clause: EX12-047#effect#3
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4): Amaterasumon + inert Option fillers
+      # hand (0-4): Amaterasumon, ONE cheap [TB] Digimon (Gasamon -- never
+      # played, present only so DCGO's `CanSelect()` is true on turn 1; see
+      # the TURN-1 note above), and inert Option fillers.
       - EX12-047
-      - EX12-070
+      - EX12-020
       - EX12-074
       - EX12-075
       - EX12-070

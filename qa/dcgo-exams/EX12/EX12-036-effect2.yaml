@@ -1,0 +1,237 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #2 -- "<Decode (Lv.5 or lower
+# w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)> (When this Digimon would
+# leave the battle area other than in battle, you may play 1 specified Digimon
+# card from its digivolution cards without paying the cost.)"
+#
+# Printed text read off the card FACE (Textures/Card/EX12-036.webp): the
+# Decode parameter line sits between the Barrier/Evade row and the On Play row,
+# and reads "<Decode (Lv.5 or lower w/[Aqua]/[Sea Animal] in any trait or
+# w/[TB] trait)>". DCGO behaviour read from
+# DCGO/Assets/Scripts/CardEffect/EX12/Blue/EX12_036.cs:48-64 (registers at
+# EffectTiming.WhenRemoveField via CardEffectFactory.DecodeSelfEffect with
+# SourceCondition = IsDigimon && Level <= 5 && (Aqua | Sea Animal | TB)) ->
+# CardEffectFactory/KeyWordEffects/Decode.cs:51-56 (CanUseCondition requires
+# CanTriggerWhenRemoveField && !IsByBattle) -> CardEffectCommons/KeyWordEffects/
+# Decode.cs:27-73 (DecodeProcess: one SelectCardEffect over the carrier's
+# DigivolutionCards with canNoSelect, then PlayPermanentCards payCost:false,
+# activateETB:true).
+#
+# THE LINE -- a return-to-hand, so the leave is unambiguously "other than in
+# battle" and NEITHER <Barrier> (battle-only) NOR <Evade> (a would-be-deleted
+# replacement) competes for the window. That isolation is the whole reason
+# this route was chosen over a self-delete:
+#   T1  p0 hard-plays Karakurumon (EX12-063, cost 7, memory 0 -> -7; the
+#       overshoot ends the turn). Its [On Play] suspend fizzles on p1's empty
+#       board, so no prompt opens.
+#   T2  p1 all-passes (memory 7 -> p0 gets 3).
+#   T3  p0 digivolves Ryugumon over it. Karakurumon is purple/green, so the
+#       printed blue/yellow Lv.5 circles miss and ONLY the alt
+#       "[Digivolve] Lv.5 w/[Aquatic]/[Shambala]: Cost 3" route matches --
+#       one distinct cost, so no cost-choice prompt (memory 3 -> 0). p0 then
+#       passes (p1 gets 3).
+#   T4  p1 hard-plays MarineBullmon (EX12-031, cost 7, memory 3 -> -4), pays
+#       its [On Play] cost by tucking Gasamon (EX12-020) as its bottom source,
+#       and returns p0's Ryugumon to the hand -- legal, Ryugumon holds exactly
+#       1 digivolution card.
+#   THE CLAUSE: that return opens Ryugumon's <Decode> window. Accepted, and
+#   the single qualifying digivolution card (Karakurumon: Lv.5, [TB]) is
+#   played free onto p0's field while Ryugumon continues to p0's hand.
+#
+# WHY EXACTLY ONE MATERIAL CANDIDATE, on purpose: Ryugumon sits directly on a
+# bare hard-played Lv.5, so it owns exactly one digivolution card. That is
+# load-bearing twice over -- it keeps the bounce legal (MarineBullmon can only
+# return a Digimon with 1 or fewer digivolution cards) AND it is the only
+# reason the material pick can be answered at all sim-side (see the blocker
+# below).
+#
+# NO HAND-FILTER CANDIDATES ON p0, on purpose: every p0 hand card at the T3
+# digivolve is either an Option (EX12-070/074/075 -- no level) or level 7
+# (EX12-076), so clause #3's "[On Play] [When Digivolving] [When Attacking]
+# ... place 1 level 6 or lower [Aqua]/[Sea Animal]/[TB] card from your hand"
+# finds nothing and NEITHER engine opens its pick (DCGO gates the whole
+# coroutine on HasMatchConditionOwnersHand, EX12_036.cs:105). Same reason
+# MarineBullmon's own [On Play] is safe to script: p1's hand holds exactly one
+# qualifying Digimon, Gasamon.
+#
+# THE STACKED TRIGGER AT STEP 13 IS REAL, NOT NOISE: Decode plays Karakurumon
+# while Ryugumon is still in the battle area (the leave has not completed --
+# that is what a "would leave" window means), so p0 gets TWO simultaneous
+# triggers -- Karakurumon's [On Play] suspend/lock, and Ryugumon's own clause
+# #4 [All Turns] "when any of your Digimon are played or digivolve". Our
+# engine offers them as [EX12-063, EX12-036]; the line answers by IDENTITY
+# (EX12-063 first) so DCGO resolves the same symbolic answer against its own
+# MultipleSkills list and a disagreement about ordering surfaces as a
+# divergence instead of being papered over. Both then target p1's lone
+# MarineBullmon.
+#
+# ORACLE BLOCKER -- THIS SCENARIO CANNOT BE RUN AGAINST DCGO AS COMMITTED.
+# Re-derived 2026-08-24, and it is a WIRE-VOCABULARY gap, not a line problem:
+#   * Our engine parks the material pick as SelectionKind::Material, whose
+#     valid_action_ids are SOURCE-INDEX encodings
+#     (EffectContext::select_material, effect_context/selections.rs:431-490).
+#   * runners/selection_resolve.rs:326-373 resolves `cards:` picks by identity
+#     for Hand / UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation
+#     / Security ONLY; Material falls through the `_ => None` arm, so
+#     `select: { cards: [EX12-063] }` fails lowering with
+#     "card pick 'EX12-063' not found in Material prompt".
+#   * The only payload our side accepts is therefore `yes:`, which resolves
+#     ONLY because valid.len() == 1 here (selection_resolve.rs:396-399) and
+#     rides the wire as select_has_bool/select_bool
+#     (dcgo-harness/src/main.rs:1495-1496).
+#   * DCGO's chokepoint for this prompt is
+#     SelectCardEffect.SetTargetCardAndIndicies, which accepts select_card_ids
+#     or select_cancel and calls InputDriver.Abort on anything else
+#     (SelectCardEffect.cs:941-944: "SelectCardEffect prompt needs
+#     select_card_ids or select_cancel"). A bool answer aborts the job at step
+#     12, BEFORE the clause body resolves.
+#   Same blocker recorded on EX12-031#effect#0, the pool's other <Decode>.
+#   The fix is one of: teach `resolve_next` to match SelectionKind::Material
+#   by card identity against the carrier's card_sources (mirroring the
+#   Hand/Trash arms), or give the Material arm the TriggerOrder treatment in
+#   `build_selection_row` (resolve the identity locally, ship card_ids on the
+#   wire). Until then this file is a sim-only regression guard for the line,
+#   NOT a confirmable clause -- do NOT read a green --sim-only run as parity,
+#   and do NOT "fix" it by declining the material pick: a declined Decode
+#   never runs the clause body and would launder a vacuous line into a pass.
+#
+# Stack layout (p0): hand [0..4], security [5..9] (untouched), [10] the T3
+# turn-draw, [11] the T3 digivolve-draw, [12] the T5 turn-draw taken just
+# before the trailing breeding prompt.
+# Stack layout (p1): hand [0..4], security [5..9] (untouched), [10] the T2
+# turn-draw, [11] the T4 turn-draw.
+card: EX12-036
+clause: EX12-036#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Karakurumon/Ryugumon spine plus three Options, which
+      # have no level and so can never match clause #3's hand filter.
+      - EX12-063
+      - EX12-036
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9): never checked -- no attack happens on this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10) and T3 digivolve (11) are both filter-proof
+      # (EX12-076 is level 7, EX12-074 is an Option); (12) is the T5 draw.
+      - EX12-076
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): MarineBullmon (the bouncer) and exactly one Gasamon (its
+      # [On Play] cost); the three Options can never match that filter.
+      - EX12-031
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9): never checked.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10) and T4 turn (11), both filter-proof Options.
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hard-play Karakurumon (0 -> -7). Its [On Play] fizzles
+  # on p1's empty board, so nothing parks; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 7): all-pass -> p0 gets memory 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Ryugumon over Karakurumon on the alt route only
+  # (cost 3, 3 -> 0). Clause #3 finds no hand candidate and clause #4 finds no
+  # opposing Digimon, so the digivolve is prompt-free. Then pass -> p1 gets 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): hard-play MarineBullmon (3 -> -4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # MarineBullmon's [On Play] cost: tuck Gasamon as its bottom source.
+  - actor: 1
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # ...then return p0's 1-source Ryugumon to the hand. THIS is the non-battle
+  # leave the clause keys off.
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE, half 1: accept Ryugumon's <Decode> window.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE, half 2: play the qualifying digivolution card. Karakurumon is
+  # the lone candidate, so the affirmative resolves the one accept id. See the
+  # ORACLE BLOCKER note -- this row cannot ride the DCGO wire as a bool.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: SelectCardEffect }
+  # Karakurumon's arrival stacks two of p0's triggers (see header); take its
+  # own [On Play] first, by identity.
+  - actor: 0
+    do: { select: { cards: [EX12-063] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-063, EX12-036] }
+  # Karakurumon [On Play]: suspend p1's MarineBullmon, then lock it from
+  # unsuspending.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Ryugumon clause #4's lock, on the same lone target.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # p1's overshoot ended its turn; p0's T5 breeding decision closes the line.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Decode's witness: Karakurumon is back on p0's FIELD -- played for free out
+  # of Ryugumon's digivolution cards, so it is NOT in the trash the bounce
+  # would otherwise have sent it to (both trashes are empty) -- while Ryugumon
+  # itself continued to p0's hand. p1's MarineBullmon stands suspended with
+  # its tucked Gasamon.
+  - at: 17
+    that:
+      p0.field:
+        - { card_id: EX12-063, dp: 7000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: EX12-031, dp: 7000, suspended: true, sources: [EX12-020] }
+      p0.hand: [EX12-036, EX12-070, EX12-074, EX12-074, EX12-075, EX12-075, EX12-076]
+      p0.trash: []
+      p1.trash: []
+      p0.security: 5
+      p1.security: 5

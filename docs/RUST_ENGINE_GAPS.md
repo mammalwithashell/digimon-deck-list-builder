@@ -2209,3 +2209,31 @@ EX12-042's only checked `has_keyword`. Both `EX12-032` and `EX12-042` were
 authored and registered but appear in neither `validated_cards_dsl.json` nor
 `validated_cards.json`. A keyword that is granted but inert passes every
 "is it implemented?" check that existed.
+
+## Mass-aura keyword grants install the FLAG but not the keyword's TRIGGER  [G-ENGINE-AURA-GRANT-NO-TRIGGER]
+
+**Found 2026-08-24 by the DCGO exam** (`qa/dcgo-exams/EX12/EX12-065-effect3.yaml`), and it is the unfixed half of `task_8f063aa6` — that chip fixed SELF-auras; filtered-target auras still have the hole.
+
+EX12-065 Kaguyamon prints one sentence granting two keywords: "[All Turns] All of your [Puppet] or [TB] trait Digimon gain `<Blocker>` and `<Retaliation>`." The oracle diff:
+
+```
+p1.trash: ours=[]                            dcgo=[EX12-046]
+p1.field: ours=[EX12-046(7000, suspended)]   dcgo=[]
+```
+
+`<Blocker>` works — it is a persistent flag the mask reads through `has_keyword`. `<Retaliation>` does nothing: §16-12 makes it a MANDATORY trigger ("when this Digimon is deleted in battle, delete the Digimon it battled"), DCGO fires it and deletes the battle winner, we leave the winner alive.
+
+**Cause.** `dsl_cards/lower_aura.rs` only sets the `granted_keyword` marker for a SELF-aura, with this comment:
+
+> "Filtered-target auras (grants landing on OTHER permanents) must NOT set this — the auto-effects would wrongly key on the grantor."
+
+That is correct as far as it goes — the grantor must not host the recipient's trigger — but nothing installs the trigger on the RECIPIENT either, so a mass-granted trigger keyword is inert. `Game::has_keyword` DOES report the grant (it checks `modifiers.has_keyword` first), so the engine knows the recipient has the keyword; there is simply no `Effect` to fire.
+
+**Where the fix does NOT belong.** `Game::build_effects_for_card` is the obvious hook and the wrong one: it is keyed on `card_id` and memoized, and it is the per-step hot path (see `project-engine-perf-effects-for-card` — ~94% of step time). Making it depend on per-permanent modifier state would destroy that.
+
+**Suggested resolution.** At TRIGGER DISPATCH, when firing a timing for a permanent, also consider keyword-derived effects for §16 trigger/replacement keywords the permanent has via `has_keyword` but does not print. Must handle: no double-fire when the keyword is also printed or self-granted; `source_permanent` keyed to the RECIPIENT; and the aura's `active_when` still gating.
+
+**Scope.** Every trigger/replacement keyword handed out by a filtered-target aura — Retaliation, Fortitude, Partition, Decoy, Evade, Barrier, Armor Purge, Scapegoat, Fragment, Execute. Only the persistent ones (Blocker, Piercing, Security A. +/-, Rush, Jamming, Progress ...) currently work when mass-granted.
+
+**Consumer status:** `EX12-065#effect#3` is recorded `diverged`. The scenario deliberately does NOT assert either behaviour — asserting ours would bake the bug in, asserting DCGO's would fail the sim-only gate before the oracle ruled — so the per-step oracle diff is what surfaces it.
+

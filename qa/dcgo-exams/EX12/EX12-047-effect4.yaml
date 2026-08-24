@@ -27,17 +27,62 @@
 # both sides: EX12-036 in hand is level 6.) The two
 # `cards:` answers are the clause's own choices, not tie-breaks. The
 # carrier's <Ascension> rides the same mandatory TriggerOrder bundle
-# (slot 5 = the clause, first; slot 6 = the Ascension yes/no gate,
-# accepted -- its EffectChoice offers no decline-shaped PASS).
-# REVIEW 2026-08-22 -- REJECTED (MultipleSkills value-space mismatch): the
-# `value: 5` / `value: 6` answers are OUR engine's TriggerOrder slot values
-# (probe: choices "30 => EX12-047 slot 5", "31 => slot 6"), but DCGO's
-# SetTargetSkill (MultipleSkills.cs) treats select_value as a 0-BASED index
-# into skillInfos_active -- and an out-of-range index silently CLEARS the
-# whole trigger stack (Count < _skillIndex -> StackedSkillInfos reset,
-# yield break), dropping every stacked trigger and desyncing all later
-# rows. Blocked until the bridge translates slot values <-> DCGO skill
-# indices.
+# (our branch 0 = the clause, resolved first; our branch 1 = the Ascension
+# yes/no gate, accepted -- its EffectChoice offers no decline-shaped PASS).
+# DCGO stacks the same two triggers in the OPPOSITE order; see the
+# BLOCKED note below.
+# BLOCKED ON THE ORACLE -- TRIGGER-LIST INVERSION (reconciled 2026-08-24
+# against the failed oracle recordings 20260824T175253Z / 20260824T175315Z).
+# The two engines present the deleted Amaterasumon's two simultaneous
+# triggers in OPPOSITE order, and the `select:` vocabulary has no way to
+# name a trigger across that inversion, so this line cannot be made to
+# satisfy both wires at once.
+#
+#   OURS  (probed via the exam's own lowering note): branch 0 = [On Deletion],
+#         branch 1 = <Ascension>.
+#   DCGO  (READ OFF THE WIRE, not inferred): `EX12_047.CardEffects` adds the
+#         <Ascension> keyword in the "Static Keywords" region BEFORE the
+#         "On Deletion" region, and `MultipleSkills.skillInfos_active`
+#         preserves that order -- so index 0 = <Ascension>, index 1 =
+#         [On Deletion]. Proof: in the effect4 recording DCGO answered
+#         `MultipleSkills` with int_value 0 and the VERY NEXT prompt was
+#         `generic_bool`, which is `AscensionProcess`'s
+#         SetBoolSelection("Will you place this card in security?").
+#
+# `select: {cards:, ordinal:}` carries ONE ordinal that each engine resolves
+# against its OWN candidate list (`match_one_with_ordinal` /
+# `SelectionAnswer.MatchOneWithOrdinal`), and `value:` is a single raw index
+# on both sides -- so whichever value is authored, exactly one engine
+# resolves <Ascension> first and the other resolves [On Deletion] first.
+# The two orders do NOT produce the same wire, and cannot be made to:
+#
+#   * <Ascension> first: it moves the carrier out of the trash, and DCGO then
+#     DROPS the [On Deletion] outright, because
+#     `CanActivateOnDeletion = card.IsToken || IsTopCardStillInTrash(...)`
+#     is now false (CanUseEffects/OnDeletion.cs:114). Rows: [MultipleSkills,
+#     generic_bool].
+#   * [On Deletion] first: its trash pick ALWAYS opens, because the carrier
+#     itself is a [TB] card sitting in the trash
+#     (`HasMatchConditionOwnersCardInTrash` = `Owner.TrashCards.Some(...)`,
+#     no self-exclusion), so there is no board state that starves it. Rows:
+#     [MultipleSkills, SelectCardEffect, (SelectHandEffect), (generic_bool)].
+#
+# Neither trigger can be made to emit ZERO rows either -- the only lever on
+# <Ascension> is `Player.CanAddSecurity`, which needs an
+# `ICannotAddSecurityEffect` on the board and the Toho pool has none. So the
+# gate row lands in position 1 on one wire and in the last position on the
+# other, and the strict cursor aborts there.
+#
+# The ordinal below is therefore chosen to keep the SIM side honest (it is
+# OUR branch index; `--sim-only` lowers and asserts clean). The oracle pass
+# will abort at the row named above with a prompt mismatch -- that abort IS
+# the finding, and it is a substrate gap in the exam wire, not evidence that
+# either engine resolves the card wrongly: simultaneous triggers are
+# resolved one at a time by the player who controls them (general_rule.pdf
+# 15-4-2-3 / 15-4-3-5), so the list ORDER is a presentation detail and BOTH
+# candidate orders are legal. Unblocking needs the wire to name a
+# trigger by something order-independent (e.g. a per-engine ordinal, or the
+# effect's clause id) -- a harness change, not an authoring one.
 card: EX12-047
 clause: EX12-047#effect#4
 seed: 424242
@@ -168,12 +213,16 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # The deletion bundle: resolve [On Deletion] (slot 5) first.
+  # The deletion bundle: resolve [On Deletion] first -- OUR branch 0.
+  # DCGO's index 0 is <Ascension>, which is the blocker documented above.
   - actor: 0
-    do: { select: { value: 5 } }
-    expect: { prompt: MultipleSkills }
-  # THE CLAUSE, half 1: return the [TB] Gasamon from trash to hand (the
-  # trashed Amaterasumon does not qualify -- no [TB] trait).
+    do: { select: { cards: [EX12-047], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
+  # THE CLAUSE, half 1: return a [TB] card from trash to hand. The trash
+  # holds TWO qualifying cards -- Gasamon (seeded at T5) and the just-deleted
+  # Amaterasumon, whose printed face carries [TB] (cards.json drops it) --
+  # so this is a real choice, answered by identity rather than a
+  # single-candidate walkover.
   - actor: 0
     do: { select: { cards: [EX12-020] } }
     expect: { prompt: SelectCardEffect }
@@ -182,10 +231,20 @@ steps:
   - actor: 0
     do: { select: { cards: [EX12-020] } }
     expect: { prompt: SelectHandEffect }
-  # <Ascension> (slot 6): accept -- the deleted card tops p0's security.
+  # <Ascension>: accept -- the deleted card tops p0's security. DCGO
+  # surfaces this gate as `generic_bool`, NOT `OptionalSkill`:
+  # `CardEffectCommons.AscensionProcess` raises it with
+  # `userSelectionManager.SetBoolSelection(...)` ("Will you place this card
+  # in security?"), whose response lands on
+  # `UserSelectionManager.SetBoolForPlayer` -- the fallback channel the
+  # recorder writes as `generic_bool`. Corrected from the failed oracle
+  # recording 20260824T175315Z, whose abort message
+  # ("step 21 expected prompt 'SelectCardEffect' but DCGO asked
+  # 'generic_bool'") is that gate arriving early because DCGO took
+  # <Ascension> as MultipleSkills index 0 -- see the header note.
   - actor: 0
     do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: generic_bool }
   # The -1 memory overshoot ends p0's turn; p1's breeding decision closes.
   - actor: 1
     do: { pass: {} }

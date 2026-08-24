@@ -1,0 +1,175 @@
+# Exam scenario: EX12-075 Kunlun's Imperial Decree effect clause #2 --
+# "[Main] <Delay> (By trashing this card after the placing turn, activate the
+#  effect below.) - Gain 2 memory."
+#
+# Printed text read off the card face
+# (C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/EX12-075.webp):
+# the second [Main] row carries the <Delay> keyword box and a single bullet,
+# "Gain 2 memory". There is no card_bundles/EX12-075.md, so the face is the
+# authority here; cards.json agrees.
+#
+# DCGO reference: Assets/Scripts/CardEffect/EX12/White/EX12_075.cs:72-77 routes
+# the <Delay> body to `CardEffectFactory.Gain2MemoryOptionDelayEffect(card)` at
+# EffectTiming.OnDeclaration -- i.e. a DECLARED field [Main], not a background
+# process. That factory (Assets/Scripts/Script/CardEffectFactory.cs:470-505)
+# gates on `CardEffectCommons.CanDeclareOptionDelayEffect(card)`, deletes the
+# option's own permanent as the cost, and only then runs
+# `card.Owner.AddMemory(2, ...)` -- so trash-then-gain is one atomic
+# declaration with NO selection prompt anywhere in it. Our side matches:
+# `Game::activate_delayed_option_main` (code/digimon-engine/src/option_lifecycle.rs:543)
+# fires the DelayEffect body then trashes the carrier, gated by
+# `delayed_option_main_activation_available` (:510) on
+# `turn_count > placed_on_turn`.
+#
+# So this is a FIELD [Main], and the activation verb is `main:`, not `play:`
+# (the `play:` verb is clause #1's surface -- putting the option down from
+# hand). DCGO decodes the same action id: InputDriver maps
+# FIELD_EFFECT_START..FIELD_EFFECT_END to ActivatePermanentAction(slot, 0).
+# `on:` matches by SLOT: field.0 is Gasamon, field.1 is the placed option.
+#
+# The "after the placing turn" half of the clause is load-bearing and is why
+# the line spans two P0 turns: the option is PLACED on T3 and can only be
+# declared on T5. (Its unavailability on T3 is clause #2's other half; a
+# scenario cannot assert a NON-offer, so the T3 half is left to the oracle's
+# prompt diff -- our line simply never tries it.)
+#
+# The measured observable is memory + the carrier's move to trash, and both
+# are route-independent here: T5 opens at exactly 3 memory, the declaration
+# gains 2 (-> 5), and EX12-075 leaves the battle area for P0's trash, leaving
+# Gasamon alone on the board. Nothing else on either side can touch memory:
+# no attacks, no eggs hatched (so EX12-004's <Execute> grant never exists and
+# no end-of-turn gate opens), and Gasamon's only printed effect is a passive
+# would-digivolve cost reduction.
+#
+# Getting there is EX12-075-effect1's line verbatim (that file is the exam for
+# the [Main] body itself), extended by one P1 turn and one P0 turn:
+#   T1 (P0, memory 0): play Gasamon -- the [Shambala] use-req provider that
+#       lets the WHITE option ignore colour requirements
+#       (EX12_075.cs:13-23 -> CardEffectFactory.UseRequirements). The play
+#       overshoots (0 -> -3) and ends the turn.
+#   T2 (P1): all-pass; P0 gets 3.
+#   T3 (P0, memory 3): play EX12-075 (3 -> 0). Its [Main] parks the mandatory
+#       [Shambala] reveal pick, then the bottom-of-deck ordering prompt, then
+#       places itself in the battle area as a DP-less Delay permanent
+#       (dp -1) -- NOT in the trash.
+#   T4 (P1): all-pass; P0 gets 3.
+#   T5 (P0, memory 3): THE CLAUSE -- declare the <Delay>; trailing pass one
+#       step after.
+#
+# Stack layout (a stack is a draw-order prefix: [0..4] opening hand, [5..9]
+# security with 5 = BOTTOM and 9 = TOP -- never flipped, neither seat attacks,
+# [10] the T3 draw, [11..13] the three revealed cards, [14] the T5 draw).
+# The three revealed ids are DISTINCT so the identity pick is unambiguous;
+# every card in toho-braves carries [Shambala], so all 3 are candidates.
+# Hand tracking: T1 plays hand.0 (Gasamon); the T3 draw appends, so EX12-075
+# is still hand.0 at T3.
+card: EX12-075
+clause: EX12-075#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # opening hand (0-4)
+      - EX12-020
+      - EX12-075
+      - EX12-070
+      - EX12-070
+      - EX12-070
+      # security (5-9) -- never checked
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-031
+      # T3 draw (10)
+      - EX12-070
+      # the reveal (11-13): three distinct ids
+      - EX12-011
+      - EX12-026
+      - EX12-046
+      # T5 draw (14)
+      - EX12-074
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): the [Shambala] provider lands in the BATTLE area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): PLACE the option (cost 3 -> 0). This is clause #1's
+  # body; it is answered, not declined -- it is mandatory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-075, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Add EX12-011 to hand; EX12-026 + EX12-046 go to the deck bottom.
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: SelectCardEffect }
+  # "Return the rest to the bottom of the deck": our engine asks the order of
+  # the 2 remaining cards (OrderedPermutation); answer bottom-most first.
+  - actor: 0
+    do: { select: { cards: [EX12-026, EX12-046] } }
+    expect: { prompt: SelectCardEffect }
+  # Memory landed on exactly 0, so the same seat answers the trailing pass;
+  # that pass hands 3 memory to P1 and ends the PLACING turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): THE CLAUSE. The placing turn (T3) has passed, so the
+  # <Delay> is declarable; it trashes itself and gains 2 memory (3 -> 5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { main: { on: field.1 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause resolves.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step-13 snapshot, i.e. AFTER the <Delay> declaration and BEFORE the
+  # trailing pass (which would hand the memory to P1 and read -3).
+  #
+  # Memory 5 is the whole witness for "gain 2": T5 opened at exactly 3 and no
+  # other effect in this line moves memory. The carrier's move from field to
+  # trash is the "by trashing this card" cost, and it is the reason field
+  # collapses back to Gasamon alone.
+  - at: 13
+    that:
+      p0.memory: 5
+      p0.security: 5
+      p0.trash: [EX12-075]
+      p0.hand: [EX12-011, EX12-070, EX12-070, EX12-070, EX12-070, EX12-074]
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+  # One step earlier: the option is still ON THE FIELD as a DP-less Delay
+  # permanent and memory is still 3 -- so step 12 is provably the step that
+  # both trashed it and paid the 2.
+  - at: 12
+    that:
+      p0.memory: 3
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-075, dp: -1, suspended: false, sources: [] }

@@ -1,107 +1,144 @@
-# Exam scenario: EX12-031 (MarineBullmon), clause inherited#0 -- the
-# INHERITED "<Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or
-# w/[TB] trait)>" granted while MarineBullmon sits in the digivolution cards.
+# Exam scenario: EX12-031 (MarineBullmon), clause inherited#0 -- the INHERITED
+# "<Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)>"
+# that is live while MarineBullmon sits in a permanent's digivolution cards:
+# "(When this Digimon would leave the battle area other than in battle, you may
+#  play 1 specified Digimon card from its digivolution cards without paying the
+#  cost.)"
 #
-# The carrier is built on the BATTLE AREA (not breeding) so the digivolution
-# stack stays minimal: play Shellmon (Lv.4), digivolve MarineBullmon over it,
-# digivolve Amaterasumon over that. The stack under the carrier is then
-# exactly [EX12-026, EX12-031] -- ONE card qualifying for Decode's Lv.4-or-
-# lower filter (Shellmon; MarineBullmon itself is Lv.5), so each Decode
-# window prompt has a single accept id and `yes` answers it. When p1's
-# Amaterasumon deletes the carrier by effect (a non-battle leave), the
-# inherited Decode from EX12-031 fires: accepting plays Shellmon for free
-# before the rest of the stack hits the trash.
+# For the inherited half to be measurable the carrier needs BOTH (a) EX12-031
+# among its digivolution cards and (b) a SEPARATE Lv.4-or-lower [Aqua]/
+# [Sea Animal]/[TB] card there for Decode to play (EX12-031 itself is Lv.5,
+# above its own filter). That is at least two sources, which rules out reaching
+# the window with MarineBullmon's own bounce (it only takes targets with "1 or
+# fewer digivolution cards"), so the carrier is built on the battle area and
+# then DELETED outside battle:
+#   T3 (p0, memory 3): play Shellmon EX12-026 (Lv.4, [Mollusk/Shambala/TB],
+#       cost 5 -> memory -2, turn ends). Its [On Play] is target-starved --
+#       p1 never puts anything on the board on this line.
+#   T5 (p0, memory 3): digivolve MarineBullmon over it. TWO distinct costs are
+#       on offer (the printed blue Lv.4 circle at 4, and the printed
+#       "Lv.4 w/[Aquatic]/[Shambala]: Cost 3" alt that Shellmon's [Shambala]
+#       satisfies), so the rule-17 cost choice parks and the VALUE 3 takes the
+#       alt (memory 3 -> 0). MarineBullmon's own [When Digivolving] (effect#1)
+#       then parks its placement prompt -- Kaguyamon and Kokeshimon in hand are
+#       both Lv.<=6 [TB] Digimon, so it is live on BOTH engines -- and is
+#       DECLINED: leaving the stack at exactly [EX12-026] keeps Decode's later
+#       pick single-candidate. Declining also forfeits the bounce
+#       (EX12_031.cs:119), which is target-starved anyway.
+#   T7 (p0, memory 3): digivolve Kaguyamon EX12-065 over MarineBullmon. Its
+#       printed circles are purple/green Lv.5 and miss blue/yellow
+#       MarineBullmon, so the ONLY matching route is its
+#       "Lv.5 w/[Puppet]/[Shambala]: Cost 3" alt -- one distinct cost, no cost
+#       prompt (memory 3 -> 0). Its [OP][WD][WA] trash revive stays silent:
+#       p0's trash is empty. The carrier is now top EX12-065 over
+#       [EX12-026, EX12-031].
+#   T9 (p0, memory 3): play Kokeshimon EX12-062 (cost 4 -> -1, turn ends). Its
+#       [On Play] "By deleting 1 of your Digimon, ..." is the removal: the
+#       payment prompt takes ANY of your Digimon regardless of level, so it
+#       takes the carrier. That deletion is not a battle, so THE CLAUSE opens.
+#       The enemy half of Kokeshimon's effect then finds no target.
 #
-# Silence ledger on the way up:
-#   - Shellmon's [On Play] at T3 and both [When Digivolving] triggers at
-#     T5/T7 are condition- or target-starved (p1 fieldless; p0's hand holds
-#     no Aqua/Sea Animal/TB Digimon -- every pinned filler is an Option, and
-#     Amaterasumon carries no [TB] trait).
-#   - both field digivolves offer two distinct costs (printed circle 4 vs
-#     the [Shambala] alt path 3), so each parks the cost-choice prompt,
-#     answered with the VALUE 3.
-# After the deletion the carrier's own [On Deletion] + <Ascension> triggers
-# bundle into a mandatory TriggerOrder prompt (each body carries its own
-# optionality): the On Deletion body's trash pick is declined, the Ascension
-# yes/no gate is ACCEPTED (its EffectChoice offers no decline-shaped PASS,
-# and placing the carrier as top security is a crisp extra witness), and
-# p1's "by returning 2 cards from their trash" cost prompt is declined: the
-# clause under exam stays the Decode play.
-# REVIEW 2026-08-22 -- REJECTED (MultipleSkills value-space mismatch): the
-# `value: 5` / `value: 6` answers are OUR engine's TriggerOrder slot values
-# (probe: choices "30 => EX12-047 slot 5", "31 => slot 6"), but DCGO's
-# SetTargetSkill (MultipleSkills.cs) treats select_value as a 0-BASED index
-# into skillInfos_active -- and an out-of-range index silently CLEARS the
-# whole trigger stack (Count < _skillIndex -> StackedSkillInfos reset,
-# yield break), dropping every stacked trigger and desyncing all later
-# rows. Blocked until the bridge translates slot values <-> DCGO skill
-# indices.
-# PLUS three more structural conflicts:
-# (1) Continuation-vs-trigger ordering: DCGO's EX12_047.cs asks p1's
-#     'Select 2 cards to bottom deck' INSIDE the On Play coroutine, right
-#     after the delete/Decode (trash count 2 >= 2), BEFORE the queued
-#     Shellmon-On-Play / On-Deletion / Ascension triggers drain -- this
-#     line has that row LAST (our engine's inline-trigger order). The
-#     strict cursor mismatches at that point.
-# (2) The T5 MarineBullmon [When Digivolving] tuck: DCGO parks its
-#     canNoSelect SelectHandEffect (EX12-047 in hand prints [TB] on its
-#     face; EX12_031.cs gates only on the HAND having a candidate, not on
-#     a bounce target existing) while the sim stays silent (stale
-#     cards.json) -- a decline wire row after the T5 'value: 3' is needed
-#     once the other blocks lift.
-# (3) The Decode material pick is answered with 'yes:' but DCGO's
-#     SelectCardEffect hook accepts only select_card_ids / select_cancel.
+# WHY KAGUYAMON IS THE CARRIER TOP. Every other Lv.6 in the DCGO-legal toho
+# pool that can sit on a Lv.5 [Shambala] brings its own competing "would
+# leave" machinery, which would bury the clause under exam:
+#   - EX12-036 Ryugumon carries <Barrier>, <Evade> AND its own <Decode>
+#     (verified by building this line on it: the deletion is intercepted by an
+#     <Evade> replacement prompt before the inherited window is even reached);
+#   - EX12-047 Amaterasumon carries [On Deletion] + <Ascension>, i.e. the
+#     duplicate-identity MultipleSkills that got the previous version of this
+#     file rejected.
+# Kaguyamon's only deletion-time additions are its [On Deletion] (target
+# starved here) and its MANDATORY <Fortitude> (general_rule.pdf 16-26: a
+# deleted Digimon WITH digivolution cards is played back from the trash for
+# free). Both are triggers of the same card, so step 25 is exactly the
+# stacked-trigger prompt `ordinal:` exists for: our TriggerOrder offers
+# [EX12-065, EX12-065] and DCGO offers the same two as MultipleSkills.
+# ORDINAL CAVEAT: 0 here is OUR branch order, not one read off a DCGO abort
+# message. It is safe to author blind in this one line because both triggers
+# are mandatory and the [On Deletion] is target-starved, so the reachable
+# state is identical either way -- but if DCGO stacks them the other way the
+# row still surfaces that as a finding rather than silently agreeing.
+#
+# BLOCKED ON THE ORACLE WIRE -- identical to EX12-031-effect0.yaml, and the
+# only reason this line cannot be confirmed today. Step 24 answers Decode's
+# source pick, which our engine parks as `SelectionKind::Material` ("Choose a
+# level 4 or lower [Aqua]/[Sea Animal]/[TB] source to play", one accept id at
+# SOURCE_SELECT_START = 2000). `resolve_next`'s card-identity arm
+# (code/digimon-engine/src/runners/selection_resolve.rs:343-365) handles Hand /
+# UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation / Security and
+# drops Material into the catch-all, so a `cards: [EX12-026]` payload fails
+# LOWERING; the payloads that DO lower (`yes:` / `value:`) ride the wire as
+# select_bool / select_value, and DCGO's hook for this prompt --
+# SelectCardEffect.SetTargetCardAndIndicies
+# (DCGO/Assets/Scripts/Script/SelectCardEffect.cs:906-945) -- takes only
+# select_card_ids or select_cancel and calls InputDriver.Abort on anything
+# else. So the oracle job aborts AT step 24, after the inherited window has
+# opened on both sides and before the play is compared: verdict `unreachable`,
+# never `confirmed`. One match arm resolving SOURCE_SELECT_START + i against
+# the subject permanent's digivolution cards turns step 24 into
+# `cards: [EX12-026]` and unblocks both files.
+#
+# DCGO shape this is authored against: the inherited copy is the SAME factory
+# call as the printed one with isInheritedEffect: true
+# (EX12_031.cs:196-210 -> CardEffectFactory.DecodeSelfEffect), so it is
+# isOptional: true (Decode.cs:41) gated by CanTriggerWhenRemoveField &&
+# !IsByBattle (:53-56), and CanActivateDecode requires a source passing the
+# filter AND CanPlayAsNewPermanent (CardEffectCommons/KeyWordEffects/
+# Decode.cs:16-21) -- i.e. DCGO asks OptionalSkill (step 23) then
+# SelectCardEffect (step 24), 1:1 with our Replacement gate then Material pick.
 card: EX12-031
 clause: EX12-031#inherited#0
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4): the three stack cards + Option fillers (no Digimon that
-      # could satisfy MarineBullmon's tuck condition)
+      # hand (0-4): the four cards the line plays, in play order, plus one
+      # levelless Option filler.
       - EX12-026
       - EX12-031
-      - EX12-047
-      - EX12-070
+      - EX12-065
+      - EX12-062
       - EX12-074
-      # security (5-9) -- never touched
+      # security (5-9): never checked -- there is no attack on this line.
       - EX12-009
       - EX12-011
-      - EX12-062
       - EX12-063
-      - EX12-036
-      # draws (Options only, keeping the tuck condition false):
-      # T3 turn (10), T5 turn (11), T5 dv (12), T7 turn (13), T7 dv (14),
-      # T9 turn (15, drawn before the trailing breeding prompt)
-      - EX12-075
+      - EX12-062
+      - EX12-047
+      # draws, all levelless Options so no later draw can widen a prompt:
+      # T3 turn (10), T5 turn (11), T5 digivolve (12), T7 turn (13),
+      # T7 digivolve (14), T9 turn (15).
       - EX12-070
       - EX12-074
       - EX12-075
       - EX12-070
       - EX12-074
+      - EX12-075
     rest: toho-braves
   p1:
     stack:
-      # hand (0-4): exactly one Amaterasumon; inert fillers
-      - EX12-047
+      # p1 passes every turn; the hand is levelless filler and the board stays
+      # EMPTY all game, which is what keeps Shellmon's [On Play], Kokeshimon's
+      # enemy delete and Kaguyamon's [On Deletion] silent on both engines.
       - EX12-070
       - EX12-074
       - EX12-075
-      - EX12-065
-      # security (5-9) -- never touched
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked.
       - EX12-009
       - EX12-011
-      - EX12-062
       - EX12-063
       - EX12-036
-      # draws: T2 (10), T4 (11), T6 (12), T8 (13)
-      - EX12-070
-      - EX12-074
+      - EX12-047
+      # draws: T2 (10), T4 (11), T6 (12), T8 (13).
       - EX12-075
+      - EX12-074
       - EX12-070
+      - EX12-009
     rest: toho-braves
 steps:
-  # T1 (p0): all-pass.
+  # T1 (p0, memory 0): all-pass.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -115,121 +152,112 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (p0): play Shellmon (cost 5, memory 3 -> -2; turn ends, [On Play]
-  # target-starved).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
+  # T3 (p0, memory 3): the stack's bottom card and Decode's eventual payload.
   - actor: 0
     do: { play: { card: EX12-026, from: hand } }
     expect: { prompt: main_phase }
-  # T4 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T5 (p0): MarineBullmon over the field Shellmon -- printed blue circle
-  # (cost 4) vs alt [Shambala] (cost 3): the VALUE 3 picks the alt (3 -> 0).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
+  # T5 (p0, memory 3): MarineBullmon over Shellmon -- printed blue circle (4)
+  # vs the [Aquatic]/[Shambala] alt (3); the VALUE 3 takes the alt.
   - actor: 0
     do: { digivolve: { from: field.0, using: EX12-031 } }
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { value: 3 } }
     expect: { prompt: SelectCountEffect }
-  # MarineBullmon's optional [WD] hand-placement now opens (corrected [TB]
-  # data, task_69f10a66 EX12-070 triage: the EX12-047 copies in hand match
-  # the filter) -- decline it; this exam is the inherited Decode.
+  # effect#1's placement prompt is live (Kaguyamon and Kokeshimon in hand both
+  # pass its Lv.<=6 [TB] filter). DECLINED: the stack must stay [EX12-026] so
+  # Decode's later pick has exactly one candidate.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T6 (p1): all-pass.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T7 (p0): Amaterasumon over the stack -- printed yellow circle (cost 4)
-  # vs alt [Shambala] (cost 3): VALUE 3 again (3 -> 0).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
+  # T7 (p0, memory 3): Kaguyamon over MarineBullmon. Only its
+  # "Lv.5 w/[Puppet]/[Shambala]: Cost 3" alt matches, so no cost prompt; its
+  # [WD] trash revive is silent (p0's trash is empty). MarineBullmon is now a
+  # SOURCE, and its inherited <Decode> is live.
   - actor: 0
-    do: { digivolve: { from: field.0, using: EX12-047 } }
+    do: { digivolve: { from: field.0, using: EX12-065 } }
     expect: { prompt: main_phase }
-  - actor: 0
-    do: { select: { value: 3 } }
-    expect: { prompt: SelectCountEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T8 (p1): play Amaterasumon (cost 12, memory 3 -> -9) and aim its
-  # mandatory delete at p0's only Digimon -- the carrier.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
-    do: { play: { card: EX12-047, from: hand } }
+    do: { pass: {} }
     expect: { prompt: main_phase }
-  - actor: 1
-    do: { select: { targets: [opp.field.0] } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T9 (p0, memory 3): Kokeshimon -- the removal engine.
+  - actor: 0
+    do: { play: { card: EX12-062, from: hand } }
+    expect: { prompt: main_phase }
+  # Kokeshimon's payment: "By deleting 1 of your Digimon" takes any level, so
+  # it takes the carrier at slot 0 (Kokeshimon itself is slot 1). The enemy
+  # half then finds no target and asks nothing.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # THE CLAUSE: the non-battle leave opens the inherited Decode window...
+  # THE CLAUSE, half 1 -- the inherited Decode window on a non-battle leave.
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # ...whose single qualifying digivolution card (Shellmon) is the one
-  # accept id of the material pick.
+  # THE CLAUSE, half 2 -- the source pick. One accept id (Shellmon; the stack's
+  # other card is MarineBullmon itself at Lv.5, above the filter). "yes:" ONLY
+  # because the identity payload cannot address a Material prompt yet -- see
+  # "BLOCKED ON THE ORACLE WIRE" above; this is the row DCGO will refuse.
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: SelectCardEffect }
-  # Decode PLAYED Shellmon, so its [On Play] fires for real now: both target
-  # picks aim at p1's fresh Amaterasumon (0 sources: the trash-2 no-ops, the
-  # attack/block lock lands).
+  # The deleted carrier's own bundle: Kaguyamon's [On Deletion] and its
+  # mandatory <Fortitude>, both offering EX12-065 -- the stacked-trigger case
+  # `ordinal:` exists for. See the ORDINAL CAVEAT above.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
-  # The deleted carrier's own bundle: [On Deletion] (slot 5) + <Ascension>
-  # (slot 6), both queued as mandatory carriers. Resolve slot 5 first.
-  - actor: 0
-    do: { select: { value: 5 } }
+    do: { select: { cards: [EX12-065], ordinal: 0 } }
     expect: { prompt: MultipleSkills }
-  # [On Deletion] body: decline the optional "return 1 [TB] from trash" pick
-  # (its follow-up hand play then has no candidate and stays silent).
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: SelectCardEffect }
-  # <Ascension>: accept -- the deleted carrier's card goes to p0's top
-  # security (5 -> 6) instead of staying in trash.
-  - actor: 0
-    do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
-  # p1's optional "by returning 2 cards from their trash" cost: decline.
+  # Trailing step: the cost-4 play left memory at -1, so p0's turn ended with
+  # the clause; p1's breeding decision closes the line.
   - actor: 1
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
-  # The overshoot ended p1's turn; p0's breeding decision closes.
-  - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # The Decode play is the witness: Shellmon alone (and fresh) on p0's field,
-  # MarineBullmon in p0's trash, the carrier's top card on security via the
-  # accepted Ascension (5 -> 6), p1's Amaterasumon standing.
-  - at: 31
+  # The Decode play is the witness: Shellmon is on p0's board with NO
+  # digivolution cards (it was PLAYED out of the stack, not moved), and
+  # MarineBullmon -- whose inherited clause did the playing -- is the only
+  # card in the trash. Kaguyamon's own mandatory <Fortitude> put IT back on
+  # the battle area with an empty stack, which is why the trash holds one
+  # card and the board holds three.
+  - at: 26
     that:
-      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: false, sources: [] }]
+      p0.memory: -1
       p0.trash: [EX12-031]
-      p0.security: 6
-      p1.field: [{ card_id: EX12-047, dp: 12000, suspended: false, sources: [] }]
+      p1.field: []
+      p0.field:
+        - { card_id: EX12-026, dp: 5000, suspended: false, sources: [] }
+        - { card_id: EX12-062, dp: 5000, suspended: false, sources: [] }
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }

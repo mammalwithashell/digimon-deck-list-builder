@@ -1,0 +1,170 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#5 -- the alternate
+# digivolution requirement "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait:
+# Cost 5" (printed in the top text box of the card face,
+# Assets/Textures/Card/EX12-076.webp).
+#
+# DCGO registers exactly this clause as a static requirement at
+# CardEffect/EX12/Yellow/EX12_076.cs:16-28 --
+# `CardEffectFactory.AddSelfDigivolutionRequirementStaticEffect(
+#      permanentCondition: TopCard.HasHybridTraits || HasShambalaTraits
+#                          || HasTSTraits,
+#      digivolutionCost: 5, ignoreDigivolutionRequirement: false, level: 6)`.
+#
+# THE LINE. P0 hard-casts Shishimamon (EX12-046, Lv.5, cost 7) on T1 into an
+# empty enemy board -- its [On Play] "give 1 of your opponent's Digimon
+# <Security A. -1> and -3000 DP" has no candidate and stays silent. T3
+# digivolves Kaguyamon (EX12-065, Lv.6) over it: Kaguyamon's printed circles
+# are purple Lv.5 / black Lv.5 and Shishimamon is yellow/red, so the ONLY
+# matching route is Kaguyamon's own "Lv.5 w/[Puppet]/[Shambala]: Cost 3" alt
+# path -- one distinct cost, no cost-choice prompt there. Its [On Play] ("play
+# 1 play cost 5 or lower [Puppet]/[Shambala] card from your trash") is silent:
+# P0's trash is empty.
+#
+# T4 is P1's memory donation: Gasamon (cost 3, memory 3 -> 0) then Seasarmon
+# (cost 5, 0 -> -5), so P0 opens T5 on exactly 5 memory -- the amount this
+# clause charges. Seasarmon's [On Play] "delete 1 of your opponent's Digimon
+# with 5000 DP or less" sees only the 12000 DP Kaguyamon, so it is silent too.
+#
+# T5 IS THE CLAUSE. Susanoomon digivolves over Kaguyamon and our engine parks
+# an `EffectChoice` ("Choose which digivolution cost to pay") because BOTH
+# routes match: the printed circle (our YAML renders it `level_eq: 6` +
+# `self_color_count_gte: 2`, and Kaguyamon is 2-coloured) at cost 6, and THIS
+# clause's trait route at cost 5. The `select: {value: 5}` step answers the
+# cost-5 branch by VALUE (`resolve_next`'s count path matches the branch label
+# "…cost 5", not a raw index), and memory 5 -> 0 is the payment witness: had
+# the cost-6 branch resolved instead, memory would read -1.
+#
+# NOTE FOR THE ORACLE PASS (a real finding-in-waiting, not a scenario bug).
+# Our card YAML gates the PRINTED circle on `self_color_count_gte: 2` (a Lv.6
+# with two or more colours), but DCGO's own card data
+# (Assets/CardBaseEntity/EX12/Yellow/Digimon/EX12_076.asset) lists SEVEN
+# EvoCosts -- CardColor 0..6, Level 6, MemoryCost 6 -- i.e. "any Lv.6, cost 6",
+# the rainbow circle on the card face. The two renderings coincide only for a
+# multi-coloured base, which is why this line uses the 2-coloured Kaguyamon:
+# both engines then offer the same two branches and the cost prompt is
+# gate-for-gate equivalent. A mono-coloured Lv.6 base would separate them (DCGO
+# would still offer cost 6; our engine would not) -- deliberately NOT exercised
+# here, because this file is the clause's exam, not the circle's.
+#
+# Susanoomon's own [On Play]/[When Digivolving] (clause #3) fires on the same
+# digivolve and deletes P1's board; that is clause #3's exam
+# (EX12-076-effect3.yaml) and is asserted here only as the incidental state it
+# is. Stack layout: hand [0..4], security [5..9] REVERSED (9 = TOP), then draws
+# in order. DIGIVOLVING DRAWS A CARD, so P0's slots are T3-turn, T3-digivolve,
+# T5-turn, T5-digivolve; P1 never digivolves, so its slots are just T2 and T4.
+card: EX12-076
+clause: EX12-076#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 base, the Lv.6 base, Susanoomon, inert Options.
+      # NO [TB] Digimon with 5000 DP or less may sit here from T5 on --
+      # Shishimamon's inherited "[End of Attack] [Once Per Turn] You may play 1
+      # [TB] trait Digimon card with 5000 DP or less from your hand without
+      # paying the cost" rides under Susanoomon and would open a prompt.
+      - EX12-046
+      - EX12-065
+      - EX12-076
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked in this line; plain Digimon regardless.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T3 digivolve (11), T5 turn (12), T5 digivolve
+      # (13) -- DIGIVOLVING DRAWS A CARD, so each digivolve consumes a slot.
+      # Options ONLY, so nothing drawn can open a free-play prompt.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): the two memory-donation bodies, then inert cards.
+      - EX12-020
+      - EX12-011
+      - EX12-020
+      - EX12-020
+      - EX12-075
+      # security (5-9): never checked in this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-075
+      # draws: T2 (10), T4 (11).
+      - EX12-070
+      - EX12-074
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base, hard-cast into an empty enemy board
+  # (cost 7, 0 -> -7 overshoot; the turn ends on it).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass -- the enemy board must stay empty for T3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon over Shishimamon -- alt path only, cost 3,
+  # memory 3 -> 0, so no cost-choice prompt here.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the donation -- 3 -> 0 -> -5, handing P0 exactly 5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 5): THE CLAUSE -- Susanoomon over the Lv.6 [Shambala] base.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-076 } }
+    expect: { prompt: main_phase }
+  # The cost choice: the printed circle (6) vs THIS clause's trait route (5).
+  # Answered by VALUE, not by branch index.
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  # Trailing pass so the digivolve's consequences land in the projection.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observable: P0 opened T5 on 5 memory and the digivolve left it
+  # at 0 -- the cost-5 route was the one that resolved (the printed cost-6
+  # branch would read -1). The board shows Susanoomon standing on exactly the
+  # two-card stack the line built, which is what makes the cost route legible.
+  - at: 13
+    that:
+      turn: 5
+      memory: 0
+      p0.field:
+        - card_id: EX12-076
+          dp: 16000
+          suspended: false
+          sources: [EX12-046, EX12-065]

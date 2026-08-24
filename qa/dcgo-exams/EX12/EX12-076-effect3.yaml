@@ -1,0 +1,192 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#3 -- "[On Play]
+# [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the
+# turn for each color in this Digimon's digivolution cards."
+#
+# The [When Digivolving] half is the one this line drives; the [On Play] half
+# is unreachable in any legal line that can also OBSERVE it (see the note at
+# the bottom of this header).
+#
+# DCGO builds both halves from one shared coroutine
+# (CardEffect/EX12/Yellow/EX12_076.cs:56-95 --
+# `CardEffectFactory.ActivateClassesForSharedEffects(..., optional: false,
+# onPlay: true, whenDigivolving: true)`): it collects `CardColors` over
+# `card.PermanentOfThisCard().DigivolutionCards`, `.Distinct()`s them, and
+# applies `dpChange = -3000 * DigivolutionCardColors` with
+# `EffectDuration.UntilEachTurnEnd` to every permanent matching
+# `IsPermanentExistsOnOpponentBattleAreaDigimon`. Note DISTINCT COLOURS OF THE
+# DIGIVOLUTION CARDS -- not the number of cards, and not the top card's own
+# colours.
+#
+# THE STACK IS THE MULTIPLIER, so it is pinned by construction:
+#   EX12-046 Shishimamon  yellow + red     (Lv.5, hard-cast T1)
+#   EX12-065 Kaguyamon    purple + black   (Lv.6, digivolved T3)
+# -> 4 distinct colours under Susanoomon -> -12000 DP to all of P1's Digimon.
+# The `sources:` list in the assertion below pins exactly those two cards, so
+# the multiplier is readable off the asserted state rather than assumed.
+#
+# THE LINE. T1 hard-casts Shishimamon into an empty enemy board (its own
+# [On Play] has no candidate). T3 digivolves Kaguyamon over it -- Kaguyamon's
+# printed circles are purple Lv.5 / black Lv.5 and Shishimamon is yellow/red,
+# so only Kaguyamon's "Lv.5 w/[Puppet]/[Shambala]: Cost 3" route matches and no
+# cost prompt opens; its [On Play] ("play 1 play cost 5 or lower [Puppet]/
+# [Shambala] card from your trash") is silent against an empty trash.
+#
+# T4 builds P1's board AND donates the memory: Gasamon (cost 3, memory 3 -> 0)
+# then Shishimamon (cost 7, 0 -> -7), so P0 opens T5 on 7. P1's Shishimamon
+# [On Play] is MANDATORY and has exactly one candidate -- P0's Kaguyamon -- so
+# the line answers that prompt explicitly; it lands <Security A. -1> and
+# -3000 DP "until their turn ends" ON THE PERMANENT, which is why Susanoomon
+# reads 13000 rather than 16000 in the assertion below. That -3000 is P1's
+# card, not this clause; it is asserted because it is route-independent, not
+# because it is under exam.
+#
+# T5 IS THE CLAUSE. Susanoomon digivolves for 5 (the alt trait route -- both
+# routes match a 2-coloured Lv.6, so our engine parks the cost choice and
+# `value: 5` answers it; that prompt is clause #5's exam) and its
+# [When Digivolving] applies -12000 to BOTH of P1's Digimon: Gasamon (2000)
+# and Shishimamon (7000) are deleted outright.
+#
+# WHAT THE SIM-SIDE ASSERTION ACTUALLY PINS. A 7000 DP body dying proves the
+# reduction was at least 7000, i.e. at least 3 colours' worth; combined with
+# the pinned two-card stack (max 4 distinct colours) it narrows the multiplier
+# to 3 or 4. The exact -12000 is the ORACLE's to confirm via the state diff --
+# no legal board in this pool holds a Digimon above 12000 DP, so no surviving
+# `dp:` witness for the full magnitude exists here. Stated plainly rather than
+# claimed.
+#
+# THE [On Play] HALF IS NOT AUTHORABLE, and that is a property of the card, not
+# of this file: a Susanoomon PLAYED from hand has NO digivolution cards, so the
+# distinct-colour count is 0 and the effect applies -0 DP -- a no-op nothing
+# can observe. (It is also barely playable: cost 16 against a memory range of
+# -10..10, so `pay_memory` refuses it below 6 memory.) The clause is therefore
+# examined through its [When Digivolving] half, which is the same coroutine on
+# both engines.
+#
+# Neither deleted body carries an [On Deletion] and neither is deleted in
+# battle, so the wipe is prompt-free. Stack layout: hand [0..4], security
+# [5..9] REVERSED (9 = TOP), then draws in order. DIGIVOLVING DRAWS A CARD, so
+# P0's slots are T3-turn, T3-digivolve, T5-turn, T5-digivolve; P1 never
+# digivolves, so its slots are just T2 and T4.
+card: EX12-076
+clause: EX12-076#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 base, the Lv.6 base, Susanoomon, inert Options.
+      # NO [TB] Digimon with 5000 DP or less from T5 on -- Shishimamon's
+      # inherited "[End of Attack] [Once Per Turn] You may play 1 [TB] trait
+      # Digimon card with 5000 DP or less from your hand without paying the
+      # cost" rides under Susanoomon.
+      - EX12-046
+      - EX12-065
+      - EX12-076
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked in this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T3 digivolve (11), T5 turn (12), T5 digivolve
+      # (13) -- DIGIVOLVING DRAWS A CARD, so each digivolve consumes a slot.
+      # Options ONLY, so nothing drawn can open a free-play prompt.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): the 2000 DP body and the 7000 DP body -- the two DP tiers
+      # the -12000 has to clear -- then inert cards.
+      - EX12-020
+      - EX12-046
+      - EX12-020
+      - EX12-020
+      - EX12-075
+      # security (5-9): never checked in this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-075
+      # draws: T2 (10), T4 (11).
+      - EX12-070
+      - EX12-074
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base into an empty enemy board -- On Play
+  # silent (cost 7, 0 -> -7 overshoot; the turn ends on it).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass -- the enemy board must stay empty for T3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon over Shishimamon (alt route only, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the two victims, and the donation that leaves P0 on 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # P1's Shishimamon [On Play]: mandatory, one candidate -- P0's Kaguyamon.
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T5 (P0, memory 7): THE CLAUSE fires on the digivolve.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  # Trailing pass so the [When Digivolving] consequences land in the
+  # projection.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observable: every one of P1's Digimon took the reduction, and
+  # BOTH DP tiers died -- the 2000 DP Gasamon and the 7000 DP Shishimamon --
+  # so the reduction cleared 7000 (>= 3 colours x 3000) against a stack whose
+  # `sources:` pins the distinct-colour count at 4. P0's own board is asserted
+  # to fix the stack that feeds the formula; its 13000 is 16000 minus P1's
+  # Shishimamon [On Play] -3000, which is still live on P0's turn.
+  - at: 14
+    that:
+      turn: 5
+      memory: 2
+      p1.field: []
+      p1.trash: [EX12-020, EX12-046]
+      p0.field:
+        - card_id: EX12-076
+          dp: 13000
+          suspended: false
+          sources: [EX12-046, EX12-065]

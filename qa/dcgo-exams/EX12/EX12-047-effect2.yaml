@@ -6,49 +6,111 @@
 # [On Play] is target- and trash-starved -- p1 has no Digimon and an empty
 # trash), then p1 plays its own and aims the mandatory "delete 1 of your
 # opponent's lowest DP Digimon" at p0's only Digimon. The deleted carrier's
-# [On Deletion] + <Ascension> triggers bundle into a mandatory TriggerOrder:
-# the [On Deletion] body is candidate-starved on purpose (p0's trash is
-# empty and its hand holds only Options, so both optional picks skip
-# silently), leaving the <Ascension> yes/no gate as the clause's own
-# decision. Accepting it moves the deleted card to p0's TOP SECURITY:
-# security 5 -> 6 with an empty trash is a witness nothing else on this
-# board can produce.
+# [On Deletion] + <Ascension> triggers bundle into a mandatory TriggerOrder,
+# and the line resolves <Ascension> FIRST -- that ordering is what isolates
+# the clause. Accepting the gate moves the deleted card out of the trash and
+# onto p0's TOP SECURITY, so the [On Deletion] body that resolves next is
+# candidate-starved on BOTH engines: p0's trash is then empty (nothing to
+# return) and its hand holds only Options (no level-5-or-lower [TB] Digimon
+# to free-play), so both of its optional picks skip silently. Ordering it
+# the other way is NOT equivalent -- the printed face carries the [TB] trait
+# (cards.json drops it), so an [On Deletion] resolved first WOULD find the
+# just-trashed Amaterasumon and return it to hand, which is the differential
+# recorded below.
+#
+# Security 5 -> 6 with an empty trash and an empty field is the witness:
+# nothing else on this board can put a card on top of security.
 #
 # p1's follow-up "by returning 2 cards from their trash" stays silent too:
-# after Ascension resolves, p0's trash is empty.
+# after Ascension resolves, p0's trash is empty (DCGO gates that whole
+# select on `card.Owner.Enemy.TrashCards.Count >= 2`, EX12_047.cs:98).
 #
 # Memory: two all-pass turns hand p0 3; the cost-12 play lands at -9 and
 # hands p1 9; p1's cost-12 play lands at -3 and ends its turn.
-# REVIEW 2026-08-22 -- REJECTED (MultipleSkills value-space mismatch): the
-# `value: 5` / `value: 6` answers are OUR engine's TriggerOrder slot values
-# (probe: choices "30 => EX12-047 slot 5", "31 => slot 6"), but DCGO's
-# SetTargetSkill (MultipleSkills.cs) treats select_value as a 0-BASED index
-# into skillInfos_active -- and an out-of-range index silently CLEARS the
-# whole trigger stack (Count < _skillIndex -> StackedSkillInfos reset,
-# yield break), dropping every stacked trigger and desyncing all later
-# rows. Blocked until the bridge translates slot values <-> DCGO skill
-# indices.
-# UPDATE (task_69f10a66 EX12-070 triage): the stale [TB] data is fixed, so
-# the sim ALSO parks the [On Deletion] trash-return pick if the [On
-# Deletion] body resolves while the deleted EX12-047 is still in the trash.
-# Per this header's own advice the line now resolves <Ascension> (slot 6)
-# FIRST -- the accepted placement empties the trash, so the [On Deletion]
-# body's picks are candidate-starved and skip silently on BOTH engines.
-# The MultipleSkills value-space mismatch above still stands for the
-# oracle pass.
+# TURN-1 DEAD MAIN PHASE (also reconciled 2026-08-24; this is what the
+# FIRST failed oracle run actually reported -- "step 1 expected actor 0 but
+# DCGO asked actor 1"). Recording 20260824T175253Z logged p0's breeding pass
+# at step 2 and then stopped: DCGO never asked p0's turn-1 main phase at
+# all. `TurnStateMachine.MainPhase`'s `if (!CanSelect()) EndTurnProcess();`
+# guard rotates the turn WITHOUT consulting InputDriver and without writing
+# a main_phase row, so the line's next step met p1's breeding instead.
+# p0's original turn-1 hand could select nothing: Amaterasumon costs 12
+# while `Player.MaxMemoryCost` is |10 - 0| = 10 on turn 1 (and
+# `CardSource.CanPlayCardTargetFrame` refuses `MaxMemoryCost < cost`), and
+# the rest were Options carrying `<Use Req. ([TB]/[Shambala] trait)>` with
+# no Digimon in play. Wankomon (EX12-009, cost 3) now rides in hand purely
+# to satisfy that guard -- it is never played, and the [On Deletion] body
+# still contributes no rows on our side because <Ascension> empties the
+# trash before it resolves. Every LATER pass on this line clears the guard
+# unaided (both seats sit at memory 3 or 9 with a cost-12 Amaterasumon in
+# hand).
+#
+# BLOCKED ON THE ORACLE -- TRIGGER-LIST INVERSION (reconciled 2026-08-24
+# against the failed oracle recordings 20260824T175253Z / 20260824T175315Z).
+# The two engines present the deleted Amaterasumon's two simultaneous
+# triggers in OPPOSITE order, and the `select:` vocabulary has no way to
+# name a trigger across that inversion, so this line cannot be made to
+# satisfy both wires at once.
+#
+#   OURS  (probed via the exam's own lowering note): branch 0 = [On Deletion],
+#         branch 1 = <Ascension>.
+#   DCGO  (READ OFF THE WIRE, not inferred): `EX12_047.CardEffects` adds the
+#         <Ascension> keyword in the "Static Keywords" region BEFORE the
+#         "On Deletion" region, and `MultipleSkills.skillInfos_active`
+#         preserves that order -- so index 0 = <Ascension>, index 1 =
+#         [On Deletion]. Proof: in the effect4 recording DCGO answered
+#         `MultipleSkills` with int_value 0 and the VERY NEXT prompt was
+#         `generic_bool`, which is `AscensionProcess`'s
+#         SetBoolSelection("Will you place this card in security?").
+#
+# `select: {cards:, ordinal:}` carries ONE ordinal that each engine resolves
+# against its OWN candidate list (`match_one_with_ordinal` /
+# `SelectionAnswer.MatchOneWithOrdinal`), and `value:` is a single raw index
+# on both sides -- so whichever value is authored, exactly one engine
+# resolves <Ascension> first and the other resolves [On Deletion] first.
+# The two orders do NOT produce the same wire, and cannot be made to:
+#
+#   * <Ascension> first: it moves the carrier out of the trash, and DCGO then
+#     DROPS the [On Deletion] outright, because
+#     `CanActivateOnDeletion = card.IsToken || IsTopCardStillInTrash(...)`
+#     is now false (CanUseEffects/OnDeletion.cs:114). Rows: [MultipleSkills,
+#     generic_bool].
+#   * [On Deletion] first: its trash pick ALWAYS opens, because the carrier
+#     itself is a [TB] card sitting in the trash
+#     (`HasMatchConditionOwnersCardInTrash` = `Owner.TrashCards.Some(...)`,
+#     no self-exclusion), so there is no board state that starves it. Rows:
+#     [MultipleSkills, SelectCardEffect, (SelectHandEffect), (generic_bool)].
+#
+# Neither trigger can be made to emit ZERO rows either -- the only lever on
+# <Ascension> is `Player.CanAddSecurity`, which needs an
+# `ICannotAddSecurityEffect` on the board and the Toho pool has none. So the
+# gate row lands in position 1 on one wire and in the last position on the
+# other, and the strict cursor aborts there.
+#
+# The ordinal below is therefore chosen to keep the SIM side honest (it is
+# OUR branch index; `--sim-only` lowers and asserts clean). The oracle pass
+# will abort at the row named above with a prompt mismatch -- that abort IS
+# the finding, and it is a substrate gap in the exam wire, not evidence that
+# either engine resolves the card wrongly: simultaneous triggers are
+# resolved one at a time by the player who controls them (general_rule.pdf
+# 15-4-2-3 / 15-4-3-5), so the list ORDER is a presentation detail and BOTH
+# candidate orders are legal. Unblocking needs the wire to name a
+# trigger by something order-independent (e.g. a per-engine ordinal, or the
+# effect's clause id) -- a harness change, not an authoring one.
 card: EX12-047
 clause: EX12-047#effect#2
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4): Amaterasumon + Option-only fillers (the [On Deletion]
-      # hand pick must stay candidate-free)
+      # hand (0-4): Amaterasumon, one cheap [TB] Digimon (Wankomon -- never
+      # played; it exists ONLY so DCGO's turn-1 `CanSelect()` is true, see
+      # the TURN-1 note above), and Option fillers.
       - EX12-047
       - EX12-070
       - EX12-074
       - EX12-075
-      - EX12-070
+      - EX12-009
       # security (5-9) -- never touched
       - EX12-009
       - EX12-011
@@ -117,13 +179,19 @@ steps:
   # deleted card out of the trash, so the [On Deletion] body that fires
   # next is candidate-starved on both engines and skips silently.
   - actor: 0
-    do: { select: { value: 6 } }
-    expect: { prompt: MultipleSkills }
+    do: { select: { cards: [EX12-047], ordinal: 1 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
   # THE CLAUSE: the <Ascension> gate -- accept, placing the deleted card as
-  # p0's top security card.
+  # p0's top security card. DCGO surfaces this as `generic_bool`, NOT
+  # `OptionalSkill`: `CardEffectCommons.AscensionProcess` raises it with
+  # `userSelectionManager.SetBoolSelection(...)`, whose response lands on
+  # `UserSelectionManager.SetBoolForPlayer` -- the fallback channel the
+  # recorder writes as `generic_bool` (rule 27 / DCGO_RECORDING_SCHEMA).
+  # Read off the failed oracle recording 20260824T175315Z, where the
+  # sibling effect4 line hit exactly this row.
   - actor: 0
     do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: generic_bool }
   # p1's turn ended at -3; p0's breeding decision closes the line.
   - actor: 0
     do: { pass: {} }

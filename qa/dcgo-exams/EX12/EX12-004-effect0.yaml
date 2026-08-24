@@ -1,0 +1,182 @@
+# Exam scenario: EX12-004 Onibimon, clause EX12-004#effect#0 -- the WHOLE
+# printed box as the current extractor renders it from cards.json's
+# `effect_description_eng`:
+#
+#   "Inherited Effect [Your Turn] This Digimon with the [TB] trait gains
+#    <Execute> (At the end of your turn, this Digimon may attack. At the end
+#    of that attack, delete this Digimon. Your opponent's unsuspended Digimon
+#    can also be attacked with this effect.)"
+#
+# DENOMINATOR NOTE (read before trusting the id). Onibimon is a Digi-Egg and
+# the card face (Assets/Textures/Card/EX12-004.webp) prints exactly ONE box,
+# labelled "Inherited Effect". cards.json stores that one box TWICE: verbatim
+# (plus the "Inherited Effect" label) in `effect_description_eng`, and
+# TRUNCATED -- the <Execute> grant is dropped -- in
+# `inherited_effect_description_eng`. So `#effect#0` and `#inherited#0` are two
+# renderings of ONE printed clause, and `#effect#0` is the FAITHFUL one.
+# DCGO agrees there is only one behaviour here: EX12_004.cs registers a single
+# ICardEffect --
+#   DCGO/Assets/Scripts/CardEffect/EX12/Purple/EX12_004.cs:13-22
+#     if (timing == EffectTiming.OnEndTurn)
+#         cardEffects.Add(CardEffectFactory.ExecuteSelfEffect(
+#             isInheritedEffect: true, card: card,
+#             condition: () => CardEffectCommons.IsOwnerTurn(card)
+#                           && card.PermanentOfThisCard().TopCard.EqualsTraits("TB")));
+# -- i.e. exactly [Your Turn] + [TB]-on-top + <Execute>-on-self.
+#
+# WHAT THIS LINE ADDS over the two sibling scenarios. `-effect1` declines the
+# window and `-inherited0` spends it into a 2000-vs-2000 trade; `-effect2`
+# spends it from a 7000 attacker but asserts only the PRE-attack setup. This
+# line asserts the clause's full PAYOFF -- the post-attack board -- and pins
+# the two halves the sibling lines leave implicit:
+#
+#  1. "[Your Turn] ... This Digimon with the [TB] trait": P1 NEVER hatches, so
+#     P1's Digimon has no Onibimon under it and no <Execute> anywhere. The
+#     line therefore contains NO end-of-turn gate on P1's turns at all -- an
+#     engine that granted the keyword off-turn, or to a non-carrier, would
+#     park a window here and desync the line at the T2/T4 passes.
+#  2. "At the end of that attack, delete this Digimon": the attacker WINS its
+#     battle (7000 vs 2000), so the attacker's trip to the trash is the
+#     keyword's own self-delete and nothing else. Both halves land in one
+#     projected step (assert at 14): both fields empty, the whole 3-card
+#     attacker stack plus the defender in their owners' trashes.
+#  3. "Your opponent's unsuspended Digimon can also be attacked": the ONLY
+#     target on the board is unsuspended, so without the widened defender set
+#     the attack step could not lower at all.
+#
+# BUILD. P0: hatch Onibimon (T1), digivolve Wankomon EX12-009 [TB] over it in
+# breeding (alt circle, cost 0 -- the printed red Lv.2 circle does not match
+# the purple egg), digivolve Shellmon EX12-026 [TB] in breeding on T3 (alt
+# circle "Lv.3 w/[Shambala]: Cost 2"), move to battle on T5. Both digivolves
+# happen while P1's battle area is EMPTY, so Shellmon's
+# [On Play]/[When Digivolving] has no target and prompts nothing. On P0's turn
+# the stack reads 7000 DP: printed 5000 + Wankomon's inherited [Your Turn]
+# +2000. P1 plays Gasamon EX12-020 (Lv.3, 2000 DP, [TB]) from hand on T4 --
+# its own text is a [Your Turn] digivolve-cost reduction, inert on P0's turn
+# and silent on play -- and leaves it unsuspended as the defender.
+#
+# The end-of-turn window is authored in OUR vocabulary (`attack` at the
+# EndOfTurnAction park); the emitter maps that single row to DCGO's
+# OptionalSkill(yes) + SelectAttackEffect pair.
+card: EX12-004
+clause: EX12-004#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-026, EX12-011, EX12-031, EX12-046,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T3 / T5 draws
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-062, EX12-070, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): hatch Onibimon, digivolve Wankomon over it in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): nothing at all -- P1 never hatches, so P1 owns no Onibimon
+  # and no <Execute> for the rest of the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0, memory 3): digivolve Shellmon over the breeding Wankomon
+  # (3 -> 1). P1's battle area is empty, so Shellmon's
+  # [On Play]/[When Digivolving] finds no target and asks nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1, memory 3): play the defender from hand (3 -> 0). No hatch, no
+  # Onibimon: this turn MUST end with no <Execute> gate on either seat -- the
+  # [Your Turn] + carrier half of the clause, checked structurally.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (P0, memory 3): move the Onibimon/Wankomon/Shellmon stack to the
+  # battle area, then pass the main phase -- which reaches the granted
+  # <Execute> end-of-turn window.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Spend the window on the opponent's UNSUSPENDED Digimon -- legal only
+  # because <Execute> widens the defender set. 7000 vs 2000: the defender is
+  # deleted by the battle, then <Execute> deletes the surviving attacker at
+  # the end of that attack.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: OptionalSkill }
+  # Sim-only phase exit: our engine stays parked in EndOfTurnAction until a
+  # PASS even after the carrier self-deleted; DCGO rotates on its own, so this
+  # row emits nothing on the wire.
+  - actor: 0
+    do: { pass: {} }
+  # Trailing pass: P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-attack setup, read at the end-of-turn gate row itself (step 13, still
+  # turn 5): the carrier is [TB] on top (Shellmon) with Onibimon at the bottom
+  # of its stack, reading 7000 DP (5000 printed + Wankomon's inherited
+  # [Your Turn] +2000); the defender sits unsuspended at its printed 2000 with
+  # no sources -- the only legal target, and only because <Execute> widens the
+  # defender set.
+  - at: 13
+    that:
+      turn: 5
+      p0.field: [{ card_id: EX12-026, dp: 7000, suspended: false, sources: [EX12-004, EX12-009] }]
+      p1.field: [{ card_id: EX12-020, dp: 2000, suspended: false, sources: [] }]
+  # The clause's payoff, INSIDE the still-open window (step 14, still turn 5 --
+  # our engine lingers in EndOfTurnAction until a PASS): the defender is gone
+  # (battle) AND the attacker is gone (the <Execute> self-delete), the
+  # attacker's whole 3-card stack is in P0's trash, and neither security stack
+  # was touched -- the granted attack went at a Digimon, not at the player.
+  # Step 14 is the SimOnlyAction row, so it carries no DCGO wire row and this
+  # block is a sim-side regression guard only.
+  - at: 14
+    that:
+      turn: 5
+      p0.field: []
+      p1.field: []
+      p0.trash: [EX12-004, EX12-009, EX12-026]
+      p1.trash: [EX12-020]
+      p0.security: 5
+      p1.security: 5
+  # The same payoff after the turn rotates (step 15, P1's breeding decision on
+  # turn 6) -- this row IS on the wire, so it is the oracle-comparable form of
+  # the claim: both deletions are permanent, both securities still full.
+  - at: 15
+    that:
+      turn: 6
+      p0.field: []
+      p1.field: []
+      p0.trash: [EX12-004, EX12-009, EX12-026]
+      p1.trash: [EX12-020]
+      p0.security: 5
+      p1.security: 5

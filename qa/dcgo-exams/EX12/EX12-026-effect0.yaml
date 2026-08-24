@@ -9,6 +9,13 @@
 # security untouched + attacker in P1's trash is a pair of observables no
 # static aura can fake.
 #
+# Sources: the card face (Assets/Textures/Card/EX12-026.webp) prints the
+# <Blocker> box; DCGO registers it as an EffectTiming.None static self-effect,
+# `CardEffectFactory.BlockerSelfStaticEffect(isInheritedEffect: false, ...)` at
+# EX12_026.cs:28 -- unconditional (`condition: null`) and NOT inherited, so it
+# is live only while Shellmon is the TOP card, which this line's board (a bare
+# Shellmon with no digivolution cards) satisfies by construction.
+#
 # ORDER IS LOAD-BEARING: Shellmon lands FIRST, into an empty enemy board.
 # Its [On Play] ("trash the bottom 2 digivolution cards of 1 of your
 # opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution
@@ -33,6 +40,22 @@
 # your [Shambala] Digimon attacks..." functions FROM the security stack and
 # would bury the blocker window under a TriggerOrder prompt when the
 # [Shambala] Gasamon declares.
+#
+# P1'S HAND MUST HOLD A DIGIMON (EX12-009), reconciled against the DCGO wire.
+# DCGO does NOT prompt a turn player who has nothing to choose: the main-phase
+# loop in TurnStateMachine.cs runs `if (!CanSelect()) EndTurnProcess()` BEFORE
+# it ever asks, and CanSelect() is false when no hand card is playable, no
+# permanent can attack or declare a skill, and no hand/trash card can. The
+# block empties P1's board, and P1's remaining hand was all Option cards
+# (EX12-070 / EX12-075, card_kind 2). An Option needs MatchColorRequirement --
+# a matching-colour permanent in play, or a [TB]/[Shambala] permanent for its
+# <Use Req.> -- and an EMPTY board satisfies neither, so every card in hand was
+# unplayable, CanSelect() went false, and DCGO ended P1's turn SILENTLY. The
+# first oracle run failed exactly there: "step 10 expected actor 1 but DCGO
+# asked actor 0" -- actor 0 being P0's turn-5 breeding prompt.
+# EX12-009 (Digimon, cost 3; MaxMemoryCost is 7 at memory 3) carries no colour
+# requirement, so it keeps CanSelect() true and DCGO keeps asking. It is inert:
+# it has only an [On Play] effect and is never played.
 card: EX12-026
 clause: EX12-026#effect#0
 seed: 424242
@@ -58,8 +81,10 @@ decks:
   p1:
     stack:
       # hand (0-4): exactly one Gasamon so the play intent is unambiguous.
+      # EX12-009 (Wankomon, Digimon, cost 3) is here ONLY to keep DCGO asking:
+      # see the CanSelect() note in the header. It is never played.
       - EX12-020
-      - EX12-070
+      - EX12-009
       - EX12-075
       - EX12-070
       - EX12-075
@@ -109,7 +134,8 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # Attacking costs no memory; P1 keeps the turn after the battle.
+  # Attacking costs no memory, and the EX12-009 in hand keeps CanSelect() true
+  # now that the block emptied P1's board -- so DCGO still asks P1 here.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
