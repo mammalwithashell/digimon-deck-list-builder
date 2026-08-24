@@ -255,10 +255,19 @@ fn bt25_062_somp_free_digivolves_into_machine_from_hand() {
         perm.card_sources.len() >= 2,
         "digivolution stack must now hold Kokuwamon underneath the Lv.4 result"
     );
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert the [Machine] card's departure by identity, not by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "MACHINE-LV4"),
+        "the [Machine] card left hand to become the new top card"
+    );
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 1,
-        "the [Machine] card left hand to become the new top card"
+        hand_before,
+        "the digivolve draw replaced it (§8-1-3-3)"
     );
 }
 

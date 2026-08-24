@@ -1435,7 +1435,6 @@ impl Game {
             first_player,
             evo_hand_index,
             effective_cost,
-            true,
             false,
         );
 
@@ -1454,8 +1453,11 @@ impl Game {
     ///
     /// Unlike `digivolve_from_hand`, this does **not** check `GamePhase::Main`
     /// or fire `check_turn_end` — it is designed for use inside effect
-    /// callbacks where those invariants don't apply. It also does **not**
-    /// draw a card (that's a player-action benefit, not an effect mechanic).
+    /// callbacks where those invariants don't apply. It DOES draw the
+    /// §8-1-3-3 card: the draw is part of the digivolution *procedure*
+    /// ("places the Digimon ... on top of the chosen card, draws 1 card, and
+    /// the digivolution process is resolved"), not a benefit of the main-phase
+    /// action, so it applies however the digivolution was initiated.
     ///
     /// Returns `true` on success, `false` if validation fails (bad index,
     /// no matching evo cost, or insufficient memory).
@@ -1735,6 +1737,16 @@ impl Game {
             .get(target.index as usize)
             .map(|perm| perm.top_card().handle())
             .expect("effect digivolve target remains in battle area after stack mutation");
+
+        // 4b. §8-1-3-3: the digivolution procedure is "places the Digimon ...
+        // on top of the chosen card, draws 1 card, and the digivolution
+        // process is resolved". The draw belongs to the PROCEDURE, so an
+        // effect-initiated digivolve draws exactly like the main-phase action
+        // — and it lands here, after the stack mutation and BEFORE the
+        // WhenDigivolving fan-out, mirroring the player-action path above.
+        // (§8-1-2-10 covers the empty-deck case: digivolution still happens,
+        // just "without drawing a card" — which `draw()` already models.)
+        self.player_mut(player_id).draw();
 
         // 5. Fire WhenDigivolving triggers.
         self.enqueue_triggered(

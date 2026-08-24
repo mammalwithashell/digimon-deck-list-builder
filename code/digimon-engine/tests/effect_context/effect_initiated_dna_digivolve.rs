@@ -632,3 +632,52 @@ fn dna_printed_cost_none_for_illegal_pair() {
         "illegal pair must resolve NO printed DNA cost (recipe unsatisfied)"
     );
 }
+
+/// §8-2-3-3: "The player places the Digimon for the DNA digivolution on top of
+/// the stack, **draws 1 card**, and the DNA digivolution process is resolved."
+///
+/// The draw is part of the DNA digivolution PROCEDURE, so it does not depend
+/// on who initiated it. This matters more here than for standard digivolution,
+/// because §8-2-2-4 says DNA digivolution "can only be performed by an effect
+/// that specifically performs DNA digivolution" — under the old
+/// `grant_digivolve_bonus: false` wiring on the effect path, a large share of
+/// real DNA digivolutions silently skipped the draw.
+///
+/// Sibling of `ex12_046_effect_initiated_digivolve_still_draws_the_rule_8_1_3_3_card`
+/// (standard digivolve, §8-1-3-3), found by the DCGO card-clause exam.
+#[test]
+fn effect_initiated_dna_digivolve_draws_the_rule_8_2_3_3_card() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-A", "DnaSourceA"))
+        .add_card(make_test_card("TST-B", "DnaSourceB"))
+        .add_card(make_test_card("TST-DNA-RESULT", "DnaResult"))
+        .add_card(make_test_card("TST-DECKTOP", "DeckTop"))
+        .hand(0, &["TST-DNA-RESULT"])
+        .deck(0, &["TST-DECKTOP"])
+        .memory(5)
+        .start();
+
+    let handle_a = runner.place_on_field(0, "TST-A", None);
+    let handle_b = runner.place_on_field(0, "TST-B", None);
+    let hand_card_handle = runner.game.players[0].hand[0].handle();
+    let deck_before = runner.game.players[0].deck.len();
+    assert_eq!(deck_before, 1, "fixture: exactly 1 card to draw");
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card_handle, None, 0);
+        ctx.effect_initiated_dna_digivolve(handle_a, handle_b, hand_card_handle, 0, true)
+    };
+    assert!(result.is_some(), "the DNA digivolve resolved");
+
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before - 1,
+        "§8-2-3-3: the DNA digivolution procedure draws 1 card"
+    );
+    // Hand: the result card left (-1) and the §8-2-3-3 draw replaced it (+1).
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        1,
+        "hand returns to its prior size: result consumed, draw gained"
+    );
+}

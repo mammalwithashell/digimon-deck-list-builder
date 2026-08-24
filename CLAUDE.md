@@ -344,12 +344,15 @@ cd code/digimon-engine-py && maturin develop
 
     The raw grep above is a STARTING POINT, not the verified count: several files (`SelectCardEffect.cs`, `SelectHandEffect.cs`, `SelectPermanentEffect.cs`, `SelectAttackEffect.cs`) capture `GameRecorder.Instance` into a local `__rec` once, then call `__rec?.LogSelectionRow(...)` from two separate branches — the second call has no literal "GameRecorder.Instance" text for the grep to find. Confirm real call counts by reading each matched file, not by trusting the grep's line count alone.
 
-    Current map (verified 2026-08-21, `LogEffectActivation` added same day — clause-activation recorder hook), by recorder method — **27 live call sites across 12 files**:
+    Current map (re-derived 2026-08-24 by READING every match, incl. the `__rec`-local form — `LogAction` gained the `UseCardEffect` mirror that day), by recorder
+    method — **29 live call sites across 12 files**. (The previous stamp read "27";
+    its own table already summed to 28, so treat the headline count as derived, not
+    quoted — re-run the derivation rather than trusting either number.)
 
     | Method | Call sites |
     |---|---|
     | `LogSelectionRow` | **14** — `SelectCardEffect.cs` (×2), `SelectHandEffect.cs` (×2), `SelectPermanentEffect.cs` (×2), `SelectAttackEffect.cs` (×2), `SelectCountEffect.cs`, `SelectDigiXrosClass.cs`, `MultipleSkills.cs`, `OptionalSkill.cs`, `UserSelectionManager.cs` (×2) |
-    | `LogAction` | 4 — `TurnStateMachine.cs` (queued main-phase decisions) |
+    | `LogAction` | **5** — `TurnStateMachine.cs`: the human-UI `QueueMainPhaseAction` chokepoint, plus FOUR AI/harness decision mirrors (attack, play, **activate**, pass). The `UseCardEffect` mirror — `[Main]` activated abilities, `<Delay>`, `<Training>` — was **missing until 2026-08-24** (DCGO `e69f10a38`): the decision was consumed but recorded nothing, so every activated effect in the pool was invisible to `dcgo-replay` and unmeasurable by the exam. It rebuilds the action from indices captured in `SetActSkill`/`SetActCardSkill`, because `CardEffects()` allocates a fresh `ICardEffect` per call and reference lookup can never match. |
     | `LogReveal` | 3 — `CardController.cs` (PvP reveals: `DrawClass.Draw()`, `IBreakSecurity.SecurityCheck()`, `IAddTrashCardsFromLibraryTop`) |
     | `LogGameStart` / `LogInitialState` / `LogMulligan` / `LogBreedingAction` / `LogGameEnd` | 1 each — `TurnStateMachine.cs` |
     | `LogActionResolution` | 1 — `CardController.cs` (`PlayCardClass.PlayCard()`, after cost is paid) |

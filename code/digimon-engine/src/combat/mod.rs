@@ -3432,19 +3432,29 @@ impl Game {
                     self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
-                    // Trash the revealed card unless an effect raised the
-                    // `played` bit via `EffectContext::play_pending_security`.
+                    // §13-1-5: "A checked card is removed from the security
+                    // stack and is treated as NOT BEING IN ANY PARTICULAR
+                    // AREA." It only reaches the trash at §13-1-7-4 ("a card
+                    // revealed from a security check is placed in the trash
+                    // unless it belongs to an area"), which is the LAST step
+                    // of the check procedure -- after §13-1-7-2's triggered
+                    // effects and §13-1-7-3's security battle.
+                    //
+                    // So the security-removed observers below run while the
+                    // card is still in no area, and the trash push happens in
+                    // `DisposeFinalize`. Trashing here instead made the card
+                    // visible to any trash-reading effect during the observer
+                    // window -- the divergence the DCGO card-clause exam
+                    // caught on six Toho Braves clauses (DCGO holds the card
+                    // in `ExecutingCards` and calls `AddTrashCard` only at the
+                    // end of `ISecurityCheck.SecurityCheck`).
+                    //
                     // `security_resolution` stays alive across the observer
                     // drain so a selection installed by an observer can
                     // resume through `DisposeFinalize` (§2.5j residual).
                     let defender = state.defender;
                     let attacker_opt = state.attacker;
                     let revealed_card = state.revealed_card;
-                    if let Some(pending) = self.pending_security.take() {
-                        if !pending.played {
-                            self.player_mut(defender).trash.push(pending.card);
-                        }
-                    }
 
                     // Security-removed observers fire after a security card
                     // leaves the defender's stack (trashed or played from
@@ -3489,6 +3499,26 @@ impl Game {
                     self.set_security_phase(SecurityPhase::DisposeFinalize);
                 }
                 SecurityPhase::DisposeFinalize => {
+                    // §13-1-7-4, the last step of the check: the revealed card
+                    // is placed in the trash "unless it belongs to an area" --
+                    // i.e. unless an effect raised the `played` bit via
+                    // `EffectContext::play_pending_security` (or otherwise
+                    // moved it), in which case it already belongs somewhere
+                    // and must not be trashed on top of that.
+                    //
+                    // Reached from BOTH the straight-through path and the
+                    // park-and-resume path, so the `take()` runs exactly once
+                    // per checked card either way.
+                    // Read the defender BEFORE taking, so a missing
+                    // resolution can never silently swallow the card.
+                    if let Some(defender) = self.security_resolution.as_ref().map(|s| s.defender) {
+                        if let Some(pending) = self.pending_security.take() {
+                            if !pending.played {
+                                self.player_mut(defender).trash.push(pending.card);
+                            }
+                        }
+                    }
+
                     // Post-observer finalization. `security_resolution` is
                     // still live; drain it now and decide the terminal
                     // outcome (or loop to the next card).

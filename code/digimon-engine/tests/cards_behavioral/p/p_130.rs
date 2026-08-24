@@ -160,10 +160,20 @@ fn p_130_on_move_clause_shape() {
         })
         .expect("P-130 must have an OnMove triggered clause");
 
+    // §15-7-1 names this exact shape: "Optional processing conditions
+    // include text such as 'by X, Y.'" -- and its worked example is literally
+    // "[On Deletion] By trashing 1 card in the hand, gain 1 memory". §15-7-4:
+    // "A player can choose whether or not to execute the content of optional
+    // processing conditions." So "by suspending this Tamer, gain 1 memory" is
+    // declinable, and rule 17 requires the decline to reach the action space.
+    //
+    // This assertion used to be inverted, on the theory that "the 'cost' is
+    // the suspend, which prevents re-triggering" -- that explains why no
+    // once_per_turn is printed, but it does not make the payment mandatory.
+    // DCGO agrees with the manual: P_130.cs passes isOptional=true.
     assert!(
-        !on_move_clause.optional,
-        "Clause 2 body is NOT optional at clause level — triggering is mandatory once conditions met; \
-         the 'cost' is the suspend, which prevents re-triggering"
+        on_move_clause.optional,
+        "Clause 2 is an optional processing condition (§15-7-1/§15-7-4): the player may decline to suspend"
     );
     assert!(
         on_move_clause.active_when.is_some(),
@@ -303,7 +313,10 @@ fn p_130_your_turn_trigger_suspends_self_and_gains_memory_on_move() {
     let moved = runner.move_from_breeding(0);
     assert!(moved, "Lv.3 Rookie must move from breeding to battle area");
 
-    // Auto-resolve any pending selections from the trigger.
+    // ACCEPT the optional processing condition ("by suspending this Tamer").
+    // The prompt must exist -- rule 17 -- so this test drives the accept
+    // branch explicitly rather than letting auto_resolve pick for it.
+    accept_optional_cost(&mut runner);
     let _ = runner.auto_resolve();
 
     // P-130 must now be suspended (the cost was paying suspend).
@@ -536,4 +549,63 @@ fn _unused_silencer() {
     let _ = make_filler("X");
     let _ = make_egg("Y");
     let _ = make_rookie("Z");
+}
+
+/// The accept half of P-130's optional suspend cost: take the first non-PASS
+/// action on the pending prompt.
+fn accept_optional_cost(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != digimon_engine::action::space::PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the suspend cost");
+}
+
+/// §15-7-4: "A player can choose whether or not to execute the content of
+/// optional processing conditions." Declining "by suspending this Tamer" must
+/// leave BOTH halves undone -- the Tamer stays unsuspended and no memory is
+/// gained -- because §15-7-2 says that if the optional condition's content
+/// isn't executed, "the processing after the conditions can't be executed".
+///
+/// This is the branch the engine had no way to reach: the clause fired
+/// unconditionally, so the suspend was auto-paid. Found by the DCGO
+/// card-clause exam (`qa/dcgo-exams/EX12/P-130-effect0.yaml`), whose harness
+/// note read "our engine auto-resolved the prompt".
+#[test]
+fn p_130_your_turn_trigger_may_be_declined_leaving_tamer_unsuspended() {
+    let mut runner = lui_runner_with_breeding_rookie();
+    let mem_before = runner.memory();
+
+    let moved = runner.move_from_breeding(0);
+    assert!(moved, "Lv.3 Rookie must move from breeding to battle area");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional processing condition must surface a prompt (rule 17)");
+    runner
+        .execute_action(view.selecting_player, digimon_engine::action::space::PASS)
+        .expect("declining must be reachable from the action space");
+    let _ = runner.auto_resolve();
+
+    let p130_perm = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|perm| perm.top_card().card_id(&runner.game.card_data).eq(CARD_ID))
+        .expect("P-130 must still be on field");
+    assert!(
+        !p130_perm.is_suspended,
+        "declining the optional cost must NOT suspend the Tamer"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "with the optional condition declined, the processing after it can't execute"
+    );
 }

@@ -1993,10 +1993,13 @@ impl Game {
     ///   user-action path; passes the printed cost minus
     ///   `BeforePayCost` reductions and never bypasses.
     ///
-    /// `grant_digivolve_bonus`: if true, `hand_owner` draws 1 card after the
-    /// merge but before triggers fire. The user-action path passes `true`
-    /// (matching `digivolve_from_hand`); the effect-initiated path passes
-    /// `false`.
+    /// §8-2-3-3 — "places the Digimon for the DNA digivolution on top of the
+    /// stack, draws 1 card, and the DNA digivolution process is resolved" —
+    /// so `hand_owner` ALWAYS draws 1 after the merge and before triggers
+    /// fire, however the DNA digivolution was initiated. This used to be
+    /// gated behind a `grant_digivolve_bonus` flag that the effect-initiated
+    /// callers passed as `false`; since §8-2-2-4 makes every DNA digivolution
+    /// effect-driven, that silently skipped the draw for most real DNA lines.
     ///
     /// `effect_initiated`: marks the global `OnDigivolve` payload so observers
     /// can distinguish effect-created DNA digivolutions from player-action DNA.
@@ -2007,7 +2010,6 @@ impl Game {
         hand_owner: PlayerId,
         hand_index: usize,
         cost: u16,
-        grant_digivolve_bonus: bool,
         effect_initiated: bool,
     ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
@@ -2091,19 +2093,18 @@ impl Game {
             memory_paid: cost as i16,
         });
 
-        if grant_digivolve_bonus {
-            // Opaque-aware: routes through draw_one_for_player so opaque
-            // opponents pull from their RevealSource rather than from the
-            // (empty in opaque mode) deck Vec. Errors are logged-and-
-            // ignored to preserve the original `-> ()` signature of this
-            // function; the symptom of a misaligned reveal source is a
-            // downstream parity divergence the replay harness will catch.
-            if let Err(e) = self.draw_one_for_player(hand_owner) {
-                eprintln!(
-                    "[opaque-deck] digivolve bonus draw error for player {}: {}",
-                    hand_owner, e
-                );
-            }
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card.
+        // Opaque-aware: routes through draw_one_for_player so opaque
+        // opponents pull from their RevealSource rather than from the
+        // (empty in opaque mode) deck Vec. Errors are logged-and-
+        // ignored to preserve the original `-> ()` signature of this
+        // function; the symptom of a misaligned reveal source is a
+        // downstream parity divergence the replay harness will catch.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
         }
 
         self.enqueue_triggered(
@@ -2259,6 +2260,16 @@ impl Game {
             memory_paid: cost as i16,
         });
 
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // `dna_digivolve_inner`; these partner variants (hand partner / trash
+        // partner) are DNA digivolutions too, so they draw identically.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
+        }
+
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(merged_handle),
@@ -2400,6 +2411,16 @@ impl Game {
             was_blast_dna: false,
             memory_paid: cost as i16,
         });
+
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // `dna_digivolve_inner`; these partner variants (hand partner / trash
+        // partner) are DNA digivolutions too, so they draw identically.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
+        }
 
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,

@@ -642,11 +642,22 @@ fn bt17_095_replacement_dna_digivolves_into_omnimon_when_eligible() {
         merged.card_sources.len()
     );
 
-    // Both hand cards were consumed.
+    // Both hand cards were consumed. §8-2-3-3: the DNA digivolution
+    // procedure then draws 1, so the hand holds that drawn card and nothing
+    // else -- assert the two departures by identity, not by hand size.
+    for consumed in ["BT17095-OMNI", "BT17095-PARTNER"] {
+        assert!(
+            !runner.game.players[0]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == consumed),
+            "{consumed} must leave the hand"
+        );
+    }
     assert_eq!(
         runner.game.players[0].hand.len(),
-        0,
-        "the Omnimon result and the DNA partner must both leave the hand"
+        1,
+        "the DNA digivolve draw replaced them (§8-2-3-3)"
     );
 }
 
