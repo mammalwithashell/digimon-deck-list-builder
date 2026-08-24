@@ -8,6 +8,20 @@
 //! companion tests covering the positive and negative branch of any
 //! conditional effect).
 
+/// EXPERIMENT (2026-08-24): swap the global allocator for this test binary.
+///
+/// Rust on Windows allocates through the system heap, whose locks are a known
+/// multithreaded bottleneck. This suite is the adversarial case: huge
+/// allocation churn against a heap that only grows, because
+/// `card_store::shared_card_store` memoizes per distinct test card set into a
+/// process-global map that is never evicted (~2 MB retained per test, measured
+/// monotonic 523 MB -> 1471 MB over 484 tests at ONE thread).
+///
+/// `#[global_allocator]` must live in the binary crate, and an integration-test
+/// binary is its own crate, so it goes here rather than in the library.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod app_fuse_primitive;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]
