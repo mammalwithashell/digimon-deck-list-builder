@@ -8247,3 +8247,17 @@ See `qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
 - Suggested resolution: (1) engine — read `AddColor` `Colors { value }` payloads additively in `synth_identity` (append-dedup after the `ChangeBaseCardColor` pass); (2) DSL — a self-aura field (e.g. `gain_colors_from: source_stack`) whose per-tick install computes the current non-flipped source-color list into the payload. Once landed, the two sibling gaps above collapse into ordinary reads of the synthesized colors (`self_color_count_gte: 4` would then be the faithful +4000 gate).
 - Consumer status: clause OMITTED from BT8-084.yaml (documented in its header); same tripwire test as above.
 - First reported: 2026-08-22
+
+## `<Delay>` on turn-scheduled triggers auto-pays its §16-16 cost  [G-DSL-DELAY-TURN-TRIGGER-NOT-OPTIONAL]
+- Effect text: the §16-16 keyword reminder itself — "(By trashing this card after the placing turn, activate the effect below.)". §16-16 classes `<Delay>` as **Optional**: trashing the card is the player's choice, and declining must skip the linked effect (§15-7-2).
+- **This is a live rule-17 defect, not missing vocabulary.** `lower_delay.rs:115-117` makes only ONE of three lowering arms optional:
+  `if matches!(delay_trigger, DelayTrigger::OnEvent(_)) { builder = builder.optional().needs_outer_optional_prompt(); }`
+  - **(A) `trigger: delayed` → `MainPhaseActivated` — CORRECT.** A player-visible [Main] mask bit (`action/mask.rs`, gated by `delayed_option_main_activation_available` in `option_lifecycle.rs`), with PASS always legal in Main. Not activating IS the decline. ~24 cards.
+  - **(B) `OnEvent` triggers — CORRECT.** `.optional().needs_outer_optional_prompt()` installs an explicit accept/decline selection via `effect_queue.rs` `install_outer_optional_trigger_selection`.
+  - **(C) `end_of_your_turn` / `end_of_your_next_turn` / `start_of_your_turn` → `EndOfThisTurn` / `EndOfYourNextTurn` / `StartOfYourNextTurn` — DEFECTIVE.** `optional` stays false, so no outer prompt installs; `game_phases.rs` `resolve_delayed_options_matching` enqueues `EffectTiming::DelayEffect`, drains, and then **unconditionally** `delete_permanent_with_cause(..., ReplacementCause::Cost)`. The "by trashing this card" cost is auto-paid and the body auto-resolves. **14 cards ride this arm.**
+- The lowering already concedes it in a comment: the turn-scheduled triggers "fire through `resolve_delayed_options_matching`, which bypasses the queue's optional machinery."
+- Suggested resolution: route arm (C) through the same optional machinery as (B) — make the builder `.optional().needs_outer_optional_prompt()` for every `DelayTrigger`, and have `resolve_delayed_options_matching` install the outer confirm and trash the carrier only on accept. Note the ordering constraint: the card is trashed as the COST, so a decline must leave the Delay option on the field for its next window rather than deleting it.
+- How found: the §16-keyword verification lane of the 2026-08-24 optional-cost audit. 33 of the 60 audit candidates were dismissed as "the cost belongs to a §16 keyword, so it is engine machinery" — that dismissal is SAFE for `<Barrier>` / `<Evade>` / `<Alliance>` / `<Overclock>` / `<Fragment>` / `<Armor Purge>` / `<Training>` (each verified to surface the decline, with file:line evidence) and UNSAFE for `<Delay>` on arm (C).
+- Consumer status: NOT fixed; 14 cards currently auto-pay. No tripwire yet.
+- First reported: 2026-08-24
+
