@@ -88,7 +88,8 @@ jobs:
           cargo run -p dcgo-harness --release -- exam \
             --scenario qa/dcgo-exams/ \
             --sim-only \
-            --cards-json data/cards.json
+            --cards-json data/cards.json \
+            --decks qa/dcgo-exams/EX12/toho_pool.json
 
       # Lowering, the normalized projection, the differ, the verdict store and
       # the drafter are pure Rust over fixtures — the only thing that needs
