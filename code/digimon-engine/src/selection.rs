@@ -229,6 +229,20 @@ pub struct EffectChoiceEntry {
     pub source_kind: Option<EffectSourceKind>,
     pub timing: Option<EffectTiming>,
     pub is_optional: bool,
+    /// The KEYWORD this branch belongs to, when it is a keyword effect --
+    /// `<Fortitude>`, an aura-granted `<Retaliation>`, and so on. `None` for a
+    /// plain printed clause like `[On Deletion]`.
+    ///
+    /// This is the only field that separates the branches of a same-card
+    /// trigger stack. EX12-065 Kaguyamon deleted in battle raises THREE
+    /// simultaneous triggers -- `<Fortitude>`, the `[All Turns]` aura's
+    /// `<Retaliation>` (it is itself [Puppet]/[TB], so it grants to itself),
+    /// and its `[On Deletion]` -- and every other field is identical across all
+    /// three: same `source_card`, `timing: OnDeletion`, `is_optional: false`.
+    /// Without this the only remaining handle is the branch's POSITION in the
+    /// bundle, which is per-engine and so cannot answer one scripted line in
+    /// two engines (see the exam's `ordinal:`).
+    pub keyword: Option<crate::enums::Keyword>,
     pub observation_metadata: crate::effect::EffectObservationMetadata,
 }
 

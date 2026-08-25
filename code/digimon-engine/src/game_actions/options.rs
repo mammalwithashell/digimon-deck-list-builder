@@ -682,6 +682,7 @@ impl Game {
                     source_kind: Some(source_kind),
                     timing: Some(crate::enums::EffectTiming::BeforePayCost),
                     is_optional: true,
+                    keyword: None,
                     observation_metadata: Default::default(),
                 }]),
                 source_card: key.source_card,
@@ -968,6 +969,7 @@ impl Game {
                 source_kind: Some(EffectSourceKind::Option),
                 timing: None,
                 is_optional: false,
+                keyword: None,
                 observation_metadata: Default::default(),
             });
         }

@@ -1552,6 +1552,7 @@ fn install_delay_hand_digivolve_selection(
             source_kind: None,
             timing: None,
             is_optional: false,
+            keyword: None,
             observation_metadata: Default::default(),
         })
         .collect();
@@ -1794,6 +1795,7 @@ fn install_delay_play_from_hand_selection(
             source_kind: None,
             timing: None,
             is_optional: false,
+            keyword: None,
             observation_metadata: Default::default(),
         })
         .collect();
@@ -2297,6 +2299,7 @@ fn install_delay_dna_card_selection(
             source_kind: None,
             timing: None,
             is_optional: false,
+            keyword: None,
             observation_metadata: Default::default(),
         })
         .collect();

@@ -209,6 +209,7 @@ impl Game {
                 source_kind: Some(effect.source_kind),
                 timing: Some(effect.timing),
                 is_optional: optional,
+                keyword: None,
                 observation_metadata,
             });
         }
@@ -3986,6 +3987,25 @@ impl Game {
                         .map(|effect| effect.observation_metadata)
                 })
                 .unwrap_or_default();
+            // Which KEYWORD this branch is, if any -- the only thing that tells
+            // the branches of a same-card trigger stack apart (see
+            // `EffectChoiceEntry::keyword`). Two sources, because a keyword
+            // reaches the queue two different ways:
+            //   * `qe.keyword_effect` -- the carrier gained the keyword from a
+            //     filtered-target aura, so no card's effect list contains this
+            //     body at all (G-ENGINE-AURA-GRANT-NO-TRIGGER).
+            //   * `Effect::granted_keyword` -- the card's own printed keyword,
+            //     which the DSL authors as a `kind: grant_keyword` clause
+            //     (EX12-065's `<Fortitude>` is effect slot 0).
+            // Aura first: a granted body is not addressable through the card's
+            // effect list, so the slot lookup would miss it.
+            let keyword = qe.keyword_effect.or_else(|| {
+                self.effects_for_queued(qe).and_then(|effects| {
+                    effects
+                        .get(qe.effect_slot as usize)
+                        .and_then(|effect| effect.granted_keyword)
+                })
+            });
             debug_assert!(action_id < HAND_EFFECT_END);
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
@@ -4004,6 +4024,7 @@ impl Game {
                 source_kind: Some(qe.source_kind),
                 timing: Some(qe.timing),
                 is_optional: qe.is_optional,
+                keyword,
                 observation_metadata,
             });
         }
