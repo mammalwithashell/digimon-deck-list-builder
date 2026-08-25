@@ -123,7 +123,10 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         // Selections resolve against the live PendingSelection rather than the
         // main mask; Task 3 threads them through ScenarioAdapter, which is why
         // they never match here.
-        StepAction::Select { .. } => false,
+        // Neither select form matches against the main-phase mask: both resolve
+        // against a live PendingSelection instead. A DCGO-only row resolves
+        // against nothing at all on our side, by definition.
+        StepAction::Select { .. } | StepAction::SelectDcgoOnly { .. } => false,
     }
 }
 

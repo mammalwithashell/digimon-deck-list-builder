@@ -1483,7 +1483,12 @@ fn build_exam_job(
                         ]
                     }
                 }
-                LoweredStep::Select(w) => vec![ScriptedInput {
+                // A DCGO-ONLY row emits exactly like a plain select — DCGO
+                // cannot tell the difference, and must not: it resolves the
+                // identities against its own candidate list as usual. The
+                // asymmetry is entirely on our side, where the step consumes
+                // no live prompt.
+                LoweredStep::Select(w) | LoweredStep::DcgoOnlySelect(w) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: None,
                     expect_prompt,
@@ -1510,6 +1515,9 @@ fn build_exam_job(
                 // EndOfTurnAction park after the last gate was spent) —
                 // DCGO has no prompt for it, so it contributes NO wire row.
                 LoweredStep::SimOnlyAction(_) => Vec::new(),
+                // A follow-on material pick: ours only. The FIRST pick's row
+                // already carries every declared id for DCGO.
+                LoweredStep::SimOnlySelect => vec![],
                 LoweredStep::EndOfTurnGate { attack, .. } => {
                     let gate_prompt =
                         Some(expect_prompt.unwrap_or_else(|| "OptionalSkill".to_string()));
@@ -1984,6 +1992,12 @@ steps:
         let variants: Vec<LoweredStep> = vec![
             LoweredStep::Action(62),
             LoweredStep::SimOnlyAction(62),
+            // The mirror of SimOnlyAction: one wire row, no sim-side row.
+            LoweredStep::DcgoOnlySelect(SelectWire {
+                card_ids: vec!["ST1-03".to_string()],
+                ordinal: Some(1),
+                ..SelectWire::default()
+            }),
             LoweredStep::Select(SelectWire {
                 card_ids: vec!["ST1-03".to_string()],
                 ..SelectWire::default()

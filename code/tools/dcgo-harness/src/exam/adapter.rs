@@ -116,6 +116,33 @@ pub enum LoweredStep {
     /// resolved and the carrier self-deleted, our phase still parks until a
     /// PASS, while DCGO simply rotates — no prompt exists to consume a row).
     SimOnlyAction(u16),
+    /// The MIRROR of `SimOnlyAction`: a selection DCGO asks that our engine
+    /// never parks — emitted to the wire, consumed by NOTHING sim-side.
+    ///
+    /// DCGO batches same-timing triggers into one `MultipleSkills` prompt and
+    /// asks which to resolve first. Where our engine models one of those
+    /// triggers as a combat-state window instead of a queued trigger, it opens
+    /// only the OTHER pick, so the line is one DCGO answer short and the run
+    /// aborts on a prompt mismatch. EX12-076 Susanoomon is the motivating
+    /// case: DCGO stacks `<Raid>` (`RaidSelfEffect`, `OnAllyAttack`) beside the
+    /// card's own `[When Attacking]` clause in ONE batch, while we open
+    /// `AttackState::RaidOpen` separately — and unlike its siblings that clause
+    /// NEEDS Raid activatable, so the line cannot dodge the stack by making
+    /// Raid's candidate set empty.
+    ///
+    /// Authored as `dcgo_only: true` on a select step. The row still carries
+    /// card IDENTITIES (and an `ordinal` where the stacked candidates share
+    /// one id), so DCGO resolves it against its OWN candidate list exactly
+    /// like any other select — this widens the vocabulary, it does not weaken
+    /// the comparison. The step contributes ZERO comparable state rows, so the
+    /// differ counts it as excluded rather than silently mispairing.
+    DcgoOnlySelect(SelectWire),
+    /// The 2nd..Nth pick of a multi-pick material declaration
+    /// (`SelectPayload::Materials`). Our engine asks once per recipe element;
+    /// DCGO declares the whole set in ONE row, which the FIRST pick carries.
+    /// These contribute a comparable state row on our side and ZERO wire rows,
+    /// keeping the two traces aligned across the cardinality mismatch.
+    SimOnlySelect,
 }
 
 impl LoweredStep {
@@ -131,6 +158,11 @@ impl LoweredStep {
         match self {
             // No DCGO prompt exists for it — see the variant's own docs.
             LoweredStep::SimOnlyAction(_) => 0,
+            // The inverse: DCGO asks, our engine does not. One wire row.
+            LoweredStep::DcgoOnlySelect(_) => 1,
+            // A follow-on material pick: ours only, already covered by the
+            // first pick's single wire row.
+            LoweredStep::SimOnlySelect => 0,
             LoweredStep::Action(_) => 1,
             // A folded DECLINE is one row (DCGO never opens the pick after a
             // declined gate); a folded PICK is the gate row plus the pick row.
@@ -208,6 +240,83 @@ impl ScenarioAdapter {
                     });
                     lowered.push(LoweredStep::Select(wire));
                     advance_through_selection(&mut game, i, actor, &row)?;
+                }
+                // MULTI-PICK MATERIAL DECLARATION ([Assembly] / [DigiXros]).
+                //
+                // Cardinality, not prompt kind, is what differs here: our
+                // engine re-installs a `Material` prompt per recipe element
+                // (`install_assembly_element`), DCGO declares the whole set in
+                // ONE row. So this answers N live prompts in element order and
+                // contributes ONE wire row, carrying every id — the mirror of
+                // `optional_gate_fold` (one sim prompt, two wire rows).
+                //
+                // Each element is answered by IDENTITY through the ordinary
+                // single-pick path, so a wrong id fails loudly with the usual
+                // "not among the offered candidates" error rather than being
+                // silently assigned to another slot.
+                StepAction::Select(SelectPayload::Materials(ids)) => {
+                    for (n, id) in ids.iter().enumerate() {
+                        if game.pending_selection.is_none() {
+                            return Err(format!(
+                                "step {i}: `materials:` declares {} cards but our engine                                  stopped asking after {n}. Either the recipe needs fewer                                  elements than listed, or an earlier pick already completed                                  the declaration.",
+                                ids.len()
+                            ));
+                        }
+                        let one = SelectPayload::Cards {
+                            ids: vec![id.clone()],
+                            ordinal: None,
+                        };
+                        // `expect` describes the DECLARATION, so it is checked
+                        // once against the first element's prompt.
+                        let expect_for_this = if n == 0 { step.expect.as_ref() } else { None };
+                        let (row, mut wire) =
+                            build_selection_row(&game, i, actor, &one, expect_for_this)?;
+                        if n == 0 {
+                            check_select_expectations(&game, i, step.expect.as_ref())?;
+                            // The single wire row carries the WHOLE declaration.
+                            wire.card_ids = ids.clone();
+                        }
+                        steps.push(StepSpec {
+                            actor,
+                            action_id: 0,
+                            phase: game.current_phase.py_name().to_string(),
+                            source: "scenario".to_string(),
+                            memory_after: None,
+                            dcgo_memory: None,
+                            turn: Some(game.turn_count as u64),
+                            is_game_over: None,
+                            expected_digest: None,
+                            selection: Some(row.clone()),
+                            board_p0: None,
+                            board_p1: None,
+                        });
+                        lowered.push(if n == 0 {
+                            LoweredStep::Select(wire)
+                        } else {
+                            LoweredStep::SimOnlySelect
+                        });
+                        advance_through_selection(&mut game, i, actor, &row)?;
+                    }
+                }
+                // A DCGO-ONLY row: emit the wire answer, touch nothing here.
+                //
+                // It contributes NO StepSpec, so our trace gains no row for the
+                // differ to pair -- which is the point. The `dcgo_wire_rows`
+                // count (1) is what keeps the two traces aligned across it.
+                //
+                // Guard rail: our engine must NOT have a live prompt at this
+                // point. If it does, the author has mislabelled a real shared
+                // decision as DCGO-only, and skipping it here would leave that
+                // prompt unanswered and desync every later step.
+                StepAction::SelectDcgoOnly(payload) => {
+                    if let Some(pending) = game.pending_selection.as_ref() {
+                        return Err(format!(
+                            "step {i}: `dcgo_only: true` but OUR engine has a live                              {:?} prompt here. A DCGO-only row is for a decision only                              DCGO asks; this one is shared, so answer it as a normal                              `select:` step.",
+                            pending.kind
+                        ));
+                    }
+                    let wire = build_dcgo_only_wire(payload)?;
+                    lowered.push(LoweredStep::DcgoOnlySelect(wire));
                 }
                 _ => {
                     let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
@@ -301,7 +410,9 @@ impl ScenarioAdapter {
                 LoweredStep::Action(id) => Some(*id),
                 LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
                 LoweredStep::SimOnlyAction(id) => Some(*id),
-                LoweredStep::Select(_) => None,
+                LoweredStep::Select(_)
+                | LoweredStep::DcgoOnlySelect(_)
+                | LoweredStep::SimOnlySelect => None,
             })
             .collect()
     }
@@ -600,6 +711,47 @@ fn resolve_target_ref(
 /// Build the `SelectionRow` (for our own resolve path) and the `SelectWire`
 /// (for the emitted DCGO job) from one symbolic select payload, resolved
 /// against the CURRENT game state at lowering time.
+/// Build the wire answer for a DCGO-ONLY select row.
+///
+/// Unlike [`build_selection_row`] this resolves NOTHING against our game: by
+/// definition our engine has no prompt here, so there is no candidate list to
+/// match against and no `SelectionRow` to record. The identities (and
+/// `ordinal`) ride the wire verbatim for DCGO to resolve against its own
+/// candidates.
+///
+/// `targets:` is refused: it is expressed as OUR slot references
+/// (`own.field.N`), which are resolved at lowering time against our live game
+/// -- exactly the thing that does not exist here. Answer a DCGO-only row by
+/// card identity, or by `value:` for a raw count/int prompt.
+fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
+    let mut wire = SelectWire::default();
+    if let SelectPayload::Materials(_) = payload {
+        return Err("select `materials:` cannot be combined with `dcgo_only: true`: a material                     declaration is a SHARED decision both engines make (ours as N element                     prompts, DCGO's as one row), so it is never DCGO-only."
+            .to_string());
+    }
+    match payload {
+        SelectPayload::Cards { ids, ordinal } => {
+            wire.card_ids = ids.clone();
+            wire.ordinal = *ordinal;
+        }
+        SelectPayload::Value(v) => wire.value = Some(*v),
+        SelectPayload::Yes => wire.bool_answer = Some(true),
+        SelectPayload::Decline => {
+            wire.bool_answer = Some(false);
+            wire.cancel = true;
+        }
+        // Refused above with a dedicated message.
+        SelectPayload::Materials(_) => unreachable!("materials + dcgo_only refused above"),
+        SelectPayload::Targets(_) => {
+            return Err(
+                "select `targets:` cannot be used with `dcgo_only: true`: slot references                  (own.field.N / opp.field.N) are resolved against OUR live game, which by                  definition has no prompt on a DCGO-only row. Use `cards: [ID]` (plus                  `ordinal:` when the stacked candidates share an id), or `value: N`."
+                    .to_string(),
+            );
+        }
+    }
+    Ok(wire)
+}
+
 fn build_selection_row(
     game: &Game,
     i: usize,
@@ -658,6 +810,16 @@ fn build_selection_row(
     }
 
     match payload {
+        // Never reaches here: the adapter's step loop expands a multi-pick
+        // material declaration into one single-pick call per recipe element,
+        // because our engine asks once per element. An internal invariant, so
+        // it fails loudly rather than silently answering one element.
+        SelectPayload::Materials(_) => {
+            return Err(
+                "internal: `materials:` must be expanded by the adapter's multi-pick loop                  before build_selection_row"
+                    .to_string(),
+            );
+        }
         SelectPayload::Cards { ids, ordinal } => {
             // The wire always carries the SYMBOLIC answer — identities plus,
             // when the prompt stacks a card's triggers, which of them.

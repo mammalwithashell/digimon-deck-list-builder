@@ -62,6 +62,23 @@ pub enum StepAction {
     /// not-the-placing-turn rule.
     Main { on: String },
     Select(SelectPayload),
+    /// A selection DCGO asks that OUR engine never parks -- authored
+    /// `select: { ..., dcgo_only: true }`.
+    ///
+    /// DCGO batches same-timing triggers into one `MultipleSkills` prompt; where
+    /// our engine models one of those triggers as a combat-state window rather
+    /// than a queued trigger, it opens only the other pick and the line is one
+    /// DCGO answer short. Without this the scenario is unauthorable: the run
+    /// aborts on a prompt mismatch no board arrangement can dodge. EX12-076
+    /// Susanoomon's `<Raid>` clause is the motivating case -- it REQUIRES Raid
+    /// activatable, which is exactly the condition that stacks it beside the
+    /// card's own `[When Attacking]` trigger.
+    ///
+    /// The row still answers by card IDENTITY (with `ordinal:` where the
+    /// stacked candidates share an id), so DCGO resolves it against its own
+    /// candidate list like any other select. This widens the vocabulary; it
+    /// does not weaken the comparison.
+    SelectDcgoOnly(SelectPayload),
 }
 
 /// The answer a `select:` step gives to the engine's parked selection prompt.
@@ -95,6 +112,23 @@ pub enum SelectPayload {
     Yes,
     /// Cancel / decline an optional prompt.
     Decline,
+    /// A MULTI-PICK material declaration -- `[Assembly]` / `[DigiXros]`.
+    ///
+    /// The one place the two engines disagree on CARDINALITY rather than on
+    /// prompt kind. Our engine walks the recipe one element at a time
+    /// (`install_assembly_element` re-installs per element), so N successive
+    /// `Material` prompts; DCGO declares the whole set in ONE row
+    /// (`SelectAssemblyClass` / `SelectDigiXrosClass`, recorded as a single
+    /// `selection` with every id and `mechanic: "assembly"`). So one authored
+    /// step answers N sim prompts and emits ONE wire row -- the mirror of
+    /// `optional_gate_fold`, which is one sim prompt over two wire rows.
+    ///
+    /// Ids are given in RECIPE-ELEMENT ORDER, which is the order our engine
+    /// asks in. Without this form a card whose only affordable line is its
+    /// Assembly path is unplayable in an exam at all -- EX12-076 Susanoomon
+    /// costs 16 against a +10 memory ceiling and only `[Assembly -9]` brings it
+    /// to 7, so every clause needing it PLAYED was unreachable.
+    Materials(Vec<String>),
 }
 
 /// Every verb this format understands, in the order shown to an author whose
@@ -170,10 +204,19 @@ struct SelectArgs {
     yes: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     decline: Option<bool>,
+    /// Marks the step as a DCGO-ONLY row (see `StepAction::SelectDcgoOnly`).
+    /// A MODIFIER like `ordinal:`, not one of the answer forms, so it does not
+    /// count toward the exactly-one rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    dcgo_only: Option<bool>,
+    /// Multi-pick material declaration -- see [`SelectPayload::Materials`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    materials: Option<Vec<String>>,
 }
 
 /// The five select forms, for the exactly-one error message.
-const SELECT_FORMS: &str = "cards: [..] / targets: [..] / value: N / yes: true / decline: true";
+const SELECT_FORMS: &str =
+    "cards: [..] / materials: [..] / targets: [..] / value: N / yes: true / decline: true";
 
 /// Rendered in the error an author gets for `ordinal:` without `cards:`.
 const ORDINAL_RULE: &str = "select `ordinal:` is only legal alongside `cards:`: it is the 0-based \
@@ -184,6 +227,7 @@ impl SelectArgs {
     fn into_payload(self) -> Result<SelectPayload, String> {
         let present = [
             self.cards.is_some(),
+            self.materials.is_some(),
             self.targets.is_some(),
             self.value.is_some(),
             self.yes.is_some(),
@@ -211,6 +255,15 @@ impl SelectArgs {
                      `decline: true`"
                 ));
             }
+        }
+        if let Some(materials) = self.materials {
+            if materials.is_empty() {
+                return Err(
+                    "select `materials:` is empty: a material declaration with no cards                      declares nothing"
+                        .to_string(),
+                );
+            }
+            return Ok(SelectPayload::Materials(materials));
         }
         if let Some(cards) = self.cards {
             if cards.is_empty() {
@@ -265,6 +318,7 @@ impl SelectArgs {
                 a.cards = Some(ids.clone());
                 a.ordinal = *ordinal;
             }
+            SelectPayload::Materials(m) => a.materials = Some(m.clone()),
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
             SelectPayload::Value(v) => a.value = Some(*v),
             SelectPayload::Yes => a.yes = Some(true),
@@ -341,10 +395,15 @@ impl<'de> Deserialize<'de> for StepAction {
             }
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
-                StepAction::Select(
-                    a.into_payload()
-                        .map_err(|e| D::Error::custom(format!("step `do: select`: {e}")))?,
-                )
+                let dcgo_only = a.dcgo_only.unwrap_or(false);
+                let payload = a
+                    .into_payload()
+                    .map_err(|e| D::Error::custom(format!("step `do: select`: {e}")))?;
+                if dcgo_only {
+                    StepAction::SelectDcgoOnly(payload)
+                } else {
+                    StepAction::Select(payload)
+                }
             }
             other => {
                 return Err(D::Error::custom(format!(
@@ -396,6 +455,11 @@ impl Serialize for StepAction {
             }
             StepAction::Select(payload) => {
                 map.serialize_entry("select", &SelectArgs::from_payload(payload))?
+            }
+            StepAction::SelectDcgoOnly(payload) => {
+                let mut a = SelectArgs::from_payload(payload);
+                a.dcgo_only = Some(true);
+                map.serialize_entry("select", &a)?
             }
         }
         map.end()
@@ -892,5 +956,127 @@ assert:
         let bad = GOOD.replace("at: 3", "at: 99");
         let err = Scenario::from_yaml(&bad).unwrap_err();
         assert!(err.contains("99"), "got: {err}");
+    }
+}
+
+#[cfg(test)]
+mod dcgo_only_tests {
+    use super::*;
+
+    fn step_yaml(sel: &str) -> String {
+        let head = "card: EX12-076\nclause: EX12-076#effect#1\nseed: 1\ndecks:\n  p0: { rest: toho-braves }\n  p1: { rest: toho-braves }\nsteps:\n  - actor: 0\n    do: { select: ";
+        format!("{head}{sel} }}\n")
+    }
+
+    /// `dcgo_only: true` selects the DCGO-ONLY carrier, not the shared one.
+    #[test]
+    fn dcgo_only_parses_into_its_own_variant() {
+        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], ordinal: 1, dcgo_only: true }"))
+            .expect("dcgo_only step parses");
+        match &s.steps[0].act {
+            StepAction::SelectDcgoOnly(SelectPayload::Cards { ids, ordinal }) => {
+                assert_eq!(ids, &vec!["EX12-076".to_string()]);
+                assert_eq!(*ordinal, Some(1));
+            }
+            other => panic!("expected SelectDcgoOnly, got {other:?}"),
+        }
+    }
+
+    /// Absent or false, the step stays an ordinary SHARED select. The flag must
+    /// never be the default: a mislabelled row would leave our engine's real
+    /// prompt unanswered and desync every later step.
+    #[test]
+    fn without_the_flag_the_step_is_a_normal_select() {
+        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076] }")).expect("parses");
+        assert!(matches!(&s.steps[0].act, StepAction::Select(_)));
+        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], dcgo_only: false }"))
+            .expect("parses");
+        assert!(matches!(&s.steps[0].act, StepAction::Select(_)));
+    }
+
+    /// It is a MODIFIER, not an answer form: it must not satisfy the
+    /// exactly-one-form rule on its own.
+    #[test]
+    fn dcgo_only_alone_is_still_no_answer_form() {
+        let err = Scenario::from_yaml(&step_yaml("{ dcgo_only: true }"))
+            .expect_err("a bare dcgo_only carries no answer");
+        assert!(err.contains("select"), "got: {err}");
+    }
+
+    /// Round-trips, so a re-serialized scenario keeps the flag.
+    #[test]
+    fn dcgo_only_round_trips() {
+        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], ordinal: 1, dcgo_only: true }"))
+            .expect("parses");
+        let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
+        assert!(yaml.contains("dcgo_only"), "flag survives serialization: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, s.steps[0].act);
+    }
+}
+
+#[cfg(test)]
+mod materials_tests {
+    use super::*;
+
+    fn step_yaml(sel: &str) -> String {
+        let head = "card: EX12-076\nclause: EX12-076#effect#0\nseed: 1\ndecks:\n  p0: { rest: toho-braves }\n  p1: { rest: toho-braves }\nsteps:\n  - actor: 0\n    do: { select: ";
+        format!("{head}{sel} }}\n")
+    }
+
+    #[test]
+    fn materials_parses_in_recipe_element_order() {
+        let s = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004, EX12-011, EX12-020] }"))
+            .expect("materials step parses");
+        match &s.steps[0].act {
+            StepAction::Select(SelectPayload::Materials(ids)) => assert_eq!(
+                ids,
+                &vec![
+                    "EX12-004".to_string(),
+                    "EX12-011".to_string(),
+                    "EX12-020".to_string()
+                ]
+            ),
+            other => panic!("expected Materials, got {other:?}"),
+        }
+    }
+
+    /// It is an ANSWER FORM, so it collides with the others.
+    #[test]
+    fn materials_and_cards_together_are_refused() {
+        let err = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004], cards: [EX12-011] }"))
+            .expect_err("two answer forms must be refused");
+        assert!(err.contains("materials"), "the message names the form: {err}");
+    }
+
+    /// An empty declaration declares nothing -- refused rather than silently
+    /// answering zero prompts and desyncing the line.
+    #[test]
+    fn empty_materials_is_refused() {
+        let err = Scenario::from_yaml(&step_yaml("{ materials: [] }"))
+            .expect_err("empty materials must be refused");
+        assert!(err.contains("declares nothing"), "got: {err}");
+    }
+
+    /// A material declaration is a SHARED decision; it can never be DCGO-only.
+    #[test]
+    fn materials_with_dcgo_only_is_refused() {
+        let s = Scenario::from_yaml(&step_yaml(
+            "{ materials: [EX12-004], dcgo_only: true }",
+        ))
+        .expect("parses -- the clash is caught at lowering, with a fuller message");
+        assert!(matches!(
+            &s.steps[0].act,
+            StepAction::SelectDcgoOnly(SelectPayload::Materials(_))
+        ));
+    }
+
+    #[test]
+    fn materials_round_trips() {
+        let s = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004, EX12-011] }"))
+            .expect("parses");
+        let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, s.steps[0].act);
     }
 }
