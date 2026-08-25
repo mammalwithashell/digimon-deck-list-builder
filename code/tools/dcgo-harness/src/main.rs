@@ -24,8 +24,17 @@ use dcgo_harness::pool;
 #[command(about = "Drive unattended DCGO games from a filesystem job queue.")]
 struct Args {
     /// Harness root: the directory holding jobs/ claimed/ done/ failed/.
+    ///
+    /// OPTIONAL, because not every subcommand drives DCGO. `exam --sim-only`
+    /// replays scenarios in our engine alone -- no jobs, no queue, no Unity --
+    /// so demanding a root there is a pure obstacle. It was a required arg
+    /// until now, which is why `.github/workflows/dcgo-exam-sim.yml` had never
+    /// once run: clap rejected the invocation before a single scenario was
+    /// read, and the failure looked like a config problem rather than a dead
+    /// gate. Subcommands that DO need a root resolve it through
+    /// [`Args::require_root`], which names the flag in its error.
     #[arg(long)]
-    root: PathBuf,
+    root: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Command,
@@ -204,11 +213,34 @@ fn main() -> ExitCode {
         .expect("worker thread panicked")
 }
 
+impl Args {
+    /// The harness root, for the subcommands that actually queue DCGO work.
+    fn require_root(&self) -> Result<&std::path::Path, String> {
+        self.root.as_deref().ok_or_else(|| {
+            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam` runs without one."
+                .to_string()
+        })
+    }
+}
+
+/// Whether this subcommand touches the job queue at all.
+///
+/// `exam` does not: it lowers scenarios and replays them in our engine, and
+/// with `--sim-only` never involves DCGO. Creating jobs/ claimed/ done/
+/// failed/ for it would litter the CI workspace with empty directories at
+/// best, and at worst require a root the run has no use for.
+fn needs_root(command: &Command) -> bool {
+    !matches!(command, Command::Exam { .. })
+}
+
 fn run(args: &Args) -> Result<ExitCode, String> {
-    for dir in [DIR_JOBS, DIR_CLAIMED, DIR_DONE, DIR_FAILED] {
-        let path = args.root.join(dir);
-        std::fs::create_dir_all(&path)
-            .map_err(|e| format!("creating {}: {}", path.display(), e))?;
+    if needs_root(&args.command) {
+        let root = args.require_root()?;
+        for dir in [DIR_JOBS, DIR_CLAIMED, DIR_DONE, DIR_FAILED] {
+            let path = root.join(dir);
+            std::fs::create_dir_all(&path)
+                .map_err(|e| format!("creating {}: {}", path.display(), e))?;
+        }
     }
 
     match &args.command {
@@ -225,7 +257,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 timeout_seconds: *timeout_seconds,
             };
             let jobs = pool::build_jobs(&deck_pool, *count, *seed, &limits)?;
-            let jobs_dir = args.root.join(DIR_JOBS);
+            let jobs_dir = args.require_root()?.join(DIR_JOBS);
             for spec in &jobs {
                 let path = jobs_dir.join(format!("{}.json", spec.job_id));
                 std::fs::write(&path, spec.to_json()?)
@@ -239,7 +271,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Enable => {
-            let marker = args.root.join(MARKER_FILE);
+            let marker = args.require_root()?.join(MARKER_FILE);
             std::fs::write(&marker, "enabled by dcgo-harness
 ")
                 .map_err(|e| format!("writing {}: {}", marker.display(), e))?;
@@ -248,7 +280,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Disable => {
-            let marker = args.root.join(MARKER_FILE);
+            let marker = args.require_root()?.join(MARKER_FILE);
             match std::fs::remove_file(&marker) {
                 Ok(()) => println!("harness disabled ({} removed)", marker.display()),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -264,23 +296,23 @@ fn run(args: &Args) -> Result<ExitCode, String> {
         } => {
             if *sweep {
                 let (requeued, quarantined) =
-                    dcgo_harness::queue::sweep_timeouts(&args.root, *timeout_seconds)?;
+                    dcgo_harness::queue::sweep_timeouts(args.require_root()?, *timeout_seconds)?;
                 if requeued > 0 || quarantined > 0 {
                     println!("swept: requeued={} quarantined={}", requeued, quarantined);
                 }
             }
-            let status = dcgo_harness::queue::scan(&args.root)?;
+            let status = dcgo_harness::queue::scan(args.require_root()?)?;
             // Surface the enable state. A queue full of pending jobs with the
             // harness switched off looks exactly like a hung DCGO otherwise --
             // the same silent-failure shape the triage denominator guards.
-            let enabled = args.root.join(MARKER_FILE).exists();
+            let enabled = args.require_root()?.join(MARKER_FILE).exists();
             println!("harness: {}", if enabled { "ENABLED" } else { "disabled" });
             // A queue that is not draining looks identical whether DCGO is
             // stopped, hung, or simply switched off. Say which.
-            match dcgo_harness::daemon::read_pid(&args.root) {
+            match dcgo_harness::daemon::read_pid(args.require_root()?) {
                 Some(pid) if dcgo_harness::daemon::pid_alive(pid) => {
                     let health = dcgo_harness::daemon::classify_heartbeat(
-                        dcgo_harness::daemon::heartbeat_age(&args.root),
+                        dcgo_harness::daemon::heartbeat_age(args.require_root()?),
                         dcgo_harness::daemon::DEFAULT_STALE_SECONDS,
                     );
                     println!("process: pid {}, heartbeat {:?}", pid, health);
@@ -318,7 +350,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             // corpus; this handler just calls it and prints the report.
             let (stats, findings) = scan_corpus(&recording_paths, &card_data);
 
-            let status = dcgo_harness::queue::scan(&args.root)?;
+            let status = dcgo_harness::queue::scan(args.require_root()?)?;
             let report = TriageReport {
                 status,
                 corpus_stats: stats,
@@ -375,11 +407,11 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Up { build } => {
-            println!("{}", dcgo_harness::daemon::up(&args.root, build)?);
+            println!("{}", dcgo_harness::daemon::up(args.require_root()?, build)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Down => {
-            println!("{}", dcgo_harness::daemon::down(&args.root)?);
+            println!("{}", dcgo_harness::daemon::down(args.require_root()?)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Watch {
@@ -391,7 +423,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             progress_stale_seconds,
         } => {
             let outcome = dcgo_harness::watch::run(
-                &args.root,
+                args.require_root()?,
                 build,
                 std::time::Duration::from_secs(*poll_seconds),
                 *stale_seconds,
@@ -1177,9 +1209,59 @@ struct StarterDeck {
 }
 
 impl DeckBook {
+    /// Build the deck book as a UNION: the stock starter decks first, then any
+    /// `--decks` pool overlaid on top (the pool wins on a name collision).
+    ///
+    /// It used to be either/or -- supplying `--decks` returned early with ONLY
+    /// the pool -- which made a directory-wide run impossible. The committed
+    /// corpus spans both books: the EX12 scenarios name `toho-braves` /
+    /// `toho-analog` / `toho-matt` / `st19-arisa` from
+    /// `qa/dcgo-exams/EX12/toho_pool.json`, while `qa/dcgo-exams/ST1/*` name
+    /// `starter_st1_gaia_red` from `data/starter_decks.json`. Under either/or
+    /// there was no single invocation that could lower all 144 scenarios: the
+    /// pool book failed the 3 ST1 files and the default book failed the other
+    /// 141. Since `exam --scenario <dir>` is exactly how CI runs the corpus,
+    /// that alone kept the gate unusable even once its missing `--root` was
+    /// fixed.
     fn load(decks: Option<&Path>, cards_json: &Path) -> Result<DeckBook, String> {
         let mut by_name: BTreeMap<String, DeckEntry> = BTreeMap::new();
+        let mut sources: Vec<String> = Vec::new();
 
+        // Base layer: the stock starter decks. Required when no pool is given
+        // (there would otherwise be no book at all); best-effort when one is,
+        // so a pool-only checkout still works.
+        let starter_path = cards_json
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("starter_decks.json");
+        match std::fs::read_to_string(&starter_path) {
+            Ok(text) => {
+                let file: StarterDeckFile = serde_json::from_str(&text)
+                    .map_err(|e| format!("parsing {}: {e}", starter_path.display()))?;
+                for d in file.starter_decks {
+                    let entry = DeckEntry {
+                        main: d.main_deck.clone(),
+                        eggs: d.egg_deck.clone(),
+                    };
+                    // Registered under every name a scenario might reasonably use.
+                    for alias in [&d.id, &d.name, &d.set] {
+                        if !alias.is_empty() {
+                            by_name.insert(alias.to_lowercase(), entry.clone());
+                        }
+                    }
+                }
+                sources.push(starter_path.display().to_string());
+            }
+            Err(e) if decks.is_none() => {
+                return Err(format!(
+                    "no --decks given and the default deck book {} is unreadable: {e}",
+                    starter_path.display()
+                ));
+            }
+            Err(_) => {}
+        }
+
+        // Overlay: the explicit pool, which wins on a name collision.
         if let Some(path) = decks {
             let pool = pool::load_pool(path)?;
             for d in pool.decks {
@@ -1191,39 +1273,12 @@ impl DeckBook {
                     },
                 );
             }
-            return Ok(DeckBook {
-                by_name,
-                source: path.display().to_string(),
-            });
+            sources.push(path.display().to_string());
         }
 
-        let path = cards_json
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join("starter_decks.json");
-        let text = std::fs::read_to_string(&path).map_err(|e| {
-            format!(
-                "no --decks given and the default deck book {} is unreadable: {e}",
-                path.display()
-            )
-        })?;
-        let file: StarterDeckFile = serde_json::from_str(&text)
-            .map_err(|e| format!("parsing {}: {e}", path.display()))?;
-        for d in file.starter_decks {
-            let entry = DeckEntry {
-                main: d.main_deck.clone(),
-                eggs: d.egg_deck.clone(),
-            };
-            // Registered under every name a scenario might reasonably use.
-            for alias in [&d.id, &d.name, &d.set] {
-                if !alias.is_empty() {
-                    by_name.insert(alias.to_lowercase(), entry.clone());
-                }
-            }
-        }
         Ok(DeckBook {
             by_name,
-            source: path.display().to_string(),
+            source: sources.join(" + "),
         })
     }
 
