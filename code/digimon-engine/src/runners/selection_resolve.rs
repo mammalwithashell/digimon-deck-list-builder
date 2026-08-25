@@ -182,6 +182,67 @@ fn card_id_for_handle(game: &Game, handle: crate::card_source::CardHandle) -> St
         .unwrap_or_default()
 }
 
+/// The selectable digivolution sources of an in-flight `SelectionKind::Material`
+/// prompt, as `(card IDs bottom-up, range_start)` — `range_start` being the
+/// action id of source index 0.
+///
+/// Material action IDs are the one card-pick encoding that does not name its
+/// owner. A battle-area id is `SOURCE_SELECT_START + field_index *
+/// SOURCES_PER_FIELD + source_index` (`material_zone_geometry`,
+/// `effect_context/selections.rs`), so the FIELD index is recoverable by
+/// arithmetic but the carrier's PLAYER is not — and `zone_owner` is `None` on
+/// this kind. Guessing the side would mean picking a source index out of the
+/// wrong stack, which resolves cleanly against the real carrier and silently
+/// takes the wrong card. So the carrier comes from the engine, not from
+/// arithmetic — the same shape as `permutation_remaining_ids` above: the DSL
+/// installer (`install_select_material` in `dsl_cards/step/selections.rs`, the
+/// only `EffectContext::select_material` caller in the crate) parks a
+/// `ResumeFrame::RunTail { select_kind: ResumeSelectKind::Material { perm } }`
+/// beside the prompt, and `perm` IS the carrier.
+///
+/// The recovered frame is then cross-checked against the live prompt: every one
+/// of its `valid_action_ids` must fall inside that carrier's own 12-slot band.
+/// `SelectionKind::Material` is heavily overloaded — DNA digivolution
+/// (`game_actions/digivolve.rs`) and DigiXros material assembly
+/// (`game_actions/misc.rs`) reuse the kind with completely different action-id
+/// encodings (raw field indices, hand ids) — and a prompt from one of those, or
+/// from a legacy closure-only installer with no data frame, returns `None` here
+/// and surfaces as an honest resolution error rather than a wrong pick.
+fn material_source_ids(game: &Game, valid: &[u16]) -> Option<(Vec<String>, u16)> {
+    use crate::action::space::SOURCES_PER_FIELD;
+    use crate::effect_context::selections::{material_zone_geometry, material_zone_slice};
+    use crate::resume::{ResumeFrame, ResumeSelectKind};
+
+    let stack = game.pending_selection_resume.as_ref()?;
+    // Frames run inner-to-outer, so the live prompt is the innermost one —
+    // same traversal as `permutation_remaining_ids`.
+    let perm = stack.frames.iter().rev().find_map(|f| match f {
+        ResumeFrame::RunTail {
+            select_kind: ResumeSelectKind::Material { perm },
+            ..
+        } => Some(*perm),
+        _ => None,
+    })?;
+
+    let (source_count, range_start) = material_zone_geometry(game, perm)?;
+    let band = range_start..range_start.saturating_add(SOURCES_PER_FIELD);
+    if valid.is_empty() || !valid.iter().all(|id| band.contains(id)) {
+        return None;
+    }
+
+    // Mirror the installer: the top card (the active Digimon itself) is never a
+    // candidate, so only `source_count` entries are addressable.
+    let cap = source_count.min(SOURCES_PER_FIELD as usize);
+    Some((
+        material_zone_slice(game, perm)?
+            .iter()
+            .take(cap)
+            .map(|c| c.card_id(&game.card_data).to_string())
+            .collect(),
+        range_start,
+    ))
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -354,6 +415,16 @@ pub fn resolve_next(
             }
             SelectionKind::OrderedPermutation { .. } => {
                 permutation_remaining_ids(game).and_then(|ids| find_id(&ids, SEL_REVEAL_START))
+            }
+            // Digivolution sources of the prompt's carrier. Duplicate ids are
+            // interchangeable copies, so they resolve by occurrence order —
+            // `find_id` takes the FIRST matching index the prompt still
+            // accepts, exactly as the Hand / Trash / Reveal arms above do
+            // (a copy the install-time filter excluded is skipped, and the
+            // scan continues to the next occurrence). Occurrence order here is
+            // bottom-up: index 0 is the bottom card of the stack.
+            SelectionKind::Material => {
+                material_source_ids(game, valid).and_then(|(ids, base)| find_id(&ids, base))
             }
             SelectionKind::Security => {
                 let base = if zone_owner == pending.selecting_player {
@@ -704,6 +775,236 @@ mod tests {
         let result = resolve_next(&runner.game, &payload, 0);
 
         assert_eq!(result, Ok(Some(ATTACK_START)));
+    }
+
+    // ── Material picks answered by CARD IDENTITY ─────────────────────────
+    //
+    // The exam answers every selection by card identity on both sides (DCGO's
+    // `SelectCardEffect.SetTargetCardAndIndicies` matches `select_card_ids`
+    // against its scripted candidates and then sets `Indicies = null`), so a
+    // scenario can never name a raw source index. Before the `Material` arm,
+    // `resolve_next` dropped this kind through `_ => None` and the only shape
+    // that lowered was `yes: true` (legal solely because `valid.len() == 1`),
+    // which DCGO refuses outright — blocking EX12-031#effect#0 and
+    // EX12-036#effect#2 (<Decode> source picks) at the wire, not at the rule.
+
+    use crate::debug_runner::make_test_card;
+    use crate::dsl_cards::bindings::Bindings;
+    use crate::dsl_cards::step::StepRuntime;
+    use crate::permanent::PermanentHandle;
+    use crate::resume::{
+        ResumeDecline, ResumeFrame, ResumeProvenance, ResumeSelectKind, ResumeStack,
+    };
+    use digimon_dsl::compiled::CompiledStep;
+    use std::sync::Arc;
+
+    /// A bare `SelectionRow` carrying one card-identity pick — the shape an
+    /// exam step's `select: { cards: [X] }` lowers to.
+    fn card_row(card_id: &str) -> SelectionRow {
+        SelectionRow {
+            step: 0,
+            actor: 0,
+            prompt: "SelectCardEffect".to_string(),
+            phase: "Main".to_string(),
+            targets: None,
+            card_ids: Some(vec![card_id.to_string()]),
+            indexes: None,
+            count: None,
+            candidates: None,
+            int_value: None,
+            bool_value: None,
+            cancel: None,
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            mechanic: None,
+            zone: None,
+        }
+    }
+
+    /// Park a `Material` prompt exactly as `EffectContext::select_material`
+    /// does (`effect_context/selections.rs`), plus the data frame its only
+    /// caller — `install_select_material` in `dsl_cards/step/selections.rs` —
+    /// parks beside it. `carrier` is the permanent whose digivolution sources
+    /// are on offer; it is deliberately NOT recoverable from the action ids.
+    fn park_material_selection(
+        game: &mut Game,
+        carrier: PermanentHandle,
+        valid_action_ids: Vec<u16>,
+    ) {
+        let source_card = CardHandle(0);
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Material,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose a source to play".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            // `select_material` never sets a zone owner — so the carrier's
+            // side cannot be inferred from the prompt either.
+            zone_owner: None,
+        });
+        game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![ResumeFrame::RunTail {
+                prov: ResumeProvenance {
+                    source_card,
+                    source_permanent: None,
+                    source_kind: EffectSourceKind::Digimon,
+                    controller: 0,
+                    override_pin: None,
+                },
+                select_kind: ResumeSelectKind::Material { perm: carrier },
+                bind_as: None,
+                inner_tail: Arc::new(vec![CompiledStep::GainMemory(0)]),
+                outer_conts: Vec::new(),
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context: None,
+                decline: ResumeDecline::None,
+            }],
+        });
+    }
+
+    /// A `DebugRunner` whose card pool holds the given ids (all distinct test
+    /// cards), so `place_stack` can build carriers out of them.
+    fn runner_with_cards(ids: &[&str]) -> DebugRunner {
+        let mut builder = DebugRunner::builder();
+        for id in ids {
+            builder = builder.add_card(make_test_card(id, id));
+        }
+        builder.memory(0).start()
+    }
+
+    fn material_range_start(game: &Game, carrier: PermanentHandle) -> u16 {
+        crate::effect_context::selections::material_zone_geometry(game, carrier)
+            .expect("carrier has selectable sources")
+            .1
+    }
+
+    #[test]
+    fn material_pick_resolves_by_card_identity() {
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-B", "MAT-TOP"]);
+        // Bottom-up: source 0 = MAT-A, source 1 = MAT-B, top = MAT-TOP.
+        let carrier = runner.place_stack(0, &["MAT-A", "MAT-B", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base, base + 1]);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-A"), 0),
+            Ok(Some(base))
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-B"), 0),
+            Ok(Some(base + 1))
+        );
+    }
+
+    #[test]
+    fn material_pick_reads_the_carrier_from_the_data_frame_not_the_selecting_player() {
+        // The load-bearing case: the action ids encode only a FIELD index, so
+        // a resolver that assumed the selecting player's side would read the
+        // wrong stack. Both players hold a slot-0 stack containing MAT-B, at
+        // DIFFERENT source indices, so a side mix-up returns a different id.
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-B", "MAT-TOP"]);
+        let _p0_decoy = runner.place_stack(0, &["MAT-B", "MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(1, &["MAT-A", "MAT-B", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        // Selecting player stays 0 while the carrier belongs to player 1.
+        park_material_selection(&mut runner.game, carrier, vec![base, base + 1]);
+
+        // On the carrier MAT-B is source 1; on player 0's decoy it is source 0.
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-B"), 0),
+            Ok(Some(base + 1))
+        );
+    }
+
+    #[test]
+    fn material_duplicate_ids_resolve_by_occurrence_order() {
+        // Interchangeable copies: sources bottom-up are DUP, MAT-X, DUP. Like
+        // the Hand / Trash / Reveal arms, the FIRST accepted occurrence wins —
+        // here the bottom-most copy.
+        let mut runner = runner_with_cards(&["MAT-DUP", "MAT-X", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-DUP", "MAT-X", "MAT-DUP", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base, base + 1, base + 2]);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-DUP"), 0),
+            Ok(Some(base))
+        );
+    }
+
+    #[test]
+    fn material_duplicate_skips_a_copy_the_prompt_does_not_accept() {
+        // Same stack, but the install-time filter excluded the bottom copy —
+        // the scan must continue to the next occurrence rather than returning
+        // an id the engine would reject.
+        let mut runner = runner_with_cards(&["MAT-DUP", "MAT-X", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-DUP", "MAT-X", "MAT-DUP", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base + 1, base + 2]);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-DUP"), 0),
+            Ok(Some(base + 2))
+        );
+    }
+
+    #[test]
+    fn material_top_card_is_never_a_candidate() {
+        // `select_material` offers sources only — the active Digimon on top of
+        // the stack is not one, so naming it must be an honest Err.
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-A", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base]);
+
+        let err = resolve_next(&runner.game, &card_row("MAT-TOP"), 0)
+            .expect_err("the top card is not a selectable material");
+        assert!(err.contains("MAT-TOP"), "error must name the pick: {err}");
+        assert!(err.contains("Material"), "error must name the kind: {err}");
+    }
+
+    #[test]
+    fn material_without_a_data_frame_is_an_honest_err_not_a_guess() {
+        // A closure-only Material installer parks no `ResumeSelectKind::Material`
+        // frame, so the carrier is unknowable — and guessing a side would pick a
+        // source index out of the wrong stack, which resolves cleanly and takes
+        // the wrong card. Must fail loudly instead.
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-A", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base]);
+        runner.game.pending_selection_resume = None;
+
+        assert!(
+            resolve_next(&runner.game, &card_row("MAT-A"), 0).is_err(),
+            "a carrier-less Material prompt must not resolve to an action id"
+        );
+    }
+
+    #[test]
+    fn foreign_material_prompt_is_rejected_rather_than_mis_decoded() {
+        // DNA digivolution and DigiXros assembly reuse `SelectionKind::Material`
+        // with raw field / hand indices (`game_actions/digivolve.rs`,
+        // `game_actions/misc.rs`). Those ids are nowhere near the carrier's
+        // source band, so the band cross-check must reject them outright.
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-A", "MAT-TOP"]);
+        // Raw battle-area indices, exactly as `initiate_dna_digivolve` installs.
+        park_material_selection(&mut runner.game, carrier, vec![0, 1]);
+
+        assert!(
+            resolve_next(&runner.game, &card_row("MAT-A"), 0).is_err(),
+            "a DNA-style Material prompt must not be decoded as a source band"
+        );
     }
 
     #[test]
