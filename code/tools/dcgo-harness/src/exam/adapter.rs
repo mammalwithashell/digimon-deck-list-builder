@@ -217,30 +217,6 @@ impl ScenarioAdapter {
         for (i, step) in s.steps.iter().enumerate() {
             let actor = step.actor as PlayerId;
             match &step.act {
-                StepAction::Select(payload) => {
-                    let (row, wire) =
-                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
-                    check_select_expectations(&game, i, step.expect.as_ref())?;
-                    steps.push(StepSpec {
-                        actor,
-                        // Placeholder: the replay driver branches on
-                        // `selection` BEFORE it ever reads `action_id`, and
-                        // the job emitter reads the SelectWire, never this.
-                        action_id: 0,
-                        phase: game.current_phase.py_name().to_string(),
-                        source: "scenario".to_string(),
-                        memory_after: None,
-                        dcgo_memory: None,
-                        turn: Some(game.turn_count as u64),
-                        is_game_over: None,
-                        expected_digest: None,
-                        selection: Some(row.clone()),
-                        board_p0: None,
-                        board_p1: None,
-                    });
-                    lowered.push(LoweredStep::Select(wire));
-                    advance_through_selection(&mut game, i, actor, &row)?;
-                }
                 // MULTI-PICK MATERIAL DECLARATION ([Assembly] / [DigiXros]).
                 //
                 // Cardinality, not prompt kind, is what differs here: our
@@ -308,6 +284,30 @@ impl ScenarioAdapter {
                 // point. If it does, the author has mislabelled a real shared
                 // decision as DCGO-only, and skipping it here would leave that
                 // prompt unanswered and desync every later step.
+                StepAction::Select(payload) => {
+                    let (row, wire) =
+                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
+                    check_select_expectations(&game, i, step.expect.as_ref())?;
+                    steps.push(StepSpec {
+                        actor,
+                        // Placeholder: the replay driver branches on
+                        // `selection` BEFORE it ever reads `action_id`, and
+                        // the job emitter reads the SelectWire, never this.
+                        action_id: 0,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: Some(row.clone()),
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    lowered.push(LoweredStep::Select(wire));
+                    advance_through_selection(&mut game, i, actor, &row)?;
+                }
                 StepAction::SelectDcgoOnly(payload) => {
                     if let Some(pending) = game.pending_selection.as_ref() {
                         return Err(format!(
