@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-25T01:58:56.169152400+00:00",
+  "last_updated": "2026-08-25T02:03:34.468199300+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -987,12 +987,11 @@
     "EX12-063#inherited#0": {
       "clause_id": "EX12-063#inherited#0",
       "card_id": "EX12-063",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "2edc93086256c26b9116e025ade694e2fa027c0ca9785ff460aafcc139f8ba14",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-inherited0.yaml",
+      "recorded_at": "2026-08-25T02:03:34.468199300+00:00"
     },
     "EX12-063#security#0": {
       "clause_id": "EX12-063#security#0",

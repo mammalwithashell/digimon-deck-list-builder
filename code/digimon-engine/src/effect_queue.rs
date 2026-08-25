@@ -3234,13 +3234,49 @@ impl Game {
         // context proves this is a post-deletion fire: handler bodies
         // either read live state (gracefully bail when the carrier is
         // gone) or read the snapshot via `ctx.deleted_self_*()`.
-        if qe.timing == EffectTiming::OnDeletion
-            && qe
+        if qe.timing == EffectTiming::OnDeletion {
+            if let Some(snap) = qe
                 .trigger_context
                 .as_ref()
-                .is_some_and(|t| t.deleted_object.is_some())
-        {
-            return true;
+                .and_then(|t| t.deleted_object.as_ref())
+            {
+                // §15-4-4-3: "When a card with an effect that's pending
+                // activation becomes a NEW CARD before the effect activates,
+                // the effect can no longer be activated." A card that CHANGES
+                // AREAS becomes a new card, so a sibling trigger that moved the
+                // carrier since the batch trashed it has made this entry MISS
+                // TIMING.
+                //
+                // The motivating case is EX12-047 Amaterasumon, whose deletion
+                // raises `<Ascension>` and `[On Deletion]` simultaneously.
+                // §15-4-3-5-1 lets the controller pick the activation order, and
+                // that pick is a FORFEIT: taking `<Ascension>` first places the
+                // card on the security stack, so the pending `[On Deletion]`
+                // is lost. Bypassing unconditionally handed the controller both
+                // halves of a choice the rules make exclusive.
+                //
+                // Still a BYPASS of the on-field test, which is what this
+                // branch exists for: the batched flow trashes the carrier
+                // before the drain runs, so "is the permanent still on the
+                // field" is false for every batched OnDeletion entry. We only
+                // add the question it was missing -- is the card still where
+                // the deletion left it?
+                //
+                // TOKENS are exempt: a token does not change areas when it
+                // leaves the field, it CEASES TO EXIST and never lands in the
+                // trash. It therefore never "becomes a new card", and its
+                // `[On Deletion]` still resolves -- Petrification's "trash your
+                // top security card" and Familiar's -3000 DP both depend on
+                // this. Without the exemption the trash test below reads every
+                // token as having been moved.
+                if snap.is_token {
+                    return true;
+                }
+                return self
+                    .players
+                    .get(snap.former_controller as usize)
+                    .is_some_and(|p| p.trash.iter().any(|c| c.handle() == snap.top_card));
+            }
         }
         if perm_handle.index == BREEDING_TARGET as u8 {
             return self
