@@ -38,10 +38,8 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - none_of:
-            - replacement_cause: battle
+      none_of:
+        - replacement_cause: battle
     summary: "<Decode (Lv.5 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
     process:
       - select_material:

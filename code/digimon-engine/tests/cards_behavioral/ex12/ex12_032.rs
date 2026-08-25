@@ -1,9 +1,11 @@
 use digimon_engine::enums::{CardColor, ModifierType};
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 use digimon_engine::{enums::EffectTiming, permanent::PermanentHandle};
 
 use super::support::{
-    plain_digimon, push_to_trash, select_first_non_pass, tamer, vb_digimon, DebugRunner,
+    field_contains, hand_contains, plain_digimon, push_to_trash, select_first_non_pass, tamer,
+    vb_digimon, DebugRunner,
 };
 
 const CARD_ID: &str = "EX12-032";
@@ -225,5 +227,159 @@ fn ex12_032_without_a_same_level_pair_the_security_check_deletes_the_attacker() 
         "with no [When Attacking] window owed, a 7000 DP attacker must lose to \
          a 12000 DP security Digimon — if it survives here the security check \
          is not running and the sibling test proves nothing"
+    );
+}
+
+/// An INHERITED `<Decode>` is still SELF-scoped: it belongs to the host the
+/// source card is buried under, not to every friendly permanent on the field.
+///
+/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// Digimon **with this effect** would leave the battle area other than by a
+/// battle, you may play 1 Digimon card specified by this effect from **that
+/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// trigger the same way. DCGO agrees:
+/// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
+/// `CanTriggerWhenRemoveField`, which
+/// (`CardEffectCommons/CanUseEffects/WhenRemoveField.cs:11-14`) requires the
+/// LEAVING permanent's `cardSources` to contain the Decode carrier itself --
+/// for an INHERITED Decode that carrier is the source card, so the window
+/// belongs to the host it is buried under and to no other permanent.
+///
+/// The over-offer this pins down: `lower_replacement.rs:108-125` only enforces
+/// `replacement_subject_is_source` when the clause's `active_when` does NOT
+/// read the replacement subject, and `predicate_reads_replacement_subject`
+/// (`lower_replacement.rs:372-416`) counts `replacement_subject_is_mine` as
+/// such a read. This card's Decode clause carried
+/// `replacement_subject_is_mine: true`, which silently dropped the self-scope
+/// check, so `replacement.rs` `collect_candidates` step (2) offered the window
+/// for ANY other friendly battle-area permanent's non-battle leave.
+#[test]
+fn ex12_032_inherited_decode_does_not_open_a_window_for_another_permanents_leave() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-032 YAML loads")
+        .add_card(vb_digimon("VB-L4", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("CARRIER-TOP", CardColor::Blue, 6, 11000))
+        .add_card(plain_digimon("OTHER-TOP", CardColor::Blue, 6, 10000))
+        .memory(10)
+        .start();
+    // The inherited Decode's host: EX12-032 sits UNDER "CARRIER-TOP" on slot 0,
+    // and that host is NOT the permanent that leaves.
+    let _carrier = runner.place_stack(0, &[CARD_ID, "CARRIER-TOP"]);
+    // A SECOND P0 Digimon stacked over the exact payload EX12-032's Decode
+    // names, so a cross-permanent window would have a legal candidate and
+    // really park.
+    let other = runner.place_stack(0, &["VB-L4", "OTHER-TOP"]);
+
+    runner.game.return_to_hand_from_effect(other, 0);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "16-35-1: <Decode> triggers only when the Digimon WITH THIS EFFECT \
+         would leave the battle area -- the EX12-032 host is still on the field \
+         and the leaving Digimon does not carry it as a source (got: {:?})",
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|s| s.prompt.clone())
+    );
+    assert!(
+        hand_contains(&runner, 0, "OTHER-TOP"),
+        "the bounce itself must have committed"
+    );
+    assert!(
+        !field_contains(&runner, 0, "VB-L4"),
+        "16-35-1: the Decode payload comes from THAT DIGIMON'S digivolution \
+         cards -- an inherited Decode may not reach into another permanent's \
+         stack"
+    );
+}
+
+/// POSITIVE control -- the host carrying the inherited `<Decode>` leaving the
+/// battle area other than by a battle must still open its window and play the
+/// named source from its OWN digivolution cards.
+///
+/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// Digimon **with this effect** would leave the battle area other than by a
+/// battle, you may play 1 Digimon card specified by this effect from **that
+/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// trigger the same way. DCGO agrees:
+/// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
+/// `CanTriggerWhenRemoveField`, which
+/// (`CardEffectCommons/CanUseEffects/WhenRemoveField.cs:11-14`) requires the
+/// LEAVING permanent's `cardSources` to contain the Decode carrier itself --
+/// for an INHERITED Decode that carrier is the source card, so the window
+/// belongs to the host it is buried under and to no other permanent.
+#[test]
+fn ex12_032_inherited_decode_plays_matching_source_on_its_hosts_non_battle_leave() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-032 YAML loads")
+        .add_card(vb_digimon("VB-L4", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("HOST-TOP", CardColor::Blue, 6, 11000))
+        .memory(10)
+        .start();
+    let host = runner.place_stack(0, &["VB-L4", CARD_ID, "HOST-TOP"]);
+
+    runner.game.return_to_hand_from_effect(host, 1);
+    select_first_non_pass(&mut runner);
+    select_first_non_pass(&mut runner);
+    runner.auto_resolve().expect("finish Decode");
+
+    assert!(
+        field_contains(&runner, 0, "VB-L4"),
+        "16-35-1: the host's own non-battle leave plays 1 named Digimon card \
+         from THAT DIGIMON'S digivolution cards"
+    );
+    assert!(
+        hand_contains(&runner, 0, "HOST-TOP"),
+        "the original non-battle leave still returns the host to hand"
+    );
+}
+
+/// NEGATIVE control on the other axis -- a leave BY A BATTLE opens no
+/// `<Decode>` window at all.
+///
+/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// Digimon **with this effect** would leave the battle area other than by a
+/// battle, you may play 1 Digimon card specified by this effect from **that
+/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// trigger the same way. DCGO agrees:
+/// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
+/// `CanTriggerWhenRemoveField`, which
+/// (`CardEffectCommons/CanUseEffects/WhenRemoveField.cs:11-14`) requires the
+/// LEAVING permanent's `cardSources` to contain the Decode carrier itself --
+/// for an INHERITED Decode that carrier is the source card, so the window
+/// belongs to the host it is buried under and to no other permanent.
+#[test]
+fn ex12_032_inherited_decode_does_not_trigger_on_a_battle_leave() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-032 YAML loads")
+        .add_card(vb_digimon("VB-L4", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("HOST-TOP", CardColor::Blue, 6, 11000))
+        .memory(10)
+        .start();
+    let host = runner.place_stack(0, &["VB-L4", CARD_ID, "HOST-TOP"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::Battle);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "16-35-1: <Decode> fires only when the carrier would leave the battle \
+         area OTHER THAN BY A BATTLE (got: {:?})",
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|s| s.prompt.clone())
+    );
+    assert!(
+        !field_contains(&runner, 0, "VB-L4"),
+        "16-35-1: a battle leave Decodes nothing -- the source goes to trash \
+         with the stack"
     );
 }
