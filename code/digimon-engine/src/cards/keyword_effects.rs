@@ -1294,9 +1294,31 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `ctx.player` (the loser's controller) is the correct acting player.
         Keyword::Retaliation => vec![Effect::on_deletion(card)
             .name("<Retaliation>")
+            // Cause gate: Battle only (16-12), evaluated as the CONDITION so
+            // the trigger scan never queues it on a non-battle deletion.
+            //
+            // This used to live in `process` below, which runs only after the
+            // branch has been offered AND chosen. On an effect deletion the
+            // keyword still reached the trigger-order prompt and then resolved
+            // to nothing -- a mandatory branch in the RL action space that
+            // provably does nothing (rule 17), a phantom for the turn player to
+            // order under 15-4-3-5-1, and a guaranteed cross-engine divergence:
+            // DCGO filters its stack by `CanActivate` BEFORE staging candidates
+            // (MultipleSkills.cs:236) and `CanActivateRetaliation`
+            // (CardEffectCommons/KeyWordEffects/Retaliation.cs:24-52) is false
+            // with no battle in the hashtable, so DCGO offers two branches
+            // where we offered three.
+            .condition(|ctx| {
+                matches!(
+                    ctx.deletion_cause(),
+                    Some(crate::replacement::ReplacementCause::Battle)
+                )
+            })
             .process(|ctx| {
                 use crate::replacement::ReplacementCause;
-                // Cause gate: Battle only.
+                // Defence in depth: `condition` already gated this, but the
+                // body stays self-sufficient so a future caller that bypasses
+                // the trigger scan cannot delete on a non-battle cause.
                 if !matches!(ctx.deletion_cause(), Some(ReplacementCause::Battle)) {
                     return;
                 }

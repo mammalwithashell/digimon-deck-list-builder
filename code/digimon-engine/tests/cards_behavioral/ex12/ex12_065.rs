@@ -348,3 +348,57 @@ fn advance_to_trigger_order(runner: &mut DebugRunner) {
     }
     panic!("gave up walking to the TriggerOrder prompt");
 }
+
+/// A `<Retaliation>` whose battle condition is not met must never REACH the
+/// trigger-order prompt -- not merely resolve to nothing once chosen.
+///
+/// 16-12 makes `<Retaliation>` fire "when deleted in battle". On an EFFECT
+/// deletion it does not trigger at all, so it is not one of the simultaneous
+/// triggers 15-4-3-5-1 asks the turn player to order. Offering it anyway is
+/// wrong three ways: it puts a mandatory branch in the RL action space that
+/// provably does nothing (rule 17), it makes the player order a phantom, and
+/// it guarantees a cross-engine divergence -- DCGO filters its stack by
+/// `CanActivate` BEFORE staging candidates (MultipleSkills.cs:236), and
+/// `CanActivateRetaliation` (CardEffectCommons/KeyWordEffects/Retaliation.cs:
+/// 24-52) returns false when the hashtable carries no battle. DCGO offers two
+/// branches here; we offered three.
+///
+/// The cause gate used to live inside the keyword's `process` body, which runs
+/// only AFTER the branch has been offered and chosen. It is now the effect's
+/// `condition`, which the trigger scan evaluates before queueing.
+///
+/// This is the shape `qa/dcgo-exams/EX12/EX12-065-effect1.yaml` scripts:
+/// Kaguyamon deleted as Kokeshimon's cost -- an effect deletion -- where the
+/// real stack is `<Fortitude>` + `[On Deletion]`.
+#[test]
+fn ex12_065_retaliation_is_not_offered_as_a_branch_on_an_effect_deletion() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(plain_digimon("BYSTANDER", CardColor::Purple, 5, 7000))
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "BYSTANDER", Some(0));
+    runner.game.tick_declarative_effects();
+
+    runner
+        .game
+        .delete_permanents_batch(vec![kaguyamon], ReplacementCause::OwnEffect);
+
+    if let Some(pending) = runner.game.pending_selection.as_ref() {
+        if let Some(choices) = pending.effect_choices.as_ref() {
+            let offered: Vec<String> = choices
+                .iter()
+                .map(|c| format!("{:?}", c.keyword))
+                .collect();
+            assert!(
+                !choices
+                    .iter()
+                    .any(|c| c.keyword == Some(Keyword::Retaliation)),
+                "16-12: <Retaliation> triggers only on a BATTLE deletion, so it \
+                 must not be one of the branches offered for an effect \
+                 deletion; offered = {offered:?}"
+            );
+        }
+    }
+}
