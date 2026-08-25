@@ -230,7 +230,31 @@ fn park_keyword_count_capped_frame(
 /// needs to cover BOTH the return-to-deck and return-to-hand timings per
 /// printed rules ("returned to your opponent's deck/hand"), so this helper
 /// returns a `Vec<Effect>` rather than `Option<Effect>`.
+///
+/// Every effect this returns is stamped with
+/// [`Effect::keyword_source`]`= Some(keyword)`. The stamping lives HERE, in the
+/// wrapper, rather than in the ~16 `Keyword::X =>` arms of the inner match: a
+/// per-arm `.keyword_source(...)` is a thing a newly-added arm can silently
+/// forget, and a body that forgets it goes back to being an anonymous branch in
+/// a simultaneous-trigger stack (see `EffectChoiceEntry::keyword`).
+///
+/// `keyword_source` is NOT `granted_keyword`. `granted_keyword` means "this
+/// effect GRANTS this keyword" and is read that way at `game/queries.rs`,
+/// `game/triggers.rs` and `game_phases.rs`; setting it here would make every
+/// synthesized `<Barrier>` body claim to grant `<Barrier>` to its carrier.
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
+    keyword_to_auto_effect_inner(keyword, card)
+        .into_iter()
+        .map(|mut effect| {
+            effect.keyword_source = Some(keyword);
+            effect
+        })
+        .collect()
+}
+
+/// The actual per-keyword bodies. Private on purpose — callers must go through
+/// [`keyword_to_auto_effect`] so the `keyword_source` stamp cannot be skipped.
+fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     match keyword {
         // Printed [Hand][Counter] <Blast Digivolve>: the Counter window scans
         // hand-card effects for this marker and then validates the actual

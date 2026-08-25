@@ -1391,6 +1391,21 @@ struct ScriptedInput {
     /// Same `int.MinValue` absent sentinel, so absence OMITS the key.
     #[serde(skip_serializing_if = "Option::is_none")]
     select_ordinal: Option<i32>,
+    /// Which of ONE card's simultaneous triggers to resolve, named by its
+    /// KEYWORD -- the semantic sibling of `select_ordinal`, and the preferred
+    /// one. Carries the NORMALIZED name (lowercased, `<`/`>`/whitespace
+    /// stripped) so our `<Armor Purge>` and DCGO's `"Armor Purge"` compare
+    /// equal; DCGO normalizes its own `ICardEffect.EffectName` the same way.
+    ///
+    /// Emitted even though no DCGO build reads it yet, and that is deliberate.
+    /// Without it a `trigger:` scenario passes `--sim-only` and then aborts on
+    /// the oracle: DCGO refuses an ambiguous same-identity stack by telling the
+    /// author to "Add select_ordinal" (SelectionAnswer.cs:175-181) -- exactly
+    /// the key our own parser refuses to accept alongside `trigger:`. A green
+    /// sim gate that hands the author advice they are forbidden to follow is
+    /// worse than no key at all.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    select_trigger: Option<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     select_has_bool: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
@@ -1533,6 +1548,7 @@ fn build_exam_job(
                                 select_card_ids: w.card_ids.clone(),
                                 select_value: w.value,
                                 select_ordinal: w.ordinal,
+                                select_trigger: w.trigger.clone(),
                                 ..ScriptedInput::default()
                             },
                         ]
@@ -1552,6 +1568,7 @@ fn build_exam_job(
                     select_card_ids: w.card_ids.clone(),
                     select_value: w.value,
                     select_ordinal: w.ordinal,
+                    select_trigger: w.trigger.clone(),
                     select_has_bool: w.bool_answer.is_some(),
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,
@@ -1875,6 +1892,45 @@ steps:
         // `select_value` stays the raw DCGO-index fallback and must NOT be
         // written: the C# hook aborts on value+card_ids by design.
         assert!(v["inputs"][2].get("select_value").is_none());
+    }
+
+    /// The whole point of `trigger:` is that it survives the trip to DCGO. It
+    /// did NOT at first: `SelectWire::trigger` existed and `--sim-only` went
+    /// green, but `ScriptedInput` had no `select_trigger`, so the key was
+    /// dropped at the job boundary and the scenario aborted on the oracle --
+    /// DCGO refuses an ambiguous same-identity stack with "Add select_ordinal"
+    /// (SelectionAnswer.cs:175-181), the one key our parser forbids next to
+    /// `trigger:`. A sim gate that passes and then strands the author on the
+    /// oracle is worse than no key, so pin the serialization itself.
+    #[test]
+    fn select_trigger_rides_the_wire_under_the_csharp_field_name() {
+        let s = select_line("{ cards: [EX12-065], trigger: fortitude }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-065".to_string()],
+            trigger: Some("fortitude".to_string()),
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["select_card_ids"], serde_json::json!(["EX12-065"]));
+        assert_eq!(v["inputs"][2]["select_trigger"], "fortitude");
+        // `trigger:` and `ordinal:` are mutually exclusive by construction, so
+        // a trigger row must never also carry the positional disambiguator.
+        assert!(v["inputs"][2].get("select_ordinal").is_none());
+    }
+
+    /// An absent trigger OMITS the key -- the C# reads absence as "not given",
+    /// so writing `null` would be a different statement.
+    #[test]
+    fn an_absent_trigger_is_omitted_from_the_wire() {
+        let s = select_line("{ cards: [EX12-047] }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["EX12-047".to_string()],
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert!(v["inputs"][2].get("select_trigger").is_none());
     }
 
     #[test]

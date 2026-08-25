@@ -265,6 +265,21 @@ pub struct Effect {
     pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
     pub granted_keyword: Option<Keyword>,
+    /// The keyword whose printed BEHAVIOUR this effect *is* — set only on the
+    /// bodies synthesized by
+    /// [`crate::cards::keyword_effects::keyword_to_auto_effect`].
+    ///
+    /// Deliberately NOT `granted_keyword`: that field means "this effect GRANTS
+    /// this keyword to something" and is read that way by the keyword-lookup
+    /// scans (`game/queries.rs`, `game/triggers.rs`, `game_phases.rs`), so
+    /// reusing it here would make every keyword body claim to grant itself.
+    ///
+    /// Consumed by the `TriggerOrder` install site in `effect_queue.rs`, which
+    /// surfaces it as `EffectChoiceEntry::keyword` — the only handle that tells
+    /// the branches of a same-card simultaneous-trigger stack apart (EX12-065
+    /// Kaguyamon raises three `OnDeletion` triggers whose every other field is
+    /// identical).
+    pub keyword_source: Option<Keyword>,
     pub overclock_cost_filter: Option<OverclockCostFilterFn>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
@@ -739,6 +754,7 @@ impl EffectBuilder {
                 security_attack_fn: None,
                 cost_reduction: 0,
                 granted_keyword: None,
+                keyword_source: None,
                 overclock_cost_filter: None,
                 applies_to_opponent_security_dp: false,
                 applies_to_own_security_dp: false,
@@ -1029,6 +1045,15 @@ impl EffectBuilder {
 
     pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
         self.inner.granted_keyword = Some(keyword);
+        self
+    }
+
+    /// Mark this effect as being the printed behaviour OF `keyword` (see
+    /// [`Effect::keyword_source`]). Set centrally by the
+    /// `keyword_to_auto_effect` wrapper, not by individual keyword arms — a
+    /// per-arm call is a thing a future arm can forget.
+    pub fn keyword_source(mut self, keyword: Keyword) -> Self {
+        self.inner.keyword_source = Some(keyword);
         self
     }
 

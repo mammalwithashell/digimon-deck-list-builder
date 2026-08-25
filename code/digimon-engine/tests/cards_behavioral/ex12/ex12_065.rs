@@ -238,3 +238,113 @@ fn ex12_065_mass_grant_does_not_double_fire_on_a_printed_retaliation_recipient()
         "the winner is deleted exactly once"
     );
 }
+
+/// The three simultaneous `OnDeletion` triggers Kaguyamon raises when it is
+/// deleted in battle must be TELLABLE APART, and the only field that can tell
+/// them apart is `EffectChoiceEntry::keyword` — `source_card`, `timing` and
+/// `is_optional` are identical across all three.
+///
+/// The three, and where each keyword comes from:
+///   * the printed `[On Deletion]` bottom-deck clause (YAML `effects[4]`,
+///     lowered to slot 6) — no keyword, it is a plain clause;
+///   * `<Fortitude>` (YAML `effects[0]`, a `kind: grant_keyword` clause whose
+///     BODY `effects_for_card` synthesizes and appends as slot 7) — resolved
+///     through `Effect::keyword_source`, the stamp
+///     `keyword_effects::keyword_to_auto_effect` puts on every body it returns;
+///   * the `[All Turns]` aura's `<Retaliation>`, which Kaguyamon grants to
+///     ITSELF (it is [Puppet]/[TB]) — resolved through
+///     `QueuedEffect::keyword_effect`, since an aura-granted body is in no
+///     card's effect list at all.
+///
+/// Without the `keyword_source` half, slot 7 reported `None` and the stack held
+/// two indistinguishable branches, leaving the exam's `select:` step nothing to
+/// name but a per-engine POSITION.
+#[test]
+fn ex12_065_simultaneous_on_deletion_branches_are_distinguishable_by_keyword() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(plain_digimon("HUGE-ATTACKER", CardColor::Purple, 7, 20000))
+        .add_card(plain_digimon("DECOY-LOW", CardColor::Purple, 3, 1000))
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    let attacker = runner.place_on_field(1, "HUGE-ATTACKER", Some(0));
+    runner.place_on_field(1, "DECOY-LOW", Some(0));
+    runner.game.tick_declarative_effects();
+
+    let _ = runner.attack_digimon(attacker, kaguyamon, false);
+    // Walk past the pre-battle window the granted <Blocker> opens.
+    advance_to_trigger_order(&mut runner);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("a TriggerOrder prompt is parked");
+    let entries = pending
+        .effect_choices
+        .as_ref()
+        .expect("a TriggerOrder prompt carries effect choices");
+    assert_eq!(
+        entries.len(),
+        3,
+        "expected three simultaneous OnDeletion triggers, got {entries:?}"
+    );
+
+    let keywords: Vec<Option<Keyword>> = entries.iter().map(|e| e.keyword).collect();
+    assert!(
+        keywords.contains(&Some(Keyword::Fortitude)),
+        "the printed <Fortitude> branch must name itself; got {keywords:?} for {entries:?}"
+    );
+    assert!(
+        keywords.contains(&Some(Keyword::Retaliation)),
+        "the aura-granted <Retaliation> branch must name itself; got {keywords:?}"
+    );
+    assert!(
+        keywords.contains(&None),
+        "the plain printed [On Deletion] clause is not a keyword and must stay \
+         unnamed; got {keywords:?}"
+    );
+
+    // The point of the field: no two branches collide.
+    let mut seen = keywords.clone();
+    seen.sort_by_key(|k| format!("{k:?}"));
+    seen.dedup();
+    assert_eq!(
+        seen.len(),
+        3,
+        "every branch of a same-card trigger stack must be separately \
+         addressable; got {keywords:?}"
+    );
+}
+
+/// Resolve prompts until the simultaneous-trigger prompt is the live one.
+/// Declines everything on the way (the granted `<Blocker>` window).
+fn advance_to_trigger_order(runner: &mut DebugRunner) {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+
+    for _ in 0..16 {
+        match runner.game.pending_selection.as_ref().map(|p| p.kind.clone()) {
+            Some(SelectionKind::TriggerOrder) => return,
+            None => panic!("no TriggerOrder prompt was ever parked"),
+            Some(_) => {
+                let view = runner
+                    .pending_selection_view()
+                    .expect("a parked prompt has a view");
+                let action = if view.is_optional || view.valid_action_ids.contains(&PASS) {
+                    PASS
+                } else {
+                    *view
+                        .valid_action_ids
+                        .first()
+                        .unwrap_or_else(|| panic!("prompt had no legal action: {view:?}"))
+                };
+                runner
+                    .execute_action(view.selecting_player, action)
+                    .expect("resolve pending selection");
+            }
+        }
+    }
+    panic!("gave up walking to the TriggerOrder prompt");
+}

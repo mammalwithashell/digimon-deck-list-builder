@@ -22,7 +22,9 @@ use digimon_engine::selection::SelectionKind;
 use digimon_engine::{CardData, Game, PlayerId, Rules};
 
 use crate::exam::lower::{lower_step, LowerError};
-use crate::exam::scenario::{Expect, Scenario, SelectPayload, StepAction};
+use crate::exam::scenario::{
+    normalize_trigger_name, Expect, Scenario, SelectPayload, StepAction,
+};
 
 /// Seat that acts first in a scenario game.
 ///
@@ -57,6 +59,26 @@ pub struct SelectWire {
     /// disagreement about that order surfaces as a divergence rather than
     /// being papered over by one shared index.
     pub ordinal: Option<i32>,
+    /// The SEMANTIC form of the same disambiguation: which KEYWORD's trigger to
+    /// resolve, already NORMALIZED by
+    /// [`crate::exam::scenario::normalize_trigger_name`] (lowercased, `<`/`>`
+    /// and whitespace stripped) so exactly one spelling ever rides the wire.
+    ///
+    /// Preferred over [`Self::ordinal`] wherever it applies. An ordinal is a
+    /// POSITION in a candidate list each engine builds for itself, so the same
+    /// ordinal can name a different trigger on the two sides; a keyword names
+    /// the same trigger in both.
+    ///
+    /// Rides the wire as `select_trigger`; absence OMITS the key. DCGO resolves
+    /// it against its own candidates by normalizing `ICardEffect.EffectName`
+    /// the same way -- DCGO spells keyword effects without brackets and with
+    /// spaces (`SetUpICardEffect("Armor Purge", ...)`), which normalizes onto
+    /// the same `armorpurge` as our printed `<Armor Purge>`.
+    ///
+    /// NOT YET FORWARDED TO THE EMITTED JOB: `ScriptedInput` in
+    /// `dcgo-harness/src/main.rs` still has no `select_trigger` field, so this
+    /// value stops at the adapter boundary. Sim-side matching below is live.
+    pub trigger: Option<String>,
     pub value: Option<i32>,
     pub bool_answer: Option<bool>,
     pub cancel: bool,
@@ -241,6 +263,7 @@ impl ScenarioAdapter {
                         let one = SelectPayload::Cards {
                             ids: vec![id.clone()],
                             ordinal: None,
+                            trigger: None,
                         };
                         // `expect` describes the DECLARATION, so it is checked
                         // once against the first element's prompt.
@@ -586,6 +609,76 @@ fn classify_lowered_action(
     }
 }
 
+/// Resolve one authored `select: { cards: [ID], ordinal|trigger }` answer
+/// against our live `TriggerOrder` prompt.
+///
+/// `trigger:` is the preferred disambiguator and takes the keyword-filtered
+/// path; without it this is the historical positional path, unchanged.
+///
+/// The keyword filter runs BEFORE the identity match, not after: the question
+/// `trigger:` answers is "which of this stack's branches is the <Fortitude>
+/// one", and a branch that is not that keyword is not a candidate for the
+/// answer at all. Filtering first also makes the refusal say the useful thing —
+/// it names the keyword that was wanted and lists every branch actually
+/// offered, instead of reporting an ordinal that happens to be out of range.
+fn match_one_branch(
+    wanted: &str,
+    ordinal: Option<i32>,
+    trigger: Option<&str>,
+    candidates: &[TriggerCandidate],
+) -> Result<usize, String> {
+    let Some(trigger) = trigger else {
+        let ids: Vec<String> = candidates.iter().map(|c| c.card_id.clone()).collect();
+        return match_one_with_ordinal(wanted, ordinal, &ids);
+    };
+
+    let want_trigger = normalize_trigger_name(trigger);
+    let by_trigger: Vec<usize> = candidates
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| {
+            c.trigger.as_deref().map(normalize_trigger_name).as_deref()
+                == Some(want_trigger.as_str())
+        })
+        .map(|(i, _)| i)
+        .collect();
+
+    // Zero is a FINDING about the stack's shape, never a reason to fall through
+    // to the first candidate: the author asserted this prompt stacks that
+    // keyword's trigger and it does not.
+    if by_trigger.is_empty() {
+        return Err(format!(
+            "wanted trigger '{trigger}' on card '{wanted}', but no branch of this prompt \
+             is that keyword. Offered: [{}]",
+            describe_candidates(candidates)
+        ));
+    }
+
+    let matches: Vec<usize> = by_trigger
+        .into_iter()
+        .filter(|i| candidates[*i].card_id == wanted)
+        .collect();
+
+    match matches.len() {
+        0 => Err(format!(
+            "trigger '{trigger}' is offered by this prompt, but not on card '{wanted}'. \
+             Offered: [{}]",
+            describe_candidates(candidates)
+        )),
+        1 => Ok(matches[0]),
+        // Two branches of one card carrying the SAME keyword: the keyword has
+        // run out of resolving power, so refuse and hand the author the only
+        // remaining handle rather than taking the first.
+        n => Err(format!(
+            "card '{wanted}' offers trigger '{trigger}' {n} times, so the keyword does not \
+             say which. Offered: [{}]. Fall back to `ordinal:` (0..{}), noting it is a \
+             per-engine POSITION",
+            describe_candidates(candidates),
+            n - 1
+        )),
+    }
+}
+
 /// Resolve one card identity (+ optional ordinal) against a prompt's candidate
 /// list, returning the index of the pick.
 ///
@@ -646,23 +739,73 @@ fn match_one_with_ordinal(
     }
 }
 
-/// The source-card ids our live `TriggerOrder` prompt is offering, in ITS own
-/// order — the candidate list [`match_one_with_ordinal`] resolves against.
+/// One branch of our live `TriggerOrder` prompt, as the scripted answer sees it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TriggerCandidate {
+    /// Source card of the branch — what `cards:` matches.
+    card_id: String,
+    /// Which KEYWORD this branch is, in DISPLAY spelling (`Fortitude`,
+    /// `ArmorPurge`), or `None` for a plain printed clause like `[On Deletion]`.
+    /// Comparison always runs through [`normalize_trigger_name`]; this string
+    /// stays human-spelled so the refusal messages are legible.
+    trigger: Option<String>,
+}
+
+impl TriggerCandidate {
+    /// How this branch is shown in a refusal: `EX12-065 <Fortitude>`, or the
+    /// bare id for a branch that is not a keyword at all.
+    fn describe(&self) -> String {
+        match &self.trigger {
+            Some(t) => format!("{} <{t}>", self.card_id),
+            None => self.card_id.clone(),
+        }
+    }
+}
+
+/// Display spelling of a keyword, for [`TriggerCandidate::trigger`].
+///
+/// The `Debug` name minus any payload: `Keyword::MaterialSave(1)` is the
+/// `<Material Save>` trigger, and the `1` is that keyword's PARAMETER, not part
+/// of its name. `trigger:` names the keyword; it does not address a parameter.
+fn keyword_display_name(keyword: digimon_engine::enums::Keyword) -> String {
+    let debug = format!("{keyword:?}");
+    match debug.split_once('(') {
+        Some((name, _payload)) => name.to_string(),
+        None => debug,
+    }
+}
+
+/// The branches our live `TriggerOrder` prompt is offering, in ITS own order —
+/// the candidate list [`match_one_branch`] resolves against.
 ///
 /// `None` when any entry carries no source card: that is NOT MEASURED, and an
 /// unverifiable match is a wrong answer waiting to happen. Resolved through
 /// `Game::card` rather than by parsing the branch label, so a label-format
 /// change cannot silently break identity matching.
-fn trigger_order_candidate_ids(game: &Game) -> Option<Vec<String>> {
+///
+/// Ids and keywords are read from the SAME `effect_choices` entries in one
+/// pass, so the two halves cannot drift out of alignment.
+fn trigger_order_candidates(game: &Game) -> Option<Vec<TriggerCandidate>> {
     let pending = game.pending_selection.as_ref()?;
     let entries = pending.effect_choices.as_ref()?;
     entries
         .iter()
         .map(|e| {
-            e.source_card
-                .map(|h| game.card(h).card_id.clone())
+            e.source_card.map(|h| TriggerCandidate {
+                card_id: game.card(h).card_id.clone(),
+                trigger: e.keyword.map(keyword_display_name),
+            })
         })
         .collect()
+}
+
+/// Render a candidate list for a refusal message.
+fn describe_candidates(candidates: &[TriggerCandidate]) -> String {
+    candidates
+        .iter()
+        .map(TriggerCandidate::describe)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Resolve one `own.field.N` / `opp.field.N` slot reference against the live
@@ -730,9 +873,14 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
             .to_string());
     }
     match payload {
-        SelectPayload::Cards { ids, ordinal } => {
+        SelectPayload::Cards {
+            ids,
+            ordinal,
+            trigger,
+        } => {
             wire.card_ids = ids.clone();
             wire.ordinal = *ordinal;
+            wire.trigger = trigger.as_deref().map(normalize_trigger_name);
         }
         SelectPayload::Value(v) => wire.value = Some(*v),
         SelectPayload::Yes => wire.bool_answer = Some(true),
@@ -820,11 +968,18 @@ fn build_selection_row(
                     .to_string(),
             );
         }
-        SelectPayload::Cards { ids, ordinal } => {
+        SelectPayload::Cards {
+            ids,
+            ordinal,
+            trigger,
+        } => {
             // The wire always carries the SYMBOLIC answer — identities plus,
-            // when the prompt stacks a card's triggers, which of them.
+            // when the prompt stacks a card's triggers, which of them. The
+            // trigger name is normalized here so exactly one spelling reaches
+            // DCGO; the raw authored spelling stays in the scenario YAML.
             wire.card_ids = ids.clone();
             wire.ordinal = *ordinal;
+            wire.trigger = trigger.as_deref().map(normalize_trigger_name);
 
             let live_kind = game.pending_selection.as_ref().map(|p| p.kind.clone());
             match live_kind {
@@ -841,25 +996,35 @@ fn build_selection_row(
                             ids.len()
                         ));
                     }
-                    let candidates = trigger_order_candidate_ids(game).ok_or_else(|| {
+                    let candidates = trigger_order_candidates(game).ok_or_else(|| {
                         format!(
                             "step {i}: our TriggerOrder prompt offers a branch with no \
                              source card, so its candidate list is NOT MEASURED and \
                              identities cannot be matched"
                         )
                     })?;
-                    let pick = match_one_with_ordinal(&ids[0], *ordinal, &candidates)
+                    let pick = match_one_branch(&ids[0], *ordinal, trigger.as_deref(), &candidates)
                         .map_err(|e| format!("step {i}: {e}"))?;
+                    let how = match (trigger.as_deref(), ordinal) {
+                        // A keyword means the same thing in both engines, so
+                        // this branch is NOT position-dependent.
+                        (Some(t), _) => format!(" trigger '{t}'"),
+                        (None, Some(o)) => format!(" ordinal {o}"),
+                        (None, None) => String::new(),
+                    };
                     println!(
                         "  note: step {i} answers our TriggerOrder prompt by identity -- \
-                         '{}'{} is branch {pick} of [{}]. That order is OURS; DCGO \
-                         resolves the same step against its own list, so a \
-                         disagreement surfaces as a divergence.",
+                         '{}'{how} is branch {pick} of [{}].{}",
                         ids[0],
-                        ordinal
-                            .map(|o| format!(" ordinal {o}"))
-                            .unwrap_or_default(),
-                        candidates.join(", ")
+                        describe_candidates(&candidates),
+                        if trigger.is_some() {
+                            " Named by KEYWORD, so DCGO resolves the same branch against \
+                             its own list."
+                        } else {
+                            " That order is OURS; DCGO resolves the same step against its \
+                             own list, so a disagreement surfaces as a divergence. Prefer \
+                             `trigger:` where the branch is a keyword."
+                        }
                     );
                     // `int_value` is the branch-index payload `resolve_next`
                     // maps straight through `effect_choices`.
@@ -870,9 +1035,14 @@ fn build_selection_row(
                 // stack. Our side would ignore it while DCGO acted on it --
                 // a half-answered step, which is exactly the silent
                 // desynchronization this format refuses everywhere else.
-                Some(kind) if ordinal.is_some() => {
+                Some(kind) if ordinal.is_some() || trigger.is_some() => {
+                    let key = if trigger.is_some() {
+                        "trigger:"
+                    } else {
+                        "ordinal:"
+                    };
                     return Err(format!(
-                        "step {i}: `ordinal:` disambiguates a stacked-trigger prompt \
+                        "step {i}: `{key}` disambiguates a stacked-trigger prompt \
                          (DCGO MultipleSkills / our TriggerOrder), but our engine's \
                          live prompt here is {kind:?}"
                     ))
@@ -881,9 +1051,15 @@ fn build_selection_row(
                     // No live prompt (our engine auto-resolved one DCGO still
                     // asks about), or an ordinary identity pick: unchanged.
                     row.card_ids = Some(ids.clone());
-                    if ordinal.is_some() && game.pending_selection.is_none() {
+                    if (ordinal.is_some() || trigger.is_some()) && game.pending_selection.is_none()
+                    {
+                        let key = if trigger.is_some() {
+                            "trigger:"
+                        } else {
+                            "ordinal:"
+                        };
                         println!(
-                            "  note: step {i} carries `ordinal:` but our engine parks no \
+                            "  note: step {i} carries `{key}` but our engine parks no \
                              prompt here -- it rides the wire for DCGO and is not \
                              checked sim-side"
                         );
@@ -1337,6 +1513,120 @@ steps:
         let err = match_one_with_ordinal("Z", None, &c).unwrap_err();
         assert!(err.contains("not among the offered candidates"), "got: {err}");
         assert!(err.contains("A, B"), "must show the list: {err}");
+    }
+
+    // ── semantic trigger matching (`trigger:`) ───────────────────────────
+
+    /// The EX12-065 Kaguyamon stack, exactly as the engine offers it when it
+    /// is deleted in battle: three branches, one card, every other field
+    /// identical. Measured, not invented — see
+    /// `ex12_065_simultaneous_on_deletion_branches_are_distinguishable_by_keyword`.
+    fn kaguyamon_stack() -> Vec<TriggerCandidate> {
+        vec![
+            // The printed [On Deletion] bottom-deck clause: not a keyword.
+            TriggerCandidate { card_id: "EX12-065".to_string(), trigger: None },
+            TriggerCandidate {
+                card_id: "EX12-065".to_string(),
+                trigger: Some("Fortitude".to_string()),
+            },
+            TriggerCandidate {
+                card_id: "EX12-065".to_string(),
+                trigger: Some("Retaliation".to_string()),
+            },
+        ]
+    }
+
+    #[test]
+    fn a_trigger_names_the_branch_that_no_ordinal_could_name_portably() {
+        let c = kaguyamon_stack();
+        assert_eq!(
+            match_one_branch("EX12-065", None, Some("Fortitude"), &c).unwrap(),
+            1
+        );
+        assert_eq!(
+            match_one_branch("EX12-065", None, Some("Retaliation"), &c).unwrap(),
+            2
+        );
+    }
+
+    #[test]
+    fn trigger_matching_is_case_and_bracket_insensitive() {
+        let c = kaguyamon_stack();
+        for spelling in ["Fortitude", "fortitude", "FORTITUDE", "<Fortitude>", " <Fortitude> "] {
+            assert_eq!(
+                match_one_branch("EX12-065", None, Some(spelling), &c).unwrap(),
+                1,
+                "spelling {spelling:?} must resolve like every other"
+            );
+        }
+    }
+
+    #[test]
+    fn a_trigger_no_branch_carries_is_a_finding_not_a_fallthrough() {
+        // The author asserted this stack contains an <Ascension>. It does not.
+        // Taking the first candidate would bury a real disagreement about the
+        // stack's SHAPE under a green run.
+        let c = kaguyamon_stack();
+        let err = match_one_branch("EX12-065", None, Some("Ascension"), &c).unwrap_err();
+        assert!(err.contains("no branch of this prompt"), "got: {err}");
+        assert!(err.contains("<Fortitude>"), "must list what WAS offered: {err}");
+        assert!(err.contains("<Retaliation>"), "must list what WAS offered: {err}");
+    }
+
+    #[test]
+    fn a_trigger_on_the_wrong_card_refuses_and_names_both_halves() {
+        let mut c = kaguyamon_stack();
+        c.push(TriggerCandidate {
+            card_id: "EX12-047".to_string(),
+            trigger: Some("Ascension".to_string()),
+        });
+        let err = match_one_branch("EX12-065", None, Some("Ascension"), &c).unwrap_err();
+        assert!(err.contains("not on card 'EX12-065'"), "got: {err}");
+        assert!(err.contains("EX12-047 <Ascension>"), "must show the list: {err}");
+    }
+
+    #[test]
+    fn a_keyword_that_appears_twice_on_one_card_refuses_rather_than_guessing() {
+        // The keyword has run out of resolving power. Refuse and hand back the
+        // only remaining handle instead of silently taking the first.
+        let c = vec![
+            TriggerCandidate { card_id: "X".to_string(), trigger: Some("Fortitude".to_string()) },
+            TriggerCandidate { card_id: "X".to_string(), trigger: Some("Fortitude".to_string()) },
+        ];
+        let err = match_one_branch("X", None, Some("Fortitude"), &c).unwrap_err();
+        assert!(err.contains("2 times"), "got: {err}");
+        assert!(err.contains("ordinal:"), "must name the fallback: {err}");
+    }
+
+    #[test]
+    fn without_a_trigger_the_positional_path_is_untouched() {
+        // `trigger: None` must behave exactly as before this key existed,
+        // including still REQUIRING an ordinal on an ambiguous stack.
+        let c = kaguyamon_stack();
+        let err = match_one_branch("EX12-065", None, None, &c).unwrap_err();
+        assert!(err.contains("AMBIGUOUS"), "got: {err}");
+        assert_eq!(match_one_branch("EX12-065", Some(2), None, &c).unwrap(), 2);
+    }
+
+    #[test]
+    fn a_keyword_less_branch_is_reachable_only_positionally() {
+        // The plain printed [On Deletion] clause carries no keyword, so
+        // `trigger:` cannot name it -- `ordinal:` remains the way in, and the
+        // refusal above is what tells an author that.
+        let c = kaguyamon_stack();
+        assert_eq!(match_one_branch("EX12-065", Some(0), None, &c).unwrap(), 0);
+        assert_eq!(c[0].describe(), "EX12-065");
+        assert_eq!(c[1].describe(), "EX12-065 <Fortitude>");
+    }
+
+    #[test]
+    fn keyword_display_name_drops_the_payload_but_keeps_the_name() {
+        use digimon_engine::enums::Keyword;
+        assert_eq!(keyword_display_name(Keyword::Fortitude), "Fortitude");
+        assert_eq!(keyword_display_name(Keyword::ArmorPurge), "ArmorPurge");
+        // A parameterized keyword is still named by its KEYWORD, not by its
+        // parameter: `<Material Save 1>` is the `MaterialSave` trigger.
+        assert_eq!(keyword_display_name(Keyword::MaterialSave(1)), "MaterialSave");
     }
 
     #[test]

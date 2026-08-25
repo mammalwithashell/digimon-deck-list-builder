@@ -3997,13 +3997,22 @@ impl Game {
             //   * `Effect::granted_keyword` -- the card's own printed keyword,
             //     which the DSL authors as a `kind: grant_keyword` clause
             //     (EX12-065's `<Fortitude>` is effect slot 0).
+            //   * `Effect::keyword_source` -- a body SYNTHESIZED by
+            //     `keyword_to_auto_effect` and appended to the card's effect
+            //     list by `effects_for_card` (EX12-065's slots 6 and 7). These
+            //     carry no `granted_keyword`, because they ARE the keyword's
+            //     behaviour rather than a clause granting it.
             // Aura first: a granted body is not addressable through the card's
-            // effect list, so the slot lookup would miss it.
+            // effect list, so the slot lookup would miss it. Then, within the
+            // slot lookup, `granted_keyword` before `keyword_source` -- a
+            // `kind: grant_keyword` clause names the keyword the author wrote,
+            // and only synthesized bodies ever set `keyword_source`, so the two
+            // never both apply to one effect.
             let keyword = qe.keyword_effect.or_else(|| {
                 self.effects_for_queued(qe).and_then(|effects| {
-                    effects
-                        .get(qe.effect_slot as usize)
-                        .and_then(|effect| effect.granted_keyword)
+                    effects.get(qe.effect_slot as usize).and_then(|effect| {
+                        effect.granted_keyword.or(effect.keyword_source)
+                    })
                 })
             });
             debug_assert!(action_id < HAND_EFFECT_END);

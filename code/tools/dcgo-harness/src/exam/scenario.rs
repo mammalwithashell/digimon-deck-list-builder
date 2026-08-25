@@ -98,9 +98,18 @@ pub enum SelectPayload {
     /// those are different decisions — so occurrence order must not silently
     /// pick between them. It is the 0-based position AMONG the candidates
     /// carrying that same id, NOT an index into the whole candidate list.
+    ///
+    /// `trigger` is the SEMANTIC form of the same disambiguation, and is
+    /// preferred wherever it applies: it names the branch's KEYWORD
+    /// (`<Fortitude>`, `<Ascension>`, an aura-granted `<Retaliation>`) rather
+    /// than its POSITION. Position is per-engine by construction -- both engines
+    /// resolve the same authored step against their OWN candidate list -- so an
+    /// `ordinal:` can silently mean different triggers on the two sides, while a
+    /// keyword means the same thing in both. Mutually exclusive with `ordinal`.
     Cards {
         ids: Vec<String>,
         ordinal: Option<i32>,
+        trigger: Option<String>,
     },
     /// Field-permanent picks as OUR slot references (`own.field.N` /
     /// `opp.field.N`), resolved at lowering time against the live game.
@@ -196,6 +205,12 @@ struct SelectArgs {
     /// Only legal alongside `cards:` — see [`SelectPayload::Cards`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     ordinal: Option<i32>,
+    /// Only legal alongside `cards:`, and never alongside `ordinal:` — see
+    /// [`SelectPayload::Cards`]. Names the branch's KEYWORD; matching is
+    /// case-insensitive and tolerant of the printed angle brackets, so
+    /// `fortitude`, `Fortitude` and `"<Fortitude>"` are one answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    trigger: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     targets: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -223,6 +238,43 @@ const ORDINAL_RULE: &str = "select `ordinal:` is only legal alongside `cards:`: 
 position among the candidates carrying THAT card id, so without an id it \
 addresses nothing. To answer a prompt by raw DCGO index, use `value: N`";
 
+/// Rendered in the error an author gets for `trigger:` without `cards:`.
+const TRIGGER_RULE: &str = "select `trigger:` is only legal alongside `cards:`: it names WHICH \
+of that card's stacked triggers to resolve (`<Fortitude>`, `<Ascension>`, an aura-granted \
+`<Retaliation>`), so without an id it addresses nothing. To answer a prompt by raw DCGO index, \
+use `value: N`";
+
+/// Rendered when a step carries BOTH disambiguators.
+///
+/// Not a style preference: `ordinal:` is a POSITION in the prompt's candidate
+/// list, and each engine builds that list itself, so one ordinal can name a
+/// different trigger on the two sides. A keyword names the same trigger in both.
+const TRIGGER_VS_ORDINAL_RULE: &str = "select `trigger:` and `ordinal:` both disambiguate one \
+card's stacked triggers, so a step carrying both gives two answers to one question. Prefer \
+`trigger:`: `ordinal:` is a POSITION in the prompt's candidate list and each engine builds that \
+list itself, so the same ordinal can name a DIFFERENT trigger on the two sides; a keyword names \
+the same trigger in both";
+
+/// Canonical spelling of a trigger name, for cross-engine comparison.
+///
+/// Lowercases and drops `<`, `>` and whitespace, so every way one keyword can be
+/// written collapses onto a single string:
+///   * the author's `trigger: fortitude` / `Fortitude` / `"<Fortitude>"`;
+///   * our sim side, which spells a branch's keyword from the `Keyword` variant
+///     (`adapter::keyword_display_name` -> `ArmorPurge`) -- the same word
+///     `keyword_to_auto_effect` prints as `Effect::name = "<Armor Purge>"`;
+///   * DCGO's `ICardEffect.EffectName`, which names keywords WITHOUT brackets
+///     and WITH spaces (`SetUpICardEffect("Armor Purge", ...)`).
+///
+/// Dropping whitespace is what makes those agree: `ArmorPurge`, `<Armor Purge>`
+/// and `Armor Purge` all land on `armorpurge`.
+pub fn normalize_trigger_name(raw: &str) -> String {
+    raw.chars()
+        .filter(|c| !c.is_whitespace() && *c != '<' && *c != '>')
+        .flat_map(|c| c.to_lowercase())
+        .collect()
+}
+
 impl SelectArgs {
     fn into_payload(self) -> Result<SelectPayload, String> {
         let present = [
@@ -241,6 +293,18 @@ impl SelectArgs {
         // mention the key the author actually wrote.
         if self.ordinal.is_some() && self.cards.is_none() {
             return Err(ORDINAL_RULE.to_string());
+        }
+        // Same placement, same reason: a bare `trigger:` carries no answer
+        // form, so the generic "got 0 forms" message below would never mention
+        // the key the author actually wrote.
+        if self.trigger.is_some() && self.cards.is_none() {
+            return Err(TRIGGER_RULE.to_string());
+        }
+        // Also before the exactly-one rule, so an author who wrote both
+        // disambiguators is told WHICH to keep instead of being told they
+        // wrote zero answer forms.
+        if self.trigger.is_some() && self.ordinal.is_some() {
+            return Err(TRIGGER_VS_ORDINAL_RULE.to_string());
         }
         if present != 1 {
             return Err(format!(
@@ -278,9 +342,28 @@ impl SelectArgs {
                     cards.len()
                 ));
             }
+            if let Some(trigger) = self.trigger.as_deref() {
+                if normalize_trigger_name(trigger).is_empty() {
+                    return Err(format!(
+                        "select `trigger: {trigger:?}` names no keyword once the angle \
+                         brackets and spacing are stripped. Write the keyword itself, \
+                         e.g. `trigger: Fortitude`"
+                    ));
+                }
+                if cards.len() != 1 {
+                    return Err(format!(
+                        "select `trigger:` names WHICH of one card's own stacked triggers \
+                         to take, so it cannot accompany a {}-card pick list -- the \
+                         prompts that stack triggers (DCGO MultipleSkills / our \
+                         TriggerOrder) are single-pick",
+                        cards.len()
+                    ));
+                }
+            }
             return Ok(SelectPayload::Cards {
                 ids: cards,
                 ordinal: self.ordinal,
+                trigger: self.trigger,
             });
         }
         if let Some(targets) = self.targets {
@@ -314,9 +397,14 @@ impl SelectArgs {
     fn from_payload(p: &SelectPayload) -> SelectArgs {
         let mut a = SelectArgs::default();
         match p {
-            SelectPayload::Cards { ids, ordinal } => {
+            SelectPayload::Cards {
+                ids,
+                ordinal,
+                trigger,
+            } => {
                 a.cards = Some(ids.clone());
                 a.ordinal = *ordinal;
+                a.trigger = trigger.clone();
             }
             SelectPayload::Materials(m) => a.materials = Some(m.clone()),
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
@@ -798,6 +886,7 @@ assert:
             SelectPayload::Cards {
                 ids: vec!["EX12-020".to_string(), "EX12-020".to_string()],
                 ordinal: None,
+                trigger: None,
             }
         );
     }
@@ -812,6 +901,7 @@ assert:
             SelectPayload::Cards {
                 ids: vec!["EX12-047".to_string()],
                 ordinal: Some(1),
+                trigger: None,
             }
         );
     }
@@ -854,6 +944,7 @@ assert:
         let act = StepAction::Select(SelectPayload::Cards {
             ids: vec!["EX12-047".to_string()],
             ordinal: Some(1),
+            trigger: None,
         });
         let yaml = serde_yml::to_string(&act).expect("serializes");
         assert!(yaml.contains("ordinal"), "the key must survive: {yaml}");
@@ -866,9 +957,119 @@ assert:
         let act = StepAction::Select(SelectPayload::Cards {
             ids: vec!["EX12-047".to_string()],
             ordinal: None,
+            trigger: None,
         });
         let yaml = serde_yml::to_string(&act).expect("serializes");
         assert!(!yaml.contains("ordinal"), "got: {yaml}");
+    }
+
+    // ── select `trigger:` (the SEMANTIC MultipleSkills disambiguator) ──
+
+    #[test]
+    fn select_trigger_parses_alongside_cards() {
+        let p = select_payload_of("{ cards: [EX12-065], trigger: Fortitude }").unwrap();
+        assert_eq!(
+            p,
+            SelectPayload::Cards {
+                ids: vec!["EX12-065".to_string()],
+                ordinal: None,
+                trigger: Some("Fortitude".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn select_trigger_without_cards_is_rejected_loudly() {
+        // A trigger names WHICH of a card's stacked triggers to resolve; with
+        // no card id it addresses nothing, exactly as with `ordinal:`.
+        let err = select_payload_of("{ trigger: Fortitude }").unwrap_err();
+        assert!(err.contains("only legal alongside `cards:`"), "got: {err}");
+        assert!(err.contains("value: N"), "must name the alternative: {err}");
+    }
+
+    #[test]
+    fn select_trigger_and_ordinal_together_are_rejected_preferring_trigger() {
+        // Two answers to one question. The refusal must also say WHICH to
+        // keep: an ordinal is a per-engine POSITION, so it can name a
+        // different trigger on the two sides; a keyword cannot.
+        let err =
+            select_payload_of("{ cards: [EX12-065], trigger: Fortitude, ordinal: 1 }")
+                .unwrap_err();
+        assert!(err.contains("cannot be combined") || err.contains("two answers"), "got: {err}");
+        assert!(err.contains("Prefer `trigger:`"), "must say which to keep: {err}");
+        assert!(err.contains("POSITION"), "must say why: {err}");
+    }
+
+    #[test]
+    fn select_trigger_with_a_multi_card_pick_is_rejected() {
+        let err = select_payload_of("{ cards: [A, B], trigger: Fortitude }").unwrap_err();
+        assert!(err.contains("single-pick"), "got: {err}");
+    }
+
+    #[test]
+    fn an_empty_trigger_is_rejected_rather_than_matching_everything() {
+        // `trigger: "<>"` normalizes to the empty string, which would compare
+        // equal to nothing and silently behave like "no trigger given".
+        let err = select_payload_of("{ cards: [A], trigger: \"<>\" }").unwrap_err();
+        assert!(err.contains("names no keyword"), "got: {err}");
+    }
+
+    #[test]
+    fn trigger_spellings_normalize_to_one_answer() {
+        // The three ways an author will write the same keyword. The RAW
+        // spelling is preserved in the payload (so the YAML round-trips), and
+        // the normalizer is what makes them one answer.
+        for raw in ["fortitude", "Fortitude", "<Fortitude>", "  <Fortitude> "] {
+            let p = select_payload_of(&format!("{{ cards: [EX12-065], trigger: \"{raw}\" }}"))
+                .unwrap();
+            let SelectPayload::Cards { trigger, .. } = p else {
+                panic!("expected a Cards payload");
+            };
+            let trigger = trigger.expect("the key survives parsing");
+            assert_eq!(trigger, raw, "the AUTHORED spelling is what round-trips");
+            assert_eq!(
+                normalize_trigger_name(&trigger),
+                "fortitude",
+                "every spelling of one keyword must compare equal"
+            );
+        }
+    }
+
+    #[test]
+    fn normalization_bridges_our_bracketed_name_and_dcgos_spaced_one() {
+        // Our engine names keyword bodies `<Armor Purge>`; DCGO names the same
+        // effect `Armor Purge` (`SetUpICardEffect("Armor Purge", ...)`).
+        // Dropping whitespace as well as the brackets is what makes the two
+        // sides land on one string.
+        assert_eq!(normalize_trigger_name("<Armor Purge>"), "armorpurge");
+        assert_eq!(normalize_trigger_name("Armor Purge"), "armorpurge");
+        assert_eq!(normalize_trigger_name("armorpurge"), "armorpurge");
+        // And distinct keywords stay distinct.
+        assert_ne!(
+            normalize_trigger_name("<Fortitude>"),
+            normalize_trigger_name("<Retaliation>")
+        );
+    }
+
+    #[test]
+    fn select_trigger_round_trips_through_yaml_and_is_omitted_when_absent() {
+        let act = StepAction::Select(SelectPayload::Cards {
+            ids: vec!["EX12-065".to_string()],
+            ordinal: None,
+            trigger: Some("<Fortitude>".to_string()),
+        });
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(yaml.contains("trigger"), "the key must survive: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act);
+
+        let bare = StepAction::Select(SelectPayload::Cards {
+            ids: vec!["EX12-065".to_string()],
+            ordinal: None,
+            trigger: None,
+        });
+        let yaml = serde_yml::to_string(&bare).expect("serializes");
+        assert!(!yaml.contains("trigger"), "absent must OMIT the key: {yaml}");
     }
 
     #[test]
@@ -921,6 +1122,7 @@ assert:
             StepAction::Select(SelectPayload::Cards {
                 ids: vec!["ST1-03".to_string()],
                 ordinal: None,
+                trigger: None,
             }),
             StepAction::Select(SelectPayload::Targets(vec!["own.field.1".to_string()])),
             StepAction::Select(SelectPayload::Value(3)),
@@ -974,7 +1176,7 @@ mod dcgo_only_tests {
         let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], ordinal: 1, dcgo_only: true }"))
             .expect("dcgo_only step parses");
         match &s.steps[0].act {
-            StepAction::SelectDcgoOnly(SelectPayload::Cards { ids, ordinal }) => {
+            StepAction::SelectDcgoOnly(SelectPayload::Cards { ids, ordinal, .. }) => {
                 assert_eq!(ids, &vec!["EX12-076".to_string()]);
                 assert_eq!(*ordinal, Some(1));
             }
