@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-25T02:03:34.468199300+00:00",
+  "last_updated": "2026-08-25T22:41:02.775971+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -572,7 +572,7 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
-      "reason": "engine Decode leave-scoping: sim parks a spurious Decode window row DCGO never asks (engine bug candidate, review note in scenario header).",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"SelectCardEffect prompt needs select_card_ids or select_cancel, got: select_bool=true\". We model the optional <Decode> accept as a separate yes/no (generic_bool) and THEN a card pick; DCGO folds both into one SelectCardEffect where cancel IS the decline. The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
@@ -600,7 +600,7 @@
       "verdict": "unreachable",
       "label": "inherited_effect_description_eng",
       "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
-      "reason": "MultipleSkills value-space mismatch: our TriggerOrder slot values vs DCGO 0-based skillInfos index; out-of-range silently clears the trigger stack (review finding 2).",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 3 expected actor 1 but DCGO asked actor 0\". This one fails at STEP 3, far earlier than the others and before any card under exam is involved, so it is a turn/priority-sequencing difference in the opening, not a clause-level disagreement. Triage this one first: it is the cheapest to localize and may be masking whatever else the line would have found. (Supersedes the 'MultipleSkills value-space mismatch' reason.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
@@ -638,7 +638,7 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
-      "reason": "Material (digivolution-source) prompt is an indexes-payload class outside select-support scope.",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"SelectCardEffect prompt needs select_card_ids or select_cancel, got: select_bool=true\". Identical shape to EX12-031#effect#0 -- the same <Decode> optional-accept modelling difference. (Supersedes the previous reason, which blamed the Material indexes payload; that gap was closed in 1f6811001 and is no longer what stops this line.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
@@ -804,7 +804,7 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "4242ce3203afc068d8c004f766a1e506efe2d76a7fa30783ae7ab2c631352c93",
-      "reason": "MultipleSkills value-space mismatch (review finding 2).",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 10 expected prompt 'generic_bool' but DCGO asked 'SelectCardEffect'\". Same optional-accept family as the two <Decode> clauses. (Supersedes the previous 'MultipleSkills value-space mismatch' reason -- the trigger-order stack is no longer what stops this line.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
@@ -823,7 +823,7 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "accd0cde3dc0b75dc87fdc42da64d344daf3fd56eb417352936107ec751358bc",
-      "reason": "MultipleSkills value-space mismatch (review finding 2).",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 21 expected prompt 'SelectCardEffect' but DCGO asked 'generic_bool'\". NOTE THE DIRECTION -- this is the INVERSE of the other three: here DCGO raises the extra yes/no and we go straight to the card pick. So the family is not 'we always add a bool'; the two engines disagree about WHICH optional effects get a standalone confirm, in both directions. That asymmetry is the finding worth triaging. (Supersedes the previous 'MultipleSkills value-space mismatch' reason.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
@@ -1210,7 +1210,7 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 23 expected prompt 'SelectPermanentEffect' but DCGO asked 'MultipleSkills'\". DCGO raises a simultaneous-trigger stack where we go straight to a target prompt -- i.e. the two engines disagree about how many effects triggered at that point, not about how to answer one. Distinct from the optional-accept family. (Supersedes the 'structurally unmeasurable with the current line vocabulary' recon note, which was never measured.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
