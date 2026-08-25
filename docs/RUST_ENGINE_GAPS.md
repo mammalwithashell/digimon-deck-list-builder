@@ -2210,7 +2210,7 @@ authored and registered but appear in neither `validated_cards_dsl.json` nor
 `validated_cards.json`. A keyword that is granted but inert passes every
 "is it implemented?" check that existed.
 
-## Mass-aura keyword grants install the FLAG but not the keyword's TRIGGER  [G-ENGINE-AURA-GRANT-NO-TRIGGER]
+## Mass-aura keyword grants install the FLAG but not the keyword's TRIGGER  [G-ENGINE-AURA-GRANT-NO-TRIGGER] — RESOLVED 2026-08-24
 
 **Found 2026-08-24 by the DCGO exam** (`qa/dcgo-exams/EX12/EX12-065-effect3.yaml`), and it is the unfixed half of `task_8f063aa6` — that chip fixed SELF-auras; filtered-target auras still have the hole.
 
@@ -2237,3 +2237,35 @@ That is correct as far as it goes — the grantor must not host the recipient's 
 
 **Consumer status:** `EX12-065#effect#3` is recorded `diverged`. The scenario deliberately does NOT assert either behaviour — asserting ours would bake the bug in, asserting DCGO's would fail the sim-only gate before the oracle ruled — so the per-step oracle diff is what surfaces it.
 
+
+**Status: RESOLVED (2026-08-24).** Fixed at TRIGGER DISPATCH, as suggested — `Game::build_effects_for_card` was left untouched, so its `card_id`-keyed memo (the ~94%-of-step-time hot path) is unaffected.
+
+* `ModifierRegistry::aura_granted_keywords(target)` (`src/modifiers.rs`) returns the keywords on `target` that came from a MATERIALIZED-declarative entry and have no non-materialized twin. That is exactly the filtered-target-aura set: a runtime `EffectContext::grant_keyword` already installs a granted-triggered body through `grant_keyword_triggered_auto_effects`, and excluding its keyword is what stops the double-fire.
+* `Game::has_keyword` was split; its card-source half is now `Game::has_keyword_from_card_sources` (`src/game/queries.rs`) — printed face keywords, a below-top source's or a link card's inherited keywords, and SELF-aura / `scope: inherited` grants carrying the `Effect::granted_keyword` marker. That is precisely the set `build_effects_for_card` already synthesizes into a scanned effect list, so it is the second half of the no-double-fire guard (modelled on the `already_printed` guard in `game/triggers.rs`).
+* `Game::enqueue_from_permanent` (`src/effect_queue.rs`) walks those keywords after the top-card scan and enqueues `keyword_to_auto_effect(kw, top_card)` entries whose timing matches, skipping declarative and pure-replacement entries. `source_permanent`/`controller` are the RECIPIENT (matching the granted-triggered branch above it, D4/DCGO). The aura's `active_when` still gates: a false condition simply stops the materialized entry from re-installing on the next declarative tick, so the keyword is not in the registry at dispatch. Per-keyword gates (`<Retaliation>`'s Battle-only deletion-cause filter, `<Fortitude>`'s source-count gate) are unchanged, inside the auto-effect body.
+* `QueuedEffect` gained `keyword_effect: Option<Keyword>` (`src/selection.rs`, plain `Copy` data — clone-safe, no closure). The drainer resolves such an entry through a new `Game::effects_for_queued`, which re-synthesizes the keyword's auto-effects instead of reading the card's, so `effect_slot` indexing and EVERY downstream gate (source liveness, condition, OPT, optionality, the outer-optional prompt, the trigger-order label) apply exactly as for a printed effect. Mirrors the replacement side's `CandidateKind::GrantedKeywordEffect`.
+
+**Coverage.** The dispatch is keyword-agnostic, so it covers every plain-process trigger keyword `keyword_to_auto_effect` can produce — `<Retaliation>`, `<Fortitude>`, `<Save>`, `<MaterialSave(N)>`, `<Execute>`, `<Engage>`, `<Ascension>`. The replacement-process keywords (`<Barrier>`, `<Evade>`, `<Fragment(N)>`, `<ArmorPurge>`, `<Decoy>`, `<Scapegoat>`, `<Partition>`, `<Guard>`) were ALREADY reached, through `replacement::collect_candidates`'s existing `ModifierRegistry::granted_keywords` scan — now pinned by tests rather than assumed. Declarative keyword auto-effects (`<Training>`, `<MindLink>`, `<BlastDigivolve>`) are deliberately skipped here: they belong to the declarative tick, and no card mass-grants them today (a future one would need `materialize_declaratives_full` widened the same way).
+
+**Pack census (2026-08-24).** Across all 829 YAML specs, filtered-target auras grant: `Blocker` ×9, `Rush` ×6, `Alliance` ×6, `Reboot` ×3, `SecurityAttackPlus` ×2, `Piercing` ×2, `Vortex` ×1 — all persistent, all already working — and `Retaliation` ×1: **EX12-065 is today's sole affected card**. (The one mass-granted `Execute` is a SELF-aura — EX12-004 Onibimon, closed by `task_69f10a66`.) The fix matters going forward: any future "all of your [X] gain `<trigger keyword>`" now works by construction.
+
+**Provers.**
+* `tests/cards_behavioral/ex12/ex12_065.rs` — `ex12_065_mass_granted_retaliation_deletes_battle_winner_on_recipient` (the oracle's exact shape), `..._respects_the_battle_cause_gate` (16-12 Battle-only survives the grant), `ex12_065_mass_grant_does_not_double_fire_on_a_printed_retaliation_recipient` (recipient that ALSO prints `<Retaliation>` deletes the winner exactly once).
+* `tests/replacements/granted_keywords.rs` — `mass_granted_fortitude_fires_on_a_non_source_recipient` (trigger half on a non-source), `mass_granted_fortitude_fires_on_its_own_grantor` (the grantor matches its own filter — the case a naive "aura source == target" de-dup would drop), `mass_granted_evade_prompts_on_a_non_source_recipient` (replacement half).
+
+
+## A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+
+**Found 2026-08-24** while closing `G-ENGINE-AURA-GRANT-NO-TRIGGER` — independent of it, and it predates that fix.
+
+`<Retaliation>` (§16-12) identifies its victim through `EffectContext::battle_opponent_of`, which reads the LIVE `Game::pending_attack`. When another `[On Deletion]` clause on the SAME carrier parks a selection, the park unwinds `delete_permanents_batch`; that unwind restores `current_deletion_cause` and the attack finishes, so when the resume drains the REST of the OnDeletion bundle, `pending_attack == None`, `battle_opponent_of` returns `None`, and `<Retaliation>` silently no-ops. The deletion cause itself survives (it is read from the threaded `deleted_object` snapshot) — only the battle identity is lost.
+
+It is therefore **order-dependent**: if the controller orders `<Retaliation>` FIRST in the trigger-order prompt, it fires correctly; if the parking clause goes first, the keyword is lost. That asymmetry alone makes it a rules bug — trigger order must not change WHETHER a mandatory keyword resolves.
+
+**Affects printed, self-granted, and aura-granted `<Retaliation>` identically** — the reproducer below takes the keyword through the DSL's printed-keyword form (`kind: grant_keyword`, the `Effect::granted_keyword` marker path), i.e. entirely pre-existing machinery.
+
+**Reproducers (both `#[ignore]`d with this gap code):**
+* `code/digimon-engine/tests/keyword_phase_e/retaliation.rs::retaliation_survives_a_parked_sibling_on_deletion_clause` — minimal synthetic card: `<Retaliation>` + an `[On Deletion]` clause that parks a 2-candidate pick.
+* `code/digimon-engine/tests/cards_behavioral/ex12/ex12_065.rs::ex12_065_mass_granted_retaliation_also_fires_on_the_grantor_itself` — the real card. EX12-065 Kaguyamon's own `[On Deletion]` bottom-deck clause parks, so its self-granted `<Retaliation>` is lost when it loses a battle. (The GRANTOR-self grant path itself is proven working by `mass_granted_fortitude_fires_on_its_own_grantor`; only the battle-state lifetime blocks this one.)
+
+**Likely shape of the fix:** snapshot the battle identity (attacker / effective target) into the OnDeletion `TriggerContext` alongside the existing `deleted_object` snapshot, and have `battle_opponent_of` fall back to it when `pending_attack` is gone — the same "read the snapshot, not the live slot" discipline CLAUDE.md rule 25 already imposes on OnDeletion handlers. Not attempted here: it touches the battle-state lifetime and wants its own change.

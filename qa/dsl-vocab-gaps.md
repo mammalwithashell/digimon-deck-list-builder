@@ -8319,3 +8319,23 @@ pins that the turn scan does not trash such a marker.
   `place_self_as_delay_option` in the [Main] body) would say it directly instead
   of through a Delay clause that means something else.
 
+## Exam scenarios cannot declare [Assembly] / [DigiXros] materials  [G-EXAM-MULTIPICK-MATERIAL-DECLARATION]
+
+- **What is unexpressible:** the `select:` step vocabulary in `qa/dcgo-exams/*.yaml` has no MULTI-PICK material payload, so a scenario cannot play a card through its `[Assembly]` or `[DigiXros]` alt path. `docs/DCGO_EXAM.md` lists this as deliberately out of scope for the original brief.
+- **Why it now matters:** it is not just an alt-cost nicety, it gates whole CLAUSES. EX12-076 Susanoomon prints `[Assembly -9] 8 [Hybrid]/[Shambala] trait cards w/different names`, which takes its play cost 16 -> 7. Without Assembly the card is unplayable from hand at all (16 exceeds the +10 memory ceiling), so every clause that requires it to be PLAYED rather than digivolved is unreachable — starting with `<Rush>`, whose only load-bearing gate is `turn_played == turn && turn_digivolved != turn` (`action/mask.rs`).
+- **Also blocked behind it:** the `[Assembly]`/`[DigiXros]` machinery itself is never exam-measured, on any card.
+- **Suggested shape:** extend the select step with a multi-pick payload, e.g.
+  `select: { materials: [EX12-004, EX12-011, ...] }`, lowering to DCGO's
+  `SelectAssemblyClass` / `SelectDigiXrosClass` rows (both already emit
+  `LogSelectionRow`, see CLAUDE.md rule 27) and to our engine's material
+  selection. Identities on the wire as usual, never indices.
+- **Worked example to build against:** Susanoomon + 8 differently-named
+  [Hybrid]/[Shambala] cards in the controller's OWN trash (DCGO filters
+  `card.Owner.TrashCards`, `SelectAssemblyClass.cs`). Include EX12-004
+  Onibimon — a Lv.2 Digi-Egg with [Shambala] AND inherited `<Execute>` — and the
+  same line also witnesses a granted `<Execute>` end-of-turn attack (§16-37).
+- **Consumer status:** `EX12-076#effect#0` is recorded `unreachable` with this as
+  the cause (its earlier "memory ceiling" reason was wrong and has been
+  corrected). `EX12-076#effect#5` is the matching digivolve-cost line.
+- First reported: 2026-08-24
+

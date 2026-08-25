@@ -31,58 +31,98 @@
 # yes/no gate, accepted -- its EffectChoice offers no decline-shaped PASS).
 # DCGO stacks the same two triggers in the OPPOSITE order; see the
 # BLOCKED note below.
-# BLOCKED ON THE ORACLE -- TRIGGER-LIST INVERSION (reconciled 2026-08-24
-# against the failed oracle recordings 20260824T175253Z / 20260824T175315Z).
-# The two engines present the deleted Amaterasumon's two simultaneous
-# triggers in OPPOSITE order, and the `select:` vocabulary has no way to
-# name a trigger across that inversion, so this line cannot be made to
-# satisfy both wires at once.
+# BLOCKED ON THE ORACLE -- TRIGGER-LIST INVERSION. Re-derived from scratch
+# 2026-08-25 (recorded verdict cause "MultipleSkills value-space mismatch
+# (review finding 2)", stamped 2026-08-22, is STALE: that cause described a
+# wire that handed ONE engine's raw index to the other, and it was fixed on
+# 2026-08-23 by `select_ordinal` + `MatchOneWithOrdinal`/`match_one_with_ordinal`,
+# each engine now resolving the symbolic answer against its OWN list. What
+# survives is a different, sharper defect, stated below.)
 #
-#   OURS  (probed via the exam's own lowering note): branch 0 = [On Deletion],
-#         branch 1 = <Ascension>.
-#   DCGO  (READ OFF THE WIRE, not inferred): `EX12_047.CardEffects` adds the
-#         <Ascension> keyword in the "Static Keywords" region BEFORE the
-#         "On Deletion" region, and `MultipleSkills.skillInfos_active`
-#         preserves that order -- so index 0 = <Ascension>, index 1 =
-#         [On Deletion]. Proof: in the effect4 recording DCGO answered
-#         `MultipleSkills` with int_value 0 and the VERY NEXT prompt was
-#         `generic_bool`, which is `AscensionProcess`'s
-#         SetBoolSelection("Will you place this card in security?").
+# THE DEFECT. `select: {cards:, ordinal:}` names a trigger by (card identity,
+# position among THAT card's candidates). When one card contributes TWO
+# DIFFERENT triggers the position is pure PRESENTATION, and the two engines
+# present this card's pair in OPPOSITE order -- so no single authored ordinal
+# makes both engines resolve the same trigger first. Identity+ordinal is not
+# an engine-independent NAME for a trigger.
 #
-# `select: {cards:, ordinal:}` carries ONE ordinal that each engine resolves
-# against its OWN candidate list (`match_one_with_ordinal` /
-# `SelectionAnswer.MatchOneWithOrdinal`), and `value:` is a single raw index
-# on both sides -- so whichever value is authored, exactly one engine
-# resolves <Ascension> first and the other resolves [On Deletion] first.
-# The two orders do NOT produce the same wire, and cannot be made to:
+# FOUR INDEPENDENT OBSERVATIONS, all re-taken 2026-08-25, none inherited:
+#   1. OURS, ordinal 0 -> "our engine's parked Trash prompt" (probe of this
+#      line with ordinal 0). Our branch 0 = [On Deletion].
+#   2. OURS, ordinal 1 -> EffectChoice prompt 'you may place this card as the
+#      top security card'. Our branch 1 = <Ascension>.
+#   3. DCGO, index 0 = <Ascension>. Not inferred: the effect4 oracle job
+#      (result exam-EX12-047-effect4.result.json, recording
+#      20260824T175315Z) authored ordinal 0 and aborted with
+#      "prompt mismatch: step 21 expected prompt 'SelectCardEffect' but DCGO
+#      asked 'generic_bool'" -- generic_bool is `AscensionProcess`'s
+#      SetBoolSelection, so DCGO took <Ascension> at index 0.
+#   4. Source agrees: `EX12_047.CardEffects` adds the <Ascension> keyword in
+#      the "Static Keywords" region BEFORE the "On Deletion" region, and
+#      `MultipleSkills` preserves that order into `skillInfos_active`
+#      (MultipleSkills.cs, the StackedSkillInfos -> skillInfos_active loop).
 #
-#   * <Ascension> first: it moves the carrier out of the trash, and DCGO then
-#     DROPS the [On Deletion] outright, because
+# WHY NO BOARD STATE RESCUES IT. The two orders produce DIFFERENT wires, and
+# every lever that could collapse them is closed:
+#   * <Ascension> first: it moves the carrier out of the trash, and the
+#     [On Deletion] is then DROPPED on BOTH engines -- DCGO by
 #     `CanActivateOnDeletion = card.IsToken || IsTopCardStillInTrash(...)`
-#     is now false (CanUseEffects/OnDeletion.cs:114). Rows: [MultipleSkills,
-#     generic_bool].
+#     (CanUseEffects/OnDeletion.cs:114), and OURS verifiably too: an
+#     ordinal-1 probe of the effect4 board (trash still holding a [TB]
+#     EX12-020, hand still holding free-play candidates) logged
+#     "select answered no live prompt -- our engine auto-resolved it" for
+#     BOTH following picks. Rows: [order, bool].
 #   * [On Deletion] first: its trash pick ALWAYS opens, because the carrier
-#     itself is a [TB] card sitting in the trash
-#     (`HasMatchConditionOwnersCardInTrash` = `Owner.TrashCards.Some(...)`,
-#     no self-exclusion), so there is no board state that starves it. Rows:
-#     [MultipleSkills, SelectCardEffect, (SelectHandEffect), (generic_bool)].
+#     is itself a [TB] card sitting in the owner's trash and
+#     `HasMatchConditionOwnersCardInTrash` is a bare
+#     `card.Owner.TrashCards.Some(...)` with NO self-exclusion
+#     (GameContextDeterminarion.cs:856). Rows: [order, SelectCardEffect,
+#     (SelectHandEffect), generic_bool].
+#   * Neither trigger can be starved out of the prompt itself. Both register
+#     on the same gate (`CanTriggerAscension` IS `CanTriggerOnDeletion`), so
+#     `skillInfos_active.Count` is 2 whenever this card is deleted and DCGO
+#     always raises MultipleSkills (Count==1 is the only no-prompt branch).
+#     The one lever on <Ascension>'s body is `Player.CanAddSecurity`, which
+#     needs an `ICannotAddSecurityEffect` on the board (Toho pool has none)
+#     or `gameContext.IsSecurityLooking` (only BT14/BT16/ST10 look-effects) --
+#     and it would silence DCGO's gate without silencing ours, converting a
+#     substrate gap into a false divergence.
+#   The two sequences are a ROTATION of each other, and a rotation cannot be
+#   padded away: the emitter can add DCGO-only rows (a select answering no
+#   live prompt on our side) but never OURS-only rows, and our engine's next
+#   prompt must be answered by the very next scenario step.
 #
-# Neither trigger can be made to emit ZERO rows either -- the only lever on
-# <Ascension> is `Player.CanAddSecurity`, which needs an
-# `ICannotAddSecurityEffect` on the board and the Toho pool has none. So the
-# gate row lands in position 1 on one wire and in the last position on the
-# other, and the strict cursor aborts there.
+# `value: N` IS NOT THE ESCAPE HATCH. It rides the wire as DCGO's raw skill
+# index, but on our side it lowers to a COUNT payload, and a count is matched
+# against branch LABELS or a candidate set. Probed 2026-08-25:
+#   FAILED: count payload 1 has no candidate set, so it cannot be mapped onto
+#   the TriggerOrder prompt 'Choose which triggered effect to resolve next
+#   (2 pending)' -- choices: ["30 => EX12-047 slot 5 (mandatory)",
+#                             "31 => EX12-047 slot 6 (mandatory)"]
+# Those labels are also the second half of the finding: OUR TriggerOrder
+# branch labels carry no trigger identity at all -- just card id, queue slot
+# and mandatoriness -- so even a label-matching wire could not name
+# <Ascension> on our side today, while DCGO's `DescribeScriptedCandidates`
+# already prints `cardEffect.EffectName` ("Ascension").
+#
+# NEITHER ENGINE IS WRONG. general_rule.pdf 15-4-2-3 / 15-4-3-5 leave the
+# order of one player's simultaneous triggers to that player, so BOTH
+# candidate orders are legal presentations of the same choice. This is a gap
+# in the exam WIRE, not a card-resolution divergence.
+#
+# UNBLOCK (a harness change, not an authoring one): give the wire an
+# order-independent name for a trigger. Cheapest shape -- carry the trigger's
+# EFFECT IDENTITY rather than its position: add a `select: {trigger: ...}`
+# form matched against DCGO's `ICardEffect.EffectName` and against an OUR-side
+# label that has been widened to include the clause's timing/keyword
+# ("<Ascension>" vs "[On Deletion]"). A per-engine ordinal pair would also
+# work and is cheaper still, but it encodes each engine's presentation into
+# the scenario file, which is exactly what this format refuses everywhere else.
 #
 # The ordinal below is therefore chosen to keep the SIM side honest (it is
 # OUR branch index; `--sim-only` lowers and asserts clean). The oracle pass
 # will abort at the row named above with a prompt mismatch -- that abort IS
-# the finding, and it is a substrate gap in the exam wire, not evidence that
-# either engine resolves the card wrongly: simultaneous triggers are
-# resolved one at a time by the player who controls them (general_rule.pdf
-# 15-4-2-3 / 15-4-3-5), so the list ORDER is a presentation detail and BOTH
-# candidate orders are legal. Unblocking needs the wire to name a
-# trigger by something order-independent (e.g. a per-engine ordinal, or the
-# effect's clause id) -- a harness change, not an authoring one.
+# the finding.
 card: EX12-047
 clause: EX12-047#effect#4
 seed: 424242

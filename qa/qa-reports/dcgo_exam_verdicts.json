@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-24T19:51:05.566771700+00:00",
+  "last_updated": "2026-08-25T01:58:56.169152400+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -645,12 +645,11 @@
     "EX12-036#effect#3": {
       "clause_id": "EX12-036#effect#3",
       "card_id": "EX12-036",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "682f9331e1885ba7899da79dc6ab2d19ef5423f1acddcd105b1be3415fe5038d",
-      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect3.yaml",
+      "recorded_at": "2026-08-25T00:00:05.993366500+00:00"
     },
     "EX12-036#effect#4": {
       "clause_id": "EX12-036#effect#4",
@@ -891,7 +890,7 @@
       "label": "inherited_effect_description_eng",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-inherited0.yaml",
-      "recorded_at": "2026-08-23T22:13:48.572566700+00:00"
+      "recorded_at": "2026-08-25T00:03:51.102220800+00:00"
     },
     "EX12-061#inherited#1": {
       "clause_id": "EX12-061#inherited#1",
@@ -933,12 +932,11 @@
     "EX12-062#inherited#0": {
       "clause_id": "EX12-062#inherited#0",
       "card_id": "EX12-062",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-inherited0.yaml",
+      "recorded_at": "2026-08-25T00:00:06.641209200+00:00"
     },
     "EX12-062#inherited#1": {
       "clause_id": "EX12-062#inherited#1",
@@ -1036,12 +1034,11 @@
     "EX12-065#effect#3": {
       "clause_id": "EX12-065#effect#3",
       "card_id": "EX12-065",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "d65042cd9bb15fc8adc41ef78cadc07736caab126e1fe8be63c37f1592dae575",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect3.yaml",
-      "reason": "DIVERGED at step 16 (compared 17 of 17 ours / 17 dcgo steps)",
-      "recorded_at": "2026-08-24T19:41:35.807671800+00:00"
+      "recorded_at": "2026-08-25T01:58:56.169152400+00:00"
     },
     "EX12-065#effect#4": {
       "clause_id": "EX12-065#effect#4",
@@ -1204,9 +1201,9 @@
       "verdict": "unreachable",
       "label": "effect_description_eng",
       "text_sha256": "0607df73a20b8899abe82f76ee9ac09f0d66cb52e60b9f2ad0ebf85ef0da5276",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "reason": "CORRECTED 2026-08-24 (user report, verified against the card face). The previous reason claimed <Rush> was structurally unreachable because a hand play costs 16 against a memory ceiling of 10, so the turn ends on the play. That is WRONG: the card face prints [Assembly -9] (8 [Hybrid]/[Shambala] trait cards w/different names), which takes the play cost to 7 -- comfortably payable, leaving memory positive, so the Rush attack CAN be declared the turn it is played. This is a real Toho Braves line, not a theoretical one. EX12-004 Onibimon is also relevant: a Lv.2 Digi-Egg carrying the [Shambala] trait AND inherited <Execute>, so it both qualifies as one of the eight Assembly materials and grants Susanoomon (a [TB] card) an end-of-turn attack (§16-37) -- a second attack-the-turn-it-was-played route. The ACTUAL blocker is a harness vocabulary gap, not the rules: an [Assembly] material declaration is a MULTI-PICK selection, which docs/DCGO_EXAM.md lists as out of scope for the `select:` step vocabulary (alongside DigiXros material declarations). Measurable as soon as the scenario format can express a multi-pick material payload. NOTE ON THE DENOMINATOR: the face also prints [Assembly -9] and '(Rule) Trait: Has [Hybrid] Form.', neither of which appears in cards.json, so this card's 6-clause denominator is short by two -- the same API-lossiness family as the earlier Rule-granted trait corrections.",
       "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "recorded_at": "2026-08-24T23:39:40.581323+00:00"
     },
     "EX12-076#effect#1": {
       "clause_id": "EX12-076#effect#1",
@@ -1244,6 +1241,15 @@
       "text_sha256": "b4f8ae728b642deae7d7c907759f090ecdf11847e11c12461d6b564915b11d41",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect4.yaml",
       "recorded_at": "2026-08-24T19:51:05.566771700+00:00"
+    },
+    "EX12-076#effect#5": {
+      "clause_id": "EX12-076#effect#5",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "51c3a09b0f76e0767bdd01be2147fdb7ce1aacc5a2cecaa927ce195928925455",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect5.yaml",
+      "recorded_at": "2026-08-25T00:35:03.432117+00:00"
     },
     "P-130#effect#0": {
       "clause_id": "P-130#effect#0",

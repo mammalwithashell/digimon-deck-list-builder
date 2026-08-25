@@ -59,24 +59,63 @@
 # state is identical either way -- but if DCGO stacks them the other way the
 # row still surfaces that as a finding rather than silently agreeing.
 #
-# BLOCKED ON THE ORACLE WIRE -- identical to EX12-031-effect0.yaml, and the
-# only reason this line cannot be confirmed today. Step 24 answers Decode's
-# source pick, which our engine parks as `SelectionKind::Material` ("Choose a
-# level 4 or lower [Aqua]/[Sea Animal]/[TB] source to play", one accept id at
-# SOURCE_SELECT_START = 2000). `resolve_next`'s card-identity arm
-# (code/digimon-engine/src/runners/selection_resolve.rs:343-365) handles Hand /
-# UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation / Security and
-# drops Material into the catch-all, so a `cards: [EX12-026]` payload fails
-# LOWERING; the payloads that DO lower (`yes:` / `value:`) ride the wire as
-# select_bool / select_value, and DCGO's hook for this prompt --
-# SelectCardEffect.SetTargetCardAndIndicies
-# (DCGO/Assets/Scripts/Script/SelectCardEffect.cs:906-945) -- takes only
-# select_card_ids or select_cancel and calls InputDriver.Abort on anything
-# else. So the oracle job aborts AT step 24, after the inherited window has
-# opened on both sides and before the play is compared: verdict `unreachable`,
-# never `confirmed`. One match arm resolving SOURCE_SELECT_START + i against
-# the subject permanent's digivolution cards turns step 24 into
-# `cards: [EX12-026]` and unblocks both files.
+# BLOCKED ON THE ORACLE WIRE -- same single gap as EX12-031-effect0.yaml,
+# and the only reason this line cannot be confirmed today.
+#
+# RE-DERIVED 2026-08-25 (gap-closing lane; sim-only probes on the prebuilt
+# harness -- no cargo, no Unity):
+#
+# 1. THE RECORDED CAUSE IS STALE. The verdict store says "MultipleSkills
+#    value-space mismatch: our TriggerOrder slot values vs DCGO 0-based
+#    skillInfos index; out-of-range silently clears the trigger stack"
+#    (recorded 2026-08-22). That was fixed by the `ordinal:` payload landed
+#    2026-08-23: step 25 no longer ships an index at all. It lowers as
+#    `Select(SelectWire { card_ids: ["EX12-065"], ordinal: Some(0) })`, i.e.
+#    an IDENTITY plus a within-card trigger ordinal, resolved on each side
+#    against that side's own candidate list
+#    (`match_one_with_ordinal` here / `SelectionAnswer.MatchOneWithOrdinal`
+#    on DCGO's). A disagreement about trigger order now surfaces as a
+#    divergence instead of silently clearing a stack. The stacked-trigger
+#    row is no longer a blocker for this clause.
+#
+# 2. WHAT BLOCKS IT NOW is step 24, Decode's source pick, and the gap is
+#    entirely on OUR side. Our engine parks it as SelectionKind::Material
+#    with SOURCE-INDEX action ids (EffectContext::select_material,
+#    effect_context/selections.rs:431-490; here `valid == [2000]`), while
+#    DCGO's chokepoint wants IDENTITIES --
+#    SelectCardEffect.SetTargetCardAndIndicies matches `select_card_ids`
+#    against ScriptedCandidateIds() and sets `Indicies = null`
+#    (SelectCardEffect.cs:923-938), so nothing on the wire wants indexes.
+#    `resolve_next`'s card-identity block
+#    (runners/selection_resolve.rs:326-373) covers Hand / UnionZone / Trash /
+#    Reveal / RevealBucket / OrderedPermutation / Security and drops Material
+#    through `_ => None`, so the payload DCGO wants cannot be produced.
+#
+#    All four payload shapes probed at THIS step, verbatim:
+#      * `cards: [EX12-026]` -> refused at LOWERING (nothing reaches Unity):
+#          "step 24: ... card pick 'EX12-026' not found in Material prompt
+#           'Choose a level 4 or lower [Aqua]/[Sea Animal]/[TB] source to
+#           play' (zone owner 0, valid [2000])".
+#      * `value: 0` -> refused at LOWERING: "count payload 0 has no
+#        candidate set, so it cannot be mapped onto the Material prompt".
+#      * `yes: true` -> the ONLY shape that lowers, and only because
+#        valid.len() == 1 (selection_resolve.rs:396-399). It rides as
+#        select_has_bool/select_bool (dcgo-harness/src/main.rs:1495-1496),
+#        which DCGO ABORTS on: "SelectCardEffect prompt needs
+#        select_card_ids or select_cancel" (SelectCardEffect.cs:941-944).
+#        This is the committed line, so the oracle pass dies AT step 24 --
+#        after the inherited window has opened on both sides, before the
+#        play is compared. Verdict `unreachable`, never `confirmed`.
+#      * `decline: true` -> refused at LOWERING: "step 24: ... recorded
+#        cancel on a non-optional Material prompt". It would be refused on
+#        purpose regardless: a declined Decode never runs the clause body,
+#        so measuring it would confirm the GATE and launder the clause into
+#        a pass.
+#
+#    One match arm resolving `SelectionKind::Material` by identity against
+#    the carrier's `card_sources` turns step 24 into `cards: [EX12-026]` and
+#    changes nothing else in this file; it unblocks EX12-031#effect#0 and
+#    EX12-036#effect#2 at the same time.
 #
 # DCGO shape this is authored against: the inherited copy is the SAME factory
 # call as the printed one with isInheritedEffect: true

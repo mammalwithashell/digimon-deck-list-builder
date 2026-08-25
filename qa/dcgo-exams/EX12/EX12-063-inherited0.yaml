@@ -47,6 +47,17 @@
 #      Barrier is declined; Evade is not offered (the attacker is already
 #      suspended, so its suspend-to-prevent cost is unpayable).
 #
+# SECOND RECONCILIATION PASS (2026-08-24, sim-side). The reconciled line above
+# still carried an oracle-fatal hole that sim-only could not see: step 11's
+# DIGIVOLVE DRAW (general_rule.pdf 8-1-3-3) was not stacked. See the p0 stack
+# comment for why that would have aborted the job at step 12 under the oracle
+# while lowering clean sim-side. Both engines now draw a named card at every
+# draw p0 takes. The DCGO gate shape at step 13 was re-derived from the C# at
+# the same time -- see that step's comment; the recorded `unreachable` cause
+# ("DCGO parks an OptionalSkill/MultipleSkills gate where our engine surfaces
+# no prompt") does NOT describe this line: our engine parks a Replacement gate
+# where DCGO parks exactly one OptionalSkill, 1:1, and step 13 answers it.
+#
 # Prompt shape (EX12_063.cs): the [On Deletion] ActivateClass is registered
 # with `optional: false` + `SetIsSkippable(true)` and resolves through
 # `CardEffectCommons.PlayByEffect(..., SelectCardEffect.Root.Trash, payCost:
@@ -76,8 +87,40 @@ decks:
       - EX12-026
       - EX12-031
       - EX12-020
-      # draws: T3 (10), T5 (11) -- Options, to keep the hand level-free.
+      # draws: T3 turn (10), T5 turn (11), T5 DIGIVOLVE (12).
+      #
+      # THE DIGIVOLVE DRAW IS THE ONE THIS FILE USED TO MISS, and it was
+      # oracle-fatal rather than cosmetic. Digivolving draws a card
+      # (general_rule.pdf 8-1-3-3), so step 11 pulls a THIRD card that the
+      # committed stack stopped one short of naming. Sim-only hid it: with no
+      # shuffle, `ordered_deck` fed slot 12 from the back of the toho-braves
+      # file order, which happens to be Susanoomon. Under the ORACLE that slot
+      # is whatever DCGO's shuffle left there, and toho-braves is ~30 level-
+      # carrying [TB] Digimon, so the overwhelmingly likely draw makes
+      # Ryugumon's shared place-cost LIVE -- DCGO would raise a SelectHandEffect
+      # at the [When Attacking] copy (step 12) that this line has no step to
+      # answer, and the job would abort on prompt mismatch. Stacking slot 12 is
+      # the fix; the general rule is "stack every card the line DRAWS", not
+      # just every card it names.
+      #
+      # Slots 11 and 12 are Susanoomon on purpose, and it does two jobs:
+      #   1. LEVEL 7 -- invisible to Ryugumon's place-cost filter on both
+      #      engines (EX12_036.cs CanSelectHandCardCondition is
+      #      `HasLevel && Level <= 6`; our EX12-036.yaml select_hand filter is
+      #      `level_lte: 6`), so the prompt stays shut at the [When Digivolving]
+      #      copy (step 11) and the [When Attacking] copy (step 12) alike.
+      #   2. A PLAYABLE DIGIMON in p0's hand for the trailing step. DCGO ends a
+      #      turn ITSELF when TurnStateMachine.CanSelect() is false, and after
+      #      the clause resolves p0's only body is the just-played (so
+      #      attack-locked) Gasamon; an all-Options hand would make the final
+      #      `pass` depend on DCGO agreeing that an Option's <Use Req.>
+      #      satisfies MatchColorRequirement. A Digimon in hand is
+      #      unconditionally playable, so the prompt is guaranteed to open.
+      # Slot 13 is a spare: unused if the draw count is exactly 3, and harmless
+      # if it is not.
       - EX12-075
+      - EX12-076
+      - EX12-076
       - EX12-075
     rest: toho-braves
   p1:
@@ -153,8 +196,22 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # Decline Barrier (trash the top security card to survive); Evade never opens
-  # (the attacker is already suspended).
+  # Decline Barrier. RE-DERIVED FROM THE DCGO SOURCE (2026-08-24), because the
+  # gate shape here is the whole reason this clause was parked `unreachable`:
+  #   - Barrier is the ONLY activatable effect at the WhenPermanentWouldBeDeleted
+  #     timing. CardEffectFactory/KeyWordEffects/Barrier.cs registers it with
+  #     `SetUpActivateClass(..., -1, true, ...)` -- ActivateClass.cs:14 names
+  #     that 4th arg `isOptional` -- so it is an OptionalSkill, and
+  #     CanActivateBarrier only needs `Owner.SecurityCards.Count >= 1` (p0 has 4).
+  #   - Evade is stacked but FILTERED OUT: CanActivateEvade ->
+  #     CanActivatePermanentSuspendCostEffect requires `!permanent.IsSuspended`
+  #     (CanSuspend.cs:21) and the attacker suspended to attack.
+  #   - Decode never triggers at all: its CanUse is gated `!IsByBattle`.
+  # MultipleSkills.ActivateMultipleSkills_OnePlayer re-filters the stack by
+  # CanActivate and takes the `skillInfos_active.Count == 1` branch, so DCGO
+  # raises ONE OptionalSkill here -- not the MultipleSkills that the recorded
+  # `unreachable` cause was about. A `select_cancel` answer to an OptionalSkill
+  # is DCGO's "no" (OptionalSkill.cs decline bridge).
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
@@ -170,11 +227,25 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  # The clause's observable, read immediately after the pick resolves: the
-  # security Gasamon is back on p0's field (played, so unsuspended, no
-  # digivolution cards) and the security battle happened.
+  # The clause's observable, read immediately after the pick resolves.
+  #   p0.field   -- the security Gasamon is back in play, PLAYED (unsuspended,
+  #                 no digivolution cards), which is the clause firing.
+  #   p0.trash   -- the carrier and Karakurumon, and NOT Gasamon: the revival
+  #                 target left the trash, so the play came from there.
+  #                 Karakurumon being in the trash is also what proves it was a
+  #                 digivolution SOURCE (it went there with the carrier), i.e.
+  #                 that the INHERITED copy fired and not the printed one.
+  #   p1.field   -- empty, so nothing else could have been the pick's target.
+  #   securities -- one check each: p0's at T4, p1's at T5.
+  #   p0.memory  -- 0: the alt digivolve route cost 3 from 3. A cost prompt
+  #                 taken the other way (the printed blue circle, 4) would show
+  #                 up here as -1.
   - at: 15
     that:
       p0.field:
         - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+      p0.trash: [EX12-036, EX12-063]
+      p1.field: []
+      p0.memory: 0
+      p0.security: 4
       p1.security: 4

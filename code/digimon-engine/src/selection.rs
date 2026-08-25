@@ -432,6 +432,20 @@ pub struct QueuedEffect {
     /// metadata. Selection-driving bodies park on the queue identically
     /// to printed effects via the standard `pending_selection` path.
     pub granted_effect_id: Option<u64>,
+    /// `G-ENGINE-AURA-GRANT-NO-TRIGGER` — when `Some(kw)`, this entry runs a
+    /// KEYWORD-DERIVED effect that no card's effect list contains: the carrier
+    /// gained `kw` from a filtered-target aura ("all of your [X] gain `<KW>`"),
+    /// which installs the keyword on the RECIPIENT's modifier registry but
+    /// cannot advertise it through `Effect::granted_keyword` (that marker keys
+    /// the synthesized auto-effect to the GRANTOR).
+    ///
+    /// The drainer resolves the body by re-synthesizing
+    /// `keyword_effects::keyword_to_auto_effect(kw, source_card)` and indexing
+    /// it with `effect_slot`, so every downstream gate (source liveness,
+    /// condition, OPT, optionality) applies exactly as for a printed effect.
+    /// `card_id` is still the carrier's top card for labelling. Mirrors the
+    /// replacement side's `CandidateKind::GrantedKeywordEffect`.
+    pub keyword_effect: Option<crate::enums::Keyword>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a

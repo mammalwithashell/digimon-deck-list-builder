@@ -447,3 +447,194 @@ effects:
     assert!(sel.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
     assert_eq!(sel.selecting_player, 0);
 }
+
+// ─── G-ENGINE-AURA-GRANT-NO-TRIGGER (replacement half) ──────────────────────
+//
+// The tests above cover a SELF-aura / runtime grant. A FILTERED-TARGET aura —
+// the "all of your X gain <KW>" shape (EX12-065 Kaguyamon) — lands the grant on
+// OTHER permanents and deliberately does NOT set the `granted_keyword` marker
+// (that marker keys the auto-effect to the GRANTOR). These two pin that the
+// recipient of a mass grant still reaches the replacement window.
+
+/// A `<Evade>` handed out by a filtered-target aura to a DIFFERENT permanent
+/// (the grantor does not match its own filter) must offer the prevention.
+#[test]
+fn mass_granted_evade_prompts_on_a_non_source_recipient() {
+    let aura_yaml = r#"
+card: DSL-MASS-EVADE
+name: Mass Evade Granter
+kind: digimon
+level: 3
+color: [blue]
+cost: 2
+dp: 9000
+effects:
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      trait_has: Recipient
+    grant_keyword: { keyword: Evade }
+    summary: "[All Turns] Your [Recipient] Digimon gain <Evade>"
+"#;
+    let mut recipient = make_test_card("RECIPIENT", "Recipient");
+    recipient.dp = Some(3000);
+    recipient.traits = vec!["Recipient".to_string()];
+
+    let mut r = DebugRunner::builder()
+        .add_card(recipient)
+        .from_dsl_yaml(aura_yaml)
+        .expect("aura card compiles")
+        .start();
+
+    let grantor = r.place_on_field(0, "DSL-MASS-EVADE", Some(0));
+    let handle = r.place_on_field(0, "RECIPIENT", Some(0));
+    r.game.tick_declarative_effects();
+
+    assert!(
+        r.game.has_keyword(handle, Keyword::Evade),
+        "sanity: the mass grant reaches the recipient"
+    );
+    assert!(
+        !r.game.has_keyword(grantor, Keyword::Evade),
+        "sanity: the grantor does not match its own filter"
+    );
+
+    r.game.delete_permanent_with_effects(handle);
+
+    let sel = r.game.pending_selection.as_ref().expect(
+        "mass-granted <Evade> must offer its prevention on the RECIPIENT \
+         (G-ENGINE-AURA-GRANT-NO-TRIGGER)",
+    );
+    assert!(sel.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept mass-granted Evade replacement");
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "RECIPIENT"),
+        "Evade keeps the recipient on the field"
+    );
+}
+
+/// The TRIGGER half of the same shape: a filtered-target aura handing
+/// `<Fortitude>` (an `[On Deletion]` plain-process keyword) to a NON-source
+/// recipient must actually fire — the flag alone is inert.
+#[test]
+fn mass_granted_fortitude_fires_on_a_non_source_recipient() {
+    let aura_yaml = r#"
+card: DSL-MASS-FORTITUDE
+name: Mass Fortitude Granter
+kind: digimon
+level: 3
+color: [blue]
+cost: 2
+dp: 9000
+effects:
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      trait_has: Recipient
+    grant_keyword: { keyword: Fortitude }
+    summary: "[All Turns] Your [Recipient] Digimon gain <Fortitude>"
+"#;
+    let mut recipient = make_test_card("RECIPIENT", "Recipient");
+    recipient.dp = Some(3000);
+    recipient.traits = vec!["Recipient".to_string()];
+
+    let mut base = make_test_card("BASE", "Base");
+    base.dp = Some(1000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(recipient)
+        .add_card(base)
+        .from_dsl_yaml(aura_yaml)
+        .expect("aura card compiles")
+        .start();
+
+    let _grantor = r.place_on_field(0, "DSL-MASS-FORTITUDE", Some(0));
+    // <Fortitude> is gated on >=1 digivolution source under the top.
+    let handle = r.place_stack(0, &["BASE", "RECIPIENT"]);
+    r.game.tick_declarative_effects();
+    assert!(r.game.has_keyword(handle, Keyword::Fortitude));
+
+    r.game.delete_permanent_with_cause(
+        handle,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "RECIPIENT"),
+        "<Fortitude> replays the recipient from trash — the mass grant must \
+         install the trigger, not just the flag (G-ENGINE-AURA-GRANT-NO-TRIGGER)"
+    );
+}
+
+/// The grantor-self half: a filtered-target aura whose filter also matches its
+/// OWN carrier ("all of your Digimon gain `<KW>`" — EX12-065 Kaguyamon is
+/// itself a [TB] Digimon) must install the trigger on the grantor too. This is
+/// the case a naive "skip entries whose aura source IS the target" de-dup would
+/// silently drop, since the filtered-target lowering never sets the
+/// `Effect::granted_keyword` marker that would otherwise cover it.
+#[test]
+fn mass_granted_fortitude_fires_on_its_own_grantor() {
+    let aura_yaml = r#"
+card: DSL-SELF-MATCHING-AURA
+name: Self Matching Aura
+kind: digimon
+level: 5
+color: [blue]
+cost: 5
+dp: 9000
+effects:
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+    grant_keyword: { keyword: Fortitude }
+    summary: "[All Turns] All of your Digimon gain <Fortitude>"
+"#;
+    let mut base = make_test_card("BASE", "Base");
+    base.dp = Some(1000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(base)
+        .from_dsl_yaml(aura_yaml)
+        .expect("aura card compiles")
+        .start();
+
+    // <Fortitude> is gated on >=1 digivolution source under the top.
+    let grantor = r.place_stack(0, &["BASE", "DSL-SELF-MATCHING-AURA"]);
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(grantor, Keyword::Fortitude),
+        "sanity: the aura's filter matches its own carrier"
+    );
+
+    r.game.delete_permanent_with_cause(
+        grantor,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "DSL-SELF-MATCHING-AURA"),
+        "the grantor's own mass grant must install its <Fortitude> trigger \
+         (G-ENGINE-AURA-GRANT-NO-TRIGGER)"
+    );
+}

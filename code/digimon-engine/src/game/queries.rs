@@ -54,6 +54,27 @@ impl Game {
         if self.modifiers.has_keyword(handle, keyword) {
             return true;
         }
+        self.has_keyword_from_card_sources(handle, keyword)
+    }
+
+    /// The card-source half of [`Game::has_keyword`]: `keyword` reaches
+    /// `handle` from PRINTED text (own face keywords, a below-top source's
+    /// inherited keywords, a link card's inherited keywords) or from a
+    /// declarative `grant_keyword` clause that advertises itself with
+    /// `Effect::granted_keyword` (a SELF-aura / `scope: inherited` grant).
+    /// The modifier registry is deliberately NOT consulted.
+    ///
+    /// This is exactly the set of origins for which
+    /// `Game::build_effects_for_card` already synthesizes the keyword's
+    /// auto-effects into some card's effect list — so the trigger-dispatch
+    /// scan for AURA-granted keywords
+    /// (`G-ENGINE-AURA-GRANT-NO-TRIGGER`) uses it as its
+    /// already-covered / no-double-fire guard.
+    pub(crate) fn has_keyword_from_card_sources(
+        &self,
+        handle: PermanentHandle,
+        keyword: crate::enums::Keyword,
+    ) -> bool {
         // Native printed on the top card's face.
         let Some(player) = self.players.get(handle.player as usize) else {
             return false;

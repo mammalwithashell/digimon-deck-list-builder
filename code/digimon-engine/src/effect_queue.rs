@@ -132,6 +132,24 @@ fn permanent_activation_blocked_for_timing(
 impl Game {
     // ─── Public API ─────────────────────────────────────────────────
 
+    /// Resolve the effect list a `QueuedEffect` indexes with its
+    /// `effect_slot`. Ordinary entries read the card's registry + synthesized
+    /// effects; `G-ENGINE-AURA-GRANT-NO-TRIGGER` entries
+    /// (`keyword_effect.is_some()`) re-synthesize the keyword's auto-effects
+    /// instead, because an aura-granted keyword lives on the RECIPIENT's
+    /// modifier registry and appears in no card's effect list.
+    fn effects_for_queued(
+        &self,
+        qe: &QueuedEffect,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        match qe.keyword_effect {
+            Some(keyword) => Some(std::sync::Arc::new(
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, qe.source_card),
+            )),
+            None => self.effects_for_card(&qe.card_id, qe.source_card),
+        }
+    }
+
     fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
         let is_turn_player = effect.controller == self.turn_player();
         QueuedEffect {
@@ -151,6 +169,7 @@ impl Game {
             allow_below_top_liveness: false,
             dna_origin_context: None,
             granted_effect_id: None,
+            keyword_effect: None,
         }
     }
 
@@ -737,6 +756,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -807,6 +827,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -1863,6 +1884,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -1953,6 +1975,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -2011,6 +2034,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -2127,6 +2151,7 @@ impl Game {
                 attribution_source_kind: None,
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
+                keyword_effect: None,
             });
         }
 
@@ -2174,6 +2199,92 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
+                });
+            }
+        }
+
+        // `G-ENGINE-AURA-GRANT-NO-TRIGGER` — keywords handed to this permanent
+        // by a FILTERED-TARGET aura ("[All Turns] all of your [Puppet] or [TB]
+        // trait Digimon gain <Blocker> and <Retaliation>" — EX12-065
+        // Kaguyamon).
+        //
+        // Such a grant lands on the RECIPIENT's modifier registry via
+        // `grant_declarative_keyword`, and `lower_aura` deliberately does NOT
+        // set the grantor effect's `Effect::granted_keyword` marker (that
+        // marker keys the synthesized auto-effect to the GRANTOR, which is the
+        // wrong carrier for a grant landing on someone else). The consequence
+        // was that PERSISTENT granted keywords worked — the mask reads them
+        // through `Game::has_keyword` — while TRIGGER keywords were inert: the
+        // engine knew the recipient had `<Retaliation>` and had no `Effect` to
+        // fire. §16-12 makes `<Retaliation>` mandatory, and the DCGO oracle
+        // deletes the battle winner, so silence was a faithfulness bug.
+        //
+        // Fixing it at trigger DISPATCH (rather than in
+        // `Game::build_effects_for_card`) is deliberate: that builder is keyed
+        // on `card_id` and memoized, and is ~94% of per-step time — making it
+        // depend on per-permanent modifier state would destroy the memo.
+        //
+        // De-dup, so a keyword is never fired twice:
+        //   * `ModifierRegistry::aura_granted_keywords` returns only
+        //     MATERIALIZED-declarative entries with no non-materialized twin —
+        //     a runtime `EffectContext::grant_keyword` already installed a
+        //     granted-triggered body through
+        //     `grant_keyword_triggered_auto_effects` (drained above).
+        //   * `Game::has_keyword_from_card_sources` excludes every origin whose
+        //     auto-effects `build_effects_for_card` already synthesizes into a
+        //     scanned effect list — printed face keywords, a below-top source's
+        //     or a link card's inherited keywords, and SELF-aura /
+        //     `scope: inherited` grants that DO carry the `granted_keyword`
+        //     marker.
+        //
+        // The aura's `active_when` still gates the grant: a conditional aura
+        // simply stops re-installing its materialized entry on the next
+        // declarative tick, so the keyword is absent from the registry here.
+        // Per-keyword gates (e.g. `<Retaliation>`'s Battle-only deletion-cause
+        // filter) live inside the auto-effect body and are unchanged.
+        let aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        for keyword in aura_keywords {
+            if self.has_keyword_from_card_sources(handle, keyword) {
+                continue;
+            }
+            let effects =
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card);
+            for (slot, effect) in effects.iter().enumerate() {
+                // Declarative keyword entries (Training / MindLink /
+                // BlastDigivolve) materialize through the declarative tick, and
+                // pure-replacement entries (Barrier / Evade / Fragment / ...)
+                // are collected by `replacement::collect_candidates`, which
+                // already scans `ModifierRegistry::granted_keywords`. Neither
+                // belongs on the trigger queue.
+                if effect.declarative || effect.process.is_none() {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: Some(handle),
+                    source_kind: top_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
+                    // The granted clause is the CARRIER's own effect once
+                    // installed (D4 / DCGO sources the granted ActivateClass
+                    // from the carrier's top card), matching the
+                    // granted-triggered branch above.
+                    controller: handle.player,
+                    timing,
+                    trigger_context: trigger_context.clone(),
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
+                    keyword_effect: Some(keyword),
                 });
             }
         }
@@ -2238,6 +2349,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2328,6 +2440,7 @@ impl Game {
                         allow_below_top_liveness: false,
                         dna_origin_context: self.current_dna_origin,
                         granted_effect_id: None,
+                        keyword_effect: None,
                     });
                 }
             }
@@ -2390,6 +2503,7 @@ impl Game {
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2461,6 +2575,7 @@ impl Game {
                 attribution_source_kind: None,
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
+                keyword_effect: None,
             });
         }
 
@@ -2489,6 +2604,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2535,6 +2651,7 @@ impl Game {
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2611,6 +2728,7 @@ impl Game {
             // Snapshot the fields we need; release the borrow before
             // entering the trigger-context guard (which needs &mut self).
             let card_id = qe.card_id.clone();
+            let keyword_effect = qe.keyword_effect;
             let source_card = qe.source_card;
             let source_permanent = qe.source_permanent;
             let source_kind = qe.source_kind;
@@ -2639,28 +2757,35 @@ impl Game {
             if dna_origin_context.is_some() {
                 self.current_dna_origin = dna_origin_context;
             }
-            let condition_passes =
-                if let Some(effects) = self.effects_for_card(&card_id, source_card) {
-                    if let Some(eff) = effects.get(effect_slot) {
-                        if let Some(cond) = &eff.condition {
-                            let trigger_guard = TriggerContextGuard::install(self, trigger_context);
-                            let ctx = EffectContext::new_with_source_kind(
-                                &mut *trigger_guard.game,
-                                source_card,
-                                source_permanent,
-                                source_kind,
-                                controller,
-                            );
-                            cond(&ctx.as_read())
-                        } else {
-                            true // no condition → keep
-                        }
+            // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
+            // indexes the keyword's synthesized auto-effects, not the card's.
+            let looked_up = match keyword_effect {
+                Some(keyword) => Some(std::sync::Arc::new(
+                    crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
+                )),
+                None => self.effects_for_card(&card_id, source_card),
+            };
+            let condition_passes = if let Some(effects) = looked_up {
+                if let Some(eff) = effects.get(effect_slot) {
+                    if let Some(cond) = &eff.condition {
+                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                        let ctx = EffectContext::new_with_source_kind(
+                            &mut *trigger_guard.game,
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller,
+                        );
+                        cond(&ctx.as_read())
                     } else {
-                        true // slot missing → keep, let run-time handle it
+                        true // no condition → keep
                     }
                 } else {
-                    true // effects missing → keep
-                };
+                    true // slot missing → keep, let run-time handle it
+                }
+            } else {
+                true // effects missing → keep
+            };
             self.current_dna_origin = prev_dna_origin;
             if !condition_passes {
                 to_skip.push(i);
@@ -2731,7 +2856,7 @@ impl Game {
         // not overridden.
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(&qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2860,7 +2985,7 @@ impl Game {
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
-                let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+                let Some(effects) = self.effects_for_queued(&qe) else {
                     return;
                 };
                 let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2908,7 +3033,7 @@ impl Game {
     /// `return_self_to_deck_bottom_as_cost`); OPT bookkeeping is preserved
     /// so a successful firing counts toward the cap.
     fn run_queued_effect_process_tail_after_activation_cost(&mut self, qe: &QueuedEffect) {
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2954,7 +3079,7 @@ impl Game {
     }
 
     fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -3598,7 +3723,7 @@ impl Game {
         if qe.granted_effect_id.is_some() {
             return false;
         }
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return false;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -3732,7 +3857,10 @@ impl Game {
         if is_pass {
             // Mirror the `on_decline` closure above — the resume path is the
             // one a parked selection actually takes.
-            self.note_declined_delay(state.queued_effect.timing, state.queued_effect.source_permanent);
+            self.note_declined_delay(
+                state.queued_effect.timing,
+                state.queued_effect.source_permanent,
+            );
             return;
         }
         self.run_queued_effect(state.queued_effect);
@@ -3815,7 +3943,7 @@ impl Game {
             let qe = &self.effect_queue[qe_idx];
             let action_id = HAND_EFFECT_START + pos as u16;
             let observation_metadata = self
-                .effects_for_card(&qe.card_id, qe.source_card)
+                .effects_for_queued(qe)
                 .and_then(|effects| {
                     effects
                         .get(qe.effect_slot as usize)
