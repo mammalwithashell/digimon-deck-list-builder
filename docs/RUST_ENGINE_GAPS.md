@@ -2487,3 +2487,65 @@ Same shape as the `<Retaliation>` phantom branch fixed in `e3363579e`: a decisio
 If confirmed this is a missing decision, not merely an ordering difference: with two `<Decode>`-family or `<Evade>`/`<Barrier>`-family replacements live at once, which resolves first can change what the second sees.
 
 Reproducer not yet written.
+
+
+## `PermanentHandle.index` goes stale across a battle-area removal, and it blocks the 15-8-5-4 ordering fix  [G-PERMANENT-HANDLE-POSITIONAL-STALENESS]
+
+**Found 2026-08-26.** Root blocker under `EX12-036#effect#2`, one of the last two
+unconfirmed clauses in the Toho core. The dependency order below matters more
+than either symptom.
+
+`PermanentHandle.index` is a POSITION into `Player::battle_area`, a `Vec` that
+`game/mod.rs:1821` mutates with `battle_area.remove(field_index)`. Every handle
+pointing at a LATER slot silently shifts by one. Queued effects hold these
+handles in `QueuedEffect::source_permanent`, so after any mid-board removal a
+queued effect can address the wrong permanent -- or, once the vec shrinks, none
+at all.
+
+DCGO does not have this class of bug: `FieldPermanents` is a SPARSE FRAME ARRAY
+and `GetFieldPermanents()` compacts a COPY for display, so a permanent's identity
+never moves.
+
+**Why it blocks the ordering fix -- measured, not reasoned.** 16-16 aside, the
+governing rule here is 15-8-5-4: the immediate-type window runs "until the cause
+that first interrupted the immediate-type effect is resolved", so a parked
+replacement's LEAVE must commit BEFORE any trigger it queued activates. We do the
+reverse -- in `effect_queue.rs::resolve_selection` (~line 4222)
+`exit_deferred_drain_and_flush()` runs before
+`try_drain_parked_replacement_with_guard()`.
+
+Flipping that order (scoped to fire only when a replacement is parked) DOES fix
+the phantom branch: `ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer`
+goes green. It then BREAKS `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`,
+because after the commit the SURVIVING carrier's handle is stale too. Probed at
+the bundle: the standing Ryugumon reports `src_perm = index 1` while the battle
+area holds one permanent at index 0, so `queued_effect_source_is_live` reads a
+LIVE effect as dead and `run_queued_effect` silently skips it. The reorder trades
+a phantom branch for a DROPPED MANDATORY TRIGGER, so it was reverted.
+
+**The three parts are a CHAIN, not a set.** An earlier attempt applied them
+together and regressed EX12-031-inherited0 into a phantom 2-branch TriggerOrder;
+that clause is now CONFIRMED against the oracle, so the bar is higher:
+
+1. **Handle stability FIRST.** Either make `PermanentHandle` identity-based (a
+   generational id or card_index key rather than a slot), or re-key every queued
+   effect's `source_permanent` on removal. Until this lands nothing downstream
+   can trust liveness after a removal.
+2. **Then the 15-8-5-4 ordering flip**, which becomes correct once liveness is
+   trustworthy.
+3. **Then a staging-time liveness filter** in
+   `non_firing_queued_effect_indices_for`, which today evaluates only the
+   effect's `condition` closure and never liveness. Mirrors DCGO's `CanActivate`
+   re-filter (MultipleSkills.cs:219, :261).
+
+Part 3 alone is a NO-OP for this case, recorded explicitly so nobody re-derives
+it: written, measured, reverted. At bundle-build time the carrier is still in the
+battle area, so liveness is genuinely true and there is nothing to filter. It
+would have mirrored DCGO, passed the suite, and done nothing.
+
+Reproducers, both `#[ignore]`d with this gap code, in
+`tests/cards_behavioral/ex12/ex12_036.rs`:
+`ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer` and
+`ex12_036_decode_play_offers_only_the_played_cards_own_trigger`.
+The positive control `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`
+is what any candidate fix must keep green -- it is what caught the reorder.
