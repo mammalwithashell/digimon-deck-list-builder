@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-26T14:25:02.339922200+00:00",
+  "last_updated": "2026-08-26T16:20:31.932881400+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -817,12 +817,11 @@
     "EX12-047#effect#4": {
       "clause_id": "EX12-047#effect#4",
       "card_id": "EX12-047",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "accd0cde3dc0b75dc87fdc42da64d344daf3fd56eb417352936107ec751358bc",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect4.yaml",
-      "reason": "DIVERGED at step 24 (compared 25 of 25 ours / 25 dcgo steps)",
-      "recorded_at": "2026-08-26T14:24:59.418899400+00:00"
+      "recorded_at": "2026-08-26T16:20:29.855666400+00:00"
     },
     "EX12-047#effect#5": {
       "clause_id": "EX12-047#effect#5",
@@ -1194,12 +1193,11 @@
     "EX12-076#effect#0": {
       "clause_id": "EX12-076#effect#0",
       "card_id": "EX12-076",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "0607df73a20b8899abe82f76ee9ac09f0d66cb52e60b9f2ad0ebf85ef0da5276",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect0.yaml",
-      "reason": "DIVERGED at step 17 (compared 37 of 37 ours / 37 dcgo steps)",
-      "recorded_at": "2026-08-26T14:25:02.339922200+00:00"
+      "recorded_at": "2026-08-26T16:20:31.932881400+00:00"
     },
     "EX12-076#effect#1": {
       "clause_id": "EX12-076#effect#1",
