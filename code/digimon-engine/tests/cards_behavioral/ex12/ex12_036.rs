@@ -285,6 +285,28 @@ fn ex12_036_decode_does_not_trigger_on_a_battle_leave() {
 /// This is exam `qa/dcgo-exams/EX12/EX12-036-effect2.yaml` step 13 in
 /// miniature: we offered a two-branch trigger prompt where DCGO offered none.
 ///
+/// ROOT CAUSE LOCALIZED 2026-08-26, and it is an ORDERING bug, not a filtering
+/// one. Probing the bundle at the moment it is built shows the bounced carrier
+/// reporting `src_perm = Some(index 0)`, `live = true`: THE LEAVE HAS NOT
+/// COMMITTED YET. So adding a source-liveness filter to
+/// `non_firing_queued_effect_indices_for` -- the obvious fix, and the one that
+/// mirrors DCGO's `CanActivate` staging filter -- changes nothing here, because
+/// liveness is genuinely true at that instant. Tried and reverted.
+///
+/// The defect is that we DRAIN TOO EARLY. 15-8-5-4 runs the immediate-type
+/// window "until the cause that first interrupted the immediate-type effect is
+/// resolved", so the leave must commit BEFORE any pending trigger activates.
+/// Our post-replacement drain runs first, while the carrier is still in the
+/// battle area, and by the time liveness could rule it out the branch has
+/// already been offered.
+///
+/// That makes the fix an ordering change in the replacement flow rather than a
+/// gate anywhere in `effect_queue`. A previous attempt bundled it with two other
+/// changes (re-keying effect_queue handles across a battle-area remove, and a
+/// bundle filter) and regressed EX12-031-inherited0 into a phantom 2-branch
+/// TriggerOrder -- that clause is now CONFIRMED against the oracle, so the bar
+/// is higher than it was: any fix must keep it clean.
+///
 /// The witness that this is a REAL play and not a whiffed Decode is the source
 /// arriving on the field; the sibling test below adds a live Ryugumon that
 /// DOES lock, so an all-quiet engine cannot pass both.
