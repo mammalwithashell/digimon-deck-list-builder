@@ -570,6 +570,7 @@ impl Game {
             self.modifiers
                 .shift_after_battle_area_remove(handle.player, handle.index);
             self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
+            self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
         } else {
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);

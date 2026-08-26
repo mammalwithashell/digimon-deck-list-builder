@@ -2714,6 +2714,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
 
         // Sources-below-top → each source's owner's trash. Per source: push,
         // enqueue OnDigivolutionCardTrashed for each player, drain queue.
@@ -2846,6 +2847,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
 
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards {
@@ -3021,6 +3023,7 @@ impl Game {
         };
         // Re-key the in-flight attack's handles after the `remove()` shift.
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
         let top_handle = top.handle();
         let face_up_key = top.card_index;
 
@@ -3093,6 +3096,7 @@ impl Game {
         self.modifiers.expire_player_on_permanent_leave(target);
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
         self.fire_on_place_security(player_id, observer_player, top_handle);
         true
     }

@@ -3832,6 +3832,45 @@ impl Game {
     /// handle against `pending_attack.attacker` mid-OnDeletion), and the
     /// battle outcome no longer relies on re-probing it (see
     /// `PendingAttack::battle_defender_deleted`).
+    /// Re-key QUEUED-EFFECT permanent handles after removing one battle-area
+    /// permanent, the sibling of
+    /// [`Self::shift_pending_attack_after_battle_area_remove`] and
+    /// `ModifierRegistry::shift_after_battle_area_remove`.
+    ///
+    /// `PermanentHandle.index` is a POSITION into `Player::battle_area`, a Vec
+    /// that `battle_area.remove(field_index)` compacts, so every handle at a
+    /// later slot shifts down by one. Modifier state and the pending attack
+    /// were already re-keyed on removal; `Game::effect_queue` was not, and a
+    /// queued effect holds its carrier in `QueuedEffect::source_permanent`.
+    /// After any mid-board removal it therefore addressed the WRONG permanent,
+    /// or none once the Vec shrank -- and `queued_effect_source_is_live` read
+    /// the resulting mismatch as "source gone", silently dropping a MANDATORY
+    /// trigger belonging to a permanent that never moved.
+    ///
+    /// An entry whose carrier IS the removed permanent is left alone rather
+    /// than dropped: the OnDeletion path depends on those entries surviving the
+    /// removal (they carry the `deleted_object` snapshot and are filtered by
+    /// the 15-4-4-3 trash test in `queued_effect_source_is_live` instead), and
+    /// silently discarding them here would resurrect the bug this is fixing in
+    /// mirror image.
+    ///
+    /// DCGO has no equivalent hazard: `FieldPermanents` is a sparse frame array
+    /// and `GetFieldPermanents()` compacts a COPY, so a permanent's identity
+    /// never moves.
+    pub(crate) fn shift_effect_queue_after_battle_area_remove(
+        &mut self,
+        player: PlayerId,
+        removed_index: u8,
+    ) {
+        for qe in self.effect_queue.iter_mut() {
+            if let Some(h) = qe.source_permanent.as_mut() {
+                if h.player == player && h.index > removed_index {
+                    h.index -= 1;
+                }
+            }
+        }
+    }
+
     pub(crate) fn shift_pending_attack_after_battle_area_remove(
         &mut self,
         player: PlayerId,

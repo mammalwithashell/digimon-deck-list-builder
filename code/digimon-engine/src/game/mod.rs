@@ -2635,6 +2635,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(src.player, src.index);
         self.shift_pending_attack_after_battle_area_remove(src.player, src.index);
+        self.shift_effect_queue_after_battle_area_remove(src.player, src.index);
 
         // Linked cards lose their host → trash + OnLinkedCardTrashed observer.
         // Matches the linked-card flow in `trash_single_for_batch`
