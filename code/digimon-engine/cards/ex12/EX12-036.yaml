@@ -42,10 +42,16 @@ effects:
         - replacement_cause: battle
     summary: "<Decode (Lv.5 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
     process:
+      # NO `optional:` here, deliberately. 16-35-3 makes the <Decode>
+      # processing optional ONCE, and that decline is the clause gate above.
+      # A second optional on the pick would let the player accept the gate and
+      # then decline the pick -- an outcome-neutral decision the rules do not
+      # grant, which over-exposes an illegal PASS to the action space. This card
+      # was the ONLY one of the eight EX12 <Decode> specs carrying it
+      # (G-DECODE-DOUBLE-OPTIONAL); the other seven already had this shape.
       - select_material:
           of_permanent: replacement_subject
           bind_as: decode_source
-          optional: true
           filter:
             all_of:
               - kind: digimon

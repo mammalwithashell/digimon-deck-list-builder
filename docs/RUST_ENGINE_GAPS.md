@@ -2410,3 +2410,62 @@ stored on `OptionState::Delayed` and `Game::option_field_state` already computes
 `can_activate_this_turn`; the gate is a one-line consult. Pre-existing (it was
 equally wrong before this fix), left out of the auto-trash fix to keep that diff
 attributable. Affects EX12-070, BT20-100, BT19-099, BT17-097.
+
+
+## `<De-Digivolve x>` auto-selects the maximum instead of letting the player declare  [G-DEDIGIVOLVE-NO-DECLARATION]
+
+**Found 2026-08-26** while making the SelectionKind -> DCGO prompt-class mapping total. Not previously in any tracker.
+
+`de_digivolve_core` (`code/digimon-engine/src/game_actions/helpers.rs:260`) reads
+
+```rust
+let max = amount.unwrap_or(u8::MAX);
+let mut popped: u8 = 0;
+while popped < max { ... }
+```
+
+and pops until it hits `max`, the stack floor, or the level floor. **There is no prompt anywhere on the path.** So `<De-Digivolve 2>` always trashes 2 when 2 are available; the player never chooses 1.
+
+**16-11-6 settles it, read off `general_rule.pdf` p.35:** "When using `<De-Digivolve>` to trash multiple cards, even if the category of the top card changes while the trashing is still being performed, the trashing will continue until **the declared number** is trashed." There is a DECLARED NUMBER, so there is a declaration. `docs/digimon-rules/keyword-semantics.md:29` derives the same from 16-11: "Trash **up to** x ... trashing mandatory, can't choose 0" -- the player declares 1..x, and 0 is not among the options.
+
+DCGO implements the declaration: `CardController.cs:5113-5137` opens a `SelectCountEffect` with `MaxCount = min(sources, N)` and `CanNoSelect: false` -- exactly "1..x, mandatory".
+
+This is a **rule-17 violation**: a choice the rules grant is not in the RL action space. It affects every card printing `<De-Digivolve 2>` or higher.
+
+Fixing it needs a `SelectCountEffect`-shaped prompt (our `CountCappedMultiSelect` or a count selection) installed when `max >= 2` AND at least 2 sources are actually trashable -- installing it for a forced 1 would be the mirror mistake (see G-ORDERED-PERMUTATION-FORCED-SINGLETON below).
+
+
+## `<Decode>`'s optional processing is offered TWICE on one card and once on another  [G-DECODE-DOUBLE-OPTIONAL]
+
+**Found 2026-08-26**, same investigation. This is an inconsistency between two of our own card specs, and one of them is wrong.
+
+16-35-3: "The processing from `<Decode>` is optional." ONCE.
+
+* `code/digimon-engine/cards/ex12/EX12-031.yaml:83` -- `optional: true` on the `kind: replacement` clause, and the inner `select_material` has NO `optional:`. **Correct**: the player declines at the gate, and having accepted, picks a source.
+* `code/digimon-engine/cards/ex12/EX12-036.yaml:39,48` -- `optional: true` on the clause **and** `optional: true` on the inner `select_material`. The player can accept the gate and then decline the pick, an outcome-neutral second decision the rules do not grant. This over-exposes an illegal PASS to the action space -- the exact pitfall recorded in the `reference-dsl-optional-mandatory-selection-pitfall` memory.
+
+EX12-031 is the shape to copy. Note DCGO has the same defect from the other direction: `Decode.cs:37` passes `canNoSelect: () => true` to the post-gate `SelectCardEffect`, so it too allows accept-then-decline. Neither engine's second decision is grantable under 16-35-3, so this is not a divergence to preserve -- both are wrong and the manual is the tiebreak.
+
+Worth checking the other `<Decode>` cards (EX12-014/-016/-017/-032/-035/-044) for the same double-optional before fixing, so it is one pass rather than six.
+
+
+## `OrderedPermutation` installs a forced 1-candidate prompt  [G-ORDERED-PERMUTATION-FORCED-SINGLETON]
+
+**Found 2026-08-26**, same investigation. Previously known as a scenario-authoring nuisance; recorded here as the engine-side entry.
+
+`EffectContext::place_remainder_on_deck` (`code/digimon-engine/src/effect_context/selections.rs:2449-2530`) installs an `OrderedPermutation` even for a single leftover card, documented as a deliberate no-approximations choice so "the RL agent sees the (trivial) ordering decision". DCGO does not: `RevealLibrary.cs:478` short-circuits `if (remainingCards.Count == 1)` straight to `AddLibraryBottomCards` with no prompt.
+
+A one-candidate, non-declinable prompt is not a decision -- there is exactly one legal answer and no way to decline. Under rule 17 the action space should carry choices that can change the outcome; this one cannot. It is also a live cardinality mismatch that costs the exam a wire row on every reveal with a single leftover (the `EX12-009#effect#0` scenario is authored around it, see its header).
+
+Same shape as the `<Retaliation>` phantom branch fixed in `e3363579e`: a decision offered where none exists.
+
+
+## Simultaneous replacement effects resolve in collection order with no player choice  [G-REPLACEMENT-NO-ORDER-PROMPT]
+
+**Found 2026-08-26**, same investigation. Inherited from the mapping research and NOT independently re-verified -- treat the line numbers as a lead.
+
+`code/digimon-engine/src/replacement.rs:347-350` -- when more than one replacement candidate is live, they are run in collection order. 15-8-5-3 / 15-8-5-4 give the controller the choice of processing order for simultaneous immediate-type effects, and DCGO routes exactly this through `MultipleSkills`.
+
+If confirmed this is a missing decision, not merely an ordering difference: with two `<Decode>`-family or `<Evade>`/`<Barrier>`-family replacements live at once, which resolves first can change what the second sees.
+
+Reproducer not yet written.
