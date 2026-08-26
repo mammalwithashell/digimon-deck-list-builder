@@ -703,12 +703,38 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-/// §4.2 — Check that the player has at least one Digimon or Tamer of a
-/// color matching any of the Option card's colors, either on the battle
-/// area or in the breeding area.
+/// 4-19 — can this player meet an Option card's COLOR REQUIREMENTS?
 ///
-/// Mirror of Python's `action_mask.py` lines 77-99 for ordinary color
-/// matching. Player-scoped `IgnoreColorRequirement` is consumed by
+/// 4-19-2: "To meet color requirements, you must have a Digimon or Tamer on
+/// your field that's the same color as the Option card you want to use."
+/// 4-19-3: "An Option card with multiple colors can't be used unless the color
+/// requirements are met for ALL of its colors."
+/// 4-19-4: "A multicolor Digimon or multicolor Tamer can meet the color
+/// requirements for multiple colors."
+///
+/// So the test is: for EVERY color the Option prints, SOME qualifying permanent
+/// carries that color. Different colors may be covered by different permanents,
+/// and one multicolor permanent may cover several (4-19-4) -- hence a per-color
+/// existence check rather than any per-permanent test.
+///
+/// This used to ask whether any SINGLE permanent shared any ONE of the Option's
+/// colors, which let a mono-color board pay for a multicolor Option -- 4-19-3
+/// says it cannot. 63 Option cards in data/cards.json print more than one
+/// color, so this was reachable, not theoretical. DCGO agrees with the manual:
+/// CardSource.cs:307-310 uses `colorsToCheck.Every(...)`.
+///
+/// BREEDING AREA, deliberately still counted, and NOT the same question:
+/// 3-4-5 says "The field is divided into the breeding area and the battle
+/// area", so a breeding Digimon is literally "on your field" as 4-19-2 words
+/// it. The restrictions on breeding cards (3-4-6-3 "can't be affected by
+/// effects", 3-4-6-5 "can't be chosen for effects") are scoped to EFFECTS, and
+/// a color requirement is a rules gate on USING the card, not an effect that
+/// targets the breeding Digimon. DCGO checks `Owner.GetFieldPermanents()` only
+/// and so would disagree -- that is a genuine open question against the manual
+/// and is left ALONE here rather than changed on the same commit as a fix the
+/// manual states outright. Do not "align to DCGO" without re-reading 3-4-5.
+///
+/// Player-scoped `IgnoreColorRequirement` is consumed by
 /// `option_use_requirement_or_color_available` before this helper runs.
 pub(crate) fn option_color_match_available(
     card: &crate::card_source::CardSource,
@@ -717,7 +743,15 @@ pub(crate) fn option_color_match_available(
 ) -> bool {
     let option_colors = card.option_colors(card_data);
 
-    // Battle area: Digimon or Tamer with an overlapping color.
+    // A colorless Option has nothing to satisfy.
+    if option_colors.is_empty() {
+        return true;
+    }
+
+    // Every color a qualifying permanent contributes. Collected once, because
+    // 4-19-4 lets a single multicolor permanent cover several of the Option's
+    // colors and lets different colors come from different permanents.
+    let mut covered: Vec<crate::enums::CardColor> = Vec::new();
     for perm in &me.battle_area {
         if !perm.is_digimon(card_data) && !perm.is_tamer(card_data) {
             continue;
@@ -727,22 +761,18 @@ pub(crate) fn option_color_match_available(
         } else {
             perm.top_card().colors(card_data)
         };
-        if option_colors.iter().any(|c| perm_colors.contains(c)) {
-            return true;
-        }
+        covered.extend(perm_colors);
     }
-
-    // Breeding area: only Digimon counts (Tamers can't be in breeding).
+    // Breeding area: only Digimon can be there (Tamers cannot). See the
+    // breeding note above -- 3-4-5 puts the breeding area inside the field.
     if let Some(ref breeding) = me.breeding_area {
         if breeding.is_digimon(card_data) {
-            let perm_colors = breeding.top_card().digimon_colors(card_data);
-            if option_colors.iter().any(|c| perm_colors.contains(c)) {
-                return true;
-            }
+            covered.extend(breeding.top_card().digimon_colors(card_data));
         }
     }
 
-    false
+    // 4-19-3: ALL of the Option's colors, not any.
+    option_colors.iter().all(|c| covered.contains(c))
 }
 
 /// Option-use legality for the color requirement. A true printed Use Req.
