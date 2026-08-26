@@ -97,6 +97,10 @@ pub struct SelectWire {
     /// unblock is a `select_trigger` reader in DCGO's `SelectionAnswer`, not a
     /// harness-side workaround.
     pub trigger: Option<String>,
+    /// The branch to EXCLUDE, normalized -- the complement of
+    /// [`SelectWire::trigger`], for a wanted branch that carries no keyword
+    /// of its own. Mutually exclusive with it.
+    pub trigger_not: Option<String>,
     pub value: Option<i32>,
     pub bool_answer: Option<bool>,
     pub cancel: bool,
@@ -282,6 +286,7 @@ impl ScenarioAdapter {
                             ids: vec![id.clone()],
                             ordinal: None,
                             trigger: None,
+                            trigger_not: None,
                         };
                         // `expect` describes the DECLARATION, so it is checked
                         // once against the first element's prompt.
@@ -722,8 +727,61 @@ fn match_one_branch(
     wanted: &str,
     ordinal: Option<i32>,
     trigger: Option<&str>,
+    trigger_not: Option<&str>,
     candidates: &[TriggerCandidate],
 ) -> Result<usize, String> {
+    // Exclusion form: name the branch by what it is NOT. For a stack whose
+    // wanted branch has no keyword, this is the only handle either engine can
+    // compute without a registry of what counts as a keyword -- and DCGO has no
+    // such registry (no IsKeywordEffect flag, no keyword enum, and `<Decode>`'s
+    // effect name is parameterized), so a "not a keyword" test there would
+    // degrade into matching against a hardcoded name list.
+    if let Some(excluded) = trigger_not {
+        let want_excluded = normalize_trigger_name(excluded);
+        let mine: Vec<usize> = candidates
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.card_id == wanted)
+            .map(|(i, _)| i)
+            .collect();
+        if mine.is_empty() {
+            return Err(format!(
+                "wanted card '{wanted}' is not among the offered branches. Offered: [{}]",
+                describe_candidates(candidates)
+            ));
+        }
+        let survivors: Vec<usize> = mine
+            .iter()
+            .copied()
+            .filter(|i| {
+                candidates[*i]
+                    .trigger
+                    .as_deref()
+                    .map(normalize_trigger_name)
+                    .as_deref()
+                    != Some(want_excluded.as_str())
+            })
+            .collect();
+        return match survivors.len() {
+            // The exclusion removed everything this card offers: either the
+            // stack is smaller than the author believed, or every branch IS the
+            // excluded keyword. Both are findings about its shape.
+            0 => Err(format!(
+                "`trigger_not: {excluded}` excluded every branch card '{wanted}' offers, \
+                 leaving nothing to pick. Offered: [{}]",
+                describe_candidates(candidates)
+            )),
+            1 => Ok(survivors[0]),
+            // Exclusion did not isolate one branch, so it has run out of
+            // resolving power exactly as a repeated keyword does for `trigger:`.
+            n => Err(format!(
+                "`trigger_not: {excluded}` leaves {n} branches of card '{wanted}', so it \
+                 does not say which. Offered: [{}]",
+                describe_candidates(candidates)
+            )),
+        };
+    }
+
     let Some(trigger) = trigger else {
         let ids: Vec<String> = candidates.iter().map(|c| c.card_id.clone()).collect();
         return match_one_with_ordinal(wanted, ordinal, &ids);
@@ -974,10 +1032,12 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
             ids,
             ordinal,
             trigger,
+            trigger_not,
         } => {
             wire.card_ids = ids.clone();
             wire.ordinal = *ordinal;
             wire.trigger = trigger.as_deref().map(normalize_trigger_name);
+            wire.trigger_not = trigger_not.as_deref().map(normalize_trigger_name);
         }
         SelectPayload::Value(v) => wire.value = Some(*v),
         SelectPayload::Yes => wire.bool_answer = Some(true),
@@ -1069,6 +1129,7 @@ fn build_selection_row(
             ids,
             ordinal,
             trigger,
+            trigger_not,
         } => {
             // The wire always carries the SYMBOLIC answer — identities plus,
             // when the prompt stacks a card's triggers, which of them. The
@@ -1077,6 +1138,7 @@ fn build_selection_row(
             wire.card_ids = ids.clone();
             wire.ordinal = *ordinal;
             wire.trigger = trigger.as_deref().map(normalize_trigger_name);
+            wire.trigger_not = trigger_not.as_deref().map(normalize_trigger_name);
 
             let live_kind = game.pending_selection.as_ref().map(|p| p.kind.clone());
             match live_kind {
@@ -1100,14 +1162,21 @@ fn build_selection_row(
                              identities cannot be matched"
                         )
                     })?;
-                    let pick = match_one_branch(&ids[0], *ordinal, trigger.as_deref(), &candidates)
-                        .map_err(|e| format!("step {i}: {e}"))?;
-                    let how = match (trigger.as_deref(), ordinal) {
+                    let pick = match_one_branch(
+                        &ids[0],
+                        *ordinal,
+                        trigger.as_deref(),
+                        trigger_not.as_deref(),
+                        &candidates,
+                    )
+                    .map_err(|e| format!("step {i}: {e}"))?;
+                    let how = match (trigger.as_deref(), trigger_not.as_deref(), ordinal) {
                         // A keyword means the same thing in both engines, so
                         // this branch is NOT position-dependent.
-                        (Some(t), _) => format!(" trigger '{t}'"),
-                        (None, Some(o)) => format!(" ordinal {o}"),
-                        (None, None) => String::new(),
+                        (Some(t), _, _) => format!(" trigger '{t}'"),
+                        (None, Some(x), _) => format!(" trigger_not '{x}'"),
+                        (None, None, Some(o)) => format!(" ordinal {o}"),
+                        (None, None, None) => String::new(),
                     };
                     println!(
                         "  note: step {i} answers our TriggerOrder prompt by identity -- \
@@ -1115,15 +1184,22 @@ fn build_selection_row(
                         ids[0],
                         describe_candidates(&candidates),
                         if trigger.is_some() {
-                            " Named by KEYWORD, which is order-independent BY DESIGN -- \
-                             but DCGO cannot read `select_trigger` yet (HarnessJob.cs \
-                             declares select_ordinal and no select_trigger), so the \
-                             oracle still refuses a same-identity stack answered this \
-                             way. Sim-side the branch is unambiguous."
+                            " Named by KEYWORD, which is order-independent BY \
+                             DESIGN: DCGO reads `select_trigger` and resolves it \
+                             against its own ICardEffect.EffectName, so the branch \
+                             index above is an implementation detail neither side \
+                             answers with."
+                        } else if trigger_not.is_some() {
+                            " Named by EXCLUSION, order-independent for the same \
+                             reason: DCGO reads `select_trigger_not` and drops the \
+                             named branch from its OWN list, requiring exactly one \
+                             survivor. This form exists for a branch with NO keyword \
+                             of its own, which `trigger:` cannot name."
                         } else {
-                            " That order is OURS; DCGO resolves the same step against its \
-                             own list, so a disagreement surfaces as a divergence. Prefer \
-                             `trigger:` where the branch is a keyword."
+                            " That order is OURS; DCGO resolves the same step against \
+                             its own list, so a disagreement surfaces as a divergence. \
+                             Prefer `trigger:` where the branch is a keyword, or \
+                             `trigger_not:` where it is the one that is not."
                         }
                     );
                     // `int_value` is the branch-index payload `resolve_next`
@@ -1640,11 +1716,11 @@ steps:
     fn a_trigger_names_the_branch_that_no_ordinal_could_name_portably() {
         let c = kaguyamon_stack();
         assert_eq!(
-            match_one_branch("EX12-065", None, Some("Fortitude"), &c).unwrap(),
+            match_one_branch("EX12-065", None, Some("Fortitude"), None, &c).unwrap(),
             1
         );
         assert_eq!(
-            match_one_branch("EX12-065", None, Some("Retaliation"), &c).unwrap(),
+            match_one_branch("EX12-065", None, Some("Retaliation"), None, &c).unwrap(),
             2
         );
     }
@@ -1654,7 +1730,7 @@ steps:
         let c = kaguyamon_stack();
         for spelling in ["Fortitude", "fortitude", "FORTITUDE", "<Fortitude>", " <Fortitude> "] {
             assert_eq!(
-                match_one_branch("EX12-065", None, Some(spelling), &c).unwrap(),
+                match_one_branch("EX12-065", None, Some(spelling), None, &c).unwrap(),
                 1,
                 "spelling {spelling:?} must resolve like every other"
             );
@@ -1667,7 +1743,7 @@ steps:
         // Taking the first candidate would bury a real disagreement about the
         // stack's SHAPE under a green run.
         let c = kaguyamon_stack();
-        let err = match_one_branch("EX12-065", None, Some("Ascension"), &c).unwrap_err();
+        let err = match_one_branch("EX12-065", None, Some("Ascension"), None, &c).unwrap_err();
         assert!(err.contains("no branch of this prompt"), "got: {err}");
         assert!(err.contains("<Fortitude>"), "must list what WAS offered: {err}");
         assert!(err.contains("<Retaliation>"), "must list what WAS offered: {err}");
@@ -1680,7 +1756,7 @@ steps:
             card_id: "EX12-047".to_string(),
             trigger: Some("Ascension".to_string()),
         });
-        let err = match_one_branch("EX12-065", None, Some("Ascension"), &c).unwrap_err();
+        let err = match_one_branch("EX12-065", None, Some("Ascension"), None, &c).unwrap_err();
         assert!(err.contains("not on card 'EX12-065'"), "got: {err}");
         assert!(err.contains("EX12-047 <Ascension>"), "must show the list: {err}");
     }
@@ -1693,7 +1769,7 @@ steps:
             TriggerCandidate { card_id: "X".to_string(), trigger: Some("Fortitude".to_string()) },
             TriggerCandidate { card_id: "X".to_string(), trigger: Some("Fortitude".to_string()) },
         ];
-        let err = match_one_branch("X", None, Some("Fortitude"), &c).unwrap_err();
+        let err = match_one_branch("X", None, Some("Fortitude"), None, &c).unwrap_err();
         assert!(err.contains("2 times"), "got: {err}");
         assert!(err.contains("ordinal:"), "must name the fallback: {err}");
     }
@@ -1703,9 +1779,9 @@ steps:
         // `trigger: None` must behave exactly as before this key existed,
         // including still REQUIRING an ordinal on an ambiguous stack.
         let c = kaguyamon_stack();
-        let err = match_one_branch("EX12-065", None, None, &c).unwrap_err();
+        let err = match_one_branch("EX12-065", None, None, None, &c).unwrap_err();
         assert!(err.contains("AMBIGUOUS"), "got: {err}");
-        assert_eq!(match_one_branch("EX12-065", Some(2), None, &c).unwrap(), 2);
+        assert_eq!(match_one_branch("EX12-065", Some(2), None, None, &c).unwrap(), 2);
     }
 
     #[test]
@@ -1714,7 +1790,7 @@ steps:
         // `trigger:` cannot name it -- `ordinal:` remains the way in, and the
         // refusal above is what tells an author that.
         let c = kaguyamon_stack();
-        assert_eq!(match_one_branch("EX12-065", Some(0), None, &c).unwrap(), 0);
+        assert_eq!(match_one_branch("EX12-065", Some(0), None, None, &c).unwrap(), 0);
         assert_eq!(c[0].describe(), "EX12-065");
         assert_eq!(c[1].describe(), "EX12-065 <Fortitude>");
     }
@@ -1794,6 +1870,7 @@ steps:
             ids: vec!["ST1-03".to_string()],
             ordinal: None,
             trigger: None,
+            trigger_not: None,
         }
     }
 

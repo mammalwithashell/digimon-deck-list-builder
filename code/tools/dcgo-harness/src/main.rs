@@ -1406,6 +1406,18 @@ struct ScriptedInput {
     /// worse than no key at all.
     #[serde(skip_serializing_if = "Option::is_none")]
     select_trigger: Option<String>,
+    /// The branch to EXCLUDE, for a wanted branch with no keyword of its
+    /// own -- the complement of `select_trigger`, normalized identically.
+    ///
+    /// EX12-047 Amaterasumon is the case: its deletion stack is
+    /// [Ascension, the printed On Deletion] and only the first is nameable
+    /// by keyword. Neither engine can answer "which branch is not a
+    /// keyword" without a registry of what counts as one, and DCGO has
+    /// none -- no IsKeywordEffect flag, no keyword enum, and Decode's
+    /// effect name is parameterized. Both sides CAN drop a named branch
+    /// and check that exactly one survives.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    select_trigger_not: Option<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     select_has_bool: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
@@ -1549,6 +1561,7 @@ fn build_exam_job(
                                 select_value: w.value,
                                 select_ordinal: w.ordinal,
                                 select_trigger: w.trigger.clone(),
+                                select_trigger_not: w.trigger_not.clone(),
                                 ..ScriptedInput::default()
                             },
                         ]
@@ -1569,6 +1582,7 @@ fn build_exam_job(
                     select_value: w.value,
                     select_ordinal: w.ordinal,
                     select_trigger: w.trigger.clone(),
+                    select_trigger_not: w.trigger_not.clone(),
                     select_has_bool: w.bool_answer.is_some(),
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,

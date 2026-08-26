@@ -110,6 +110,17 @@ pub enum SelectPayload {
         ids: Vec<String>,
         ordinal: Option<i32>,
         trigger: Option<String>,
+        /// Names the wanted branch by what it is NOT -- the complement of
+        /// `trigger`, for the branch that carries no keyword of its own.
+        ///
+        /// EX12-047 Amaterasumon is why this exists. Its deletion stack is
+        /// [`<Ascension>`, the printed `[On Deletion]`], and only the first has
+        /// a keyword. Nothing else separates them: same source card, same
+        /// timing (both register under `OnDestroyedAnyone`), same optionality.
+        /// `trigger_not: Ascension` says "this card's OTHER branch", which both
+        /// engines can resolve against their own list without either needing a
+        /// registry of what counts as a keyword.
+        trigger_not: Option<String>,
     },
     /// Field-permanent picks as OUR slot references (`own.field.N` /
     /// `opp.field.N`), resolved at lowering time against the live game.
@@ -211,6 +222,11 @@ struct SelectArgs {
     /// `fortitude`, `Fortitude` and `"<Fortitude>"` are one answer.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     trigger: Option<String>,
+    /// Only legal alongside `cards:`, and never alongside `trigger:` or
+    /// `ordinal:` -- see [`SelectPayload::Cards`]. Names the branch to EXCLUDE,
+    /// leaving exactly one survivor; normalized identically to `trigger:`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    trigger_not: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     targets: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -254,6 +270,23 @@ card's stacked triggers, so a step carrying both gives two answers to one questi
 `trigger:`: `ordinal:` is a POSITION in the prompt's candidate list and each engine builds that \
 list itself, so the same ordinal can name a DIFFERENT trigger on the two sides; a keyword names \
 the same trigger in both";
+
+/// Rendered when `trigger_not:` is written without `cards:`.
+const TRIGGER_NOT_RULE: &str = "select `trigger_not:` is only legal alongside `cards:`: it \
+names WHICH of that card's stacked triggers to EXCLUDE, leaving exactly one survivor";
+
+/// Rendered when both naming forms are written on one step.
+const TRIGGER_NOT_VS_TRIGGER_RULE: &str = "select `trigger:` and `trigger_not:` are two ways \
+to name one branch -- positively and by exclusion -- so a step carrying both gives two answers \
+to one question. Keep whichever the wanted branch actually supports: `trigger:` when it has a \
+keyword of its own, `trigger_not:` when it is the keyword-LESS branch and can only be named by \
+what it is not";
+
+/// Rendered when `trigger_not:` is paired with the positional disambiguator.
+const TRIGGER_NOT_VS_ORDINAL_RULE: &str = "select `trigger_not:` and `ordinal:` both \
+disambiguate one card's stacked triggers. Prefer `trigger_not:`: `ordinal:` is a POSITION in \
+the prompt's candidate list and each engine builds that list itself, so the same ordinal can \
+name a DIFFERENT trigger on the two sides";
 
 /// Canonical spelling of a trigger name, for cross-engine comparison.
 ///
@@ -305,6 +338,18 @@ impl SelectArgs {
         // wrote zero answer forms.
         if self.trigger.is_some() && self.ordinal.is_some() {
             return Err(TRIGGER_VS_ORDINAL_RULE.to_string());
+        }
+        // Same placement and the same reasoning as the three rules above: name
+        // the key the author actually wrote before falling back to the generic
+        // "got 0 answer forms" message.
+        if self.trigger_not.is_some() && self.cards.is_none() {
+            return Err(TRIGGER_NOT_RULE.to_string());
+        }
+        if self.trigger_not.is_some() && self.trigger.is_some() {
+            return Err(TRIGGER_NOT_VS_TRIGGER_RULE.to_string());
+        }
+        if self.trigger_not.is_some() && self.ordinal.is_some() {
+            return Err(TRIGGER_NOT_VS_ORDINAL_RULE.to_string());
         }
         if present != 1 {
             return Err(format!(
@@ -360,10 +405,27 @@ impl SelectArgs {
                     ));
                 }
             }
+            if let Some(trigger_not) = self.trigger_not.as_deref() {
+                if normalize_trigger_name(trigger_not).is_empty() {
+                    return Err(format!(
+                        "select `trigger_not: {trigger_not:?}` names no keyword once the \
+                         angle brackets and spacing are stripped. Write the keyword to \
+                         exclude, e.g. `trigger_not: Ascension`"
+                    ));
+                }
+                if cards.len() != 1 {
+                    return Err(format!(
+                        "select `trigger_not:` names WHICH of one card's own stacked \
+                         triggers to exclude, so it cannot accompany a {}-card pick list",
+                        cards.len()
+                    ));
+                }
+            }
             return Ok(SelectPayload::Cards {
                 ids: cards,
                 ordinal: self.ordinal,
                 trigger: self.trigger,
+                trigger_not: self.trigger_not,
             });
         }
         if let Some(targets) = self.targets {
@@ -401,10 +463,12 @@ impl SelectArgs {
                 ids,
                 ordinal,
                 trigger,
+                trigger_not,
             } => {
                 a.cards = Some(ids.clone());
                 a.ordinal = *ordinal;
                 a.trigger = trigger.clone();
+                a.trigger_not = trigger_not.clone();
             }
             SelectPayload::Materials(m) => a.materials = Some(m.clone()),
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
@@ -887,6 +951,7 @@ assert:
                 ids: vec!["EX12-020".to_string(), "EX12-020".to_string()],
                 ordinal: None,
                 trigger: None,
+                trigger_not: None,
             }
         );
     }
@@ -902,6 +967,7 @@ assert:
                 ids: vec!["EX12-047".to_string()],
                 ordinal: Some(1),
                 trigger: None,
+                trigger_not: None,
             }
         );
     }
@@ -945,6 +1011,7 @@ assert:
             ids: vec!["EX12-047".to_string()],
             ordinal: Some(1),
             trigger: None,
+            trigger_not: None,
         });
         let yaml = serde_yml::to_string(&act).expect("serializes");
         assert!(yaml.contains("ordinal"), "the key must survive: {yaml}");
@@ -958,6 +1025,7 @@ assert:
             ids: vec!["EX12-047".to_string()],
             ordinal: None,
             trigger: None,
+            trigger_not: None,
         });
         let yaml = serde_yml::to_string(&act).expect("serializes");
         assert!(!yaml.contains("ordinal"), "got: {yaml}");
@@ -974,6 +1042,7 @@ assert:
                 ids: vec!["EX12-065".to_string()],
                 ordinal: None,
                 trigger: Some("Fortitude".to_string()),
+                trigger_not: None,
             }
         );
     }
@@ -985,6 +1054,90 @@ assert:
         let err = select_payload_of("{ trigger: Fortitude }").unwrap_err();
         assert!(err.contains("only legal alongside `cards:`"), "got: {err}");
         assert!(err.contains("value: N"), "must name the alternative: {err}");
+    }
+
+    // -- select `trigger_not:` (the keyword-LESS branch) ------------------
+
+    /// The complement form parses beside `cards:`, exactly as `trigger:` does.
+    #[test]
+    fn select_trigger_not_parses_alongside_cards() {
+        let p = select_payload_of("{ cards: [EX12-047], trigger_not: Ascension }").unwrap();
+        assert_eq!(
+            p,
+            SelectPayload::Cards {
+                ids: vec!["EX12-047".to_string()],
+                ordinal: None,
+                trigger: None,
+                trigger_not: Some("Ascension".to_string()),
+            }
+        );
+    }
+
+    /// `trigger_not:` names WHICH branch to drop, so without `cards:` it has
+    /// nothing to drop it from.
+    #[test]
+    fn select_trigger_not_without_cards_is_rejected_loudly() {
+        let err = select_payload_of("{ trigger_not: Ascension }").unwrap_err();
+        assert!(
+            err.contains("trigger_not"),
+            "the message must name the key the author wrote: {err}"
+        );
+    }
+
+    /// The two naming forms answer one question two ways, so a step carrying
+    /// both is refused rather than silently preferring one.
+    #[test]
+    fn select_trigger_and_trigger_not_together_are_rejected() {
+        let err = select_payload_of("{ cards: [EX12-047], trigger: Ascension, trigger_not: Fortitude }").unwrap_err();
+        assert!(
+            err.contains("trigger:") && err.contains("trigger_not:"),
+            "the message must name BOTH keys so the author knows which to drop: {err}"
+        );
+    }
+
+    /// Pairing exclusion with the POSITIONAL disambiguator is the same mistake
+    /// as pairing the positive form with it.
+    #[test]
+    fn select_trigger_not_and_ordinal_together_are_rejected() {
+        let err = select_payload_of("{ cards: [EX12-047], trigger_not: Ascension, ordinal: 0 }").unwrap_err();
+        assert!(
+            err.contains("trigger_not") && err.contains("ordinal"),
+            "the message must name both: {err}"
+        );
+    }
+
+    /// A `trigger_not:` that normalizes away entirely would exclude nothing and
+    /// silently match the first branch -- refuse instead.
+    #[test]
+    fn an_empty_trigger_not_is_rejected_rather_than_excluding_nothing() {
+        let err = select_payload_of("{ cards: [EX12-047], trigger_not: \"<>\" }").unwrap_err();
+        assert!(
+            err.contains("names no keyword"),
+            "an all-punctuation exclusion must be refused: {err}"
+        );
+    }
+
+    /// Same normalization as `trigger:` -- the angle brackets and case are
+    /// noise, so all three spellings are one answer.
+    #[test]
+    fn trigger_not_spellings_normalize_to_one_answer() {
+        for spelling in ["Ascension", "ascension", "<Ascension>"] {
+            let p = select_payload_of(&format!(
+                "{{ cards: [EX12-047], trigger_not: \"{spelling}\" }}"
+            ))
+            .unwrap();
+            match p {
+                SelectPayload::Cards {
+                    trigger_not: Some(ref t),
+                    ..
+                } => assert_eq!(
+                    normalize_trigger_name(t),
+                    "ascension",
+                    "{spelling} must normalize onto the same answer"
+                ),
+                other => panic!("expected trigger_not, got {other:?}"),
+            }
+        }
     }
 
     #[test]
@@ -1057,6 +1210,7 @@ assert:
             ids: vec!["EX12-065".to_string()],
             ordinal: None,
             trigger: Some("<Fortitude>".to_string()),
+            trigger_not: None,
         });
         let yaml = serde_yml::to_string(&act).expect("serializes");
         assert!(yaml.contains("trigger"), "the key must survive: {yaml}");
@@ -1067,6 +1221,7 @@ assert:
             ids: vec!["EX12-065".to_string()],
             ordinal: None,
             trigger: None,
+            trigger_not: None,
         });
         let yaml = serde_yml::to_string(&bare).expect("serializes");
         assert!(!yaml.contains("trigger"), "absent must OMIT the key: {yaml}");
@@ -1123,6 +1278,7 @@ assert:
                 ids: vec!["ST1-03".to_string()],
                 ordinal: None,
                 trigger: None,
+                trigger_not: None,
             }),
             StepAction::Select(SelectPayload::Targets(vec!["own.field.1".to_string()])),
             StepAction::Select(SelectPayload::Value(3)),

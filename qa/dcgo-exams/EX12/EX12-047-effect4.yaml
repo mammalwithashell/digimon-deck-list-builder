@@ -274,7 +274,7 @@ steps:
   # The deletion bundle: resolve [On Deletion] first -- OUR branch 0.
   # DCGO's index 0 is <Ascension>, which is the blocker documented above.
   - actor: 0
-    do: { select: { cards: [EX12-047], ordinal: 0 } }
+    do: { select: { cards: [EX12-047], trigger_not: Ascension } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
   # THE CLAUSE, half 1: return a [TB] card from trash to hand. The trash
   # holds TWO qualifying cards -- Gasamon (seeded at T5) and the just-deleted
