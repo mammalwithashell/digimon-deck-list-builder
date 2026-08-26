@@ -49,6 +49,13 @@ effects:
       # grant, which over-exposes an illegal PASS to the action space. This card
       # was the ONLY one of the eight EX12 <Decode> specs carrying it
       # (G-DECODE-DOUBLE-OPTIONAL); the other seven already had this shape.
+      #
+      # This is a RULE-17 problem specific to us, not a rules-text one, and not
+      # something DCGO gets wrong: DCGO does allow backing out of the post-gate
+      # pick, but that is a UI affordance for a human (open the list, see your
+      # sources, close it) and both paths reach the same game state. Our prompts
+      # feed an RL action space instead, where a PASS that cannot change the
+      # outcome is pollution.
       - select_material:
           of_permanent: replacement_subject
           bind_as: decode_source

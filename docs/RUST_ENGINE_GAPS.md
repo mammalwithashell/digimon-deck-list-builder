@@ -2444,7 +2444,25 @@ Fixing it needs a `SelectCountEffect`-shaped prompt (our `CountCappedMultiSelect
 * `code/digimon-engine/cards/ex12/EX12-031.yaml:83` -- `optional: true` on the `kind: replacement` clause, and the inner `select_material` has NO `optional:`. **Correct**: the player declines at the gate, and having accepted, picks a source.
 * `code/digimon-engine/cards/ex12/EX12-036.yaml:39,48` -- `optional: true` on the clause **and** `optional: true` on the inner `select_material`. The player can accept the gate and then decline the pick, an outcome-neutral second decision the rules do not grant. This over-exposes an illegal PASS to the action space -- the exact pitfall recorded in the `reference-dsl-optional-mandatory-selection-pitfall` memory.
 
-EX12-031 is the shape to copy. Note DCGO has the same defect from the other direction: `Decode.cs:37` passes `canNoSelect: () => true` to the post-gate `SelectCardEffect`, so it too allows accept-then-decline. Neither engine's second decision is grantable under 16-35-3, so this is not a divergence to preserve -- both are wrong and the manual is the tiebreak.
+EX12-031 is the shape to copy.
+
+**DCGO is NOT wrong here, and an earlier draft of this entry said it was.** It
+does pass `canNoSelect: () => true` to the post-gate `SelectCardEffect`
+(`CardEffectCommons/KeyWordEffects/Decode.cs:37` -- note there are TWO
+`Decode.cs` files and the first draft cited the `CardEffectFactory` one, which
+contains no such call). But its 16-35-3 decision is the OptionalSkill gate,
+raised by `SetUpActivateClass(..., isOptional: true, ...)`; the `canNoSelect`
+on the pick is a UI AFFORDANCE -- open the list, see what your sources hold,
+back out -- and both paths reach the same game state. No rules outcome differs,
+so nothing is granted that 16-35-3 withholds. That is ordinary and correct for a
+client humans actually play.
+
+The defect is ours alone, and it is specifically a RULE-17 problem rather than a
+rules-text one: an extra PASS that cannot change the outcome is action-space
+pollution, because our prompts feed an RL agent rather than a person who can
+simply close a dialog. DCGO has no action space to pollute. The fix stands on
+its own evidence regardless -- EX12-036 was the OUTLIER against our own other
+seven `<Decode>` specs.
 
 Worth checking the other `<Decode>` cards (EX12-014/-016/-017/-032/-035/-044) for the same double-optional before fixing, so it is one pass rather than six.
 
