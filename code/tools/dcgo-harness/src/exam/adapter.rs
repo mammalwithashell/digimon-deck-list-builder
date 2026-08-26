@@ -75,9 +75,27 @@ pub struct SelectWire {
     /// spaces (`SetUpICardEffect("Armor Purge", ...)`), which normalizes onto
     /// the same `armorpurge` as our printed `<Armor Purge>`.
     ///
-    /// NOT YET FORWARDED TO THE EMITTED JOB: `ScriptedInput` in
-    /// `dcgo-harness/src/main.rs` still has no `select_trigger` field, so this
-    /// value stops at the adapter boundary. Sim-side matching below is live.
+    /// WIRE STATUS, re-derived 2026-08-25 — the emitter half is DONE, the
+    /// DCGO half is NOT, and the two used to be conflated here:
+    ///   * EMITTED: `ScriptedInput` in `dcgo-harness/src/main.rs` carries
+    ///     `select_trigger` (main.rs:1408) and both select branches fill it
+    ///     (main.rs:1551, :1571). The older note claiming the field did not
+    ///     exist is stale.
+    ///   * NOT READ BY DCGO: `Assets/Scripts/Script/Harness/HarnessJob.cs`
+    ///     declares `select_ordinal` (:174) and no `select_trigger` at all, and
+    ///     `SelectionAnswer` resolves a same-identity stack only through
+    ///     `MatchOneWithOrdinal` (SelectionAnswer.cs:178 tells the author to
+    ///     "Add select_ordinal"). So a `trigger:`-only answer to a
+    ///     `MultipleSkills` row still ABORTS the oracle pass today.
+    /// Consequence for scenario authors: `trigger:` is live and preferred
+    /// SIM-side, but a stack whose branches share one card id is still
+    /// unauthorable against DCGO without an `ordinal:` — and an ordinal is a
+    /// per-engine POSITION, so where the two engines enumerate the branches in
+    /// opposite order (measured: EX12-047, DCGO stacks `<Ascension>` at
+    /// EX12_047.cs:41 BEFORE the printed `[On Deletion]` at :182, we stack them
+    /// the other way) neither disambiguator can name the branch portably. The
+    /// unblock is a `select_trigger` reader in DCGO's `SelectionAnswer`, not a
+    /// harness-side workaround.
     pub trigger: Option<String>,
     pub value: Option<i32>,
     pub bool_answer: Option<bool>,
@@ -252,7 +270,7 @@ impl ScenarioAdapter {
                 // single-pick path, so a wrong id fails loudly with the usual
                 // "not among the offered candidates" error rather than being
                 // silently assigned to another slot.
-                StepAction::Select(SelectPayload::Materials(ids)) => {
+                StepAction::Select(decl @ SelectPayload::Materials(ids)) => {
                     for (n, id) in ids.iter().enumerate() {
                         if game.pending_selection.is_none() {
                             return Err(format!(
@@ -271,7 +289,7 @@ impl ScenarioAdapter {
                         let (row, mut wire) =
                             build_selection_row(&game, i, actor, &one, expect_for_this)?;
                         if n == 0 {
-                            check_select_expectations(&game, i, step.expect.as_ref())?;
+                            check_select_expectations(&game, i, decl, step.expect.as_ref())?;
                             // The single wire row carries the WHOLE declaration.
                             wire.card_ids = ids.clone();
                         }
@@ -310,7 +328,7 @@ impl ScenarioAdapter {
                 StepAction::Select(payload) => {
                     let (row, wire) =
                         build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
-                    check_select_expectations(&game, i, step.expect.as_ref())?;
+                    check_select_expectations(&game, i, payload, step.expect.as_ref())?;
                     steps.push(StepSpec {
                         actor,
                         // Placeholder: the replay driver branches on
@@ -470,6 +488,80 @@ fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
     }
 }
 
+/// True when the live prompt is a **digivolution-source pick** — the one of
+/// `SelectionKind::Material`'s several uses whose DCGO class is knowable.
+///
+/// `SelectionKind::Material` is heavily overloaded on our side: DNA
+/// digivolution (`game_actions/digivolve.rs`) and DigiXros material assembly
+/// (`game_actions/misc.rs`) reuse the SAME kind with completely different
+/// action-id encodings, and DCGO asks those as different prompt classes
+/// (`SelectDigiXrosClass` / `SelectAssemblyClass`, each with its own recorder
+/// hook — see CLAUDE.md rule 27). So the KIND alone cannot name a DCGO class,
+/// and asserting one from the kind would be a confident wrong answer on those
+/// prompts.
+///
+/// The discriminator is the engine's own: `install_select_material`
+/// (`dsl_cards/step/selections.rs`, the only `EffectContext::select_material`
+/// caller in the crate) parks a
+/// `ResumeFrame::RunTail { select_kind: ResumeSelectKind::Material { .. } }`
+/// beside the prompt, and nothing else does. This is the same frame
+/// `runners/selection_resolve.rs`'s `material_source_ids` recovers before it
+/// will resolve an identity — deliberately the same test, so the prompt this
+/// asserts a class for is exactly the prompt the identity payload can answer.
+fn is_digivolution_source_pick(game: &Game) -> bool {
+    use digimon_engine::resume::{ResumeFrame, ResumeSelectKind};
+    let Some(stack) = game.pending_selection_resume.as_ref() else {
+        return false;
+    };
+    // Frames run inner-to-outer, so the live prompt is the innermost one —
+    // same traversal `material_source_ids` uses.
+    stack.frames.iter().rev().any(|f| {
+        matches!(
+            f,
+            ResumeFrame::RunTail {
+                select_kind: ResumeSelectKind::Material { .. },
+                ..
+            }
+        )
+    })
+}
+
+/// The same mapping, resolved with the live game and the step's PAYLOAD in
+/// hand — so the one context-dependent kind that CAN be decided here is.
+///
+/// `SelectionKind::Material` parked by the digivolution-source installer (see
+/// [`is_digivolution_source_pick`]) is DCGO's `SelectCardEffect`: `<Decode>`'s
+/// "play 1 specified Digimon card from its digivolution cards" opens
+/// `GetComponent<SelectCardEffect>()` over
+/// `customRootCardList: cardSource.PermanentOfThisCard().DigivolutionCards`
+/// (DCGO `CardEffectCommons/KeyWordEffects/Decode.cs:31-51`), and that
+/// chokepoint accepts only `select_card_ids` / `select_cancel`
+/// (`SelectCardEffect.cs:941-944`) — which is precisely the wire contract a
+/// step over this prompt has to satisfy, so it is worth asserting rather than
+/// noting.
+///
+/// A `materials:` DECLARATION is excluded even then: that form exists to
+/// express an `[Assembly]` / `[DigiXros]` recipe (see
+/// [`SelectPayload::Materials`]), whose DCGO class depends on which mechanic
+/// it belongs to. Anything else — the DNA-digivolution and DigiXros reuses of
+/// the kind, a legacy closure-only installer with no data frame — falls
+/// through to `None` and keeps the printed "not asserted" note.
+///
+/// Everything except `Material` defers to [`dcgo_prompt_name`] unchanged.
+fn dcgo_prompt_name_for(
+    game: &Game,
+    kind: &SelectionKind,
+    payload: &SelectPayload,
+) -> Option<&'static str> {
+    if matches!(kind, SelectionKind::Material) {
+        if matches!(payload, SelectPayload::Materials(_)) {
+            return None;
+        }
+        return is_digivolution_source_pick(game).then_some("SelectCardEffect");
+    }
+    dcgo_prompt_name(kind)
+}
+
 /// True when our live prompt is a pick-shaped selection that DCGO may split
 /// into `OptionalSkill` + pick (the `<Raid>`-family fold — see
 /// `SelectWire::optional_gate_fold`).
@@ -489,7 +581,12 @@ fn kind_is_pick_shaped(kind: &SelectionKind) -> bool {
 /// Sim-side `expect.prompt` on a select step: assert loosely against the
 /// parked prompt's kind where the kind->DCGO mapping is unambiguous, and say
 /// so out loud where it is not.
-fn check_select_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> Result<(), String> {
+fn check_select_expectations(
+    game: &Game,
+    i: usize,
+    payload: &SelectPayload,
+    expect: Option<&Expect>,
+) -> Result<(), String> {
     let Some(want) = expect.and_then(|e| e.prompt.as_deref()) else {
         return Ok(());
     };
@@ -513,7 +610,7 @@ fn check_select_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> 
         );
         return Ok(());
     }
-    match dcgo_prompt_name(&pending.kind) {
+    match dcgo_prompt_name_for(game, &pending.kind, payload) {
         Some(name) if name == want => Ok(()),
         Some(name) => Err(format!(
             "step {i}: expect.prompt is '{want}' but our engine's parked {:?} prompt \
@@ -925,7 +1022,7 @@ fn build_selection_row(
             .or_else(|| {
                 game.pending_selection
                     .as_ref()
-                    .and_then(|p| dcgo_prompt_name(&p.kind))
+                    .and_then(|p| dcgo_prompt_name_for(game, &p.kind, payload))
                     .map(str::to_string)
             })
             .unwrap_or_else(|| "select".to_string()),
@@ -1018,8 +1115,11 @@ fn build_selection_row(
                         ids[0],
                         describe_candidates(&candidates),
                         if trigger.is_some() {
-                            " Named by KEYWORD, so DCGO resolves the same branch against \
-                             its own list."
+                            " Named by KEYWORD, which is order-independent BY DESIGN -- \
+                             but DCGO cannot read `select_trigger` yet (HarnessJob.cs \
+                             declares select_ordinal and no select_trigger), so the \
+                             oracle still refuses a same-identity stack answered this \
+                             way. Sim-side the branch is unambiguous."
                         } else {
                             " That order is OURS; DCGO resolves the same step against its \
                              own list, so a disagreement surfaces as a divergence. Prefer \
@@ -1671,6 +1771,117 @@ steps:
             a.steps()[6].selection.as_ref().unwrap().card_ids.as_deref(),
             Some(["ST1-04".to_string()].as_slice()),
             "the row still carries the identity for resolve_next's zone search"
+        );
+    }
+
+    // ── Material's several DCGO surfaces ────────────────────────────────
+
+    /// A game with nothing parked — so `pending_selection_resume` is `None`
+    /// and `is_digivolution_source_pick` is false. That is the state every
+    /// NON-digivolution-source use of `SelectionKind::Material` presents to
+    /// this mapping (DNA digivolution and DigiXros assembly reuse the kind
+    /// with their own action-id encodings and no `ResumeSelectKind::Material`
+    /// frame), which is what these cases pin.
+    fn game_with_no_material_frame() -> Game {
+        let card_data = test_support::load_card_data();
+        let deck = simple_deck();
+        construct(&deck, &deck, &card_data, 7, SCENARIO_FIRST_PLAYER)
+            .expect("scenario game should build")
+    }
+
+    fn one_card_pick() -> SelectPayload {
+        SelectPayload::Cards {
+            ids: vec!["ST1-03".to_string()],
+            ordinal: None,
+            trigger: None,
+        }
+    }
+
+    /// THE NEGATIVE THIS ARM EXISTS FOR. `SelectionKind::Material` is
+    /// overloaded — DNA digivolution (`game_actions/digivolve.rs`) and
+    /// DigiXros assembly (`game_actions/misc.rs`) reuse it, and DCGO asks
+    /// those as `SelectDigiXrosClass` / `SelectAssemblyClass`, NOT
+    /// `SelectCardEffect`. Without the resume-frame gate the mapping would
+    /// name a class for those prompts too, which would be a confident wrong
+    /// answer. A prompt with no `ResumeSelectKind::Material` frame must stay
+    /// unasserted.
+    #[test]
+    fn a_material_prompt_with_no_digivolution_source_frame_stays_unasserted() {
+        let game = game_with_no_material_frame();
+        assert!(!is_digivolution_source_pick(&game));
+        assert_eq!(
+            dcgo_prompt_name_for(&game, &SelectionKind::Material, &one_card_pick()),
+            None,
+            "without the installer's frame this is DNA-digivolve / DigiXros / a \
+             closure-only installer, and DCGO's class for those is not SelectCardEffect"
+        );
+    }
+
+    /// The `materials:` DECLARATION form is excluded even when a frame is
+    /// present: it expresses an `[Assembly]` / `[DigiXros]` recipe, whose DCGO
+    /// class depends on which mechanic it belongs to.
+    #[test]
+    fn a_material_declaration_is_never_mapped_onto_select_card_effect() {
+        let game = game_with_no_material_frame();
+        let decl = SelectPayload::Materials(vec!["ST1-03".to_string()]);
+        assert_eq!(
+            dcgo_prompt_name_for(&game, &SelectionKind::Material, &decl),
+            None
+        );
+    }
+
+    /// Every other kind is untouched by the new parameters — the payload and
+    /// the game only ever change the answer for `Material`.
+    #[test]
+    fn every_other_kind_defers_to_the_payload_less_mapping() {
+        let game = game_with_no_material_frame();
+        let pick = one_card_pick();
+        let decl = SelectPayload::Materials(vec!["ST1-03".to_string()]);
+        for kind in [
+            SelectionKind::Hand,
+            SelectionKind::Trash,
+            SelectionKind::Reveal,
+            SelectionKind::OwnField,
+            SelectionKind::OppField,
+            SelectionKind::AnyField,
+            SelectionKind::TriggerOrder,
+        ] {
+            for payload in [&pick, &decl] {
+                assert_eq!(
+                    dcgo_prompt_name_for(&game, &kind, payload),
+                    dcgo_prompt_name(&kind),
+                    "{kind:?} must be unaffected by the payload form"
+                );
+            }
+        }
+    }
+
+    /// `expect: {prompt: OptionalSkill}` over a live Material prompt must
+    /// stay the declared OptionalSkill+pick FOLD, not become a hard mismatch:
+    /// `Material` is in `kind_is_pick_shaped`, and the fold branch in
+    /// `check_select_expectations` runs BEFORE the class mapping. The new
+    /// mapping arm sits directly downstream of that branch, so if the two were
+    /// ever reordered every folded material pick would start failing to lower.
+    ///
+    /// HONEST SCOPE: this is a SOURCE-ORDER guard, not a behavioural one — no
+    /// scenario in the corpus currently folds an OptionalSkill gate onto a
+    /// Material prompt (measured 2026-08-25: the 7 live folds are over Hand
+    /// and OppField), so there is nothing to drive it end to end yet. It goes
+    /// red if the fold branch is removed, neutered, or moved below the
+    /// mapping; it cannot catch a semantic change that keeps both in place.
+    #[test]
+    fn the_optional_gate_fold_still_precedes_the_material_mapping() {
+        assert!(kind_is_pick_shaped(&SelectionKind::Material));
+        let src = include_str!("adapter.rs");
+        let fold = src
+            .find("if want == \"OptionalSkill\" && kind_is_pick_shaped(&pending.kind)")
+            .expect("the fold branch should still exist in check_select_expectations");
+        let mapping = src
+            .find("match dcgo_prompt_name_for(game, &pending.kind, payload)")
+            .expect("the class mapping should still exist in check_select_expectations");
+        assert!(
+            fold < mapping,
+            "the OptionalSkill fold must be checked BEFORE the class mapping"
         );
     }
 

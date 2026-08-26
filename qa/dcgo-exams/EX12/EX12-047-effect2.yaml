@@ -124,19 +124,35 @@
 # candidate orders are legal presentations of the same choice. This is a gap
 # in the exam WIRE, not a card-resolution divergence.
 #
-# UNBLOCK (a harness change, not an authoring one): give the wire an
-# order-independent name for a trigger. Cheapest shape -- carry the trigger's
-# EFFECT IDENTITY rather than its position: add a `select: {trigger: ...}`
-# form matched against DCGO's `ICardEffect.EffectName` and against an OUR-side
-# label that has been widened to include the clause's timing/keyword
-# ("<Ascension>" vs "[On Deletion]"). A per-engine ordinal pair would also
-# work and is cheaper still, but it encodes each engine's presentation into
-# the scenario file, which is exactly what this format refuses everywhere else.
+# UNBLOCK -- HALF BUILT, re-derived 2026-08-25. The prescribed shape (an
+# order-independent NAME for a trigger, carried as the trigger's effect
+# identity rather than its position) now exists on OUR side end to end:
+#   * `select: { cards: [...], trigger: <Keyword> }` parses
+#     (exam/scenario.rs, mutually exclusive with `ordinal:`);
+#   * the adapter resolves it against the live branch list by normalized
+#     keyword (`match_one_branch`, exam/adapter.rs) -- for this stack
+#     `[EX12-047, EX12-047 <Ascension>]`, so `trigger: Ascension` is branch 1;
+#   * it rides the wire as `select_trigger` (dcgo-harness/src/main.rs:1408,
+#     :1551, :1571), normalized so our `<Armor Purge>` and DCGO's
+#     `"Armor Purge"` compare equal.
+# The MISSING half is DCGO's: `Assets/Scripts/Script/Harness/HarnessJob.cs`
+# declares `select_ordinal` (:174) and NO `select_trigger`, and
+# `SelectionAnswer` resolves a same-identity stack only through
+# `MatchOneWithOrdinal`, whose refusal literally tells the author to "Add
+# select_ordinal" (SelectionAnswer.cs:178) -- the key our own parser forbids
+# alongside `trigger:`. One `select_trigger` reader there (match against
+# `ICardEffect.EffectName`, normalized the same way) finishes this.
 #
-# The ordinal below is therefore chosen to keep the SIM side honest (it is
-# OUR branch index; `--sim-only` lowers and asserts clean). The oracle pass
-# will abort at the row named above with a prompt mismatch -- that abort IS
-# the finding.
+# The step below is therefore authored with `trigger:`, not `ordinal:`. It
+# keeps the SIM side honest (`--sim-only` lowers and asserts clean, branch 1)
+# and it fails the oracle HONESTLY: DCGO refuses the ambiguous stack AT this
+# row instead of resolving its own branch 1 (the [On Deletion]) and aborting
+# two rows later with a mutated board. That refusal IS the finding, and the
+# file needs no edit once DCGO can read the key.
+#
+# A per-engine ordinal pair would also "work" and is cheaper still, but it
+# encodes each engine's presentation into the scenario file, which is exactly
+# what this format refuses everywhere else. Not done on purpose.
 card: EX12-047
 clause: EX12-047#effect#2
 seed: 424242
@@ -214,12 +230,25 @@ steps:
   - actor: 1
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # The deleted carrier's bundle: [On Deletion] (slot 5) + <Ascension>
-  # (slot 6). Resolve slot 6 (<Ascension>) FIRST: accepting it moves the
-  # deleted card out of the trash, so the [On Deletion] body that fires
-  # next is candidate-starved on both engines and skips silently.
+  # The deleted carrier's bundle: [On Deletion] + <Ascension>, in whichever
+  # order each engine enumerates them. Resolve <Ascension> FIRST: accepting
+  # it moves the deleted card out of the trash, so the [On Deletion] body
+  # that fires next is candidate-starved on both engines and skips silently.
+  #
+  # Named by KEYWORD, not by ordinal (switched 2026-08-25). Both branches
+  # carry this card's id, and the two engines enumerate them in OPPOSITE
+  # order (see TRIGGER-LIST INVERSION above), so no single ordinal names the
+  # same branch on both sides. `trigger:` does -- our side resolves it
+  # against `[EX12-047, EX12-047 <Ascension>]` and picks branch 1, and it
+  # rides the wire as `select_trigger: ascension` with `select_ordinal`
+  # OMITTED. DCGO cannot read that key yet, so the oracle pass still aborts
+  # here -- but it now aborts AT this row ("offered 2 times ... Add
+  # select_ordinal", SelectionAnswer.cs:178) instead of silently resolving
+  # DCGO's OTHER branch and aborting two rows later on a prompt mismatch
+  # with a mutated board. Loud at the right place, and correct the moment
+  # DCGO's SelectionAnswer learns the key.
   - actor: 0
-    do: { select: { cards: [EX12-047], ordinal: 1 } }
+    do: { select: { cards: [EX12-047], trigger: Ascension } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
   # THE CLAUSE: the <Ascension> gate -- accept, placing the deleted card as
   # p0's top security card. DCGO surfaces this as `generic_bool`, NOT

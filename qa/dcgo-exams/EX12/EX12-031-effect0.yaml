@@ -33,66 +33,42 @@
 # plain Gasamon at no point, and the sibling EX12-031-effect1.yaml (which
 # does) now lowers with no spurious row at all.
 #
-# BLOCKED ON THE ORACLE WIRE -- read before running the oracle pass, and do
-# NOT "fix" it by declining. Step 8 answers Decode's source pick, and it is
-# the one row this format cannot carry.
+# ORACLE-WIRE BLOCKER -- CLEARED 2026-08-25. Read the history before
+# re-deriving it: this file carried a "BLOCKED ON THE ORACLE WIRE" banner for
+# step 8 (Decode's source pick) through two separate re-derivations, and both
+# causes it named are now stale.
 #
-# RE-DERIVED 2026-08-25 (gap-closing lane; sim-only probes on the prebuilt
-# harness -- no cargo, no Unity). Stated in this order because the verdict
-# store still records something else:
+# 1. STALE CAUSE A (recorded 2026-08-22): "engine Decode leave-scoping: sim
+#    parks a spurious Decode window row DCGO never asks". GONE -- this line
+#    lowers to exactly 10 steps with no unanswered row, and the sibling
+#    EX12-031-effect1.yaml (which bounces a PLAIN Gasamon, the permanent the
+#    over-ask used to fabricate a window on) is `confirmed` in the store as of
+#    2026-08-24.
 #
-# 1. THE RECORDED CAUSE IS STALE. The store says "engine Decode
-#    leave-scoping: sim parks a spurious Decode window row DCGO never asks"
-#    (recorded 2026-08-22). That defect is GONE. This line lowers to exactly
-#    10 steps with no unanswered row, and the sibling
-#    EX12-031-effect1.yaml -- which bounces a PLAIN Gasamon, the very
-#    permanent the over-ask used to fabricate a window on -- is `confirmed`
-#    in the store as of 2026-08-24. Leave-scoping is not what blocks this
-#    clause any more.
+# 2. STALE CAUSE B (recorded 2026-08-25, morning): "the Material prompt has no
+#    identity payload, so step 8 can only ride as select_bool, which DCGO's
+#    SelectCardEffect aborts on (SelectCardEffect.cs:941-944)". That WAS true
+#    and it is what killed the 2026-08-24 oracle pass. It is now CLOSED on our
+#    side: `runners/selection_resolve.rs` gained a `SelectionKind::Material`
+#    arm in its card-identity block (:425-428, backed by `material_source_ids`
+#    at :211-244), so `select: { cards: [EX12-020] }` resolves against the
+#    carrier's digivolution sources by identity. Step 8 is now authored that
+#    way and the lowered wire row carries
+#    `SelectWire { card_ids: ["EX12-020"] }` -- exactly the `select_card_ids`
+#    payload DCGO's chokepoint requires
+#    (SelectCardEffect.SetTargetCardAndIndicies matches select_card_ids against
+#    ScriptedCandidateIds() and then sets Indicies = null,
+#    SelectCardEffect.cs:923-938, the same null the AI's own AutoSelect passes).
 #
-# 2. WHAT BLOCKS IT NOW is the Material prompt's wire vocabulary, and the
-#    gap is entirely on OUR side. Our engine parks Decode's source pick as
-#    SelectionKind::Material with SOURCE-INDEX action ids
-#    (EffectContext::select_material, effect_context/selections.rs:431-490;
-#    here `valid == [2000]`). DCGO's chokepoint wants IDENTITIES:
-#    SelectCardEffect.SetTargetCardAndIndicies matches `select_card_ids`
-#    against ScriptedCandidateIds() and then sets `Indicies = null`
-#    (SelectCardEffect.cs:923-938), exactly as the AI's own AutoSelect
-#    passes null -- nothing on the wire wants indexes. But `resolve_next`'s
-#    card-identity block (runners/selection_resolve.rs:326-373) covers
-#    Hand / UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation /
-#    Security and drops Material through `_ => None`, so the payload DCGO
-#    wants cannot be produced.
+#    NOT YET ORACLE-VERIFIED. The lowering, the wire-row shape and the
+#    assertions are proven sim-side; that DCGO accepts the row is inferred from
+#    its chokepoint contract, not measured. The next oracle pass is what
+#    settles it -- do not upgrade the verdict to `confirmed` from a --sim-only
+#    run.
 #
-#    All four payload shapes probed at THIS step, verbatim:
-#      * `cards: [EX12-020]` -> refused at LOWERING (nothing reaches Unity):
-#          "step 8: ... card pick 'EX12-020' not found in Material prompt
-#           'Choose a level 4 or lower [Aqua]/[Sea Animal]/[TB] source to
-#           play' (zone owner 0, valid [2000])".
-#      * `value: 0` -> refused at LOWERING: "count payload 0 has no
-#        candidate set, so it cannot be mapped onto the Material prompt".
-#      * `yes: true` -> the ONLY shape that lowers, and only because
-#        valid.len() == 1 (selection_resolve.rs:396-399). It rides as
-#        select_has_bool/select_bool (dcgo-harness/src/main.rs:1495-1496),
-#        which DCGO ABORTS on: "SelectCardEffect prompt needs
-#        select_card_ids or select_cancel" (SelectCardEffect.cs:941-944).
-#        This is the committed line, so the oracle pass dies AT step 8 --
-#        after the window has opened on both sides, before the play is
-#        compared. Verdict `unreachable`, never `confirmed`.
-#      * `decline: true` -> refused at LOWERING here: "step 8: ... recorded
-#        cancel on a non-optional Material prompt". That differs from the
-#        pool's other <Decode> (EX12-036#effect#2, same blocker) where the
-#        shape does lower -- see the SEPARATE FINDING below. It would be
-#        refused on purpose regardless: a declined Decode never runs the
-#        clause body, so measuring it would confirm the GATE and launder the
-#        clause into a pass.
-#
-#    The fix is one match arm: either teach `resolve_next` to match
-#    SelectionKind::Material by identity against the carrier's `card_sources`
-#    (mirroring the Hand/Trash arms), or give Material the TriggerOrder
-#    treatment in `build_selection_row` (resolve the identity locally, ship
-#    card_ids on the wire). After that, step 8 becomes
-#    `cards: [EX12-020]` and NOTHING else in this file changes.
+#    Do NOT "fix" a future failure here by declining the pick: a declined
+#    Decode never runs the clause body, so it would confirm the GATE and
+#    launder this clause into a pass.
 #
 # SEPARATE FINDING surfaced by this lane (not the blocker, and not fixable
 # from a scenario lane): EX12-031's `select_material` is MANDATORY --
@@ -188,13 +164,13 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # THE CLAUSE, half 2 -- the source pick. One accept id (Gasamon; the
-  # carrier's only other card is MarineBullmon itself at Lv.5, above the
-  # filter). See "BLOCKED ON THE ORACLE WIRE" above: this row is "yes:"
-  # ONLY because the identity payload cannot be resolved against a Material
-  # prompt yet, and DCGO will refuse the select_bool it emits.
+  # THE CLAUSE, half 2 -- the source pick, answered by IDENTITY. One accept
+  # id (Gasamon; the carrier's only other card is MarineBullmon itself at
+  # Lv.5, above the filter), but the identity payload is what rides the wire
+  # as `select_card_ids` -- the shape DCGO's SelectCardEffect requires. See
+  # "ORACLE-WIRE BLOCKER -- CLEARED" above for why this used to be `yes:`.
   - actor: 0
-    do: { select: { yes: true } }
+    do: { select: { cards: [EX12-020] } }
     expect: { prompt: SelectCardEffect }
   # Trailing step: p1 still holds the turn at memory 0, so close it.
   - actor: 1

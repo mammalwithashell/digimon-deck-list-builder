@@ -64,78 +64,50 @@
 # divergence instead of being papered over. Both then target p1's lone
 # MarineBullmon.
 #
-# ORACLE BLOCKER -- THIS SCENARIO CANNOT BE RUN AGAINST DCGO AS COMMITTED.
-# Re-derived 2026-08-24, and it is a WIRE-VOCABULARY gap, not a line problem:
-#   * Our engine parks the material pick as SelectionKind::Material, whose
-#     valid_action_ids are SOURCE-INDEX encodings
-#     (EffectContext::select_material, effect_context/selections.rs:431-490).
-#   * runners/selection_resolve.rs:326-373 resolves `cards:` picks by identity
-#     for Hand / UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation
-#     / Security ONLY; Material falls through the `_ => None` arm, so
-#     `select: { cards: [EX12-063] }` fails lowering with
-#     "card pick 'EX12-063' not found in Material prompt".
-#   * The only payload our side accepts is therefore `yes:`, which resolves
-#     ONLY because valid.len() == 1 here (selection_resolve.rs:396-399) and
-#     rides the wire as select_has_bool/select_bool
-#     (dcgo-harness/src/main.rs:1495-1496).
-#   * DCGO's chokepoint for this prompt is
-#     SelectCardEffect.SetTargetCardAndIndicies, which accepts select_card_ids
-#     or select_cancel and calls InputDriver.Abort on anything else
-#     (SelectCardEffect.cs:941-944: "SelectCardEffect prompt needs
-#     select_card_ids or select_cancel"). A bool answer aborts the job at step
-#     12, BEFORE the clause body resolves.
-#   Same blocker recorded on EX12-031#effect#0, the pool's other <Decode>.
-#   The fix is one of: teach `resolve_next` to match SelectionKind::Material
-#   by card identity against the carrier's card_sources (mirroring the
-#   Hand/Trash arms), or give the Material arm the TriggerOrder treatment in
-#   `build_selection_row` (resolve the identity locally, ship card_ids on the
-#   wire). Until then this file is a sim-only regression guard for the line,
-#   NOT a confirmable clause -- do NOT read a green --sim-only run as parity,
-#   and do NOT "fix" it by declining the material pick: a declined Decode
-#   never runs the clause body and would launder a vacuous line into a pass.
+# ORACLE-WIRE BLOCKER -- CLEARED 2026-08-25. This file carried an "ORACLE
+# BLOCKER -- THIS SCENARIO CANNOT BE RUN AGAINST DCGO AS COMMITTED" banner for
+# step 12 (Decode's source pick). The cause it named was real and is what
+# killed the 2026-08-24 oracle pass; it is now closed. Recorded here so the
+# next re-derivation does not repeat it:
 #
-# RE-DERIVED 2026-08-25 (gap-closing lane, sim-only probes on the prebuilt
-# harness). The blocker still stands, and the ONE detail worth correcting is
-# WHOSE side it is on. The verdict store records the cause as "Material
-# (digivolution-source) prompt is an indexes-payload class outside
-# select-support scope" -- that is wrong about DCGO. DCGO's prompt is an
-# IDENTITY payload: `SetTargetCardAndIndicies` under the harness matches
-# `select_card_ids` against `ScriptedCandidateIds()` and then sets
-# `Indicies = null` (SelectCardEffect.cs:923-938), exactly as the AI's own
-# `AutoSelect()` passes null (`:640`). Nothing on the wire wants indexes.
-# The gap is entirely on OUR side: `resolve_next` has no
-# `SelectionKind::Material` arm in its card-identity block, so the identity
-# payload DCGO wants cannot be produced. All four payload shapes probed at
-# this step, verbatim:
-#   * `cards: [EX12-063]` -> refused at LOWERING (nothing reaches Unity):
-#       "step 12: ... card pick 'EX12-063' not found in Material prompt
-#        'Decode: play 1 level 5 or lower [Aqua]/[Sea Animal]/[TB] source'
-#        (zone owner 0, valid [2000])"
-#     -- selection_resolve.rs:326-373 matches identities for Hand /
-#     UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation /
-#     Security and drops Material through `_ => None`.
-#   * `value: 0` -> refused at LOWERING: "count payload 0 has no candidate
-#     set, so it cannot be mapped onto the Material prompt".
-#   * `yes: true` -> the only shape that lowers (valid.len() == 1), and it
-#     rides as select_has_bool/select_bool, which DCGO ABORTS on:
-#     "SelectCardEffect prompt needs select_card_ids or select_cancel"
-#     (SelectCardEffect.cs:941-944). This is the committed line, so the
-#     oracle pass dies at step 12 BEFORE the clause body resolves.
-#   * `decline: true` -> lowers AND rides the wire legally as select_cancel,
-#     so it is the one shape both engines accept -- and it is NOT this
-#     clause: the probe run reports Karakurumon in p0's TRASH and no field
-#     entry (3 assertion failures against this file's block), i.e. the
-#     Decode window opened and the BODY never ran. Measuring that would
-#     confirm the gate and launder the clause. Refused on purpose.
+#   WAS: our engine parks the pick as SelectionKind::Material, and
+#   `runners/selection_resolve.rs` matched `cards:` picks by identity for
+#   Hand / UnionZone / Trash / Reveal / RevealBucket / OrderedPermutation /
+#   Security only -- Material fell through `_ => None`. So the ONLY payload
+#   that lowered was `yes:` (and only because valid.len() == 1), which rides as
+#   select_has_bool/select_bool and which DCGO's chokepoint aborts on:
+#   "SelectCardEffect prompt needs select_card_ids or select_cancel"
+#   (SelectCardEffect.cs:941-944).
+#
+#   NOW: `selection_resolve.rs` has a `SelectionKind::Material` arm in its
+#   card-identity block (:425-428, backed by `material_source_ids` at
+#   :211-244), resolving the identity against the carrier's digivolution
+#   sources. Step 12 is authored `cards: [EX12-063]` and the lowered carrier is
+#   `SelectWire { card_ids: ["EX12-063"] }` -- exactly the `select_card_ids`
+#   payload DCGO wants. Nothing on that wire ever wanted indexes:
+#   `SetTargetCardAndIndicies` under the harness matches select_card_ids
+#   against ScriptedCandidateIds() and then sets `Indicies = null`
+#   (SelectCardEffect.cs:923-938), the same null the AI's own AutoSelect
+#   passes (:640).
+#
+#   NOT YET ORACLE-VERIFIED. The lowering, the wire-row shape and this file's
+#   7 assertions are proven --sim-only; that DCGO accepts the row is inferred
+#   from its chokepoint contract, not measured. Do not upgrade the verdict to
+#   `confirmed` from a --sim-only run.
+#
+#   Still refused on purpose: `decline: true`. It lowers AND rides the wire
+#   legally as select_cancel, but the probe run reports Karakurumon in p0's
+#   TRASH with no field entry (3 assertion failures) -- the Decode window
+#   opened and the BODY never ran. Measuring that would confirm the gate and
+#   launder the clause.
+#
 # Also re-checked, because "unreachable" was a recon-time label: the line
 # itself is fine. It lowers 18/18 and runs sim-only with 0 failed
 # assertions, and the clause binding is right -- the card FACE
 # (Textures/Card/EX12-036.webp) prints `<Decode <Lv.5 or lower w/[Aqua]/
 # [Sea Animal] in any trait or w/[TB] trait>>` as the third keyword row, and
 # `clause_coverage.extract --card-ids EX12-036` (6 clauses, effect=6) keys
-# EX12-036#effect#2 to Decode. Nothing about the position is unreachable;
-# exactly one wire cell is missing. Neither of the two fixes named above is
-# in this lane's scope (scenario files only).
+# EX12-036#effect#2 to Decode.
 #
 # Stack layout (p0): hand [0..4], security [5..9] (untouched), [10] the T3
 # turn-draw, [11] the T3 digivolve-draw, [12] the T5 turn-draw taken just
@@ -235,10 +207,10 @@ steps:
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   # THE CLAUSE, half 2: play the qualifying digivolution card. Karakurumon is
-  # the lone candidate, so the affirmative resolves the one accept id. See the
-  # ORACLE BLOCKER note -- this row cannot ride the DCGO wire as a bool.
+  # the lone candidate, and the pick is answered by IDENTITY -- the payload
+  # DCGO's SelectCardEffect chokepoint requires (`select_card_ids`).
   - actor: 0
-    do: { select: { yes: true } }
+    do: { select: { cards: [EX12-063] } }
     expect: { prompt: SelectCardEffect }
   # Karakurumon's arrival stacks two of p0's triggers (see header); take its
   # own [On Play] first, by identity.
