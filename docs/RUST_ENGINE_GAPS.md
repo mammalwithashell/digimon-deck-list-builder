@@ -2269,3 +2269,58 @@ It is therefore **order-dependent**: if the controller orders `<Retaliation>` FI
 * `code/digimon-engine/tests/cards_behavioral/ex12/ex12_065.rs::ex12_065_mass_granted_retaliation_also_fires_on_the_grantor_itself` — the real card. EX12-065 Kaguyamon's own `[On Deletion]` bottom-deck clause parks, so its self-granted `<Retaliation>` is lost when it loses a battle. (The GRANTOR-self grant path itself is proven working by `mass_granted_fortitude_fires_on_its_own_grantor`; only the battle-state lifetime blocks this one.)
 
 **Likely shape of the fix:** snapshot the battle identity (attacker / effective target) into the OnDeletion `TriggerContext` alongside the existing `deleted_object` snapshot, and have `battle_opponent_of` fall back to it when `pending_attack` is gone — the same "read the snapshot, not the live slot" discipline CLAUDE.md rule 25 already imposes on OnDeletion handlers. Not attempted here: it touches the battle-state lifetime and wants its own change.
+
+
+## `[Assembly]` applies its FULL cost reduction after one material  [G-ASSEMBLY-NO-MINIMUM]
+
+**Found 2026-08-26** while authoring `qa/dcgo-exams/EX12/EX12-076-effect0.yaml`.
+
+EX12-076 Susanoomon prints cost **16** and `[Assembly -9] 8 [Hybrid]/[Shambala] trait cards w/different names` (read off the card face; `cards.json` drops the Assembly line entirely). Declaring **one** material and passing puts it on the field for **7** — the whole -9 — instead of requiring all eight.
+
+`game_actions/mod.rs:3367`:
+
+```rust
+let min = if is_first { 0 } else { count };
+…
+is_first, // is_optional_zero
+```
+
+`install_multipick_step` then computes `effective_min = 0` and `is_optional = picked >= 0`, which is **always true**, so PASS closes the declaration at any pick count while `assembly_finish` still applies `params.total_reduction + params.assembly_reduction`. The `min: 0` is only meant to be the "use Assembly at all?" gate; it is leaking into "how many materials satisfy the recipe".
+
+DCGO does not permit this: `SelectDigiXrosClass` sets `canEndNotMax: false` and only stacks when `selectedAssemblyCards.Count == elementCount`.
+
+**Measured, not inferred.** A copy of the EX12-076 line with the declaration cut to one card lowers clean and asserts `p0.memory: 3` at the play — i.e. cost 7 paid from memory 10.
+
+**Note the sibling path already solved this.** `kind: cast_time_assembly` rides the DigiXros transaction and has mask-level `distinct_by: name` uniqueness, optional-zero, and the DCGO decline gate, covered by `tests/cast_time_assembly.rs` (see `[G-CAST-TIME-ASSEMBLY]` above). There are two assembly implementations and EX12-076 uses the weaker one; the fix may be to route plain `kind: assembly` through the same machinery rather than to patch the minimum in place.
+
+**Not yet reproduced as a test.** The exam scenario deliberately declares all 8 so it does not depend on the defect, which also means it would not catch a regression here.
+
+
+## `[Assembly]` discards `distinct_by: name`  [G-ASSEMBLY-NO-DISTINCT-BY]
+
+**Found 2026-08-26**, same investigation, same function.
+
+`resolve_eligible_assembly` (`game_actions/mod.rs:672`) builds `elements: Vec<(CompiledPredicate, u8)>` from `m.filter` and `m.repeat` and **drops `m.distinct_by` entirely**, even though `code/digimon-engine/cards/ex12/EX12-076.yaml:33` declares `distinct_by: name` and the card face says "w/different names". `install_assembly_element` passes `distinct_by: None`, and its filter excludes already-picked **handles**, not names — so eight copies of ONE card satisfy a recipe that requires eight different names.
+
+Confirmed by mutation: swapping two of the eight declared materials for `EX12-070, EX12-070` lowered fine (`card_ids: [… "EX12-070", "EX12-070"]`). Only the scenario's own `sources:` assertion caught it.
+
+DCGO enforces it via `CanTargetCondition_ByPreSelecetedList` → `GetUniqueNameCardCount`.
+
+
+## A Delay option with an EVENT window is auto-trashed a turn later  [G-DELAY-EVENT-WINDOW-AUTOTRASHED]
+
+**Found 2026-08-26** while tracing an "unexplained" board observation in the EX12-076 exam line: three EX12-070 reached the battle area and then vanished with no prompt.
+
+`place_self_as_delay_option_permanent` (`effect_context/action/lifecycle.rs:176-186`) does
+
+```rust
+effects_for_card(...).find_map(|e| e.delay_trigger).unwrap_or(DelayTrigger::EndOfYourNextTurn)
+```
+
+and `compute_delay_trash_turn` turns that fallback into `next_owner_turn_count(owner)` — a scheduled auto-trash.
+
+EX12-070 Sanmyojin Arrival's Delay window is an EVENT: `[All Turns]` when any of your level 5 or higher [TB] Digimon would leave the battle area. Per **16-16-1** a Delay is available *"while a card with this effect is in the battle area"* — no expiry — and **16-16-2** makes the processing optional. Ours discards it a turn later without ever offering it, so the player silently loses the option.
+
+**`lower_delay.rs:80-95` already calls this exact `EndOfYourNextTurn` catch-all "silent and wrong"** and narrows it there; the identical fallback survives at `lifecycle.rs:182`. The fix is presumably the same narrowing applied to the second site.
+
+Currently pinned as CURRENT (wrong) behaviour by `qa/dcgo-exams/EX12/EX12-076-effect0.yaml`'s `at: 36` assertion, which is commented to say so. When this is fixed, that assertion changes.

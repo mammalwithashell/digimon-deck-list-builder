@@ -59,8 +59,34 @@
 # state is identical either way -- but if DCGO stacks them the other way the
 # row still surfaces that as a finding rather than silently agreeing.
 #
-# BLOCKED ON THE ORACLE WIRE -- same single gap as EX12-031-effect0.yaml,
-# and the only reason this line cannot be confirmed today.
+# ORACLE HISTORY. This line has aborted on the DCGO oracle twice, for two
+# DIFFERENT reasons, and both are now addressed in this file:
+#
+#   A. The LAST recorded abort (verdict store: measured against DCGO
+#      scripted-v12, dcgo_commit 4db6ee409) and the earliest failure of any
+#      scenario in the corpus: "prompt mismatch: step 3 expected actor 1 but
+#      DCGO asked actor 0" -- p1's ENTIRE main phase was skipped by DCGO, so
+#      the row went unconsumed and actor 0's next breeding prompt landed on
+#      it. Nothing to do with the card under exam. Cause and fix are written
+#      up on p1's `stack:` below; in one line, p1's hand was all Options whose
+#      colour requirement an empty field can never meet, which makes all five
+#      of DCGO's `CanSelect()` clauses false, and DCGO then ends the turn
+#      WITHOUT asking (TurnStateMachine.cs:1298-1308). One cheap Digimon
+#      (EX12-009, cost 3) in p1's hand is the whole fix -- UNVERIFIED against
+#      the oracle, because sim-only cannot see this class of mismatch at all.
+#      Only a DCGO re-run settles it.
+#
+#      NOT AN ENGINE BUG EITHER WAY. Our engine exposing PASS as a real
+#      decision point is required by the no-approximations policy, and the
+#      outcome (turn ends) is identical on both sides; DCGO's silent auto-end
+#      is a UI convenience, not a rules difference. Changing our opening
+#      sequencing to match would invalidate every confirmed verdict in the
+#      store to buy nothing. This is a SCENARIO-AUTHORING constraint that
+#      `--sim-only` structurally cannot see: our engine always offers the
+#      pass, so the line always lowers clean.
+#
+#   B. step 24, Decode's source pick -- see item 2 below. CLOSED: the Material
+#      prompt now takes an identity payload.
 #
 # RE-DERIVED 2026-08-25 (gap-closing lane; sim-only probes on the prebuilt
 # harness -- no cargo, no Unity):
@@ -78,7 +104,15 @@
 #    divergence instead of silently clearing a stack. The stacked-trigger
 #    row is no longer a blocker for this clause.
 #
-# 2. WHAT BLOCKS IT NOW is step 24, Decode's source pick, and the gap is
+# 2. THIS ONE IS NOW CLOSED TOO -- kept because the probe table below is the
+#    record of what each payload shape does, and because the `value:` and
+#    `decline:` rows are still true. Re-probed 2026-08-26 against the live
+#    prompt: `cards: [EX12-026]` now RESOLVES at step 24 and the line walks
+#    past it, so step 24 is authored as an identity pick and the `yes: true`
+#    row DCGO would have refused is gone. The analysis as it stood on
+#    2026-08-25 follows.
+#
+#    WHAT BLOCKED IT THEN was step 24, Decode's source pick, and the gap was
 #    entirely on OUR side. Our engine parks it as SelectionKind::Material
 #    with SOURCE-INDEX action ids (EffectContext::select_material,
 #    effect_context/selections.rs:431-490; here `valid == [2000]`), while
@@ -116,6 +150,7 @@
 #    the carrier's `card_sources` turns step 24 into `cards: [EX12-026]` and
 #    changes nothing else in this file; it unblocks EX12-031#effect#0 and
 #    EX12-036#effect#2 at the same time.
+#    -- That arm has since landed; step 24 is the identity pick now.
 #
 # DCGO shape this is authored against: the inherited copy is the SAME factory
 # call as the printed one with isInheritedEffect: true
@@ -156,10 +191,52 @@ decks:
     rest: toho-braves
   p1:
     stack:
-      # p1 passes every turn; the hand is levelless filler and the board stays
-      # EMPTY all game, which is what keeps Shellmon's [On Play], Kokeshimon's
-      # enemy delete and Kaguyamon's [On Deletion] silent on both engines.
-      - EX12-070
+      # p1 passes every turn and its board stays EMPTY all game, which is what
+      # keeps Shellmon's [On Play], Kokeshimon's enemy delete and Kaguyamon's
+      # [On Deletion] silent on both engines.
+      #
+      # hand (0-4). EX12-009 Wankomon (Lv.3, cost 3) is LOAD-BEARING, not
+      # filler: it is the only card in this hand DCGO considers playable, and
+      # without it DCGO never asks p1 a main_phase question AT ALL, so the p1
+      # main-phase rows (steps 3 / 7 / 14) are consumed by nobody and the line
+      # desyncs. That is what the previous all-Option hand did -- the oracle
+      # aborted at "step 3 expected actor 1 but DCGO asked actor 0", where
+      # actor 0 is p0's NEXT breeding prompt, i.e. p1's whole main phase had
+      # been skipped.
+      #
+      # DCGO's MainPhase() runs EndTurnProcess() and `goto EndMainPhase`
+      # WITHOUT consulting InputDriver when CanSelect() is false
+      # (TurnStateMachine.cs:1298-1308) -- the one code path that can produce
+      # "our engine asks a main-phase decision and DCGO never does".
+      # CanSelect()'s hand clause is HandCards.Some(
+      # CanPlayFromHandDuringMainPhase). For an OPTION that is false whenever
+      # CanNotPlayThisOption holds (CardSource.cs:158-163), which it does on
+      # every turn of this line via !MatchColorRequirement
+      # (CardSource.cs:238-243 + 308-311: every card colour must be covered by
+      # Owner.GetFieldPermanents(), and p1's field -- battle AND breeding --
+      # is empty all game). So an all-Option p1 hand makes all five CanSelect()
+      # clauses false: no permanents to declare or attack with, no trash, and
+      # no Option playable.
+      #
+      # Wankomon takes the Digimon branch instead (CardSource.cs:147-152 ->
+      # CanPutFieldThisPermanentCard(true, null) -> CanPlayCardTargetFrame,
+      # CardSource.cs:1145-1155): p1 has empty battle frames, and cost 3 is
+      # inside Owner.MaxMemoryCost under EITHER reading of DCGO's memory sign
+      # (Player.cs:1131-1148 gives 7 or 13 for p1 at 3 memory; both >= 3), so
+      # the cost gate cannot reject it. CanSelect() is therefore true and DCGO
+      # asks.
+      #
+      # It is never PLAYED -- every p1 main-phase step still answers `pass`, so
+      # p1's board stays empty -- and it is inert in hand: [On Play] only
+      # (EX12_009.cs:26, OnEnterFieldAnyone), no OnDeclaration effect, and no
+      # prompt in this line reads p1's hand.
+      #
+      # POSITIVE CONTROL for the claim above: 54 main-phase `pass` steps across
+      # the corpus have PASS as our engine's ONLY legal action and are
+      # confirmed against the oracle; every one of them has at least one
+      # Digimon card in the acting seat's hand. The three that do not -- steps
+      # 3 / 7 / 14 of THIS file -- are the only ones that ever aborted.
+      - EX12-009
       - EX12-074
       - EX12-075
       - EX12-070
@@ -266,12 +343,19 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # THE CLAUSE, half 2 -- the source pick. One accept id (Shellmon; the stack's
-  # other card is MarineBullmon itself at Lv.5, above the filter). "yes:" ONLY
-  # because the identity payload cannot address a Material prompt yet -- see
-  # "BLOCKED ON THE ORACLE WIRE" above; this is the row DCGO will refuse.
+  # THE CLAUSE, half 2 -- the source pick, answered by IDENTITY. One accept id
+  # (Shellmon; the stack's other card is MarineBullmon itself at Lv.5, above
+  # the filter), but the identity payload is what rides the wire as
+  # `select_card_ids` -- the shape DCGO's SelectCardEffect requires
+  # (SelectCardEffect.cs:923-938 matches `select_card_ids` against
+  # ScriptedCandidateIds() and sets Indicies = null; :941-944 ABORTS on a bool).
+  # This used to be `yes: true` because Material prompts could not be addressed
+  # by identity -- that gap is CLOSED, verified here by lowering both payloads
+  # against the live prompt: `cards: [EX12-026]` resolves and the line walks on,
+  # while `value: 2000` is still refused ("count payload 2000 has no candidate
+  # set"). Same shape as the confirmed sibling EX12-031-effect0.yaml.
   - actor: 0
-    do: { select: { yes: true } }
+    do: { select: { cards: [EX12-026] } }
     expect: { prompt: SelectCardEffect }
   # The deleted carrier's own bundle: Kaguyamon's [On Deletion] and its
   # mandatory <Fortitude>, both offering EX12-065 -- the stacked-trigger case
