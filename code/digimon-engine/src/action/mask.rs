@@ -723,16 +723,22 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 /// color, so this was reachable, not theoretical. DCGO agrees with the manual:
 /// CardSource.cs:307-310 uses `colorsToCheck.Every(...)`.
 ///
-/// BREEDING AREA, deliberately still counted, and NOT the same question:
-/// 3-4-5 says "The field is divided into the breeding area and the battle
-/// area", so a breeding Digimon is literally "on your field" as 4-19-2 words
-/// it. The restrictions on breeding cards (3-4-6-3 "can't be affected by
-/// effects", 3-4-6-5 "can't be chosen for effects") are scoped to EFFECTS, and
-/// a color requirement is a rules gate on USING the card, not an effect that
-/// targets the breeding Digimon. DCGO checks `Owner.GetFieldPermanents()` only
-/// and so would disagree -- that is a genuine open question against the manual
-/// and is left ALONE here rather than changed on the same commit as a fix the
-/// manual states outright. Do not "align to DCGO" without re-reading 3-4-5.
+/// BREEDING AREA COUNTS, and this is SETTLED -- all three sources agree.
+/// 3-4-5: "The field is divided into the breeding area and the battle area",
+/// so a breeding Digimon is literally "on your field" as 4-19-2 words it. The
+/// restrictions on breeding cards (3-4-6-3 "can't be affected by effects",
+/// 3-4-6-5 "can't be chosen for effects") are scoped to EFFECTS; a color
+/// requirement is a rules gate on USING a card, not an effect targeting the
+/// breeding Digimon.
+///
+/// DCGO agrees, contrary to a review claim that it checked the battle area
+/// only: `CardSource.cs:308-310` iterates `Owner.GetFieldPermanents()`, and
+/// `Player.cs:669-685` returns the WHOLE `FieldPermanents` array unfiltered --
+/// it is `GetBattleAreaPermanents` (`Player.cs:621-637`) that narrows with
+/// `FieldCardFrame.isBattleAreaFrameID(i)`. Confirmed independently by the
+/// repo owner. Pinned by
+/// `a_breeding_area_digimon_satisfies_the_color_requirement`; do NOT "align to
+/// DCGO" by dropping the breeding branch -- that would break all three.
 ///
 /// Player-scoped `IgnoreColorRequirement` is consumed by
 /// `option_use_requirement_or_color_available` before this helper runs.

@@ -136,3 +136,36 @@ fn mono_color_option_still_rejected_by_a_different_colored_board() {
         "4-19-2: a red Option needs a red Digimon or Tamer on the field"
     );
 }
+
+/// 3-4-5: "The field is divided into the breeding area and the battle area", so
+/// a Digimon in the BREEDING area is on your field and satisfies 4-19-2. The
+/// 3-4-6 restrictions ("can't be affected by effects", "can't be chosen for
+/// effects") are scoped to EFFECTS; a color requirement is a rules gate on
+/// USING a card.
+///
+/// DCGO agrees: CardSource.cs:308-310 iterates `Owner.GetFieldPermanents()`,
+/// and Player.cs:669-685 returns the whole `FieldPermanents` array unfiltered --
+/// `GetBattleAreaPermanents` (Player.cs:621-637) is the one that narrows with
+/// `isBattleAreaFrameID`. A review claimed the opposite; it was wrong, and this
+/// test exists so the next reader does not have to re-litigate it.
+#[test]
+fn a_breeding_area_digimon_satisfies_the_color_requirement() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("R-OPTION", &[CardColor::Red]))
+        .add_card(digimon("RED-EGG", &[CardColor::Red]))
+        .hand(0, &["R-OPTION"])
+        .memory(10)
+        .start();
+    r.place_in_breeding(0, "RED-EGG");
+
+    assert!(
+        r.game.player(0).battle_area.is_empty(),
+        "the point of this test is that the BATTLE area is empty -- if the \
+         Digimon landed there instead, it proves nothing about breeding"
+    );
+    assert!(
+        option_is_playable(&r),
+        "4-19-2 + 3-4-5: a red Digimon in the breeding area is on your field, \
+         so it meets a red Option's color requirement"
+    );
+}
