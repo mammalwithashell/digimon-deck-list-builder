@@ -75,27 +75,28 @@ pub struct SelectWire {
     /// spaces (`SetUpICardEffect("Armor Purge", ...)`), which normalizes onto
     /// the same `armorpurge` as our printed `<Armor Purge>`.
     ///
-    /// WIRE STATUS, re-derived 2026-08-25 — the emitter half is DONE, the
-    /// DCGO half is NOT, and the two used to be conflated here:
+    /// WIRE STATUS, re-derived 2026-08-26 — BOTH halves are DONE. (The block
+    /// this replaces said "NOT READ BY DCGO ... a `trigger:`-only answer to a
+    /// `MultipleSkills` row still ABORTS the oracle pass today". That was true
+    /// when written and is now false; it was still being read as current.)
     ///   * EMITTED: `ScriptedInput` in `dcgo-harness/src/main.rs` carries
     ///     `select_trigger` (main.rs:1408) and both select branches fill it
-    ///     (main.rs:1551, :1571). The older note claiming the field did not
-    ///     exist is stale.
-    ///   * NOT READ BY DCGO: `Assets/Scripts/Script/Harness/HarnessJob.cs`
-    ///     declares `select_ordinal` (:174) and no `select_trigger` at all, and
-    ///     `SelectionAnswer` resolves a same-identity stack only through
-    ///     `MatchOneWithOrdinal` (SelectionAnswer.cs:178 tells the author to
-    ///     "Add select_ordinal"). So a `trigger:`-only answer to a
-    ///     `MultipleSkills` row still ABORTS the oracle pass today.
-    /// Consequence for scenario authors: `trigger:` is live and preferred
-    /// SIM-side, but a stack whose branches share one card id is still
-    /// unauthorable against DCGO without an `ordinal:` — and an ordinal is a
-    /// per-engine POSITION, so where the two engines enumerate the branches in
-    /// opposite order (measured: EX12-047, DCGO stacks `<Ascension>` at
+    ///     (main.rs:1551, :1571).
+    ///   * READ BY DCGO: `Assets/Scripts/Script/Harness/HarnessJob.cs` declares
+    ///     `select_trigger` (:199) and `select_trigger_not` (:223) beside
+    ///     `select_ordinal` (:174); `SelectionAnswer` implements
+    ///     `MatchOneWithTrigger` (:241) and `MatchOneExcludingTrigger` (:318);
+    ///     `MultipleSkills.cs:642-674` dispatches to both and rejects the
+    ///     mutually-exclusive combinations (trigger+ordinal,
+    ///     trigger+trigger_not) by design.
+    /// Consequence for scenario authors: `trigger:` is now the PORTABLE answer
+    /// for a same-identity stack and `ordinal:` is the fallback. An ordinal is
+    /// a per-engine POSITION, so where the two engines enumerate the branches
+    /// in opposite order (measured: EX12-047, DCGO stacks `<Ascension>` at
     /// EX12_047.cs:41 BEFORE the printed `[On Deletion]` at :182, we stack them
-    /// the other way) neither disambiguator can name the branch portably. The
-    /// unblock is a `select_trigger` reader in DCGO's `SelectionAnswer`, not a
-    /// harness-side workaround.
+    /// the other way) an ordinal cannot name the branch portably and a keyword
+    /// can — which is what `qa/qa-reports/dcgo_exam_verdicts.json`'s
+    /// `EX12-047#effect#2` (confirmed via `select_trigger`) rests on.
     pub trigger: Option<String>,
     /// The branch to EXCLUDE, normalized -- the complement of
     /// [`SelectWire::trigger`], for a wanted branch that carries no keyword
@@ -476,20 +477,207 @@ impl ScenarioAdapter {
 }
 
 /// The unambiguous `SelectionKind` -> DCGO prompt-class mappings, for the
-/// LOOSE sim-side `expect.prompt` check on select steps. Kinds whose DCGO
-/// class depends on context (`Target` may be `SelectAttackEffect` or
-/// `SelectPermanentEffect`; `EffectChoice` may be `OptionalSkill`,
-/// `MultipleSkills`, or `SelectCountEffect`; ...) return `None` and are left
-/// unasserted here with a printed note -- the STRICT assertion is DCGO's job,
-/// where the real prompt class is in hand.
+/// LOOSE sim-side `expect.prompt` check on select steps. A kind whose DCGO
+/// class depends on context returns `None` and is left unasserted here with a
+/// printed note -- the STRICT assertion is DCGO's job, where the real prompt
+/// class is in hand.
+///
+/// # Why this match has no `_ =>` arm, on purpose
+///
+/// The two engines cut their selection surfaces on DIFFERENT axes: ours by
+/// ZONE (`OwnField` / `Hand` / `Trash` / ...), DCGO's by WIDGET
+/// (`SelectPermanentEffect` / `SelectHandEffect` / `SelectCardEffect` / ...).
+/// Neither axis refines the other, so the translation is genuinely partial,
+/// and a partial translation is only safe while every gap is a DECISION
+/// someone made and wrote down. A `_ => None` catch-all turns "nobody has
+/// looked at this variant yet" and "we looked, and DCGO has no analogue" into
+/// the same silent answer.
+///
+/// So this match lists all 22 `SelectionKind` variants explicitly, and adding
+/// a 23rd must FAIL TO COMPILE until someone decides what it maps to -- the
+/// same discipline the crate applies syntactically with
+/// `#![deny(unreachable_patterns)]`, applied here to a SEMANTIC gap. If you
+/// are here because the compiler sent you: the answer may well be `None`, but
+/// it has to be `None` **with a reason on the line**, not by omission.
+/// `docs/DCGO_EXAM.md` § "Our selection surface vs DCGO's" carries the same
+/// table in prose, with the cardinality mismatch per row.
+///
+/// Two kinds map only CONDITIONALLY and are `None` here by construction:
+/// `Material` and `TriggerOrder`. Their live-state discriminators live in
+/// [`dcgo_prompt_name_for`], which is the only caller that has a `Game` to
+/// read them from.
 fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
     match kind {
+        // ── mapped: one DCGO widget, unconditionally ──────────────────────
+
+        // `SelectHandEffect` is scoped to ONE zone -- it logs `zone` as the
+        // fixed literal "Hand" and reads `_selectPlayer.HandCards`
+        // (SelectHandEffect.cs:151, :889-906) -- and DCGO's `Root.Hand` never
+        // opens a `SelectCardEffect` (`RootCardList()` has no Hand case,
+        // SelectCardEffect.cs:232-258; PlayEffects.cs:34-38 branches Hand to
+        // this class). 1:1.
         SelectionKind::Hand => Some("SelectHandEffect"),
+
+        // DCGO's permanent widget is natively BOTH-SIDES: each recorded target
+        // is `{absolute playerID, compact frame}` (SelectPermanentEffect.cs:
+        // 1143, :1168-1189), so our three side-cut kinds collapse onto it 3:1.
+        // The side must come from OUR kind when lowering `OwnField`/`OppField`
+        // (their ids are `encode_attack(0, slot)`, side implicit); `AnyField`
+        // already encodes the absolute player and is the exact shape match.
         SelectionKind::OwnField | SelectionKind::OppField | SelectionKind::AnyField => {
             Some("SelectPermanentEffect")
         }
+
+        // The generic card widget. NOTE its `zone` field is NOT a reliable
+        // discriminator and must not be asserted alone: SelectCardEffect.cs:960
+        // writes `zone = _root.ToString()`, and `_root` collapses to "Custom"
+        // for every derived or FOREIGN list -- e.g. an opponent-trash pick is
+        // `root: Root.Custom, customRootCardList: card.Owner.Enemy.TrashCards`
+        // (EX11_012.cs:82-85), which is our `zone_owner != selecting_player`
+        // case. Assert the CLASS; match cards by identity.
         SelectionKind::Trash | SelectionKind::Reveal => Some("SelectCardEffect"),
-        _ => None,
+
+        // One `SelectCardEffect` per bucket: `RevealLibrary.cs:287-296` loops
+        // `foreach (SelectCardConditionClass ...)` opening one prompt per
+        // condition with that bucket's `maxCount` (root: Root.Library). Class
+        // is stable; the CARDINALITY is not -- we re-park per PICK, DCGO logs
+        // one row per bucket carrying every id it took
+        // (SelectCardEffect.cs:972-979). Corroborated by 7 corpus steps.
+        SelectionKind::RevealBucket { .. } => Some("SelectCardEffect"),
+
+        // `root: SelectCardEffect.Root.Security` (31 cards, e.g. BT1_087.cs:76,
+        // BT11_042.cs:90); the class self-tags at SelectCardEffect.cs:368-375,
+        // and `RootCardList()` derives the candidates from
+        // `_selectPlayer.SecurityCards` (:248-253), so here `zone` really is
+        // "Security" rather than "Custom". 1:1.
+        SelectionKind::Security => Some("SelectCardEffect"),
+
+        // DCGO expresses an ordering as ONE multi-pick `SelectCardEffect` whose
+        // CLICK ORDER is the answer (`maxCount: remainingCards.Count`,
+        // `canNoSelect: () => false`, root: Custom -- RevealLibrary.cs:487-502
+        // and :544-559). Class is stable; cardinality is N:1 (we ask once per
+        // position) and DCGO asks NOTHING at N==1 (RevealLibrary.cs:478, :535).
+        // Corroborated by 9 corpus steps.
+        SelectionKind::OrderedPermutation { .. } => Some("SelectCardEffect"),
+
+        // The accept/decline window on an optional effect. DCGO reaches it
+        // through the ICardEffect optionality machinery -- `SetUpActivateClass
+        // (..., isOptional: true, ...)` then `Activate_Optional` ->
+        // `OptionalSkill.SelectOptional` (ICardEffect.cs:1062-1067), recorded
+        // as `boolValue` (OptionalSkill.cs:190-191). `<Decode>` sets that flag
+        // at CardEffectFactory/KeyWordEffects/Decode.cs:19. 1:1, and the single
+        // best-corroborated new row here: 19 corpus steps already expect
+        // exactly this.
+        SelectionKind::Replacement => Some("OptionalSkill"),
+
+        // Both budget kinds are ONE `SelectPermanentEffect` on DCGO's side,
+        // with `maxCount` + a `canTargetCondition_ByPreSelecetedList` re-filter
+        // + a `canEndSelectCondition` running-sum check -- BT17_018.cs:101-116
+        // (DP <= 15000) and EX4_073.cs:133-147 (play cost <= 6). Same
+        // semantics as our per-pick trampoline, drawn at a different widget
+        // boundary, so the class is stable and only the cardinality differs
+        // (N picks + PASS vs one `targets` array).
+        SelectionKind::DpBudget { .. } | SelectionKind::PlayCostBudget { .. } => {
+            Some("SelectPermanentEffect")
+        }
+
+        // ── unmapped, each with its reason ────────────────────────────────
+
+        // OVERLOADED ON OUR SIDE, and the action-id range does not separate the
+        // uses. `Target` is the attack-target pick (combat.rs:228, :430 ->
+        // DCGO `SelectAttackEffect`) but ALSO App Fuse's host-permanent pick
+        // (app_fuse.rs:142 -> `SelectPermanentEffect`) and its result-card pick
+        // (app_fuse.rs:261 -> `SelectCardEffect`). The host pick uses the SAME
+        // `encode_attack(...)` encoding as an attack target, so even reading
+        // `valid_action_ids` cannot tell those two apart. Splitting the
+        // app-fuse uses off `Target` is what would make this decidable.
+        SelectionKind::Target => None,
+
+        // CONDITIONAL -- see `dcgo_prompt_name_for`. Four uses with three
+        // incompatible encodings: digivolution-source pick (`SelectCardEffect`),
+        // DNA digivolution (`SelectPermanentEffect`), Blast DNA, and DigiXros
+        // (a `SelectDigiXrosClass` ZONE row followed by that zone's widget).
+        SelectionKind::Material => None,
+
+        // CONDITIONAL -- see `dcgo_prompt_name_for`. `MultipleSkills` for a
+        // bundle of 2+, `OptionalSkill` for the 1-element pre-cost gate, and
+        // our KIND alone does not carry the candidate count.
+        SelectionKind::TriggerOrder => None,
+
+        // GENUINELY MULTI-CLASS. Our one "pick a labeled branch" kind covers
+        // decisions DCGO renders through at least four widgets, all four
+        // observed in the corpus today: `SelectCountEffect` (the
+        // "which digivolution cost do you pay?" route, CardController.cs:721-741
+        // -- 13 steps), `generic_bool` (2), `OptionalSkill` (2) and
+        // `SelectCardEffect` (1). DCGO's true N-branch analogue is
+        // `generic_int` (`UserSelectionManager.SetIntSelection`,
+        // InputDriver.KindGenericInt) -- undocumented in
+        // docs/DCGO_RECORDING_SCHEMA.md's payload table and unexercised by the
+        // corpus. Nothing on the kind picks between these.
+        SelectionKind::EffectChoice => None,
+
+        // DCGO asks this as TWO prompts, and the SECOND one's class is the
+        // answer to the first: a `generic_int` zone menu
+        // ("From hand" / "From trash" / "Do not play" -- AD1_002.cs:172-194)
+        // and then the chosen zone's own widget (PlayEffects.cs:34-49:
+        // Root.Hand -> SelectHandEffect, Root.Trash -> SelectCardEffect). Our
+        // single prompt spans the union, so no ONE class is right for it. The
+        // one corpus step over a `UnionZone` prompt expects `SelectHandEffect`.
+        SelectionKind::UnionZone { .. } => None,
+
+        // The class follows the ZONE the picks come from -- `CountCappedZone`
+        // is Hand | Trash | Material (effect_context/selections.rs:3430-3441),
+        // i.e. `SelectHandEffect` or `SelectCardEffect` -- and the KIND does not
+        // carry it. (It is NOT `SelectCountEffect`, which is a false friend:
+        // that widget's answer is a NUMBER, `Func<int, IEnumerator>`
+        // SelectCountEffect.cs:11-30, not a set of cards. DCGO's multi-pick is
+        // the zone widget itself with `maxCount > 1` + `canEndNotMax: true`.)
+        SelectionKind::CountCappedMultiSelect { .. } => None,
+
+        // Our ONE flat prompt picks carrier AND source together
+        // (`encode_source_select(field_index, source_index)`), while DCGO
+        // SPLITS the decision whenever the sources span more than one carrier:
+        // `SelectPermanentEffect` for the carrier, THEN `SelectCardEffect` over
+        // that carrier's `DigivolutionCards` (TrashDigivolutionCards.cs:92-99
+        // then :123-138; MaterialSave.cs:38-45 then :70-85). Self-carrier
+        // keywords (Fragment / Decode / Partition) skip straight to the card
+        // prompt. So the class of the row facing a given step depends on the
+        // board, not on the kind.
+        SelectionKind::SourceMulti { .. } => None,
+
+        // DEAD VARIANT -- zero construction sites anywhere under `code/`
+        // (`grep -rn 'SelectionKind::Source\b'` returns nothing; every
+        // apparent hit is `SourceMulti`). No installer, no encoding, no mask
+        // arm, no decoder arm. Its documented job is done by `Material` (via
+        // `select_material`) and `SourceMulti`. It cannot appear, so no DCGO
+        // prompt can correspond to it. Deleting it would take the live enum to
+        // 21 variants.
+        SelectionKind::Source => None,
+
+        // NO DCGO ANALOGUE, and structurally there cannot be one: a player has
+        // at most ONE breeding permanent (exactly one non-battle frame --
+        // `FieldCardFrame.isBattleAreaFrameID` is `0..count-2`, Player.cs:
+        // 1561-1563), and our own prompt is installed with exactly one
+        // candidate (effect_context/selections.rs:872). DCGO therefore never
+        // opens a widget for it -- P_130.cs:49 simply moves
+        // `GetBreedingAreaPermanents()[0]` behind the effect's own
+        // `isOptional: true` gate (P_130.cs:19). Both corpus steps over a
+        // `BreedingPermanent` prompt expect `OptionalSkill` for that reason.
+        // (`SelectPermanentEffect`'s pool DOES include the breeding frame --
+        // `GetFieldPermanents()`, Player.cs:669-685 -- so the permanent is
+        // ADDRESSABLE at frame == battle_area.len(); addressable is not the
+        // same as "DCGO ever prompts for it", and no card in the pool does.)
+        SelectionKind::BreedingPermanent => None,
+
+        // NO DCGO ANALOGUE -- a scope difference, not a mismatch. This prompt
+        // lives strictly BETWEEN games of a BO3 match (installed only by the
+        // external `Game::request_play_order_selection`, game/lifecycle.rs:152),
+        // while DCGO has no match concept at all: its first player is a random
+        // roll optionally overridden by a Photon lobby room property
+        // (TurnStateMachine.cs:276-304), never a runtime prompt. An exam
+        // scenario scripts exactly one game, so reaching this kind means the
+        // scripted game already ended.
+        SelectionKind::PlayOrder => None,
     }
 }
 
@@ -499,11 +687,23 @@ fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
 /// `SelectionKind::Material` is heavily overloaded on our side: DNA
 /// digivolution (`game_actions/digivolve.rs`) and DigiXros material assembly
 /// (`game_actions/misc.rs`) reuse the SAME kind with completely different
-/// action-id encodings, and DCGO asks those as different prompt classes
-/// (`SelectDigiXrosClass` / `SelectAssemblyClass`, each with its own recorder
-/// hook — see CLAUDE.md rule 27). So the KIND alone cannot name a DCGO class,
-/// and asserting one from the kind would be a confident wrong answer on those
-/// prompts.
+/// action-id encodings, and DCGO asks those through different prompt classes.
+/// So the KIND alone cannot name a DCGO class, and asserting one from the kind
+/// would be a confident wrong answer on those prompts.
+///
+/// CORRECTED 2026-08-26 — this used to read "`SelectDigiXrosClass` /
+/// `SelectAssemblyClass`, each with its own recorder hook". `SelectAssemblyClass`
+/// has NO recorder hook and no `InputDriver` hook: it is an ORCHESTRATOR that
+/// loops the recipe elements and delegates each to a real widget
+/// (`SelectAssemblyClass.cs:176-201` -> `SelectTrashCard` -> `SelectCardEffect`,
+/// root `Root.Trash`). The same is true of `SelectJogressEffect` (->
+/// `SelectPermanentEffect`), `SelectAppFusionEffect` and
+/// `SelectBurstDigivolutionEffect`. `InputDriver.cs:61-73` declares the CLOSED
+/// 13-kind prompt vocabulary and none of them appear in it. `SelectDigiXrosClass`
+/// IS hooked, but it records a ZONE, not a recipe: `select_value` is
+/// `0=Hand 1=Field 2=Trash 3=TamerSources 4=End`
+/// (`SelectDigiXrosClass.cs:1050-1066`), and it PRECEDES the material-pick row
+/// rather than replacing it.
 ///
 /// The discriminator is the engine's own: `install_select_material`
 /// (`dsl_cards/step/selections.rs`, the only `EffectContext::select_material`
@@ -552,7 +752,11 @@ fn is_digivolution_source_pick(game: &Game) -> bool {
 /// the kind, a legacy closure-only installer with no data frame — falls
 /// through to `None` and keeps the printed "not asserted" note.
 ///
-/// Everything except `Material` defers to [`dcgo_prompt_name`] unchanged.
+/// The second context-dependent kind is `TriggerOrder`, decided by the live
+/// prompt's CANDIDATE COUNT (see [`trigger_order_prompt_name`]).
+///
+/// Everything except `Material` and `TriggerOrder` defers to
+/// [`dcgo_prompt_name`] unchanged.
 fn dcgo_prompt_name_for(
     game: &Game,
     kind: &SelectionKind,
@@ -564,7 +768,51 @@ fn dcgo_prompt_name_for(
         }
         return is_digivolution_source_pick(game).then_some("SelectCardEffect");
     }
+    if matches!(kind, SelectionKind::TriggerOrder) {
+        // Only the LIVE prompt can answer this, and only when it is the same
+        // prompt: callers may pass a kind that is not `game.pending_selection`'s
+        // (the unit tests do), and guessing from a stale prompt would be worse
+        // than the printed note.
+        let pending = game.pending_selection.as_ref()?;
+        if !matches!(pending.kind, SelectionKind::TriggerOrder) {
+            return None;
+        }
+        return trigger_order_prompt_name(pending.valid_action_ids.len(), pending.is_optional);
+    }
     dcgo_prompt_name(kind)
+}
+
+/// DCGO's class for a live `SelectionKind::TriggerOrder` prompt, from its
+/// candidate count.
+///
+/// Our engine parks ONE kind for two decisions DCGO renders through two
+/// different widgets, and the split is exactly at bundle length 1:
+///
+/// * **2+ candidates** -> `MultipleSkills`. `install_trigger_order_selection`
+///   emits one id per bundle position (`effect_queue.rs:3975-3977`), and DCGO's
+///   `MultipleSkills` indexes `skillInfos_active` and records `intValue`
+///   (`MultipleSkills.cs:751-752`). Note the two index bases are NOT
+///   interchangeable -- each engine's list is its own, which is why the wire
+///   answers with `trigger:` / `ordinal:` rather than a raw position.
+/// * **1 candidate** -> `OptionalSkill`. `MultipleSkills.cs:273-277`
+///   short-circuits a one-element stack (`_skillIndex = 0; Activate(true)`) and
+///   emits NO selection row; that lone effect's optionality is then asked
+///   separately by `Activate_Optional` -> `OptionalSkill`. Our engine still
+///   parks a prompt there, because the pre-cost decline gate
+///   (`effect_queue.rs:1243-1246`) is installed only for a single-trigger
+///   bundle and always with `allow_decline_all: true` -- so the sim-side kind
+///   is `TriggerOrder` while the DCGO-side class is `OptionalSkill`.
+///
+/// A one-candidate prompt that is NOT declinable has no DCGO row at all (the
+/// short-circuit fires and nothing is optional to ask about), so it stays
+/// unasserted rather than claiming a class.
+fn trigger_order_prompt_name(candidates: usize, is_optional: bool) -> Option<&'static str> {
+    match candidates {
+        0 => None,
+        1 if is_optional => Some("OptionalSkill"),
+        1 => None,
+        _ => Some("MultipleSkills"),
+    }
 }
 
 /// True when our live prompt is a pick-shaped selection that DCGO may split
@@ -1877,8 +2125,11 @@ steps:
     /// THE NEGATIVE THIS ARM EXISTS FOR. `SelectionKind::Material` is
     /// overloaded — DNA digivolution (`game_actions/digivolve.rs`) and
     /// DigiXros assembly (`game_actions/misc.rs`) reuse it, and DCGO asks
-    /// those as `SelectDigiXrosClass` / `SelectAssemblyClass`, NOT
-    /// `SelectCardEffect`. Without the resume-frame gate the mapping would
+    /// those through a DIFFERENT surface: DNA opens `SelectPermanentEffect`
+    /// once per recipe element (`SelectJogressEffect.cs:164`, :362 — that
+    /// class is itself unhooked, like `SelectAssemblyClass`), and
+    /// DigiXros opens a `SelectDigiXrosClass` ZONE row before each material
+    /// pick. Neither is `SelectCardEffect`. Without the resume-frame gate the mapping would
     /// name a class for those prompts too, which would be a confident wrong
     /// answer. A prompt with no `ResumeSelectKind::Material` frame must stay
     /// unasserted.
@@ -1907,8 +2158,15 @@ steps:
         );
     }
 
-    /// Every other kind is untouched by the new parameters — the payload and
-    /// the game only ever change the answer for `Material`.
+    /// Every kind OTHER than the two context-dependent ones (`Material`,
+    /// `TriggerOrder`) is untouched by the extra parameters — the payload and
+    /// the game never change their answer.
+    ///
+    /// `TriggerOrder` is deliberately excluded: it reads the LIVE prompt's
+    /// candidate count (see `trigger_order_prompt_name`), so it agrees with the
+    /// payload-less mapping only by accident, when nothing is parked. Its own
+    /// behaviour is pinned by
+    /// `a_trigger_order_prompt_maps_by_its_candidate_count`.
     #[test]
     fn every_other_kind_defers_to_the_payload_less_mapping() {
         let game = game_with_no_material_frame();
@@ -1921,7 +2179,8 @@ steps:
             SelectionKind::OwnField,
             SelectionKind::OppField,
             SelectionKind::AnyField,
-            SelectionKind::TriggerOrder,
+            SelectionKind::Security,
+            SelectionKind::Replacement,
         ] {
             for payload in [&pick, &decl] {
                 assert_eq!(
@@ -1931,6 +2190,27 @@ steps:
                 );
             }
         }
+        // With nothing parked there is no candidate count to read, so the
+        // conditional kind refuses rather than guessing.
+        assert_eq!(
+            dcgo_prompt_name_for(&game, &SelectionKind::TriggerOrder, &pick),
+            None,
+            "no live prompt => no candidate count => no class"
+        );
+    }
+
+    /// The `TriggerOrder` split, pinned as a pure function of the live prompt:
+    /// 2+ stacked triggers are DCGO's `MultipleSkills`, a single declinable
+    /// trigger is its `OptionalSkill` (`MultipleSkills.cs:273-277`
+    /// short-circuits a one-element stack and logs no row), and a lone
+    /// MANDATORY trigger produces no DCGO row at all.
+    #[test]
+    fn a_trigger_order_prompt_maps_by_its_candidate_count() {
+        assert_eq!(trigger_order_prompt_name(3, false), Some("MultipleSkills"));
+        assert_eq!(trigger_order_prompt_name(2, true), Some("MultipleSkills"));
+        assert_eq!(trigger_order_prompt_name(1, true), Some("OptionalSkill"));
+        assert_eq!(trigger_order_prompt_name(1, false), None);
+        assert_eq!(trigger_order_prompt_name(0, true), None);
     }
 
     /// `expect: {prompt: OptionalSkill}` over a live Material prompt must

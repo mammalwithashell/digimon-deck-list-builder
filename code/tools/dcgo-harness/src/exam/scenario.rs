@@ -137,11 +137,32 @@ pub enum SelectPayload {
     /// The one place the two engines disagree on CARDINALITY rather than on
     /// prompt kind. Our engine walks the recipe one element at a time
     /// (`install_assembly_element` re-installs per element), so N successive
-    /// `Material` prompts; DCGO declares the whole set in ONE row
-    /// (`SelectAssemblyClass` / `SelectDigiXrosClass`, recorded as a single
-    /// `selection` with every id and `mechanic: "assembly"`). So one authored
-    /// step answers N sim prompts and emits ONE wire row -- the mirror of
-    /// `optional_gate_fold`, which is one sim prompt over two wire rows.
+    /// `Material` prompts; DCGO declares one element's whole pick set in ONE
+    /// row. So one authored step answers N sim prompts and emits ONE wire row
+    /// -- the mirror of `optional_gate_fold`, which is one sim prompt over two
+    /// wire rows.
+    ///
+    /// SCOPE, corrected 2026-08-26 (this used to claim DCGO declares the whole
+    /// RECIPE in one row, via a `SelectAssemblyClass` row -- both halves are
+    /// wrong):
+    ///   * `SelectAssemblyClass` emits NO recorder row at all. It has zero
+    ///     `Recording`/`GameRecorder` references and no `InputDriver` kind; it
+    ///     is an orchestrator that loops
+    ///     `foreach (AssemblyConditionElement element in
+    ///     AssemblyCondition.elements)` (`SelectAssemblyClass.cs:176`) and
+    ///     delegates each to `SelectTrashCard` (:200) -> one `SelectCardEffect`
+    ///     (root `Root.Trash`, `SetAssembly()` at :245). The `mechanic:
+    ///     "assembly"` tag rides THAT row, which is why the tag exists.
+    ///   * So the ONE-row collapse is exact only for a ONE-ELEMENT recipe. A
+    ///     multi-element `[Assembly]` emits one DCGO row PER ELEMENT, and this
+    ///     form's `SimOnlySelect` padding (which reports zero wire rows for
+    ///     picks 2..N) would under-count the wire by `elements - 1`.
+    ///   * `[DigiXros]` differs again: DCGO precedes EACH material pick with a
+    ///     `SelectDigiXrosClass` ZONE row (`select_value` 0=Hand 1=Field
+    ///     2=Trash 3=TamerSources, `SelectDigiXrosClass.cs:1050-1066`) and ends
+    ///     with a `4=End` row -- roughly 2 rows per material plus one, not one
+    ///     row total.
+    /// Neither shape is exercised by the corpus today; both are latent.
     ///
     /// Ids are given in RECIPE-ELEMENT ORDER, which is the order our engine
     /// asks in. Without this form a card whose only affordable line is its

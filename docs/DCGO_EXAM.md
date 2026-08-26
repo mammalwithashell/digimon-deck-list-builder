@@ -419,6 +419,129 @@ declarations and `indexes`-payload prompts; `generic_int`/`generic_bool` values
 can be scripted but their candidates cannot be asserted (no candidate list on
 that channel).
 
+## Our selection surface vs DCGO's
+
+The two engines cut their selection surfaces on **different axes, and neither
+axis refines the other**. Ours is cut by **zone** — `OwnField`, `Hand`, `Trash`,
+`Security`, `Material` — because rule 17 requires every choice to reach the RL
+action space, and the action space is addressed by zone. DCGO's is cut by
+**widget** — `SelectPermanentEffect`, `SelectHandEffect`, `SelectCardEffect`,
+`SelectCountEffect` — because its job is to drive a human UI, so one widget
+serves every zone whose picks look the same on screen. The result is a
+many-to-many translation: three of our kinds collapse onto `SelectPermanentEffect`,
+while one of ours (`Material`) fans out across four DCGO surfaces.
+
+What that costs the exam is specific and worth naming. The exam drives both
+engines through **one** scripted line and diffs state per step, so a
+disagreement about the **shape** or **count** of prompts aborts the line on
+prompt sequence and measures *nothing* — which is a translation failure, not a
+rules finding. Two mismatch families produce almost all of it: **cardinality**
+(we re-park once per pick where DCGO asks once with a `maxCount`, or the
+reverse — DCGO gates a pick behind a separate yes/no we fold into the pick
+itself) and **overload** (one of our kinds carries two decisions DCGO renders
+through two different widgets).
+
+None of this makes DCGO the authority on what is *correct*. `general_rule.pdf`
+outranks DCGO (see CLAUDE.md's source priority); a row below that says one side
+is wrong says so explicitly, and cites the rule.
+
+`dcgo_prompt_name` in `code/tools/dcgo-harness/src/exam/adapter.rs` is the
+executable form of this table. It is an **exhaustive match with no `_ =>` arm**,
+so adding a 23rd `SelectionKind` fails to compile until someone decides what it
+maps to — the same discipline the crate applies syntactically with
+`#![deny(unreachable_patterns)]`, applied here to a semantic gap. Two kinds map
+only conditionally, from live game state; that logic lives in
+`dcgo_prompt_name_for`, which is the only caller holding a `Game`.
+
+### The table
+
+`sim-assert` = what the loose sim-side `expect.prompt` check does with the kind
+today: **yes** (asserted), **live** (asserted from live state), **no** (printed
+as a note; the strict check is DCGO's).
+
+| Our `SelectionKind` | DCGO prompt class | Cardinality | sim-assert | Known mismatch |
+|---|---|---|---|---|
+| `Hand` | `SelectHandEffect` | 1:1 | yes | DCGO conflates zone-owner and decider into one `_selectPlayer`; we keep `zone_owner` and `selecting_player` apart. A controller picking from the OPPONENT's hand cannot ride `SelectHandEffect` at all and becomes a `Root.Custom` `SelectCardEffect` — the class *and* the row's actor change. |
+| `OwnField` | `SelectPermanentEffect` | N:1 (with `OppField`/`AnyField`) | yes | Our ids are `encode_attack(0, slot)` with the side implicit in the kind; DCGO's row names the absolute player. The side must be supplied from our kind when lowering. |
+| `OppField` | `SelectPermanentEffect` | N:1 | yes | Same as `OwnField`. |
+| `AnyField` | `SelectPermanentEffect` | 1:1 | yes | The clean one: our `encode_attack(player, index)` and DCGO's `{playerID, frame}` agree field for field. |
+| `Trash` | `SelectCardEffect` | 1:1 | yes | `zone` is NOT a discriminator: DCGO writes `zone = _root.ToString()`, which collapses to `"Custom"` for any derived or foreign list (an opponent-trash pick is `Root.Custom` over `Owner.Enemy.TrashCards`). Assert the class, match cards by identity. |
+| `Reveal` | `SelectCardEffect` | 1:1 | yes | Indistinguishable from `Trash` and `OrderedPermutation` at the class level, and only sometimes separable by `zone`. |
+| `RevealBucket` | `SelectCardEffect` | N:1 per bucket | yes | We re-park per PICK; DCGO logs one row per BUCKET carrying every id it took. A ≥2-bucket reveal also gets a leading `generic_bool` gate with no sim counterpart. |
+| `Security` | `SelectCardEffect` | 1:1 | yes | One of the few kinds where `zone` really is reliable (`Root.Security` is derived, not `Custom`). Note both sides carry card identities for a face-down stack — fine for a scripted line, not a model for the RL surface. |
+| `OrderedPermutation` | `SelectCardEffect` | N:1, and 1:0 at N=1 | yes | DCGO asks ONE multi-pick prompt whose click order *is* the permutation; we ask once per position. At N=1 DCGO asks nothing and we still park — see the findings below. |
+| `Replacement` | `OptionalSkill` | 1:1 | yes | DCGO's gate is unconditional whenever `IsOptional`; ours is installed only when the body's first step is mandatory. When the body opens with a declinable pick, our ONE prompt is gate *and* pick — that branch is what `optional_gate_fold` compensates for. |
+| `DpBudget` | `SelectPermanentEffect` | N:1 | yes | Ours is a per-pick trampoline (+ a terminating PASS); DCGO is one prompt with `maxCount` + `canTargetCondition_ByPreSelecetedList` + `canEndSelectCondition`. Answer form is `targets:`, not `cards:`. |
+| `PlayCostBudget` | `SelectPermanentEffect` | N:1 | yes | Identical in shape to `DpBudget`, summing printed play cost instead of DP. |
+| `Material` | `SelectCardEffect` **only** as a digivolution-source pick; otherwise `SelectPermanentEffect` (DNA, Blast DNA) or `SelectDigiXrosClass` + a zone widget (DigiXros) | 1:1 / 1:2 by use | live | Four uses, three incompatible action-id encodings. Decided from the engine's own `ResumeSelectKind::Material` frame; every other use stays unasserted. DigiXros is 1-of-ours-to-2-of-theirs *per material*, plus a terminal `4=End` row. |
+| `TriggerOrder` | `MultipleSkills` (2+ candidates) / `OptionalSkill` (1 declinable candidate) | 1:1 / 1:0 | live | The index bases are NOT interchangeable — each side indexes its own candidate list, and the two demonstrably order a same-card stack differently. That is what `trigger:` exists for. At bundle length 1 DCGO short-circuits and logs no `MultipleSkills` row; the lone effect's optionality is asked as `OptionalSkill` instead. |
+| `Target` | none — ambiguous | — | no | Overloaded on OUR side: attack target (`SelectAttackEffect`), App Fuse host permanent (`SelectPermanentEffect`), App Fuse result card (`SelectCardEffect`). The host pick reuses the attack encoding, so even the action-id range cannot separate them. Splitting the App Fuse uses off `Target` would make this decidable. |
+| `EffectChoice` | none — genuinely multi-class | — | no | Four DCGO classes observed in the corpus today: `SelectCountEffect` (the digivolution-cost route), `generic_bool`, `OptionalSkill`, `SelectCardEffect`. DCGO's true N-branch analogue is `generic_int`, which is undocumented in the schema doc's payload table and unexercised here. Its payload is the author's chosen `value`, **not** a 0-based index — the same position-vs-identity trap `trigger:` was invented for. |
+| `UnionZone` | none — DCGO splits it in two | 1:2 | no | DCGO asks a `generic_int` zone menu first ("From hand" / "From trash" / "Do not play") and then the chosen zone's own widget. Our single prompt spans the union and recovers the zone from the picked action id's range. |
+| `CountCappedMultiSelect` | none — follows the zone | N:1 | no | The class is whichever zone widget the picks come from (`Hand` → `SelectHandEffect`, `Trash`/`Material` → `SelectCardEffect`), and the kind does not carry the zone. **Not** `SelectCountEffect`: that widget's answer is a NUMBER (`Func<int, IEnumerator>`), not a set of cards. |
+| `SourceMulti` | none — board-dependent | N:(1+C) | no | Our one flat prompt picks carrier AND source together. Where the sources span more than one carrier, DCGO splits it: `SelectPermanentEffect` for the carrier, then `SelectCardEffect` over that carrier's `DigivolutionCards`. Self-carrier keywords (Fragment / Decode / Partition) skip straight to the card prompt. DCGO's own `zone` is inconsistent here (`Custom` vs `DigivolutionCards` for the same semantic zone), so do not assert it. |
+| `BreedingPermanent` | none — DCGO never prompts | 1:0 | no | Structural, not an omission: a player has at most ONE breeding permanent (exactly one non-battle frame), so there is never anything to pick. DCGO takes `GetBreedingAreaPermanents()[0]` behind the effect's own optional gate. The permanent IS addressable through `SelectPermanentEffect` (its pool is `GetFieldPermanents()`, which includes the breeding frame, sorted last) — but addressable is not the same as prompted, and no card in the pool prompts for it. |
+| `Source` | none — DEAD VARIANT | — | no | Zero construction sites anywhere under `code/`. No installer, no encoding, no mask arm, no decoder arm. Its documented job is done by `Material` and `SourceMulti`. The live enum is 21 variants, not 22. |
+| `PlayOrder` | none — outside DCGO's scope | — | no | A BO3 between-games prompt. DCGO has no match concept: its first player is a random roll optionally overridden by a lobby room property, never a runtime prompt. An exam scripts one game, so reaching this kind means the game already ended. |
+
+### The translation mechanisms, and the row each one pays for
+
+Seven pieces of vocabulary exist **only** because of the rows above. Listing
+them against their cause is the point of this section: it turns invented
+vocabulary into a legible list of known gaps, so the next mismatch gets checked
+against this list before an eighth mechanism is invented.
+
+| Mechanism | Compensates for | What it does |
+|---|---|---|
+| `ordinal:` | `TriggerOrder` ↔ `MultipleSkills` | A 0-based position among the candidates sharing one card id. The FALLBACK: an ordinal is a position in a list each engine builds for itself, so it cannot name a branch portably where the two enumerate a stack in opposite order. |
+| `trigger:` | `TriggerOrder` ↔ `MultipleSkills` | Names the branch by its KEYWORD, normalized identically on both sides. The portable form, and preferred over `ordinal:` wherever it applies. |
+| `trigger_not:` | `TriggerOrder` ↔ `MultipleSkills` | The complement, for the branch in a same-id stack that carries no keyword of its own (a plain `[On Deletion]` beside an `<Ascension>`). Mutually exclusive with `trigger:`. |
+| `optional_gate_fold` | `Replacement` (and the pick-shaped kinds) | DCGO splits some optional windows into an `OptionalSkill` yes/no FOLLOWED by the pick; our single declinable pick is both. One sim prompt → two wire rows. |
+| `SimOnlySelect` | `Material` (multi-pick declarations) | The 2nd..Nth pick of a `materials:` declaration: contributes a comparable state row on our side and ZERO wire rows, keeping the traces aligned across the cardinality gap. |
+| `DcgoOnlySelect` | `TriggerOrder` ↔ `MultipleSkills`, from the other side | A prompt DCGO asks that we never park — DCGO batches a same-timing trigger into `MultipleSkills` where we model it as a combat-state window. Emitted to the wire, consumed by nothing sim-side. |
+| `materials:` | `Material` (`[Assembly]` / `[DigiXros]`) | One authored step answering N successive sim prompts against a single DCGO row. The mirror of `optional_gate_fold`. Exact only for a ONE-ELEMENT recipe — see the scope note on `SelectPayload::Materials`. |
+
+Three of the seven — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` —
+exist purely because the engines disagree about whether a decision EXISTS, not
+about what it is. Those are the rows worth re-reading before adding an eighth.
+
+### Rows where one side looks rules-wrong
+
+Recorded here, **not** fixed here; they are engine findings, not mapping
+entries.
+
+- **`OrderedPermutation` at N=1 — ours.** We install a one-choice,
+  non-declinable prompt for the last item of every ordered permutation,
+  justified in its own doc block as rule-17 compliance. A prompt with a single
+  valid action id and no decline cannot change any outcome, so it is not a
+  choice; rule 17 asks that every CHOICE reach the action space. DCGO skips the
+  prompt entirely at that cardinality. Firing the callback directly when one
+  item remains removes both the phantom decision and the 1-row-vs-0-rows
+  mismatch.
+- **`Replacement` — both sides, opposite directions, on `<Decode>`.**
+  `general_rule.pdf` §16-35-3 makes the processing optional exactly once, and
+  §15-9-1-2 / §15-10-2-1 then make the source pick mandatory. DCGO asks twice
+  (its post-gate pick passes `canNoSelect: () => true`), which is
+  outcome-neutral but a decision the rules do not grant. We contradict
+  ourselves: two EX12 cards author the same keyword's pick with opposite
+  optionality.
+- **`Replacement` ordering — ours.** With more than one replacement candidate we
+  run them in collection order with no ordering prompt (`replacement.rs` carries
+  the TODO). §15-8-5-3 / §15-8-5-4 make simultaneous immediate-type effects
+  activate one at a time, and DCGO batches them through `MultipleSkills`. That
+  is a MISSING decision, not a surface difference.
+- **`BreedingPermanent` — ours is the one the rules endorse.** §3-4-5 divides
+  the field into breeding and battle areas and §3-4-6-5 says breeding cards
+  can't be chosen for effects unless the effect references breeding areas. We
+  enforce that structurally with a separate zone, kind and action range; DCGO
+  enforces it per-card, inside individual target filters. Any DCGO filter that
+  forgets the guard offers an illegal target, and the exam would read that as
+  OUR divergence.
+- **`UnionZone` — ours is the one the rules endorse.** The manual has no
+  zone-declaration step as part of choosing a card, and DCGO's own code skips
+  its zone menu when only one zone qualifies. It is a UI affordance; the exam
+  should fold it, not model it as a decision.
+
 ## Execution
 
 ```
