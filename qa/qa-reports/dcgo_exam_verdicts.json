@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-26T12:24:11.095682600+00:00",
+  "last_updated": "2026-08-26T14:25:02.339922200+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -596,12 +596,11 @@
     "EX12-031#inherited#0": {
       "clause_id": "EX12-031#inherited#0",
       "card_id": "EX12-031",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "inherited_effect_description_eng",
       "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
-      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 3 expected actor 1 but DCGO asked actor 0\". This one fails at STEP 3, far earlier than the others and before any card under exam is involved, so it is a turn/priority-sequencing difference in the opening, not a clause-level disagreement. Triage this one first: it is the cheapest to localize and may be masking whatever else the line would have found. (Supersedes the 'MultipleSkills value-space mismatch' reason.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-031-inherited0.yaml",
+      "recorded_at": "2026-08-26T14:25:00.661689800+00:00"
     },
     "EX12-031#security#0": {
       "clause_id": "EX12-031#security#0",
@@ -818,12 +817,12 @@
     "EX12-047#effect#4": {
       "clause_id": "EX12-047#effect#4",
       "card_id": "EX12-047",
-      "verdict": "unreachable",
+      "verdict": "diverged",
       "label": "effect_description_eng",
       "text_sha256": "accd0cde3dc0b75dc87fdc42da64d344daf3fd56eb417352936107ec751358bc",
-      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 21 expected prompt 'SelectCardEffect' but DCGO asked 'generic_bool'\". NOTE THE DIRECTION -- this is the INVERSE of the other three: here DCGO raises the extra yes/no and we go straight to the card pick. So the family is not 'we always add a bool'; the two engines disagree about WHICH optional effects get a standalone confirm, in both directions. That asymmetry is the finding worth triaging. (Supersedes the previous 'MultipleSkills value-space mismatch' reason.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect4.yaml",
+      "reason": "DIVERGED at step 24 (compared 25 of 25 ours / 25 dcgo steps)",
+      "recorded_at": "2026-08-26T14:24:59.418899400+00:00"
     },
     "EX12-047#effect#5": {
       "clause_id": "EX12-047#effect#5",
@@ -1195,12 +1194,12 @@
     "EX12-076#effect#0": {
       "clause_id": "EX12-076#effect#0",
       "card_id": "EX12-076",
-      "verdict": "unreachable",
+      "verdict": "diverged",
       "label": "effect_description_eng",
       "text_sha256": "0607df73a20b8899abe82f76ee9ac09f0d66cb52e60b9f2ad0ebf85ef0da5276",
-      "reason": "CORRECTED 2026-08-24 (user report, verified against the card face). The previous reason claimed <Rush> was structurally unreachable because a hand play costs 16 against a memory ceiling of 10, so the turn ends on the play. That is WRONG: the card face prints [Assembly -9] (8 [Hybrid]/[Shambala] trait cards w/different names), which takes the play cost to 7 -- comfortably payable, leaving memory positive, so the Rush attack CAN be declared the turn it is played. This is a real Toho Braves line, not a theoretical one. EX12-004 Onibimon is also relevant: a Lv.2 Digi-Egg carrying the [Shambala] trait AND inherited <Execute>, so it both qualifies as one of the eight Assembly materials and grants Susanoomon (a [TB] card) an end-of-turn attack (§16-37) -- a second attack-the-turn-it-was-played route. The ACTUAL blocker is a harness vocabulary gap, not the rules: an [Assembly] material declaration is a MULTI-PICK selection, which docs/DCGO_EXAM.md lists as out of scope for the `select:` step vocabulary (alongside DigiXros material declarations). Measurable as soon as the scenario format can express a multi-pick material payload. NOTE ON THE DENOMINATOR: the face also prints [Assembly -9] and '(Rule) Trait: Has [Hybrid] Form.', neither of which appears in cards.json, so this card's 6-clause denominator is short by two -- the same API-lossiness family as the earlier Rule-granted trait corrections.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-24T23:39:40.581323+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect0.yaml",
+      "reason": "DIVERGED at step 17 (compared 37 of 37 ours / 37 dcgo steps)",
+      "recorded_at": "2026-08-26T14:25:02.339922200+00:00"
     },
     "EX12-076#effect#1": {
       "clause_id": "EX12-076#effect#1",
