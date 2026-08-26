@@ -323,12 +323,16 @@ steps:
           - EX12-065
           - EX12-074
           - EX12-075
-  # <Rush>. Susanoomon entered the battle area on THIS turn, at slot 5 -- four
-  # EX12-061 (slots 0-3) plus the one EX12-070 that stayed on the field (slot 4)
-  # precede it, confirmed by the positive control's printed legal-action list.
-  # Without the keyword this step does not lower.
+  # <Rush>. Susanoomon entered the battle area on THIS turn, at slot 8 -- the
+  # four EX12-061 and the four EX12-070 interleave ahead of it in play order
+  # (T1 061, T3 070+061, T5 070+061, T7 070+061, T9 070), confirmed by the
+  # printed legal-action list. Without the keyword this step does not lower.
+  #
+  # This was `field.5` while G-DELAY-EVENT-WINDOW-AUTOTRASHED was live: three of
+  # the four EX12-070 were silently auto-trashed before turn 11, collapsing the
+  # field to five slots. They now persist (16-16-1), so the index moves by 3.
   - actor: 0
-    do: { attack: { attacker: field.5, target: security } }
+    do: { attack: { attacker: field.8, target: security } }
     expect: { prompt: main_phase }
 assert:
   # Hand-authored, NOT oracle-backfilled -- read off our engine's projection on
@@ -336,16 +340,27 @@ assert:
   #
   # BEFORE the play. Susanoomon is absent from P0's field, so its presence at 36
   # dates its arrival to turn 11 -- which is the entire content of "the turn it
-  # was played". The eleven-card trash is the Assembly declaration's menu, and
-  # P1 still has both Digimon here.
+  # was played". The eight-card trash is the Assembly declaration's menu -- one
+  # trash-cost card per EX12-061/EX12-070 play, nothing else -- and P1 still has
+  # both Digimon here.
+  #
+  # All four EX12-070 are on the field, interleaved with the four EX12-061 in
+  # play order. Each is a <Delay> whose window is an EVENT owned by its
+  # replacement clause ("[All Turns] When any of your level 5 or higher [TB]
+  # trait Digimon would leave the battle area"), so 16-16-1 keeps it available
+  # for as long as it is in the battle area. None has been activated: nothing
+  # of P0's has left the battle area on this line.
   - at: 34
     that:
       turn: 11
       p0.memory: 10
       p0.field:
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
         - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
       p0.trash:
@@ -356,9 +371,6 @@ assert:
           EX12-036,
           EX12-047,
           EX12-065,
-          EX12-070,
-          EX12-070,
-          EX12-070,
           EX12-074,
           EX12-075,
         ]
@@ -379,8 +391,11 @@ assert:
       p0.memory: 3
       p0.field:
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
         - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - card_id: EX12-076
@@ -397,23 +412,25 @@ assert:
               EX12-074,
               EX12-075,
             ]
-      # The eight materials left the trash for the source stack. What remains is
-      # three EX12-070 -- and NOT because they never reached the battle area:
-      # tracing p0.field across the line, each one is PLAYED and then silently
-      # auto-trashed a turn later. place_self_as_delay_option_permanent
-      # (effect_context/action/lifecycle.rs:176-186) falls back to
-      # DelayTrigger::EndOfYourNextTurn when the card declares no delay trigger,
-      # and compute_delay_trash_turn turns that into a scheduled trash. But
-      # EX12-070 Sanmyojin Arrival is a Delay whose window is an EVENT -- [All
-      # Turns] when any of your Lv.5+ [TB] Digimon would leave the battle area --
-      # and 16-16-1 makes a Delay available for as long as the card is IN the
-      # battle area, with no expiry, 16-16-2 making the processing optional.
-      # So this assertion pins an ENGINE DEFECT as current behaviour, not
-      # correct behaviour. lower_delay.rs:80-95 already calls this same
-      # EndOfYourNextTurn catch-all "silent and wrong" and narrows it there; the
-      # identical fallback survives at lifecycle.rs:182. Logged to
-      # docs/RUST_ENGINE_GAPS.md. When it is fixed, this line changes.
-      p0.trash: [EX12-070, EX12-070, EX12-070]
+      # The eight materials left the trash for the source stack, and nothing
+      # else was ever in there -- so P0's trash is EMPTY.
+      #
+      # This line used to read `[EX12-070, EX12-070, EX12-070]` and its comment
+      # said so explicitly: three of the four EX12-070 had been PLAYED and then
+      # silently auto-trashed a turn later, and the assertion pinned that ENGINE
+      # DEFECT as current behaviour rather than correct behaviour
+      # (G-DELAY-EVENT-WINDOW-AUTOTRASHED). `place_self_as_delay_option_permanent`
+      # fell back to `DelayTrigger::EndOfYourNextTurn` when a card declares no
+      # delay trigger, and `compute_delay_trash_turn` turned that into a
+      # scheduled trash -- but EX12-070 Sanmyojin Arrival's <Delay> window is an
+      # EVENT ([All Turns] when any of your Lv.5+ [TB] Digimon would leave the
+      # battle area), and 16-16-1 makes a <Delay> available for as long as the
+      # card is IN the battle area, with no expiry. The fallback is now
+      # `DelayTrigger::ExternallyGated` (parks indefinitely, schedules nothing,
+      # offers no [Main] activation), the four copies persist above, and this
+      # line records the FIXED behaviour, which is also what the DCGO oracle
+      # showed on the EX12-076#effect#0 divergence at step 17.
+      p0.trash: []
       p1.field: []
       p1.trash: [ST1-03, ST1-10]
       p0.security: 5
@@ -437,8 +454,11 @@ assert:
       p0.memory: 3
       p0.field:
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
         - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
         - card_id: EX12-076

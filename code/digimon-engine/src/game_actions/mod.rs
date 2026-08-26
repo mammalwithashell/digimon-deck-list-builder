@@ -1748,8 +1748,13 @@ impl Game {
             }
             // Standard `<Delay>` is activated by a player `[Main]`-phase
             // action, not a turn-keyed auto-trash scan. `OnEvent` likewise
-            // has no scheduled turn — both park indefinitely.
-            DelayTrigger::MainPhaseActivated | DelayTrigger::OnEvent(_) => u16::MAX,
+            // has no scheduled turn, and `ExternallyGated` hands the whole
+            // window to another clause (a `kind: replacement` on the same
+            // card) — all three park indefinitely, per 16-16-1's
+            // "while a card with this effect is in the battle area".
+            DelayTrigger::MainPhaseActivated
+            | DelayTrigger::OnEvent(_)
+            | DelayTrigger::ExternallyGated => u16::MAX,
         }
     }
 

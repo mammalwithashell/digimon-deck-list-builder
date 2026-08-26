@@ -310,16 +310,29 @@ steps:
 assert:
   # The clause's witness: Gasamon FRESH on p0's field beside Kokeshimon,
   # Amaterasumon on security via Ascension (5 -> 6), and the returned-and-
-  # played EX12-020 nowhere in the trash. (Sim-side oddity, left visible for
-  # the differ: our engine trashes the placed Sanmyojin Arrival delay Option
-  # at the T7 turn-end boundary, so p0.trash reads [EX12-070] here rather
-  # than [] -- the printed Delay text keeps it in the battle area.)
+  # played EX12-020 nowhere in the trash.
+  #
+  # EX12-070 Sanmyojin Arrival stays on p0's FIELD and p0's trash is EMPTY.
+  # This block used to read `p0.trash: [EX12-070]` with EX12-070 absent from
+  # p0.field, and its comment flagged that as a "sim-side oddity ... the
+  # printed Delay text keeps it in the battle area". It was not an oddity, it
+  # was G-DELAY-EVENT-WINDOW-AUTOTRASHED: our engine trashed the placed Delay
+  # Option at the T7 turn-end boundary because
+  # `place_self_as_delay_option_permanent` fell back to
+  # `DelayTrigger::EndOfYourNextTurn` for a card that declares no delay
+  # trigger. 16-16-1 (`general_rule.pdf` p.35) makes a <Delay> available for as
+  # long as the card is in the battle area, with no expiry. The DCGO oracle
+  # said the same on the EX12-047#effect#4 divergence at step 24
+  # (`p0.trash: ours=[EX12-070] dcgo=[]`, `p0.field: dcgo=[..., EX12-070]`).
+  # The fallback is now `DelayTrigger::ExternallyGated`, and these two lines
+  # record the FIXED, oracle-confirmed state.
   - at: 25
     that:
       p0.field:
         - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
         - { card_id: EX12-062, dp: 5000, suspended: false, sources: [] }
-      p0.trash: [EX12-070]
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+      p0.trash: []
       p0.security: 6
       p1.field: []
       p1.trash: [EX12-020]

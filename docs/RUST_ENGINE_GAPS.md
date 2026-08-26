@@ -2307,7 +2307,79 @@ Confirmed by mutation: swapping two of the eight declared materials for `EX12-07
 DCGO enforces it via `CanTargetCondition_ByPreSelecetedList` → `GetUniqueNameCardCount`.
 
 
-## A Delay option with an EVENT window is auto-trashed a turn later  [G-DELAY-EVENT-WINDOW-AUTOTRASHED]
+## ~~A Delay option with an EVENT window is auto-trashed a turn later~~ — RESOLVED 2026-08-26  [G-DELAY-EVENT-WINDOW-AUTOTRASHED]
+
+**RESOLVED 2026-08-26.** `DelayTrigger` gained a variant, `ExternallyGated`
+(`enums.rs`), meaning "the `<Delay>`'s activation window is owned by a clause
+outside the delay machinery — park the carrier and do nothing else". Both
+fallback sites now use it instead of `EndOfYourNextTurn`:
+`place_self_as_delay_option_permanent` (`effect_context/action/lifecycle.rs`)
+and `install_field_option_as_delay` (`option_lifecycle.rs`).
+`compute_delay_trash_turn` (`game_actions/mod.rs`) maps it to `u16::MAX`,
+joining `MainPhaseActivated` and `OnEvent(_)`.
+
+A new variant rather than a re-used one, because every existing variant is
+*read* by a consumer that would then do the wrong thing: the turn scans
+(`resolve_delayed_options` / `resolve_start_delayed_options` /
+`delay_lifecycle_triggers` in `game_phases.rs`) enumerate the three
+turn-scheduled variants, `delayed_option_main_activation_available`
+(`option_lifecycle.rs`) exposes a `[Main]` FIELD_EFFECT bit for
+`MainPhaseActivated`, and `enqueue_event_gated_delayed_options` /
+`event_gated_delay_source` / `find_event_gated_delay_permanent`
+(`effect_queue.rs`) dispatch and post-trash `OnEvent(_)`. `ExternallyGated`
+matches none of them, so it parks and nothing else fires — while still being
+an `OptionState::Delayed { .. }`, which is what `source_is_delayed_option`
+(`dsl_cards/lower_replacement.rs`) requires for the replacement clause that
+actually owns the window.
+
+Affected cards: **SEVEN**, not the four an earlier draft of this entry claimed.
+Derived exactly rather than by eyeball: `Effect::delay_trigger` is written only
+by `EffectBuilder::delay()`, whose sole caller is `lower_delay.rs`, so the
+`find_map` misses iff the card has no `kind: delay` clause. Cards with a LIVE
+`place_self_as_delay_option` step and no such clause:
+
+* Window owned by a `kind: replacement` clause on the same card -- **EX12-070**,
+  **BT17-095**, **BT17-097**, **BT19-099**, **BT20-100**, **ST20-14**. The fix is
+  straightforwardly right for these.
+* **BT24-093 -- NO owner clause at all.** Its `<Delay>` is deliberately
+  unauthored (`BT24-093.yaml:146`: "BLOCKED -- see gap notes above") while its
+  `place_self_as_delay_option` step is live. Before: parked, then auto-trashed at
+  the owner's next turn end. After: parks inert for the rest of the game. Judged
+  the better of two wrongs -- 16-16-1 says the card stays in the battle area, and
+  the absent activation is the pre-existing BLOCKED gap rather than anything
+  introduced here -- but it is UNTESTED behaviour on a card the fix never opened,
+  and `ExternallyGated` overstates it: nothing gates BT24-093.
+
+Two of the seven carry tests that FABRICATE the pre-fix state rather than
+exercise it: `bt17_095.rs:542-545` and `st20_14.rs:461-464` hand-build
+`OptionState::Delayed { trigger: EndOfYourNextTurn, .. }` in a local
+`seat_as_delay_option` helper, bypassing the production fallback entirely. They
+are green, and they now pin a state shape the production path can no longer
+produce for those cards. Worth re-pointing at the real path.
+
+Regression tests:
+`tests/cards_behavioral/ex12/ex12_070.rs`
+(`ex12_070_delay_option_parks_with_no_scheduled_expiry`,
+`ex12_070_delay_option_is_not_auto_trashed_after_the_owners_next_turn`,
+`ex12_070_parked_delay_option_offers_no_main_phase_activation`). The
+turn-scheduled form is unchanged and still auto-trashes — pinned by
+`tests/cards_behavioral/bt21/bt21_097.rs`
+(`bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay` asserts
+`EndOfYourNextTurn` + `trash_on_turn == placing_turn + 2` through the same
+`place_self_as_delay_option` path;
+`bt21_097_delay_fires_at_end_of_owners_next_turn_and_links_hand_card_free`
+asserts the scan still fires and trashes).
+
+Both exam scenarios that pinned the wrong behaviour were updated:
+`qa/dcgo-exams/EX12/EX12-076-effect0.yaml` (`at: 34/36/37` field + trash, and
+the attack step's `field.5` → `field.8`) and
+`qa/dcgo-exams/EX12/EX12-047-effect4.yaml` (`at: 25`). NOTE: the two
+`diverged` verdicts in `qa/qa-reports/dcgo_exam_verdicts.json`
+(`EX12-047#effect#4`, `EX12-076#effect#0`) are **not** re-classified here —
+sim-only cannot legitimately flip an oracle verdict; they need a fresh Unity
+oracle pass.
+
+**Original report below.**
 
 **Found 2026-08-26** while tracing an "unexplained" board observation in the EX12-076 exam line: three EX12-070 reached the battle area and then vanished with no prompt.
 
@@ -2324,3 +2396,17 @@ EX12-070 Sanmyojin Arrival's Delay window is an EVENT: `[All Turns]` when any of
 **`lower_delay.rs:80-95` already calls this exact `EndOfYourNextTurn` catch-all "silent and wrong"** and narrows it there; the identical fallback survives at `lifecycle.rs:182`. The fix is presumably the same narrowing applied to the second site.
 
 Currently pinned as CURRENT (wrong) behaviour by `qa/dcgo-exams/EX12/EX12-076-effect0.yaml`'s `at: 36` assertion, which is commented to say so. When this is fixed, that assertion changes.
+
+**Follow-on, still OPEN — 16-16-3 is not enforced on the replacement-owned
+window.** With the carrier now parked indefinitely, the *lower* bound matters
+more: 16-16-3 says "＜Delay＞ can't be activated the same turn the card with the
+effect is placed in the battle area", and DCGO enforces it for exactly these
+cards via `CardEffectCommons.CanDeclareOptionDelayEffect` (`EnterFieldTurnCount
+!= TurnCount`). Our replacement path gates only on `source_is_delayed_option`
+(`dsl_cards/lower_replacement.rs`), which checks `OptionState::Delayed { .. }`
+and ignores `placed_on_turn` — so a Lv5+ [TB] Digimon leaving on the SAME turn
+EX12-070 is placed would still offer the window. `placed_on_turn` is already
+stored on `OptionState::Delayed` and `Game::option_field_state` already computes
+`can_activate_this_turn`; the gate is a one-line consult. Pre-existing (it was
+equally wrong before this fix), left out of the auto-trash fix to keep that diff
+attributable. Affects EX12-070, BT20-100, BT19-099, BT17-097.

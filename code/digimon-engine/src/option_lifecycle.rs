@@ -122,12 +122,18 @@ impl Game {
         placed_turn: u32,
     ) -> PermanentHandle {
         let placed_turn = placed_turn.min(u16::MAX as u32) as u16;
+        // Same narrowing as `place_self_as_delay_option_permanent` — see the
+        // long comment there. A card with no `kind: delay` clause has its
+        // `<Delay>` window owned elsewhere (a `kind: replacement` clause), so
+        // the carrier parks indefinitely (16-16-1) instead of inheriting a
+        // fabricated `EndOfYourNextTurn` auto-trash.
+        // G-DELAY-EVENT-WINDOW-AUTOTRASHED.
         let trigger = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
             .unwrap_or_default()
             .iter()
             .find_map(|effect| effect.delay_trigger)
-            .unwrap_or(DelayTrigger::EndOfYourNextTurn);
+            .unwrap_or(DelayTrigger::ExternallyGated);
         let mut permanent = Permanent::new(card, placed_turn);
         let placed_card = permanent.top_card().handle();
         permanent.option_state = OptionState::Delayed {
