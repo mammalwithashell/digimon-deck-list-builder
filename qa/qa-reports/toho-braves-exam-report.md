@@ -1,30 +1,44 @@
-# Toho Braves — DCGO card-clause exam report
+# Toho Braves - DCGO card-clause exam report
 
-**Date:** 2026-08-23 · **Campaign:** `toho-braves-exam` · **Oracle:** DCGO player
-`scripted-v8` (`dcgo_commit 617cf381b`) · **Store:**
-`qa/qa-reports/dcgo_exam_verdicts.json` · **Scenarios:** 135 under `qa/dcgo-exams/`
-· **Denominator correction:** `qa/qa-reports/clause-denominator-correction.md`
+**Date:** 2026-08-26 (supersedes the 2026-08-23 edition) - **Campaign:**
+`toho-braves-exam` - **Oracle:** DCGO player `scripted-v13` (built from
+`dcgo_commit 4db6ee409` plus the `select_trigger` reader; `artifact_sha256`
+638f4070) - **Store:** `qa/qa-reports/dcgo_exam_verdicts.json` - **Scenarios:**
+144 under `qa/dcgo-exams/` - **Denominator correction:**
+`qa/qa-reports/clause-denominator-correction.md`
 
 ## The denominator, always first
 
-**166 clauses across the 42-card tournament pool: 82 confirmed · 0 diverged ·
-23 unreachable · 61 unmeasured.**
+**166 clauses across the 42-card tournament pool: 107 confirmed - 0 diverged -
+5 unreachable - 54 unmeasured.**
 
-**82 clauses — 49% — have actually been run in both engines** and compared
-step-by-step. The 18-card competitive core (in ≥33 of 45 tournament lists) is at
-**44 of 74 = 59%**.
+**The 18-card competitive core (in >=33 of 45 tournament lists) is at 69 of 74 =
+93%, with 0 diverged and 0 unmeasured** - every core clause is adjudicated, and
+each of the 5 that are not confirmed is blocked on a named, MEASURED reason
+rather than on nobody having looked.
 
-Coverage is UNCHANGED by the 2026-08-23/24 triage pass — 82 measured before, 82
-after. What changed is what the measured clauses SAY: **11 diverged → 0**. Ten
-resolved into agreement via three engine fixes; the eleventh turned out to be a
-DCGO recorder gap and was fixed on the DCGO side. Read that as "everything we
-compared now agrees", NOT as "coverage improved" — the 61 unmeasured clauses are
-exactly as unmeasured as before, and the 23 unreachable are exactly as
-unreachable.
+Movement since the 2026-08-23 edition, which reported 82/0/23/61 and a core of
+44 of 74:
 
-Never read this as "Toho Braves passed." Read it per clause: a `confirmed` is a
+| | 2026-08-23 | now |
+|---|---|---|
+| Pool confirmed | 82 | **107** |
+| Core confirmed | 44 / 74 | **69 / 74** |
+| Diverged | 0 | 0 |
+| Core unmeasured | 30 | **0** |
+
+Never read this as "Toho Braves passed". Read it per clause: a `confirmed` is a
 scripted line that ran identically in our engine and in DCGO under a full
 per-step state diff; everything else is exactly as unproven as it says.
+
+### `--sim-only` is not confirmation, and this campaign proved it the hard way
+
+The corpus lowers 144/144 in our engine alone. That says a line is legal HERE;
+it says nothing about DCGO's prompt sequence. When six sim-green scenarios were
+put to the oracle, **all six failed** - none on state divergence, every one on
+prompt SEQUENCE. Only an oracle pass moves a clause to `confirmed`, and the
+exam prints `mode sim-only (no oracle: this can only re-check what a previous
+oracle run confirmed)` precisely so this is never mistaken.
 
 ### The denominator itself was wrong, and is now corrected
 
@@ -44,24 +58,24 @@ measured card-by-card in `clause-denominator-correction.md`.
 
 | Card | Name | In lists | Clauses | confirmed | diverged | unreachable | unmeasured |
 |---|---|---|---|---|---|---|---|
-| EX12-076 | Susanoomon | 45/45 | 6 |  |  | 4 | 2 |
-| EX12-004 | Onibimon | 44/45 | 2 | 1 |  |  | 1 |
-| EX12-009 | Wankomon | 44/45 | 3 | 2 |  | 1 |  |
-| EX12-020 | Gasamon | 44/45 | 3 | 2 |  |  | 1 |
-| EX12-026 | Shellmon | 44/45 | 4 | 2 |  |  | 2 |
-| EX12-031 | MarineBullmon | 44/45 | 4 | 1 |  | 3 |  |
-| EX12-046 | Shishimamon | 44/45 | 4 | 3 |  | 1 |  |
-| EX12-047 | Amaterasumon | 44/45 | 6 | 3 |  | 3 |  |
+| EX12-076 | Susanoomon | 45/45 | 6 | 4 |  | 2 |  |
+| EX12-004 | Onibimon | 44/45 | 2 | 2 |  |  |  |
+| EX12-009 | Wankomon | 44/45 | 3 | 3 |  |  |  |
+| EX12-020 | Gasamon | 44/45 | 3 | 3 |  |  |  |
+| EX12-026 | Shellmon | 44/45 | 4 | 4 |  |  |  |
+| EX12-031 | MarineBullmon | 44/45 | 4 | 3 |  | 1 |  |
+| EX12-046 | Shishimamon | 44/45 | 4 | 4 |  |  |  |
+| EX12-047 | Amaterasumon | 44/45 | 6 | 5 |  | 1 |  |
 | EX12-061 | Hanimon | 44/45 | 4 | 4 |  |  |  |
-| EX12-062 | Kokeshimon | 44/45 | 4 | 1 |  | 3 |  |
-| EX12-063 | Karakurumon | 44/45 | 4 | 2 |  | 2 |  |
-| EX12-065 | Kaguyamon | 44/45 | 5 | 4 |  |  | 1 |
+| EX12-062 | Kokeshimon | 44/45 | 4 | 4 |  |  |  |
+| EX12-063 | Karakurumon | 44/45 | 4 | 4 |  |  |  |
+| EX12-065 | Kaguyamon | 44/45 | 5 | 5 |  |  |  |
 | EX12-070 | Sanmyojin Arrival | 44/45 | 4 | 4 |  |  |  |
 | EX12-011 | Seasarmon | 42/45 | 4 | 4 |  |  |  |
-| EX12-036 | Ryugumon | 42/45 | 6 | 2 |  | 4 |  |
-| EX12-074 | Genshi Continent & Ashin | 40/45 | 4 | 3 |  | 1 |  |
+| EX12-036 | Ryugumon | 42/45 | 6 | 5 |  | 1 |  |
+| EX12-074 | Genshi Continent & Ashin | 40/45 | 4 | 4 |  |  |  |
 | EX1-066 | Analog Youth | 34/45 | 3 | 3 |  |  |  |
-| EX12-075 | Kunlun's Imperial Decree | 33/45 | 4 | 3 |  | 1 |  |
+| EX12-075 | Kunlun's Imperial Decree | 33/45 | 4 | 4 |  |  |  |
 | EX12-043 | Hakubamon | 7/45 | 3 | 3 |  |  |  |
 | BT8-097 | Crimson Blaze | 3/45 | 3 | 3 |  |  |  |
 | P-130 | Lui Ohwada | 3/45 | 3 | 3 |  |  |  |
