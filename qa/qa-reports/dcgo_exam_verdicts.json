@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-25T22:41:02.775971+00:00",
+  "last_updated": "2026-08-26T00:56:59.480160600+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -569,12 +569,11 @@
     "EX12-031#effect#0": {
       "clause_id": "EX12-031#effect#0",
       "card_id": "EX12-031",
-      "verdict": "unreachable",
+      "verdict": "confirmed",
       "label": "effect_description_eng",
       "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
-      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"SelectCardEffect prompt needs select_card_ids or select_cancel, got: select_bool=true\". We model the optional <Decode> accept as a separate yes/no (generic_bool) and THEN a card pick; DCGO folds both into one SelectCardEffect where cancel IS the decline. The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-031-effect0.yaml",
+      "recorded_at": "2026-08-26T00:56:59.480160600+00:00"
     },
     "EX12-031#effect#1": {
       "clause_id": "EX12-031#effect#1",
