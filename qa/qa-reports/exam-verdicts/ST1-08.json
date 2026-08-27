@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:14:46.534105800+00:00",
+  "clauses": {
+    "ST1-08#effect#0": {
+      "clause_id": "ST1-08#effect#0",
+      "card_id": "ST1-08",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "79ff505c83f16c2de69cfd691f9027d89d194a5ba6c8c9d400290098e9163399",
+      "scenario_path": "qa/dcgo-exams/ST1/ST1-08.yaml",
+      "recorded_at": "2026-08-23T22:14:46.534105800+00:00"
+    }
+  }
+}

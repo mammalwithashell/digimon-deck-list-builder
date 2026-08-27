@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:14:17.570910700+00:00",
+  "clauses": {
+    "EX12-070#effect#0": {
+      "clause_id": "EX12-070#effect#0",
+      "card_id": "EX12-070",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:07.765091200+00:00"
+    },
+    "EX12-070#effect#1": {
+      "clause_id": "EX12-070#effect#1",
+      "card_id": "EX12-070",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "850f840d7b980faf63508e4279dbb7d6ce8be5cf108e1b92059fc99419456cf0",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:10.097271800+00:00"
+    },
+    "EX12-070#effect#2": {
+      "clause_id": "EX12-070#effect#2",
+      "card_id": "EX12-070",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "5941c9db6ad218e12e491454ee20783541a9cd680215949ada8cbe7a8dffc320",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:12.442881800+00:00"
+    },
+    "EX12-070#effect#3": {
+      "clause_id": "EX12-070#effect#3",
+      "card_id": "EX12-070",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "ac4cc6c4c24b6d67887d579360ab2ba699acf4fd47e05607d3f09562837946c7",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect3.yaml",
+      "recorded_at": "2026-08-23T22:14:14.904735+00:00"
+    },
+    "EX12-070#effect#4": {
+      "clause_id": "EX12-070#effect#4",
+      "card_id": "EX12-070",
+      "verdict": "unreachable",
+      "label": "effect_description_eng",
+      "text_sha256": "f7ff3b42101d148d22fae4795844a509267e2a0a0038f0959b7c01e2c08acb5a",
+      "reason": "prompt-shape mismatch: DCGO parks SelectHandEffect where our sim parks EffectChoice that cannot take cards: (review note).",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-070#security#0": {
+      "clause_id": "EX12-070#security#0",
+      "card_id": "EX12-070",
+      "verdict": "confirmed",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-070-security0.yaml",
+      "recorded_at": "2026-08-23T22:14:17.570910700+00:00"
+    }
+  }
+}

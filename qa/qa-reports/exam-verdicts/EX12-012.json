@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:12:22.857419+00:00",
+  "clauses": {
+    "EX12-012#effect#0": {
+      "clause_id": "EX12-012#effect#0",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect0.yaml",
+      "recorded_at": "2026-08-23T22:12:13.645768400+00:00"
+    },
+    "EX12-012#effect#1": {
+      "clause_id": "EX12-012#effect#1",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "dc81d55a8b8c3056ff84e993329de1d31f4e43340c7270402310af072211891a",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect1.yaml",
+      "recorded_at": "2026-08-23T22:12:15.937835900+00:00"
+    },
+    "EX12-012#effect#2": {
+      "clause_id": "EX12-012#effect#2",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect2.yaml",
+      "recorded_at": "2026-08-23T22:12:18.213778+00:00"
+    },
+    "EX12-012#effect#3": {
+      "clause_id": "EX12-012#effect#3",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect3.yaml",
+      "recorded_at": "2026-08-23T22:12:20.497158300+00:00"
+    },
+    "EX12-012#inherited#0": {
+      "clause_id": "EX12-012#inherited#0",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:22.857419+00:00"
+    }
+  }
+}

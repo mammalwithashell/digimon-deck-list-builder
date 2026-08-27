@@ -865,4 +865,31 @@ mod tests {
         assert_eq!(card_file_name("EX12-035"), "EX12-035.json");
         assert_eq!(card_file_name("P-130"), "P-130.json");
     }
+
+    #[test]
+    fn migration_from_the_blob_preserves_every_row() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_migration");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        let mut blob = VerdictStore::default();
+        blob.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        blob.record(v("EX12-035#security#0", Verdict::Unreachable, "sha-ex12-035"));
+        blob.record(v("BT8-084#effect#0", Verdict::Confirmed, "sha-bt8-084"));
+        let blob_path = tmp.join("dcgo_exam_verdicts.json");
+        blob.save(&blob_path).unwrap();
+
+        let loaded = VerdictStore::load(&blob_path).unwrap();
+        let dir = tmp.join("exam-verdicts");
+        loaded.save_dir(&dir).unwrap();
+        let back = VerdictStore::load_dir(&dir).unwrap();
+
+        assert_eq!(back.len(), blob.len(), "no row may be lost in migration");
+        for (clause_id, before) in blob.iter() {
+            let after = back.get(clause_id).expect("every clause survives");
+            assert_eq!(after.verdict, before.verdict);
+            assert_eq!(after.text_sha256, before.text_sha256);
+            assert_eq!(after.recorded_at, before.recorded_at);
+        }
+    }
 }

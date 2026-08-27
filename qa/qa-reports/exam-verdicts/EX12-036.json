@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-25T00:00:05.993366500+00:00",
+  "clauses": {
+    "EX12-036#effect#0": {
+      "clause_id": "EX12-036#effect#0",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "a21b668cef733b509ed7fd63595f875b81a6eb29bbf53cf047e8a1d26e2a7558",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect0.yaml",
+      "recorded_at": "2026-08-24T19:06:30.578031400+00:00"
+    },
+    "EX12-036#effect#1": {
+      "clause_id": "EX12-036#effect#1",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "b34b65b6bc6ea1181e172e54c8e6405d9b72f5e46b6bbb4fa21d9dd20a67e625",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect1.yaml",
+      "recorded_at": "2026-08-24T19:09:13.866468600+00:00"
+    },
+    "EX12-036#effect#2": {
+      "clause_id": "EX12-036#effect#2",
+      "card_id": "EX12-036",
+      "verdict": "unreachable",
+      "label": "effect_description_eng",
+      "text_sha256": "ecaa1a256f20bda288ded82eeeb81210b97712538ab15e4e70e8fca53623005b",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"SelectCardEffect prompt needs select_card_ids or select_cancel, got: select_bool=true\". Identical shape to EX12-031#effect#0 -- the same <Decode> optional-accept modelling difference. (Supersedes the previous reason, which blamed the Material indexes payload; that gap was closed in 1f6811001 and is no longer what stops this line.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-036#effect#3": {
+      "clause_id": "EX12-036#effect#3",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "682f9331e1885ba7899da79dc6ab2d19ef5423f1acddcd105b1be3415fe5038d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect3.yaml",
+      "recorded_at": "2026-08-25T00:00:05.993366500+00:00"
+    },
+    "EX12-036#effect#4": {
+      "clause_id": "EX12-036#effect#4",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "01676e15e9f2bd2bf3901f805696a358cbb1b20c8aa8e189bb94817267a189a3",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect4.yaml",
+      "recorded_at": "2026-08-23T22:13:17.203664500+00:00"
+    },
+    "EX12-036#effect#5": {
+      "clause_id": "EX12-036#effect#5",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "95c56f78c1b4d2b0ecbc7b7019bf301a06139907711b68e754709c594ab2b2d7",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect5.yaml",
+      "recorded_at": "2026-08-23T22:13:19.943110700+00:00"
+    },
+    "EX12-036#effect#6": {
+      "clause_id": "EX12-036#effect#6",
+      "card_id": "EX12-036",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "95c56f78c1b4d2b0ecbc7b7019bf301a06139907711b68e754709c594ab2b2d7",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect6.yaml",
+      "recorded_at": "2026-08-22T14:52:38.425131+00:00"
+    },
+    "EX12-036#inherited#0": {
+      "clause_id": "EX12-036#inherited#0",
+      "card_id": "EX12-036",
+      "verdict": "unreachable",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "fa868a61ca973d8c04c09d82e07d2d848abe9e81b00a9e0ce9f2018341ca1071",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-036#security#0": {
+      "clause_id": "EX12-036#security#0",
+      "card_id": "EX12-036",
+      "verdict": "unreachable",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

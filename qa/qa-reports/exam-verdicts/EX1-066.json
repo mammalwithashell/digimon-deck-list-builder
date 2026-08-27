@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:11:43.910179300+00:00",
+  "clauses": {
+    "EX1-066#effect#0": {
+      "clause_id": "EX1-066#effect#0",
+      "card_id": "EX1-066",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "6ef2a72b9af483b07b1d6dfc91e82390a94b9f143915bd2947b5730a121c64d0",
+      "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect0.yaml",
+      "recorded_at": "2026-08-23T22:11:38.925909100+00:00"
+    },
+    "EX1-066#effect#1": {
+      "clause_id": "EX1-066#effect#1",
+      "card_id": "EX1-066",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "db914dc64761b53ef147ceba156c24a72b8865807447ee20eef634744281e5b5",
+      "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect1.yaml",
+      "recorded_at": "2026-08-23T22:11:41.495590300+00:00"
+    },
+    "EX1-066#effect#2": {
+      "clause_id": "EX1-066#effect#2",
+      "card_id": "EX1-066",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect2.yaml",
+      "recorded_at": "2026-08-23T22:11:43.910179300+00:00"
+    }
+  }
+}

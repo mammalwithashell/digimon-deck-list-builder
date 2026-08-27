@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-25T02:03:34.468199300+00:00",
+  "clauses": {
+    "EX12-063#effect#0": {
+      "clause_id": "EX12-063#effect#0",
+      "card_id": "EX12-063",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "582c9e9f3181e2a3b80f507ed29f6f08d477a398e12bb006a772cb540158a39e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect0.yaml",
+      "recorded_at": "2026-08-23T22:13:56.281814100+00:00"
+    },
+    "EX12-063#effect#1": {
+      "clause_id": "EX12-063#effect#1",
+      "card_id": "EX12-063",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "2edc93086256c26b9116e025ade694e2fa027c0ca9785ff460aafcc139f8ba14",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect1.yaml",
+      "recorded_at": "2026-08-24T19:34:58.481161800+00:00"
+    },
+    "EX12-063#effect#2": {
+      "clause_id": "EX12-063#effect#2",
+      "card_id": "EX12-063",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "7a09bdcfc3e4d5489d4c758e11b858aa196b62d18b1ddc5152a83bc6798fbda0",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect2.yaml",
+      "recorded_at": "2026-08-22T14:57:40.912415200+00:00"
+    },
+    "EX12-063#inherited#0": {
+      "clause_id": "EX12-063#inherited#0",
+      "card_id": "EX12-063",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "2edc93086256c26b9116e025ade694e2fa027c0ca9785ff460aafcc139f8ba14",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-063-inherited0.yaml",
+      "recorded_at": "2026-08-25T02:03:34.468199300+00:00"
+    },
+    "EX12-063#security#0": {
+      "clause_id": "EX12-063#security#0",
+      "card_id": "EX12-063",
+      "verdict": "unreachable",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

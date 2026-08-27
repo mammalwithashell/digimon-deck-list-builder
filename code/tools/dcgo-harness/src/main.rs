@@ -114,7 +114,7 @@ enum Command {
         #[arg(
             long,
             num_args = 0..=1,
-            default_missing_value = "qa/qa-reports/dcgo_exam_verdicts.json"
+            default_missing_value = "qa/qa-reports/exam-verdicts"
         )]
         verdicts: Option<PathBuf>,
         /// `clause_coverage extract` output supplying each clause's label and
@@ -183,6 +183,15 @@ enum Command {
         #[arg(long, default_value_t = dcgo_harness::watch::DEFAULT_PROGRESS_STALE_SECONDS)]
         progress_stale_seconds: u64,
     },
+    /// Split a single-blob verdict store into per-card files (one-time).
+    MigrateVerdicts {
+        /// The existing single-file store.
+        #[arg(long, default_value = "qa/qa-reports/dcgo_exam_verdicts.json")]
+        from: PathBuf,
+        /// Destination directory for per-card files.
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        to: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -226,11 +235,16 @@ impl Args {
 /// Whether this subcommand touches the job queue at all.
 ///
 /// `exam` does not: it lowers scenarios and replays them in our engine, and
-/// with `--sim-only` never involves DCGO. Creating jobs/ claimed/ done/
-/// failed/ for it would litter the CI workspace with empty directories at
-/// best, and at worst require a root the run has no use for.
+/// with `--sim-only` never involves DCGO. `migrate-verdicts` does not either:
+/// it is a pure file-to-file conversion of the verdict store, unrelated to
+/// the DCGO job queue. Creating jobs/ claimed/ done/ failed/ for either would
+/// litter the CI workspace with empty directories at best, and at worst
+/// require a root the run has no use for.
 fn needs_root(command: &Command) -> bool {
-    !matches!(command, Command::Exam { .. })
+    !matches!(
+        command,
+        Command::Exam { .. } | Command::MigrateVerdicts { .. }
+    )
 }
 
 fn run(args: &Args) -> Result<ExitCode, String> {
@@ -461,6 +475,20 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             })
         }
+        Command::MigrateVerdicts { from, to } => {
+            let store = dcgo_harness::exam::verdict::VerdictStore::load(from)?;
+            let cards: std::collections::BTreeSet<String> =
+                store.iter().map(|(_, cv)| cv.card_id.clone()).collect();
+            let rows = store.len();
+            store.save_dir(to)?;
+            println!(
+                "migrated {rows} verdicts across {} cards: {} -> {}",
+                cards.len(),
+                from.display(),
+                to.display()
+            );
+            Ok(ExitCode::SUCCESS)
+        }
     }
 }
 
@@ -539,11 +567,7 @@ fn run_exam(
                     .to_string()
             })?;
             let book = ClauseTextBook::load(ctj)?;
-            let store = if path.exists() {
-                VerdictStore::load(path)?
-            } else {
-                VerdictStore::default()
-            };
+            let store = VerdictStore::load_dir(path)?;
             Some((path.to_path_buf(), book, store))
         }
         None => None,
@@ -639,7 +663,7 @@ fn run_exam(
                 store.set_current_text_sha(id, &dcgo_harness::exam::verdict::sha256_hex(&ct.text));
             }
         }
-        store.save(store_path)?;
+        store.save_dir(store_path)?;
         println!(
             "exam: verdict store {} -- {}",
             store_path.display(),

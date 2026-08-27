@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-24T17:16:04.711503400+00:00",
+  "clauses": {
+    "EX12-046#effect#0": {
+      "clause_id": "EX12-046#effect#0",
+      "card_id": "EX12-046",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "a1f4bf3d71dc0482d860f413481a6c9ca694dd7866e5072e71d7802b29761629",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect0.yaml",
+      "recorded_at": "2026-08-23T22:13:29.393423800+00:00"
+    },
+    "EX12-046#effect#1": {
+      "clause_id": "EX12-046#effect#1",
+      "card_id": "EX12-046",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "487692e25886594f727d22fa91dcdcbbecbce70d15abd0762d3ce166d6f36712",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:31.799299800+00:00"
+    },
+    "EX12-046#effect#2": {
+      "clause_id": "EX12-046#effect#2",
+      "card_id": "EX12-046",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "3b02fb5cbeceda5702afa99d2b3ef02c49ceefcce7086d385f62acd225580ddf",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect2.yaml",
+      "recorded_at": "2026-08-24T02:07:38.823237900+00:00"
+    },
+    "EX12-046#effect#3": {
+      "clause_id": "EX12-046#effect#3",
+      "card_id": "EX12-046",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "3b02fb5cbeceda5702afa99d2b3ef02c49ceefcce7086d385f62acd225580ddf",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect3.yaml",
+      "recorded_at": "2026-08-22T14:53:13.057723700+00:00"
+    },
+    "EX12-046#inherited#0": {
+      "clause_id": "EX12-046#inherited#0",
+      "card_id": "EX12-046",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "152ee40e0daaecf88292e6000ffd67266bc2c159cbfeaad101983fa0892c9d62",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-046-inherited0.yaml",
+      "recorded_at": "2026-08-24T17:16:04.711503400+00:00"
+    },
+    "EX12-046#security#0": {
+      "clause_id": "EX12-046#security#0",
+      "card_id": "EX12-046",
+      "verdict": "unreachable",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

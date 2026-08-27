@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:12:57.467571800+00:00",
+  "clauses": {
+    "EX12-022#effect#1": {
+      "clause_id": "EX12-022#effect#1",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-effect1.yaml",
+      "recorded_at": "2026-08-23T22:12:52.598185300+00:00"
+    },
+    "EX12-022#inherited#0": {
+      "clause_id": "EX12-022#inherited#0",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "ed6ae462b769af6c7dd4e3f2563728f81ad9fe9b0230e1a3a9b9075ea20bcc91",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:54.932961600+00:00"
+    },
+    "EX12-022#inherited#1": {
+      "clause_id": "EX12-022#inherited#1",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "55311f4a7383e65b8f68e93b41e9222d6b8690d45c8b5d5023ba9bc672deee86",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-inherited1.yaml",
+      "recorded_at": "2026-08-23T22:12:57.467571800+00:00"
+    }
+  }
+}

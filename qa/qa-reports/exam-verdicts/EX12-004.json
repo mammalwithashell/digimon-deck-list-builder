@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-24T17:12:45.214652300+00:00",
+  "clauses": {
+    "EX12-004#effect#0": {
+      "clause_id": "EX12-004#effect#0",
+      "card_id": "EX12-004",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "dbc4f2d4f98ea3a70b6be24d1726bed49e3dd8d2a0cece238760d4ac8ed036a9",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-004-effect0.yaml",
+      "recorded_at": "2026-08-24T17:12:45.214652300+00:00"
+    },
+    "EX12-004#effect#1": {
+      "clause_id": "EX12-004#effect#1",
+      "card_id": "EX12-004",
+      "verdict": "unreachable",
+      "label": "effect_description_eng",
+      "text_sha256": "2f8294e6613ee827f4e522a1548d33c057083ea556c682119f8f67cd9f673ae8",
+      "reason": "optional-trigger gate asymmetry: DCGO parks an OptionalSkill/MultipleSkills gate at an isOptional trigger boundary where our engine surfaces no prompt; the scripted line desyncs at the gate (triage task_69f10a66). The line reached the position; the gate question itself is the divergence surface.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-004#effect#2": {
+      "clause_id": "EX12-004#effect#2",
+      "card_id": "EX12-004",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "1b7faea4ff2532355e393e4a51588b148d790ff067b3115402ff7475732df5c5",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-004-effect2.yaml",
+      "recorded_at": "2026-08-23T22:11:51.513563600+00:00"
+    },
+    "EX12-004#inherited#0": {
+      "clause_id": "EX12-004#inherited#0",
+      "card_id": "EX12-004",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "2f8294e6613ee827f4e522a1548d33c057083ea556c682119f8f67cd9f673ae8",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-004-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:11:53.853981800+00:00"
+    },
+    "EX12-004#security#0": {
+      "clause_id": "EX12-004#security#0",
+      "card_id": "EX12-004",
+      "verdict": "unreachable",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-25T01:58:56.169152400+00:00",
+  "clauses": {
+    "EX12-065#effect#0": {
+      "clause_id": "EX12-065#effect#0",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "961dab0cad24f7381e9c60d6a6431967fe195cf0692b1e30cc34ba75e15f43da",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect0.yaml",
+      "recorded_at": "2026-08-22T14:59:27.325089200+00:00"
+    },
+    "EX12-065#effect#1": {
+      "clause_id": "EX12-065#effect#1",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:59.455548500+00:00"
+    },
+    "EX12-065#effect#2": {
+      "clause_id": "EX12-065#effect#2",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "1330ddf39ae229c330ce69859333a3b7456189d854ff80bea09b89fbdda5bd20",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:01.879862500+00:00"
+    },
+    "EX12-065#effect#3": {
+      "clause_id": "EX12-065#effect#3",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "d65042cd9bb15fc8adc41ef78cadc07736caab126e1fe8be63c37f1592dae575",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect3.yaml",
+      "recorded_at": "2026-08-25T01:58:56.169152400+00:00"
+    },
+    "EX12-065#effect#4": {
+      "clause_id": "EX12-065#effect#4",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "8c52985984ddb63702fa87a961ac4831fac55911caa85a9cdff751db358b778a",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect4.yaml",
+      "recorded_at": "2026-08-23T22:14:04.687833700+00:00"
+    },
+    "EX12-065#effect#6": {
+      "clause_id": "EX12-065#effect#6",
+      "card_id": "EX12-065",
+      "verdict": "unreachable",
+      "label": "Effect",
+      "text_sha256": "8c52985984ddb63702fa87a961ac4831fac55911caa85a9cdff751db358b778a",
+      "reason": "TriggerOrder branch prompt: every Kaguyamon deletion queues two mandatory triggers in our engine and parks a branch-index question DCGO never asks; indexes payloads out of select-support scope.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

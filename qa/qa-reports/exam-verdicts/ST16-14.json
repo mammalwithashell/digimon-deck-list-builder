@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:14:54.560364700+00:00",
+  "clauses": {
+    "ST16-14#effect#0": {
+      "clause_id": "ST16-14#effect#0",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "659a34328f74aa1ae7ebc589c65341825e78b2591982d99ba1db4c5d53387505",
+      "scenario_path": "qa/dcgo-exams/ST16/ST16-14-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:52.218113800+00:00"
+    },
+    "ST16-14#effect#1": {
+      "clause_id": "ST16-14#effect#1",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "cd747c3da7a26d0facdee268625e8c04a61c4ddc4a436f968e1cb3ff3f65ea61",
+      "scenario_path": "qa/dcgo-exams/ST16/ST16-14-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:54.560364700+00:00"
+    },
+    "ST16-14#effect#2": {
+      "clause_id": "ST16-14#effect#2",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/ST16-14-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:41.927396700+00:00"
+    }
+  }
+}
