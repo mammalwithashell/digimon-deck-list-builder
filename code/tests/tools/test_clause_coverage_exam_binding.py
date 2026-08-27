@@ -246,6 +246,74 @@ def test_load_verdict_store_directory_rejects_a_row_filed_under_the_wrong_card(t
     assert "BT8-084" in message, message
 
 
+def test_load_verdict_store_directory_rejects_a_row_whose_clause_id_disagrees_with_its_key(
+    tmp_path,
+):
+    """A row's embedded `clause_id` must agree with the dict key it is filed
+    under.
+
+    Mirrors the Rust `VerdictStore::from_json` check in
+    `code/tools/dcgo-harness/src/exam/verdict.rs`: a bad hand-edit or merge
+    that leaves `EX12-004.json` with key `"EX12-004#effect#0"` mapping to a
+    record whose `clause_id` is `"EX12-004#effect#2"` passes the card check
+    but must still be refused -- otherwise `bind()` would report `#effect#0`
+    as `confirmed` on the strength of a verdict recorded for a different
+    clause.
+    """
+    d = tmp_path / "exam-verdicts"
+    d.mkdir()
+    (d / "EX12-004.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "EX12-004#effect#0": {
+                        "clause_id": "EX12-004#effect#2",
+                        "card_id": "EX12-004",
+                        "verdict": "confirmed",
+                        "text_sha256": "abc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        load_verdict_store(d)
+
+    message = str(exc_info.value)
+    assert "EX12-004.json" in message, message
+    assert "EX12-004#effect#0" in message, message
+    assert "EX12-004#effect#2" in message, message
+
+
+def test_load_verdict_store_directory_tolerates_an_empty_embedded_clause_id(tmp_path):
+    """An empty/missing embedded `clause_id` is filled in from the key, not
+    rejected -- matching the Rust reader's tolerance in `from_json`."""
+    d = tmp_path / "exam-verdicts"
+    d.mkdir()
+    (d / "EX12-004.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "EX12-004#effect#0": {
+                        "clause_id": "",
+                        "card_id": "EX12-004",
+                        "verdict": "confirmed",
+                        "text_sha256": "abc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store = load_verdict_store(d)
+    assert store["EX12-004#effect#0"]["verdict"] == "confirmed"
+
+
 def test_load_verdict_store_still_reads_a_single_file(tmp_path):
     """The single-file form stays supported: tests and fixtures use it."""
     p = tmp_path / "verdicts.json"

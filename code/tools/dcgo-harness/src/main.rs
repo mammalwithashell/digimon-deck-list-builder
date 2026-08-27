@@ -226,7 +226,7 @@ impl Args {
     /// The harness root, for the subcommands that actually queue DCGO work.
     fn require_root(&self) -> Result<&std::path::Path, String> {
         self.root.as_deref().ok_or_else(|| {
-            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam` runs without one."
+            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam` and `migrate-verdicts` run without one."
                 .to_string()
         })
     }
@@ -245,6 +245,30 @@ fn needs_root(command: &Command) -> bool {
         command,
         Command::Exam { .. } | Command::MigrateVerdicts { .. }
     )
+}
+
+/// Whether `to` looks like the destination of a migration that already ran:
+/// a directory that exists and already holds at least one `*.json` file.
+///
+/// A non-existent or empty directory is fine to migrate into. Anything else
+/// -- including a directory that holds unrelated `*.json` files -- is
+/// treated as "already migrated" on purpose: `migrate-verdicts` is a
+/// one-shot conversion, and the caller (`Command::MigrateVerdicts`) refuses
+/// rather than let `save_dir`'s prune step delete files it doesn't
+/// recognize.
+fn migrate_verdicts_destination_already_populated(to: &Path) -> Result<bool, String> {
+    if !to.is_dir() {
+        return Ok(false);
+    }
+    let entries = std::fs::read_dir(to)
+        .map_err(|e| format!("failed to read {}: {e}", to.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("failed to read {}: {e}", to.display()))?;
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn run(args: &Args) -> Result<ExitCode, String> {
@@ -476,6 +500,21 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             })
         }
         Command::MigrateVerdicts { from, to } => {
+            // `save_dir` prunes any *.json under `to` that isn't a card the
+            // store being written carries. Re-running this migration against
+            // a recovered copy of the old blob -- a plausible operator move
+            // after a bad merge -- would otherwise silently delete every
+            // card file the live ledger has grown since the migration ran,
+            // while printing a cheerful success line. Refuse instead.
+            if migrate_verdicts_destination_already_populated(to)? {
+                return Err(format!(
+                    "{} already contains *.json files -- the migration has already \
+                     run against this directory. Refusing to re-run it: save_dir \
+                     prunes any file not present in the source store, so doing so \
+                     here would delete every card file added since the migration.",
+                    to.display()
+                ));
+            }
             let store = dcgo_harness::exam::verdict::VerdictStore::load(from)?;
             let cards: std::collections::BTreeSet<String> =
                 store.iter().map(|(_, cv)| cv.card_id.clone()).collect();
@@ -2236,5 +2275,90 @@ steps:
         assert_eq!(v["inputs"][2]["select_has_bool"], true);
         assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
         assert!(v["inputs"][2].get("select_cancel").is_none());
+    }
+}
+
+#[cfg(test)]
+mod migrate_verdicts_guard_tests {
+    use super::*;
+
+    #[test]
+    fn missing_destination_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_missing");
+        let _ = std::fs::remove_dir_all(&tmp);
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn empty_destination_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_empty");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn destination_holding_a_json_file_is_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_populated");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(tmp.join("EX12-035.json"), "{}").unwrap();
+        assert!(migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn destination_holding_only_non_json_files_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_non_json");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(tmp.join("README.md"), "notes").unwrap();
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn migrate_verdicts_refuses_when_destination_is_already_populated() {
+        // End-to-end: a recovered copy of the old blob, re-migrated against a
+        // `--to` that already has per-card files (added since the real
+        // migration ran), must be refused rather than pruned.
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_end_to_end");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        let mut blob = dcgo_harness::exam::verdict::VerdictStore::default();
+        blob.record(dcgo_harness::exam::verdict::ClauseVerdict {
+            clause_id: "EX12-035#effect#0".to_string(),
+            card_id: "EX12-035".to_string(),
+            verdict: dcgo_harness::exam::verdict::Verdict::Confirmed,
+            label: String::new(),
+            text_sha256: "sha-ex12-035".to_string(),
+            scenario_path: None,
+            reason: None,
+            dcgo_build: None,
+            job_id: None,
+            recorded_at: "2026-01-01T00:00:00Z".to_string(),
+        });
+        let from = tmp.join("dcgo_exam_verdicts.json");
+        blob.save(&from).unwrap();
+
+        // The live ledger has grown a card since the real migration ran.
+        let to = tmp.join("exam-verdicts");
+        std::fs::create_dir_all(&to).unwrap();
+        std::fs::write(to.join("BT8-084.json"), "{}").unwrap();
+
+        let args = Args {
+            root: None,
+            command: Command::MigrateVerdicts {
+                from: from.clone(),
+                to: to.clone(),
+            },
+        };
+        let err = run(&args).expect_err("must refuse a populated destination");
+        assert!(err.contains("already contains"), "{err}");
+        assert!(err.contains(&to.display().to_string()), "{err}");
+
+        // Refused before ever touching save_dir: the pre-existing file
+        // survives untouched.
+        assert!(to.join("BT8-084.json").exists());
+        assert!(!to.join("EX12-035.json").exists());
     }
 }

@@ -163,15 +163,24 @@ def load_verdict_store(path: Path | str | None) -> dict:
     A missing path is NOT an error (fresh checkout): it yields an empty store,
     and every clause then honestly reports `unmeasured`.
 
-    In the directory branch only, a row whose ``card_id`` does not match the
-    file it was found in is rejected with a ``ValueError`` naming both the
-    file and the offending card -- the same check the Rust
-    ``VerdictStore::load_dir`` (`code/tools/dcgo-harness/src/exam/verdict.rs`)
-    performs, so a misfiled row (a bad hand-edit or a bad merge) cannot be
-    silently absorbed into a card's clause list by one reader while the other
-    refuses it. The single-file branch is exempt: fixtures and tests load
-    arbitrarily-named single files on purpose, and the filename there carries
-    no claim about which card the contents belong to.
+    In the directory branch only, two checks mirror the Rust
+    ``VerdictStore::load_dir`` / ``VerdictStore::from_json``
+    (`code/tools/dcgo-harness/src/exam/verdict.rs`), so a misfiled or
+    mismatched row cannot be silently absorbed into a card's clause list by
+    one reader while the other refuses it:
+
+    1. A row whose ``card_id`` does not match the file it was found in is
+       rejected with a ``ValueError`` naming both the file and the offending
+       card.
+    2. A row whose embedded ``clause_id`` disagrees with the dict key it is
+       filed under is rejected with a ``ValueError`` naming the file, the
+       key, and the disagreeing ``clause_id`` -- an empty/missing embedded
+       ``clause_id`` is tolerated (the key is treated as authoritative),
+       matching the Rust reader's tolerance.
+
+    The single-file branch is exempt from both checks: fixtures and tests
+    load arbitrarily-named single files on purpose, and the filename there
+    carries no claim about which card the contents belong to.
     """
     if not path:
         return {}
@@ -191,6 +200,12 @@ def load_verdict_store(path: Path | str | None) -> dict:
                         f"(clause {clause_id!r}); each file holds exactly one card's "
                         "verdicts"
                     )
+                embedded_clause_id = record.get("clause_id")
+                if embedded_clause_id and embedded_clause_id != clause_id:
+                    raise ValueError(
+                        f"verdict file {f} key {clause_id!r} disagrees with its "
+                        f"clause_id {embedded_clause_id!r}"
+                    )
                 merged[clause_id] = record
         return merged
 
@@ -198,7 +213,7 @@ def load_verdict_store(path: Path | str | None) -> dict:
 
 
 def _load_verdict_file(p: Path) -> dict:
-    """One store file -> ``{clause_id: entry}``. Shape errors yield ``{}`."""
+    """One store file -> ``{clause_id: entry}``. Shape errors yield ``{}``."""
     with open(p, encoding="utf-8") as f:
         data = json.load(f)
     clauses = data.get("clauses") if isinstance(data, dict) else None

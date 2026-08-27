@@ -38,7 +38,7 @@ def render_index(rows: list[dict], generated_from: str) -> str:
     for row in rows:
         binding = row["binding"]
         by_verdict = binding["denominator"]["by_verdict"]
-        total = binding["total_clauses"]
+        total = binding["denominator"]["total_clauses"]
         got = sum(by_verdict.get(k, 0) for k in VERDICT_COLUMNS)
         if got != total:
             raise ValueError(
@@ -80,7 +80,7 @@ def render_index(rows: list[dict], generated_from: str) -> str:
     for row in ordered:
         binding = row["binding"]
         by_verdict = binding["denominator"]["by_verdict"]
-        total = binding["total_clauses"]
+        total = binding["denominator"]["total_clauses"]
         measured = total - by_verdict.get("unmeasured", 0)
         pct = f"{(100 * measured / total):.0f}%" if total else "n/a"
         cells = " | ".join(str(by_verdict.get(c, 0)) for c in VERDICT_COLUMNS)

@@ -744,6 +744,14 @@ Three merged write-targets plus a generated rollup, each shaped by how it merges
 | `qa/qa-reports/exam-claims/<CARD-ID>.claim` | Advisory leases with expiry | One file per card |
 | `qa/qa-reports/exam-index.md` | Generated rollup, sorted by `unmeasured` descending | Regenerated, never hand-edited |
 
+**Not written yet.** `exam-log.jsonl`, the `exam-claims/` leases, and
+`exam-index.md` are produced by the campaign driver, which has not landed —
+`ledger.rs` currently has no caller, and no `dcgo-harness` subcommand writes
+any of the three. Only `qa/qa-reports/exam-verdicts/<CARD-ID>.json` is live
+today (written by `exam` and by `migrate-verdicts`). Until the driver lands,
+do not go looking for the other three on disk; the advice below describes
+the design, not the current state.
+
 **Claims are advisory.** Two nodes pushing in the same instant can both claim a
 card; git is the only coordinator. That is an accepted trade rather than an
 oversight — a duplicate costs one card's authoring and is visible at merge,

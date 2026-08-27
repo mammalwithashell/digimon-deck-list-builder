@@ -19,7 +19,7 @@ clause: ST1-12#effect#0
 seed: 424242
 # STATUS: this is the proof-of-concept scenario (the first exam line that ever
 # played a card), NOT a tracked clause -- ST1-12 has no entry in
-# qa/qa-reports/dcgo_exam_verdicts.json. Its job is to keep the sim-only CI gate
+# qa/qa-reports/exam-verdicts/. Its job is to keep the sim-only CI gate
 # honest. The slot pin below was re-derived for sim-only; a fresh ORACLE run of
 # this changed line does not yet pass (the stacked deck shifts the turn
 # structure and the tail desyncs), so do not read it as oracle-verified. The

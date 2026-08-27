@@ -9,16 +9,24 @@ from tools.clause_coverage.exam_index import render_index
 
 
 def _binding(total, confirmed, diverged, unreachable, unavailable, unmeasured):
+    """Match the real shape `exam_binding.bind()` returns: `total_clauses`
+    (and `total_cards`, `by_zone`) live nested under `denominator`, alongside
+    `by_verdict` -- there is no top-level `total_clauses` key. `render_index`
+    only reads `by_verdict` and `total_clauses`; `total_cards`/`by_zone` are
+    included anyway so the fixture is honestly representative of a real
+    `bind()` result."""
     return {
-        "total_clauses": total,
         "denominator": {
+            "total_clauses": total,
+            "total_cards": 1,
             "by_verdict": {
                 "confirmed": confirmed,
                 "diverged": diverged,
                 "unreachable": unreachable,
                 "unavailable": unavailable,
                 "unmeasured": unmeasured,
-            }
+            },
+            "by_zone": {"effect": total},
         },
     }
 

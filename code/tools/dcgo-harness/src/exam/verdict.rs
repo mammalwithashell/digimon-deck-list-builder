@@ -294,7 +294,12 @@ impl VerdictStore {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            if !by_card.contains_key(&stem) {
+            // Guard the only unbounded delete in this module: only ever prune
+            // a file whose stem is shaped like a card id. A `*.json` file
+            // that doesn't match (a note, a README export, anything a human
+            // dropped into the directory) is left alone rather than deleted,
+            // even though it isn't in `by_card` either.
+            if !by_card.contains_key(&stem) && looks_like_card_id(&stem) {
                 std::fs::remove_file(&path).map_err(|e| {
                     format!("failed to prune stale verdict file {}: {e}", path.display())
                 })?;
@@ -508,6 +513,31 @@ pub fn sha256_hex(text: &str) -> String {
 /// one place that has to learn about it.
 pub fn card_file_name(card_id: &str) -> String {
     format!("{card_id}.json")
+}
+
+/// Whether `stem` has the shape of a card id: uppercase ASCII letters/digits,
+/// then a `-`, then one or more digits -- e.g. `EX12-004`, `BT8-084`,
+/// `P-130`, `ST1-15`.
+///
+/// `VerdictStore::save_dir`'s prune step is the one unbounded delete in this
+/// module (it removes any `*.json` in the directory that isn't a currently-
+/// tracked card). This check is its guard rail: a file whose stem doesn't
+/// look like a card id is skipped rather than deleted, so an unrelated file
+/// dropped into the ledger directory can't be silently destroyed by a save.
+fn looks_like_card_id(stem: &str) -> bool {
+    let Some(dash) = stem.find('-') else {
+        return false;
+    };
+    let (head, rest) = stem.split_at(dash);
+    let tail = &rest[1..]; // drop the '-' itself
+    if head.is_empty() || tail.is_empty() {
+        return false;
+    }
+    let head_ok = head
+        .chars()
+        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
+    let tail_ok = tail.chars().all(|c| c.is_ascii_digit());
+    head_ok && tail_ok
 }
 
 /// Record one scenario run's verdict, or refuse.
@@ -858,6 +888,28 @@ mod tests {
 
         assert!(tmp.join("EX12-035.json").exists());
         assert!(!tmp.join("BT8-084.json").exists(), "stale card file must be pruned");
+    }
+
+    #[test]
+    fn save_dir_never_deletes_a_file_that_doesnt_look_like_a_card_id() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_unrelated_file_survives");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        // An unrelated file a human dropped into the ledger directory --
+        // its stem is not shaped like a card id, so the prune step (which
+        // is otherwise an unbounded delete of anything untracked) must
+        // leave it alone.
+        std::fs::write(tmp.join("notes.json"), "{}").unwrap();
+
+        let mut store = VerdictStore::default();
+        store.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        store.save_dir(&tmp).unwrap();
+
+        assert!(
+            tmp.join("notes.json").exists(),
+            "an unrelated *.json file must survive save_dir's prune step"
+        );
+        assert!(tmp.join("EX12-035.json").exists());
     }
 
     #[test]
