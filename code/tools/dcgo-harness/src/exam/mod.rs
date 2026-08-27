@@ -29,6 +29,11 @@
 //! renders that observation as a draft `cards_behavioral` test for a human to
 //! review.
 //!
+//! Running the exam across a fleet of parallel nodes needs one more thing
+//! [`verdict`]'s current-state store cannot express: history. [`ledger`]
+//! records that as an append-only log of attempts, so nodes don't each burn
+//! an afternoon rediscovering the same dead end.
+//!
 //! The `pub use` block below is a convenience surface only. Each module
 //! remains the owner of its own names — import from the module when you want
 //! to be explicit, and note that nothing may be re-exported here under a name
@@ -39,6 +44,7 @@ pub mod backfill;
 pub mod dcgo_pool;
 pub mod differ;
 pub mod drafter;
+pub mod ledger;
 pub mod lower;
 pub mod projection;
 pub mod scenario;
