@@ -29,7 +29,7 @@
 //! (`version` / `last_updated` / `cards`) so the QA artifacts read alike.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -198,6 +198,107 @@ impl VerdictStore {
         text.push('\n');
         std::fs::write(path, text)
             .map_err(|e| format!("failed to write verdict store {}: {e}", path.display()))
+    }
+
+    /// Load every `<CARD-ID>.json` under `dir` and merge them into one store.
+    ///
+    /// A **missing directory is not an error** — it is a fresh checkout, and
+    /// every clause then honestly reports `unmeasured`. (Contrast [`load`],
+    /// which takes an explicitly named file and must fail on a typo.)
+    ///
+    /// A row whose `card_id` does not match the file it was found in is
+    /// rejected rather than merged: that is the per-card analogue of the
+    /// key-vs-`clause_id` check in [`from_json`], and it catches a bad merge
+    /// or a hand-edit that would otherwise file a verdict under a card that
+    /// never earned it.
+    pub fn load_dir(dir: &Path) -> Result<VerdictStore, String> {
+        let mut merged = VerdictStore::default();
+        if !dir.exists() {
+            return Ok(merged);
+        }
+        let entries = std::fs::read_dir(dir)
+            .map_err(|e| format!("failed to read verdict directory {}: {e}", dir.display()))?;
+        let mut paths: Vec<PathBuf> = Vec::new();
+        for entry in entries {
+            let entry =
+                entry.map_err(|e| format!("failed to read {}: {e}", dir.display()))?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                paths.push(path);
+            }
+        }
+        // Deterministic order so an error is reproducible.
+        paths.sort();
+
+        for path in paths {
+            let expected_card = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_string();
+            let one = VerdictStore::load(&path)?;
+            for (clause_id, cv) in one.clauses.into_iter() {
+                if cv.card_id != expected_card {
+                    return Err(format!(
+                        "verdict file {} holds a verdict for card {:?} (clause {:?}); \
+                         each file holds exactly one card's verdicts",
+                        path.display(),
+                        cv.card_id,
+                        clause_id
+                    ));
+                }
+                merged.clauses.insert(clause_id, cv);
+            }
+            if one.last_updated > merged.last_updated {
+                merged.last_updated = one.last_updated;
+            }
+        }
+        Ok(merged)
+    }
+
+    /// Write one file per card under `dir`.
+    ///
+    /// Disjoint writers never touch the same file, which is what makes two
+    /// nodes' branches merge cleanly. Card files that no longer have any
+    /// verdicts are removed, so a re-extraction that drops a card cannot
+    /// leave a stale verdict behind to be read back later.
+    pub fn save_dir(&self, dir: &Path) -> Result<(), String> {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("failed to create verdict directory {}: {e}", dir.display()))?;
+
+        let mut by_card: BTreeMap<String, VerdictStore> = BTreeMap::new();
+        for (clause_id, cv) in self.clauses.iter() {
+            let per = by_card.entry(cv.card_id.clone()).or_default();
+            per.clauses.insert(clause_id.clone(), cv.clone());
+            if cv.recorded_at > per.last_updated {
+                per.last_updated = cv.recorded_at.clone();
+            }
+        }
+
+        for (card_id, per) in by_card.iter() {
+            per.save(&dir.join(card_file_name(card_id)))?;
+        }
+
+        // Prune files for cards we no longer carry.
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) != Some("json") {
+                    continue;
+                }
+                let stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default()
+                    .to_string();
+                if !by_card.contains_key(&stem) {
+                    std::fs::remove_file(&path).map_err(|e| {
+                        format!("failed to prune stale verdict file {}: {e}", path.display())
+                    })?;
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Serialize to the `{version, last_updated, clauses}` JSON shape.
@@ -396,6 +497,15 @@ pub fn sha256_hex(text: &str) -> String {
     let mut h = Sha256::new();
     h.update(text.as_bytes());
     format!("{:x}", h.finalize())
+}
+
+/// File name a card's verdicts live in.
+///
+/// Card ids are already filesystem-safe (`[A-Z0-9-]`), so this is a plain
+/// suffix rather than a sanitizer — if that ever stops being true, this is the
+/// one place that has to learn about it.
+pub fn card_file_name(card_id: &str) -> String {
+    format!("{card_id}.json")
 }
 
 /// Record one scenario run's verdict, or refuse.
@@ -671,5 +781,86 @@ mod tests {
             sha256_hex("abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
+    }
+
+    #[test]
+    fn save_dir_writes_one_file_per_card() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_per_card");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let mut store = VerdictStore::default();
+        store.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        store.record(v("EX12-035#effect#1", Verdict::Unreachable, "sha-ex12-035"));
+        store.record(v("BT8-084#effect#0", Verdict::Confirmed, "sha-bt8-084"));
+
+        store.save_dir(&tmp).expect("save_dir");
+
+        assert!(tmp.join("EX12-035.json").exists());
+        assert!(tmp.join("BT8-084.json").exists());
+        let files: Vec<_> = std::fs::read_dir(&tmp).unwrap().filter_map(|e| e.ok()).collect();
+        assert_eq!(files.len(), 2, "one file per card, not per clause");
+    }
+
+    #[test]
+    fn load_dir_round_trips_every_row() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_round_trip");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let mut store = VerdictStore::default();
+        store.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        store.record(v("BT8-084#effect#0", Verdict::Diverged, "sha-bt8-084"));
+        store.save_dir(&tmp).expect("save_dir");
+
+        let back = VerdictStore::load_dir(&tmp).expect("load_dir");
+        assert_eq!(back.len(), 2);
+        assert_eq!(back.get("EX12-035#effect#0").unwrap().verdict, Verdict::Confirmed);
+        assert_eq!(back.get("BT8-084#effect#0").unwrap().verdict, Verdict::Diverged);
+    }
+
+    #[test]
+    fn load_dir_missing_directory_is_empty_not_an_error() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_absent_dir");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let store = VerdictStore::load_dir(&tmp).expect("missing dir is a fresh checkout");
+        assert!(store.is_empty());
+    }
+
+    #[test]
+    fn load_dir_rejects_a_row_filed_under_the_wrong_card() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_misfiled");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        // BT8-084's verdict written into EX12-035.json: a hand-edit or a bad
+        // merge. Silently accepting it would file a verdict under a card that
+        // never earned it.
+        let mut store = VerdictStore::default();
+        store.record(v("BT8-084#effect#0", Verdict::Confirmed, "sha-bt8-084"));
+        std::fs::write(tmp.join("EX12-035.json"), store.to_json().unwrap()).unwrap();
+
+        let err = VerdictStore::load_dir(&tmp).expect_err("must reject a misfiled row");
+        assert!(err.contains("EX12-035"), "error names the file: {err}");
+        assert!(err.contains("BT8-084"), "error names the offending card: {err}");
+    }
+
+    #[test]
+    fn save_dir_removes_a_card_file_that_no_longer_has_verdicts() {
+        let tmp = std::env::temp_dir().join("exam_verdicts_pruned");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let mut store = VerdictStore::default();
+        store.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        store.record(v("BT8-084#effect#0", Verdict::Confirmed, "sha-bt8-084"));
+        store.save_dir(&tmp).unwrap();
+
+        // A re-extraction dropped BT8-084 entirely.
+        let mut store2 = VerdictStore::default();
+        store2.record(v("EX12-035#effect#0", Verdict::Confirmed, "sha-ex12-035"));
+        store2.save_dir(&tmp).unwrap();
+
+        assert!(tmp.join("EX12-035.json").exists());
+        assert!(!tmp.join("BT8-084.json").exists(), "stale card file must be pruned");
+    }
+
+    #[test]
+    fn card_file_name_is_the_card_id_plus_json() {
+        assert_eq!(card_file_name("EX12-035"), "EX12-035.json");
+        assert_eq!(card_file_name("P-130"), "P-130.json");
     }
 }
