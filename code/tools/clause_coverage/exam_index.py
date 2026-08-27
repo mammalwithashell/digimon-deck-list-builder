@@ -72,7 +72,7 @@ def render_index(rows: list[dict], generated_from: str) -> str:
     out.append("")
     out.append(
         "| Archetype | Cards | Clauses | "
-        + " | ".join(VERDICT_COLUMNS)
+        + " | ".join(c.capitalize() for c in VERDICT_COLUMNS)
         + " | Measured |"
     )
     out.append("|---|---|---|" + "---|" * (len(VERDICT_COLUMNS) + 1))

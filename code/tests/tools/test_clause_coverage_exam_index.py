@@ -39,7 +39,7 @@ def test_every_row_prints_all_five_classes():
              "binding": _binding(166, 107, 0, 5, 0, 54)}]
     out = render_index(rows, "ledger")
     for column in ("confirmed", "diverged", "unreachable", "unavailable", "unmeasured"):
-        assert column in out
+        assert column in out.lower()
     assert "107" in out and "54" in out
 
 
