@@ -1,0 +1,89 @@
+# Exam scenario: EX12-025 Gawappamon inherited clause #0 -- the hand-size gate
+# of "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards,
+# <Draw 1>".
+#
+# Line shape copied from the confirmed EX12-026-inherited0.yaml (Shellmon
+# prints the identical inherited effect, so the isolation problem is the same
+# one, already solved there).
+#
+# Gawappamon must be a digivolution SOURCE in the battle area when the stack
+# attacks. The stack is built ON THE FIELD, never through breeding: hatching
+# would put Onibimon's <Execute>-granting inherited under the stack and its
+# optional end-of-turn attack would prompt at every trailing pass.
+#
+# Getting Gawappamon onto the field without a prompt rules out every Lv.3
+# base: Wankomon's [On Play] is a reveal-and-add selection, Hanimon's is an
+# optional trash-for-draw, and Gasamon/Kamemon carry the very same
+# [When Attacking] draw (two simultaneous triggers would race). So the line
+# overspends and PLAYS Gawappamon itself on T1 (memory 0 -> -5, which legally
+# ends the turn; its [On Play] bounce arm is vacuous on an empty opponent
+# board -- DCGO guards it with `HasMatchConditionPermanent` -- so nothing
+# prompts). The over-card is Karakurumon (EX12-063), also prompt-free here:
+# its [When Digivolving] (suspend 1 opponent Digimon/Tamer) is vacuous on an
+# empty opponent board, and it has no attack-time trigger as the top card.
+# Its purple standard circle cannot match blue Gawappamon, so only the
+# "Non-white Lv.4 w/[Puppet]/[Shambala]: Cost 3" route matches -- one
+# distinct cost, no cost-choice prompt.
+#
+#   T1 (P0, memory 0): play Gawappamon (0 -> -5, turn ends on resolution).
+#   T2 (P1, memory 5): passes everything (P0 gets 3).
+#   T3 (P0, memory 3): digivolve Karakurumon over Gawappamon (alt path,
+#       memory 3 -> 0), then attack security -- the stack entered the field
+#       on T1, so it may attack. Gawappamon's inherited [When Attacking]
+#       fires: hand is 4 (<= 7), so the gate passes and <Draw 1> resolves
+#       automatically, no prompt. The observation is hand 4 -> 5 during the
+#       attack step.
+#
+# The attack checks P1's top security card: stack[9] = EX12-061 Hanimon,
+# 2000 DP, no security text -- it loses to Karakurumon (7000 DP) and is
+# trashed with no prompts.
+#
+# Deck: `sw-shambala` for P0 (appended for this batch -- toho-braves has no
+# Gawappamon); P1 keeps toho-braves.
+card: EX12-025
+clause: EX12-025#inherited#0
+seed: 424242
+decks:
+  p0: { stack: [EX12-025, EX12-063, EX12-031, EX12-031, EX12-031, EX12-011, EX12-011, EX12-011, EX12-011, EX12-046, EX12-046], rest: sw-shambala }
+  p1: { stack: [EX12-011, EX12-011, EX12-031, EX12-031, EX12-046, EX12-046, EX12-046, EX12-031, EX12-031, EX12-061], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): overspend-play Gawappamon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-025, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Karakurumon over Gawappamon (3 -> 0), then attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # The clause under exam fires during this step: Gawappamon's inherited
+  # [When Attacking] checks the hand (4 <= 7) and draws 1 before the
+  # security check.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The attack resolved: one security card popped (5 -> 4) and the attacker is
+  # suspended with Gawappamon as its digivolution source. The <Draw 1> itself
+  # is only observable via the oracle backfill (the drawn card comes from the
+  # unpinned seeded remainder, so its identity cannot be authored here).
+  - at: 8
+    that:
+      p1.security: 4
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: true, sources: [EX12-025] }]

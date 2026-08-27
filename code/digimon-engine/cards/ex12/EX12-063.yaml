@@ -67,9 +67,15 @@ effects:
     optional: true
     summary: "[On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"
     process:
+      # `optional: true` on the pick: the printed "You may play 1 ..." makes
+      # the pick itself the declinable surface (PASS = don't play) — matching
+      # DCGO's cancelable SelectCardEffect (EX12_063.cs: isOptional false +
+      # SetIsSkippable(true), NO OptionalSkill gate) so the exam surfaces
+      # align 1:1 (task_69f10a66 Family 3b).
       - select_trash:
           of: you
           bind_as: revive_pick
+          optional: true
           filter:
             all_of:
               - kind: digimon
@@ -85,9 +91,11 @@ effects:
     optional: true
     summary: "[Inherited][On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"
     process:
+      # Same declinable-pick surface as the face clause (see above).
       - select_trash:
           of: you
           bind_as: revive_pick_inh
+          optional: true
           filter:
             all_of:
               - kind: digimon

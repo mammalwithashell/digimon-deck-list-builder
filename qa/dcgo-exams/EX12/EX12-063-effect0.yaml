@@ -1,0 +1,124 @@
+# Exam scenario: EX12-063 (Karakurumon), clause effect#0 -- "[On Play] [When
+# Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of
+# their Digimon or Tamers can't unsuspend until their turn ends." -- exercised
+# on the [On Play] side with BOTH selections live.
+#
+# p1 builds the target by legal play only: hatch Onibimon, digivolve Hanimon
+# over it in breeding (cost 0), move it out on T4. On T5 p0 plays Karakurumon
+# from hand -- cost 7 from the pass-granted 3 memory is an overshooting play
+# (-4, above the -10 floor), so the turn ends right after the effect resolves.
+#
+# DCGO's flow (EX12_063.cs): two mandatory SelectPermanentEffect prompts --
+# the suspend pick, then the can't-unsuspend pick (independently re-checked,
+# so the same permanent is a legal answer to both). Both steps answer with
+# p1's lone Hanimon.
+card: EX12-063
+clause: EX12-063#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-063
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-020
+      - EX12-026
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # draws: T2 turn (10), T2 digivolve (11), T4 turn (12)
+      - EX12-020
+      - EX12-026
+      - EX12-036
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): hatch, digivolve Hanimon in breeding (cost 0).
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): move Hanimon out -- the clause's target.
+  - actor: 1
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T4: decline p1's granted <Execute> gate (task_69f10a66 Family 1 --
+  # Onibimon under the moved [TB] Hanimon; moved stacks can attack the move
+  # turn). Our EndOfTurnAction PASS; OptionalSkill "no" on the wire.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 5 (p0): the clause -- play Karakurumon (cost 7, memory 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand } }
+    expect: { prompt: main_phase }
+  # Suspend pick: p1's lone Hanimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Can't-unsuspend pick: the same Hanimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The overshoot ended p0's turn; p1's Hanimon must NOT unsuspend at its own
+  # turn start -- the trailing breeding pass makes that state observable.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After both picks: Hanimon is suspended and Karakurumon is on p0's field.
+  - at: 14
+    that:
+      p1.field: [{ card_id: EX12-061, dp: 2000, suspended: true, sources: [EX12-004] }]
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: false, sources: [] }]
+  # The lock half: p1's own turn has started (unsuspend phase done) and the
+  # Hanimon is STILL suspended.
+  - at: 15
+    that:
+      p1.field: [{ card_id: EX12-061, dp: 2000, suspended: true, sources: [EX12-004] }]

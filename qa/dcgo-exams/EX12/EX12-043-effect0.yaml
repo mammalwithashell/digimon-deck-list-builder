@@ -1,0 +1,87 @@
+# Exam scenario: EX12-043 Hakubamon effect clause #0 --
+# "[Main] [Once Per Turn] You may play or use 1 card with the [SW] trait
+#  from your hand with the cost reduced by 2."
+#
+# This is a FIELD [Main], so the activation itself is the `main:` verb (the
+# surface added 2026-08-23), not `play:`. DCGO decodes the same action id:
+# `InputDriver` maps FIELD_EFFECT_START..FIELD_EFFECT_END to
+# `ActivatePermanentAction(slot, 0)`, which runs EX12_043.cs's
+# `EffectTiming.OnDeclaration` ActivateClass.
+#
+# The cost reduction is the whole point of the clause, so the line is built
+# so that MEMORY alone proves it. The [SW] card in hand is Takinmon
+# (EX12-039, play cost 3): activating at memory 3 and paying 3 - 2 = 1
+# leaves memory 2. Without the reduction the same play would land on 0, so
+# the assert distinguishes the two outcomes.
+#
+# Takinmon is chosen because it is the only prompt-free [SW] body available:
+# it has no [On Play] (Kamemon/Wankomon reveal-and-add, Hanimon trashes for
+# a draw, Kakamon opens a Start-of-Main cost gate), its own printed effect is
+# a static digivolve-cost reduction, and its inherited <Barrier> is
+# source-only. DCGO plays it through
+# `CardEffectCommons.PlayPermanentCards(..., activateETB: true)`, so an ETB
+# effect WOULD prompt -- there is none.
+#
+# Board hygiene: no egg is ever hatched, so Onibimon's <Execute> grant never
+# exists and no end-of-turn gate opens. Hakubamon itself reaches the field by
+# OVERSPENDING on T1 (memory 0 -> -5, which legally ends the turn); it has no
+# [On Play], so the play prompts nothing.
+#
+#   T1 (P0, memory 0): play Hakubamon (0 -> -5, turn ends on resolution).
+#   T2 (P1, memory 5): passes everything (P0 gets 3).
+#   T3 (P0, memory 3): THE CLAUSE -- activate Hakubamon's [Main], pick
+#       Takinmon out of hand, and pay 1 instead of 3 (memory 3 -> 2).
+#       Trailing pass one step after.
+#
+# P1 never acts and is never attacked, so its seat needs no stack.
+#
+# Deck: `sw-shambala` (appended for this batch) -- toho-braves has neither
+# Hakubamon nor an [SW] payload card.
+card: EX12-043
+clause: EX12-043#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-043, EX12-039, EX12-031, EX12-031, EX12-031,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-011, EX12-046,   # security
+            EX12-046]                                           # T3 draw
+    rest: sw-shambala
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): overspend-play Hakubamon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-043, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  # The [SW] pick: DCGO SelectHandEffect (canNoSelect: true, maxCount 1);
+  # ours `select_hand optional: true`. Takinmon is the only [SW] card in
+  # hand, so the identity is unambiguous.
+  - actor: 0
+    do: { select: { cards: [EX12-039] } }
+    expect: { prompt: SelectHandEffect }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The cost-2 reduction witness: Takinmon (printed cost 3) was played for 1,
+  # so memory ran 3 -> 2, and both permanents are on P0's board.
+  - at: 7
+    that:
+      p0.memory: 2

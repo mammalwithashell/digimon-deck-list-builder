@@ -827,6 +827,7 @@ fn lm_029_delay_fires_at_start_of_your_turn_and_returns_yellow_trash_to_deck_top
     // the StartOfYourNextTurn Delay.
     runner.end_turn();
     runner.end_turn();
+    accept_scheduled_delay(&mut runner);
     assert_eq!(runner.game.turn_player(), 0, "back on player 0's turn");
 
     // Step (a) is a mandatory trash pick of a yellow Digimon.
@@ -927,6 +928,7 @@ fn lm_029_delay_then_optionally_plays_small_yellow_digimon_if_you_have_no_digimo
 
     runner.end_turn();
     runner.end_turn();
+    accept_scheduled_delay(&mut runner);
     assert_eq!(runner.game.turn_player(), 0);
 
     // Step (a): mandatory trash pick. All three yellow Digimon are eligible
@@ -1039,6 +1041,7 @@ fn lm_029_delay_skips_optional_play_when_you_already_have_a_digimon() {
 
     runner.end_turn();
     runner.end_turn();
+    accept_scheduled_delay(&mut runner);
     assert_eq!(runner.game.turn_player(), 0);
 
     let view = runner
@@ -1077,4 +1080,25 @@ fn lm_029_delay_skips_optional_play_when_you_already_have_a_digimon() {
         "step (a) returned one yellow Digimon to deck top; LM-029 and the \
          second yellow Digimon remain in the trash"
     );
+}
+
+
+/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+///
+/// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
+/// cost and run the body straight away. It is optional processing, so the
+/// controller is asked first.
+fn accept_scheduled_delay(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the scheduled <Delay> window must offer its optional cost");
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != digimon_engine::action::space::PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the <Delay> cost");
 }

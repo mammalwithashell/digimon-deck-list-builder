@@ -9,8 +9,36 @@ effects:
   - scope: inherited
     when: on_opponent_attack
     once_per_turn: true
+    # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+    # — the printed sentence is exactly that shape: "by trashing 3 [Mineral] or
+    # [Rock] trait cards from this Digimon's digivolution cards, end that
+    # attack." §15-7-4: "A player can choose whether or not to execute the
+    # content of optional processing conditions, regardless of whether or not
+    # the content of the conditions can be executed." So the 3-source trash is
+    # the player's choice, and rule 17 (no auto-selections) requires the
+    # decline to reach the action space. §15-7-2: declining skips BOTH the
+    # trash AND the "end that attack" that follows it.
+    #
+    # DCGO agrees: EX10_003.cs:19
+    #   activateClass.SetUpActivateClass(CanActivateCondition, ActivateCoroutine, 1, true, ...)
+    # — the 4th argument (isOptional) is `true`. Its coroutine also passes
+    # `canNoSelect: () => true` to the source prompt and only runs
+    # `TrashDigivolutionCards` + `EndAttack` `if (selectedCards.Count >= 3)`.
+    #
+    # `outer_prompt: true`: the body's first step is `select_own_sources` with
+    # min: 3, which `body_first_step_is_declinable` treats as NOT declinable
+    # (`SelectOwnSources { min, .. } => *min == 0`), so without the explicit
+    # outer confirm there is no PASS for the player to take. It also gives the
+    # printed [Once Per Turn] the DCGO `RemoveUse` semantics
+    # (G-OPT-REFUND-ON-DECLINE): declining drops the queued effect before its
+    # body runs, so the once-per-turn use is not consumed.
+    #
+    # Same shape as sibling EX10-034 clause B ("by trashing 2 sources"), which
+    # already carries `optional: true`.
+    optional: true
+    outer_prompt: true
     active_when: { opponents_turn: true }
-    summary: "Opponent's Turn OPT: trash 3 Mineral/Rock sources from this Digimon to end the attack"
+    summary: "Opponent's Turn OPT: MAY trash 3 Mineral/Rock sources from this Digimon to end the attack"
     process:
       - select_own_sources:
           from: source

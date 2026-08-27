@@ -133,8 +133,42 @@ effects:
   # Cost: trash 1 Mineral/Rock trait source from any of your Digimon's
   # digivolution cards. Effect: 1 of your Mineral/Rock Digimon gains
   # Collision + Piercing + +3000 DP until end of opponent's turn.
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # — "By trashing any 1 [Mineral] or [Rock] trait card from your Digimon's
+  # digivolution cards, 1 of your such Digimon gains <Collision>, <Piercing>
+  # and +3000 DP" is exactly that shape. (The keywords are only the PAYOFF;
+  # the trash is a real cost belonging to this clause, not a keyword's own
+  # reminder-text cost, so the clause is in scope.) §15-7-4: "A player can
+  # choose whether or not to execute the content of optional processing
+  # conditions, regardless of whether or not the content of the conditions can
+  # be executed." §15-7-2: declining skips BOTH the trash AND the
+  # keyword/DP grant. Rule 17 requires the decline to reach the action space.
+  #
+  # DCGO agrees behaviourally, though it encodes the choice differently:
+  # EX10_032.cs:336/359/382 pass isOptional=`false` to SetUpActivateClass, but
+  # the FIRST step of `SharedActivateCoroutine` (EX10_032.cs:~205,
+  # "Select Permanent to trash Digivolution Cards") is installed with
+  # `canNoSelect: true`, and everything downstream is gated on
+  # `if (selectedPermanment != null)`. So DCGO's decline path is the inner
+  # PASS on that first selection, taken BEFORE any card is trashed — the same
+  # semantics §15-7-2 requires.
+  #
+  # Our body's first step is `select_own_sources` with min: 1, which
+  # `body_first_step_is_declinable` treats as NOT declinable
+  # (`SelectOwnSources { min, .. } => *min == 0`), so the inner PASS DCGO
+  # relies on does not exist here. `outer_prompt: true` supplies the
+  # equivalent accept/decline before the cost is paid.
+  #
+  # NOTE: clause 1 ([Hand][Main] "by placing 1 [Landramon] ...") is deliberately
+  # NOT marked optional — a `main_from_hand` clause is mask-offered (hand-[Main]
+  # bits 30-59, `hand_main_match`), so activating it IS the player's opt-in and
+  # an `optional:` flag would double-prompt. DCGO matches: EX10_032.cs:20 passes
+  # isOptional=false and its first inner select uses `canNoSelect: () => false`.
   - when: [on_play, when_digivolving, when_attacking]
-    summary: "[OP][WD][WA] Trash 1 Mineral/Rock source → 1 of your Mineral/Rock Digimon gains Collision + Piercing + +3000 DP until EoOT"
+    optional: true
+    outer_prompt: true
+    summary: "[OP][WD][WA] MAY trash 1 Mineral/Rock source → 1 of your Mineral/Rock Digimon gains Collision + Piercing + +3000 DP until EoOT"
     process:
       # Step 1: Select 1 Mineral/Rock trait source card from any of your
       # Digimon's digivolution cards to trash (the cost).

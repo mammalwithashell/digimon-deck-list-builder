@@ -1,0 +1,251 @@
+# Exam scenario: EX12-063 (Karakurumon), clause inherited#0 -- "[On Deletion]
+# You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from
+# your trash without paying the cost." -- the INHERITED copy, live only while
+# Karakurumon sits in a carrier's digivolution cards.
+#
+# RECONCILED against the DCGO wire (recording 20260824T175442Z_ce69a2a...).
+# The previous line had TWO permanents on p0's board (Karakurumon T1, Hanimon
+# T3) and addressed both the digivolve and the attack as `field.0`. Slot 0 is
+# not the same permanent on the two sides: our battle_area is in PLAY order,
+# DCGO's compact index is ascending FrameID and its digimon are placed
+# centre-out (1st -> frame 4, 2nd -> frame 3), so with two bodies DCGO's slot 0
+# is the SECOND card played. The recording shows exactly that: Ryugumon
+# digivolved onto HANIMON (board_p0 went ["EX12-061","EX12-063"] ->
+# ["EX12-036","EX12-063"]), so the attacking stack carried Hanimon's inherited
+# [When Attacking] alongside Ryugumon's own -- two simultaneous triggers, which
+# is why DCGO asked `MultipleSkills` where the line expected the Barrier
+# `OptionalSkill`. Karakurumon was never a digivolution source at all, so the
+# clause under exam was never even reachable.
+#
+# The fix is structural: p0 holds EXACTLY ONE permanent for the whole game, so
+# `field.0` names the same thing in both engines.
+#   T1 p0 plays Karakurumon (overshoot 0 -> -7) while the trash is still EMPTY
+#      -- DCGO's Assembly condition (EX12_063.cs; SelectAssemblyClass reads
+#      `Owner.TrashCards`) would otherwise park a material prompt. Its [On
+#      Play] suspend fizzles on p1's empty board.
+#   T2 p1 plays Gasamon (EX12-020, level 3, [TB], no [On Play]); T4 it attacks
+#      p0's security. The checked card is p0's own EX12-020 -- a 2000-vs-2000
+#      mirror, both deleted -- so the clause's revival target reaches p0's
+#      TRASH without p0 ever gaining a second permanent.
+#   T5 Ryugumon (EX12-036) digivolves over Karakurumon: the printed BLUE Lv.5
+#      circle misses the purple/green base, so only the alt [Aquatic]/
+#      [Shambala] route (cost 3) matches and no cost-choice prompt opens.
+#      Ryugumon is deliberate: it has no [On Deletion] of its own (its Decode
+#      fires only on NON-battle exits), so the carrier's death fires exactly
+#      one On Deletion -- Karakurumon's inherited clause under exam.
+#      p0's hand at that point holds ONLY Option cards, and EX12_036.cs gates
+#      its shared [On Play]/[When Digivolving]/[When Attacking] cost on
+#      `HasLevel && Level <= 6`, so that prompt is unpayable and never opens on
+#      either the digivolve or the attack. (The wire also settled a related
+#      question: DCGO does NOT consume the shared [Once Per Turn] when the
+#      place-cost is declined -- the failed run's MultipleSkills contained
+#      Ryugumon's [When Attacking] copy after its [When Digivolving] copy had
+#      been cancelled. Denying the cost outright sidesteps that entirely.)
+#      Its [All Turns] lock fizzles on p1's empty board.
+#   The attack runs the 12000 DP carrier into p1's top security card,
+#      Susanoomon (16000 DP, blank security text): the attacker is deleted.
+#      Barrier is declined; Evade is not offered (the attacker is already
+#      suspended, so its suspend-to-prevent cost is unpayable).
+#
+# SECOND RECONCILIATION PASS (2026-08-24, sim-side). The reconciled line above
+# still carried an oracle-fatal hole that sim-only could not see: step 11's
+# DIGIVOLVE DRAW (general_rule.pdf 8-1-3-3) was not stacked. See the p0 stack
+# comment for why that would have aborted the job at step 12 under the oracle
+# while lowering clean sim-side. Both engines now draw a named card at every
+# draw p0 takes. The DCGO gate shape at step 13 was re-derived from the C# at
+# the same time -- see that step's comment; the recorded `unreachable` cause
+# ("DCGO parks an OptionalSkill/MultipleSkills gate where our engine surfaces
+# no prompt") does NOT describe this line: our engine parks a Replacement gate
+# where DCGO parks exactly one OptionalSkill, 1:1, and step 13 answers it.
+#
+# Prompt shape (EX12_063.cs): the [On Deletion] ActivateClass is registered
+# with `optional: false` + `SetIsSkippable(true)` and resolves through
+# `CardEffectCommons.PlayByEffect(..., SelectCardEffect.Root.Trash, payCost:
+# false)` -- a cancelable SelectCardEffect, NO OptionalSkill gate. Our
+# EX12-063.yaml matches it with a declinable `select_trash` pick.
+card: EX12-063
+clause: EX12-063#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Karakurumon, the Ryugumon that will carry it, and three
+      # Option cards. After the digivolve the hand is ALL Options -- no card
+      # with a level -- which is what keeps Ryugumon's place-1-card cost
+      # unpayable and its prompt closed.
+      - EX12-063
+      - EX12-036
+      - EX12-070
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- REVERSED into the security stack, so slot 9 is the
+      # TOP card and the one p1's T4 attack checks. That card is the clause's
+      # revival target: Gasamon, level 3, [TB], no [On Play].
+      # Nothing here carries [Security] text or a security-area passive.
+      - EX12-009
+      - EX12-011
+      - EX12-026
+      - EX12-031
+      - EX12-020
+      # draws: T3 turn (10), T5 turn (11), T5 DIGIVOLVE (12).
+      #
+      # THE DIGIVOLVE DRAW IS THE ONE THIS FILE USED TO MISS, and it was
+      # oracle-fatal rather than cosmetic. Digivolving draws a card
+      # (general_rule.pdf 8-1-3-3), so step 11 pulls a THIRD card that the
+      # committed stack stopped one short of naming. Sim-only hid it: with no
+      # shuffle, `ordered_deck` fed slot 12 from the back of the toho-braves
+      # file order, which happens to be Susanoomon. Under the ORACLE that slot
+      # is whatever DCGO's shuffle left there, and toho-braves is ~30 level-
+      # carrying [TB] Digimon, so the overwhelmingly likely draw makes
+      # Ryugumon's shared place-cost LIVE -- DCGO would raise a SelectHandEffect
+      # at the [When Attacking] copy (step 12) that this line has no step to
+      # answer, and the job would abort on prompt mismatch. Stacking slot 12 is
+      # the fix; the general rule is "stack every card the line DRAWS", not
+      # just every card it names.
+      #
+      # Slots 11 and 12 are Susanoomon on purpose, and it does two jobs:
+      #   1. LEVEL 7 -- invisible to Ryugumon's place-cost filter on both
+      #      engines (EX12_036.cs CanSelectHandCardCondition is
+      #      `HasLevel && Level <= 6`; our EX12-036.yaml select_hand filter is
+      #      `level_lte: 6`), so the prompt stays shut at the [When Digivolving]
+      #      copy (step 11) and the [When Attacking] copy (step 12) alike.
+      #   2. A PLAYABLE DIGIMON in p0's hand for the trailing step. DCGO ends a
+      #      turn ITSELF when TurnStateMachine.CanSelect() is false, and after
+      #      the clause resolves p0's only body is the just-played (so
+      #      attack-locked) Gasamon; an all-Options hand would make the final
+      #      `pass` depend on DCGO agreeing that an Option's <Use Req.>
+      #      satisfies MatchColorRequirement. A Digimon in hand is
+      #      unconditionally playable, so the prompt is guaranteed to open.
+      # Slot 13 is a spare: unused if the draw count is exactly 3, and harmless
+      # if it is not.
+      - EX12-075
+      - EX12-076
+      - EX12-076
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): Gasamon is the only Digimon -- played T2, attacks T4.
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-046
+      # security (5-9): slot 9 is the TOP card, the one p0's T5 attack checks.
+      # Susanoomon, 16000 DP and blank security text, deletes the 12000 DP
+      # carrier outright.
+      - EX12-009
+      - EX12-011
+      - EX12-026
+      - EX12-031
+      - EX12-076
+      # draws: T2 (10), T4 (11)
+      - EX12-046
+      - EX12-031
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): play Karakurumon (overshoot 0 -> -7); suspend fizzles; the
+  # turn ends.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): play Gasamon (7 -> 4 in p1's favour), then end the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): nothing to do -- Gasamon must wait a turn before it can
+  # attack, so p0 hands the turn straight back.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): Gasamon attacks p0's security; the 2000-vs-2000 check deletes
+  # both, and the security Gasamon lands in p0's TRASH.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Ryugumon over Karakurumon via the alt route (cost 3, memory
+  # 3 -> 0). p0's hand is all Options, so the shared place-a-card cost is
+  # unpayable and its [When Digivolving] prompt never opens.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  # Attack: the carrier is still p0's ONLY permanent, so `field.0` names it on
+  # both sides. The security battle deletes it. The [When Attacking] copy of
+  # the shared effect is unpayable for the same reason as above.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Decline Barrier. RE-DERIVED FROM THE DCGO SOURCE (2026-08-24), because the
+  # gate shape here is the whole reason this clause was parked `unreachable`:
+  #   - Barrier is the ONLY activatable effect at the WhenPermanentWouldBeDeleted
+  #     timing. CardEffectFactory/KeyWordEffects/Barrier.cs registers it with
+  #     `SetUpActivateClass(..., -1, true, ...)` -- ActivateClass.cs:14 names
+  #     that 4th arg `isOptional` -- so it is an OptionalSkill, and
+  #     CanActivateBarrier only needs `Owner.SecurityCards.Count >= 1` (p0 has 4).
+  #   - Evade is stacked but FILTERED OUT: CanActivateEvade ->
+  #     CanActivatePermanentSuspendCostEffect requires `!permanent.IsSuspended`
+  #     (CanSuspend.cs:21) and the attacker suspended to attack.
+  #   - Decode never triggers at all: its CanUse is gated `!IsByBattle`.
+  # MultipleSkills.ActivateMultipleSkills_OnePlayer re-filters the stack by
+  # CanActivate and takes the `skillInfos_active.Count == 1` branch, so DCGO
+  # raises ONE OptionalSkill here -- not the MultipleSkills that the recorded
+  # `unreachable` cause was about. A `select_cancel` answer to an OptionalSkill
+  # is DCGO's "no" (OptionalSkill.cs decline bridge).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE (inherited): with the carrier dead, Karakurumon's inherited
+  # [On Deletion] parks the trash pick. The only candidate is the security
+  # Gasamon -- Karakurumon (level 5) and Ryugumon (level 6) both fail the
+  # level<=4 filter -- and Gasamon has no [On Play], so nothing parks after it.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectCardEffect }
+  # Still p0's turn at memory 0; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The clause's observable, read immediately after the pick resolves.
+  #   p0.field   -- the security Gasamon is back in play, PLAYED (unsuspended,
+  #                 no digivolution cards), which is the clause firing.
+  #   p0.trash   -- the carrier and Karakurumon, and NOT Gasamon: the revival
+  #                 target left the trash, so the play came from there.
+  #                 Karakurumon being in the trash is also what proves it was a
+  #                 digivolution SOURCE (it went there with the carrier), i.e.
+  #                 that the INHERITED copy fired and not the printed one.
+  #   p1.field   -- empty, so nothing else could have been the pick's target.
+  #   securities -- one check each: p0's at T4, p1's at T5.
+  #   p0.memory  -- 0: the alt digivolve route cost 3 from 3. A cost prompt
+  #                 taken the other way (the printed blue circle, 4) would show
+  #                 up here as -1.
+  - at: 15
+    that:
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+      p0.trash: [EX12-036, EX12-063]
+      p1.field: []
+      p0.memory: 0
+      p0.security: 4
+      p1.security: 4

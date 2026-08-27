@@ -173,13 +173,35 @@ impl<'a> EffectContext<'a> {
         let owner = source_card.owner;
         let placed_card = source_card.handle();
         let card_id = source_card.card_id(&self.game.card_data).to_string();
+        // The card's own `kind: delay` clause, if it has one, names the window
+        // (`[Main]` activation, a turn boundary, or an engine event). When it
+        // has NONE, the `<Delay>` window is owned by another clause on the same
+        // card — a `kind: replacement` "[All Turns] When ... would leave the
+        // battle area, ＜Delay＞" (EX12-070, BT20-100, BT19-099, BT17-097) — and
+        // the carrier must simply PARK.
+        //
+        // This fallback used to be `EndOfYourNextTurn`, which invented a
+        // turn-scheduled auto-trash the printed card never prints: 16-16-1
+        // (`general_rule.pdf` p.35) bounds a `<Delay>`'s availability by
+        // presence in the battle area and nothing else, and 16-16-2 makes the
+        // processing optional, so the engine was silently taking a printed
+        // option away one turn after placement. DCGO agrees — its Delay gate
+        // (`CardEffectCommons.CanDeclareOptionDelayEffect`) is
+        // `IsExistOnBattleArea(card) && EnterFieldTurnCount != TurnCount`, with
+        // no scheduled trash anywhere. G-DELAY-EVENT-WINDOW-AUTOTRASHED.
+        //
+        // Philosophically identical to the narrowing already done at
+        // `dsl_cards/lower_delay.rs` (whose comment calls the same
+        // `EndOfYourNextTurn` catch-all "silent and wrong"): the turn-scheduled
+        // forms are the ones a scan fires, and they are enumerated — nothing
+        // may fall into them by default.
         let trigger = self
             .game
             .effects_for_card(&card_id, placed_card)
             .unwrap_or_default()
             .iter()
             .find_map(|effect| effect.delay_trigger)
-            .unwrap_or(DelayTrigger::EndOfYourNextTurn);
+            .unwrap_or(DelayTrigger::ExternallyGated);
         let mut permanent = Permanent::new(source_card, self.game.turn_count);
         permanent.option_state = crate::permanent::OptionState::Delayed {
             owner,

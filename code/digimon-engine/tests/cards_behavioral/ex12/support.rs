@@ -286,6 +286,28 @@ pub(super) fn select_first_non_pass(runner: &mut DebugRunner) {
         .expect("select first legal action");
 }
 
+/// Drain every pending selection by DECLINING (PASS) whenever PASS is legal,
+/// falling back to the first legal action otherwise. Used to walk past the
+/// optional interrupt windows an attack opens (e.g. the <Blocker> declaration
+/// prompt) when the test cares about what happens AFTER the battle resolves.
+pub(super) fn decline_all_selections(runner: &mut DebugRunner) {
+    while let Some(view) = runner.pending_selection_view() {
+        let action = if view.is_optional || view.valid_action_ids.contains(&PASS) {
+            // An optional window (e.g. the <Blocker> declaration) accepts PASS
+            // even though PASS is not enumerated in `valid_action_ids`.
+            PASS
+        } else {
+            *view
+                .valid_action_ids
+                .first()
+                .unwrap_or_else(|| panic!("pending selection had no legal action: {view:?}"))
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("resolve pending selection");
+    }
+}
+
 pub(super) fn play_declining_optional_materials(
     runner: &mut DebugRunner,
     player: u8,

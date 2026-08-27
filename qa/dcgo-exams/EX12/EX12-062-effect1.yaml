@@ -1,0 +1,95 @@
+# Exam scenario: EX12-062 (Kokeshimon), clause effect#1 -- "Digivolve: Lv.3
+# w/[Puppet]/[Shambala] trait: Cost 2" (alt digivolve), exercised on the FIELD.
+#
+# The base must be a Lv.3 that only the trait circle matches: over Hanimon
+# (purple), the printed purple circle and the alt trait route both apply (equal
+# costs, but the exam would not isolate the clause). Gasamon (EX12-020, BLUE
+# Lv.3 with the [Shambala] trait) leaves exactly one route: the clause under
+# test. Gasamon's own "[Your Turn] when THIS Digimon would digivolve into a
+# [TB] card, reduce the cost by 1" applies (Kokeshimon carries [TB]), so the
+# alt cost 2 is paid as 1 -- the memory assertion (3 -> 2) witnesses both the
+# trait route matching and the printed reduction.
+#
+# Kokeshimon's [When Digivolving] ("By deleting 1 of your Digimon, delete 1 of
+# the opponent's level 4 or lower Digimon") opens its payment
+# SelectPermanentEffect even though p1's board is empty (DCGO gates the enemy
+# check AFTER the payment, EX12_062.cs) -- the decline step cancels it.
+card: EX12-062
+clause: EX12-062#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-062
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-076
+      # draws: T3 turn (10), T5 turn (11), T5 digivolve (12)
+      - EX12-026
+      - EX12-065
+      - EX12-047
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # Turn 1 (p0): memory 0, keep the position clean -- all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): play Gasamon (cost 3, memory 3 -> 0), the blue Lv.3 base.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): the clause -- Kokeshimon over the blue Gasamon. Only the alt
+  # [Puppet]/[Shambala] route matches; its cost 2 is reduced to 1 by Gasamon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  # Decline the [When Digivolving] payment (no enemy Digimon to pay toward).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Turn is still p0's at memory 2; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Alt route cost 2, minus Gasamon's -1 for a [TB] digivolve: memory 3 -> 2.
+  # (Checked before the closing pass hands the gauge to p1.)
+  - at: 12
+    that:
+      memory: 2
+      p0.field: [{ card_id: EX12-062, dp: 5000, suspended: false, sources: [EX12-020] }]

@@ -930,6 +930,7 @@ impl<'a> EffectContext<'a> {
                 source_kind: Some(source_kind),
                 timing: None,
                 is_optional: false,
+                keyword: None,
                 observation_metadata: Default::default(),
             });
         }

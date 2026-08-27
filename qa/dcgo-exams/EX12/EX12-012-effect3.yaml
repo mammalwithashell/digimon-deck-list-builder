@@ -1,0 +1,83 @@
+# Exam scenario: EX12-012 Apemon, clause EX12-012#effect#3 --
+# "Digivolve: Lv.3 w/[Shambala] trait: Cost 2" (the printed ALTERNATE
+#  digivolution requirement in the card's digivolve circle).
+#
+# The witness is that the digivolve is LEGAL AT ALL. Apemon is RED and its
+# standard circle reads "Lv.3 / 2", so a red Lv.3 base would satisfy it without
+# the alt path. The base here is a BLUE Lv.3 (EX12-022 Kamemon, [Shambala]), so
+# the standard circle's colour requirement fails and only
+# "Lv.3 w/[Shambala]: Cost 2" can license step 6. Both circles name the same
+# cost 2, so even where both could match neither engine opens a cost
+# EffectChoice -- and memory 3 -> 1 pins that the cost really was 2.
+#
+# Kamemon itself is on the board only because of ITS alt circle
+# (Lv.2 w/[Shambala]: Cost 0 over the YELLOW Digi-Egg EX12-002 Mococomon --
+# EX12-022#effect#1's own exam), so this line is an alt-circle chain: yellow
+# egg -> blue Lv.3 -> red Lv.4, a stack no standard circle could build.
+#
+# The line is shared verbatim with EX12-012-effect1.yaml (the
+# [When Digivolving] clause fires off this same digivolve); only the assertion
+# emphasis differs. Kamemon's [On Play] does not fire on a digivolve, and
+# Apemon's <Raid> opens no window against an empty opponent board.
+#
+# EVERY DIGIVOLVE DRAWS 1 (before any [When Digivolving] effect resolves), so
+# stack[10] and stack[12] are the two digivolve-draws, stack[11] the T3 turn
+# draw and stack[13..14] the <Draw 2> payoff -- all pinned.
+card: EX12-012
+clause: EX12-012#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-012, EX12-043, EX12-009, EX12-011,   # opening hand
+            EX12-020, EX12-026, EX12-031, EX12-046, EX12-061,   # security
+            EX12-020,                                           # [10] T1 digivolve-draw
+            EX12-026,                                           # [11] T3 turn draw
+            EX12-031,                                           # [12] T3 digivolve-draw
+            EX12-009, EX12-011]                                 # [13][14] the <Draw 2>
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): build Kamemon over the Digi-Egg in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-022 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out...
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # ...and digivolve Apemon onto it -- THE CLAUSE fires here.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-012 } }
+    expect: { prompt: main_phase }
+  # Pay the cost: trash the only [SW] card in hand.
+  - actor: 0
+    do: { select: { cards: [EX12-043] } }
+    expect: { prompt: SelectHandEffect }
+  # One step after the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: the cost was paid (EX12-043 in trash),
+  # both pinned cards were drawn, and the alt-circle digivolve took memory
+  # 3 -> 1. Apemon reads its printed 4000 -- neither Mococomon nor Kamemon is a
+  # DP source.
+  - at: 8
+    that:
+      p0.memory: 1
+      p0.trash: [EX12-043]
+      p0.hand: [EX12-009, EX12-009, EX12-011, EX12-011, EX12-020, EX12-026, EX12-031]
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: false, sources: [EX12-002, EX12-022] }]

@@ -1,0 +1,143 @@
+# Exam scenario: EX12-026 Shellmon inherited clause #0 -- "[When Attacking]
+# [Once Per Turn] If your hand has 7 or fewer cards, <Draw 1> (Draw 1 card from
+# your deck.)".
+#
+# Card face (Assets/Textures/Card/EX12-026.webp) prints the inherited line; DCGO
+# builds it at EX12_026.cs:122-162 -- an OnAllyAttack ActivateClass with
+# useCount 1 (":127"), gated on `card.Owner.HandCards.Count <= 7` (":150"), and
+# calling `RemoveUse()` when the gate fails (":159"), i.e. the once-per-turn
+# charge is only spent when the draw actually happens.
+#
+# Shellmon must be a digivolution SOURCE in the battle area when the stack
+# attacks. The stack is built ON THE FIELD, never through breeding: hatching
+# would put Onibimon's <Execute>-granting inherited under the stack and its
+# optional end-of-turn attack would prompt at every trailing pass.
+#
+# Getting Shellmon onto the field without a prompt rules out every Lv.3 base:
+# Wankomon's [On Play] is a reveal-and-add selection, Hanimon's [On Play] is an
+# optional trash-for-draw, and Gasamon shares Shellmon's [When Attacking] draw
+# (two simultaneous triggers would race). So the line overspends and PLAYS
+# Shellmon itself on T1 (memory 0 -> -5, which legally ends the turn; its
+# [On Play] trash-digivolution-cards effect is vacuous on an empty opponent
+# board -- DCGO gates BOTH of its picks behind
+# `HasMatchConditionOpponentsPermanent` at EX12_026.cs:56 and :82 -- so nothing
+# prompts). The over-card is Karakurumon (EX12-063), also prompt-free here: its
+# [When Digivolving] (suspend 1 opponent Digimon/Tamer) is vacuous on an empty
+# opponent board, and it has no attack-time or security-removal triggers as the
+# top card.
+#
+#   T1 (P0, memory 0): play Shellmon (0 -> -5, turn ends on resolution -- no
+#       further main-phase question this turn).
+#   T2 (P1, memory 5): passes everything (P0 gets 3).
+#   T3 (P0, memory 3): digivolve Karakurumon over Shellmon (non-white Lv.4
+#       w/[Shambala] alt path, single cost-3 action, memory 3 -> 0), then
+#       attack the player -- the stack entered the field on T1, so it may
+#       attack. Shellmon's inherited [When Attacking] fires: hand is 5 (<= 7),
+#       so the gate passes and <Draw 1> resolves automatically, no prompt.
+#
+# THE DRAW IS PINNED, so this clause's own observable is asserted sim-side
+# instead of deferred to the oracle. Stack positions past the opening 10 are
+# subsequent draws IN ORDER, and every draw the line performs consumes one --
+# including the DIGIVOLUTION DRAW (§7-2: digivolving draws 1), which is the
+# easy off-by-one here. P0's draw ledger, verified against the engine's own
+# trace rather than assumed:
+#
+#   stack[10] = EX12-046 -> T3 turn draw          (P0 goes first, so no T1 draw)
+#   stack[11] = EX12-075 -> the T3 DIGIVOLVE draw
+#   stack[12] = EX12-062 -> THE CLAUSE's <Draw 1>
+#
+# so the hand walks 5 -> 4 (play Shellmon) -> 5 (turn draw) -> 5 (digivolve:
+# -063 +075) -> 6 (the clause). EX12-062 appears nowhere else in P0's stack and
+# is drawn by nothing else in the line, so its presence in hand is attributable
+# to this clause alone.
+#
+# The attack checks P1's top security card: stack[9] = EX12-061 Hanimon,
+# 2000 DP, no security text -- it loses to Karakurumon (7000 DP) and is
+# trashed with no prompts.
+card: EX12-026
+clause: EX12-026#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-026
+      - EX12-063
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      # security (5-9) -- never checked; P0 is never attacked.
+      - EX12-011
+      - EX12-011
+      - EX12-011
+      - EX12-011
+      - EX12-046
+      # draws: T3 turn (10), T3 digivolution draw (11), THE CLAUSE (12).
+      - EX12-046
+      - EX12-075
+      - EX12-062
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): inert, P1 all-passes.
+      - EX12-011
+      - EX12-011
+      - EX12-031
+      - EX12-031
+      - EX12-046
+      # security (5-9): stack[9] = TOP, the card the single check flips.
+      # Plain Digimon, no [Security] text, all under 7000 DP.
+      - EX12-046
+      - EX12-046
+      - EX12-031
+      - EX12-031
+      - EX12-061
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): overspend-play Shellmon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-026, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Karakurumon over Shellmon (3 -> 0), then attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # The clause under exam fires during this step: Shellmon's inherited
+  # [When Attacking] checks the hand (5 <= 7) and draws 1 before the
+  # security check.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-attack hand pins the GATE's input: exactly 5 cards, i.e. the "7 or
+  # fewer" condition is satisfied and EX12-062 is not yet in hand.
+  - at: 6
+    that:
+      p0.hand: [EX12-031, EX12-031, EX12-031, EX12-046, EX12-075]
+  # Post-line: the clause's own observable -- the pinned <Draw 1> added
+  # EX12-062 (stack[12]), taking the hand from 5 to 6. Plus the attack context
+  # that raised it: one security card popped (5 -> 4) and the attacker
+  # suspended with Shellmon as its digivolution source, which is what makes
+  # the inherited text live at all.
+  - at: 8
+    that:
+      p1.security: 4
+      p0.hand: [EX12-031, EX12-031, EX12-031, EX12-046, EX12-062, EX12-075]
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: true, sources: [EX12-026] }]

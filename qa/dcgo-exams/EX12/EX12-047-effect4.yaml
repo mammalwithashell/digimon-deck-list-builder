@@ -1,0 +1,338 @@
+# Exam scenario: EX12-047 (Amaterasumon), clause effect#4 -- "[On Deletion]
+# You may return 1 [TB] trait card from your trash to the hand. Then, you may
+# play 1 level 5 or lower [TB] trait Digimon card from your hand without
+# paying the cost."
+#
+# Both halves are exercised with REAL candidates and answered by identity:
+#   - p0 seeds its own trash with Gasamon (EX12-020, [TB]) by paying
+#     Sanmyojin Arrival's "trash 1 [TB] card from hand" draw-2 cost at T5;
+#   - at T7 p0's Kokeshimon deletes p0's OWN Amaterasumon as its "by
+#     deleting 1 of your Digimon" cost -- an effect deletion with no
+#     follow-up window on the opponent's side -- and the [On Deletion] body
+#     returns Gasamon from trash to hand, then plays it for free.
+#
+# Kokeshimon (not a second Amaterasumon) is the deleter on purpose: the
+# mirror's "by returning 2 cards from their trash" clause parks a 2-pick
+# count-capped multiselect for the OPPONENT the moment the deleted card
+# lands in a 2-card trash, and identity picks against that prompt kind are
+# outside the current `select:` vocabulary. Kokeshimon's kit is fully
+# answerable, and p1's fielded Gasamon gives its second delete a real
+# level-4-or-lower target.
+#
+# Each [On Deletion] pick has exactly one qualifying candidate SIM-side.
+# (TRAIT-DATA NOTE, review 2026-08-22: the trashed Amaterasumon's card face
+# DOES print [TB] -- cards.json is stale -- so DCGO offers TWO return
+# candidates [EX12-020, EX12-047]; the identity pick EX12-020 is still
+# offered and disambiguates. The free-play pick stays single-candidate on
+# both sides: EX12-036 in hand is level 6.) The two
+# `cards:` answers are the clause's own choices, not tie-breaks. The
+# carrier's <Ascension> rides the same mandatory TriggerOrder bundle
+# (our branch 0 = the clause, resolved first; our branch 1 = the Ascension
+# yes/no gate, accepted -- its EffectChoice offers no decline-shaped PASS).
+# DCGO stacks the same two triggers in the OPPOSITE order; see the
+# BLOCKED note below.
+# BLOCKED ON THE ORACLE -- TRIGGER-LIST INVERSION. Re-derived from scratch
+# 2026-08-25 (recorded verdict cause "MultipleSkills value-space mismatch
+# (review finding 2)", stamped 2026-08-22, is STALE: that cause described a
+# wire that handed ONE engine's raw index to the other, and it was fixed on
+# 2026-08-23 by `select_ordinal` + `MatchOneWithOrdinal`/`match_one_with_ordinal`,
+# each engine now resolving the symbolic answer against its OWN list. What
+# survives is a different, sharper defect, stated below.)
+#
+# THE DEFECT. `select: {cards:, ordinal:}` names a trigger by (card identity,
+# position among THAT card's candidates). When one card contributes TWO
+# DIFFERENT triggers the position is pure PRESENTATION, and the two engines
+# present this card's pair in OPPOSITE order -- so no single authored ordinal
+# makes both engines resolve the same trigger first. Identity+ordinal is not
+# an engine-independent NAME for a trigger.
+#
+# FOUR INDEPENDENT OBSERVATIONS, all re-taken 2026-08-25, none inherited:
+#   1. OURS, ordinal 0 -> "our engine's parked Trash prompt" (probe of this
+#      line with ordinal 0). Our branch 0 = [On Deletion].
+#   2. OURS, ordinal 1 -> EffectChoice prompt 'you may place this card as the
+#      top security card'. Our branch 1 = <Ascension>.
+#   3. DCGO, index 0 = <Ascension>. Not inferred: the effect4 oracle job
+#      (result exam-EX12-047-effect4.result.json, recording
+#      20260824T175315Z) authored ordinal 0 and aborted with
+#      "prompt mismatch: step 21 expected prompt 'SelectCardEffect' but DCGO
+#      asked 'generic_bool'" -- generic_bool is `AscensionProcess`'s
+#      SetBoolSelection, so DCGO took <Ascension> at index 0.
+#   4. Source agrees: `EX12_047.CardEffects` adds the <Ascension> keyword in
+#      the "Static Keywords" region BEFORE the "On Deletion" region, and
+#      `MultipleSkills` preserves that order into `skillInfos_active`
+#      (MultipleSkills.cs, the StackedSkillInfos -> skillInfos_active loop).
+#
+# WHY NO BOARD STATE RESCUES IT. The two orders produce DIFFERENT wires, and
+# every lever that could collapse them is closed:
+#   * <Ascension> first: it moves the carrier out of the trash, and the
+#     [On Deletion] is then DROPPED on BOTH engines -- DCGO by
+#     `CanActivateOnDeletion = card.IsToken || IsTopCardStillInTrash(...)`
+#     (CanUseEffects/OnDeletion.cs:114), and OURS verifiably too: an
+#     ordinal-1 probe of the effect4 board (trash still holding a [TB]
+#     EX12-020, hand still holding free-play candidates) logged
+#     "select answered no live prompt -- our engine auto-resolved it" for
+#     BOTH following picks. Rows: [order, bool].
+#   * [On Deletion] first: its trash pick ALWAYS opens, because the carrier
+#     is itself a [TB] card sitting in the owner's trash and
+#     `HasMatchConditionOwnersCardInTrash` is a bare
+#     `card.Owner.TrashCards.Some(...)` with NO self-exclusion
+#     (GameContextDeterminarion.cs:856). Rows: [order, SelectCardEffect,
+#     (SelectHandEffect), generic_bool].
+#   * Neither trigger can be starved out of the prompt itself. Both register
+#     on the same gate (`CanTriggerAscension` IS `CanTriggerOnDeletion`), so
+#     `skillInfos_active.Count` is 2 whenever this card is deleted and DCGO
+#     always raises MultipleSkills (Count==1 is the only no-prompt branch).
+#     The one lever on <Ascension>'s body is `Player.CanAddSecurity`, which
+#     needs an `ICannotAddSecurityEffect` on the board (Toho pool has none)
+#     or `gameContext.IsSecurityLooking` (only BT14/BT16/ST10 look-effects) --
+#     and it would silence DCGO's gate without silencing ours, converting a
+#     substrate gap into a false divergence.
+#   The two sequences are a ROTATION of each other, and a rotation cannot be
+#   padded away: the emitter can add DCGO-only rows (a select answering no
+#   live prompt on our side) but never OURS-only rows, and our engine's next
+#   prompt must be answered by the very next scenario step.
+#
+# `value: N` IS NOT THE ESCAPE HATCH. It rides the wire as DCGO's raw skill
+# index, but on our side it lowers to a COUNT payload, and a count is matched
+# against branch LABELS or a candidate set. Probed 2026-08-25:
+#   FAILED: count payload 1 has no candidate set, so it cannot be mapped onto
+#   the TriggerOrder prompt 'Choose which triggered effect to resolve next
+#   (2 pending)' -- choices: ["30 => EX12-047 slot 5 (mandatory)",
+#                             "31 => EX12-047 slot 6 (mandatory)"]
+# Those labels are also the second half of the finding: OUR TriggerOrder
+# branch labels carry no trigger identity at all -- just card id, queue slot
+# and mandatoriness -- so even a label-matching wire could not name
+# <Ascension> on our side today, while DCGO's `DescribeScriptedCandidates`
+# already prints `cardEffect.EffectName` ("Ascension").
+#
+# NEITHER ENGINE IS WRONG. general_rule.pdf 15-4-2-3 / 15-4-3-5 leave the
+# order of one player's simultaneous triggers to that player, so BOTH
+# candidate orders are legal presentations of the same choice. This is a gap
+# in the exam WIRE, not a card-resolution divergence.
+#
+# UNBLOCK -- HALF BUILT, AND THIS FILE NEEDS THE OTHER HALF TWICE OVER.
+# Re-derived 2026-08-25. The prescribed shape (an order-independent NAME for a
+# trigger) now exists on OUR side end to end: `select: { cards:, trigger: }`
+# parses (exam/scenario.rs), the adapter resolves it by normalized keyword
+# against the live branch list (`match_one_branch`, exam/adapter.rs), and it
+# rides the wire as `select_trigger` (dcgo-harness/src/main.rs:1408, :1551,
+# :1571). The missing half is DCGO's: `HarnessJob.cs` declares
+# `select_ordinal` (:174) and NO `select_trigger`, and `SelectionAnswer`
+# resolves a same-identity stack only through `MatchOneWithOrdinal`, whose
+# refusal tells the author to "Add select_ordinal" (SelectionAnswer.cs:178).
+#
+# SECOND GAP, specific to THIS file. Its sibling EX12-047-effect2 wants the
+# <Ascension> branch, which `trigger:` can name today (sim-side) because a
+# keyword IS its name. This file wants the OTHER branch -- the printed
+# [On Deletion] clause -- which carries NO keyword, so
+# `trigger_order_candidates` labels it `None` and `trigger:` cannot address it
+# at all (see `a_keyword_less_branch_is_reachable_only_positionally` in
+# exam/adapter.rs). Even with a DCGO `select_trigger` reader, naming this
+# branch portably needs one more thing: either a canonical label for a printed
+# clause that both engines spell the same way, or a complement form ("the
+# branch that is NOT <Ascension>"), which is unambiguous in a 2-branch stack.
+# DCGO's own name for it is the whole rules line ("May return 1 [TB] card from
+# trash to hand, then may play 1 lvl 5- [TB] Digimon from hand for free",
+# EX12_047.cs:185), which our engine does not spell the same way -- so
+# `ICardEffect.EffectName` matching alone does NOT close this one.
+#
+# The ordinal below is therefore kept (it is OUR branch index; `--sim-only`
+# lowers and asserts clean) because nothing better exists yet. The oracle pass
+# will still abort -- DCGO takes ordinal 0 as <Ascension>, whose generic_bool
+# arrives where this line expects the [On Deletion]'s SelectCardEffect. That
+# abort IS the finding.
+card: EX12-047
+clause: EX12-047#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Amaterasumon, the Gasamon to trash/return/play, the
+      # Sanmyojin Arrival that does the trashing, Kokeshimon, filler
+      - EX12-047
+      - EX12-020
+      - EX12-070
+      - EX12-062
+      - EX12-075
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws (Options / non-TB-Digimon only -- the free-play pick must
+      # keep exactly one candidate): T3 turn (10), T5 turn (11),
+      # T5 draw-2 (12-13), T7 turn (14)
+      - EX12-074
+      - EX12-075
+      - EX12-074
+      - EX12-075
+      - EX12-036
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon (Kokeshimon's level-4-or-lower
+      # target); inert fillers
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass (Gasamon waits until AFTER Amaterasumon's mandatory
+  # [On Play] delete so it survives to be Kokeshimon's target).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Amaterasumon (cost 12, memory 3 -> -9). Its [On Play] is
+  # silent: p1 has no Digimon and no trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-047, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1): play Gasamon (cost 3, memory 9 -> 6), keep the turn, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): Sanmyojin Arrival (cost 3, memory 3 -> 0; the yellow
+  # Amaterasumon satisfies its color requirement). Pay its optional "trash
+  # 1 [TB] card from hand" with Gasamon -- seeding p0's trash -- draw 2,
+  # and the Option places itself in the battle area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): Kokeshimon (cost 4, memory 3 -> -1). Its "by deleting 1 of
+  # your Digimon" cost takes the Amaterasumon at slot 0 (Kokeshimon itself
+  # is the other candidate).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-062, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The corrected [TB] data (task_69f10a66 EX12-070 triage) makes the
+  # deleted Amaterasumon (Lv6, now [TB]) match the fielded Sanmyojin
+  # Arrival delay-Option's "when your Lv5+ [TB] Digimon would leave"
+  # replacement window on BOTH engines -- decline it (this exam is the
+  # [On Deletion] body, not the Delay).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Kokeshimon's second delete resolves BEFORE the queued deletion
+  # triggers: p1's Gasamon is the one level-4-or-lower candidate.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The deletion bundle: resolve [On Deletion] first -- OUR branch 0.
+  # DCGO's index 0 is <Ascension>, which is the blocker documented above.
+  - actor: 0
+    do: { select: { cards: [EX12-047], trigger_not: Ascension } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }
+  # THE CLAUSE, half 1: return a [TB] card from trash to hand. The trash
+  # holds TWO qualifying cards -- Gasamon (seeded at T5) and the just-deleted
+  # Amaterasumon, whose printed face carries [TB] (cards.json drops it) --
+  # so this is a real choice, answered by identity rather than a
+  # single-candidate walkover.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, half 2: play the returned Gasamon (level 3, [TB]) from hand
+  # without paying the cost.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # <Ascension>: accept -- the deleted card tops p0's security. DCGO
+  # surfaces this gate as `generic_bool`, NOT `OptionalSkill`:
+  # `CardEffectCommons.AscensionProcess` raises it with
+  # `userSelectionManager.SetBoolSelection(...)` ("Will you place this card
+  # in security?"), whose response lands on
+  # `UserSelectionManager.SetBoolForPlayer` -- the fallback channel the
+  # recorder writes as `generic_bool`. Corrected from the failed oracle
+  # recording 20260824T175315Z, whose abort message
+  # ("step 21 expected prompt 'SelectCardEffect' but DCGO asked
+  # 'generic_bool'") is that gate arriving early because DCGO took
+  # <Ascension> as MultipleSkills index 0 -- see the header note.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: generic_bool }
+  # The -1 memory overshoot ends p0's turn; p1's breeding decision closes.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The clause's witness: Gasamon FRESH on p0's field beside Kokeshimon,
+  # Amaterasumon on security via Ascension (5 -> 6), and the returned-and-
+  # played EX12-020 nowhere in the trash.
+  #
+  # EX12-070 Sanmyojin Arrival stays on p0's FIELD and p0's trash is EMPTY.
+  # This block used to read `p0.trash: [EX12-070]` with EX12-070 absent from
+  # p0.field, and its comment flagged that as a "sim-side oddity ... the
+  # printed Delay text keeps it in the battle area". It was not an oddity, it
+  # was G-DELAY-EVENT-WINDOW-AUTOTRASHED: our engine trashed the placed Delay
+  # Option at the T7 turn-end boundary because
+  # `place_self_as_delay_option_permanent` fell back to
+  # `DelayTrigger::EndOfYourNextTurn` for a card that declares no delay
+  # trigger. 16-16-1 (`general_rule.pdf` p.35) makes a <Delay> available for as
+  # long as the card is in the battle area, with no expiry. The DCGO oracle
+  # said the same on the EX12-047#effect#4 divergence at step 24
+  # (`p0.trash: ours=[EX12-070] dcgo=[]`, `p0.field: dcgo=[..., EX12-070]`).
+  # The fallback is now `DelayTrigger::ExternallyGated`, and these two lines
+  # record the FIXED, oracle-confirmed state.
+  - at: 25
+    that:
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-062, dp: 5000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+      p0.trash: []
+      p0.security: 6
+      p1.field: []
+      p1.trash: [EX12-020]

@@ -680,10 +680,19 @@ fn bt22_013_hand_main_jump_digivolves_agumon_at_cost6_with_nokia() {
         "BT22-013",
         "WarGreymon must be the top card of the Agumon stack after the [Hand][Main] jump"
     );
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert WarGreymon's departure by identity instead of by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT22-013"),
+        "WarGreymon must leave the hand after digivolving onto the Agumon"
+    );
     assert_eq!(
         runner.hand_size(0),
-        0,
-        "WarGreymon must leave the hand after digivolving onto the Agumon"
+        1,
+        "the digivolve draw replaced it (§8-1-3-3)"
     );
     // The cost-6 digivolve must actually deduct 6 memory — assert the delta so
     // the test is robust to any starting-memory clamp. A silently-ignored cost

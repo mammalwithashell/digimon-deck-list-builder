@@ -1,0 +1,244 @@
+# Exam scenario: EX12-074 (Genshi Continent & Ashino Island), clause effect#1 --
+# "[Security] [Your Turn] [Once Per Turn] When one of your [Shambala] trait
+# Digimon attacks, it may digivolve into a [Shambala] trait Digimon card in the
+# hand with the cost reduced by 1."
+#
+# THE FACE-UP PRECONDITION (this is why the line looks long).
+# DCGO gates BOTH halves of this clause on the option being FACE UP in its
+# owner's security stack: EX12_074.cs's CanUseCondition and CanActivateCondition
+# each open with `CardEffectCommons.IsExistInSecurity(card, false)`
+# (DCGO/Assets/Scripts/CardEffect/EX12/White/EX12_074.cs:36 and :43), and that
+# helper is `card.Owner.SecurityCards.Contains(card) && card.IsFlipped ==
+# isFlipped` (GameContextDeterminarion.cs:391-397) with `IsFlipped == true`
+# meaning FACE DOWN (CardSource.cs:56-72; SetReverse() sets it, SetFace()
+# clears it). Cards laid into security at game setup go through
+# `CardObjectController.AddSecurityCard(..., faceUp: false)` -> `SetReverse()`
+# (CardObjectController.cs:1064-1066), i.e. FACE DOWN -- so a copy that merely
+# starts in the security stack can never reach this clause on the oracle side.
+# The only route in the Toho pool is the card's own [Main] (clause effect#2),
+# which runs `ReplaceBottomSecurityWithFaceUpOptionEffect` -- hence steps 6-7
+# below, which are prefix, not the clause under exam.
+#
+# GATE ASYMMETRY (the store note's cause, re-derived here; NOT asserted).
+# Our engine's security-scope trigger scan
+# (`Game::enqueue_from_security_stack_card`, effect_queue.rs:1964-2015) filters
+# on `effect.security` and the timing only -- it never consults
+# `Player::face_up_security`. So our engine would fire this clause from a
+# FACE-DOWN security copy where DCGO would not. This line deliberately routes
+# through the face-up placement so BOTH engines are inside the gate and the
+# oracle diff measures the clause's RESOLUTION rather than the gate; the
+# face-down asymmetry is a separate, one-step scenario nobody has authored.
+#
+# THE LINE
+#   T1 (p0): hatch Onibimon (the egg deck is all EX12-004, so the hatch is
+#       deterministic), digivolve Wankomon EX12-009 over it in breeding. Only
+#       the alt route matches (Wankomon's printed circle is RED Lv.2 and
+#       Onibimon is purple), "Lv.2 w/[Shambala] trait: Cost 0" -- one distinct
+#       cost, so the rule-17 cost-choice prompt stays closed. Digivolving does
+#       NOT fire Wankomon's [On Play] reveal-3, which is the whole reason the
+#       attacker is raised rather than hard-cast.
+#   T3 (p0, memory 3): move the stack out, then play EX12-074 (cost 3 ->
+#       memory 0). Its [Main] pulls p0's BOTTOM security card (stack[5],
+#       EX12-070) into hand and puts EX12-074 back as the bottom security card
+#       FACE UP; the trailing "you may play 1 [Shambala] card for -3" is
+#       DECLINED (EX12-026 is in hand purely so the prompt has a candidate on
+#       both sides -- DCGO additionally requires IsDigimon +
+#       CanPlayAsNewPermanent at the reduced cost, EX12_074.cs:97-102).
+#   T5 (p0, memory 3): THE CLAUSE. Wankomon attacks security; the face-up
+#       EX12-074 offers its optional digivolve and the pick is Seasarmon
+#       EX12-011. Seasarmon's PRINTED circle (red Lv.3: Cost 2) matches the red
+#       Wankomon directly, and its alt ("Lv.3 w/[Shambala] trait: Cost 2") costs
+#       the same -- one distinct cost, no cost-choice prompt, and no dependence
+#       on the effect-initiated alt-path registry. Reduced by 1 the digivolve
+#       costs 1: memory 3 -> 2 is the clause's cost witness.
+#
+# GRANTED-<Execute> GATE (task_69f10a66 Family 1, same as EX12-061-inherited0):
+# Onibimon EX12-004 under the stack grants its [TB] carrier <Execute> on the
+# owner's turn, so ending T3 -- the turn the stack moved to the battle area and
+# could still attack -- parks the end-of-turn attack gate (our EndOfTurnAction
+# phase; DCGO's OptionalSkill). It is DECLINED at step 9: the clause under exam
+# is the security digivolve, not the granted Execute. T5's turn end parks no
+# gate: the carrier is suspended from its attack, so CanAttack fails.
+#
+# CANDIDATE-FILTER NOTE (not asserted, no effect on THIS line). DCGO's pick is
+# legality-checked -- CardEffectCommons.DigivolveIntoHandOrTrashCard requires
+# IsDigimon && !CanNotEvolve && CanPlayCardTargetFrame against the attacking
+# permanent -- while our DSL's `select_hand` filter is only
+# `kind: digimon` + `trait_has: Shambala`, so our candidate list is a superset
+# in general. Here the two coincide: the only [Shambala] Digimon in hand at the
+# pick are EX12-011 and EX12-026, and both digivolve legally over the red Lv.3
+# Wankomon (EX12-026 via its "Lv.3 w/[Shambala] trait: Cost 2" alt route).
+#
+# QUIET BY CONSTRUCTION: p1 never develops, so Seasarmon's <Raid> (no
+# unsuspended opponent Digimon to switch to) and its [When Digivolving] delete
+# (no opponent Digimon at all) are both silent, and p1's checked security card
+# is a plain 5000-DP Digimon with no [Security] text that the 7000-DP attacker
+# (5000 + Wankomon's inherited [Your Turn] +2000) beats outright.
+# REVISION 2026-08-24 -- this file REPLACES the version committed in b800e1f1d,
+# which carried its own "REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict)"
+# banner: it answered the clause's pick directly and so could not host DCGO's
+# isOptional gate. That is now expressible -- `expect: {prompt: OptionalSkill}`
+# over our live Hand pick is the documented OptionalSkill+pick FOLD, and the
+# harness confirms it ("step 14 folds DCGO's OptionalSkill gate into our live
+# Hand pick"). Two other claims in that version are also stale: our
+# effect-initiated digivolve DOES take the digivolution draw now (stack[13] is
+# what it takes here), and it is no longer confined to printed circles. The
+# line was rebuilt rather than patched, because its Gasamon attacker made the
+# cost witness vacuous -- Gasamon's own "[Your Turn] ... into a [TB] card:
+# reduce by 1" stacked with the clause's -1 to leave memory unchanged, so the
+# scenario could not tell "reduced by 1" from "reduced by 2" or from "free".
+# Raising a red Wankomon instead keeps the clause's -1 the ONLY reduction.
+#
+card: EX12-074
+clause: EX12-074#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009   # raised into the attacker
+      - EX12-074   # the card under exam
+      - EX12-011   # the clause's digivolve pick
+      - EX12-075   # inert Option filler (Options fail both engines' -3 filter)
+      - EX12-026   # a [Shambala] Digimon so effect#2's -3 prompt has a candidate
+      # security (5-9) -- REVERSED, so stack[5] is the BOTTOM card the [Main]
+      # pulls into hand and stack[9] is the top. p0 is never attacked, so only
+      # stack[5] is load-bearing; none of these carry [Security] text.
+      - EX12-070
+      - EX12-031
+      - EX12-063
+      - EX12-062
+      - EX12-046
+      # Every card this line draws is stacked, so sim-only and the oracle
+      # (whose remainder is DCGO's own shuffle) deal the SAME cards. p0 goes
+      # first, so there is no T1 turn draw; the DIGIVOLUTION draw is what
+      # consumes (10):
+      #   (10) T1 breeding-digivolve draw   (12) T5 turn draw
+      #   (11) T3 turn draw                 (13) the clause's digivolve draw
+      # All four are inert Options -- they can never be offered by the clause's
+      # Digimon-only pick or by effect#2's -3 play.
+      - EX12-075
+      - EX12-070
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): stack[9] is the TOP card the attack checks -- a plain
+      # 5000-DP Digimon with no [Security] text.
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-011
+      # draws: T2 (10), T4 (11), T6 (12) -- the T6 draw lands before the
+      # trailing breeding row, so it is stacked too rather than left to the
+      # shuffled remainder.
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then raise Wankomon in breeding for cost 0.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): promote, then the face-up placement prefix.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-074, from: hand } }
+    expect: { prompt: main_phase }
+  # effect#2's trailing "you may play 1 [Shambala] card for -3": declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate: declined (see header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The clause's optional digivolve. DCGO gates it behind an OptionalSkill
+  # yes/no (EX12_074.cs SetUpActivateClass(..., isOptional: true)) and then
+  # asks the pick; our engine surfaces the one declinable hand pick, so this is
+  # the documented OptionalSkill+pick fold -- the emitter writes both rows.
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing row: p1's next breeding decision proves the turn closed cleanly
+  # (no second <Execute> gate -- the attacker is suspended).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # PRE-CLAUSE (before step 13's attack declaration): EX12-074 is already the
+  # face-up bottom security card -- p0's security is still 5 because the [Main]
+  # swapped a card out for it -- p0 holds memory 3, and the attacker is still
+  # the bare Wankomon at its printed 2000 DP (its inherited [Your Turn] +2000
+  # is dormant while it is the TOP card). Pinning this separates a future
+  # regression in the long prefix from one in the clause itself.
+  - at: 13
+    that:
+      memory: 3
+      p0.security: 5
+      p1.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }
+  # POST-CLAUSE (one step after the clause resolved, before the trailing pass).
+  # memory 3 -> 2 is the cost witness: Seasarmon's digivolve cost is a printed
+  # 2 on both matching routes, reduced by 1 by the clause. The attacker is now
+  # Seasarmon over [Onibimon, Wankomon] at 5000 + 2000 (Wankomon's inherited
+  # [Your Turn] +2000, live now that it is a digivolution card), still
+  # suspended from the attack it declared BEFORE digivolving. p1 lost one
+  # security card to the check and it is in their trash. p0's hand lost the
+  # pick and gained the digivolution draw (stack[13]).
+  - at: 15
+    that:
+      memory: 2
+      p0.security: 5
+      p1.security: 4
+      p0.trash: []
+      p1.trash: [EX12-011]
+      p0.hand: [EX12-026, EX12-070, EX12-070, EX12-070, EX12-075, EX12-075, EX12-075]
+      p0.field:
+        - { card_id: EX12-011, dp: 7000, suspended: true, sources: [EX12-004, EX12-009] }

@@ -125,18 +125,50 @@ effects:
   # your security; then move 1 opponent security card to the top of their deck
   # and shuffle the rest back. ──────────────────────────────────────────────
   #
-  # "By placing 1 Digimon on top of its owner's security stack" is a mandatory
-  # cost (`pay_cost`). Any of your battle-area Digimon is a valid choice — the
-  # just-digivolved Quantumon itself is always present, so the cost is always
-  # payable. The "reveal all of your opponent's security cards" is informational
-  # (the opponent-security selection surfaces them); the mechanical effect is the
+  # OPTIONAL PROCESSING CONDITION (§15-7-1/§15-7-4).
+  #   Printed: "By placing 1 Digimon on top of its owner's security stack,
+  #             reveal all of your opponent's security cards, and place 1 card
+  #             among them on top of your opponent's deck."
+  #   §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  #     — this clause is exactly that shape ("By placing 1 Digimon …, <effect>").
+  #   §15-7-4: "A player can choose whether or not to execute the content of
+  #     optional processing conditions, regardless of whether or not the content
+  #     of the conditions can be executed." So the placement is NOT auto-paid.
+  #   §15-7-2: if the condition's content isn't executed, "the processing after
+  #     the conditions can't be executed" — declining skips BOTH the placement
+  #     and the opponent-security→deck-top move.
+  #   DCGO agrees: LM_020.cs:18 passes isOptional=true as the 4th argument of
+  #     SetUpActivateClass(CanActivateCondition, ActivateCoroutine, 1, true, …).
+  #
+  #   This clause previously modeled the placement as a MANDATORY cost ("Any of
+  #   your battle-area Digimon is a valid choice — the just-digivolved Quantumon
+  #   itself is always present, so the cost is always payable"). That reasoning
+  #   is exactly backwards for §15-7-4: payability does not make payment
+  #   compulsory, and always-payable is precisely why the auto-pay was invisible
+  #   — Quantumon would feed itself to security with no way to say no.
+  #
+  #   `outer_prompt: true` because the body's FIRST step (`select_own_permanent`
+  #   with optional: false) is not itself declinable — without the forced outer
+  #   confirm there is no PASS for the player to take. It also drops the
+  #   zero-candidate suppression guard, which is a no-op here: the just-
+  #   digivolved Quantumon is always a matching `kind: digimon` candidate.
+  #   No [Once Per Turn] is printed, so G-OPT-REFUND-ON-DECLINE is moot.
+  #
+  # The "reveal all of your opponent's security cards" is informational (the
+  # opponent-security selection surfaces them); the mechanical effect is the
   # single security→deck-top move plus a shuffle of the remainder.
   - when: when_digivolving
-    summary: "[When Digivolving] By placing 1 of your Digimon on top of your security, send 1 opponent security card to the top of their deck; shuffle the rest back"
+    # §15-7-1/§15-7-4: "By placing 1 Digimon on top of its owner's security
+    # stack, …" is an optional processing condition — the player chooses
+    # whether to pay it (DCGO LM_020.cs:18 isOptional=true).
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving] MAY place 1 of your Digimon on top of your security to send 1 opponent security card to the top of their deck; shuffle the rest back"
     process:
-      # Cost: place 1 of your Digimon on top of your security stack. Mandatory
-      # (the just-digivolved Quantumon is always a valid pick), so it is the
-      # leading step of the body rather than a separate `pay_cost`.
+      # Cost: place 1 of your Digimon on top of your security stack. Once the
+      # player has ACCEPTED the optional processing condition above, choosing
+      # which Digimon to place is mandatory (§15-7-3), so this select stays
+      # non-optional — the decline lives on the outer prompt.
       - select_own_permanent:
           bind_as: sac_digimon
           filter: { kind: digimon }

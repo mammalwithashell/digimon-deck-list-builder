@@ -429,6 +429,51 @@ pub enum DelayTrigger {
     EndOfThisTurn,
     StartOfYourNextTurn,
     OnEvent(EffectTiming),
+    /// The `<Delay>`'s activation window is NOT owned by the delay machinery.
+    ///
+    /// Reached whenever a card runs `place_self_as_delay_option` with no
+    /// `kind: delay` clause. `Effect::delay_trigger` is written in exactly one
+    /// place (`EffectBuilder::delay()`, effect.rs), whose sole caller is
+    /// `lower_delay.rs`, so the `find_map` in
+    /// `place_self_as_delay_option_permanent` returns `None` iff there is no
+    /// such clause. That is SEVEN cards today, not the four an earlier draft of
+    /// this comment listed:
+    ///
+    ///   * Window owned by a `kind: replacement` clause on the same card --
+    ///     "[All Turns] When ... would leave the battle area, ＜Delay＞":
+    ///     EX12-070 Sanmyojin Arrival, BT17-095, BT17-097, BT19-099,
+    ///     BT20-100 The Last Guardian, ST20-14. The replacement registry sees
+    ///     the window, prompts, and pays the trash-self cost itself
+    ///     (`delete_permanent: { target: source }`).
+    ///   * NO owner clause at all: BT24-093, whose `<Delay>` is deliberately
+    ///     unauthored (`BT24-093.yaml:146`, "BLOCKED -- see gap notes above")
+    ///     while its `place_self_as_delay_option` step is live. So the name of
+    ///     this variant OVERSTATES that card: nothing gates it, and it now
+    ///     parks inert for the rest of the game instead of being auto-trashed.
+    ///     That is still the better of the two wrongs -- 16-16-1 says the card
+    ///     stays in the battle area, and the missing activation is the
+    ///     pre-existing BLOCKED gap, not something introduced here -- but it is
+    ///     untested behaviour on a card this change never opened. Do not read
+    ///     the variant name as a promise that a gate exists.
+    ///
+    /// This variant means: **park the carrier and do nothing else.** The delay
+    /// machinery must not schedule an auto-trash
+    /// ([`crate::Game::compute_delay_trash_turn`] returns `u16::MAX`), must not
+    /// match a turn-boundary scan (`resolve_delayed_options` /
+    /// `resolve_start_delayed_options` enumerate only the three turn-scheduled
+    /// variants), must not expose a `[Main]`-phase activation
+    /// (`delayed_option_main_activation_available` matches only
+    /// `MainPhaseActivated`), and must not be event-dispatched
+    /// (`enqueue_event_gated_delayed_options` matches only `OnEvent`).
+    ///
+    /// Rules manual 16-16-1 (`general_rule.pdf` p.35): "＜Delay＞ is a keyword
+    /// effect. While a card with this effect is in the battle area, by trashing
+    /// that card, the effect specified in ＜Delay＞ will activate." Availability
+    /// is bounded by presence in the battle area and by nothing else — 16-16
+    /// prints no expiry. The previous fallback (`EndOfYourNextTurn`) invented
+    /// one and silently trashed the carrier a turn later, taking the printed
+    /// option away from the player. G-DELAY-EVENT-WINDOW-AUTOTRASHED.
+    ExternallyGated,
 }
 
 /// Keywords that can be granted or checked on permanents.

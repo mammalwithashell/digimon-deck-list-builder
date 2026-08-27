@@ -460,13 +460,26 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
-    /// Spawn a short-lived, easily identified process that is not our
-    /// image, for tests that need a genuinely live PID belonging to
-    /// something else. The reviewer's own reproduction used the same
-    /// decoy: "a spawned PING.EXE".
+    /// Spawn an easily identified process that is not our image, for tests
+    /// that need a genuinely live PID belonging to something else. The
+    /// reviewer's own reproduction used the same decoy: "a spawned PING.EXE".
+    ///
+    /// `-n 30` (~30s), deliberately, NOT `-n 2` (~1s). Every caller reads the
+    /// decoy back through `pid_is_image`, which shells out to `tasklist` — so
+    /// the decoy has to outlive an external process launch plus whatever
+    /// scheduling delay the test harness imposes. At ~1s that held only while
+    /// the whole suite ran in ~1.2s; once the crate grew past ~100 tests the
+    /// `tasklist` call started landing AFTER the decoy had already exited, and
+    /// `pid_is_image` correctly reported "not running" — failing the assertion
+    /// for a reason that has nothing to do with the code under test.
+    ///
+    /// The decoy's lifetime is a fixture assumption, never a property under
+    /// test, so widening it weakens no assertion. It stays finite rather than
+    /// `-t` (infinite) so a panic before the reap leaves a process that cleans
+    /// itself up instead of an immortal orphan.
     fn spawn_decoy() -> std::process::Child {
         let child = Command::new("ping")
-            .args(["-n", "2", "127.0.0.1"])
+            .args(["-n", "30", "127.0.0.1"])
             .stdout(std::process::Stdio::null())
             .spawn()
             .expect("spawn decoy process");
@@ -486,7 +499,10 @@ mod tests {
         assert!(pid_is_image(pid, "ping.exe"), "must be case-insensitive");
         assert!(!pid_is_image(pid, "DCGO.exe"));
 
-        // Reap so no stray process survives the test.
+        // Reap so no stray process survives the test. KILL first, then wait:
+        // a bare `wait()` blocks for the decoy's full lifetime, which would
+        // make every such test pay it in wall-clock.
+        let _ = decoy.kill();
         let _ = decoy.wait();
     }
 
@@ -563,6 +579,9 @@ mod tests {
             "the wrong-image pid must be cleared, not kept as if verified"
         );
 
+        // Kill before waiting -- a bare `wait()` would block for the decoy's
+        // full lifetime.
+        let _ = decoy.kill();
         let _ = decoy.wait();
 
         for d in [&root, &build] {

@@ -327,6 +327,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(source.player, source.index);
         self.shift_pending_attack_after_battle_area_remove(source.player, source.index);
+        self.shift_effect_queue_after_battle_area_remove(source.player, source.index);
 
         let mut sources = perm.card_sources;
         let Some(top) = sources.pop() else {

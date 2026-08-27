@@ -1,0 +1,99 @@
+# Exam scenario: EX12-074 Genshi Continent & Ashino Island, "[Security] You
+# may play 1 play cost 5 or lower [Shambala] trait card from your hand or
+# trash without paying the cost."
+#
+# EX12-074 is pinned as P0's TOP security card (stack position 9 -- position 5
+# is the bottom, probed empirically by the EX12-074-effect2 exam) and flipped
+# by a P1 Gasamon security attack, the same skeleton as EX12-075-security0.
+#
+# The flip parks the optional free-play pick for P0. Candidate engineering:
+#   - P0's trash is EMPTY (all-pass line), so DCGO's hand-or-trash zone
+#     question (a generic_int in its script) collapses -- only the hand side
+#     is populated and DCGO auto-picks it (UserSelectionManager.SetInt(1)).
+#   - P0's hand holds exactly ONE cost<=5 [Shambala] candidate: EX12-020
+#     Gasamon (cost 3, and prompt-free on play -- its only printed effect is a
+#     passive would-digivolve cost reduction). The fillers are cost-12/16
+#     cards (EX12-047 / EX12-065 / EX12-076), above the <=5 line. DCGO's
+#     filter is IsDigimon-only (EX12_074.cs CanPlayCondition); our DSL also
+#     admits tamers -- the toho pool has no tamers, so the sets agree.
+# The `select: cards:` step answers the pick; Gasamon is played to P0's field
+# for free. EX12-074 is an Option, so no security battle follows -- the card
+# is trashed and the attack ends.
+#
+# P1's line: Gasamon played on P1's first turn (memory 3 -> 0, turn
+# continues), sits a turn for summoning sickness, attacks security on P1's
+# second turn. P0 keeps an empty battle area until the flip, so there is no
+# blocker window.
+card: EX12-074
+clause: EX12-074#security#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-047, EX12-047, EX12-065, EX12-065,
+            EX12-009, EX12-009, EX12-009, EX12-009, EX12-074,
+            EX12-076]
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-011, EX12-011, EX12-026, EX12-026]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): decline everything; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): attack security. The check flips P0's top security
+  # card, EX12-074, whose [Security] effect parks the optional free-play pick
+  # for P0 (the security owner).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: P0 plays its hand's Gasamon without paying the cost. (DCGO
+  # routes this through PlayByEffect over Root.Hand, whose Hand branch parks
+  # a SelectHandEffect -- verified in PlayEffects.cs; a prior draft expected
+  # SelectCardEffect, which the strict driver would have kind-mismatched.
+  # Our engine parks a UnionZone pick over hand+trash -- unmapped sim-side.)
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # EX12-074 is an Option -- no security battle; it is trashed and the attack
+  # ends. Attacking spends no memory, so P1 answers one more main_phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the attack: P0 is down to 4 security with EX12-074 in the trash, the
+  # freely played Gasamon sits unsuspended on P0's field (memory untouched at
+  # 3 for P1), and P1's attacker is suspended.
+  - at: 10
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [EX12-074]
+      p0.hand: [EX12-047, EX12-047, EX12-065, EX12-065, EX12-076]
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: EX12-020, dp: 2000, suspended: true, sources: [] }

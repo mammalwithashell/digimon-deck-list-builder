@@ -400,3 +400,59 @@ fn st23_15_main_plays_beatbreak_free_and_persists_in_battle_area() {
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
     assert!(epulse_on_field, "e-Pulse persists in the battle area");
 }
+
+/// e-Pulse must SURVIVE the end of the controller's next turn.
+///
+/// Its `kind: delay` clause is a structural marker with `process: []`, carried
+/// only so `classify_option_modes` keeps the Option in the battle area for the
+/// real `[Start of Your Main Phase]` clause. The marker sits on
+/// `end_of_your_next_turn`, which is the window the turn scan
+/// (`resolve_delayed_options_matching`) drives — and that scan trashes a Delay
+/// carrier after running its body, because the trash is the §16-16-2 cost.
+///
+/// Nothing on the printed card trashes e-Pulse at end of turn: its only exit is
+/// "By placing this card from the battle area face down under any of your
+/// [BEATBREAK] trait Tamers". So if the scan reaches the marker, the Option
+/// would vanish before its SOMP clause could ever be used again. This test pins
+/// that it does not.
+#[test]
+fn st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .add_card(bb_digimon("BBD"))
+        .add_card(filler("FILLER"))
+        .hand(0, &[CARD_ID, "BBD"])
+        .deck(0, &["FILLER"; 12])
+        .deck(1, &["FILLER"; 12])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner.play(0, 0);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "fixture: e-Pulse is on the field"
+    );
+
+    // Placing turn -> opponent's turn -> controller's next turn, whose END is
+    // the marker's scheduled window.
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "the structural Delay marker must not let the turn scan trash e-Pulse --          its only printed exit is the [Start of Your Main Phase] relocate"
+    );
+}
+

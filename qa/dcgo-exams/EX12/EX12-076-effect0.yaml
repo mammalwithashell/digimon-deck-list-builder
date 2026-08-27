@@ -1,0 +1,481 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#0 -- "<Rush> (This Digimon
+# can attack the turn it was played.)".
+#
+# WHY THIS LINE IS 37 STEPS LONG
+# ------------------------------
+# Susanoomon's printed play cost is 16 against a +10 memory ceiling, so no
+# ordinary line can put it on the board from the hand at all. Its only
+# affordable route is the card face's `[Assembly -9] 8 [Hybrid]/[Shambala] trait
+# cards w/different names`, which takes the play cost 16 -> 7. (Read off the
+# card image -- `cards.json` drops the Assembly line entirely, and the printed
+# `<Rush>` there is the only trace of this clause.) <Rush> is by definition
+# "the turn it was played", so reaching it REQUIRES the Assembly route, and
+# Assembly declares out of the TRASH. That is what the 34-step prefix is for:
+# eight EX12-061 / EX12-070 plays, each paying a "trash 1 card from your hand"
+# cost, to stock P0's trash with eleven declarable cards by turn 11.
+#
+# THE WITNESS
+# -----------
+# <Rush> is a PERMISSION, so the line itself is the primary evidence: step 36
+# lowers only if our engine offers the attack. A Digimon played this turn
+# WITHOUT <Rush> is summoning-sick, its attack bit is absent from the mask, and
+# lowering fails loudly. The `assert:` blocks pin the board on either side:
+#
+#   at 34  Susanoomon is NOT on the board. P0 has five permanents (four
+#          EX12-061 and one EX12-070) and 10 memory. P1 still has both Digimon.
+#   at 36  Susanoomon IS on the board, UNSUSPENDED, carrying its eight Assembly
+#          materials as digivolution sources. Together with `at 34` this is the
+#          "played THIS turn" half -- it entered on turn 11 and nothing has
+#          suspended it. `p0.memory: 3` is the cost witness: 10 - 7, i.e. the
+#          Assembly -9 was applied, not the printed 16.
+#   at 37  (the trailing projection, index 37 == steps.len(), i.e. after the
+#          final step) the same permanent is SUSPENDED and the attack has fully
+#          resolved. Declaring an attack is the only thing in this line that
+#          suspends it, and a Digimon that was never offered an attack cannot
+#          reach that state.
+#
+# POSITIVE CONTROL -- run 2026-08-26, NOT committed (it is a different line)
+# -------------------------------------------------------------------------
+# "The attack lowered" proves nothing unless a same-turn NON-<Rush> Digimon
+# fails to. Verified on two scratch copies of this exact file, each appending
+# three steps after step 36: P0 plays EX12-009 Wankomon (cost 3, no <Rush>, so
+# memory 3 -> 0), answers its [On Play] reveal, and then attacks.
+#
+#   attacker: field.6 (the Wankomon, played THIS turn)  -> REFUSED
+#     `step 40: no legal action matches Attack { attacker: "field.6",
+#      target: "security" }`
+#     and the printed legal set contains exactly four attacks --
+#     `114/129/144/159: Slot 0..3 attacks security`, the four EX12-061 played
+#     on turns 1/3/5/7. Neither slot 6 (summoning-sick) nor slot 5
+#     (Susanoomon, already suspended by its own attack) is offered.
+#
+#   attacker: field.0 (an EX12-061 played on an EARLIER turn) -> ACCEPTED
+#     `scenarios seen 1 / lowered 1 / run 1 / failed 0`
+#
+# Same game, same turn, same board, same verb, appended steps identical: the
+# only thing that changes is which permanent attacks. So the refusal is
+# summoning sickness and not a malformed control -- and Susanoomon, played on
+# this very turn, is offered an attack anyway. Scope note, stated plainly: this
+# shows our engine treats same-turn Digimon as summoning-sick and exempts
+# Susanoomon. It is NOT a rebuild with `grant_keyword: Rush` deleted from
+# `code/digimon-engine/cards/ex12/EX12-076.yaml` -- that is a shared file and a
+# card-pack rebuild, out of this lane.
+#
+# WHY THESE EIGHT MATERIALS
+# -------------------------
+# The declaration is answered by CARD ID, so the eight are chosen, not just the
+# first eight in the trash. Two constraints:
+#
+#  1. EIGHT DISTINCT NAMES, because the card face says "w/different names".
+#     Our engine does NOT enforce that (see CAVEATS in the lane report), so
+#     eight copies of one name would have been ACCEPTED -- and the scenario
+#     would have "passed" while leaning on a rule we do not implement. These
+#     are eight distinct names.
+#  2. NO INHERITED TRIGGER THAT FIRES ON AN ATTACK. An Assembly material
+#     becomes a digivolution source, so its inherited box goes live under
+#     Susanoomon. The first draft of this line declared EX12-062
+#     (`[Inherited][When Attacking][OPT] Draw 1, then trash 1 card in hand`)
+#     and EX12-046 (`[Inherited][End of Attack][OPT] Play 1 [TB] Digimon...`),
+#     and the attack then parked THREE extra prompts -- a `TriggerOrder`
+#     between EX12-076 and EX12-062, a hand trash, and an end-of-attack
+#     decline -- none of which say anything about <Rush>. All eight below are
+#     inherited-inert during an attack, checked in
+#     `code/digimon-engine/cards/ex12/*.yaml` (`scope: inherited`) rather than
+#     inferred from printed text:
+#       EX12-009 / EX12-011              aura, `[Your Turn] +2000 DP` -- this
+#                                        is why the projection reads 20000 DP
+#                                        (16000 + 2000 + 2000) on P0's turn
+#       EX12-031                         replacement, fires only on LEAVING
+#                                        the battle area
+#       EX12-036 / EX12-047 / EX12-065   no inherited effect at all
+#       EX12-070 / EX12-074 / EX12-075   Options: inherited box is
+#                                        `[Security]`, dead under a Digimon
+#
+# WHY P1'S BOARD IS EMPTY AT THE ATTACK
+# -------------------------------------
+# P1 has to donate 10 memory in ONE action (a second action would already have
+# ended their turn), and every card in `st1-akiho` costing that much is a
+# Digimon -- so P1 necessarily ends turn 10 with Digimon on the board, as the
+# `at: 34` block records. They are removed by Susanoomon's own [On Play]
+# (effect#3): the eight materials carry six distinct colors -- red (EX12-009,
+# EX12-011, EX12-047), blue (EX12-031, EX12-036), yellow (EX12-031, EX12-036,
+# EX12-047), green (EX12-065), white (EX12-074, EX12-075), purple (EX12-065) --
+# so every opponent Digimon takes -3000 x 6 = -18000 DP for the turn, and both
+# ST1-03 (2000) and ST1-10 (12000) reach 0 DP and are deleted (rule 17-1-3-1).
+#
+# That is deliberate, not incidental: with P1's board empty, <Raid> (effect#1)
+# has no candidate and opens no window, and Susanoomon's [When Attacking]
+# (effect#4) has no Digimon to place as security -- so neither parks a prompt
+# and this line stays about <Rush>. It does NOT silence effect#4: its second
+# half still fires. See the arithmetic on the `at: 37` block.
+#
+# ORACLE STATUS: NOT RUN. There is no `# GENERATED` marker in the assert blocks
+# below -- every value was read off OUR engine's own projection on 2026-08-26.
+# This file is a SIM-SIDE REGRESSION GUARD, not a confirmation, and the clause
+# stays `unmeasured` until a DCGO pass backfills it.
+card: EX12-076
+clause: EX12-076#effect#0
+seed: 424242
+decks:
+  p0:
+    # 31 pinned positions. Every card the line names is stacked -- the author
+    # rule in docs/DCGO_EXAM.md, because sim-only and oracle deal different
+    # remainders, so an unstacked card means the two modes play different games.
+    stack:
+      # opening hand (0-4)
+      - EX12-061   # T1 Hanimon
+      - EX12-070   # T3 Option
+      - EX12-009   # material 1 (trashed T1)
+      - EX12-011   # material 2 (trashed T3)
+      - EX12-031   # material 3 (trashed T3)
+      # security (5-9), 9 = TOP. Never checked -- P1 never attacks.
+      - EX12-020
+      - EX12-020
+      - EX12-020
+      - EX12-020
+      - EX12-026
+      # draws (10+), in draw order.
+      #
+      # The four EX12-061 and four EX12-070 are spaced so that EXACTLY ONE copy
+      # of the card being played is in hand at each `play:` step: `from: hand`
+      # refuses an ambiguous intent, so the next copy must always arrive from a
+      # draw that happens AFTER the current one has left the hand.
+      - EX12-061   # d1   T1 Hanimon draw  -> played T3
+      - EX12-036   # d2   material 4
+      - EX12-074   # d3   T3 turn draw     -> material 5
+      - EX12-070   # d4   T3 Option draw   -> played T5
+      - EX12-075   # d5   material 6
+      - EX12-061   # d6   T3 Hanimon draw  -> played T5
+      - EX12-047   # d7   material 8
+      - EX12-065   # d8   T5 turn draw     -> material 7
+      - EX12-070   # d9   T5 Option draw   -> played T7
+      - EX12-076   # d10  SUSANOOMON
+      - EX12-061   # d11  T5 Hanimon draw  -> played T7
+      - EX12-026   # d12  filler
+      - EX12-026   # d13  T7 turn draw, filler
+      - EX12-070   # d14  T7 Option draw   -> played T9
+      - EX12-046   # d15  filler
+      - EX12-046   # d16  T7 Hanimon draw, filler
+      - EX12-046   # d17  filler
+      - EX12-046   # d18  T9 turn draw, filler
+      - EX12-062   # d19  T9 Option draw, filler
+      - EX12-062   # d20  filler
+      - EX12-009   # d21  T11 turn draw. Inert in hand -- it is the spare
+                   #      non-<Rush> Digimon the positive control plays.
+    rest: toho-braves
+  p1:
+    stack:
+      # opening hand (0-4)
+      - ST1-03
+      - ST1-10
+      - ST1-02
+      - ST1-02
+      - ST1-02
+      # security (5-9), 9 = TOP
+      - ST1-04
+      - ST1-04
+      - ST1-05
+      - ST1-05
+      - ST1-07
+      # draws: T2, T4, T6, T8, T10
+      - ST1-13
+      - ST1-13
+      - ST1-13
+      - ST1-13
+      - ST1-14
+    rest: st1-akiho
+steps:
+  # ── T1 (P0, memory 0) ────────────────────────────────────────────────────
+  # Every EX12-061 play is `[On Play] By trashing 1 [Puppet]/[TB] card from your
+  # hand, <Draw 2>`; every EX12-070 play is `[Main] By trashing 1 [TB] card from
+  # your hand, <Draw 2>. After, place this card in the battle area.` The
+  # `select:` after each play IS that trash cost -- which is how the eight
+  # Assembly materials reach P0's trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+  # ── T2 (P1) ──────────────────────────────────────────────────────────────
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # ── T3 (P0, memory 3) ────────────────────────────────────────────────────
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-031] } }
+  # ── T4 (P1) ──────────────────────────────────────────────────────────────
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # ── T5 (P0, memory 3) ────────────────────────────────────────────────────
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-036] } }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-074] } }
+  # ── T6 (P1) ──────────────────────────────────────────────────────────────
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # ── T7 (P0, memory 3) ────────────────────────────────────────────────────
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-075] } }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-065] } }
+  # ── T8 (P1) ──────────────────────────────────────────────────────────────
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # ── T9 (P0, memory 3) ────────────────────────────────────────────────────
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-047] } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # ── T10 (P1, memory 3) -- the memory donation ────────────────────────────
+  # 3 -> 0 (ST1-03) -> -10 (ST1-10), so P0 opens turn 11 on 10 memory. The
+  # Assembly cost of 7 leaves 3, and it is that leftover that lets the turn
+  # continue into an attack rather than ending on the play.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # ── T11 (P0, memory 10) -- THE CLAUSE ────────────────────────────────────
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-076, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Assembly -9] declaration, answered by CARD ID against the single
+  # `CountCappedMultiSelect { min: 0, max: 8 }` prompt our engine parks over the
+  # trash: eight picks, one step.
+  #
+  # NOT the `materials:` payload form, deliberately. That form expands to one
+  # single-pick call per RECIPE ELEMENT, and this recipe is ONE element with
+  # `repeat: {min: 8, max: 8}` -- so the first pick's trailing PASS closed the
+  # whole declaration at one card and lowering died with "`materials:` declares
+  # 8 cards but our engine stopped asking after 1". See CAVEATS in the lane
+  # report; the format gap is real and is not this scenario's to fix.
+  - actor: 0
+    do:
+      select:
+        cards:
+          - EX12-009
+          - EX12-011
+          - EX12-031
+          - EX12-036
+          - EX12-047
+          - EX12-065
+          - EX12-074
+          - EX12-075
+  # <Rush>. Susanoomon entered the battle area on THIS turn, at slot 8 -- the
+  # four EX12-061 and the four EX12-070 interleave ahead of it in play order
+  # (T1 061, T3 070+061, T5 070+061, T7 070+061, T9 070), confirmed by the
+  # printed legal-action list. Without the keyword this step does not lower.
+  #
+  # This was `field.5` while G-DELAY-EVENT-WINDOW-AUTOTRASHED was live: three of
+  # the four EX12-070 were silently auto-trashed before turn 11, collapsing the
+  # field to five slots. They now persist (16-16-1), so the index moves by 3.
+  - actor: 0
+    do: { attack: { attacker: field.8, target: security } }
+    expect: { prompt: main_phase }
+assert:
+  # Hand-authored, NOT oracle-backfilled -- read off our engine's projection on
+  # 2026-08-26. Deliberately narrow: only facts this line actually pins.
+  #
+  # BEFORE the play. Susanoomon is absent from P0's field, so its presence at 36
+  # dates its arrival to turn 11 -- which is the entire content of "the turn it
+  # was played". The eight-card trash is the Assembly declaration's menu -- one
+  # trash-cost card per EX12-061/EX12-070 play, nothing else -- and P1 still has
+  # both Digimon here.
+  #
+  # All four EX12-070 are on the field, interleaved with the four EX12-061 in
+  # play order. Each is a <Delay> whose window is an EVENT owned by its
+  # replacement clause ("[All Turns] When any of your level 5 or higher [TB]
+  # trait Digimon would leave the battle area"), so 16-16-1 keeps it available
+  # for as long as it is in the battle area. None has been activated: nothing
+  # of P0's has left the battle area on this line.
+  - at: 34
+    that:
+      turn: 11
+      p0.memory: 10
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+      p0.trash:
+        [
+          EX12-009,
+          EX12-011,
+          EX12-031,
+          EX12-036,
+          EX12-047,
+          EX12-065,
+          EX12-074,
+          EX12-075,
+        ]
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      p0.security: 5
+      p1.security: 5
+  # AFTER the play, BEFORE the attack. Susanoomon is on the board UNSUSPENDED
+  # with its eight declared materials underneath. `p0.memory: 3` is the cost
+  # witness (10 - 7 = the Assembly -9 applied to a printed 16). 20000 DP is
+  # 16000 plus the two `[Your Turn] +2000` source auras. P1's board is empty --
+  # the [On Play] -18000 -- which is what keeps <Raid> and [When Attacking]
+  # from parking prompts over this step.
+  - at: 36
+    that:
+      turn: 11
+      p0.memory: 3
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - card_id: EX12-076
+          dp: 20000
+          suspended: false
+          sources:
+            [
+              EX12-009,
+              EX12-011,
+              EX12-031,
+              EX12-036,
+              EX12-047,
+              EX12-065,
+              EX12-074,
+              EX12-075,
+            ]
+      # The eight materials left the trash for the source stack, and nothing
+      # else was ever in there -- so P0's trash is EMPTY.
+      #
+      # This line used to read `[EX12-070, EX12-070, EX12-070]` and its comment
+      # said so explicitly: three of the four EX12-070 had been PLAYED and then
+      # silently auto-trashed a turn later, and the assertion pinned that ENGINE
+      # DEFECT as current behaviour rather than correct behaviour
+      # (G-DELAY-EVENT-WINDOW-AUTOTRASHED). `place_self_as_delay_option_permanent`
+      # fell back to `DelayTrigger::EndOfYourNextTurn` when a card declares no
+      # delay trigger, and `compute_delay_trash_turn` turned that into a
+      # scheduled trash -- but EX12-070 Sanmyojin Arrival's <Delay> window is an
+      # EVENT ([All Turns] when any of your Lv.5+ [TB] Digimon would leave the
+      # battle area), and 16-16-1 makes a <Delay> available for as long as the
+      # card is IN the battle area, with no expiry. The fallback is now
+      # `DelayTrigger::ExternallyGated` (parks indefinitely, schedules nothing,
+      # offers no [Main] activation), the four copies persist above, and this
+      # line records the FIXED behaviour, which is also what the DCGO oracle
+      # showed on the EX12-076#effect#0 divergence at step 17.
+      p0.trash: []
+      p1.field: []
+      p1.trash: [ST1-03, ST1-10]
+      p0.security: 5
+      p1.security: 5
+  # AFTER the attack. THE <Rush> WITNESS: the same permanent is now SUSPENDED,
+  # on the turn it was played.
+  #
+  # Security arithmetic, spelled out so the numbers are not read as more than
+  # they are. P1 goes 5 -> 3 and P0 5 -> 6 across this one step. Both halves are
+  # downstream of the attack <Rush> permits, but only one IS the attack:
+  #   -1 P1, +1 P0   Susanoomon's [When Attacking] (effect#4). Its "place 1
+  #                  opponent Digimon as top security" half finds no Digimon,
+  #                  but the "if 4 or more colors in its digivolution cards,
+  #                  trash their top security card and <Recovery +1>" half
+  #                  still fires -- six colors. ST1-07 is the card trashed.
+  #   -1 P1          the attack's OWN security check: ST1-05 Birdramon (4000)
+  #                  battles Susanoomon (20000) and is deleted.
+  - at: 37
+    that:
+      turn: 11
+      p0.memory: 3
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+        - card_id: EX12-076
+          dp: 20000
+          suspended: true
+          sources:
+            [
+              EX12-009,
+              EX12-011,
+              EX12-031,
+              EX12-036,
+              EX12-047,
+              EX12-065,
+              EX12-074,
+              EX12-075,
+            ]
+      p1.field: []
+      p0.security: 6
+      p1.security: 3
+      p1.trash: [ST1-03, ST1-05, ST1-07, ST1-10]

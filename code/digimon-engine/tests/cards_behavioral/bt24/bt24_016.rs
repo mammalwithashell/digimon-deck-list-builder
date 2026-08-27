@@ -368,7 +368,20 @@ fn bt24_016_hand_main_activated_digivolve() {
             .any(|c| c.card_id(&runner.game.card_data) == "DIMETROMON"),
         "the Dimetromon must leave the trash"
     );
-    assert_eq!(runner.hand_size(0), 0, "Lamiamon must leave the hand");
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert Lamiamon's departure by identity instead of by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT24-016"),
+        "Lamiamon must leave the hand"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "the digivolve draw replaced it (§8-1-3-3)"
+    );
 }
 
 /// Condition gate: without Owen Dreadnought on the field, the [Hand][Main]

@@ -27,8 +27,44 @@ effects:
   - kind: grant_keyword
     keyword: Barrier
 
+  # ─── [On Play][When Digivolving] security-trash cost -> board-wide -6000 ────
+  #
+  # "By trashing your top security card, all of your opponent's Digimon get
+  #  -6000 DP for the turn."
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # — "BY TRASHING your top security card, ..." is precisely that shape (the
+  # manual's worked example: "[On Deletion] By trashing 1 card in the hand,
+  # gain 1 memory"). §15-7-4: "A player can choose whether or not to execute
+  # the content of optional processing conditions, regardless of whether or
+  # not the content of the conditions can be executed" — so trashing security
+  # is the player's call, never auto-paid (rule 17: no auto-selections).
+  # §15-7-2: if the condition's content isn't executed, "the processing after
+  # the conditions can't be executed" — declining leaves the security stack
+  # intact AND skips the -6000 DP debuff entirely.
+  #
+  # DCGO agrees: BT23_035.cs passes isOptional=TRUE to SetUpActivateClass at
+  # :77 ([On Play]) and :106 ([When Digivolving]) — both share
+  # SharedActivateCoroutine, which pays IDestroySecurity BEFORE the debuff.
+  # (Contrast the [All Turns][Once Per Turn] clause below: BT23_035.cs:135
+  # passes isOptional=FALSE, and its printed text carries no "by X, Y" — it
+  # stays mandatory.)
+  #
+  # `outer_prompt: true` because the body's FIRST step (`trash_top_security`)
+  # is a bare cost step with no PASS of its own, so the forced outer confirm
+  # is the only place the decline can surface.
+  #
+  # `condition: { security_count_gte: 1 }` mirrors DCGO's CanActivateCondition
+  # (`card.Owner.SecurityCards.Count >= 1`, BT23_035.cs:94 / :123) and the
+  # matching guard at the head of SharedActivateCoroutine (:48). It is what
+  # keeps the forced outer confirm from prompting in a state where DCGO never
+  # activates the clause at all — the standard pairing for an `outer_prompt`
+  # clause whose cost is a security trash (BT22-041 / BT14-084 idiom).
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Trash top security; all opponent Digimon get -6000 DP"
+    optional: true
+    outer_prompt: true
+    summary: "[On Play][When Digivolving] MAY trash top security; if so, all opponent Digimon get -6000 DP"
+    condition: { security_count_gte: 1 }
     process:
       - trash_top_security: { of: you }
       - for_each:

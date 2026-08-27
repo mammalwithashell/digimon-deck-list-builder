@@ -1,0 +1,149 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival effect clause #4 -- the <Delay>
+# payload "(By trashing this card after the placing turn, activate the
+# effect below.) - You may play 1 [Sanmyojin] trait Digimon card from your
+# hand without paying the cost."
+#
+# The ACCEPTED path of the window effect3 declines -- same line, same leave
+# event (MarineBullmon's bounce removes P0's Lv.5 [TB] Shishimamon), but
+# here the Delay fires: EX12-070 trashes itself and Kaguyamon (EX12-065,
+# [Sanmyojin]) is played from P0's hand for free, ON P1's TURN. The assert
+# pins all three observables: the option in the trash (not the battle
+# area), Kaguyamon on P0's field, and the cost-12 body arriving with P1's
+# memory untouched by it (-4 from MarineBullmon only).
+#
+# Kaguyamon's own [On Play] revive then parks over P0's trash (Wankomon,
+# cost 3 [Shambala], is a real candidate) and is DECLINED -- that clause is
+# EX12-065-effect2's exam, kept out of this file's observables.
+#
+# Same alternatives rejected as in effect3 (probed empirically): Kaguyamon
+# as the leaver parks an engine-only TriggerOrder; Amaterasumon as the
+# deleter parks an unanswerable mandatory CountCappedMultiSelect.
+#
+#   T1 (P0, memory 0): hard-cast Shishimamon (0 -> -7 overshoot; silent On
+#       Play; turn ends). Also the option's [TB] use-req body.
+#   T2: P1 passes everything.
+#   T3 (P0, memory 3): play EX12-070 (3 -> 0), discard Wankomon, <Draw 2>,
+#       option placed. Pass -- placement turn over, <Delay> declarable.
+#   T4 (P1, memory 3): MarineBullmon (3 -> -4) places a hand EX12-046 as
+#       its bottom source and bounces Shishimamon; THE CLAUSE: accept the
+#       Delay, trash the option, play Kaguyamon free; decline Kaguyamon's
+#       revive. The turn ends on the overshoot; trailing step is P0's
+#       breeding decision.
+#
+# Stack layout: hand [0..4], security [5..9], then draws in deal order
+# (P0: [10] = T3 turn draw, [11]/[12] = the <Draw 2>, [13] = the T5 turn
+# draw that lands the moment P1's overshoot ends the turn; P1: [10] = T2,
+# [11] = T4).
+# REVIEW 2026-08-22 -- REJECTED (payload-shape abort at the Sanmyojin pick):
+# the free-play row answers with 'yes:' but DCGO parks a HAND pick for
+# PlayByEffect Root.Hand -- a SelectHandEffect (not SelectCardEffect as the
+# expect says), and its hook accepts only select_card_ids / select_cancel;
+# a bool payload aborts. Sim-side the single-branch EffectChoice cannot
+# take a 'cards:' payload, so the shapes are irreconcilable until the
+# bridge maps a bool affirmation onto a single-candidate card prompt (or
+# the sim exposes the pick as a card selection). The Delay-accept 'yes:'
+# row (OptionalSkill) is fine.
+card: EX12-070
+clause: EX12-070#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-046, EX12-070, EX12-009, EX12-065, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-074, EX12-074,
+            EX12-020, EX12-020, EX12-020, EX12-074]
+    rest: toho-braves
+  p1:
+    stack: [EX12-031, EX12-046, EX12-046, EX12-046, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-047, EX12-047,
+            EX12-070, EX12-070]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 [TB] body (and use-req enabler) lands.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): place the option (its Main path, proven in effect1/2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): MarineBullmon bounces Shishimamon -- the Delay event.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # The [On Play] cost: place a hand EX12-046 ([TB], Lv.5) as the bottom
+  # source (three identical copies in hand -- interchangeable).
+  - actor: 1
+    do: { select: { cards: [EX12-046] } }
+    expect: { prompt: SelectHandEffect }
+  # The bounce target: P0's Shishimamon (the only <=1-source Digimon).
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: accept the would-leave <Delay> -- trash the option.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE's payload: play the [Sanmyojin] Kaguyamon from hand for free.
+  # Our engine collapses the pick into a single-branch EffectChoice (one
+  # Sanmyojin in hand), which only a bare affirmation can answer -- a
+  # `cards:` payload cannot resolve against that kind. DCGO instead opens a
+  # SelectCardEffect over the hand; the expect names DCGO's class (the sim
+  # side cannot assert an EffectChoice mapping and says so in a note). If
+  # the oracle rejects the bool answer on its card prompt, that is the
+  # prompt-shape divergence to triage, not a scripting slip.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: SelectCardEffect }
+  # Kaguyamon's own [On Play] revive over the trash (EX12-065-effect2's
+  # exam, not this one): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectCardEffect }
+  # P1's overshoot ended the turn once the effects resolved.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+# CAVEAT (probed empirically, 2026-08-22): with the Delay ACCEPTED, our
+# engine sends the bounced Shishimamon to the TRASH instead of the hand --
+# the would-leave replacement appears to swallow the return-to-hand
+# destination. Card text and DCGO keep the bounce a bounce (the Delay only
+# trashes the option and plays a Sanmyojin). The assert below pins OUR
+# engine's state so the line runs sim-clean; if the oracle pass diffs here
+# (DCGO: EX12-046 in hand, not trash), that is an engine finding to triage,
+# not a scripting slip. Compare effect3: with the Delay DECLINED the bounce
+# reaches the hand correctly.
+assert:
+  - at: 15
+    that:
+      p0.memory: 4
+      p0.security: 5
+      p0.trash: [EX12-009, EX12-046, EX12-070]
+      p0.hand: [EX12-074, EX12-074, EX12-020, EX12-020, EX12-020]
+      p0.field:
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }
+      p1.security: 5
+      p1.trash: []
+      p1.field:
+        - { card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-046] }

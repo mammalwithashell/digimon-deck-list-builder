@@ -10,7 +10,15 @@ use std::sync::Arc;
 /// Condition closures run during effect evaluation and during tensor-time
 /// inspection (for static DP modifiers / OPT state). They receive a
 /// read-only view of game state; they must not mutate.
-pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
+///
+/// `Arc` (not `Box`) so a condition can be SHARED between effects:
+/// `Game::build_effects_for_card` clones a declarative `grant_keyword`
+/// clause's `active_when` condition onto the keyword auto-effects it
+/// synthesizes for the grant (task_69f10a66 Family 1 — a conditionally
+/// granted `<Execute>` must fire its end-of-your-turn trigger only while the
+/// grant is active). Behaviorally inert for every other caller — the closure
+/// is still immutable and `Send + Sync`.
+pub type ConditionFn = Arc<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
 
 /// Replacement-effect candidate-filter closure. Evaluated in
 /// `replacement::collect_candidates` after `condition` for `WhenWouldBe*`
@@ -185,6 +193,14 @@ pub struct Effect {
     pub on_deletion: bool,
     pub inherited: bool,
     pub security: bool,
+    /// Trash-zone clause: the printed text carries an explicit `[Trash]`
+    /// timing scope, so the clause is active ONLY while the card sits in its
+    /// owner's trash (e.g. BT20-084 "[Trash] When any of your Digimon are
+    /// played, ..."). The `EnteredField` dispatch's trash scan
+    /// (`enqueue_from_player_trash`) enqueues ONLY effects with this flag;
+    /// the battle-area top-card scan skips them. Set via
+    /// `EffectBuilder::trash_zone()` / DSL `scope: trash`.
+    pub trash_zone: bool,
     pub counter: bool,
     pub declarative: bool,
     /// True only for process-backed declaratives that materialize static
@@ -249,6 +265,21 @@ pub struct Effect {
     pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
     pub granted_keyword: Option<Keyword>,
+    /// The keyword whose printed BEHAVIOUR this effect *is* — set only on the
+    /// bodies synthesized by
+    /// [`crate::cards::keyword_effects::keyword_to_auto_effect`].
+    ///
+    /// Deliberately NOT `granted_keyword`: that field means "this effect GRANTS
+    /// this keyword to something" and is read that way by the keyword-lookup
+    /// scans (`game/queries.rs`, `game/triggers.rs`, `game_phases.rs`), so
+    /// reusing it here would make every keyword body claim to grant itself.
+    ///
+    /// Consumed by the `TriggerOrder` install site in `effect_queue.rs`, which
+    /// surfaces it as `EffectChoiceEntry::keyword` — the only handle that tells
+    /// the branches of a same-card simultaneous-trigger stack apart (EX12-065
+    /// Kaguyamon raises three `OnDeletion` triggers whose every other field is
+    /// identical).
+    pub keyword_source: Option<Keyword>,
     pub overclock_cost_filter: Option<OverclockCostFilterFn>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
@@ -703,6 +734,7 @@ impl EffectBuilder {
                 on_deletion: false,
                 inherited: false,
                 security: false,
+                trash_zone: false,
                 counter: false,
                 declarative: false,
                 materializes_declarative_state: false,
@@ -722,6 +754,7 @@ impl EffectBuilder {
                 security_attack_fn: None,
                 cost_reduction: 0,
                 granted_keyword: None,
+                keyword_source: None,
                 overclock_cost_filter: None,
                 applies_to_opponent_security_dp: false,
                 applies_to_own_security_dp: false,
@@ -778,6 +811,13 @@ impl EffectBuilder {
     }
     pub fn security_zone(mut self) -> Self {
         self.inner.security = true;
+        self
+    }
+    /// Mark this clause as active ONLY while the card is in its owner's
+    /// trash (printed `[Trash]` timing scope — e.g. BT20-084). See
+    /// `Effect::trash_zone`.
+    pub fn trash_zone(mut self) -> Self {
+        self.inner.trash_zone = true;
         self
     }
     fn declarative_flag(mut self) -> Self {
@@ -878,7 +918,7 @@ impl EffectBuilder {
     where
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
-        self.inner.outer_optional_guard = Some(Box::new(f));
+        self.inner.outer_optional_guard = Some(Arc::new(f));
         self
     }
 
@@ -909,7 +949,7 @@ impl EffectBuilder {
         mut self,
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
-        self.inner.condition = Some(Box::new(f));
+        self.inner.condition = Some(Arc::new(f));
         self
     }
 
@@ -1005,6 +1045,15 @@ impl EffectBuilder {
 
     pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
         self.inner.granted_keyword = Some(keyword);
+        self
+    }
+
+    /// Mark this effect as being the printed behaviour OF `keyword` (see
+    /// [`Effect::keyword_source`]). Set centrally by the
+    /// `keyword_to_auto_effect` wrapper, not by individual keyword arms — a
+    /// per-arm call is a thing a future arm can forget.
+    pub fn keyword_source(mut self, keyword: Keyword) -> Self {
+        self.inner.keyword_source = Some(keyword);
         self
     }
 
@@ -1144,7 +1193,7 @@ impl EffectBuilder {
     where
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
-        self.inner.option_color_requirement_bypass = Some(Box::new(f));
+        self.inner.option_color_requirement_bypass = Some(Arc::new(f));
         self
     }
 

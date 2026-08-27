@@ -1,0 +1,149 @@
+# Exam scenario: EX12-031 (MarineBullmon), clause effect#1 --
+# "[On Play][When Digivolving] By placing 1 level 6 or lower card with [Aqua]
+#  or [Sea Animal] in any of its traits or the [TB] trait from your hand as
+#  this Digimon's bottom digivolution card, return 1 of your opponent's
+#  Digimon with 1 or fewer digivolution cards to the hand."
+#
+# The [On Play] half is taken -- the cheaper of the two timings: MarineBullmon
+# hard-casts for 7, so the line needs no digivolution prefix AND the played
+# permanent starts with ZERO digivolution cards, which makes the placement
+# itself directly observable as sources: [EX12-020].
+#
+# Line:
+#   T1 (p0, memory 0): all-pass -> p1 at 3.
+#   T2 (p1, memory 3): hard-cast Gasamon EX12-020 (cost 3 -> 0, so p1 keeps
+#       the turn), then pass -> p0 at 3. Gasamon is the bounce target: an
+#       opponent Digimon with 0 digivolution cards, i.e. "1 or fewer".
+#   T3 (p0, memory 3): THE CLAUSE -- hard-cast MarineBullmon (cost 7 -> -4,
+#       so the turn ends once the effect finishes resolving). Both halves are
+#       answered: SelectHandEffect places EX12-020 as the bottom source, then
+#       SelectPermanentEffect returns p1's Gasamon to hand.
+#
+# Gasamon is both the placement and the target on purpose: it has no
+# [On Play], so the clause's own two prompts are the ONLY prompts on the line.
+#
+# GATE SHAPE (DCGO EX12_031.cs:71-74, :91-148). The clause is
+# optional: false, isSkippable: true, but it does not activate AT ALL unless
+# the owner's hand holds a match (AdditionalActivateCondition ->
+# HasMatchConditionOwnersHand(card, CanSelectCardCondition)), and the bounce
+# is nested INSIDE "if (selectedCard != null)" (:119) -- so declining the
+# placement forfeits the bounce; the two halves are one decision, not two.
+# Our YAML mirrors that shape (condition: count_gte{hand match} n:1, then
+# select_hand{optional:true, cost:true} -> place_as_bottom_source ->
+# select_opponent_permanent). This line PAYS, so both prompts are live on
+# both sides.
+#
+# Candidate control: DCGO's hand filter is HasLevel && Level <= 6 &&
+# (ContainsTraits("Aqua") || ContainsTraits("Sea Animal") ||
+# EqualsTraits("TB")) (:76-83) -- levelless cards (Options, Tamers) can never
+# qualify. p0's hand at the moment of the play is [EX12-020, EX12-074,
+# EX12-075, EX12-070, EX12-074], so the placement prompt has exactly ONE
+# candidate on either engine and the identity answer cannot be ambiguous.
+# p1's board is a single Digimon, so the bounce prompt likewise.
+#
+# LEAVE-SCOPING (the predecessor's caveat, now RESOLVED). The committed
+# version of this file carried an extra "select: {decline:}" row after the
+# bounce, because our engine used to open a <Decode> replacement window on
+# the BOUNCED plain Gasamon -- a permanent with no Decode at all -- which
+# DCGO never asks and which aborted the job at p1's trailing breeding
+# question. Re-derived 2026-08-24: the spurious window is gone. This line
+# lowers with the bounce answered and NOTHING parked afterwards, so the row
+# is deleted rather than declined, and the assertion index moved 11 -> 9.
+card: EX12-031
+clause: EX12-031#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the card under exam, the one legal placement candidate,
+      # then levelless Options that can never enter either prompt.
+      - EX12-031
+      - EX12-020
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9): never checked -- no attack in this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10). Levelless, so the hand prompt stays
+      # single-candidate.
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): Gasamon (the bounce target) then levelless Options.
+      - EX12-020
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11) -- both pinned so the trailing
+      # snapshot's hand is route-independent.
+      - EX12-075
+      - EX12-076
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): put the bounce target down (cost 3 -> memory 0, turn
+  # continues), then hand the turn back.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # Half 1 -- the placement cost: EX12-020 from hand becomes the BOTTOM
+  # digivolution card.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # Half 2 -- the payoff: return p1's Gasamon (0 digivolution cards) to hand.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Trailing step: memory is -4, so the turn ended with the clause; p1's
+  # breeding decision closes the line one step after it resolved.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Both halves landed. p0's MarineBullmon stands with the placed Gasamon
+  # BENEATH it (a permanent that entered play with no sources, so the single
+  # source can only have come from the clause), p1's board is empty, and the
+  # bounced Gasamon is back in p1's hand alongside its four unplayed openers
+  # and the two pinned draws.
+  - at: 9
+    that:
+      p0.memory: -4
+      p0.field:
+        - { card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-020] }
+      p1.field: []
+      p0.hand: [EX12-074, EX12-075, EX12-070, EX12-074]
+      p1.hand: [EX12-074, EX12-075, EX12-070, EX12-074, EX12-075, EX12-076, EX12-020]
+      p0.security: 5
+      p1.security: 5

@@ -112,7 +112,7 @@ fn bt24_100_yaml_metadata_and_clauses_match_printed_card() {
     assert!(matches!(
         &compiled.effects[2],
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
-            trigger: CompiledTiming::EndOfYourNextTurn,
+            trigger: CompiledTiming::Delayed,
             process,
             ..
         }) if process == &vec![CompiledStep::GainMemory(2)]
@@ -194,7 +194,7 @@ fn bt24_100_main_adds_ts_card_bottoms_remainder_and_places_as_delay_option() {
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
@@ -221,25 +221,45 @@ fn bt24_100_delay_activation_gains_two_memory_and_trashes_delay_option() {
     runner.auto_resolve().expect("place BT24-100 as delay");
     let start_turn = runner.turn_count();
 
+    // TRIGGER CORRECTION (2026-08-24): this used to end two turns and expect the
+    // Delay to AUTO-FIRE, which is what the old `end_of_your_next_turn` wiring
+    // did. BT24-100 prints "[Main] <Delay>" and DCGO registers it at
+    // EffectTiming.OnDeclaration, so it is player-activated: it waits on the
+    // field until the controller spends a [Main] action on it (§16-16-1), and
+    // §16-16-3 only bars activation on the turn it was placed.
     runner.end_turn();
     runner.game.enter_main_phase();
     runner.end_turn();
     assert_eq!(runner.turn_count(), start_turn + 2);
     runner.game.enter_main_phase();
     runner.game.set_memory(0);
-    runner.end_turn();
 
-    let expected_memory = if runner.game.turn_player() == 0 {
-        2
-    } else {
-        -2
-    };
-    assert_eq!(runner.memory(), expected_memory);
+    let delay_handle = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|permanent| {
+            permanent.top_card().card_id(&runner.game.card_data) == "BT24-100"
+        })
+        .map(|index| digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: index as u8,
+        })
+        .expect("BT24-100 is still on the field waiting for its [Main] activation");
+
+    assert!(
+        runner.game.activate_delayed_option_main(delay_handle),
+        "the [Main] <Delay> activation must be available after the placing turn"
+    );
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.memory(), 2, "activating the Delay gains 2 memory");
     assert!(
         !runner.game.player(0).battle_area.iter().any(|permanent| {
             permanent.top_card().card_id(&runner.game.card_data) == "BT24-100"
                 && matches!(permanent.option_state, OptionState::Delayed { .. })
         }),
-        "BT24-100 should be trashed after its Delay resolves"
+        "BT24-100 is trashed as the Delay's cost once activated"
     );
 }

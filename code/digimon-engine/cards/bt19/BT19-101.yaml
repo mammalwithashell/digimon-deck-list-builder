@@ -38,13 +38,18 @@
 # On Play / When Digivolving / When Attacking (EffectTiming.
 #   OnEnterFieldAnyone x2 shared ActivateCoroutine body, + OnAllyAttack):
 #   CanActivateCondition = Enemy.TrashCards.Count(IsDigimon) >= 1 (the outer
-#   activation gate — with 0 candidates the clause does not fire at all, so
-#   although DCGO's inner SelectCardEffect is technically canNoSelect: () =>
-#   true, the clause-level gate means "By returning..." never offers a decline
-#   once activated: the cost pick is effectively forced through by the outer
-#   CanActivateCondition, matching the printed "By X-ing, do Y" cost-gated
-#   mandatory idiom (BT12-031 / EX7-023 / EX8-023 idiom — no printed "you
-#   may"). SelectCardEffect over the opponent's trash (IsDigimon) →
+#   activation gate — with 0 candidates the clause does not fire at all).
+#   SetUpActivateClass(..., isOptional: TRUE) at BT19_101.cs:44 (On Play),
+#   :161 (When Digivolving) and :278 (When Attacking) — DCGO asks the player
+#   whether to activate, and DCGO's inner SelectCardEffect is additionally
+#   canNoSelect: () => true. CORRECTION (was: "the cost pick is effectively
+#   forced through by the outer CanActivateCondition ... mandatory idiom"):
+#   general_rule.pdf §15-7-1 names "By X, Y" an OPTIONAL PROCESSING CONDITION
+#   and §15-7-4 says the player "can choose whether or not to execute" it
+#   REGARDLESS of whether it can be executed — a satisfiable outer gate does
+#   NOT make the payment mandatory. §15-7-2: declining skips the post-condition
+#   processing too. → `optional: true` + `outer_prompt: true`.
+#   SelectCardEffect over the opponent's trash (IsDigimon) →
 #   AddLibraryTopCards (returns the selected card to the TOP of the
 #   opponent's deck). AfterSelectCardCoroutine then unconditionally runs
 #   SelectPermanentEffect(Mode.PutLibraryBottom, maxCount: min(1, opponent
@@ -84,7 +89,7 @@
 # | Std digivolve Lv.6 (red/purple/black) / Cost 6                        | IMPLEMENTED (printed evo_costs) |
 # | Alt digivolve [MoonMillenniummon] / Cost 2                            | IMPLEMENTED (alt_paths name_is) |
 # | <Overclock ([Composite] Trait)>                                       | IMPLEMENTED (grant_keyword + overclock_cost_filter) |
-# | [On Play][When Digivolving][When Attacking] return opp-trash Digimon to top of deck, then return 1 opp Digimon to bottom of deck | IMPLEMENTED (select_trash + move_trash_card_to_deck_top + select_opponent_permanent + return_to_deck) |
+# | [On Play][When Digivolving][When Attacking] return opp-trash Digimon to top of deck, then return 1 opp Digimon to bottom of deck | IMPLEMENTED (optional: true + outer_prompt: true per 15-7-1/15-7-4; select_trash + move_trash_card_to_deck_top + select_opponent_permanent + return_to_deck) |
 # | [All Turns] no digivolution cards → can't be suspended                | IMPLEMENTED (self-aura, modifier: CannotSuspend, active_when stack_size_lte: 1) |
 # | [All Turns] no digivolution cards → isn't affected by opponent's effects | IMPLEMENTED (self-aura, effect_immunity source_controller: opponent, active_when stack_size_lte: 1) |
 
@@ -136,11 +141,32 @@ effects:
   #
   # Clause-level `condition:` mirrors DCGO's CanActivateCondition (>=1
   # opponent-trash Digimon) — with 0 candidates the clause does not activate.
-  # Once activated, both picks are mandatory (no `optional:` — the printed
-  # "By X-ing, do Y" cost-gated idiom; DCGO's inner canNoSelect flags are
-  # effectively moot once the outer gate has already required a candidate).
+  #
+  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+  # — the printed "BY RETURNING 1 Digimon card from your opponent's trash to
+  # the top of the deck, return 1 of their Digimon to the bottom of the deck"
+  # is exactly that shape (the manual's own worked example is "[On Deletion]
+  # By trashing 1 card in the hand, gain 1 memory"). §15-7-4: "A player can
+  # choose whether or not to execute the content of optional processing
+  # conditions, regardless of whether or not the content of the conditions can
+  # be executed" — so a satisfied `condition:` gate does NOT make the return
+  # mandatory. §15-7-2: if the condition's content isn't executed, "the
+  # processing after the conditions can't be executed", so declining skips
+  # BOTH the trash-return cost AND the bottom-deck follow-up.
+  # DCGO agrees: BT19_101.cs passes isOptional=TRUE to SetUpActivateClass on
+  # all three timings (:44 On Play, :161 When Digivolving, :278 When
+  # Attacking), and its inner SelectCardEffect is canNoSelect: () => true.
+  #
+  # `outer_prompt: true` because the body's FIRST step (`select_trash`, no
+  # `optional:`) is not itself declinable — without the forced outer confirm
+  # there is no PASS for the player to take and the cost auto-pays (rule 17).
+  # This clause previously fired unconditionally, justified in-file by "the
+  # outer gate has already required a candidate"; that reasoning is what
+  # §15-7-4's "regardless of whether ... can be executed" rules out.
   - when: [on_play, when_digivolving, when_attacking]
-    summary: "[On Play][When Digivolving][When Attacking] By returning 1 opponent-trash Digimon card to the top of their deck, return 1 of their Digimon to the bottom of their deck"
+    optional: true
+    outer_prompt: true
+    summary: "[On Play][When Digivolving][When Attacking] MAY, by returning 1 opponent-trash Digimon card to the top of their deck, return 1 of their Digimon to the bottom of their deck"
     condition:
       count_gte:
         filter:

@@ -5,7 +5,9 @@ level: 6
 color: [blue, yellow]
 cost: 12
 dp: 12000
-traits: [Mollusk, Sanmyojin, Tentei Hachibushu, Shambala]
+# Card face prints .../Shambala/TB plus "Rule- Trait: Has [Aquatic] Type."
+# (both dropped by the cards.json API ingest; task_69f10a66 EX12-070 triage).
+traits: [Mollusk, Sanmyojin, Tentei Hachibushu, Shambala, TB, Aquatic]
 attribute: Data
 
 alt_paths:
@@ -36,16 +38,27 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - none_of:
-            - replacement_cause: battle
+      none_of:
+        - replacement_cause: battle
     summary: "<Decode (Lv.5 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
     process:
+      # NO `optional:` here, deliberately. 16-35-3 makes the <Decode>
+      # processing optional ONCE, and that decline is the clause gate above.
+      # A second optional on the pick would let the player accept the gate and
+      # then decline the pick -- an outcome-neutral decision the rules do not
+      # grant, which over-exposes an illegal PASS to the action space. This card
+      # was the ONLY one of the eight EX12 <Decode> specs carrying it
+      # (G-DECODE-DOUBLE-OPTIONAL); the other seven already had this shape.
+      #
+      # This is a RULE-17 problem specific to us, not a rules-text one, and not
+      # something DCGO gets wrong: DCGO does allow backing out of the post-gate
+      # pick, but that is a UI affordance for a human (open the list, see your
+      # sources, close it) and both paths reach the same game state. Our prompts
+      # feed an RL action space instead, where a PASS that cannot change the
+      # outcome is pollution.
       - select_material:
           of_permanent: replacement_subject
           bind_as: decode_source
-          optional: true
           filter:
             all_of:
               - kind: digimon

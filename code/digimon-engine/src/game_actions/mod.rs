@@ -1748,8 +1748,13 @@ impl Game {
             }
             // Standard `<Delay>` is activated by a player `[Main]`-phase
             // action, not a turn-keyed auto-trash scan. `OnEvent` likewise
-            // has no scheduled turn — both park indefinitely.
-            DelayTrigger::MainPhaseActivated | DelayTrigger::OnEvent(_) => u16::MAX,
+            // has no scheduled turn, and `ExternallyGated` hands the whole
+            // window to another clause (a `kind: replacement` on the same
+            // card) — all three park indefinitely, per 16-16-1's
+            // "while a card with this effect is in the battle area".
+            DelayTrigger::MainPhaseActivated
+            | DelayTrigger::OnEvent(_)
+            | DelayTrigger::ExternallyGated => u16::MAX,
         }
     }
 
@@ -1939,6 +1944,35 @@ impl Game {
             | crate::replacement::ReplacementOutcome::CustomHandled => {}
             crate::replacement::ReplacementOutcome::Redirected(_)
             | crate::replacement::ReplacementOutcome::Substituted(_) => {}
+        }
+    }
+
+    /// Borrow the `CardSource` a `CardSourceRef` currently points at, without
+    /// removing it. Sibling of `card_source_ref_snapshot` for callers that
+    /// need the full card (e.g. the digivolve-route machinery in
+    /// `effect_initiated_digivolve_from_source_inner`) rather than the
+    /// `(handle, data_index, zone)` tuple.
+    pub(crate) fn card_source_ref_peek(
+        &self,
+        source: crate::enums::CardSourceRef,
+    ) -> Option<&crate::card_source::CardSource> {
+        use crate::enums::CardSourceRef;
+        match source {
+            CardSourceRef::Hand(p, i) => self.player(p).hand.get(i),
+            CardSourceRef::Trash(p, i) => self.player(p).trash.get(i),
+            CardSourceRef::DeckTop(p) => self.player(p).deck.last(),
+            CardSourceRef::Security(p, i) => self.player(p).security.get(i),
+            CardSourceRef::PendingSecurity => self
+                .pending_security
+                .as_ref()
+                .filter(|pending| !pending.played)
+                .map(|pending| &pending.card),
+            CardSourceRef::Material(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.card_sources.get(i)),
+            CardSourceRef::Reveal(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
         }
     }
 
@@ -2680,6 +2714,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
 
         // Sources-below-top → each source's owner's trash. Per source: push,
         // enqueue OnDigivolutionCardTrashed for each player, drain queue.
@@ -2812,6 +2847,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
 
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards {
@@ -2987,6 +3023,7 @@ impl Game {
         };
         // Re-key the in-flight attack's handles after the `remove()` shift.
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
         let top_handle = top.handle();
         let face_up_key = top.card_index;
 
@@ -3059,6 +3096,7 @@ impl Game {
         self.modifiers.expire_player_on_permanent_leave(target);
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
+        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
         self.fire_on_place_security(player_id, observer_player, top_handle);
         true
     }

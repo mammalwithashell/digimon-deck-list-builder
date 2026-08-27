@@ -230,7 +230,31 @@ fn park_keyword_count_capped_frame(
 /// needs to cover BOTH the return-to-deck and return-to-hand timings per
 /// printed rules ("returned to your opponent's deck/hand"), so this helper
 /// returns a `Vec<Effect>` rather than `Option<Effect>`.
+///
+/// Every effect this returns is stamped with
+/// [`Effect::keyword_source`]`= Some(keyword)`. The stamping lives HERE, in the
+/// wrapper, rather than in the ~16 `Keyword::X =>` arms of the inner match: a
+/// per-arm `.keyword_source(...)` is a thing a newly-added arm can silently
+/// forget, and a body that forgets it goes back to being an anonymous branch in
+/// a simultaneous-trigger stack (see `EffectChoiceEntry::keyword`).
+///
+/// `keyword_source` is NOT `granted_keyword`. `granted_keyword` means "this
+/// effect GRANTS this keyword" and is read that way at `game/queries.rs`,
+/// `game/triggers.rs` and `game_phases.rs`; setting it here would make every
+/// synthesized `<Barrier>` body claim to grant `<Barrier>` to its carrier.
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
+    keyword_to_auto_effect_inner(keyword, card)
+        .into_iter()
+        .map(|mut effect| {
+            effect.keyword_source = Some(keyword);
+            effect
+        })
+        .collect()
+}
+
+/// The actual per-keyword bodies. Private on purpose — callers must go through
+/// [`keyword_to_auto_effect`] so the `keyword_source` stamp cannot be skipped.
+fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     match keyword {
         // Printed [Hand][Counter] <Blast Digivolve>: the Counter window scans
         // hand-card effects for this marker and then validates the actual
@@ -471,43 +495,32 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Printed Decode: "When this Digimon would be returned to your
-        // opponent's deck/hand, you may return it to your hand instead."
+        // `<Decode (...)>` — NO auto-effect (task_69f10a66 Family 2).
         //
-        // Two effects are installed — one per printed timing. The deck route
-        // is the non-trivial redirect (deck → hand). The hand route is a
-        // redirect-to-hand when the original destination is ALSO hand, which
-        // is logically a no-op; it's included for symmetry with printed
-        // rules so the replacement offer actually fires on opponent return-
-        // to-hand effects too.
-        Keyword::Decode => vec![
-            Effect::when_would_be_returned_to_deck(card)
-                .name("<Decode> (deck)")
-                .optional()
-                .replacement_process(|rctx| {
-                    let me = rctx.effect.source_permanent;
-                    if let ReplacementSubject::Permanent(subject) = rctx.subject {
-                        if Some(subject) != me {
-                            return;
-                        }
-                        rctx.redirect_to(Zone::Hand);
-                    }
-                })
-                .build(),
-            Effect::when_would_be_returned_to_hand(card)
-                .name("<Decode> (hand)")
-                .optional()
-                .replacement_process(|rctx| {
-                    let me = rctx.effect.source_permanent;
-                    if let ReplacementSubject::Permanent(subject) = rctx.subject {
-                        if Some(subject) != me {
-                            return;
-                        }
-                        rctx.redirect_to(Zone::Hand);
-                    }
-                })
-                .build(),
-        ],
+        // The retired legacy pair here ("would be returned to deck/hand →
+        // return to hand instead") was NOT rule 16-35 Decode at all. Per
+        // §16-35-1 Decode triggers when "the Digimon WITH THIS EFFECT would
+        // leave the battle area other than by a battle" and plays a Digimon
+        // card matching the keyword's PER-CARD parameter from THAT Digimon's
+        // digivolution cards (§16-35-2: immediate-type, on its own leave).
+        // Two structural reasons a keyword-generic auto-effect cannot exist:
+        //   1. The parameter (`<Decode (Lv.4 or lower Aqua/Sea Animal/TB)>`)
+        //      differs per card — the play filter is unknowable here.
+        //   2. The legacy pair had no collection-time
+        //      `replacement_condition`, so `collect_candidates` emitted it
+        //      for ANY subject's leave: bouncing any permanent while a
+        //      Decode carrier sat on either field parked a fabricated
+        //      "May accept replacement: <Decode> (hand)" prompt for the
+        //      LEAVING permanent's controller (EX12-031#effect#1 exam
+        //      divergence — our engine over-asked; DCGO correctly asks
+        //      nothing).
+        // Real Decode is authored per-card as self-scoped YAML replacement
+        // clauses (`trigger: when_would_leave_battle_area`, non-battle
+        // cause filter, `select_material` + `play_from_materials`) — see
+        // EX12-031 / BT22-015 / P-213. Printed-`<Decode>` cards without a
+        // YAML spec simply have no Decode behavior until implemented (an
+        // absent effect is honest; a fabricated cross-subject window is not).
+        Keyword::Decode => Vec::new(),
 
         // Phase D Task 5 — printed Armor Purge: "When this Digimon would be
         // deleted, by trashing the top card of this Digimon, it isn't
@@ -1281,9 +1294,31 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // `ctx.player` (the loser's controller) is the correct acting player.
         Keyword::Retaliation => vec![Effect::on_deletion(card)
             .name("<Retaliation>")
+            // Cause gate: Battle only (16-12), evaluated as the CONDITION so
+            // the trigger scan never queues it on a non-battle deletion.
+            //
+            // This used to live in `process` below, which runs only after the
+            // branch has been offered AND chosen. On an effect deletion the
+            // keyword still reached the trigger-order prompt and then resolved
+            // to nothing -- a mandatory branch in the RL action space that
+            // provably does nothing (rule 17), a phantom for the turn player to
+            // order under 15-4-3-5-1, and a guaranteed cross-engine divergence:
+            // DCGO filters its stack by `CanActivate` BEFORE staging candidates
+            // (MultipleSkills.cs:236) and `CanActivateRetaliation`
+            // (CardEffectCommons/KeyWordEffects/Retaliation.cs:24-52) is false
+            // with no battle in the hashtable, so DCGO offers two branches
+            // where we offered three.
+            .condition(|ctx| {
+                matches!(
+                    ctx.deletion_cause(),
+                    Some(crate::replacement::ReplacementCause::Battle)
+                )
+            })
             .process(|ctx| {
                 use crate::replacement::ReplacementCause;
-                // Cause gate: Battle only.
+                // Defence in depth: `condition` already gated this, but the
+                // body stays self-sufficient so a future caller that bypasses
+                // the trigger scan cannot delete on a non-battle cause.
                 if !matches!(ctx.deletion_cause(), Some(ReplacementCause::Battle)) {
                     return;
                 }
@@ -1579,15 +1614,42 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 })
                 .build(),
             // (2) EndOfAttack — self-delete when the carrier was the
-            //     attacker of the just-resolved attack.
+            //     attacker of the just-resolved EXECUTE attack.
             Effect::end_of_attack(card)
                 .name("<Execute> self-delete")
+                // Condition-level phase gate (task_69f10a66): without it the
+                // observer still ENQUEUES for a Main-phase attack and — when
+                // other EndOfAttack triggers are pending — parks a vacuous
+                // TriggerOrder prompt DCGO never shows (its delete registers
+                // only inside the Execute activation). The queue's condition
+                // filter drops it before any ordering prompt.
+                .condition(|rctx| {
+                    rctx.game.current_phase == crate::enums::GamePhase::EndOfTurnAction
+                })
                 .process(|ctx| {
                     use crate::replacement::ReplacementCause;
                     let Some(me) = ctx.source_permanent else {
                         return;
                     };
-                    // Gate: only fire on the Execute carrier's own
+                    // Gate 1 (task_69f10a66): only the END-OF-TURN attack is
+                    // "that attack" in §16-37's "At the end of that attack,
+                    // delete this Digimon" — the printed text scopes the
+                    // self-delete to the attack Execute itself granted, and
+                    // DCGO registers the delete inside `ExecuteProcess`
+                    // (`UntilEndAttackEffects`), never for ordinary attacks.
+                    // Our EOT attacks resolve while the phase is parked in
+                    // `EndOfTurnAction` (decode_end_of_turn_action →
+                    // execute_attack; `cleanup_attack` fires this observer
+                    // before any phase rotation), so a Main-phase attack by
+                    // a carrier that merely HAS Execute must not self-delete.
+                    // (Exam witness: EX12-036-effect3 — Ryugumon with
+                    // granted Execute attacks security in its MAIN phase and
+                    // must survive; without this gate the observer deleted it
+                    // and cascaded a spurious <Decode> window.)
+                    if ctx.game.current_phase != crate::enums::GamePhase::EndOfTurnAction {
+                        return;
+                    }
+                    // Gate 2: only fire on the Execute carrier's own
                     // attack. EndOfAttack is a global timing — it
                     // would otherwise fire for any attack while the
                     // carrier sits on the field, e.g. an attack

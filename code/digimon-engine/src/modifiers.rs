@@ -1154,6 +1154,46 @@ impl ModifierRegistry {
         out
     }
 
+    /// Keywords granted to `target` by a MATERIALIZED DECLARATIVE aura and by
+    /// nothing else — the `G-ENGINE-AURA-GRANT-NO-TRIGGER` scan set.
+    ///
+    /// A filtered-target aura ("all of your [X] gain `<KW>`") installs its
+    /// grant here through `grant_declarative_keyword`, and deliberately does
+    /// NOT set the grantor effect's `granted_keyword` marker (that marker keys
+    /// the synthesized auto-effect to the GRANTOR, which would be wrong for a
+    /// grant landing on someone else). So for these entries — and only these —
+    /// nothing else installs the keyword's trigger, and the trigger-dispatch
+    /// scan must synthesize it on the RECIPIENT.
+    ///
+    /// A keyword that ALSO has a non-materialized entry on the same target is
+    /// excluded: a runtime grant (`EffectContext::grant_keyword`) already
+    /// registered a granted-triggered body for it through
+    /// `grant_keyword_triggered_auto_effects`, so re-synthesizing would
+    /// double-fire. (Printed / self-aura-marked origins are filtered out by the
+    /// caller via `Game::has_keyword_from_card_sources`.)
+    pub fn aura_granted_keywords(&self, target: PermanentHandle) -> Vec<Keyword> {
+        let Some(entries) = self.permanent_keywords.get(&target) else {
+            return Vec::new();
+        };
+        let mut out: Vec<Keyword> = Vec::new();
+        for entry in entries {
+            if !entry.materialized_declarative {
+                continue;
+            }
+            if out.contains(&entry.keyword) {
+                continue;
+            }
+            if entries
+                .iter()
+                .any(|other| !other.materialized_declarative && other.keyword == entry.keyword)
+            {
+                continue;
+            }
+            out.push(entry.keyword);
+        }
+        out
+    }
+
     /// Net `<Security A. +N>` / `<Security A. -N>` contributed by *granted*
     /// keyword entries on `target` (e.g. an aura's
     /// `grant_keyword: SecurityAttackPlus`). Printed face/inherited keywords

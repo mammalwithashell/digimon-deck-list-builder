@@ -1093,6 +1093,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -1137,6 +1138,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }

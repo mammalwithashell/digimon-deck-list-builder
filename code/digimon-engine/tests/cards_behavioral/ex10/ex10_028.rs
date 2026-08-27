@@ -92,6 +92,28 @@ fn base_runner() -> DebugRunner {
         .build()
 }
 
+/// Accept clause 1's outer accept/decline prompt.
+///
+/// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
+/// EX10-028's "By trashing any 1 card with the [Mineral] or [Rock] trait ...,
+/// 1 of your Digimon ... gains ＜Reboot＞, ＜Blocker＞ and +3000 DP" is exactly
+/// that shape, and §15-7-4 gives the player the choice of whether to execute
+/// it. So clause 1 installs a `SelectionKind::Replacement` accept/decline
+/// prompt BEFORE the SourceMulti cost selection. DCGO does the same:
+/// EX10_028.cs:20 ([On Play]) and :159 ([When Digivolving]) both pass
+/// `isOptional: true` to `SetUpActivateClass`.
+fn accept_optional_cost(runner: &mut DebugRunner) {
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "the optional processing condition must surface an accept/decline prompt first (rule 17); got {:?}",
+        runner.pending_kind()
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accepting the optional processing condition must be legal");
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -261,12 +283,19 @@ fn ex10_028_on_play_prompts_source_multi_with_mineral_source() {
 
     runner.play(0, 0).expect("play EX10-028 from hand");
 
+    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // condition, so the accept/decline prompt precedes the cost selection.
+    // This assertion previously read `pending_kind()` straight after the play
+    // and expected SourceMulti — pinning the auto-pay bug, in which the source
+    // trash was forced on the controller with no reachable decline.
+    accept_optional_cost(&mut runner);
+
     assert!(
         matches!(
             runner.pending_kind(),
             Some(SelectionKind::SourceMulti { min: 1, max: 1, .. })
         ),
-        "playing EX10-028 with a Mineral/Rock source must prompt SourceMulti(1,1) first; got {:?}",
+        "after accepting, EX10-028 with a Mineral/Rock source must prompt SourceMulti(1,1); got {:?}",
         runner.pending_kind()
     );
 }
@@ -292,12 +321,16 @@ fn ex10_028_on_play_prompts_source_multi_with_rock_source() {
 
     runner.play(0, 0).expect("play EX10-028 from hand");
 
+    // §15-7-1/§15-7-4: accept/decline precedes the cost selection (see
+    // `accept_optional_cost`). This assertion used to expect SourceMulti here.
+    accept_optional_cost(&mut runner);
+
     assert!(
         matches!(
             runner.pending_kind(),
             Some(SelectionKind::SourceMulti { min: 1, max: 1, .. })
         ),
-        "playing EX10-028 with a Rock source must prompt SourceMulti(1,1) first; got {:?}",
+        "after accepting, EX10-028 with a Rock source must prompt SourceMulti(1,1); got {:?}",
         runner.pending_kind()
     );
 }
@@ -322,6 +355,9 @@ fn ex10_028_on_play_after_source_selection_prompts_own_field() {
     runner.push_source(host, "M-SRC-TGT");
 
     runner.play(0, 0).expect("play EX10-028 from hand");
+
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    accept_optional_cost(&mut runner);
 
     // Step 1: SourceMulti(1,1) — manually pick the source card at slot 0
     // (the pushed Mineral source is the first/only slot in the digivolution stack).
@@ -508,6 +544,9 @@ fn ex10_028_on_play_can_buff_different_digimon_than_source_host() {
 
     runner.play(0, 0).expect("play EX10-028");
 
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    accept_optional_cost(&mut runner);
+
     // Step 1: SourceMulti(1,1) — manually pick the source from HOST-DIGI's stack.
     assert!(
         matches!(
@@ -585,12 +624,17 @@ fn ex10_028_when_digivolving_prompts_source_multi() {
     );
     runner.game.drain_effect_queue();
 
+    // §15-7-1/§15-7-4: accept/decline precedes the cost selection on the
+    // [When Digivolving] timing too — DCGO's own WhenDigivolving ActivateClass
+    // (EX10_028.cs:159) likewise passes isOptional=true.
+    accept_optional_cost(&mut runner);
+
     assert!(
         matches!(
             runner.pending_kind(),
             Some(SelectionKind::SourceMulti { min: 1, max: 1, .. })
         ),
-        "WhenDigivolving on EX10-028 with a Mineral source must prompt SourceMulti(1,1); got {:?}",
+        "WhenDigivolving on EX10-028 with a Mineral source must prompt SourceMulti(1,1) after accepting; got {:?}",
         runner.pending_kind()
     );
 }
@@ -654,8 +698,19 @@ fn ex10_028_when_digivolving_grants_all_buffs() {
 // Section 4 — Negative: Clause 1 silent-skip conditions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Negative: no Mineral/Rock source available → no selection, no buffs granted.
-/// The cost cannot be paid so the entire `then:` body is skipped.
+/// Negative: no Mineral/Rock source available → the cost cannot be paid, so
+/// no cost selection installs and no buffs are granted.
+///
+/// The accept/decline prompt itself still installs: §15-7-4 gives the player
+/// the choice "regardless of whether or not the content of the conditions can
+/// be executed", and the lowering deliberately attaches no candidate guard to
+/// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
+/// in `lower_triggered.rs` — the designed behavior is to fire and silently
+/// skip the trash). Sibling EX10-034 is tested to the same shape.
+///
+/// This assertion previously read `pending_selection().is_none()` directly
+/// after the play — correct only while the clause was mandatory (the auto-pay
+/// bug). Corrected: accept, then assert the cost selection never installs.
 #[test]
 fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
     let plain_digi = make_mineral_digimon("PLAIN-HOST");
@@ -673,14 +728,20 @@ fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
 
     runner.play(0, 0).expect("play EX10-028");
 
+    accept_optional_cost(&mut runner);
+
     assert!(
         runner.pending_selection().is_none(),
-        "no selection should install when no Mineral/Rock digivolution source is available"
+        "no cost selection should install when no Mineral/Rock digivolution source is available"
     );
 }
 
 /// Negative: source host has only a plain (non-Mineral/non-Rock) source
 /// → the filter excludes it, SourceMulti silently skips.
+///
+/// As above, the §15-7-4 accept/decline prompt still installs (no candidate
+/// guard exists for a `select_own_sources` first step); the assertion is that
+/// nothing follows the accept.
 #[test]
 fn ex10_028_on_play_no_selection_when_source_has_wrong_trait() {
     let mineral_digi = make_mineral_digimon("M-WRONGSRC");
@@ -699,6 +760,8 @@ fn ex10_028_on_play_no_selection_when_source_has_wrong_trait() {
     runner.push_source(host, "PLAIN-SRC");
 
     runner.play(0, 0).expect("play EX10-028");
+
+    accept_optional_cost(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -731,6 +794,9 @@ fn ex10_028_on_play_source_selected_but_no_buff_target_means_no_keywords() {
     runner.push_source(host, "MSRC-NOTGT");
 
     runner.play(0, 0).expect("play EX10-028");
+
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    accept_optional_cost(&mut runner);
 
     // SourceMulti must appear — the source IS Mineral.
     assert!(
@@ -1064,5 +1130,91 @@ fn ex10_028_yaml_compiles_without_error() {
     assert!(
         runner.compiled_card("EX10-028").is_some(),
         "EX10-028 must be present in the embedded DSL pack (YAML must parse + compile)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 8 — Clause 1: the §15-7-4 decline branch
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// §15-7-4: "A player can choose whether or not to execute the content of
+/// optional processing conditions, regardless of whether or not the content of
+/// the conditions can be executed." Declining "By trashing any 1 card with the
+/// [Mineral] or [Rock] trait from your Digimon's digivolution cards" must leave
+/// BOTH halves undone — the source stays on the stack AND no Digimon gains
+/// ＜Reboot＞ / ＜Blocker＞ / +3000 DP — because §15-7-2 says that if the
+/// optional condition's content isn't executed, "the processing after the
+/// conditions can't be executed".
+///
+/// DCGO agrees: EX10_028.cs:20 passes `isOptional: true` to
+/// `SetUpActivateClass`, and its inner `SelectTrashDigivolutionCards` uses
+/// `canNoTrash: false` — i.e. the outer Yes/No is the ONLY place the player
+/// can say no, exactly what `outer_prompt: true` models here.
+///
+/// This is the branch the engine had no way to reach: clause 1 fired
+/// unconditionally, so the source trash was auto-paid.
+#[test]
+fn ex10_028_on_play_optional_cost_may_be_declined() {
+    let mineral_digi = make_mineral_digimon("DECLINE-DIGI");
+    let mineral_src = make_mineral_source("DECLINE-SRC");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-028")
+        .expect("EX10-028 YAML parses and compiles")
+        .add_card(mineral_digi)
+        .add_card(mineral_src)
+        .hand(0, &["EX10-028"])
+        .memory(10)
+        .start();
+
+    let host = runner.place_on_field(0, "DECLINE-DIGI", None);
+    runner.push_source(host, "DECLINE-SRC");
+
+    let sources_before = runner.game.players[0].battle_area[host.index as usize]
+        .card_sources
+        .len();
+    let trash_before = runner.trash_size(0);
+    let dp_before = runner.dp_of(host).expect("host DP readable");
+
+    runner.play(0, 0).expect("play EX10-028 from hand");
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "the optional processing condition must surface an accept/decline prompt (rule 17); got {:?}",
+        runner.pending_kind()
+    );
+    runner
+        .decline_optional_trigger()
+        .expect("declining must be reachable from the action space");
+    let _ = runner.auto_resolve();
+
+    // §15-7-2, half 1: the cost was NOT paid.
+    assert_eq!(
+        runner.game.players[0].battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        sources_before,
+        "declining must not trash the Mineral digivolution card"
+    );
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "declining must not move any source card to the trash"
+    );
+
+    // §15-7-2, half 2: the processing after the condition did NOT happen.
+    assert!(
+        !runner.game.has_keyword(host, Keyword::Reboot),
+        "declining must not grant Reboot"
+    );
+    assert!(
+        !runner.game.has_keyword(host, Keyword::Blocker),
+        "declining must not grant Blocker"
+    );
+    assert_eq!(
+        runner.dp_of(host).expect("host DP readable"),
+        dp_before,
+        "declining must not grant +3000 DP"
     );
 }

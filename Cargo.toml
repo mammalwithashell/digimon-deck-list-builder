@@ -23,3 +23,25 @@ resolver = "2"
 # codegen-units = 1) trade build time for size and are left off by default.
 [profile.release]
 strip = true
+
+# Optimize dev/test builds. This engine's tests are simulation-heavy, and at
+# `opt-level = 0` they were dominated by unoptimized engine code: the
+# `cards_behavioral` suite (~7.8k tests) ran 56.5 min. Measured on a 484-test
+# subset, 8 threads, with mimalloc (see code/digimon-engine/tests/cards_behavioral/main.rs):
+#
+#   opt-level = 0    48.0s          full suite ~13 min
+#   opt-level = 2    19.5s          full suite  5.2 min  (measured, not projected)
+#
+# The trade is compile time: a full cold build ran 509s at opt-level 2, and the
+# incremental test-binary rebuild 244s against 87s at opt-level 0 -- roughly
+# +2 min per build against -8 min per full suite run.
+#
+# `debug-assertions` deliberately stays ON (the dev default). The codebase uses
+# `debug_assert!` for real invariants, and turning those off to buy speed would
+# quietly change what the suite verifies.
+#
+# NOTE: this only pays with the allocator fix. At opt-level 2 on the Windows
+# system heap, 4 threads ran SLOWER than 1 (136-166s vs 60s) -- faster compute
+# just hammered the heap lock harder. The two changes are a pair.
+[profile.dev]
+opt-level = 2

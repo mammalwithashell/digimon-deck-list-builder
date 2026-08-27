@@ -41,8 +41,13 @@
 //! 1. **[Main] -3000 DP + CannotActivateWhenDigivolvingEffects** — FAITHFUL.
 //!    The trailing "Then, place this card in the battle area" is STUBBED on
 //!    gap G-OPTION-PERSIST-AS-FIELD-CARRIER (the only shipped self-placement
-//!    step, `place_self_as_delay_option`, seats an auto-trashing Delayed
-//!    option; DCGO `PlaceDelayOptionCards` persists indefinitely).
+//!    step, `place_self_as_delay_option`, seats an `OptionState::Delayed`
+//!    carrier rather than an `OrdinaryFieldOption`; DCGO
+//!    `PlaceDelayOptionCards` persists indefinitely). NOTE (2026-08-26):
+//!    the "auto-trashes at the owner's next turn end" half of this gap is
+//!    GONE — G-DELAY-EVENT-WINDOW-AUTOTRASHED narrowed the no-delay-clause
+//!    fallback to `DelayTrigger::ExternallyGated`, which parks indefinitely.
+//!    What remains is the state-shape difference (see Section 4).
 //! 2. **When trashed from battle area** — STUBBED on gap
 //!    G-OPTION-SELF-TRASH-TRIGGER (`Game::trash_field_option` dispatches
 //!    `OnOptionTrashed` only to OTHER live battle-area permanents, not the
@@ -551,11 +556,21 @@ fn bt19_093_security_clamps_to_one_when_only_one_opp_digimon() {
 // must seat BT19-093 as a persistent field Option (OrdinaryFieldOption). DCGO
 // `PlaceDelayOptionCards` plays it as an ordinary permanent with no scheduled
 // auto-trash; the only shipped self-placement step, `place_self_as_delay_option`,
-// seats an OptionState::Delayed { EndOfYourNextTurn }, which the end-of-turn scan
-// AUTO-TRASHES at the owner's next turn — unfaithful. Needs a
-// `place_self_as_field_option` step lowering to OrdinaryFieldOption.
+// seats an OptionState::Delayed carrier. Needs a `place_self_as_field_option`
+// step lowering to OrdinaryFieldOption.
+//
+// UPDATED 2026-08-26 (G-DELAY-EVENT-WINDOW-AUTOTRASHED): this comment used to
+// say the seated carrier "AUTO-TRASHES at the owner's next turn — unfaithful".
+// That is no longer true. BT19-093 declares no `kind: delay` clause, so it hits
+// the self-placement fallback, which is now `DelayTrigger::ExternallyGated` —
+// it parks indefinitely, matching DCGO's `PlaceDelayOptionCards`. What survives
+// of this gap is the STATE SHAPE: `OptionState::Delayed` is not
+// `OrdinaryFieldOption`, so it reports as `OptionFieldState::Delay` through
+// `Game::option_field_state` and satisfies `source_is_delayed_option`, neither
+// of which is right for a card that prints no <Delay> at all. Re-assess whether
+// the gap is now closeable before re-authoring the YAML.
 
-#[ignore = "pending: G-OPTION-PERSIST-AS-FIELD-CARRIER — [Main] 'place this card in the battle area' needs a persistent OrdinaryFieldOption self-placement; place_self_as_delay_option auto-trashes at next turn end"]
+#[ignore = "pending: G-OPTION-PERSIST-AS-FIELD-CARRIER — [Main] 'place this card in the battle area' needs a persistent OrdinaryFieldOption self-placement; place_self_as_delay_option seats an OptionState::Delayed carrier instead (it no longer auto-trashes — see the Section 4 note)"]
 #[test]
 fn bt19_093_main_places_self_as_persistent_field_option() {
     // When implemented: play BT19-093 via [Main], resolve the debuff select,

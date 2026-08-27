@@ -8221,3 +8221,121 @@ See `qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
 - **Card text shape:** "[Your Turn] When one of your Digimon with [Gammamon] in its text or the [VB] trait attacks..."
 - **Resolution:** Added `event_target_in_text_contains`, the event-target sibling of `in_text_contains`. It reuses the whole-card text scan (name, aliases, traits, and printed text), works against both live event-target cards and deleted-object snapshots, and fails closed when no event-target card is present.
 - **Regression tests:** `dsl::phase3d_event_context::ally_attack_event_target_in_text_contains_matches_attacking_digimon_text`; `cards_behavioral::ex12::ex12_066::*`.
+
+## BT8-084 — [When Digivolving] up-to-4 DP-minus scaled by this Digimon's colors  [G-DSL-SOURCE-STACK-UNION-COLOR-COUNT]
+- Effect text: "Then, up to 4 of your opponent's Digimon get -1000 DP for each of this Digimon's colors until the end of your opponent's next turn."
+- Missing DSL verb / step kind / predicate: a **source-anchored union-incl-top color-count formula** — "distinct colors across the effect carrier's top card + its non-flipped digivolution sources". DCGO (BT8_084.cs) computes `minusDP = 1000 * TopCard.CardColors.Count` AFTER the placement leg, where `TopCard.CardColors` is the union of the printed color and the non-flipped source colors (the [Your Turn] ChangeCardColorClass is active during the controller's turn, which is when [When Digivolving] fires).
+  - `source_color_count` (FormulaSpec + PerSelector) counts SOURCES ONLY — misses the printed white top whenever no source is white (undercounts the debuff by 1000 in the common case).
+  - `digivolution_color_count` (PerSelector) is the right union but anchors at the formula TARGET — inside `add_dp_modifier` that is the opponent Digimon receiving the debuff, not the carrier.
+  - No compound composition can express the union (`add`/conditional formulas do not exist; `max`/`min`/`subtract`/`floor_div` cannot build "source colors ∪ top colors").
+- Lowers to engine API: same shared extraction as `own_source_stack_color_count_gte` (`non_flipped_source_colors` in `dsl_cards/predicate.rs` / `formula_eval.rs`) plus the top card's synth colors; `EffectContext::add_dp_modifier` already takes the computed value.
+- Suggested DSL syntax: `{ source_stack_union_color_count: {} }` as a FormulaSpec (sibling of `source_color_count`), usable inside `add_dp_modifier: { value: { base: 0, per: ..., delta: -1000 } }` or as a top-level formula. Everything else in the leg is already expressible: `select_count_capped_multi { of: opponent, zone: battle_area, min: 1, max: 4, optional_zero: false }` (DCGO canNoSelect: false + canEndNotMax: true) + `per_selected` + `add_dp_modifier { expiry: end_of_opponents_next_turn }`.
+- Consumer status: the leg is OMITTED from `code/digimon-engine/cards/bt8/BT8-084.yaml` (no approximation shipped); tripwire test `bt8_084_gap_tripwire_no_approximated_dp_minus_leg` in `code/digimon-engine/tests/cards_behavioral/bt8/bt8_084.rs` pins the omission until this gap closes.
+- First reported: 2026-08-22
+
+## BT8-084 — [Your Turn] 4-color +4000 DP self-boost  [G-DSL-OWN-STACK-COLOR-COUNT-GTE]
+- Effect text: "While this Digimon has 4 or more colors, it gets +4000 DP." (scoped under the same [Your Turn] header as the color treatment.)
+- Missing DSL verb / step kind / predicate: a **no-subject, carrier-scoped union-incl-top color-count threshold** — sibling of `own_source_stack_color_count_gte` (EX9-074) that INCLUDES the top card's colors in the union. DCGO gates on `TopCard.CardColors.Count >= 4` under IsOwnerTurn, i.e. union(printed white, non-flipped source colors) >= 4 — "white top + 3 non-white source colors" MUST qualify, which the sources-only leaf misses. `self_color_count_gte` reads only the synthesized top-card colors (a constant 1 here without the color treatment below).
+- Lowers to engine API: same shared extraction as above; the aura install path (`lower_aura` `active_when` tick predicate) already exists.
+- Suggested DSL syntax: `own_stack_color_count_gte: 4` inside a self-aura's `active_when: { your_turn: true, ... }` with `dp_modifier: 4000` (per-tick symmetric — the count fluctuates with de-digivolve / source trashing, so `while_condition`'s evict-final semantics are wrong here).
+- Consumer status: clause OMITTED from BT8-084.yaml; tripwire test `bt8_084_gap_tripwire_no_approximated_your_turn_color_clauses` pins it.
+- First reported: 2026-08-22
+
+## BT8-084 — [Your Turn] treated as also having digivolution-card colors  [G-ENGINE-ADDITIVE-COLOR-TREATMENT]
+- Effect text: "[Your Turn] This Digimon is treated as also having the colors of its digivolution cards." (Official Q&A: additive — a white card with red + green sources is a 3-color white/red/green card.)
+- Missing primitive: this is an **engine gap, not just DSL vocabulary** (belongs in docs/RUST_ENGINE_GAPS.md too). It is a cross-card-visible continuous identity change: any effect reading this permanent's colors (opponent color-targeted removal, color predicates, color-based digivolve requirements) must see the union while it is the controller's turn. In the engine, `Permanent::synth_identity` honors only the replace-style `ModifierType::ChangeBaseCardColor`; `ModifierType::AddColor` exists in the enum but has NO reader and NO DSL install surface, and no aura payload can carry a dynamic "union of non-flipped source colors" color list (DCGO: ChangeCardColorClass, additive, flip-filtered, gated on IsOwnerTurn && >= 1 digivolution card).
+- Suggested resolution: (1) engine — read `AddColor` `Colors { value }` payloads additively in `synth_identity` (append-dedup after the `ChangeBaseCardColor` pass); (2) DSL — a self-aura field (e.g. `gain_colors_from: source_stack`) whose per-tick install computes the current non-flipped source-color list into the payload. Once landed, the two sibling gaps above collapse into ordinary reads of the synthesized colors (`self_color_count_gte: 4` would then be the faithful +4000 gate).
+- Consumer status: clause OMITTED from BT8-084.yaml (documented in its header); same tripwire test as above.
+- First reported: 2026-08-22
+
+## RESOLVED 2026-08-24 — `<Delay>` on turn-scheduled triggers auto-paid its §16-16 cost  [G-DSL-DELAY-TURN-TRIGGER-NOT-OPTIONAL]
+- Effect text: the §16-16 keyword reminder itself — "(By trashing this card after the placing turn, activate the effect below.)". §16-16 classes `<Delay>` as **Optional**: trashing the card is the player's choice, and declining must skip the linked effect (§15-7-2).
+- **This is a live rule-17 defect, not missing vocabulary.** `lower_delay.rs:115-117` makes only ONE of three lowering arms optional:
+  `if matches!(delay_trigger, DelayTrigger::OnEvent(_)) { builder = builder.optional().needs_outer_optional_prompt(); }`
+  - **(A) `trigger: delayed` → `MainPhaseActivated` — CORRECT.** A player-visible [Main] mask bit (`action/mask.rs`, gated by `delayed_option_main_activation_available` in `option_lifecycle.rs`), with PASS always legal in Main. Not activating IS the decline. ~24 cards.
+  - **(B) `OnEvent` triggers — CORRECT.** `.optional().needs_outer_optional_prompt()` installs an explicit accept/decline selection via `effect_queue.rs` `install_outer_optional_trigger_selection`.
+  - **(C) `end_of_your_turn` / `end_of_your_next_turn` / `start_of_your_turn` → `EndOfThisTurn` / `EndOfYourNextTurn` / `StartOfYourNextTurn` — DEFECTIVE.** `optional` stays false, so no outer prompt installs; `game_phases.rs` `resolve_delayed_options_matching` enqueues `EffectTiming::DelayEffect`, drains, and then **unconditionally** `delete_permanent_with_cause(..., ReplacementCause::Cost)`. The "by trashing this card" cost is auto-paid and the body auto-resolves. **14 cards ride this arm.**
+- The lowering already concedes it in a comment: the turn-scheduled triggers "fire through `resolve_delayed_options_matching`, which bypasses the queue's optional machinery."
+- Suggested resolution: route arm (C) through the same optional machinery as (B) — make the builder `.optional().needs_outer_optional_prompt()` for every `DelayTrigger`, and have `resolve_delayed_options_matching` install the outer confirm and trash the carrier only on accept. Note the ordering constraint: the card is trashed as the COST, so a decline must leave the Delay option on the field for its next window rather than deleting it.
+- How found: the §16-keyword verification lane of the 2026-08-24 optional-cost audit. 33 of the 60 audit candidates were dismissed as "the cost belongs to a §16 keyword, so it is engine machinery" — that dismissal is SAFE for `<Barrier>` / `<Evade>` / `<Alliance>` / `<Overclock>` / `<Fragment>` / `<Armor Purge>` / `<Training>` (each verified to surface the decline, with file:line evidence) and UNSAFE for `<Delay>` on arm (C).
+- Consumer status: NOT fixed; 14 cards currently auto-pay. No tripwire yet.
+- First reported: 2026-08-24
+
+### Resolution (2026-08-24)
+
+**Fixed.** `lower_delay.rs` now marks the turn-scheduled arm `.optional()
+.needs_outer_optional_prompt()` alongside `OnEvent`, so the scheduled window
+OFFERS the trash-this-card cost. On a decline the scan leaves the carrier on the
+field and RESCHEDULES it via `compute_delay_trash_turn` — mandatory, because the
+scan matches `trash_on_turn == turn`, so an Option left at its spent turn number
+would sit there forever, never offered again (§16-16-1 keeps a Delay available
+"while a card with this effect is in the battle area"). Decline tests on LM-030
+and BT21-097 pin all three post-conditions (§15-7-2: carrier not trashed, body
+not run, Option still schedulable). This also closes
+`G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`, tracked separately in
+`bt21_097.rs`.
+
+**The "14 cards" in the original report were not 14 instances of one bug.**
+Checking each printed face against DCGO's registered timing split them:
+
+| What it really is | Cards | DCGO timing |
+|---|---|---|
+| Genuinely turn-scheduled | 6 — BT21-097, LM-027/029/030/031/032 | `OnEndTurn` / `OnStartTurn` |
+| Mis-authored, prints `[Main]` | 5 — BT15-096, BT22-099, BT24-100, LM-034, P-206 | `OnDeclaration` |
+| Structural marker, `process: []` | 3 — BT21-093, ST23-15, ST24-15 | real behaviour lives in a separate clause |
+
+The five `[Main]` ones carried a WORSE defect than the missing decline: authored
+`end_of_your_next_turn`, they auto-fired on a schedule instead of waiting for a
+player `[Main]` action — wrong timing *and* no choice. Re-authored to
+`trigger: delayed`. LM-055 (`trigger: on_play`, prints `[Main] <Delay>`) was the
+same mistake by a different route.
+
+### The root cause behind the mis-authoring  [G-DSL-DELAY-TRIGGER-SILENT-DEFAULT]
+
+`lower_delay.rs` matched a HARDCODED list of six event timings and sent
+everything else to `_ => EndOfYourNextTurn`. Any Delay on a timing the list did
+not name was silently converted into a turn-scheduled auto-fire. Now:
+`other => compiled_timing_to_engine(other).map(DelayTrigger::OnEvent)`, so the
+turn-scheduled forms enumerated above are the ONLY ones a scan drives and
+anything else that maps to an engine timing is event-gated by construction.
+Note `on_opponent_security_removed` existed end to end all along
+(`CompiledTiming` -> `timing_map` -> `EffectTiming`); only this match arm could
+not reach it.
+
+### Structural markers
+
+A `kind: delay` clause with `process: []` is a persistence marker, not an
+activatable Delay (BT21-093 / ST23-15 / ST24-15 keep their Option in the battle
+area for a separate clause). The lowering now skips the optional prompt for an
+empty body — otherwise the fix above would have made these prompt "activate
+this?" for an effect that does nothing. `st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn`
+pins that the turn scan does not trash such a marker.
+
+### Still open
+
+- **BT21-093 / ST23-15 / ST24-15 rely on an empty-body marker to express "this
+  Option stays in the battle area".** That is an idiom, not vocabulary: a
+  dedicated `persists_in_battle_area: true` (or an explicit
+  `place_self_as_delay_option` in the [Main] body) would say it directly instead
+  of through a Delay clause that means something else.
+
+## Exam scenarios cannot declare [Assembly] / [DigiXros] materials  [G-EXAM-MULTIPICK-MATERIAL-DECLARATION]
+
+- **What is unexpressible:** the `select:` step vocabulary in `qa/dcgo-exams/*.yaml` has no MULTI-PICK material payload, so a scenario cannot play a card through its `[Assembly]` or `[DigiXros]` alt path. `docs/DCGO_EXAM.md` lists this as deliberately out of scope for the original brief.
+- **Why it now matters:** it is not just an alt-cost nicety, it gates whole CLAUSES. EX12-076 Susanoomon prints `[Assembly -9] 8 [Hybrid]/[Shambala] trait cards w/different names`, which takes its play cost 16 -> 7. Without Assembly the card is unplayable from hand at all (16 exceeds the +10 memory ceiling), so every clause that requires it to be PLAYED rather than digivolved is unreachable — starting with `<Rush>`, whose only load-bearing gate is `turn_played == turn && turn_digivolved != turn` (`action/mask.rs`).
+- **Also blocked behind it:** the `[Assembly]`/`[DigiXros]` machinery itself is never exam-measured, on any card.
+- **Suggested shape:** extend the select step with a multi-pick payload, e.g.
+  `select: { materials: [EX12-004, EX12-011, ...] }`, lowering to DCGO's
+  `SelectAssemblyClass` / `SelectDigiXrosClass` rows (both already emit
+  `LogSelectionRow`, see CLAUDE.md rule 27) and to our engine's material
+  selection. Identities on the wire as usual, never indices.
+- **Worked example to build against:** Susanoomon + 8 differently-named
+  [Hybrid]/[Shambala] cards in the controller's OWN trash (DCGO filters
+  `card.Owner.TrashCards`, `SelectAssemblyClass.cs`). Include EX12-004
+  Onibimon — a Lv.2 Digi-Egg with [Shambala] AND inherited `<Execute>` — and the
+  same line also witnesses a granted `<Execute>` end-of-turn attack (§16-37).
+- **Consumer status:** `EX12-076#effect#0` is recorded `unreachable` with this as
+  the cause (its earlier "memory ceiling" reason was wrong and has been
+  corrected). `EX12-076#effect#5` is the matching digivolve-cost line.
+- First reported: 2026-08-24
+

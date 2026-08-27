@@ -132,6 +132,24 @@ fn permanent_activation_blocked_for_timing(
 impl Game {
     // ─── Public API ─────────────────────────────────────────────────
 
+    /// Resolve the effect list a `QueuedEffect` indexes with its
+    /// `effect_slot`. Ordinary entries read the card's registry + synthesized
+    /// effects; `G-ENGINE-AURA-GRANT-NO-TRIGGER` entries
+    /// (`keyword_effect.is_some()`) re-synthesize the keyword's auto-effects
+    /// instead, because an aura-granted keyword lives on the RECIPIENT's
+    /// modifier registry and appears in no card's effect list.
+    fn effects_for_queued(
+        &self,
+        qe: &QueuedEffect,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        match qe.keyword_effect {
+            Some(keyword) => Some(std::sync::Arc::new(
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, qe.source_card),
+            )),
+            None => self.effects_for_card(&qe.card_id, qe.source_card),
+        }
+    }
+
     fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
         let is_turn_player = effect.controller == self.turn_player();
         QueuedEffect {
@@ -151,6 +169,7 @@ impl Game {
             allow_below_top_liveness: false,
             dna_origin_context: None,
             granted_effect_id: None,
+            keyword_effect: None,
         }
     }
 
@@ -190,6 +209,7 @@ impl Game {
                 source_kind: Some(effect.source_kind),
                 timing: Some(effect.timing),
                 is_optional: optional,
+                keyword: None,
                 observation_metadata,
             });
         }
@@ -737,6 +757,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -777,6 +798,16 @@ impl Game {
                 if effect.inherited || effect.linked {
                     continue;
                 }
+                // Only clauses PRINTED with a `[Trash]` zone scope operate
+                // from the trash (BT20-084's "[Trash] When any of your
+                // Digimon are played, ..."). An ordinary field observer on a
+                // dead card must stay dormant — DCGO never fires dead cards'
+                // observers, and the phantom trigger inflated TriggerOrder
+                // bundles (EX12-063 exam: dead EX12-036's [All Turns]
+                // on-ally-played observer enqueued from trash).
+                if !effect.trash_zone {
+                    continue;
+                }
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
@@ -797,6 +828,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -1853,6 +1885,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -1943,6 +1976,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -2001,6 +2035,7 @@ impl Game {
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
+                keyword_effect: None,
             });
         }
     }
@@ -2117,6 +2152,7 @@ impl Game {
                 attribution_source_kind: None,
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
+                keyword_effect: None,
             });
         }
 
@@ -2126,6 +2162,13 @@ impl Game {
                     continue;
                 }
                 if effect.linked {
+                    continue;
+                }
+                // A `[Trash]`-scoped clause (BT20-084) is active only while
+                // the card sits in its owner's trash — never from the
+                // battle area. Mirror of the `trash_zone` gate in
+                // `enqueue_from_player_trash`.
+                if effect.trash_zone {
                     continue;
                 }
                 // An inherited effect (the lower portion of a digi card) is
@@ -2157,6 +2200,92 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
+                });
+            }
+        }
+
+        // `G-ENGINE-AURA-GRANT-NO-TRIGGER` — keywords handed to this permanent
+        // by a FILTERED-TARGET aura ("[All Turns] all of your [Puppet] or [TB]
+        // trait Digimon gain <Blocker> and <Retaliation>" — EX12-065
+        // Kaguyamon).
+        //
+        // Such a grant lands on the RECIPIENT's modifier registry via
+        // `grant_declarative_keyword`, and `lower_aura` deliberately does NOT
+        // set the grantor effect's `Effect::granted_keyword` marker (that
+        // marker keys the synthesized auto-effect to the GRANTOR, which is the
+        // wrong carrier for a grant landing on someone else). The consequence
+        // was that PERSISTENT granted keywords worked — the mask reads them
+        // through `Game::has_keyword` — while TRIGGER keywords were inert: the
+        // engine knew the recipient had `<Retaliation>` and had no `Effect` to
+        // fire. §16-12 makes `<Retaliation>` mandatory, and the DCGO oracle
+        // deletes the battle winner, so silence was a faithfulness bug.
+        //
+        // Fixing it at trigger DISPATCH (rather than in
+        // `Game::build_effects_for_card`) is deliberate: that builder is keyed
+        // on `card_id` and memoized, and is ~94% of per-step time — making it
+        // depend on per-permanent modifier state would destroy the memo.
+        //
+        // De-dup, so a keyword is never fired twice:
+        //   * `ModifierRegistry::aura_granted_keywords` returns only
+        //     MATERIALIZED-declarative entries with no non-materialized twin —
+        //     a runtime `EffectContext::grant_keyword` already installed a
+        //     granted-triggered body through
+        //     `grant_keyword_triggered_auto_effects` (drained above).
+        //   * `Game::has_keyword_from_card_sources` excludes every origin whose
+        //     auto-effects `build_effects_for_card` already synthesizes into a
+        //     scanned effect list — printed face keywords, a below-top source's
+        //     or a link card's inherited keywords, and SELF-aura /
+        //     `scope: inherited` grants that DO carry the `granted_keyword`
+        //     marker.
+        //
+        // The aura's `active_when` still gates the grant: a conditional aura
+        // simply stops re-installing its materialized entry on the next
+        // declarative tick, so the keyword is absent from the registry here.
+        // Per-keyword gates (e.g. `<Retaliation>`'s Battle-only deletion-cause
+        // filter) live inside the auto-effect body and are unchanged.
+        let aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        for keyword in aura_keywords {
+            if self.has_keyword_from_card_sources(handle, keyword) {
+                continue;
+            }
+            let effects =
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card);
+            for (slot, effect) in effects.iter().enumerate() {
+                // Declarative keyword entries (Training / MindLink /
+                // BlastDigivolve) materialize through the declarative tick, and
+                // pure-replacement entries (Barrier / Evade / Fragment / ...)
+                // are collected by `replacement::collect_candidates`, which
+                // already scans `ModifierRegistry::granted_keywords`. Neither
+                // belongs on the trigger queue.
+                if effect.declarative || effect.process.is_none() {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: Some(handle),
+                    source_kind: top_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
+                    // The granted clause is the CARRIER's own effect once
+                    // installed (D4 / DCGO sources the granted ActivateClass
+                    // from the carrier's top card), matching the
+                    // granted-triggered branch above.
+                    controller: handle.player,
+                    timing,
+                    trigger_context: trigger_context.clone(),
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
+                    keyword_effect: Some(keyword),
                 });
             }
         }
@@ -2221,6 +2350,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2311,6 +2441,7 @@ impl Game {
                         allow_below_top_liveness: false,
                         dna_origin_context: self.current_dna_origin,
                         granted_effect_id: None,
+                        keyword_effect: None,
                     });
                 }
             }
@@ -2373,6 +2504,7 @@ impl Game {
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2444,6 +2576,7 @@ impl Game {
                 attribution_source_kind: None,
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
+                keyword_effect: None,
             });
         }
 
@@ -2472,6 +2605,7 @@ impl Game {
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2518,6 +2652,7 @@ impl Game {
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
+                    keyword_effect: None,
                 });
             }
         }
@@ -2594,6 +2729,7 @@ impl Game {
             // Snapshot the fields we need; release the borrow before
             // entering the trigger-context guard (which needs &mut self).
             let card_id = qe.card_id.clone();
+            let keyword_effect = qe.keyword_effect;
             let source_card = qe.source_card;
             let source_permanent = qe.source_permanent;
             let source_kind = qe.source_kind;
@@ -2622,28 +2758,35 @@ impl Game {
             if dna_origin_context.is_some() {
                 self.current_dna_origin = dna_origin_context;
             }
-            let condition_passes =
-                if let Some(effects) = self.effects_for_card(&card_id, source_card) {
-                    if let Some(eff) = effects.get(effect_slot) {
-                        if let Some(cond) = &eff.condition {
-                            let trigger_guard = TriggerContextGuard::install(self, trigger_context);
-                            let ctx = EffectContext::new_with_source_kind(
-                                &mut *trigger_guard.game,
-                                source_card,
-                                source_permanent,
-                                source_kind,
-                                controller,
-                            );
-                            cond(&ctx.as_read())
-                        } else {
-                            true // no condition → keep
-                        }
+            // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
+            // indexes the keyword's synthesized auto-effects, not the card's.
+            let looked_up = match keyword_effect {
+                Some(keyword) => Some(std::sync::Arc::new(
+                    crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
+                )),
+                None => self.effects_for_card(&card_id, source_card),
+            };
+            let condition_passes = if let Some(effects) = looked_up {
+                if let Some(eff) = effects.get(effect_slot) {
+                    if let Some(cond) = &eff.condition {
+                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                        let ctx = EffectContext::new_with_source_kind(
+                            &mut *trigger_guard.game,
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller,
+                        );
+                        cond(&ctx.as_read())
                     } else {
-                        true // slot missing → keep, let run-time handle it
+                        true // no condition → keep
                     }
                 } else {
-                    true // effects missing → keep
-                };
+                    true // slot missing → keep, let run-time handle it
+                }
+            } else {
+                true // effects missing → keep
+            };
             self.current_dna_origin = prev_dna_origin;
             if !condition_passes {
                 to_skip.push(i);
@@ -2714,7 +2857,7 @@ impl Game {
         // not overridden.
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(&qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2843,7 +2986,7 @@ impl Game {
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
-                let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+                let Some(effects) = self.effects_for_queued(&qe) else {
                     return;
                 };
                 let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2891,7 +3034,7 @@ impl Game {
     /// `return_self_to_deck_bottom_as_cost`); OPT bookkeeping is preserved
     /// so a successful firing counts toward the cap.
     fn run_queued_effect_process_tail_after_activation_cost(&mut self, qe: &QueuedEffect) {
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -2937,7 +3080,7 @@ impl Game {
     }
 
     fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -3092,13 +3235,49 @@ impl Game {
         // context proves this is a post-deletion fire: handler bodies
         // either read live state (gracefully bail when the carrier is
         // gone) or read the snapshot via `ctx.deleted_self_*()`.
-        if qe.timing == EffectTiming::OnDeletion
-            && qe
+        if qe.timing == EffectTiming::OnDeletion {
+            if let Some(snap) = qe
                 .trigger_context
                 .as_ref()
-                .is_some_and(|t| t.deleted_object.is_some())
-        {
-            return true;
+                .and_then(|t| t.deleted_object.as_ref())
+            {
+                // §15-4-4-3: "When a card with an effect that's pending
+                // activation becomes a NEW CARD before the effect activates,
+                // the effect can no longer be activated." A card that CHANGES
+                // AREAS becomes a new card, so a sibling trigger that moved the
+                // carrier since the batch trashed it has made this entry MISS
+                // TIMING.
+                //
+                // The motivating case is EX12-047 Amaterasumon, whose deletion
+                // raises `<Ascension>` and `[On Deletion]` simultaneously.
+                // §15-4-3-5-1 lets the controller pick the activation order, and
+                // that pick is a FORFEIT: taking `<Ascension>` first places the
+                // card on the security stack, so the pending `[On Deletion]`
+                // is lost. Bypassing unconditionally handed the controller both
+                // halves of a choice the rules make exclusive.
+                //
+                // Still a BYPASS of the on-field test, which is what this
+                // branch exists for: the batched flow trashes the carrier
+                // before the drain runs, so "is the permanent still on the
+                // field" is false for every batched OnDeletion entry. We only
+                // add the question it was missing -- is the card still where
+                // the deletion left it?
+                //
+                // TOKENS are exempt: a token does not change areas when it
+                // leaves the field, it CEASES TO EXIST and never lands in the
+                // trash. It therefore never "becomes a new card", and its
+                // `[On Deletion]` still resolves -- Petrification's "trash your
+                // top security card" and Familiar's -3000 DP both depend on
+                // this. Without the exemption the trash test below reads every
+                // token as having been moved.
+                if snap.is_token {
+                    return true;
+                }
+                return self
+                    .players
+                    .get(snap.former_controller as usize)
+                    .is_some_and(|p| p.trash.iter().any(|c| c.handle() == snap.top_card));
+            }
         }
         if perm_handle.index == BREEDING_TARGET as u8 {
             return self
@@ -3581,7 +3760,7 @@ impl Game {
         if qe.granted_effect_id.is_some() {
             return false;
         }
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+        let Some(effects) = self.effects_for_queued(qe) else {
             return false;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
@@ -3663,6 +3842,8 @@ impl Game {
 
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
+        let declined_timing = qe.timing;
+        let declined_permanent = qe.source_permanent;
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
@@ -3681,10 +3862,19 @@ impl Game {
             callback: Box::new(move |game: &mut Game, _action_id: u16| {
                 game.run_queued_effect(qe);
             }),
-            // DECLINE: do nothing — the QueuedEffect (already removed from
-            // `effect_queue`) is simply dropped; its body never runs. The
-            // generic resolver resumes draining the rest of the queue.
-            on_decline: Some(Box::new(|_game: &mut Game| {})),
+            // DECLINE: the QueuedEffect (already removed from `effect_queue`)
+            // is simply dropped; its body never runs. The generic resolver
+            // resumes draining the rest of the queue.
+            //
+            // One exception has to be recorded rather than dropped: a
+            // turn-scheduled `<Delay>`. Its carrier is trashed by the turn scan
+            // AFTER the body runs, because the trash is the §16-16-2 cost — so a
+            // decline must suppress that trash too (§15-7-2). `note_declined_delay`
+            // leaves the key for `resolve_delayed_options_matching` /
+            // `resume_pending_delayed_option_lifecycle` to reschedule instead.
+            on_decline: Some(Box::new(move |game: &mut Game| {
+                game.note_declined_delay(declined_timing, declined_permanent);
+            })),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::OuterOptionalTrigger(
@@ -3701,9 +3891,65 @@ impl Game {
         state: crate::resume::OuterOptionalTriggerState,
         is_pass: bool,
     ) {
-        if !is_pass {
-            self.run_queued_effect(state.queued_effect);
+        if is_pass {
+            // Mirror the `on_decline` closure above — the resume path is the
+            // one a parked selection actually takes.
+            self.note_declined_delay(
+                state.queued_effect.timing,
+                state.queued_effect.source_permanent,
+            );
+            return;
         }
+        self.run_queued_effect(state.queued_effect);
+    }
+
+    /// Record that a turn-scheduled `<Delay>`'s §16-16-2 cost was declined, so
+    /// the turn scan reschedules its carrier instead of trashing it.
+    ///
+    /// A no-op for every other timing: only `DelayEffect` has a carrier the
+    /// scan deletes on the effect's behalf.
+    pub(crate) fn note_declined_delay(
+        &mut self,
+        timing: EffectTiming,
+        source_permanent: Option<crate::permanent::PermanentHandle>,
+    ) {
+        if timing != EffectTiming::DelayEffect {
+            return;
+        }
+        let Some(handle) = source_permanent else {
+            return;
+        };
+        let Some(perm) = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        else {
+            return;
+        };
+        // Same stable key the scan uses: an Option has no digivolution stack,
+        // so its bottom card is the Option itself.
+        // ONLY the turn-scheduled triggers need this. An `OnEvent` Delay already
+        // survives a decline correctly (its carrier is not deleted by a scan),
+        // and a `MainPhaseActivated` one is never auto-resolved at all — setting
+        // the flag for those would leave a STALE key behind, since nothing
+        // consumes it, and the next ACCEPT on the same Option would then be
+        // mistaken for a decline and skip the cost trash.
+        let is_turn_scheduled = matches!(
+            perm.option_state,
+            crate::permanent::OptionState::Delayed {
+                trigger: crate::enums::DelayTrigger::EndOfThisTurn
+                    | crate::enums::DelayTrigger::EndOfYourNextTurn
+                    | crate::enums::DelayTrigger::StartOfYourNextTurn,
+                ..
+            }
+        );
+        if !is_turn_scheduled {
+            return;
+        }
+        let Some(bottom) = perm.card_sources.first() else {
+            return;
+        };
+        self.declined_delay_option = Some((handle.player, bottom.card_index));
     }
 
     fn install_trigger_order_selection(
@@ -3734,13 +3980,41 @@ impl Game {
             let qe = &self.effect_queue[qe_idx];
             let action_id = HAND_EFFECT_START + pos as u16;
             let observation_metadata = self
-                .effects_for_card(&qe.card_id, qe.source_card)
+                .effects_for_queued(qe)
                 .and_then(|effects| {
                     effects
                         .get(qe.effect_slot as usize)
                         .map(|effect| effect.observation_metadata)
                 })
                 .unwrap_or_default();
+            // Which KEYWORD this branch is, if any -- the only thing that tells
+            // the branches of a same-card trigger stack apart (see
+            // `EffectChoiceEntry::keyword`). Two sources, because a keyword
+            // reaches the queue two different ways:
+            //   * `qe.keyword_effect` -- the carrier gained the keyword from a
+            //     filtered-target aura, so no card's effect list contains this
+            //     body at all (G-ENGINE-AURA-GRANT-NO-TRIGGER).
+            //   * `Effect::granted_keyword` -- the card's own printed keyword,
+            //     which the DSL authors as a `kind: grant_keyword` clause
+            //     (EX12-065's `<Fortitude>` is effect slot 0).
+            //   * `Effect::keyword_source` -- a body SYNTHESIZED by
+            //     `keyword_to_auto_effect` and appended to the card's effect
+            //     list by `effects_for_card` (EX12-065's slots 6 and 7). These
+            //     carry no `granted_keyword`, because they ARE the keyword's
+            //     behaviour rather than a clause granting it.
+            // Aura first: a granted body is not addressable through the card's
+            // effect list, so the slot lookup would miss it. Then, within the
+            // slot lookup, `granted_keyword` before `keyword_source` -- a
+            // `kind: grant_keyword` clause names the keyword the author wrote,
+            // and only synthesized bodies ever set `keyword_source`, so the two
+            // never both apply to one effect.
+            let keyword = qe.keyword_effect.or_else(|| {
+                self.effects_for_queued(qe).and_then(|effects| {
+                    effects.get(qe.effect_slot as usize).and_then(|effect| {
+                        effect.granted_keyword.or(effect.keyword_source)
+                    })
+                })
+            });
             debug_assert!(action_id < HAND_EFFECT_END);
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
@@ -3759,6 +4033,7 @@ impl Game {
                 source_kind: Some(qe.source_kind),
                 timing: Some(qe.timing),
                 is_optional: qe.is_optional,
+                keyword,
                 observation_metadata,
             });
         }

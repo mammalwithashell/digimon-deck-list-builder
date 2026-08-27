@@ -1,0 +1,133 @@
+# Exam scenario: EX12-046 (Shishimamon), clause effect#2 -- "[Your Turn] When
+# your opponent's security stack is removed from, this Digimon may digivolve
+# into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+#
+# The line: p0 plays Shishimamon from hand, then two turns later attacks p1's
+# security. The single check trashes p1's top security card -- a removal from
+# the security stack on p0's own turn -- and the clause parks its optional
+# digivolve prompt. p0 answers with Kaguyamon (EX12-065), the pool's only
+# [TB] trait Digimon that can sit on a level 5:
+#   - its standard purple/green circles miss the yellow/red Shishimamon, so
+#     the ONLY matching route is the "Lv.5 w/[Shambala]: Cost 3" alt path --
+#     one distinct cost, no cost-choice prompt;
+#   - reduced by 2, the digivolve costs 1: memory 3 -> 2 is the cost witness.
+#
+# Kaguyamon's own [When Digivolving] ("play 1 play cost 5 or lower [Puppet]/
+# [Shambala] card from your trash") stays silent: p0's trash is empty. Its
+# [All Turns] keyword grant is an aura, not a prompt. (TRAIT-DATA NOTE,
+# review 2026-08-22: Amaterasumon's card face DOES print [TB] -- cards.json
+# is stale -- but no EX12-047 copy is in p0's hand here, so Kaguyamon stays
+# the pick's only candidate on both sides.)
+#
+# KNOWN SIM-SIDE GAP (do not "fix" this scenario around it): our engine's
+# effect-initiated digivolve (`effect_initiated_digivolve_from_source_inner`,
+# code/digimon-engine/src/game_actions/digivolve.rs) matches ONLY the printed
+# evo circles in CardData and never consults the DSL alt-path registry, so
+# Kaguyamon's "Lv.5 w/[Puppet]/[Shambala]: Cost 3" route is invisible to it
+# and the digivolve is silently rejected after the pick (field and memory
+# unchanged). The line still parks the trigger's prompt and answers it, so
+# the assertions below claim only what is route-independent (the security
+# removal); if DCGO resolves the digivolve, the state differ will surface the
+# divergence -- which is the finding this exam exists to produce.
+#
+# p1's security is stacked with plain low-DP Digimon so the check resolves as
+# a silent security battle the 7000 DP attacker survives.
+card: EX12-046
+clause: EX12-046#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Shishimamon, Kaguyamon, inert fillers
+      - EX12-046
+      - EX12-065
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never checked; quiet Digimon regardless
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T5 turn (11), T5 digivolve (12)
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): inert, p1 all-passes
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): Digimon only, no [Security] text, DP < 7000
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Shishimamon (cost 7, memory 3 -> -4; turn ends). Its
+  # [On Play] give is silent: p1 has no Digimon to target.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): the clause -- attack security; the check removes p1's top
+  # security card and the trigger parks the optional digivolve.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Answer the digivolve prompt: Kaguyamon from hand (alt Shambala path,
+  # cost 3 - 2 = 1; memory 3 -> 2).
+  - actor: 0
+    do: { select: { cards: [EX12-065] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory stayed positive, so p0 still holds the turn: pass main.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # One security card checked (5 -> 4) by the attack that raised the trigger.
+  # Deliberately NOT asserting the digivolve outcome sim-side -- see the
+  # known-gap note above; the oracle state diff owns that comparison.
+  - at: 12
+    that: { p1.security: 4 }

@@ -1,0 +1,13 @@
+# Smoke scenario: the shortest legal line that exercises the exam pipeline
+# end to end. Deliberately minimal -- its job is to prove that lowering,
+# the ScenarioAdapter and the sim-only assertion path all work on a REAL
+# card, not to make a claim about ST1-08's behaviour yet.
+card: ST1-08
+clause: ST1-08#effect#0
+seed: 424242
+decks:
+  p0: { stack: [], rest: starter_st1_gaia_red }
+  p1: { stack: [], rest: starter_st1_gaia_red }
+steps:
+  - actor: 0
+    do: { pass: {} }

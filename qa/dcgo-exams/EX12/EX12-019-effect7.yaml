@@ -1,0 +1,199 @@
+# Exam scenario: EX12-019 (Nezhamon), clause effect#7 --
+# "[All Turns][Once Per Turn] When security stacks are removed from, this
+#  Digimon may unsuspend."
+#
+# The witness is a SECOND attack. Nezhamon attacks p1's security in the T11
+# main phase and suspends; the check removes a security card, which is exactly
+# the trigger's condition, so the clause offers the unsuspend and this line
+# ACCEPTS it (step 27). An unsuspended Nezhamon can then attack again in the
+# same main phase (step 28) -- something no suspended Digimon can do -- and
+# p1's security falls 5 -> 3 off one Digimon in one turn. Declining instead
+# leaves it at 4, which is what EX12-019-effect5.yaml records, so the two
+# outcomes are not confusable.
+#
+# The trigger is [Once Per Turn], so the SECOND check does not re-offer it and
+# the line ends with an ordinary main-phase pass rather than a third attack.
+#
+# Our engine parks the clause as a `Replacement`-kind gate labelled "You may
+# activate EX12-019's triggered effect"; DCGO parks its `ActivateClass` with
+# `isOptional: true` (EX12_019.cs, "AT Security Removed", timing
+# `EffectTiming.OnLoseSecurity`, guarded by `CanUnsuspend`), i.e. an
+# `OptionalSkill` -- hence the `expect:` annotation. DCGO's own trigger fires
+# on EITHER player's security stack (`CanTriggerWhenLoseSecurity(hashtable,
+# _ => true)`) and so does ours (`on_own_security_removed` +
+# `on_opponent_security_removed`); this line exercises the opponent-side half,
+# which is the one an attacker reaches without help.
+#
+# Highway: the proven red breeding line from EX12-047-effect1.yaml --
+#   T1 Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) / T5 Karakurumon
+#   (alt, 3) / T7 Nezhamon (alt [Shambala], 3) / T9 move out / T11 the clause.
+# The stack under Nezhamon is silent at attack time: Wankomon and Seasarmon
+# inherit DP auras, Karakurumon's inherited body is [On Deletion] only, and
+# Onibimon's <Execute> grant does not reach a non-[TB] carrier -- so the only
+# end-of-turn gate in the line is Nezhamon's own <Engage>, declined at T9 and
+# closed at T11 (it is suspended by then).
+card: EX12-019
+clause: EX12-019#effect#7
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-019
+      - EX12-070
+      # security (5-9) -- never checked (p1 all-passes); Digimon only, no
+      # [Security] text
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18). No draw repeats
+      # EX12-009/011/063/019 -- a second copy in hand would make the `using:`
+      # intent ambiguous.
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+      - EX12-075
+      - EX12-031
+      - EX12-061
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4), inert -- p1 all-passes
+      - EX12-070
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9), stack[9] = TOP = the card the T11 attack flips.
+      # Digimon only, no [Security] text, DP well under the 16000 DP attacker,
+      # so the check resolves as a silent security battle.
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): Karakurumon over the red Lv.4 [Shambala] Seasarmon on
+  # its own alternate circle (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE -- Nezhamon over the purple/green Lv.5
+  # [Shambala] Karakurumon. Only the alternate circle can reach it (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-019 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): move Nezhamon to the battle area.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9's end: the <Engage> gate is already open here (Nezhamon is in the battle
+  # area) -- declined, so the clause is measured on a turn where the carrier
+  # has been in play since the start.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T10 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (p0, memory 3): THE CLAUSE, twice over.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # First attack, in the MAIN phase: Nezhamon suspends and checks security.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The clause: accept the unsuspend offered by that check.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Only an unsuspended Digimon can declare this -- the witness.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL and prefix-pinned: two security cards checked by ONE Digimon in one
+  # turn. Only the unsuspend makes the second attack legal.
+  - at: 30
+    that: { p1.security: 3 }

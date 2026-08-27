@@ -1,0 +1,193 @@
+# Exam scenario: EX12-031 (MarineBullmon), clause effect#0 -- "<Decode (Lv.4
+# or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)> (When this
+# Digimon would leave the battle area other than in battle, you may play 1
+# specified Digimon card from its digivolution cards without paying the
+# cost.)"
+#
+# Decode needs its carrier to (a) own a qualifying digivolution card and (b)
+# leave the battle area OUTSIDE battle. Both come out of the card's own kit,
+# so the line needs no third card and no digivolution prefix:
+#   T1  p0 hard-casts MarineBullmon at memory 0 (cost 7 -> -7, the turn ends
+#       after resolution). Its effect#1 tucks Gasamon (EX12-020, Lv.3, [TB])
+#       as the bottom digivolution card -- that tucked card IS Decode's
+#       later payload. effect#1's bounce half is target-starved (p1's board
+#       is empty on turn 1) and stays silent on both engines: DCGO nests it
+#       in "if (HasMatchConditionPermanent(...))" (EX12_031.cs:127) and our
+#       engine's select_opponent_permanent parks nothing with no candidate.
+#   T2  p1 hard-casts its OWN MarineBullmon (memory 7 -> 0, turn continues),
+#       tucks its own Gasamon, and bounces p0's MarineBullmon -- a legal
+#       target, holding exactly 1 digivolution card. That leave is a return
+#       to hand, not a battle, so THE CLAUSE opens: p0 accepts and Gasamon is
+#       played for free while MarineBullmon continues on to p0's hand.
+#
+# Gasamon on both sides on purpose: it has no [On Play], so every prompt on
+# this line belongs to one of the two MarineBullmon kits, and the free play
+# out of the digivolution cards adds no follow-on trigger.
+#
+# LEAVE-SCOPING (the previous version's rejection, now RESOLVED). The
+# committed predecessor of this file drove the same idea one turn later and
+# was rejected because our engine ALSO opened a Decode window on p1's bounced
+# plain Gasamon -- a permanent with no Decode at all -- a row DCGO never asks
+# and the strict driver could not skip, aborting the job BEFORE the clause.
+# Re-derived here on 2026-08-24: that window is gone. This line bounces a
+# plain Gasamon at no point, and the sibling EX12-031-effect1.yaml (which
+# does) now lowers with no spurious row at all.
+#
+# ORACLE-WIRE BLOCKER -- CLEARED 2026-08-25. Read the history before
+# re-deriving it: this file carried a "BLOCKED ON THE ORACLE WIRE" banner for
+# step 8 (Decode's source pick) through two separate re-derivations, and both
+# causes it named are now stale.
+#
+# 1. STALE CAUSE A (recorded 2026-08-22): "engine Decode leave-scoping: sim
+#    parks a spurious Decode window row DCGO never asks". GONE -- this line
+#    lowers to exactly 10 steps with no unanswered row, and the sibling
+#    EX12-031-effect1.yaml (which bounces a PLAIN Gasamon, the permanent the
+#    over-ask used to fabricate a window on) is `confirmed` in the store as of
+#    2026-08-24.
+#
+# 2. STALE CAUSE B (recorded 2026-08-25, morning): "the Material prompt has no
+#    identity payload, so step 8 can only ride as select_bool, which DCGO's
+#    SelectCardEffect aborts on (SelectCardEffect.cs:941-944)". That WAS true
+#    and it is what killed the 2026-08-24 oracle pass. It is now CLOSED on our
+#    side: `runners/selection_resolve.rs` gained a `SelectionKind::Material`
+#    arm in its card-identity block (:425-428, backed by `material_source_ids`
+#    at :211-244), so `select: { cards: [EX12-020] }` resolves against the
+#    carrier's digivolution sources by identity. Step 8 is now authored that
+#    way and the lowered wire row carries
+#    `SelectWire { card_ids: ["EX12-020"] }` -- exactly the `select_card_ids`
+#    payload DCGO's chokepoint requires
+#    (SelectCardEffect.SetTargetCardAndIndicies matches select_card_ids against
+#    ScriptedCandidateIds() and then sets Indicies = null,
+#    SelectCardEffect.cs:923-938, the same null the AI's own AutoSelect passes).
+#
+#    NOT YET ORACLE-VERIFIED. The lowering, the wire-row shape and the
+#    assertions are proven sim-side; that DCGO accepts the row is inferred from
+#    its chokepoint contract, not measured. The next oracle pass is what
+#    settles it -- do not upgrade the verdict to `confirmed` from a --sim-only
+#    run.
+#
+#    Do NOT "fix" a future failure here by declining the pick: a declined
+#    Decode never runs the clause body, so it would confirm the GATE and
+#    launder this clause into a pass.
+#
+# SEPARATE FINDING surfaced by this lane (not the blocker, and not fixable
+# from a scenario lane): EX12-031's `select_material` is MANDATORY --
+# cards/ex12/EX12-031.yaml carries no `optional:` key on EITHER the printed
+# or the inherited Decode -- while EX12-036's carries `optional: true`. DCGO
+# builds both from the same CardEffectCommons.DecodeProcess, which passes
+# `canNoSelect: () => true` (CardEffectCommons/KeyWordEffects/Decode.cs:36),
+# i.e. after accepting the OptionalSkill gate DCGO still lets the player
+# decline the source pick. So our EX12-031 is stricter than DCGO AND than
+# its own sibling in the same set. Left for the engine/DSL lane.
+#
+# DCGO shape this line is authored against: <Decode> is
+# SetUpActivateClass(..., isOptional: true, ...)
+# (CardEffectFactory/KeyWordEffects/Decode.cs:41), gated by
+# CanTriggerWhenRemoveField && !IsByBattle (:53-56) and by
+# CanActivateDecode requiring a source that passes the filter AND
+# CanPlayAsNewPermanent (CardEffectCommons/KeyWordEffects/Decode.cs:16-21).
+# So DCGO asks OptionalSkill (step 7) then SelectCardEffect (step 8) -- 1:1
+# with our Replacement gate then Material pick.
+card: EX12-031
+clause: EX12-031#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): MarineBullmon + exactly one Gasamon (the tuck, and later
+      # Decode's payload); the rest are levelless Options, which DCGO's
+      # HasLevel filter (EX12_031.cs:78) can never offer.
+      - EX12-031
+      - EX12-020
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- never checked, no attack on this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # p0 is first player and the line ends inside p1's turn 2, so p0 never
+      # draws; nothing past index 9 is reachable.
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): MarineBullmon + exactly one Gasamon, same shape as p0.
+      - EX12-031
+      - EX12-020
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- never checked.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10). Levelless, so p1's tuck prompt stays
+      # single-candidate.
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): overshoot hard-cast -- memory 0 -> -7, the turn ends
+  # once the [On Play] finishes resolving.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # The tuck: Gasamon becomes MarineBullmon's bottom digivolution card. The
+  # bounce half is target-starved and asks nothing (p1's board is empty).
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # T2 (p1, memory 7): p1's own MarineBullmon (cost 7 -> memory 0, so p1
+  # keeps the turn).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # The removal that opens THE CLAUSE: p0's MarineBullmon holds exactly 1
+  # digivolution card, so it is a legal "1 or fewer" bounce target.
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE, half 1 -- the optional window, offered to the LEAVING
+  # permanent's controller (p0) during p1's turn. DCGO: OptionalSkill.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE, half 2 -- the source pick, answered by IDENTITY. One accept
+  # id (Gasamon; the carrier's only other card is MarineBullmon itself at
+  # Lv.5, above the filter), but the identity payload is what rides the wire
+  # as `select_card_ids` -- the shape DCGO's SelectCardEffect requires. See
+  # "ORACLE-WIRE BLOCKER -- CLEARED" above for why this used to be `yes:`.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectCardEffect }
+  # Trailing step: p1 still holds the turn at memory 0, so close it.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The Decode play is the witness, and it is route-independent: Gasamon
+  # stands alone and fresh on p0's board with NO digivolution cards (it was
+  # played, not moved), p0's trash is EMPTY (the rescued source never reached
+  # it), and MarineBullmon itself continued to p0's hand. p1's mirror stack
+  # pins the bounce's other half.
+  - at: 9
+    that:
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+      p0.trash: []
+      p0.hand: [EX12-031, EX12-070, EX12-074, EX12-075]
+      p1.field:
+        - { card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-020] }
+      p1.memory: 0

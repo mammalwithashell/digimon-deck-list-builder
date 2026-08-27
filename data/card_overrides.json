@@ -15922,5 +15922,24 @@
       "Avian",
       "Vegetation"
     ]
+  },
+  "EX12-036": {
+    "type_eng": [
+      "Mollusk",
+      "Sanmyojin",
+      "Tentei Hachibushu",
+      "Shambala",
+      "TB",
+      "Aquatic"
+    ]
+  },
+  "EX12-047": {
+    "type_eng": [
+      "Shaman",
+      "Sanmyojin",
+      "Tentei Hachibushu",
+      "Shambala",
+      "TB"
+    ]
   }
 }

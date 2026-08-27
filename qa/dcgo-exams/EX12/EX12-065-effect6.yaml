@@ -1,0 +1,174 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #6 -- "[On Deletion] Return 1
+# of your opponent's lowest level Digimon to the bottom of the deck."
+#
+# PREVIOUSLY LOGGED UNAUTHORABLE, now authorable. The recorded reason was
+# "TriggerOrder branch prompt: every Kaguyamon deletion queues two mandatory
+# triggers in our engine and parks a branch-index question DCGO never asks;
+# indexes payloads out of select-support scope." Two things changed:
+#
+#  * The `select:` vocabulary gained the MultipleSkills identity bridge --
+#    `cards: [ID]` plus `ordinal: N`, resolved against each engine's OWN
+#    candidate list (adapter.rs `match_one_with_ordinal`, a mirror of DCGO's
+#    `SelectionAnswer.MatchOneWithOrdinal`). A stacked-trigger prompt whose two
+#    branches carry the same source id is exactly what `ordinal:` is for, so
+#    the branch index is no longer "out of select-support scope".
+#  * The SHAPE of the old line was the real blocker, not the vocabulary. A
+#    HARD-CAST Kaguyamon has no digivolution cards, so DCGO's
+#    `CanActivateFortitude` (which requires `CardSources.Count >= 1`) is false
+#    and DCGO stacks ONE trigger while our engine -- which gates inside the
+#    handler instead -- stacks two. That is the asymmetry the old note
+#    described. Give the carrier a digivolution card and BOTH engines have two
+#    activatable `EffectTiming.OnDestroyedAnyone` effects (DCGO EX12_065.cs
+#    registers <Fortitude> and this [On Deletion] under the same timing), so
+#    the ordering prompt is symmetric: our `TriggerOrder`, DCGO's
+#    `MultipleSkills`. Kaguyamon therefore arrives by DIGIVOLUTION here, over a
+#    hard-cast Shishimamon (EX12-046, Lv.5 [Shambala]) on the printed alt path
+#    "Lv.5 w/[Puppet]/[Shambala] trait: Cost 3".
+#
+# THE WITNESS, and why it cannot be confused with a plain deletion: P1 fields
+# two Digimon, Gasamon (Lv.3) and Seasarmon (Lv.4). Kokeshimon's own payload
+# DELETES Seasarmon -- so EX12-011 lands in P1's TRASH. The clause then fires
+# on the unique lowest-level survivor, Gasamon, and returns it to the BOTTOM OF
+# THE DECK -- so EX12-020 leaves the field and appears in NO zone the
+# projection reports. "P1's field is empty but only one of the two bodies is in
+# the trash" is a signature only a deck-bottom return produces.
+#
+# The `ordinal:` answer is deliberately order-agnostic: whichever branch runs
+# first, the remaining prompt sequence is identical. If <Fortitude> goes first,
+# Kaguyamon returns (its [When Digivolving]/[On Play] revive sees only the
+# cost-7 Shishimamon in the trash, outside the clause's "play cost 5 or lower"
+# filter, so it parks nothing) and then this clause asks its target; if this
+# clause goes first it asks immediately and <Fortitude> follows silently.
+#
+#   T1 (P0, memory 0): hard-cast Shishimamon (cost 7, 0 -> -7 overshoot). Its
+#       [On Play] give has zero candidates against P1's empty board.
+#   T2 (P1, memory 7): play Gasamon (7 -> 4; a [Your Turn] passive only), pass.
+#   T3 (P0, memory 3): digivolve Kaguyamon over Shishimamon (cost 3, 3 -> 0);
+#       the revive sees an EMPTY trash and parks nothing. Pass out.
+#   T4 (P1, memory 3): play Seasarmon (cost 5, 3 -> -2 overshoot). Its [On
+#       Play] "delete 1 of your opponent's Digimon with 5000 DP or less" has
+#       zero candidates -- P0's only body is the 12000 DP Kaguyamon.
+#   T5 (P0, memory 2): THE CLAUSE -- play Kokeshimon (cost 4, 2 -> -2). Its
+#       "[On Play] By deleting 1 of your Digimon, delete 1 of your opponent's
+#       level 4 or lower Digimon" takes KAGUYAMON as the cost and SEASARMON as
+#       the payload; the deletion stacks Kaguyamon's two triggers.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP; never
+# checked -- neither seat attacks), then each seat's turn draws in order.
+card: EX12-065
+clause: EX12-065#effect#6
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-046
+      - EX12-065
+      - EX12-062
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): one Gasamon (T2), one Seasarmon (T4).
+      - EX12-020
+      - EX12-011
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-031
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 that becomes Kaguyamon's digivolution card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): the LOWEST-LEVEL body -- this clause's target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon arrives WITH a digivolution card, so both
+  # deletion triggers will be activatable on both sides.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the Lv.4 body Kokeshimon will eat, so this clause's own
+  # target survives to be bottom-decked.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 2): the clause under exam.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-062, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Kokeshimon's cost: delete KAGUYAMON (field.0).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Kokeshimon's payload: SEASARMON (field.1), leaving Gasamon alive.
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The deletion stacked <Fortitude> and this clause; both branches are
+  # Kaguyamon's own, so the order is named by `ordinal:`.
+  - actor: 0
+    do: { select: { cards: [EX12-065], ordinal: 0 } }
+    expect: { prompt: MultipleSkills }
+  # THE CLAUSE's own target: P1's lowest-level Digimon, the Lv.3 Gasamon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The cost-4 play overshot to -2, ending P0's turn after resolution.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Minimal, and only over stack-pinned facts. The load-bearing pair: P1's
+  # field is EMPTY yet P1's trash holds ONLY Seasarmon -- Gasamon went to the
+  # bottom of the deck, which is this clause and nothing else.
+  - at: 16
+    that:
+      p1.field: []
+      p1.trash: [EX12-011]
+      p0.trash: [EX12-046]
+      p0.field:
+        - { card_id: EX12-062, dp: 5000, suspended: false, sources: [] }
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }

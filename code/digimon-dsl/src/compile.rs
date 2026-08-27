@@ -253,6 +253,7 @@ fn compile_scope(s: crate::clause::ClauseScope) -> CompiledScope {
         S::Both => CompiledScope::Both,
         S::Linked => CompiledScope::Linked,
         S::Security => CompiledScope::Security,
+        S::Trash => CompiledScope::Trash,
     }
 }
 

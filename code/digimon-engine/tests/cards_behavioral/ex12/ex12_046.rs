@@ -116,3 +116,56 @@ fn ex12_046_inherited_end_of_attack_plays_low_dp_tb_from_hand_for_free() {
     assert!(field_contains(&runner, 0, "TB-LOW"));
     assert_eq!(runner.memory(), 10, "the inherited play is free");
 }
+
+/// §8-1-3-3: "The player places the Digimon for the digivolution on top of the
+/// chosen card, **draws 1 card**, and the digivolution process is resolved."
+///
+/// The draw is part of the digivolution PROCEDURE, so it applies to an
+/// effect-initiated digivolve exactly as it does to the main-phase action --
+/// the engine used to skip it on the effect path, reasoning that the draw was
+/// "a player-action benefit, not an effect mechanic". §8-1-2-10 settles it the
+/// other way: digivolution is possible when a draw isn't, and only then "is
+/// performed without drawing a card", which presumes the draw otherwise.
+///
+/// Found by the DCGO card-clause exam (`qa/dcgo-exams/EX12/EX12-046-effect2.yaml`):
+/// DCGO's hand held one more card than ours from this digivolve onward.
+#[test]
+fn ex12_046_effect_initiated_digivolve_still_draws_the_rule_8_1_3_3_card() {
+    let tb_lv6 = with_evo_cost(
+        tb_digimon("TB-LV6", CardColor::Yellow, 6, 11000),
+        CardColor::Yellow,
+        5,
+        4,
+    );
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-046 YAML loads")
+        .add_card(tb_lv6)
+        .add_card(plain_digimon("SEC", CardColor::Yellow, 3, 3000))
+        .add_card(plain_digimon("DECKTOP", CardColor::Yellow, 3, 3000))
+        .hand(0, &["TB-LV6"])
+        .deck(0, &["DECKTOP"])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    let deck_before = runner.deck_size(0);
+
+    fire_opponent_security_removed(&mut runner, 1);
+    select_hand_card(&mut runner, 0, "TB-LV6");
+    runner.auto_resolve().expect("finish effect digivolve");
+
+    assert_eq!(top_card_id(&runner, 0, 0), "TB-LV6", "the digivolve resolved");
+    // Hand: TB-LV6 left it (-1) and the §8-1-3-3 draw replaced it (+1).
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "digivolving from hand draws 1, so the hand returns to its prior size"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "the drawn card came off the deck"
+    );
+}

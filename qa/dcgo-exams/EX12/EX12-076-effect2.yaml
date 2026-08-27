@@ -1,0 +1,232 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#2 -- "<Blocker> (This
+# Digimon can block in the blocker timing.)".
+#
+# DCGO registers it at CardEffect/EX12/Yellow/EX12_076.cs:42-47 --
+# `CardEffectFactory.BlockerSelfStaticEffect(isInheritedEffect: false, card,
+# condition: null)` under `EffectTiming.None`: unconditional, NOT inherited, so
+# it is live only while Susanoomon is the TOP card. This line's board satisfies
+# that by construction.
+#
+# THE OBSERVABLE IS THE BLOCK. P0's battle area holds the Susanoomon stack and
+# nothing else, so the blocker window that opens on P1's security attack exists
+# only because Susanoomon prints <Blocker>; without the keyword the attack
+# would simply check P0's security. The `select:` answers it with
+# `own.field.0`, the 16000-vs-2000 battle deletes Gasamon, and P0's security
+# stays on 5 -- an untouched security stack plus the attacker in P1's trash is
+# a pair no static aura can fake.
+#
+# THE KEYWORD MUST BE SUSANOOMON'S OWN, and the stack is chosen so it is.
+# Kaguyamon (EX12-065) sits UNDER Susanoomon here, and its "[All Turns] All of
+# your [Puppet] or [TB] trait Digimon gain <Blocker> and <Retaliation>" would
+# be an alternative source of the same window -- but that is a top-card
+# [All Turns] aura, and once Susanoomon digivolves over it Kaguyamon
+# contributes only its INHERITED text, which is empty ('|applinkdp =' in
+# cards.json, '-' in DCGO's own EX12_065 asset). Shishimamon (EX12-046), the
+# other source card, prints no keyword grant at all. So on T8 the only live
+# <Blocker> in play is the one on Susanoomon's face.
+#
+# THE PREFIX (shared with the other EX12-076 lines). T1 hard-casts Shishimamon
+# (Lv.5, cost 7) into an empty enemy board -- its [On Play] has no candidate;
+# T3 digivolves Kaguyamon over it (only the "Lv.5 w/[Puppet]/[Shambala]: Cost
+# 3" route matches a yellow/red Lv.5, so no cost prompt there); T4 is P1's
+# memory donation (3 -> 0 -> -5), leaving P0 on exactly 5 for T5's Susanoomon.
+# The cost choice is answered by VALUE (clause #5's exam) and clause #3's
+# -12000 wipes the two donation bodies, so P1 rebuilds its attacker on T6 and
+# swings on T8 once it has shed summoning sickness.
+#
+# THE SPARE GASAMON -- the 2026-08-24 oracle correction, and NOT cosmetic.
+# The first version of this line ended `actor: 1 / pass / main_phase` and the
+# oracle aborted on it: "step 22 expected actor 1 but DCGO asked actor 0". The
+# recording (…172213Z…jsonl) shows the line was correct right up to the block:
+# DCGO asked P0 the `SelectPermanentEffect` blocker window and took Susanoomon
+# (P0 frame 0). What it did NEXT was give the decision to P0, not P1.
+#
+# The mechanism is in DCGO's own main-phase loop, not in this card. Before
+# reaching the scripted seam, `TurnStateMachine.MainPhase()` runs
+#   if (TurnPhase == Main && !CanSelect()) -> autoProcessing.EndTurnProcess();
+# and `CanSelect()` (TurnStateMachine.cs:1252) is "can this player play a card
+# from hand / declare a skill / attack". Susanoomon's block deletes Gasamon, so
+# P1's battle area is EMPTY -- and P1's hand was, by the original stack, ALL
+# Option cards. An Option is gated on `CardSource.CanNotPlayThisOption` ->
+# `MatchColorRequirement` (CardSource.cs:184/255): with no Digimon or Tamer in
+# play, and no `IIgnoreColorConditionEffect` source for the `<Use Req.>`
+# keywords to hang on, not one of them is playable. `CanSelect()` therefore
+# went false, DCGO ended P1's turn ITSELF, and the next prompt was P0's
+# breeding decision -- actor 0.
+#
+# Our engine parks a PASS-only main-phase decision for P1 in that position, so
+# the two engines disagreed about whether a decision point exists at all. The
+# fix is in the LINE, not in the labelling: P1's hand slot 3 holds a third
+# Gasamon that is never played. A Digimon carries no colour requirement, so
+# `CanSelect()` stays true, DCGO asks P1 for the main-phase decision, and the
+# trailing pass lands the post-battle state in the projection for the differ.
+# (The clause's observable is untouched -- the spare card stays in hand and is
+# named by no assertion.)
+#
+# TWO QUIET REQUIREMENTS, both pinned by the stack:
+#  * P0's hand holds ONLY Option cards from T5 on. Shishimamon's inherited
+#    "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card
+#    with 5000 DP or less from your hand without paying the cost" rides under
+#    Susanoomon and would open a prompt at the end of the very attack being
+#    blocked.
+#  * P1's security holds no EX12-074: its "[Security] [Your Turn] [Once Per
+#    Turn] When one of your [Shambala] trait Digimon attacks, it may digivolve
+#    ..." functions FROM the security stack and Gasamon IS [Shambala], so an
+#    unpinned P1 pile would bury the blocker window under a TriggerOrder.
+#
+# Stack layout: hand [0..4], security [5..9] REVERSED (9 = TOP), then draws in
+# order. DIGIVOLVING DRAWS A CARD, so P0's slots are T3-turn, T3-digivolve,
+# T5-turn, T5-digivolve, T7-turn.
+card: EX12-076
+clause: EX12-076#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 base, the Lv.6 base, Susanoomon, inert Options.
+      - EX12-046
+      - EX12-065
+      - EX12-076
+      - EX12-070
+      - EX12-074
+      # security (5-9): NEVER checked -- the block is what keeps it at 5.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T3 digivolve (11), T5 turn (12), T5 digivolve
+      # (13), T7 turn (14). Options ONLY -- see the header note.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): the T4 donation pair, the T6 attacker, and then a THIRD
+      # Gasamon that is never played. That spare Digimon is load-bearing --
+      # see "THE SPARE GASAMON" in the header: without it P1's post-block hand
+      # is all Options, DCGO's `CanSelect()` goes false, and DCGO ends P1's
+      # turn without ever asking for the main-phase decision this line's last
+      # step answers.
+      - EX12-020
+      - EX12-011
+      - EX12-020
+      - EX12-020
+      - EX12-075
+      # security (5-9): never checked; NO EX12-074 (see the header note).
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-075
+      # draws: T2 (10), T4 (11), T6 (12), T8 (13).
+      - EX12-070
+      - EX12-074
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base into an empty enemy board (cost 7,
+  # 0 -> -7 overshoot; the turn ends on it).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon over Shishimamon (single route, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the donation -- 3 -> 0 -> -5, handing P0 exactly 5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 5): Susanoomon arrives; clause #3 wipes P1's board.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the attacker arrives (its only printed effect is a
+  # [Your Turn] would-digivolve cost reduction, so no prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): all-pass -- Gasamon sheds summoning sickness.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, memory 3): THE CLAUSE -- Gasamon attacks P0's security and
+  # Susanoomon's printed <Blocker> opens P0's window.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory, so P1 keeps the turn after the battle -- and
+  # P1's hand still holds the spare Gasamon, which is what keeps DCGO's
+  # `CanSelect()` true so this decision point exists on both sides.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observable, asserted BEFORE the trailing pass hands the turn
+  # back to P0 (whose unsuspend phase would clear the blocker's suspended
+  # flag): the block happened, so P0's security was never checked; Gasamon lost
+  # 2000 to 16000 and is in P1's trash beside the two bodies clause #3 deleted
+  # on T5; and Susanoomon stands suspended from blocking on the stack that
+  # makes the keyword unambiguously its own.
+  - at: 22
+    that:
+      turn: 8
+      p0.security: 5
+      p1.field: []
+      p1.trash: [EX12-011, EX12-020, EX12-020]
+      p0.field:
+        - card_id: EX12-076
+          dp: 16000
+          suspended: true
+          sources: [EX12-046, EX12-065]

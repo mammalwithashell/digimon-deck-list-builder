@@ -145,10 +145,23 @@ The `source` field tells you which emitter site produced the row:
 | source | Emitter site |
 |---|---|
 | `mulligan` | `TurnStateMachine.SetRedraw` |
-| `main_phase` | `TurnStateMachine.QueueMainPhaseAction` (any of the 6 MainPhaseAction subclasses) |
+| `main_phase` | `TurnStateMachine.QueueMainPhaseAction` (any of the 6 MainPhaseAction subclasses) — the human-UI path; **plus** the AI/harness decision mirror inside the main-phase brain, which is the path a scripted or bot game actually takes. The mirror covers `AttackPermanentAction`, `PlayCardAction`, `ActivatePermanentAction`/`ActivateCardAction`, and `PassAction`. |
 | `selection_int` | `UserSelectionManager.SetIntForPlayer` |
 | `selection_bool` | `UserSelectionManager.SetBoolForPlayer` |
 | `play_card_extra` | A digivolution-source pick decomposed out of a `PlayCardAction`'s baked-in jogress / burst / app-fusion fields |
+
+> **Activation rows are new as of 2026-08-24** (DCGO `e69f10a38`). Before that
+> commit the AI/harness mirror handled only attack / play / pass, so a
+> `UseCardEffect` decision — every `[Main]` activated ability, every `<Delay>`,
+> every `<Training>` — was consumed normally but wrote **no `action` row**, and
+> therefore no `StateDumper` state row at that boundary either. Recordings made
+> before it are missing those rows entirely: a replay or exam diff over an older
+> corpus will show an unpaired row and a truncated trace at every activation,
+> which is a recording gap, not an engine divergence. The mirror rebuilds the
+> action from indices captured in `SetActSkill` / `SetActCardSkill`, because
+> `CEntity_Effect.CardEffects()` allocates a fresh `ICardEffect` on every call —
+> so looking the effect back up by reference can never match.
+
 
 ### Board-position index space
 

@@ -1,0 +1,282 @@
+# Exam scenario: EX12-076 (Susanoomon), clause effect#1 -- "<Raid> (When this
+# Digimon attacks, you may switch the target of attack to 1 of your opponent's
+# unsuspended Digimon with the highest DP.)".
+#
+# DCGO registers it at CardEffect/EX12/Yellow/EX12_076.cs:36-40 --
+# `CardEffectFactory.RaidSelfEffect(isInheritedEffect: false, card, condition:
+# null)` under `EffectTiming.OnAllyAttack`, i.e. as a TRIGGER in the same
+# OnAllyAttack batch as this card's [When Attacking] clause. Our engine models
+# the same keyword as a combat-state window instead: `AttackState::RaidOpen` ->
+# `try_enter_raid_switch` (combat/mod.rs), whose candidate set is the
+# opponent's unsuspended Digimon tied for highest effective DP, EXCLUDING the
+# current target. That structural difference is a real thing for the oracle
+# diff to weigh in on; this line is deliberately built so BOTH orderings pick
+# the same Digimon (see "ORDER-ROBUST" below).
+#
+# !!! ORACLE-BLOCKED (2026-08-24 oracle run) -- STRUCTURALLY UNREACHABLE FOR
+# THIS CARD. The line lowers clean and its assertions hold sim-side, so it
+# stays as the CI guard, but the ORACLE pass aborts and no rewrite of this file
+# can stop it: "step 23 expected prompt 'SelectPermanentEffect' but DCGO asked
+# 'MultipleSkills'" (recording …172111Z…jsonl, which gets as far as the attack
+# at DCGO step 29 and stops there). The clause verdict should be `unreachable`
+# with the reason below until the exam format grows a DCGO-only row.
+#
+# WHY, derived from the C# rather than guessed:
+#  * DCGO puts <Raid> and this card's [When Attacking] clause in the SAME
+#    `EffectTiming.OnAllyAttack` batch (EX12_076.cs:36-40 `RaidSelfEffect`, and
+#    the `WhenAttackingClass` at :97). Two stacked triggers on one card means
+#    `MultipleSkills` opens to order them, with candidates [EX12-076,
+#    EX12-076].
+#  * Our engine models <Raid> as an attack-state WINDOW (`AttackState::RaidOpen`
+#    -> `try_enter_raid_switch`, combat/mod.rs), not a queued trigger, so it
+#    parks only the [When Attacking] pick and never a `TriggerOrder`. There is
+#    no prompt on our side for that row to fold into.
+#  * The format cannot emit a DCGO-only ordering row. `optional_gate_fold` --
+#    the one DCGO-only prepend that exists -- is hardwired to `OptionalSkill`
+#    (exam/adapter.rs), and a `cards: + ordinal:` step is REFUSED outright when
+#    our live prompt is not `TriggerOrder` ("`ordinal:` disambiguates a
+#    stacked-trigger prompt ... but our engine's live prompt here is OppField"
+#    -- reproduced locally on 2026-08-24). `LoweredStep` has `SimOnlyAction`
+#    for the opposite asymmetry and nothing for this one.
+#
+# AND THE LINE CANNOT DODGE IT, which is what separates this from the sister
+# file EX12-076-effect4.yaml. `MultipleSkills` only opens over triggers that
+# pass `CanActivate` (MultipleSkills.cs `skillInfos_active`; a single survivor
+# goes straight to `Activate(true)` with no prompt), so effect#4 escapes by
+# declaring the attack ON P1's only Digimon -- `CardEffectCommons
+# .CanActivateRaid` needs an unsuspended enemy Digimon `!=
+# attackProcess.DefendingPermanent`, so <Raid> drops out and its own clause is
+# the lone survivor. THIS clause needs the opposite: <Raid> must be
+# activatable, and the [When Attacking] `CanActivate` is
+# `IsExistOnBattleAreaActivate` with no candidate gate and no
+# `additionalActivateCondition` (CardEffectFactory.cs:1044) -- it is true on
+# every attack Susanoomon makes. The only lever left is its `maxCountPerTurn:
+# 1`, i.e. a SECOND Susanoomon attack in one turn, which needs an unsuspender;
+# the toho-braves pool's only one is EX12-036's own [When Attacking] (a cost-12
+# Lv.6 that would need its own digivolution line, and whose [All Turns] lock
+# would perturb the position further). So for this card, "Raid can fire" and
+# "the [When Attacking] trigger is stacked beside it" are the same condition.
+#
+# TO UNBLOCK: give the format a DCGO-only select row (the natural shape is a
+# `dcgo_only: true` marker on a `select:` step, emitted to the wire and skipped
+# by `advance_through_selection`), then insert
+#   - actor: 0
+#     do: { select: { cards: [EX12-076], ordinal: 1 }, dcgo_only: true }
+#     expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-076, EX12-076] }
+# before the [When Attacking] pick below. Ordinal 1 is the [When Attacking]
+# clause under DCGO's registration order (Raid is added first, at :38); read it
+# off the abort message rather than trusting that, per the `ordinal:` contract
+# in docs/DCGO_EXAM.md.
+#
+# THE OBSERVABLE IS THE SECURITY STACK THAT NEVER GETS CHECKED. Susanoomon
+# declares against the PLAYER, so without the switch P1's security would drop
+# by one. The line answers the Raid window with P1's Seasarmon, and P1's
+# security ends on 5: the attack resolved entirely in the battle area. Pair
+# that with Seasarmon in P1's trash (16000 vs 5000) and no static aura can fake
+# it.
+#
+# ORDER-ROBUST BY CONSTRUCTION. Susanoomon's [When Attacking] clause (#4) also
+# fires on this attack and MOVES one of P1's Digimon into their security stack,
+# so a line where the two candidates are interchangeable would resolve
+# differently depending on which trigger runs first. P1 therefore fields two
+# DIFFERENT DP tiers -- Gasamon (EX12-020, 2000) and Seasarmon (EX12-011,
+# 5000):
+#   * <Raid> only ever offers "the highest DP", which is Seasarmon whether the
+#     window opens before or after the placement;
+#   * the [When Attacking] pick names Gasamon explicitly.
+# Both wire rows carry card IDENTITIES, so each engine resolves them against
+# its own candidate list and a genuine disagreement surfaces as a divergence
+# rather than being papered over by index luck.
+#
+# The Raid step is authored `expect: {prompt: OptionalSkill}` over our live
+# OppField pick: that is the documented <Raid>-family FOLD marker -- DCGO gates
+# the window behind an OptionalSkill yes/no before the pick, our engine
+# surfaces one declinable pick, and the emitter splits the row into
+# OptionalSkill(yes) + the pick.
+#
+# THE PREFIX (shared with the other EX12-076 lines). T1 hard-casts Shishimamon
+# (EX12-046, Lv.5, cost 7) into an empty enemy board; T3 digivolves Kaguyamon
+# (EX12-065, Lv.6) over it -- only Kaguyamon's "Lv.5 w/[Puppet]/[Shambala]:
+# Cost 3" route matches a yellow/red Lv.5, so no cost prompt opens there; T4 is
+# P1's memory donation (3 -> 0 -> -5), leaving P0 on exactly 5 for the T5
+# digivolve. Susanoomon's cost choice is answered by VALUE (clause #5's exam)
+# and its [When Digivolving] -12000 (clause #3) wipes the two donation bodies,
+# which is why P1 rebuilds on T6 and T8.
+#
+# Stack layout: hand [0..4], security [5..9] REVERSED (9 = TOP), then draws in
+# order. DIGIVOLVING DRAWS A CARD, so P0's slots are T3-turn, T3-digivolve,
+# T5-turn, T5-digivolve, T7-turn, T9-turn, and the <Recovery +1> that clause #4
+# fires on this same attack takes the next deck card straight into security.
+card: EX12-076
+clause: EX12-076#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 base, the Lv.6 base, Susanoomon, inert Options.
+      - EX12-046
+      - EX12-065
+      - EX12-076
+      - EX12-070
+      - EX12-074
+      # security (5-9): never checked in this line (P1 never attacks).
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws (10-15): Options ONLY. Shishimamon's inherited "[End of Attack]
+      # [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or
+      # less from your hand without paying the cost" rides under Susanoomon,
+      # and a small [TB] Digimon in hand would open a prompt on the very
+      # attack under exam.
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      - EX12-070
+      # (16) the card <Recovery +1> places as P0's new top security card.
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): the T4 donation pair, then the T6 / T8 rebuild pair.
+      - EX12-020
+      - EX12-011
+      - EX12-020
+      - EX12-011
+      - EX12-075
+      # security (5-9): never checked -- that is the point of this line.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-075
+      # draws: T2 (10), T4 (11), T6 (12), T8 (13).
+      - EX12-070
+      - EX12-074
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base into an empty enemy board (cost 7,
+  # 0 -> -7 overshoot; the turn ends on it).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon over Shishimamon (single route, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the donation -- 3 -> 0 -> -5, handing P0 exactly 5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 5): Susanoomon arrives; clause #3 wipes P1's board.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the 2000 DP body -- clause #4's placement target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, memory 3): the 5000 DP body -- <Raid>'s unique "highest DP"
+  # candidate. Its [On Play] "delete 1 of your opponent's Digimon with 5000 DP
+  # or less" sees only the 16000 DP Susanoomon, so it is silent. Cost 5 from 3
+  # overshoots to -2 and ends the turn, so P0 opens T9 on 2.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 2): THE CLAUSE. The attack is declared against the PLAYER,
+  # so P1's security is what <Raid> has to save.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Clause #4 resolves first on our side: Gasamon becomes P1's top security
+  # card and is then trashed (4 source colours), and <Recovery +1> refills P0.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE RAID WINDOW: switch the attack onto Seasarmon, the only unsuspended
+  # enemy Digimon left and the highest DP under either trigger order. The
+  # `OptionalSkill` expectation is the fold marker, not a claim about our
+  # engine's prompt class.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  # Attacking cost no memory, so P0 still holds the turn -- close it so the
+  # battle's consequences land in the projection.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observable: P1's security stack is UNTOUCHED BY THE ATTACK.
+  # 5 -> 6 (clause #4 places Gasamon) -> 5 (clause #4 trashes the top) and then
+  # nothing -- a declaration against the player that never reaches a security
+  # check is exactly what "switch the target of attack" means. Seasarmon, the
+  # card the switch redirected onto, is in P1's trash after losing 5000 to
+  # 16000, and P1's battle area is empty.
+  - at: 25
+    that:
+      turn: 9
+      memory: 2
+      p1.security: 5
+      p0.security: 6
+      p1.field: []
+      p1.trash: [EX12-011, EX12-011, EX12-020, EX12-020]
+      p0.field:
+        - card_id: EX12-076
+          dp: 16000
+          suspended: true
+          sources: [EX12-046, EX12-065]

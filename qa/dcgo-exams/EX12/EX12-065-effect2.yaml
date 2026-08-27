@@ -1,0 +1,87 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #2 -- "[On Play] [When
+# Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 5 or
+# lower [Puppet] or [Shambala] trait card from your trash without paying the
+# cost."
+#
+# Two selections in one line. The trash is seeded by legal play: Hanimon's
+# [On Play] "By trashing 1 [Puppet]/[TB] card from your hand, <Draw 2>"
+# (DCGO EX12_061: SelectHandEffect, canNoSelect) discards SHELLMON
+# (EX12-026: cost 5, [Shambala] -- inside the clause's cost/trait gate), and
+# Kaguyamon's [On Play] then plays it from the trash for free (DCGO
+# EX12_065: PlayByEffect over Root.Trash).
+#
+# Shellmon is the deliberate trash choice: its own [On Play] ("trash the
+# bottom 2 digivolution cards of 1 of your opponent's Digimon...") has zero
+# candidates against P1's empty board, so the free play adds no third
+# prompt. Its printed <Blocker> is a keyword, unmeasured here.
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Hanimon (cost 3, 0 -> -3
+#       overshoot -- legal above the -10 floor). Its On Play parks the hand
+#       discard; the first select trashes Shellmon, <Draw 2> resolves, the
+#       turn ends.
+#   T2 (P1): passes everything.
+#   T3 (P0, memory 3): THE CLAUSE -- hard-cast Kaguyamon (cost 12, 3 -> -9,
+#       still above the floor). [On Play] parks the trash pick; the second
+#       select plays Shellmon from the trash without paying its cost. The
+#       turn ends on the overshoot, so the trailing step is P1's breeding
+#       decision.
+#
+# Stack layout: hand [0..4], security [5..9], then P0's draws in order:
+# [10],[11] = Hanimon's <Draw 2>, [12] = the T3 turn draw. No pin adds a
+# second copy of EX12-061 / EX12-026 / EX12-065, so every card-id-matched
+# step and both identity selects stay unambiguous.
+card: EX12-065
+clause: EX12-065#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-061, EX12-026, EX12-065, EX12-074, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-074, EX12-074,
+            EX12-046, EX12-046, EX12-046]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): Hanimon, then its optional discard-for-draw.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Trash Shellmon: the clause's future revive target enters the trash.
+  - actor: 0
+    do: { select: { cards: [EX12-026] } }
+    expect: { prompt: SelectHandEffect }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- Kaguyamon's [On Play] revive.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-065, from: hand } }
+    expect: { prompt: main_phase }
+  # The trash pick: play the cost-5 [Shambala] Shellmon for free.
+  - actor: 0
+    do: { select: { cards: [EX12-026] } }
+    expect: { prompt: SelectCardEffect }
+  # The cost-12 play took memory to -9, ending P0's turn after resolution.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      p0.memory: -9
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-074, EX12-074, EX12-046, EX12-046, EX12-046]
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }
+        - { card_id: EX12-026, dp: 5000, suspended: false, sources: [] }

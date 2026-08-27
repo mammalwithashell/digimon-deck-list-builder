@@ -1,0 +1,116 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #6 -- the alternate
+# digivolution path "[Digivolve] Lv.5 w/[Aquatic]/[Shambala] trait: Cost 3".
+#
+# Attribution: the Lv.5 base is Karakurumon (EX12-063, purple/green,
+# [Puppet]/[Shambala]/[TB]) -- NOT blue and NOT yellow, so neither of
+# Ryugumon's standard color circles (cost 4) matches and the trait circle is
+# the single distinct-cost route (no EffectChoice prompt). Deliberately NOT
+# MarineBullmon: it is blue, which would put cost-4 routes next to the cost-3
+# one and open the digivolve cost-choice prompt (unauthorable, no `select:`).
+#
+# The whole line stays in the BREEDING area (pattern of EX12-026-effect2), so
+# every [When Digivolving] trigger on the spine is suppressed: Seasarmon's WD
+# delete, Karakurumon's WD suspend, Ryugumon's WD hand-place AND its
+# [All Turns] on-digivolve lock never open a prompt, and no hand-trait guards
+# are needed (the sketch's Aqua/Sea Animal/TB hand guard is moot in breeding).
+# The spine avoids Gasamon so no cost-reduction passive is anywhere near it.
+#
+#   T1 (memory 0): hatch Onibimon (purple), digivolve Hanimon over it
+#       (EX12-061, purple Lv.3 -- standard purple and Shambala circles both
+#       cost 0, one distinct cost).
+#   T3 (memory 3): digivolve Seasarmon (EX12-011) over the purple Hanimon --
+#       only its [Shambala] circle matches, cost 2, memory 3 -> 1.
+#   T5 (memory 3): digivolve Karakurumon (EX12-063) over the RED Seasarmon --
+#       only its [Puppet]/[Shambala] (non-white) circle matches, cost 3 -> 0.
+#   T7 (memory 3): THE CLAUSE -- digivolve Ryugumon over Karakurumon, only the
+#       [Aquatic]/[Shambala] circle matches, cost 3, memory 3 -> 0. Trailing
+#       pass one step after.
+#
+# Stack layout: hand [0..4], security [5..9], then the seven P0 draws in
+# order: [10] T1 digi-draw, [11] T3 draw, [12] T3 digi-draw, [13] T5 draw,
+# [14] T5 digi-draw, [15] T7 draw, [16] T7 digi-draw. Draw/security pins add
+# no second copy of any `using:` card (061/011/063/036), keeping the
+# card-id-matched digivolve steps unambiguous.
+card: EX12-036
+clause: EX12-036#effect#6
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-061, EX12-011, EX12-063, EX12-036, EX12-009,
+            EX12-070, EX12-070, EX12-070, EX12-070, EX12-074,
+            EX12-046, EX12-046, EX12-046, EX12-046, EX12-031,
+            EX12-031, EX12-031]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Seasarmon over Hanimon, Shambala circle, cost 2 -> 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): Karakurumon over the red Seasarmon, trait circle only,
+  # cost 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): the clause under exam -- Ryugumon's
+  # [Aquatic]/[Shambala] circle over Karakurumon, the only legal route,
+  # cost 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      p0.memory: 0
+      p0.field: []
+      p0.trash: []

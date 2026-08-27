@@ -1,0 +1,57 @@
+# Exam scenario: EX12-025 Gawappamon inherited clause #1 -- the "<Draw 1>"
+# half of "[When Attacking] [Once Per Turn] If your hand has 7 or fewer
+# cards, <Draw 1>".
+#
+# Same line as EX12-025-inherited0: the draw IS the observable of the same
+# activation, so the two clauses share one legal line and differ only in
+# which clause id the verdict is keyed to (#0 = the hand-size condition,
+# #1 = the draw it gates). See EX12-025-inherited0.yaml for the full
+# rationale of the line shape (overspend-play Gawappamon on T1, Karakurumon
+# on top, no Onibimon anywhere near the battle area).
+card: EX12-025
+clause: EX12-025#inherited#1
+seed: 424242
+decks:
+  p0: { stack: [EX12-025, EX12-063, EX12-031, EX12-031, EX12-031, EX12-011, EX12-011, EX12-011, EX12-011, EX12-046, EX12-046], rest: sw-shambala }
+  p1: { stack: [EX12-011, EX12-011, EX12-031, EX12-031, EX12-046, EX12-046, EX12-046, EX12-031, EX12-031, EX12-061], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): overspend-play Gawappamon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-025, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Karakurumon over Gawappamon (3 -> 0), then attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # The clause under exam fires during this step: Gawappamon's inherited
+  # [When Attacking] checks the hand (4 <= 7) and draws 1 before the
+  # security check.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The attack resolved: one security card popped (5 -> 4) and the attacker is
+  # suspended with Gawappamon as its digivolution source. The <Draw 1> itself
+  # is only observable via the oracle backfill (the drawn card comes from the
+  # unpinned seeded remainder, so its identity cannot be authored here).
+  - at: 8
+    that:
+      p1.security: 4
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: true, sources: [EX12-025] }]

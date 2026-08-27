@@ -1,0 +1,174 @@
+# !!! ORACLE-BLOCKED (adversarial review, 2026-08-23) -- DO NOT QUEUE FOR UNITY.
+# This line parks a 1-card `OrderedPermutation` that DCGO never asks for.
+# `CardEffectCommons.ReturnRevealedCardsToLibraryBottom` (RevealLibrary.cs:478)
+# AUTO-PLACES a single leftover with no prompt; our engine parks an ordering
+# prompt anyway, so the scenario puts one row on the wire with no DCGO prompt
+# to consume it and the strict cursor aborts. Identical to the already-recorded
+# blocker on EX12-009#effect#0 / EX12-062#inherited#1 ("1-card
+# OrderedPermutation ... the strict cursor aborts (review finding 3)").
+# The line is otherwise correct and lowers/asserts clean sim-only, so it stays
+# as the CI guard; the CLAUSE verdict should be `unreachable` with that reason
+# until the asymmetry is closed (engine stops parking a 1-candidate ordering,
+# or the emitter classifies it `SimOnlyAction`).
+# FIXABLE: the reveal belongs to ST19-03 (3 revealed, [Puppet] + [LIBERATOR]
+# add-buckets), not to the card under exam. Engineer the revealed three so
+# ONE bucket is empty -- then 2 cards remain, DCGO opens its single
+# maxCount-2 ordering prompt, and the answer collapses into ONE row (the
+# EX12-075-effect1 shape, already `confirmed` against the oracle).
+#
+# Exam scenario: ST19-14 (Arisa Kinosaki), clause ST19-14#effect#2 --
+# the <Rush> half of "[Your Turn] When effects play any of your Tokens or
+# [Puppet] trait Digimon, by suspending this Tamer, 1 of those Digimon gains
+# <Rush> for the turn. (This Digimon can attack the turn it was played.)"
+#
+# The keyword clause and the trigger that grants it are separate clause ids, so
+# this scenario is ST19-14-effect1.yaml's line PLUS the one thing that can
+# witness <Rush>: the freshly-played Shoemon attacking on the turn it entered.
+#
+# The witness is the LOWERING itself. A Digimon played this turn has summoning
+# sickness, so `attack:` has no legal action to match unless <Rush> is actually
+# on it -- if the grant did not happen, this scenario fails to lower rather than
+# passing quietly. The state assert then pins the consequence that is
+# independent of the battle math: p1's security drops 5 -> 4.
+#
+# p1's top security slot (stack[9]) is deliberately ST19-05 PawnChessmon -- the
+# ST19 Digimon with no [Security] text and no inherited effect -- so the check
+# resolves as a plain battle instead of dragging another card's rules in. An
+# earlier draft used ST19-10 there and its inherited <Barrier> parked a
+# replacement prompt that has nothing to do with this clause.
+#
+# ASIDE, recorded and NOT resolved (it does not affect this clause, and the
+# assert deliberately does not depend on it): on printed DP the attacker should
+# lose this check -- Shoemon 1000 vs PawnChessmon 2000 -- yet our engine has
+# Shoemon surviving unscathed. Swapping the security slot to a 4000 DP
+# (ST19-06) or 7000 DP (ST19-10) Digimon does delete it. All three data points
+# fit ST19-03's own inherited "[Your Turn] All of your opponent's security
+# Digimon get -3000 DP" being applied while Shoemon is a TOP card with no
+# digivolution cards, where an inherited effect should be inactive. Flagged for
+# the oracle pass to adjudicate; do not treat it as established.
+#
+# Everything above the attack is identical to ST19-14-effect1.yaml -- including
+# its ORDERING NOTE: our engine resolves Shoemon's [On Play] reveal before
+# Arisa's suspend choice even though the TriggerOrder step answers ST19-14.
+#
+# Deck note: both seats use `st19-arisa`.
+card: ST19-14
+clause: ST19-14#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Arisa, the P-136 that does the effect-play, the Shoemon it
+      # plays, and filler
+      - ST19-14
+      - P-136
+      - ST19-03
+      - ST19-10
+      - ST19-11
+      # security (5-9): never flipped, and no [Security] text among them
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      - ST19-12
+      # (10) turn-3 draw, (11) turn-5 draw
+      - ST19-04
+      - ST19-04
+      # (12-14): the three cards Shoemon's [On Play] reveals -- two [Puppet]
+      # candidates so that pick is a real choice, one [LIBERATOR]-only card
+      - ST19-04
+      - ST19-05
+      - P-136
+    rest: st19-arisa
+  p1:
+    stack:
+      # hand (0-4): two cost-7 ExTyrannomon (the overshoot vehicles) plus filler
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      - ST19-12
+      # security (5-9): never flipped in this line
+      - ST19-11
+      - ST19-11
+      - ST19-12
+      - ST19-09
+      - ST19-05
+      # (10) turn-2 draw, (11) turn-4 draw
+      - ST19-04
+      - ST19-04
+    rest: st19-arisa
+steps:
+  # Turn 1 (p0, memory 0): play Arisa (cost 4 -> -4, turn ends; p1 gets 4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST19-14, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1, memory 4): cost-7 overshoot, 4 -> -3; p0 gets 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST19-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0, memory 3): not enough to play P-136 and keep the turn; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1, memory 3): second cost-7 overshoot, 3 -> -4; p0 gets exactly 4.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST19-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0, memory 4): play P-136 (4 -> 0, turn continues).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-136, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # P-136's [On Play]: play Shoemon from hand without paying the cost. This is
+  # the EFFECT-play ST19-14 is watching for.
+  - actor: 0
+    do: { select: { cards: [ST19-03] } }
+    expect: { prompt: SelectHandEffect }
+  # Two triggers stack for p0; take ST19-14's first (see ORDERING NOTE above).
+  - actor: 0
+    do: { select: { cards: [ST19-14] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [ST19-03, ST19-14] }
+  # Shoemon's own [On Play]: add 1 [Puppet] (real choice: ST19-04 or ST19-05)
+  # and 1 [LIBERATOR] (only P-136), then bottom the remainder.
+  - actor: 0
+    do: { select: { cards: [ST19-04] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [P-136] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST19-05] } }
+    expect: { prompt: SelectCardEffect }
+  # Pay the cost -- suspend Arisa -- so the played Shoemon gains <Rush>.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: Shoemon attacks on the turn it was played. Slot 2 of p0's battle
+  # area; only <Rush> makes this action legal at all.
+  - actor: 0
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Battle-math independent: the attack reached the security check.
+  - at: 17
+    that:
+      p1.security: 4
+      p0.memory: 0

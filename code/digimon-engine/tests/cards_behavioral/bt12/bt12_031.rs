@@ -129,9 +129,29 @@ fn bt12_031_clause_0_is_when_digivolving() {
         clause.when.contains(&CompiledTiming::WhenDigivolving),
         "Clause must fire on WhenDigivolving"
     );
+    // NOT a rule-17 auto-pay defect, despite the printed "By returning 1
+    // [Imperialdramon: Dragon Mode] … to its owner's hand, place all of your
+    // opponent's suspended Digimon at the bottom of their owners' decks
+    // instead." §15-7-1 does name that an OPTIONAL PROCESSING CONDITION, but
+    // it is scoped to the alt-cost branch, not to the whole clause: the
+    // printed "[When Digivolving] Suspend all … Then, return 1 …" halves are
+    // MANDATORY. Marking the CLAUSE optional would over-expose a PASS on those
+    // mandatory halves.
+    //
+    // The optional half is already declinable one level in: Step B is a
+    // `select_own_sources` with `min: 0`, and `install_source_multi_selection`
+    // pushes PASS into `valid_action_ids` whenever `picked.len() >= min` — so
+    // PASS aborts BEFORE `return_selected_sources_to_hand` runs, satisfying
+    // §15-7-2 (declining skips the cost AND the "instead" replacement). See
+    // `bt12_031_declining_alt_cost_falls_through_to_return_one_to_hand`.
+    //
+    // DCGO models it identically: BT12_031.cs:29 passes isOptional = false to
+    // `SetUpActivateClass`, while the inner Dragon Mode `SelectCardEffect` at
+    // BT12_031.cs:157 passes `canNoSelect: () => true`.
     assert!(
         !clause.optional,
-        "WhenDigivolving clause is not optional — it fires mandatorily"
+        "WhenDigivolving clause is not optional — the suspend/return halves fire mandatorily; \
+         only the inner Dragon Mode alt-cost is declinable (via its own min:0 PASS)"
     );
     assert!(
         !clause.once_per_turn,

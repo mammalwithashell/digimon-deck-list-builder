@@ -2209,3 +2209,343 @@ EX12-042's only checked `has_keyword`. Both `EX12-032` and `EX12-042` were
 authored and registered but appear in neither `validated_cards_dsl.json` nor
 `validated_cards.json`. A keyword that is granted but inert passes every
 "is it implemented?" check that existed.
+
+## Mass-aura keyword grants install the FLAG but not the keyword's TRIGGER  [G-ENGINE-AURA-GRANT-NO-TRIGGER] — RESOLVED 2026-08-24
+
+**Found 2026-08-24 by the DCGO exam** (`qa/dcgo-exams/EX12/EX12-065-effect3.yaml`), and it is the unfixed half of `task_8f063aa6` — that chip fixed SELF-auras; filtered-target auras still have the hole.
+
+EX12-065 Kaguyamon prints one sentence granting two keywords: "[All Turns] All of your [Puppet] or [TB] trait Digimon gain `<Blocker>` and `<Retaliation>`." The oracle diff:
+
+```
+p1.trash: ours=[]                            dcgo=[EX12-046]
+p1.field: ours=[EX12-046(7000, suspended)]   dcgo=[]
+```
+
+`<Blocker>` works — it is a persistent flag the mask reads through `has_keyword`. `<Retaliation>` does nothing: §16-12 makes it a MANDATORY trigger ("when this Digimon is deleted in battle, delete the Digimon it battled"), DCGO fires it and deletes the battle winner, we leave the winner alive.
+
+**Cause.** `dsl_cards/lower_aura.rs` only sets the `granted_keyword` marker for a SELF-aura, with this comment:
+
+> "Filtered-target auras (grants landing on OTHER permanents) must NOT set this — the auto-effects would wrongly key on the grantor."
+
+That is correct as far as it goes — the grantor must not host the recipient's trigger — but nothing installs the trigger on the RECIPIENT either, so a mass-granted trigger keyword is inert. `Game::has_keyword` DOES report the grant (it checks `modifiers.has_keyword` first), so the engine knows the recipient has the keyword; there is simply no `Effect` to fire.
+
+**Where the fix does NOT belong.** `Game::build_effects_for_card` is the obvious hook and the wrong one: it is keyed on `card_id` and memoized, and it is the per-step hot path (see `project-engine-perf-effects-for-card` — ~94% of step time). Making it depend on per-permanent modifier state would destroy that.
+
+**Suggested resolution.** At TRIGGER DISPATCH, when firing a timing for a permanent, also consider keyword-derived effects for §16 trigger/replacement keywords the permanent has via `has_keyword` but does not print. Must handle: no double-fire when the keyword is also printed or self-granted; `source_permanent` keyed to the RECIPIENT; and the aura's `active_when` still gating.
+
+**Scope.** Every trigger/replacement keyword handed out by a filtered-target aura — Retaliation, Fortitude, Partition, Decoy, Evade, Barrier, Armor Purge, Scapegoat, Fragment, Execute. Only the persistent ones (Blocker, Piercing, Security A. +/-, Rush, Jamming, Progress ...) currently work when mass-granted.
+
+**Consumer status:** `EX12-065#effect#3` is recorded `diverged`. The scenario deliberately does NOT assert either behaviour — asserting ours would bake the bug in, asserting DCGO's would fail the sim-only gate before the oracle ruled — so the per-step oracle diff is what surfaces it.
+
+
+**Status: RESOLVED (2026-08-24).** Fixed at TRIGGER DISPATCH, as suggested — `Game::build_effects_for_card` was left untouched, so its `card_id`-keyed memo (the ~94%-of-step-time hot path) is unaffected.
+
+* `ModifierRegistry::aura_granted_keywords(target)` (`src/modifiers.rs`) returns the keywords on `target` that came from a MATERIALIZED-declarative entry and have no non-materialized twin. That is exactly the filtered-target-aura set: a runtime `EffectContext::grant_keyword` already installs a granted-triggered body through `grant_keyword_triggered_auto_effects`, and excluding its keyword is what stops the double-fire.
+* `Game::has_keyword` was split; its card-source half is now `Game::has_keyword_from_card_sources` (`src/game/queries.rs`) — printed face keywords, a below-top source's or a link card's inherited keywords, and SELF-aura / `scope: inherited` grants carrying the `Effect::granted_keyword` marker. That is precisely the set `build_effects_for_card` already synthesizes into a scanned effect list, so it is the second half of the no-double-fire guard (modelled on the `already_printed` guard in `game/triggers.rs`).
+* `Game::enqueue_from_permanent` (`src/effect_queue.rs`) walks those keywords after the top-card scan and enqueues `keyword_to_auto_effect(kw, top_card)` entries whose timing matches, skipping declarative and pure-replacement entries. `source_permanent`/`controller` are the RECIPIENT (matching the granted-triggered branch above it, D4/DCGO). The aura's `active_when` still gates: a false condition simply stops the materialized entry from re-installing on the next declarative tick, so the keyword is not in the registry at dispatch. Per-keyword gates (`<Retaliation>`'s Battle-only deletion-cause filter, `<Fortitude>`'s source-count gate) are unchanged, inside the auto-effect body.
+* `QueuedEffect` gained `keyword_effect: Option<Keyword>` (`src/selection.rs`, plain `Copy` data — clone-safe, no closure). The drainer resolves such an entry through a new `Game::effects_for_queued`, which re-synthesizes the keyword's auto-effects instead of reading the card's, so `effect_slot` indexing and EVERY downstream gate (source liveness, condition, OPT, optionality, the outer-optional prompt, the trigger-order label) apply exactly as for a printed effect. Mirrors the replacement side's `CandidateKind::GrantedKeywordEffect`.
+
+**Coverage.** The dispatch is keyword-agnostic, so it covers every plain-process trigger keyword `keyword_to_auto_effect` can produce — `<Retaliation>`, `<Fortitude>`, `<Save>`, `<MaterialSave(N)>`, `<Execute>`, `<Engage>`, `<Ascension>`. The replacement-process keywords (`<Barrier>`, `<Evade>`, `<Fragment(N)>`, `<ArmorPurge>`, `<Decoy>`, `<Scapegoat>`, `<Partition>`, `<Guard>`) were ALREADY reached, through `replacement::collect_candidates`'s existing `ModifierRegistry::granted_keywords` scan — now pinned by tests rather than assumed. Declarative keyword auto-effects (`<Training>`, `<MindLink>`, `<BlastDigivolve>`) are deliberately skipped here: they belong to the declarative tick, and no card mass-grants them today (a future one would need `materialize_declaratives_full` widened the same way).
+
+**Pack census (2026-08-24).** Across all 829 YAML specs, filtered-target auras grant: `Blocker` ×9, `Rush` ×6, `Alliance` ×6, `Reboot` ×3, `SecurityAttackPlus` ×2, `Piercing` ×2, `Vortex` ×1 — all persistent, all already working — and `Retaliation` ×1: **EX12-065 is today's sole affected card**. (The one mass-granted `Execute` is a SELF-aura — EX12-004 Onibimon, closed by `task_69f10a66`.) The fix matters going forward: any future "all of your [X] gain `<trigger keyword>`" now works by construction.
+
+**Provers.**
+* `tests/cards_behavioral/ex12/ex12_065.rs` — `ex12_065_mass_granted_retaliation_deletes_battle_winner_on_recipient` (the oracle's exact shape), `..._respects_the_battle_cause_gate` (16-12 Battle-only survives the grant), `ex12_065_mass_grant_does_not_double_fire_on_a_printed_retaliation_recipient` (recipient that ALSO prints `<Retaliation>` deletes the winner exactly once).
+* `tests/replacements/granted_keywords.rs` — `mass_granted_fortitude_fires_on_a_non_source_recipient` (trigger half on a non-source), `mass_granted_fortitude_fires_on_its_own_grantor` (the grantor matches its own filter — the case a naive "aura source == target" de-dup would drop), `mass_granted_evade_prompts_on_a_non_source_recipient` (replacement half).
+
+
+## A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+
+**Found 2026-08-24** while closing `G-ENGINE-AURA-GRANT-NO-TRIGGER` — independent of it, and it predates that fix.
+
+`<Retaliation>` (§16-12) identifies its victim through `EffectContext::battle_opponent_of`, which reads the LIVE `Game::pending_attack`. When another `[On Deletion]` clause on the SAME carrier parks a selection, the park unwinds `delete_permanents_batch`; that unwind restores `current_deletion_cause` and the attack finishes, so when the resume drains the REST of the OnDeletion bundle, `pending_attack == None`, `battle_opponent_of` returns `None`, and `<Retaliation>` silently no-ops. The deletion cause itself survives (it is read from the threaded `deleted_object` snapshot) — only the battle identity is lost.
+
+It is therefore **order-dependent**: if the controller orders `<Retaliation>` FIRST in the trigger-order prompt, it fires correctly; if the parking clause goes first, the keyword is lost. That asymmetry alone makes it a rules bug — trigger order must not change WHETHER a mandatory keyword resolves.
+
+**Affects printed, self-granted, and aura-granted `<Retaliation>` identically** — the reproducer below takes the keyword through the DSL's printed-keyword form (`kind: grant_keyword`, the `Effect::granted_keyword` marker path), i.e. entirely pre-existing machinery.
+
+**Reproducers (both `#[ignore]`d with this gap code):**
+* `code/digimon-engine/tests/keyword_phase_e/retaliation.rs::retaliation_survives_a_parked_sibling_on_deletion_clause` — minimal synthetic card: `<Retaliation>` + an `[On Deletion]` clause that parks a 2-candidate pick.
+* `code/digimon-engine/tests/cards_behavioral/ex12/ex12_065.rs::ex12_065_mass_granted_retaliation_also_fires_on_the_grantor_itself` — the real card. EX12-065 Kaguyamon's own `[On Deletion]` bottom-deck clause parks, so its self-granted `<Retaliation>` is lost when it loses a battle. (The GRANTOR-self grant path itself is proven working by `mass_granted_fortitude_fires_on_its_own_grantor`; only the battle-state lifetime blocks this one.)
+
+**Likely shape of the fix:** snapshot the battle identity (attacker / effective target) into the OnDeletion `TriggerContext` alongside the existing `deleted_object` snapshot, and have `battle_opponent_of` fall back to it when `pending_attack` is gone — the same "read the snapshot, not the live slot" discipline CLAUDE.md rule 25 already imposes on OnDeletion handlers. Not attempted here: it touches the battle-state lifetime and wants its own change.
+
+
+## `[Assembly]` applies its FULL cost reduction after one material  [G-ASSEMBLY-NO-MINIMUM]
+
+**Found 2026-08-26** while authoring `qa/dcgo-exams/EX12/EX12-076-effect0.yaml`.
+
+EX12-076 Susanoomon prints cost **16** and `[Assembly -9] 8 [Hybrid]/[Shambala] trait cards w/different names` (read off the card face; `cards.json` drops the Assembly line entirely). Declaring **one** material and passing puts it on the field for **7** — the whole -9 — instead of requiring all eight.
+
+`game_actions/mod.rs:3367`:
+
+```rust
+let min = if is_first { 0 } else { count };
+…
+is_first, // is_optional_zero
+```
+
+`install_multipick_step` then computes `effective_min = 0` and `is_optional = picked >= 0`, which is **always true**, so PASS closes the declaration at any pick count while `assembly_finish` still applies `params.total_reduction + params.assembly_reduction`. The `min: 0` is only meant to be the "use Assembly at all?" gate; it is leaking into "how many materials satisfy the recipe".
+
+DCGO does not permit this: `SelectDigiXrosClass` sets `canEndNotMax: false` and only stacks when `selectedAssemblyCards.Count == elementCount`.
+
+**Measured, not inferred.** A copy of the EX12-076 line with the declaration cut to one card lowers clean and asserts `p0.memory: 3` at the play — i.e. cost 7 paid from memory 10.
+
+**Note the sibling path already solved this.** `kind: cast_time_assembly` rides the DigiXros transaction and has mask-level `distinct_by: name` uniqueness, optional-zero, and the DCGO decline gate, covered by `tests/cast_time_assembly.rs` (see `[G-CAST-TIME-ASSEMBLY]` above). There are two assembly implementations and EX12-076 uses the weaker one; the fix may be to route plain `kind: assembly` through the same machinery rather than to patch the minimum in place.
+
+**Not yet reproduced as a test.** The exam scenario deliberately declares all 8 so it does not depend on the defect, which also means it would not catch a regression here.
+
+
+## `[Assembly]` discards `distinct_by: name`  [G-ASSEMBLY-NO-DISTINCT-BY]
+
+**Found 2026-08-26**, same investigation, same function.
+
+`resolve_eligible_assembly` (`game_actions/mod.rs:672`) builds `elements: Vec<(CompiledPredicate, u8)>` from `m.filter` and `m.repeat` and **drops `m.distinct_by` entirely**, even though `code/digimon-engine/cards/ex12/EX12-076.yaml:33` declares `distinct_by: name` and the card face says "w/different names". `install_assembly_element` passes `distinct_by: None`, and its filter excludes already-picked **handles**, not names — so eight copies of ONE card satisfy a recipe that requires eight different names.
+
+Confirmed by mutation: swapping two of the eight declared materials for `EX12-070, EX12-070` lowered fine (`card_ids: [… "EX12-070", "EX12-070"]`). Only the scenario's own `sources:` assertion caught it.
+
+DCGO enforces it via `CanTargetCondition_ByPreSelecetedList` → `GetUniqueNameCardCount`.
+
+
+## ~~A Delay option with an EVENT window is auto-trashed a turn later~~ — RESOLVED 2026-08-26  [G-DELAY-EVENT-WINDOW-AUTOTRASHED]
+
+**RESOLVED 2026-08-26.** `DelayTrigger` gained a variant, `ExternallyGated`
+(`enums.rs`), meaning "the `<Delay>`'s activation window is owned by a clause
+outside the delay machinery — park the carrier and do nothing else". Both
+fallback sites now use it instead of `EndOfYourNextTurn`:
+`place_self_as_delay_option_permanent` (`effect_context/action/lifecycle.rs`)
+and `install_field_option_as_delay` (`option_lifecycle.rs`).
+`compute_delay_trash_turn` (`game_actions/mod.rs`) maps it to `u16::MAX`,
+joining `MainPhaseActivated` and `OnEvent(_)`.
+
+A new variant rather than a re-used one, because every existing variant is
+*read* by a consumer that would then do the wrong thing: the turn scans
+(`resolve_delayed_options` / `resolve_start_delayed_options` /
+`delay_lifecycle_triggers` in `game_phases.rs`) enumerate the three
+turn-scheduled variants, `delayed_option_main_activation_available`
+(`option_lifecycle.rs`) exposes a `[Main]` FIELD_EFFECT bit for
+`MainPhaseActivated`, and `enqueue_event_gated_delayed_options` /
+`event_gated_delay_source` / `find_event_gated_delay_permanent`
+(`effect_queue.rs`) dispatch and post-trash `OnEvent(_)`. `ExternallyGated`
+matches none of them, so it parks and nothing else fires — while still being
+an `OptionState::Delayed { .. }`, which is what `source_is_delayed_option`
+(`dsl_cards/lower_replacement.rs`) requires for the replacement clause that
+actually owns the window.
+
+Affected cards: **SEVEN**, not the four an earlier draft of this entry claimed.
+Derived exactly rather than by eyeball: `Effect::delay_trigger` is written only
+by `EffectBuilder::delay()`, whose sole caller is `lower_delay.rs`, so the
+`find_map` misses iff the card has no `kind: delay` clause. Cards with a LIVE
+`place_self_as_delay_option` step and no such clause:
+
+* Window owned by a `kind: replacement` clause on the same card -- **EX12-070**,
+  **BT17-095**, **BT17-097**, **BT19-099**, **BT20-100**, **ST20-14**. The fix is
+  straightforwardly right for these.
+* **BT24-093 -- NO owner clause at all.** Its `<Delay>` is deliberately
+  unauthored (`BT24-093.yaml:146`: "BLOCKED -- see gap notes above") while its
+  `place_self_as_delay_option` step is live. Before: parked, then auto-trashed at
+  the owner's next turn end. After: parks inert for the rest of the game. Judged
+  the better of two wrongs -- 16-16-1 says the card stays in the battle area, and
+  the absent activation is the pre-existing BLOCKED gap rather than anything
+  introduced here -- but it is UNTESTED behaviour on a card the fix never opened,
+  and `ExternallyGated` overstates it: nothing gates BT24-093.
+
+Two of the seven carry tests that FABRICATE the pre-fix state rather than
+exercise it: `bt17_095.rs:542-545` and `st20_14.rs:461-464` hand-build
+`OptionState::Delayed { trigger: EndOfYourNextTurn, .. }` in a local
+`seat_as_delay_option` helper, bypassing the production fallback entirely. They
+are green, and they now pin a state shape the production path can no longer
+produce for those cards. Worth re-pointing at the real path.
+
+Regression tests:
+`tests/cards_behavioral/ex12/ex12_070.rs`
+(`ex12_070_delay_option_parks_with_no_scheduled_expiry`,
+`ex12_070_delay_option_is_not_auto_trashed_after_the_owners_next_turn`,
+`ex12_070_parked_delay_option_offers_no_main_phase_activation`). The
+turn-scheduled form is unchanged and still auto-trashes — pinned by
+`tests/cards_behavioral/bt21/bt21_097.rs`
+(`bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay` asserts
+`EndOfYourNextTurn` + `trash_on_turn == placing_turn + 2` through the same
+`place_self_as_delay_option` path;
+`bt21_097_delay_fires_at_end_of_owners_next_turn_and_links_hand_card_free`
+asserts the scan still fires and trashes).
+
+Both exam scenarios that pinned the wrong behaviour were updated:
+`qa/dcgo-exams/EX12/EX12-076-effect0.yaml` (`at: 34/36/37` field + trash, and
+the attack step's `field.5` → `field.8`) and
+`qa/dcgo-exams/EX12/EX12-047-effect4.yaml` (`at: 25`). NOTE: the two
+`diverged` verdicts in `qa/qa-reports/dcgo_exam_verdicts.json`
+(`EX12-047#effect#4`, `EX12-076#effect#0`) are **not** re-classified here —
+sim-only cannot legitimately flip an oracle verdict; they need a fresh Unity
+oracle pass.
+
+**Original report below.**
+
+**Found 2026-08-26** while tracing an "unexplained" board observation in the EX12-076 exam line: three EX12-070 reached the battle area and then vanished with no prompt.
+
+`place_self_as_delay_option_permanent` (`effect_context/action/lifecycle.rs:176-186`) does
+
+```rust
+effects_for_card(...).find_map(|e| e.delay_trigger).unwrap_or(DelayTrigger::EndOfYourNextTurn)
+```
+
+and `compute_delay_trash_turn` turns that fallback into `next_owner_turn_count(owner)` — a scheduled auto-trash.
+
+EX12-070 Sanmyojin Arrival's Delay window is an EVENT: `[All Turns]` when any of your level 5 or higher [TB] Digimon would leave the battle area. Per **16-16-1** a Delay is available *"while a card with this effect is in the battle area"* — no expiry — and **16-16-2** makes the processing optional. Ours discards it a turn later without ever offering it, so the player silently loses the option.
+
+**`lower_delay.rs:80-95` already calls this exact `EndOfYourNextTurn` catch-all "silent and wrong"** and narrows it there; the identical fallback survives at `lifecycle.rs:182`. The fix is presumably the same narrowing applied to the second site.
+
+Currently pinned as CURRENT (wrong) behaviour by `qa/dcgo-exams/EX12/EX12-076-effect0.yaml`'s `at: 36` assertion, which is commented to say so. When this is fixed, that assertion changes.
+
+**Follow-on, still OPEN — 16-16-3 is not enforced on the replacement-owned
+window.** With the carrier now parked indefinitely, the *lower* bound matters
+more: 16-16-3 says "＜Delay＞ can't be activated the same turn the card with the
+effect is placed in the battle area", and DCGO enforces it for exactly these
+cards via `CardEffectCommons.CanDeclareOptionDelayEffect` (`EnterFieldTurnCount
+!= TurnCount`). Our replacement path gates only on `source_is_delayed_option`
+(`dsl_cards/lower_replacement.rs`), which checks `OptionState::Delayed { .. }`
+and ignores `placed_on_turn` — so a Lv5+ [TB] Digimon leaving on the SAME turn
+EX12-070 is placed would still offer the window. `placed_on_turn` is already
+stored on `OptionState::Delayed` and `Game::option_field_state` already computes
+`can_activate_this_turn`; the gate is a one-line consult. Pre-existing (it was
+equally wrong before this fix), left out of the auto-trash fix to keep that diff
+attributable. Affects EX12-070, BT20-100, BT19-099, BT17-097.
+
+
+## `<De-Digivolve x>` auto-selects the maximum instead of letting the player declare  [G-DEDIGIVOLVE-NO-DECLARATION]
+
+**Found 2026-08-26** while making the SelectionKind -> DCGO prompt-class mapping total. Not previously in any tracker.
+
+`de_digivolve_core` (`code/digimon-engine/src/game_actions/helpers.rs:260`) reads
+
+```rust
+let max = amount.unwrap_or(u8::MAX);
+let mut popped: u8 = 0;
+while popped < max { ... }
+```
+
+and pops until it hits `max`, the stack floor, or the level floor. **There is no prompt anywhere on the path.** So `<De-Digivolve 2>` always trashes 2 when 2 are available; the player never chooses 1.
+
+**16-11-6 settles it, read off `general_rule.pdf` p.35:** "When using `<De-Digivolve>` to trash multiple cards, even if the category of the top card changes while the trashing is still being performed, the trashing will continue until **the declared number** is trashed." There is a DECLARED NUMBER, so there is a declaration. `docs/digimon-rules/keyword-semantics.md:29` derives the same from 16-11: "Trash **up to** x ... trashing mandatory, can't choose 0" -- the player declares 1..x, and 0 is not among the options.
+
+DCGO implements the declaration: `CardController.cs:5113-5137` opens a `SelectCountEffect` with `MaxCount = min(sources, N)` and `CanNoSelect: false` -- exactly "1..x, mandatory".
+
+This is a **rule-17 violation**: a choice the rules grant is not in the RL action space. It affects every card printing `<De-Digivolve 2>` or higher.
+
+Fixing it needs a `SelectCountEffect`-shaped prompt (our `CountCappedMultiSelect` or a count selection) installed when `max >= 2` AND at least 2 sources are actually trashable -- installing it for a forced 1 would be the mirror mistake (see G-ORDERED-PERMUTATION-FORCED-SINGLETON below).
+
+
+## `<Decode>`'s optional processing is offered TWICE on one card and once on another  [G-DECODE-DOUBLE-OPTIONAL]
+
+**Found 2026-08-26**, same investigation. This is an inconsistency between two of our own card specs, and one of them is wrong.
+
+16-35-3: "The processing from `<Decode>` is optional." ONCE.
+
+* `code/digimon-engine/cards/ex12/EX12-031.yaml:83` -- `optional: true` on the `kind: replacement` clause, and the inner `select_material` has NO `optional:`. **Correct**: the player declines at the gate, and having accepted, picks a source.
+* `code/digimon-engine/cards/ex12/EX12-036.yaml:39,48` -- `optional: true` on the clause **and** `optional: true` on the inner `select_material`. The player can accept the gate and then decline the pick, an outcome-neutral second decision the rules do not grant. This over-exposes an illegal PASS to the action space -- the exact pitfall recorded in the `reference-dsl-optional-mandatory-selection-pitfall` memory.
+
+EX12-031 is the shape to copy.
+
+**DCGO is NOT wrong here, and an earlier draft of this entry said it was.** It
+does pass `canNoSelect: () => true` to the post-gate `SelectCardEffect`
+(`CardEffectCommons/KeyWordEffects/Decode.cs:37` -- note there are TWO
+`Decode.cs` files and the first draft cited the `CardEffectFactory` one, which
+contains no such call). But its 16-35-3 decision is the OptionalSkill gate,
+raised by `SetUpActivateClass(..., isOptional: true, ...)`; the `canNoSelect`
+on the pick is a UI AFFORDANCE -- open the list, see what your sources hold,
+back out -- and both paths reach the same game state. No rules outcome differs,
+so nothing is granted that 16-35-3 withholds. That is ordinary and correct for a
+client humans actually play.
+
+The defect is ours alone, and it is specifically a RULE-17 problem rather than a
+rules-text one: an extra PASS that cannot change the outcome is action-space
+pollution, because our prompts feed an RL agent rather than a person who can
+simply close a dialog. DCGO has no action space to pollute. The fix stands on
+its own evidence regardless -- EX12-036 was the OUTLIER against our own other
+seven `<Decode>` specs.
+
+Worth checking the other `<Decode>` cards (EX12-014/-016/-017/-032/-035/-044) for the same double-optional before fixing, so it is one pass rather than six.
+
+
+## `OrderedPermutation` installs a forced 1-candidate prompt  [G-ORDERED-PERMUTATION-FORCED-SINGLETON]
+
+**Found 2026-08-26**, same investigation. Previously known as a scenario-authoring nuisance; recorded here as the engine-side entry.
+
+`EffectContext::place_remainder_on_deck` (`code/digimon-engine/src/effect_context/selections.rs:2449-2530`) installs an `OrderedPermutation` even for a single leftover card, documented as a deliberate no-approximations choice so "the RL agent sees the (trivial) ordering decision". DCGO does not: `RevealLibrary.cs:478` short-circuits `if (remainingCards.Count == 1)` straight to `AddLibraryBottomCards` with no prompt.
+
+A one-candidate, non-declinable prompt is not a decision -- there is exactly one legal answer and no way to decline. Under rule 17 the action space should carry choices that can change the outcome; this one cannot. It is also a live cardinality mismatch that costs the exam a wire row on every reveal with a single leftover (the `EX12-009#effect#0` scenario is authored around it, see its header).
+
+Same shape as the `<Retaliation>` phantom branch fixed in `e3363579e`: a decision offered where none exists.
+
+
+## Simultaneous replacement effects resolve in collection order with no player choice  [G-REPLACEMENT-NO-ORDER-PROMPT]
+
+**Found 2026-08-26**, same investigation. Inherited from the mapping research and NOT independently re-verified -- treat the line numbers as a lead.
+
+`code/digimon-engine/src/replacement.rs:347-350` -- when more than one replacement candidate is live, they are run in collection order. 15-8-5-3 / 15-8-5-4 give the controller the choice of processing order for simultaneous immediate-type effects, and DCGO routes exactly this through `MultipleSkills`.
+
+If confirmed this is a missing decision, not merely an ordering difference: with two `<Decode>`-family or `<Evade>`/`<Barrier>`-family replacements live at once, which resolves first can change what the second sees.
+
+Reproducer not yet written.
+
+
+## `PermanentHandle.index` goes stale across a battle-area removal, and it blocks the 15-8-5-4 ordering fix  [G-PERMANENT-HANDLE-POSITIONAL-STALENESS]
+
+**Found 2026-08-26.** Root blocker under `EX12-036#effect#2`, one of the last two
+unconfirmed clauses in the Toho core. The dependency order below matters more
+than either symptom.
+
+`PermanentHandle.index` is a POSITION into `Player::battle_area`, a `Vec` that
+`game/mod.rs:1821` mutates with `battle_area.remove(field_index)`. Every handle
+pointing at a LATER slot silently shifts by one. Queued effects hold these
+handles in `QueuedEffect::source_permanent`, so after any mid-board removal a
+queued effect can address the wrong permanent -- or, once the vec shrinks, none
+at all.
+
+DCGO does not have this class of bug: `FieldPermanents` is a SPARSE FRAME ARRAY
+and `GetFieldPermanents()` compacts a COPY for display, so a permanent's identity
+never moves.
+
+**Why it blocks the ordering fix -- measured, not reasoned.** 16-16 aside, the
+governing rule here is 15-8-5-4: the immediate-type window runs "until the cause
+that first interrupted the immediate-type effect is resolved", so a parked
+replacement's LEAVE must commit BEFORE any trigger it queued activates. We do the
+reverse -- in `effect_queue.rs::resolve_selection` (~line 4222)
+`exit_deferred_drain_and_flush()` runs before
+`try_drain_parked_replacement_with_guard()`.
+
+Flipping that order (scoped to fire only when a replacement is parked) DOES fix
+the phantom branch: `ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer`
+goes green. It then BREAKS `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`,
+because after the commit the SURVIVING carrier's handle is stale too. Probed at
+the bundle: the standing Ryugumon reports `src_perm = index 1` while the battle
+area holds one permanent at index 0, so `queued_effect_source_is_live` reads a
+LIVE effect as dead and `run_queued_effect` silently skips it. The reorder trades
+a phantom branch for a DROPPED MANDATORY TRIGGER, so it was reverted.
+
+**The three parts are a CHAIN, not a set.** An earlier attempt applied them
+together and regressed EX12-031-inherited0 into a phantom 2-branch TriggerOrder;
+that clause is now CONFIRMED against the oracle, so the bar is higher:
+
+1. **Handle stability FIRST.** Either make `PermanentHandle` identity-based (a
+   generational id or card_index key rather than a slot), or re-key every queued
+   effect's `source_permanent` on removal. Until this lands nothing downstream
+   can trust liveness after a removal.
+2. **Then the 15-8-5-4 ordering flip**, which becomes correct once liveness is
+   trustworthy.
+3. **Then a staging-time liveness filter** in
+   `non_firing_queued_effect_indices_for`, which today evaluates only the
+   effect's `condition` closure and never liveness. Mirrors DCGO's `CanActivate`
+   re-filter (MultipleSkills.cs:219, :261).
+
+Part 3 alone is a NO-OP for this case, recorded explicitly so nobody re-derives
+it: written, measured, reverted. At bundle-build time the carrier is still in the
+battle area, so liveness is genuinely true and there is nothing to filter. It
+would have mirrored DCGO, passed the suite, and done nothing.
+
+Reproducers, both `#[ignore]`d with this gap code, in
+`tests/cards_behavioral/ex12/ex12_036.rs`:
+`ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer` and
+`ex12_036_decode_play_offers_only_the_played_cards_own_trigger`.
+The positive control `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`
+is what any candidate fix must keep green -- it is what caught the reorder.

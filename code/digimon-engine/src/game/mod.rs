@@ -695,6 +695,25 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) in_replacement_commit: bool,
 
+    /// Companion to `in_replacement_commit`: `true` while the commit being
+    /// continued is for a replacement that actually FIRED (a non-`None`
+    /// outcome — cancel / redirect / substitute / custom). Only meaningful
+    /// while `in_replacement_commit` is set.
+    ///
+    /// `try_replace_impl` consults it to pick the §7.5 guard strictness: a
+    /// FIRED commit blocks ANY prior-fired subject regardless of timing (the
+    /// v1 double-prompt protection for redirect routes — pinned by
+    /// `dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation`),
+    /// while a DECLINED / no-op commit (outcome `None`: the event proceeds
+    /// unchanged) blocks only exact `(timing, subject)` re-dispatch so the
+    /// remaining not-yet-offered Would* windows still open. Rule 15-8-5-4:
+    /// each simultaneous immediate-type effect "can be activated one at a
+    /// time until the cause ... is resolved" — only the already ACTIVATED
+    /// one is spent; an offered-and-declined one must not consume the event
+    /// (declined `<Decode>` must not eat `<Evade>`).
+    #[doc(hidden)]
+    pub(crate) replacement_commit_fired: bool,
+
     /// Controller of the effect whose `process` is currently running, if
     /// any. Set by `run_queued_effect` at dispatch time and cleared at the
     /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's
@@ -890,6 +909,17 @@ pub struct Game {
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
+    /// Stable key `(owner, bottom_card_index)` of a turn-scheduled `<Delay>`
+    /// Option whose §16-16-2 cost the controller just DECLINED.
+    ///
+    /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
+    /// after running its body, because the trash IS the Delay's cost. When the
+    /// cost is declined the body never ran, so the trash must not happen either
+    /// (§15-7-2) — this key tells the two delete sites to reschedule the Option
+    /// to its next window instead of deleting it. Cleared as soon as it is
+    /// consumed; only ever holds one key because exactly one Delay is resolved
+    /// at a time.
+    pub(crate) declined_delay_option: Option<(PlayerId, u16)>,
     pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
     /// Continuation for the regular EndTurn state machine when an
     /// EndOfYourTurn effect parks a player selection.
@@ -1974,10 +2004,13 @@ impl Game {
     ///   user-action path; passes the printed cost minus
     ///   `BeforePayCost` reductions and never bypasses.
     ///
-    /// `grant_digivolve_bonus`: if true, `hand_owner` draws 1 card after the
-    /// merge but before triggers fire. The user-action path passes `true`
-    /// (matching `digivolve_from_hand`); the effect-initiated path passes
-    /// `false`.
+    /// §8-2-3-3 — "places the Digimon for the DNA digivolution on top of the
+    /// stack, draws 1 card, and the DNA digivolution process is resolved" —
+    /// so `hand_owner` ALWAYS draws 1 after the merge and before triggers
+    /// fire, however the DNA digivolution was initiated. This used to be
+    /// gated behind a `grant_digivolve_bonus` flag that the effect-initiated
+    /// callers passed as `false`; since §8-2-2-4 makes every DNA digivolution
+    /// effect-driven, that silently skipped the draw for most real DNA lines.
     ///
     /// `effect_initiated`: marks the global `OnDigivolve` payload so observers
     /// can distinguish effect-created DNA digivolutions from player-action DNA.
@@ -1988,7 +2021,6 @@ impl Game {
         hand_owner: PlayerId,
         hand_index: usize,
         cost: u16,
-        grant_digivolve_bonus: bool,
         effect_initiated: bool,
     ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
@@ -2072,19 +2104,18 @@ impl Game {
             memory_paid: cost as i16,
         });
 
-        if grant_digivolve_bonus {
-            // Opaque-aware: routes through draw_one_for_player so opaque
-            // opponents pull from their RevealSource rather than from the
-            // (empty in opaque mode) deck Vec. Errors are logged-and-
-            // ignored to preserve the original `-> ()` signature of this
-            // function; the symptom of a misaligned reveal source is a
-            // downstream parity divergence the replay harness will catch.
-            if let Err(e) = self.draw_one_for_player(hand_owner) {
-                eprintln!(
-                    "[opaque-deck] digivolve bonus draw error for player {}: {}",
-                    hand_owner, e
-                );
-            }
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card.
+        // Opaque-aware: routes through draw_one_for_player so opaque
+        // opponents pull from their RevealSource rather than from the
+        // (empty in opaque mode) deck Vec. Errors are logged-and-
+        // ignored to preserve the original `-> ()` signature of this
+        // function; the symptom of a misaligned reveal source is a
+        // downstream parity divergence the replay harness will catch.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
         }
 
         self.enqueue_triggered(
@@ -2240,6 +2271,16 @@ impl Game {
             memory_paid: cost as i16,
         });
 
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // `dna_digivolve_inner`; these partner variants (hand partner / trash
+        // partner) are DNA digivolutions too, so they draw identically.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
+        }
+
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(merged_handle),
@@ -2381,6 +2422,16 @@ impl Game {
             was_blast_dna: false,
             memory_paid: cost as i16,
         });
+
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // `dna_digivolve_inner`; these partner variants (hand partner / trash
+        // partner) are DNA digivolutions too, so they draw identically.
+        if let Err(e) = self.draw_one_for_player(hand_owner) {
+            eprintln!(
+                "[opaque-deck] DNA digivolve draw error for player {}: {}",
+                hand_owner, e
+            );
+        }
 
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,
@@ -2584,6 +2635,7 @@ impl Game {
         self.modifiers
             .shift_after_battle_area_remove(src.player, src.index);
         self.shift_pending_attack_after_battle_area_remove(src.player, src.index);
+        self.shift_effect_queue_after_battle_area_remove(src.player, src.index);
 
         // Linked cards lose their host → trash + OnLinkedCardTrashed observer.
         // Matches the linked-card flow in `trash_single_for_batch`
@@ -2913,28 +2965,52 @@ impl Game {
 
         // Declarative `grant_keyword` clauses are semantically equivalent to
         // printed keywords for keyword lookups. If the granted keyword carries
-        // replacement behavior (Barrier, Armor Purge, Scapegoat, etc.), also
-        // synthesize the keyword's auto-effect so inherited keyword grants can
-        // participate in replacement scans. Conditional grants are omitted
-        // here for now because `ConditionFn` is boxed and not cloneable; those
-        // cards should lower an explicit conditional replacement until the
-        // condition-composition surface is added.
+        // triggered or replacement behavior (Execute, Barrier, Armor Purge,
+        // Scapegoat, etc.), also synthesize the keyword's auto-effects so
+        // keyword grants participate in the triggered-effect enqueue and the
+        // replacement scans.
+        //
+        // task_69f10a66 Family 1: CONDITIONAL grants (an `active_when` aura
+        // like EX12-004 Onibimon's "[Your Turn] this [TB] Digimon gains
+        // <Execute>") synthesize too — `ConditionFn` is `Arc`-shared, so the
+        // grant's condition is cloned onto each synthesized auto-effect
+        // (AND-composed with any condition the auto-effect already carries,
+        // e.g. Armor Purge's stack-size gate). The condition is EVALUATED at
+        // fire/collect time (`run_queued_effect_inner` / `collect_candidates`),
+        // never here, so the built list stays a pure function of
+        // `(card_id, handle, under_top)` and the `effects_for_card` memo (and
+        // its debug differential oracle) remain valid. Without this, a
+        // conditionally granted trigger keyword installed NO body anywhere:
+        // granted <Execute> never fired at end of turn and the printed "may
+        // attack" choice never reached the action space (rule-17 violation —
+        // §16-37-2/-3, §15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
                 let Some(kw) = grant.granted_keyword else {
                     continue;
                 };
-                if !grant.declarative || grant.condition.is_some() {
+                if !grant.declarative {
                     continue;
                 }
                 if !grant.inherited && native_keywords.contains(&kw) {
                     continue;
                 }
+                let grant_condition = grant.condition.clone();
                 auto_effects.extend(
                     crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
                         .into_iter()
                         .map(|mut effect| {
                             effect.inherited = grant.inherited;
+                            if let Some(gc) = grant_condition.clone() {
+                                effect.condition = Some(match effect.condition.take() {
+                                    Some(own) => {
+                                        std::sync::Arc::new(move |rctx: &crate::effect_context::EffectReadContext| {
+                                            gc(rctx) && own(rctx)
+                                        })
+                                    }
+                                    None => gc,
+                                });
+                            }
                             effect
                         }),
                 );
@@ -3161,6 +3237,7 @@ mod reset_for_replay_tests {
         g.pending_player_digivolve_reduction = 9;
         g.in_counter_window = true;
         g.in_replacement_commit = true;
+        g.replacement_commit_fired = true;
         g.dsl_clause_aborted = true;
         g.draining_deferred = 2;
         g.until_condition_dirty = true;
@@ -3199,6 +3276,7 @@ mod reset_for_replay_tests {
         assert_eq!(g.pending_player_digivolve_reduction, 0);
         assert!(!g.in_counter_window);
         assert!(!g.in_replacement_commit);
+        assert!(!g.replacement_commit_fired);
         assert!(!g.dsl_clause_aborted);
         assert_eq!(g.draining_deferred, 0);
         assert!(!g.until_condition_dirty);

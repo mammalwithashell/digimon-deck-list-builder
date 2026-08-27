@@ -47,7 +47,10 @@ text in this order:
 2. **`data/cards.json` + `data/card_overrides.json`** (overrides win,
    per-field — a clause's `source` is tagged `"card_overrides"` only for
    fields the override patch actually touches).
-3. **`image-required`** — **security zone only**. See "Why security gets its
+3. **DCGO's C# card script** — **security zone only**, and only as a
+   *negative* oracle: it can prove a card has NO security clause, never
+   supply the text of one. See "Why security gets its own fallback" below.
+4. **`image-required`** — **security zone only**. See "Why security gets its
    own fallback" below.
 
 ### Why security gets its own fallback
@@ -69,6 +72,100 @@ at the card image, rather than silently concluding "no security effect".
 The `image_required_count` printed by `extract` is deliberately the
 headline number — it is the extractor's own honesty measure: how much of
 the denominator it could NOT confirm from text sources alone.
+
+#### What changed: DCGO as a second source (the principle survives intact)
+
+The rule above is right, and it is unchanged. What it was missing is that
+**a lossy source is not the only source available.** The reasoning "we have
+no text, therefore we cannot know" silently assumed text was the only
+evidence there is — but DCGO's C# script for a card is independent evidence
+about whether the card *has* a security clause at all, even though it can
+never tell us what that clause says.
+
+Every DCGO card with a security effect declares it under
+`EffectTiming.SecuritySkill`. Verified across the whole checkout: the
+substring `SecuritySkill` occurs **only** as `EffectTiming.SecuritySkill`
+(911 occurrences, zero other uses), and none of the neighbouring
+security-ish timings (`OnAddSecurity`, `OnLoseSecurity`, `OnSecurityCheck`,
+`OnDetermineDoSecurityCheck`, `OnDiscardSecurity`,
+`OnFaceUpSecurityIncreased`) contain it — so a plain substring test is
+exact.
+
+The rule the extractor applies, in the security zone only, when no text
+source produced a clause:
+
+| DCGO state | Meaning | Extractor |
+|---|---|---|
+| script exists, no `SecuritySkill` | **positive evidence of absence** | emit **no** security clause |
+| script exists, has `SecuritySkill` | card HAS a clause; text still unknown | emit the `image-required` slot |
+| no script for this card | genuinely unknown | emit the `image-required` slot |
+| no usable DCGO checkout | genuinely unknown | emit the `image-required` slot |
+
+Grounding, three independent sources agreeing per card: `EX12-020` Gasamon's
+card face prints no `[Security]` box, its DCGO script
+(`Assets/Scripts/CardEffect/EX12/Blue/EX12_020.cs`) contains zero
+`EffectTiming.SecuritySkill`, and `cards.json`'s security field is empty.
+`EX12-061` Hanimon was re-verified the same way against its card image.
+Contrast `EX12-071` Saneiketsu Invitation, which plainly prints a Security
+Effect box **and** has a `SecuritySkill` block — its `image-required` slot
+is correctly retained.
+
+Why this matters more than it sounds: the denominator is the exam's honesty
+mechanism ("N clauses: X confirmed, Y unmeasured"). A phantom slot is not a
+conservative over-count — it is a clause that can *never* be measured,
+because it does not exist, so it reads forever as permanently unreached and
+drags every coverage figure down by a fixed, meaningless amount. Measured
+on the 44-card Toho pool, 20 of 24 `image-required` security slots were
+phantoms; pool-wide (4294 cards) 64 of them disappear.
+
+**Failure direction is deliberate.** Every DCGO failure mode — no checkout
+at all, a worktree's empty `./DCGO` placeholder (CLAUDE.md rule 29), no
+script for the card, an unreadable file — answers `unknown`, which keeps
+the `image-required` slot. Absent DCGO can only ever reproduce today's
+behaviour; it can never silently delete a slot.
+
+**Configuring the root.** `extract_card_clauses(..., dcgo_root=...)` takes
+the checkout to consult. Omit it and `default_dcgo_root()` resolves the
+**base-repo** `DCGO/` (following a worktree's `.git` pointer file, per rule
+29); pass `dcgo_root=None` to skip DCGO entirely. The environment variable
+`DIGIMON_DCGO_ROOT` overrides the default, and setting it to the empty
+string disables the consultation — mirroring how `DIGIMON_CARD_IMAGE_DIR`
+overrides the image directory.
+
+### Ingestion artifacts are filtered before they become clauses
+
+Some values in `cards.json` are scrape residue rather than printed card
+text, and splitting them produces clauses that are not clauses:
+
+- `inherited_effect_description_eng` is literally `|applinkdp =` — a
+  MediaWiki template key — on **33** cards pool-wide (e.g. `EX12-076`,
+  `EX12-019`).
+- `effect_description_eng` is prefixed with the literal box label
+  `Inherited Effect` on **10** cards (`BT25-001..006`, `EX12-001..004`),
+  which the splitter emits as a content-free leading clause.
+
+`card_sources.is_ingestion_artifact` drops these. It is a **hard-coded
+exact-match blocklist, deliberately not a heuristic**: a clever "looks like
+junk" rule risks eating real printed text, which corrupts the denominator in
+the far more dangerous direction — a real clause silently stops being
+tracked. Consequences of exact matching, all intentional:
+
+- `EX12-001`'s whole printed text is one clause that merely *begins* with
+  `Inherited Effect`; it survives untouched. A prefix rule would have
+  truncated it.
+- `"Effect"` alone is **not** blocklisted. It is an ordinary English word
+  that legitimately ends real clause fragments (`ST1-15` splits a sentence
+  into one), and eating those is exactly the silent loss this filter exists
+  to avoid.
+- Empty text is dropped **only** when the span also carries no timing and
+  no keyword. A keyword clause legitimately has empty text — all its
+  content is in `keyword` (`EX12-065`'s `＜Fortitude＞`) — and so does a
+  marker-only timing clause; a blanket empty-text rule would delete both.
+
+**A dropped clause does not consume an index**, so its surviving siblings in
+the same zone renumber down. Zones are numbered independently, so dropping
+the only clause in a zone (every `#security#0`, and every `|applinkdp =`
+`#inherited#0`) renumbers nothing at all.
 
 When a card **does** have a bundle, a missing `"Security"` section in that
 bundle is treated as a **confirmed** absence (the official DB is
@@ -99,7 +196,10 @@ denominator that validates itself). So the extractor deliberately does
 **not** read this field for Tamer/Option/Dual kinds. The consequence:
 `EX12-073`, `EX12-066`, and `EX12-069` all get `image-required` security
 slots even though the text is arguably sitting right there in a different
-field — a documented, conservative tradeoff, not an oversight.
+field — a documented, conservative tradeoff, not an oversight. (DCGO
+independently agrees all three *have* a security clause: each script carries
+a `SecuritySkill` block, so the new DCGO check keeps their slots rather than
+dropping them.)
 
 ## Clause splitting rules
 
@@ -117,10 +217,12 @@ implementation. Summary:
   conceptually — `TIMING_MARKER_NAMES` special-cases them so both spellings
   behave identically.
 - Each **angle-bracket keyword** (`<Progress>`, `<Security A. +1>`, ...) is
-  its own clause, unconditionally — open-ended: any angle-bracket token
-  that isn't a recognized timing-marker name becomes a keyword clause, so
-  new keywords in future sets are picked up automatically without a code
-  change.
+  its own clause — open-ended: any angle-bracket token that isn't a
+  recognized timing-marker name becomes a keyword clause, so new keywords
+  in future sets are picked up automatically without a code change.
+- **Both marker families only open a clause at a clause boundary.** A
+  marker printed *inside* a sentence is a reference to an ability, not the
+  start of one, and stays inline. See "Positional boundary rule" below.
 - Square-bracket tokens that aren't recognized timing markers (`[VB]`,
   `[Gammamon]`, `[NSp]`, ...) are trait/card-name references, not clause
   boundaries — left as ordinary body text.
@@ -129,19 +231,77 @@ implementation. Summary:
   `EX12-021`, not in the task's illustrative list but structurally the same
   kind of marker as `"Start of Your Turn"`).
 
-### Known limitation: keyword splitting is unconditional, not positional
+### Positional boundary rule
 
-`<Draw 2>` embedded mid-sentence inside a triggered effect (e.g. `EX12-005`
-Agumon's `"[On Play] By trashing 1 card ..., ＜Draw 2＞ (Draw 2 cards from
-your deck.)"`) is split into its own keyword clause exactly like a
-standalone persistent-keyword grant (`EX12-018`'s `＜Progress＞ ＜Piercing＞
-＜Security A. +1＞` prefix). This can leave the preceding timing clause's
-captured text reading as an incomplete sentence and the keyword clause
-reading as context-free — read the two clauses together for full context.
-This is a deliberate simplification (uniform, position-independent rule) to
-satisfy the task's literal splitting instruction without adding an
-unrequested positional heuristic; it does not lose text (the union of a
-field's clause texts, in order, reconstructs the original almost verbatim).
+*(This section replaces the former "Known limitation: keyword splitting is
+unconditional, not positional". That rule was written for the standalone
+keyword-grant case — `EX12-018`'s `＜Progress＞ ＜Piercing＞ ＜Security A. +1＞`
+prefix — which it handles correctly. Applied to a marker printed **inside**
+a sentence it cut that one sentence into unmeasurable pieces, which
+inflated the denominator with clauses no scenario can ever exercise:
+`ST1-15`'s printed `"[Security] Activate this card's [Main] effect."`
+became `"Activate this card's"` + `"effect."`, `BT8-097` the same, and
+`EX12-065#effect#5`'s entire body was `"."`. That is the honesty problem
+this package exists to avoid, so the rule is now positional.)*
+
+A marker opens a new clause only at a **clause boundary**. Given the body
+text accumulated since the last accepted marker (`_is_clause_boundary` in
+`text_split.py`), the marker opens a clause when that body:
+
+- is **empty** — marker runs (`＜Progress＞ ＜Piercing＞`,
+  `[When Digivolving] [When Attacking]`) and field-leading markers; or
+- ends at a **line break**; or
+- ends on a **clause-ending character** — `. ! ? 。 ！ ？`, a closing
+  `) ） ]` (the end of a reminder-text span: `"...(Specified cards let you
+  ignore color requirements.) [Main] ..."`), a closing `}` (the
+  `{Hand}` / `{Security}` zone prefix printed immediately before its
+  marker), or a quote character (a granting sentence opens a quote around
+  the granted ability — `1 of your Digimon gains "[On Deletion] ..."` — and
+  that ability keeps its own clause, because it is independently testable).
+
+Otherwise the marker is mid-sentence and stays as ordinary body text of
+the clause in progress. Consequences, in both directions:
+
+- `"[Security] Activate this card's [Main] effect."` is **one** clause.
+- `"All of your [Puppet] or [TB] trait Digimon gain ＜Blocker＞ and
+  ＜Retaliation＞."` (`EX12-065`) is **one** clause; the granted keywords
+  are that clause's effect, not two clauses of their own. Likewise
+  `EX12-019`'s `＜Collision＞` reminder text mentions `＜Blocker＞`, which no
+  longer manufactures a phantom Blocker clause on that card.
+- `"[On Play] By trashing 1 card ..., ＜Draw 2＞ (Draw 2 cards from your
+  deck.)"` (`EX12-005`) is **one** clause — the keyword is this clause's
+  action. This is the case the old README told you to "read together"; it
+  is now actually together, and it matches DCGO's `effect_activation`
+  rendering, which prints the whole sentence.
+- `EX12-018`'s `＜Progress＞ ＜Piercing＞ ＜Security A. +1＞` prefix still
+  splits into **three** keyword clauses — each sits at a boundary.
+
+**One exception, by marker name.** The digivolution-condition markers
+(`[Digivolve]`, `[DNA Digivolve]`, `[Use Req.]`, `[Assembly]`,
+`[DigiXros]`, `[Arts Digivolve]`, `[Blast Digivolve]`, `[Burst Digivolve]`
+— `_ALWAYS_BOUNDARY_MARKER_NAMES`, mirroring
+`activation_match.COST_LINE_MARKERS`) always open a clause. They head
+*structured cost lines*, and consecutive lines run together with no
+sentence punctuation (`"[Digivolve] Lv.6 w/[CS] trait: Cost 5
+[DNA Digivolve] Lv.5 [Justimon] + ..."` — 30 cards pool-wide). These names
+are never printed as inline nouns, so the exception is safe.
+
+The rule still does not lose text: the union of a field's clause texts, in
+order, reconstructs the original almost verbatim.
+
+#### What the boundary rule still cannot see
+
+It is punctuation-shaped, so a **field-label ingestion artifact glued to
+the front of the text now absorbs the first marker** rather than sitting in
+a separable clause of its own. `cards.json`'s
+`effect_description_eng` carries a literal `"Inherited Effect"` /
+`"Security Effect"` box label on 11 cards (`BT25-001`..`006`, `BT25-088`,
+`EX12-001`..`004`); on those, the leading clause now reads e.g.
+`"Inherited Effect [Your Turn]"` and the marker it swallowed no longer
+tags its clause. The label is not card text and the fix belongs upstream of
+this pure splitter — strip the residue from the raw field **before**
+`split_clauses`, rather than dropping a content-free clause after it (see
+`card_sources.is_ingestion_artifact`).
 
 ## Filling in image-required slots
 

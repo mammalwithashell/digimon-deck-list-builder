@@ -1,0 +1,184 @@
+# Exam scenario: EX12-009 Wankomon, clause EX12-009#effect#0 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the
+#  [Shambala] trait and 1 card with the [TB] trait among them to the hand.
+#  Return the rest to the bottom of the deck."
+# (Printed text read off the card face, EX12-009.webp -- traits Beast /
+#  Shambala / TB, Lv.3, play cost 3, DP 2000.)
+#
+# ---------------------------------------------------------------------------
+# WHY THE REVEAL TRIO IS 1 TOHO CARD + 2 TRAIT-LESS TAMERS
+# ---------------------------------------------------------------------------
+# This clause's line is constrained by an asymmetry the two engines have at
+# the TAIL of the effect, not at its head. Both sides agree on the picks; they
+# disagree on how many leftovers it takes to earn an ordering prompt:
+#
+#   DCGO  ReturnRevealedCardsToLibraryBottom
+#         (Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:479-483)
+#         `if (remainingCards.Count == 1)` -> AddLibraryBottomCards outright,
+#         NO SelectCardEffect. The ordering prompt only exists in the `else`
+#         branch, i.e. for 2+ leftovers.
+#   OURS  EffectContext::place_remainder_on_deck
+#         (code/digimon-engine/src/effect_context/action/zones.rs:158-160)
+#         documents the opposite as a deliberate no-approximations choice:
+#         "**1 card** -> still installs a 1-choice `OrderedPermutation` so the
+#         RL agent sees the (trivial) ordering decision".
+#
+# So the OBVIOUS line -- reveal three Toho cards, take a [Shambala] and a [TB],
+# leave one over -- parks a sim-side prompt that DCGO never asks, the strict
+# driver cursor finds an unconsumed row, and the job aborts. That is what
+# blocked this clause before; it is a property of the reveal's ARITHMETIC, not
+# of the clause, so it is authored around rather than reported.
+#
+# Leaving TWO cards over puts both engines back in the same branch. Getting
+# there needs exactly ONE of the two picks to fire, and both engines skip a
+# pick with no candidates by the same rule:
+#   DCGO  RevealLibrary.cs:293-295 -- `maxCount = Min(MaxCount,
+#         revealedCards.Count(CanTargetCondition))`, prompt only `if
+#         (maxCount >= 1)`; the chosen card is removed from `revealedCards`
+#         first (AfterSelectCardCoroutine, :331-336).
+#   OURS  install_reveal_bucket_resume_step
+#         (code/digimon-engine/src/dsl_cards/step/selections.rs:2280-2285) --
+#         `if valid_action_ids.is_empty()` the bucket is recorded empty and
+#         skipped, with `no_duplicate_cards` excluding an already-picked card.
+#
+# The catch is that EVERY Digimon/Option in the Toho pool prints BOTH traits
+# (verified across cards.json, the DCGO card mirror under
+# code/digimon-engine/cards/ex12/, and card_overrides.json), so "a card that
+# satisfies only one filter" does not exist. The pool's one trait-LESS card
+# does: EX1-066 Analog Youth, a Tamer whose face carries no trait line at all
+# (`type_eng: []` in BOTH our cards.json and the DCGO mirror -- the two sides
+# agree, which is what makes the skip symmetric). It lives in `toho-analog`,
+# the deck EX1-066's own three scenarios already use.
+#
+# Hence the reveal: EX12-011 (Shambala+TB) + EX1-066 + EX1-066.
+#   bucket 0 [Shambala] -> one candidate, EX12-011: BOTH sides prompt.
+#   bucket 1 [TB]       -> EX12-011 is consumed and the Tamers have no traits,
+#                          so zero candidates: BOTH sides skip.
+#   leftovers           -> 2, so BOTH sides prompt the deck-bottom ordering.
+# The two leftovers are interchangeable copies of one card, so the ordering
+# answer is genuinely route-independent; the wire resolves duplicate ids by
+# occurrence order on both sides on purpose (our `resolve_next` indexes
+# `card_ids[picks_done]`, selection_resolve.rs:327; DCGO's
+# Harness/SelectionAnswer.cs:20-27 + MatchCardIds consumes each candidate
+# once and documents this as correct "where the duplicates are interchangeable
+# copies of a card").
+#
+# NOTE ON WHAT THIS MEASURES: with one qualifying card the two picks compete
+# for it, and the clause resolves its buckets SEQUENTIALLY -- [Shambala] first,
+# then [TB] over what is left. EX12_009.cs declares them in that order
+# (Assets/Scripts/CardEffect/EX12/Red/EX12_009.cs:66-80) and passes no
+# `mutualConditions` flag, so DCGO does NOT rescue the second pick
+# (RevealLibrary.cs:302-308, the `mutualConditions` branch, is dead here).
+# Confirming that ordering + the one-add outcome is the point of the line.
+#
+# ---------------------------------------------------------------------------
+# THE LINE
+# ---------------------------------------------------------------------------
+# T1 (p0, first player, no turn-1 draw): pass breeding, play Wankomon from
+# hand for 3 at memory 0. The overshoot to -3 ends the turn AFTER the [On Play]
+# resolves, so the reveal is exactly stack[10..12] (hand 0-4, security 5-9,
+# deck 10+).
+# T2 (p1): all-pass; p1 is inert throughout and stacked only to keep the two
+# sides' board projections comparable.
+# T3 (p0): the turn draw takes stack[13] = EX12-036. That is the second half of
+# the clause under exam: if the two leftovers had gone to the deck TOP instead
+# of the BOTTOM, this draw would be EX1-066. Asserting the drawn card is how
+# "Return the rest to the bottom of the deck" becomes observable at all -- the
+# state projection exposes hand/field/trash/security, never deck order.
+card: EX12-009
+clause: EX12-009#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the card under exam + inert filler (nothing in hand has an
+      # added-to-hand or in-hand trigger; all four fillers are plain Digimon).
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-031
+      - EX12-062
+      # security (5-9): never checked -- no attack is declared in this line.
+      # Plain Digimon with no [Security] text regardless.
+      - EX12-046
+      - EX12-046
+      - EX12-061
+      - EX12-061
+      - EX12-063
+      # the reveal (10-12), in deck-top order
+      - EX12-011   # [Shambala]+[TB] -- the only candidate either bucket has
+      - EX1-066    # Tamer, NO traits (face shows no trait line)
+      - EX1-066    # Tamer, NO traits
+      # (13) p0's T3 draw -- the deck-bottom witness
+      - EX12-036
+    rest: toho-analog
+  p1:
+    stack:
+      # hand (0-4): p1 all-passes; stacked so both sides project the same board
+      - EX12-070
+      - EX12-070
+      - EX12-074
+      - EX12-074
+      - EX12-076
+      # security (5-9): never checked
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      - EX12-011
+      - EX12-020
+      # (10) p1's T2 draw
+      - EX12-020
+    rest: toho-analog
+steps:
+  # --- T1 (p0) --------------------------------------------------------------
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-009, from: hand } }
+    expect: { prompt: main_phase }
+  # Bucket 0 -- "Select 1 [Shambala] trait card." EX12-011 is the sole
+  # candidate; the prompt is still parked (min 1, non-optional) on both sides.
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: SelectCardEffect }
+  # Bucket 1 -- "Select 1 [TB] trait card." -- has NO candidates once EX12-011
+  # is consumed, so neither side asks: there is deliberately no step for it.
+  # Next prompt is the deck-bottom ordering over the two leftovers (DCGO's
+  # "Specify the order to place the card at the bottom of the deck"; our
+  # OrderedPermutation { remaining: 2 }). Two interchangeable copies -> one
+  # row carrying both identities.
+  - actor: 0
+    do: { select: { cards: [EX1-066, EX1-066] } }
+    expect: { prompt: SelectCardEffect }
+  # --- T2 (p1), inert -------------------------------------------------------
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # --- T3 (p0): the turn draw is the deck-bottom witness ---------------------
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Step 3 -- the effect has fully resolved. THE clause observable:
+  #   * EX12-009 left the hand (it was played) and is on the field;
+  #   * EX12-011 is IN HAND -- the [Shambala] pick was added;
+  #   * NEITHER EX1-066 is in hand -- the leftovers were returned, not added,
+  #     and the [TB] bucket added nothing because it had no candidate left.
+  # The hand list is exact (the projection sorts hand on construction), so it
+  # is simultaneously a positive and a negative assertion.
+  - at: 3
+    that:
+      p0.hand: [EX12-011, EX12-020, EX12-026, EX12-031, EX12-062]
+      p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [] }]
+      p1.security: 5
+  # Step 6 -- p0's T3 draw resolved. EX12-036 was stack[13], i.e. the card that
+  # sat directly BENEATH the revealed three. Drawing it proves the two EX1-066
+  # went to the BOTTOM of the deck; had they gone to the top (or stayed on it),
+  # this draw would have been EX1-066 instead.
+  - at: 6
+    that:
+      p0.hand: [EX12-011, EX12-020, EX12-026, EX12-031, EX12-036, EX12-062]

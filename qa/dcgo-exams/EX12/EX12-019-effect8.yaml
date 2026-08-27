@@ -1,0 +1,141 @@
+# Exam scenario: EX12-019 (Nezhamon), clause effect#8 --
+# "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3".
+#
+# The witness is that the digivolve HAPPENS AT ALL, plus what it costs.
+# Nezhamon's printed digivolution circles are red Lv.5: 4 and black Lv.5: 4;
+# Karakurumon (EX12-063) is a PURPLE/GREEN Lv.5, so neither circle is open on
+# it and the ONLY route from that permanent into Nezhamon is the alternate
+# "Lv.5 w/[Shambala] trait: Cost 3" clause under exam. That also means exactly
+# one distinct cost is available, so -- unlike EX12-015-effect4.yaml -- no
+# "which digivolution cost do you pay?" prompt opens on either side, and the
+# line has no selection step at all.
+#
+# p0 enters T7 on 3 memory, so cost 3 lands on 0. A cost-4 reading would land
+# on -1, which ends the turn immediately and would leave the trailing step 17
+# with no main_phase to answer.
+#
+# Highway: the proven single-route red breeding line from
+# EX12-047-effect1.yaml, with Nezhamon in Amaterasumon's slot --
+#   T1 hatch + Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) /
+#   T5 Karakurumon (alt "Lv.4 non-white w/[Puppet] or [Shambala]", 3) /
+#   T7 Nezhamon (THE CLAUSE, alt [Shambala], 3).
+# Everything stays in the BREEDING area, which keeps the file about the
+# digivolution circle and nothing else: a breeding-area Digimon's effects do
+# not activate (DCGO gates every shared timing on `IsExistOnBattleArea*`, and
+# ours agrees), so Seasarmon's and Karakurumon's [When Digivolving] bodies stay
+# silent on the way up, and Nezhamon's <Engage> end-of-turn attack gate never
+# opens because a breeding Digimon cannot attack.
+card: EX12-019
+clause: EX12-019#effect#8
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-019
+      - EX12-070
+      # security (5-9) -- never checked (p1 all-passes); Digimon only, no
+      # [Security] text
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15), T7 dv (16). No draw repeats EX12-009/011/063/019 -- a
+      # second copy in hand would make the `using:` intent ambiguous.
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+      - EX12-075
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4), inert -- p1 all-passes
+      - EX12-070
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9) -- never checked
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): Karakurumon over the red Lv.4 [Shambala] Seasarmon on
+  # its own alternate circle (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE -- Nezhamon over the purple/green Lv.5
+  # [Shambala] Karakurumon. Only the alternate circle can reach it (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-019 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL and prefix-pinned: memory is a pure function of the scripted line,
+  # and 0 is only reachable if the digivolve cost 3.
+  - at: 17
+    that: { p0.memory: 0 }

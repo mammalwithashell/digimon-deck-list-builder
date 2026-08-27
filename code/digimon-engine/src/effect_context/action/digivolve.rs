@@ -335,7 +335,7 @@ impl<'a> EffectContext<'a> {
             self.game.pay_memory_unchecked(effective_cost);
             // Pass cost=0 to the inner so it doesn't double-pay.
             self.game
-                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false, true)
+                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, true)
         } else {
             self.game.dna_digivolve_inner(
                 target_a,
@@ -343,7 +343,6 @@ impl<'a> EffectContext<'a> {
                 hand_owner,
                 hand_index,
                 effective_cost,
-                false,
                 true,
             )
         }

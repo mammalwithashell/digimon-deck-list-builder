@@ -363,10 +363,19 @@ fn bt24_003_accepting_digivolves_into_shaman_hand_card() {
         top_id, "BT24-034",
         "the stack's top card must now be the digivolved Aegiomon"
     );
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert the Aegiomon card's departure by identity, not by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT24-034"),
+        "the Aegiomon hand card left the hand"
+    );
     assert_eq!(
         runner.game.players[0].hand.len(),
-        hand_before - 1,
-        "the Aegiomon hand card left the hand"
+        hand_before,
+        "the digivolve draw replaced it (§8-1-3-3)"
     );
     let _ = aegiomon_hand_idx;
     let _ = memory_before;

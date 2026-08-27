@@ -1,0 +1,81 @@
+# Exam scenario: EX12-006 Kakamon, clause EX12-006#inherited#0 --
+# "[Your Turn] This Digimon gets +2000 DP." (the inherited-effect box).
+#
+# An inherited effect only functions while its card is a DIGIVOLUTION SOURCE,
+# so the line buries Kakamon under Apemon and reads the carrier's effective DP
+# on both sides of a turn boundary -- the [Your Turn] gate is the whole clause,
+# and a scenario that only measured P0's turn could not tell "+2000 always"
+# from "+2000 on your turn".
+#
+#   T1 (P0, memory 0): hatch Mococomon; digivolve Kakamon over it in breeding
+#       (its own alt circle, cost 0 -- EX12-006#effect#2's exam); digivolve
+#       Apemon EX12-012 over Kakamon (alt circle, cost 2) which overshoots
+#       0 -> -2 and ends the turn.
+#   T2 (P1, memory 2): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): move the stack to the battle area. THE CLAUSE is live
+#       here -- Apemon reads 4000 + 2000 = 6000.
+#   T4 (P1): the same board on the OPPONENT's turn -- the gate closes and
+#       Apemon reads its printed 4000.
+#
+# Apemon's own "[On Play][When Digivolving] trash 1 [SW] card -> <Draw 2>" is
+# starved on purpose: after both digivolves the hand is EX12-009 / EX12-011 /
+# EX12-026, none of them [SW], so both engines skip it on their condition and
+# no prompt parks. Kakamon is never a battle-area TOP card on this line, so its
+# "[Start of Your Main Phase]" trigger never fires either.#
+# EVERY DIGIVOLVE DRAWS 1 (the core rule, before any [When Digivolving] effect
+# resolves), so both T1 digivolves pull from the stack: stack[10] and stack[11]
+# are those draws and are pinned to non-[SW] cards deliberately -- an unpinned
+# tail card landing in hand there could be [SW] and would open Apemon's
+# trash-for-<Draw 2> prompt, desynchronizing the line for a reason that is not
+# the clause.
+card: EX12-006
+clause: EX12-006#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-006, EX12-012, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-020, EX12-031, EX12-039, EX12-043, EX12-046,   # security
+            EX12-020,                                           # [10] Kakamon digivolve-draw
+            EX12-031,                                           # [11] Apemon digivolve-draw
+            EX12-026]                                           # [12] T3 turn draw
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): build the stack in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-006 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-012 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out -- the clause becomes measurable.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Pass out of P0's turn, so the same board can be read on P1's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # ON P0's TURN: Apemon's printed 4000 plus Kakamon's inherited +2000.
+  - at: 6
+    that:
+      p0.memory: 3
+      p0.field: [{ card_id: EX12-012, dp: 6000, suspended: false, sources: [EX12-002, EX12-006] }]
+  # ON P1's TURN: identical board, the [Your Turn] gate shut -- printed 4000.
+  - at: 7
+    that:
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: false, sources: [EX12-002, EX12-006] }]

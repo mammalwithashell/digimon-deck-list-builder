@@ -1,0 +1,124 @@
+# Exam scenario: EX12-047 (Amaterasumon), clause effect#5 -- "Digivolve: Lv.5
+# w/[Shambala]: Cost 3".
+#
+# Breeding highway re-routed from the recon sketch: the pool has no Takinmon
+# (EX12-039), and the sketch's purple line (Hanimon -> Kokeshimon ->
+# Karakurumon) is unauthorable anyway -- Karakurumon over a PURPLE Lv.4 matches
+# both its printed purple circle (cost 3) and its alt purple path (cost 4), two
+# distinct costs, which opens the rule-17 cost-choice prompt no `select:` step
+# can answer. The red line keeps every hop single-route:
+#   T1  hatch Onibimon (purple Lv.2 Shambala); Wankomon EX12-009 over it --
+#       only the alt Shambala circle (cost 0) matches a purple base. Its
+#       [On Play] reveal does not fire on a digivolve.
+#   T3  Seasarmon EX12-011 over the red Lv.3 Wankomon -- printed red, alt red,
+#       alt Shambala all cost 2: one distinct route.
+#   T5  Karakurumon EX12-063 over the RED Lv.4 Seasarmon -- purple/green
+#       circles miss; only "non-white Lv.4 w/[Puppet]/[Shambala]: cost 3".
+#   T7  the clause: Amaterasumon over the purple/green Lv.5 Karakurumon -- the
+#       standard yellow circle and the alt yellow path (cost 4) miss, ONLY
+#       "Lv.5 w/[Shambala]: Cost 3" matches. Memory 3 -> 0 is the witness.
+# Breeding-area effects don't function, so no When Digivolving selection opens.
+#
+# p0's stack pins hand (0-4), security (5-9, never touched) and every draw
+# (10-16) so no duplicate digivolver can reach the hand and make a `using:`
+# card-id intent ambiguous.
+card: EX12-047
+clause: EX12-047#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-047
+      - EX12-070
+      # security (5-9)
+      - EX12-074
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # draws: T1 digivolve (10), T3 turn (11), T3 digivolve (12),
+      # T5 turn (13), T5 digivolve (14), T7 turn (15), T7 digivolve (16)
+      - EX12-070
+      - EX12-036
+      - EX12-075
+      - EX12-031
+      - EX12-070
+      - EX12-076
+      - EX12-074
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (p0): hatch, Wankomon over the egg (alt Shambala, cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): Seasarmon over Wankomon (all routes cost 2, memory 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): Karakurumon over the red Lv.4 Seasarmon (trait path only, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): the clause -- Amaterasumon over the Lv.5 Shambala Karakurumon at
+  # alt cost 3; memory 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-047 } }
+    expect: { prompt: main_phase }
+  # Trailing pass so the last game question is answered.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Karakurumon's own alt digivolve paid 3 from a fresh gauge of 3...
+  - at: 12
+    that: { memory: 0 }
+  # ...and so did the clause under test.
+  - at: 17
+    that: { memory: 0 }

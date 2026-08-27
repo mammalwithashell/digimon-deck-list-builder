@@ -316,7 +316,7 @@ pub fn stamp(
     Ok(BuildManifest {
         dcgo_commit: commit,
         built_at,
-        artifact_sha256: manifest::sha256_file(&exe)?,
+        artifact_sha256: manifest::sha256_build_identity(&req.output_dir, exe_name)?,
         action_space_hash: manifest::action_space_hash(),
         executable: exe_name.to_string(),
     })
@@ -455,6 +455,14 @@ mod tests {
         let _ = std::fs::remove_dir_all(&r.output_dir);
         std::fs::create_dir_all(&r.output_dir).unwrap();
         std::fs::write(r.output_dir.join("DCGO.exe"), b"fake player").unwrap();
+        // A real Unity player always ships its managed assemblies, and the
+        // stamp now derives build identity from them rather than from the
+        // launcher stub (see manifest::sha256_build_identity). The fixture has
+        // to look like a real player or it is testing a shape that cannot
+        // occur.
+        let managed = r.output_dir.join("DCGO_Data").join("Managed");
+        std::fs::create_dir_all(&managed).unwrap();
+        std::fs::write(managed.join("Assembly-CSharp.dll"), b"fake game logic").unwrap();
 
         let m = stamp(&r, "DCGO.exe", "be359bb5b".into(), "2026-08-20T00:00:00Z".into()).unwrap();
 

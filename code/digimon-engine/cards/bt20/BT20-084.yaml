@@ -14,6 +14,10 @@ alt_paths:
 
 effects:
   - when: on_ally_played
+    # Printed [Trash] zone scope: this observer is live ONLY while the card
+    # sits in the owner's trash; the EnteredField trash scan enqueues only
+    # trash-scoped clauses (dead cards' ordinary observers stay dormant).
+    scope: trash
     optional: true
     active_when: { all_turns: true }
     summary: "[Trash] When any of your Digimon are played, may digivolve 1 Sistermon Ciel into this card for free"

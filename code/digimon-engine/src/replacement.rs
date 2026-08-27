@@ -248,6 +248,19 @@ pub(crate) fn try_replace_impl(
         return ReplacementOutcome::None;
     }
 
+    // Refresh declarative materialization before enumerating candidates.
+    // `collect_candidates` reads `ModifierRegistry::granted_keywords`, whose
+    // declarative entries (auras / conditional ESS `grant_keyword` clauses)
+    // exist only after `tick_declarative_effects()` materializes them. Any
+    // fire-site reached with a stale materialization (staged states,
+    // `Game::attack_digimon` / `delete_permanent_with_effects` outside the
+    // ticking `decode_action` wrapper) would otherwise see
+    // `granted_keywords() == []` and silently skip the prevention prompt
+    // (task_8f063aa6). Mirrors the existing staleness-guard ticks at the
+    // combat gates (`fire_piercing_or_finish`, security-strike recompute).
+    // Idempotent and cheap via the declarative fingerprint memo.
+    game.tick_declarative_effects();
+
     // §7.5: at the outermost entry, clear the fired-set so a fresh call chain
     // starts clean. EXCEPT when `in_replacement_commit` is set — that marks a
     // callback-commit continuation (the original top-level fire-site unwound
@@ -264,17 +277,34 @@ pub(crate) fn try_replace_impl(
     // the current call chain, skip re-dispatch. Critical for redirect routes
     // that funnel through the super-timing `WhenWouldLeaveBattleArea`.
     //
-    // During a callback-commit continuation (`in_replacement_commit`), we
-    // treat the guard more strictly: ANY prior fire for this subject blocks
-    // new replacements, regardless of timing. Rationale: once the player has
-    // accepted/declined a replacement for this event, the redirect route must
-    // not re-prompt for a *different* Would* timing on the same subject (the
-    // canonical case is Decode's deck→hand redirect, where the `return_to_hand`
-    // commit must NOT install a second PendingSelection for the hand-timing
-    // Decode replacement — that would double-prompt for what is logically a
-    // single event).
+    // During a callback-commit continuation (`in_replacement_commit`) the
+    // guard's strictness depends on WHAT is being committed
+    // (`replacement_commit_fired`):
+    //
+    // - **FIRED commit** (a replacement was accepted and produced a
+    //   non-`None` outcome — cancel / redirect / substitute / custom): ANY
+    //   prior fire for this subject blocks new replacements, regardless of
+    //   timing. Once a replacement has actually REPLACED the event, the
+    //   redirect route must not re-prompt for a *different* Would* timing on
+    //   the same subject (e.g. a deletion redirected deck-ward must not open
+    //   the deck-timing windows for what is logically a single, already
+    //   replaced event). This v1 broadening is pinned by
+    //   `dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation`.
+    //
+    // - **DECLINED / no-op commit** (outcome `None` — the event proceeds
+    //   unchanged): block only the exact `(timing, subject)` pairs that were
+    //   already offered. Rule 15-8-5-4: simultaneous immediate-type effects
+    //   are "activated one at a time until the cause ... is resolved", and
+    //   only "the already activated" effect is spent — an effect that was
+    //   offered and DECLINED never activated, so the remaining Would*
+    //   windows for the same event must still dispatch. Repro: declined
+    //   `<Decode>` (WhenWouldLeaveBattleArea) must not eat `<Evade>`
+    //   (WhenWouldBeDeleted) on an effect-deletion of EX12-036. DCGO agrees:
+    //   `DestroyPermanentsClass.Destroy()` stacks both cut-in timings into
+    //   one queue and `MultipleSkills` keeps offering the rest after a
+    //   decline.
     let key = (timing, subject);
-    let blocked = if game.in_replacement_commit {
+    let blocked = if game.in_replacement_commit && game.replacement_commit_fired {
         game.replacement_fired.iter().any(|(_t, s)| *s == subject)
     } else {
         game.replacement_fired.contains(&key)
@@ -1181,30 +1211,40 @@ fn install_optional_selection(
     });
 }
 
-/// Panic-safe helper for the `in_replacement_commit` flag around
-/// `commit_deferred_outcome`. Sets the flag, invokes `body`, and restores the
-/// prior value — even if `body` panics. Without this, a panic inside a
-/// replacement commit would leak `in_replacement_commit = true` and every
-/// subsequent top-level `try_replace` would spuriously treat itself as a
-/// callback-commit continuation (failing to clear `replacement_fired`,
-/// blocking legitimate replacement dispatch).
-fn run_commit_with_flag<F>(game: &mut crate::game::Game, body: F)
+/// Panic-safe helper for the `in_replacement_commit` /
+/// `replacement_commit_fired` flags around `commit_deferred_outcome`. Sets
+/// both flags, invokes `body`, and restores the prior values — even if
+/// `body` panics. Without this, a panic inside a replacement commit would
+/// leak `in_replacement_commit = true` and every subsequent top-level
+/// `try_replace` would spuriously treat itself as a callback-commit
+/// continuation (failing to clear `replacement_fired`, blocking legitimate
+/// replacement dispatch).
+///
+/// `fired` is `outcome != ReplacementOutcome::None` at every call site: it
+/// selects the §7.5 guard strictness in `try_replace_impl` (see the guard
+/// comment there — FIRED commits keep the broadened subject-wide block;
+/// DECLINED / no-op commits block exact `(timing, subject)` only so the
+/// remaining Would* windows of the same event still dispatch).
+fn run_commit_with_flag<F>(game: &mut crate::game::Game, fired: bool, body: F)
 where
     F: FnOnce(&mut crate::game::Game),
 {
     use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 
     let prior = game.in_replacement_commit;
+    let prior_fired = game.replacement_commit_fired;
     game.in_replacement_commit = true;
+    game.replacement_commit_fired = fired;
 
     // `Game` isn't `UnwindSafe` in general (it holds mutable state, interior
-    // mutability via closures, etc.), but for the purposes of restoring this
-    // single boolean on panic, `AssertUnwindSafe` is the documented pattern.
+    // mutability via closures, etc.), but for the purposes of restoring these
+    // two booleans on panic, `AssertUnwindSafe` is the documented pattern.
     // Any further observation of `Game` after a caught panic would be unsound;
-    // we do not observe it — we restore the flag and resume the unwind.
+    // we do not observe it — we restore the flags and resume the unwind.
     let result = catch_unwind(AssertUnwindSafe(|| body(game)));
 
     game.in_replacement_commit = prior;
+    game.replacement_commit_fired = prior_fired;
 
     if let Err(payload) = result {
         resume_unwind(payload);
@@ -1237,7 +1277,8 @@ pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Ga
          callers of `game.replacement_pending_outcome = Some(_)`."
     );
 
-    run_commit_with_flag(game, move |game| {
+    let fired = parked.outcome != ReplacementOutcome::None;
+    run_commit_with_flag(game, fired, move |game| {
         commit_deferred_outcome(
             game,
             parked.subject,
@@ -1309,7 +1350,11 @@ fn make_accept_callback(
         // from the original call chain survives the zone-mover re-entry.
         // `run_commit_with_flag` is panic-safe — if anything in the commit
         // body panics, the flag is restored before the unwind propagates.
-        run_commit_with_flag(game, |game| {
+        // An accepted candidate whose process left the outcome at `None`
+        // (a non-replacing rider like <Decode>, or a whiffed process) commits
+        // in DECLINED mode — the event proceeds unchanged, so the remaining
+        // Would* windows must still dispatch.
+        run_commit_with_flag(game, outcome != ReplacementOutcome::None, |game| {
             commit_deferred_outcome(
                 game,
                 subject,
@@ -1340,9 +1385,11 @@ fn make_decline_callback(
         // Decline → outcome stays None → commit the original event.
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
+        // DECLINED mode (`fired = false`): the not-yet-offered Would* windows
+        // of the same event must still dispatch during the commit.
         // `run_commit_with_flag` is panic-safe — if anything in the commit
         // body panics, the flag is restored before the unwind propagates.
-        run_commit_with_flag(game, |game| {
+        run_commit_with_flag(game, false, |game| {
             commit_deferred_outcome(
                 game,
                 subject,
@@ -1361,7 +1408,8 @@ pub(crate) fn run_optional_replacement_step(
     is_pass: bool,
 ) {
     if is_pass {
-        run_commit_with_flag(game, |game| {
+        // DECLINED mode — see `make_decline_callback`.
+        run_commit_with_flag(game, false, |game| {
             commit_deferred_outcome(
                 game,
                 state.subject,
@@ -1399,7 +1447,9 @@ pub(crate) fn run_optional_replacement_step(
     let has_unrelated_parked_replacement = game.parked_replacement.is_some();
 
     game.replacement_pending_outcome = Some(outcome);
-    run_commit_with_flag(game, |game| {
+    // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —
+    // see `make_accept_callback`.
+    run_commit_with_flag(game, outcome != ReplacementOutcome::None, |game| {
         commit_deferred_outcome(
             game,
             state.subject,
@@ -1583,13 +1633,50 @@ fn commit_deferred_outcome(
     match (dest, outcome) {
         // Deletion path — original_destination == Trash.
         (Zone::Trash, ReplacementOutcome::None) => {
-            // Decline path for a deletion: actually delete now, bypassing
-            // the replacement window (already offered and declined). The
-            // original deletion cause is re-established around the OnDeletion
-            // enqueue so `event_cause` predicates still see it — the
-            // synchronous fire-site already restored `current_deletion_cause`
-            // to `None` when it early-returned on selection install.
-            commit_permanent_deletion_no_replace(game, perm, cause, event_cause_override);
+            // Decline / no-op path for a deletion: the offered window was
+            // declined (or its process left the event unchanged — a
+            // non-replacing rider like <Decode>), which does NOT consume the
+            // deletion (rule 15-8-5-4: only the already ACTIVATED immediate
+            // effect is spent). When a deletion-window stage was never
+            // offered for this subject in the current chain (e.g.
+            // `WhenWouldBeDeleted` after a declined stage-1
+            // `WhenWouldLeaveBattleArea`), re-enter the windowed deletion
+            // flow so the remaining stage still dispatches — declined
+            // <Decode> must not eat <Evade>. The fired-set preserved by
+            // `in_replacement_commit` (DECLINED mode: exact
+            // `(timing, subject)` keys) blocks the already-offered timings,
+            // so the declined prompt cannot re-offer and the recursion is
+            // bounded by the number of deletion stages.
+            //
+            // When every stage has already been offered, take the terminal
+            // no-replace commit exactly as before. Stage list must stay in
+            // sync with `Game::run_deletion_batch_stages`.
+            //
+            // Either way the original deletion cause is re-established
+            // around the commit so OnDeletion `event_cause` predicates
+            // still see it — the synchronous fire-site already restored
+            // `current_deletion_cause` to `None` when it early-returned on
+            // selection install.
+            let deletion_stages = [
+                EffectTiming::WhenWouldLeaveBattleArea,
+                EffectTiming::WhenWouldBeDeleted,
+            ];
+            let all_stages_offered = deletion_stages
+                .iter()
+                .all(|t| game.replacement_fired.contains(&(*t, subject)));
+            if all_stages_offered {
+                commit_permanent_deletion_no_replace(game, perm, cause, event_cause_override);
+            } else {
+                let prior_override = game.current_deletion_event_cause_override;
+                game.current_deletion_event_cause_override = event_cause_override;
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    game.delete_permanent_with_cause(perm, cause);
+                }));
+                game.current_deletion_event_cause_override = prior_override;
+                if let Err(payload) = result {
+                    std::panic::resume_unwind(payload);
+                }
+            }
         }
         (Zone::Trash, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {
             // Already handled by process — nothing to do.

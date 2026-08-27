@@ -1,0 +1,210 @@
+# Exam scenario: EX12-062 (Kokeshimon), clause inherited#1 -- the
+# "<Draw 1> ... and trash 1 card in your hand" BODY of the inherited
+# "[When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand."
+#
+# RECONCILED 2026-08-24 against the failed oracle run
+# (20260824T175359Z_e973e13cdfb1403e9834ddb2728f12a8.jsonl). The recorded
+# wire is unambiguous: after "action step 7" played Wankomon (EX12-009),
+# DCGO emitted exactly TWO SelectCardEffect rows -- step 8 (EX12-065, the
+# [Shambala] pick) and step 9 (EX12-070, the [TB] pick) -- and then went
+# straight to effect_activation for the whole [On Play]. There is no third
+# row: RevealLibrary.ReturnRevealedCardsToLibraryBottom auto-places a SINGLE
+# leftover and prompts only for 2 or more, while our engine asks a one-card
+# ordering. The line died at step 8 on "expected SelectCardEffect but DCGO
+# asked main_phase" -- BEFORE the T7 clause ever ran. That is a real
+# (already-documented) surface difference, not something a scenario can
+# answer: the format has no author-facing sim-only selection row
+# (LoweredStep::SimOnlyAction is produced only for the gate-less
+# end-of-turn phase exit).
+#
+# The fix removes the reveal from the line instead of trying to script it.
+# Wankomon is still the base -- its inherited is a PASSIVE "[Your Turn]
+# +2000 DP", which is what keeps the attack window free of a competing
+# [When Attacking] trigger (Gasamon and Hanimon, the pool's only other
+# promptless Lv.3s, both carry one and would open a MultipleSkills order) --
+# but it now reaches the field by DIGIVOLVING over the Onibimon egg in
+# breeding (EX12-004 is Lv.2 [Shambala], so Wankomon's alt route costs 0).
+# Digivolving is not playing, so [On Play] never fires and the reveal never
+# happens.
+#
+# The price is the EX12-004 source: its "[Inherited][Your Turn] this [TB]
+# Digimon gains <Execute>" opens the end-of-turn attack gate at every turn
+# end where the carrier CanAttack -- end of T3 (Wankomon, moved that turn;
+# DCGO's MovePermanent never stamps EnterFieldTurnCount, and our engine
+# agrees) and end of T5 (Kokeshimon, never attacked). Both are declined via
+# our EndOfTurnAction PASS, which the emitter maps to OptionalSkill "no".
+# End of T7 has NO gate: MarineBullmon suspended itself attacking, and
+# DCGO's CanActivateExecute requires CanAttack.
+#
+# The line:
+#   T1 hatch + digivolve Wankomon over Onibimon in breeding (cost 0).
+#   T3 move it out.
+#   T5 Kokeshimon over Wankomon: the printed purple Lv.3 circle misses the
+#      RED base, so only the alt [Puppet]/[Shambala] route (cost 2) matches
+#      and the rule-17 cost-choice prompt stays closed. Its [When
+#      Digivolving] payment prompt opens over its own body (DCGO gates the
+#      enemy check AFTER the payment, EX12_062.cs) -- declined.
+#   T7 MarineBullmon (EX12-031) over Kokeshimon: the printed BLUE and YELLOW
+#      Lv.4 circles miss the purple base, so only the alt
+#      [Aquatic]/[Shambala] route (cost 3) matches. MarineBullmon has no
+#      [When Attacking] text, so the attack fires exactly ONE trigger:
+#      Kokeshimon's inherited clause under exam. Its own [When Digivolving]
+#      "By placing 1 card from your hand..." payment prompt is declined (the
+#      hand holds EX12-026, a Lv.4 [TB] Digimon, so the gate is funded on
+#      both sides rather than being a vacuous 15-7-4 park).
+#
+# The attack targets security; p1's pinned security is all blank-security
+# Digimon at 2000 DP, so the 9000 DP attacker (7000 + Wankomon's inherited
+# +2000) survives and the only selection in the attack window is the
+# clause's forced hand-trash. The <Draw 1> half is witnessed by the pinned
+# deck card EX12-047 landing in hand.
+card: EX12-062
+clause: EX12-062#inherited#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-062
+      - EX12-031
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- p0 is never attacked on this line
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-061
+      - EX12-076
+      # draws: T1 breeding digivolve (10), T3 turn (11), T5 turn (12),
+      # T5 digivolve (13), T7 turn (14), T7 digivolve (15),
+      # the clause's <Draw 1> (16)
+      - EX12-026
+      - EX12-065
+      - EX12-011
+      - EX12-020
+      - EX12-036
+      - EX12-046
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon, all 2000 DP.
+      # stack[9] is the TOP of the security stack, so EX12-061 is flipped.
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-061
+      # draws: T2 (10), T4 (11), T6 (12), T8 (13)
+      - EX12-026
+      - EX12-036
+      - EX12-047
+      - EX12-046
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): hatch, then digivolve Wankomon over the egg in breeding
+  # (cost 0). Digivolving is not playing, so the [On Play] reveal -- the
+  # clause-blocking one-card ordering row -- never happens.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass. p1 never hatches, so p1 has no <Execute> gates.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): move the stack out.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T3: decline the granted <Execute> gate on Wankomon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Kokeshimon over Wankomon via the alt trait route (cost 2,
+  # memory 3 -> 1); decline its [When Digivolving] payment.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T5: decline the granted <Execute> gate on Kokeshimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 7 (p0): MarineBullmon over Kokeshimon via the alt route (cost 3,
+  # memory 3 -> 0); decline its [When Digivolving] hand-placement payment;
+  # then the attack fires the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The clause's forced trash half; the <Draw 1> half already pulled EX12-047.
+  - actor: 0
+    do: { select: { cards: [EX12-075] } }
+    expect: { prompt: SelectHandEffect }
+  # Attack resolves (2000-DP security card loses the check); close the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-snapshot of the closing pass, i.e. after the clause resolved: the
+  # keyword's draw (EX12-047, deck slot 16) is in hand, EX12-075 was trashed,
+  # and the stack survived the security check. DP is 9000: MarineBullmon's
+  # 7000 plus Wankomon's inherited "[Your Turn] +2000" from the sources.
+  - at: 22
+    that:
+      memory: 0
+      p0.hand: [EX12-070, EX12-026, EX12-065, EX12-011, EX12-020, EX12-036, EX12-046, EX12-047]
+      p0.field: [{ card_id: EX12-031, dp: 9000, suspended: true, sources: [EX12-004, EX12-009, EX12-062] }]

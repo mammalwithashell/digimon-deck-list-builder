@@ -1,0 +1,80 @@
+# Exam scenario: EX12-009 Wankomon inherited "[Your Turn] This Digimon gets +2000 DP".
+#
+# Build the stack entirely in the breeding area (no triggers fire there), then
+# move it out and measure on the owner's turn:
+#   T1: hatch Onibimon (purple Lv2 [Shambala]), digivolve Wankomon via its alt
+#       circle (cost 0 -- the standard red circle does not match purple).
+#   T2 (memory 3): digivolve Shellmon EX12-026 over the RED Wankomon in
+#       breeding. Shellmon's standard circle is blue Lv3 and does not match, so
+#       only the alt "Lv.3 w/[Shambala]: Cost 2" path applies -- single cost, no
+#       EffectChoice, and no [When Digivolving] trigger in breeding.
+#   T3: move to battle. Shellmon (5000 DP) now carries Wankomon as a source on
+#       the owner's turn: the inherited aura puts it at 7000 DP.
+#
+# The measurement is a STATE observation (static aura), captured by the
+# projection/backfill at the end of the line -- there is no event to script.
+# The line deliberately ends on the move (answering breeding_action) WITHOUT
+# passing the main phase: ending the turn would hit Onibimon's inherited
+# end-of-turn <Execute> window, which is a different card's clause and a prompt
+# this line must not depend on.
+#
+# Stack: 5-card opening hand; stack[5..6] land in SECURITY (deal order is hand
+# 0-4, security 5-9, draws 10+ -- probed empirically by the EX12-074/EX12-061
+# lines), so every draw on this line comes from the seeded shuffle of the rest.
+# Exactly one copy each of EX12-009 and EX12-026 in the stacked prefix keeps
+# both digivolve intents unique in hand; the seeded draws happen to add no
+# duplicate before either digivolve step (verified by the sim lowering).
+card: EX12-009
+clause: EX12-009#inherited#0
+seed: 424242
+decks:
+  p0: { stack: [EX12-009, EX12-026, EX12-011, EX12-031, EX12-046, EX12-011, EX12-046], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): move the stack to the battle area. The inherited [Your Turn] aura
+  # is live from this moment -- Shellmon reads 7000 DP, not its printed 5000.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+assert:
+  # THE clause observable: Shellmon prints 5000 DP but reads 7000 on the
+  # owner's turn -- Wankomon's inherited [Your Turn] +2000 DP aura, live the
+  # moment the stack moves to battle. Sources sort on projection, so the
+  # hatched egg (EX12-004) and Wankomon (EX12-009) list in id order.
+  - at: 11
+    that:
+      p0.field: [{ card_id: EX12-026, dp: 7000, suspended: false, sources: [EX12-004, EX12-009] }]

@@ -1,0 +1,86 @@
+# Exam scenario: ST1-15 (Giga Destroyer), clause ST1-15#effect#0 --
+# "[Main] Delete up to 2 of your opponent's Digimon with 4000 DP or less."
+#
+# The first exam scenario that ANSWERS A SELECTION. The line builds the
+# position by legal play only: both seats hatch, digivolve the breeding Lv2
+# into a Lv3 Agumon (evo cost 0), and move it to the battle area -- p0's
+# Agumon satisfies the red-Option color gate, p1's Agumon is the 3000 DP
+# target. On turn 5 p0 has the pass-granted 3 memory; playing the cost-6
+# Option is legal (memory stays >= the -10 floor), parks the field-permanent
+# prompt, and the `select:` step answers it with OUR slot reference -- the
+# emitted job carries the targeted permanent's TOP-CARD id (ST1-02), so DCGO
+# resolves the identity against its own candidate list.
+#
+# The play pushes memory to -3, so the turn ends after the effect resolves;
+# the trailing pass is p1's next breeding decision, without which the line
+# exhausts while DCGO still holds a prompt.
+#
+# Stacks are the full 11-card deal prefix per seat (5 hand, 5 security, then
+# draws), so every `play`/`digivolve` intent stays unambiguous: exactly one
+# copy of each referenced card is in the acting hand when it is referenced.
+card: ST1-15
+clause: ST1-15#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-15, ST1-02, ST1-04, ST1-05, ST1-06,   # opening hand
+            ST1-13, ST1-13, ST1-14, ST1-14, ST1-12,   # security
+            ST1-03, ST1-03]                            # turn-3 / turn-5 draws
+    rest: starter_st1_gaia_red
+  p1:
+    stack: [ST1-02, ST1-04, ST1-05, ST1-06, ST1-07,   # opening hand
+            ST1-09, ST1-09, ST1-12, ST1-12, ST1-13,   # security
+            ST1-08, ST1-08]                            # turn-2 / turn-4 draws
+    rest: starter_st1_gaia_red
+steps:
+  # Turn 1 (p0): hatch, digivolve the breeding Koromon into Agumon, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST1-02 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): the same.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-02 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): move Agumon to the battle area (red presence for the Option).
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): move Agumon to the battle area (the deletion target).
+  - actor: 1
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): decline the breeding phase, play the Option, answer its prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-15, from: hand } }
+    expect: { prompt: main_phase }
+  # "Up to 2": pick p1's lone Agumon; the resolver issues the trailing PASS
+  # that closes the multi-pick itself.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The cost-6 play took memory to -3, ending p0's turn after resolution, so
+  # the next prompt is p1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }

@@ -1088,6 +1088,9 @@ impl Game {
                 (handle.player, perm.card_sources[0].card_index)
             };
 
+            // Scope the decline flag to THIS resolution: a key left over from a
+            // previous Option would otherwise be read as a decline here.
+            self.declined_delay_option = None;
             self.enqueue_triggered(
                 EffectTiming::DelayEffect,
                 crate::selection::TriggerSource::Permanent(handle),
@@ -1106,6 +1109,12 @@ impl Game {
             // Re-find the permanent by stable key — the DelayEffect body
             // may have deleted it, shifted indices via other mutations, or
             // (rarely) moved it. If it's gone, nothing to trash.
+            if self.take_declined_delay_reschedule(key) {
+                // Declined: cost unpaid, carrier stays, window moved on. Skip
+                // it for the rest of this scan so we advance to siblings.
+                cancelled_keys.insert(key);
+                continue;
+            }
             if let Some(current_handle) = self.find_delayed_permanent_by_key(key, turn, triggers) {
                 self.delete_permanent_with_cause(
                     current_handle,
@@ -1134,6 +1143,48 @@ impl Game {
                 cancelled_keys.insert(key);
             }
         }
+    }
+
+    /// If the just-resolved turn-scheduled `<Delay>` at `key` had its §16-16-2
+    /// cost DECLINED, leave the carrier alone and move its window forward.
+    ///
+    /// Returns `true` when the caller must NOT delete the carrier.
+    ///
+    /// Rescheduling is not optional politeness: the scan matches on
+    /// `trash_on_turn == turn`, so an Option left at its spent turn number
+    /// would sit on the field forever, never offered again. §16-16-1 keeps the
+    /// Delay available "while a card with this effect is in the battle area",
+    /// and these are recurring printed windows ([Start of Your Turn],
+    /// [End of Your Turn]), so the next window is the controller's next turn —
+    /// exactly what `compute_delay_trash_turn` yields from here.
+    fn take_declined_delay_reschedule(&mut self, key: (PlayerId, u16)) -> bool {
+        if self.declined_delay_option != Some(key) {
+            return false;
+        }
+        self.declined_delay_option = None;
+
+        let owner = key.0;
+        let slot = self
+            .player(owner)
+            .battle_area
+            .iter()
+            .position(|perm| perm.card_sources.first().map(|c| c.card_index) == Some(key.1));
+        if let Some(slot) = slot {
+            let trigger = match self.player(owner).battle_area[slot].option_state {
+                crate::permanent::OptionState::Delayed { trigger, .. } => Some(trigger),
+                _ => None,
+            };
+            if let Some(trigger) = trigger {
+                let next_turn = self.compute_delay_trash_turn(owner, trigger);
+                if let crate::permanent::OptionState::Delayed {
+                    trash_on_turn, ..
+                } = &mut self.player_mut(owner).battle_area[slot].option_state
+                {
+                    *trash_on_turn = next_turn;
+                }
+            }
+        }
+        true
     }
 
     pub(crate) fn park_delayed_option_lifecycle(&mut self, resume: DelayedOptionLifecycleResume) {
@@ -1168,11 +1219,15 @@ impl Game {
                         self.find_delayed_permanent_by_key(key, resume.turn, triggers)
                     }
                 };
-                if let Some(current_handle) = current_handle {
+                let declined = self.take_declined_delay_reschedule(key);
+                if let (false, Some(current_handle)) = (declined, current_handle) {
                     self.delete_permanent_with_cause(
                         current_handle,
                         crate::replacement::ReplacementCause::Cost,
                     );
+                }
+                if declined {
+                    resume.skip_key = Some(key);
                 }
 
                 if self.pending_selection.is_some() {

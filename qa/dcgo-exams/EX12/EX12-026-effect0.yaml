@@ -1,0 +1,154 @@
+# Exam scenario: EX12-026 Shellmon effect clause #0 -- "<Blocker> (This
+# Digimon can block in the blocker timing.)".
+#
+# The observable is the BLOCK itself. P0's board is Shellmon alone, so the
+# blocker window that opens on P1's security attack exists only because
+# Shellmon prints <Blocker>; without the keyword the attack would simply
+# check P0's security. The `select:` answers the window with Shellmon, the
+# 5000-vs-2000 battle deletes Gasamon, and P0's security stays on 5 --
+# security untouched + attacker in P1's trash is a pair of observables no
+# static aura can fake.
+#
+# Sources: the card face (Assets/Textures/Card/EX12-026.webp) prints the
+# <Blocker> box; DCGO registers it as an EffectTiming.None static self-effect,
+# `CardEffectFactory.BlockerSelfStaticEffect(isInheritedEffect: false, ...)` at
+# EX12_026.cs:28 -- unconditional (`condition: null`) and NOT inherited, so it
+# is live only while Shellmon is the TOP card, which this line's board (a bare
+# Shellmon with no digivolution cards) satisfies by construction.
+#
+# ORDER IS LOAD-BEARING: Shellmon lands FIRST, into an empty enemy board.
+# Its [On Play] ("trash the bottom 2 digivolution cards of 1 of your
+# opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution
+# cards can't attack or block until their turn ends" -- clause #1's exam,
+# MANDATORY) would otherwise fire on Gasamon and hand it the very
+# can't-attack modifier this line needs it not to have. Played into an empty
+# board it has zero candidates and stays silent.
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Shellmon (cost 5, 0 -> -5
+#       overshoot -- legal above the -10 floor; the turn ends on it).
+#   T2 (P1, memory 5): play Gasamon (5 -> 2; its only printed effect is a
+#       [Your Turn] would-digivolve cost reduction, so no prompt), pass out
+#       (memory 3 to P0).
+#   T3 (P0, memory 3): all-pass -- Gasamon sheds summoning sickness.
+#   T4 (P1, memory 3): THE CLAUSE -- Gasamon attacks security, Shellmon's
+#       printed <Blocker> opens P0's window, the select blocks with it.
+#       Attacking costs no memory, so P1 answers a trailing main prompt.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP), then the
+# seat's turn draws in order (P0: T3; P1: T2, T4). P1's security deliberately
+# holds NO EX12-074: its "[Security] [Your Turn] [Once Per Turn] when one of
+# your [Shambala] Digimon attacks..." functions FROM the security stack and
+# would bury the blocker window under a TriggerOrder prompt when the
+# [Shambala] Gasamon declares.
+#
+# P1'S HAND MUST HOLD A DIGIMON (EX12-009), reconciled against the DCGO wire.
+# DCGO does NOT prompt a turn player who has nothing to choose: the main-phase
+# loop in TurnStateMachine.cs runs `if (!CanSelect()) EndTurnProcess()` BEFORE
+# it ever asks, and CanSelect() is false when no hand card is playable, no
+# permanent can attack or declare a skill, and no hand/trash card can. The
+# block empties P1's board, and P1's remaining hand was all Option cards
+# (EX12-070 / EX12-075, card_kind 2). An Option needs MatchColorRequirement --
+# a matching-colour permanent in play, or a [TB]/[Shambala] permanent for its
+# <Use Req.> -- and an EMPTY board satisfies neither, so every card in hand was
+# unplayable, CanSelect() went false, and DCGO ended P1's turn SILENTLY. The
+# first oracle run failed exactly there: "step 10 expected actor 1 but DCGO
+# asked actor 0" -- actor 0 being P0's turn-5 breeding prompt.
+# EX12-009 (Digimon, cost 3; MaxMemoryCost is 7 at memory 3) carries no colour
+# requirement, so it keeps CanSelect() true and DCGO keeps asking. It is inert:
+# it has only an [On Play] effect and is never played.
+card: EX12-026
+clause: EX12-026#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): one Shellmon so the play intent is unambiguous; the rest
+      # are Options P0 never plays.
+      - EX12-026
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9): never checked (the attack is blocked), Digimon only.
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10)
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon so the play intent is unambiguous.
+      # EX12-009 (Wankomon, Digimon, cost 3) is here ONLY to keep DCGO asking:
+      # see the CanSelect() note in the header. It is never played.
+      - EX12-020
+      - EX12-009
+      - EX12-075
+      - EX12-070
+      - EX12-075
+      # security (5-9): Digimon only, NO EX12-074 (see the header note).
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-070
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): Shellmon into an empty enemy board -- On Play silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-026, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): the attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the clause under exam -- attack into Shellmon's block.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0's blocker window: block with the printed-<Blocker> Shellmon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory, and the EX12-009 in hand keeps CanSelect() true
+  # now that the block emptied P1's board -- so DCGO still asks P1 here.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over stack-pinned facts: the block happened (P0's
+  # security never checked), Gasamon lost the 5000-vs-2000 battle, and
+  # Shellmon stands suspended from blocking. Asserted at 10 -- right after the
+  # block resolves and BEFORE the trailing pass hands the turn back to P0,
+  # whose unsuspend phase would clear the blocker's suspended flag.
+  - at: 10
+    that:
+      p0.security: 5
+      p1.field: []
+      p1.trash: [EX12-020]
+      p0.field:
+        - { card_id: EX12-026, dp: 5000, suspended: true, sources: [] }

@@ -34,6 +34,12 @@ serde_yml = "0.0.12"
 # official Bandai DB mirror (data/card_official.json).
 serde_json = "1"
 strum = "0.26"
+# EXPERIMENT (2026-08-24): test-only global allocator. The suite's thread
+# scaling is pathological -- at opt-level 2 the 484-test `bt24` subset runs
+# 60s at 1 thread but 136-166s at 4 -- with 41 GB RAM free and no paging, so
+# the suspect is the Windows system heap's lock under this workload's
+# allocation churn. `dev-dependencies` keeps it out of every production build.
+mimalloc = { version = "0.1", default-features = false }
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is
 # `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the

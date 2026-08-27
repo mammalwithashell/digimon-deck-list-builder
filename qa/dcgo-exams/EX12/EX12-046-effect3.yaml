@@ -1,0 +1,99 @@
+# Exam scenario: EX12-046 (Shishimamon), clause effect#3 -- "Digivolve: Lv.4
+# w/[Shambala]: Cost 3".
+#
+# Blue breeding highway, chosen so every digivolve has exactly ONE distinct-cost
+# route (the engine's rule-17 cost-choice prompt opens on >1 distinct cost, and
+# `select:` steps are not authorable yet):
+#   T1  hatch Onibimon (purple Lv.2 Shambala), digivolve Gasamon EX12-020 over
+#       it -- printed blue circle misses the purple base, only the alt Shambala
+#       path (cost 0) matches.
+#   T3  Shellmon EX12-026 over Gasamon (blue Lv.3 Shambala) -- printed blue
+#       circle, alt blue and alt Shambala ALL match at cost 2: equal costs, so
+#       one distinct route, no prompt.
+#   T5  Shishimamon over the BLUE Lv.4 Shellmon -- the standard yellow circle
+#       and the yellow/red alt paths (cost 4) all miss a blue base; ONLY the
+#       clause under test ("Lv.4 w/[Shambala]: Cost 3") matches. Memory 3 -> 0
+#       is the witness that cost 3 was paid. Breeding-area effects don't
+#       function, so no When Digivolving selection opens anywhere on the line.
+#
+# p0's stack pins hand (0-4), security (5-9, never touched) and every draw
+# (10-14: T1 digivolve draw, T3 turn + digivolve draws, T5 turn + digivolve
+# draws) so no duplicate of a digivolver can reach the hand and make the
+# `using:` card-id intent ambiguous.
+card: EX12-046
+clause: EX12-046#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-026
+      - EX12-046
+      - EX12-070
+      - EX12-074
+      # security (5-9)
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-036
+      - EX12-076
+      # draws: T1 digivolve (10), T3 turn (11), T3 digivolve (12),
+      # T5 turn (13), T5 digivolve (14)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-031
+      - EX12-070
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (p0): hatch, digivolve Gasamon in breeding (alt Shambala, cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-020 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): Shellmon over Gasamon (every matching route costs 2, memory 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): the clause -- Shishimamon over the blue Lv.4 Shellmon. Only the
+  # "Lv.4 w/[Shambala]: Cost 3" path matches; memory 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-046 } }
+    expect: { prompt: main_phase }
+  # Trailing pass so the last game question is answered.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that: { memory: 0 }

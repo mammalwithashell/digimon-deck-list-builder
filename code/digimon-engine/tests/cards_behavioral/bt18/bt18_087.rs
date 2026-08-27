@@ -111,7 +111,8 @@ fn bt18_087_clause1_start_of_your_turn_face_up_not_optional() {
     assert!(!clause1.once_per_turn, "clause 1 is not once_per_turn");
 }
 
-/// Clause 2 must be on_opponent_security_removed, FaceUp scope, not optional.
+/// Clause 2 must be on_opponent_security_removed, FaceUp scope, and OPTIONAL —
+/// "by suspending this Tamer" is an optional processing condition.
 /// active_when: { all_turns: true } is not structurally inspectable, but
 /// the clause's presence with the correct timing/scope is verifiable.
 #[test]
@@ -141,9 +142,29 @@ fn bt18_087_clause2_on_opponent_security_removed_face_up() {
         CompiledScope::FaceUp,
         "clause 2 must have FaceUp (own) scope — Owen is a tamer, not inherited"
     );
+
+    // §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+    // Owen prints exactly that: "…, by suspending this Tamer, delete 1 of your
+    // opponent's Digimon with 4000 DP or less." §15-7-4: "A player can choose
+    // whether or not to execute the content of optional processing conditions,
+    // regardless of whether or not the content of the conditions can be
+    // executed." So the payment is the player's choice, and rule 17
+    // (no auto-selections) requires the decline to reach the action space.
+    //
+    // This assertion used to be inverted, on the theory that "cost-as-suspend
+    // is the gate, not an accept/decline prompt". Being unable to pay is
+    // indeed a gate (see `bt18_087_clause2_does_not_fire_when_owen_already_
+    // suspended`), but §15-7-4 says the gate is not what makes the payment
+    // MANDATORY when it *can* be paid. DCGO agrees with the manual:
+    // BT18_087.cs:37 passes isOptional = true to SetUpActivateClass.
     assert!(
-        !clause2.optional,
-        "clause 2 is not user-optional — cost-as-suspend is the gate, not an accept/decline prompt"
+        clause2.optional,
+        "clause 2 is an optional processing condition (§15-7-1/§15-7-4): the player may decline to suspend"
+    );
+    assert!(
+        clause2.outer_prompt,
+        "the body's first step is a bare `suspend: {{ target: source }}` cost — not itself \
+         declinable — so the decline must come from a forced outer confirm"
     );
 }
 
@@ -507,6 +528,137 @@ fn bt18_087_clause2_owen_remains_suspended_after_full_resolution() {
     assert!(
         owen_suspended,
         "Owen must remain suspended after clause 2 fully resolves (suspend is the activation cost)"
+    );
+}
+
+// ─── Section 4b: the optional processing condition is declinable ─────────────
+
+/// Prompt string `install_outer_optional_trigger_selection` builds for Owen's
+/// forced accept/decline confirm (`effect_queue.rs`).
+const OWEN_CONFIRM_PROMPT: &str = "You may activate BT18-087's triggered effect";
+
+/// Step the pending-selection queue until Owen's optional-processing-condition
+/// confirm appears, answering anything ahead of it with its first legal action.
+/// Answers the confirm with PASS when `decline`, else with its ACCEPT action.
+/// Returns `true` when the confirm was reached and answered.
+fn answer_owen_confirm(runner: &mut DebugRunner, decline: bool) -> bool {
+    for _ in 0..32 {
+        let Some(view) = runner.pending_selection_view() else {
+            return false;
+        };
+        if view.prompt == OWEN_CONFIRM_PROMPT {
+            let action = if decline {
+                digimon_engine::action::space::PASS
+            } else {
+                *view
+                    .valid_action_ids
+                    .first()
+                    .expect("the accept branch must be offered")
+            };
+            runner
+                .execute_action(view.selecting_player, action)
+                .expect("Owen's optional processing condition must be answerable");
+            return true;
+        }
+        let action = match view.valid_action_ids.first().copied() {
+            Some(id) => id,
+            None if view.is_optional => digimon_engine::action::space::PASS,
+            None => return false,
+        };
+        if runner.execute_action(view.selecting_player, action).is_err() {
+            return false;
+        }
+    }
+    false
+}
+
+fn owen_security_removal_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(OWEN_YAML)
+        .expect("BT18-087 YAML parses")
+        .add_card(make_opp_digimon("OPP-DECLINE-3000", 3000))
+        .add_card(make_filler("SEC-DECLINE"))
+        .add_card(make_filler("P0-ATTKR-DECLINE"))
+        .add_card(make_filler("FILLER-DECK"))
+        .security(1, &["SEC-DECLINE"])
+        .deck(0, &["FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BT18-087", Some(0));
+    let attacker = runner.place_on_field(0, "P0-ATTKR-DECLINE", Some(0));
+    runner.place_on_field(1, "OPP-DECLINE-3000", Some(0));
+    (runner, attacker)
+}
+
+fn owen_is_suspended(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT18-087" && p.is_suspended)
+}
+
+/// §15-7-4: "A player can choose whether or not to execute the content of
+/// optional processing conditions." Declining "by suspending this Tamer" must
+/// leave BOTH halves undone — Owen stays unsuspended AND the opponent's
+/// eligible Digimon survives — because §15-7-2 says that when the optional
+/// condition's content isn't executed, "the processing after the conditions
+/// can't be executed".
+///
+/// This is the branch the engine had no way to reach: the clause fired
+/// unconditionally, so the suspend was auto-paid and the delete was forced.
+/// DCGO exposes the choice (BT18_087.cs:37, isOptional = true).
+#[test]
+fn bt18_087_clause2_may_be_declined_leaving_owen_unsuspended_and_target_alive() {
+    let (mut runner, attacker) = owen_security_removal_runner();
+
+    assert!(!owen_is_suspended(&runner), "Owen must start unsuspended");
+    assert_eq!(runner.battle_area_size(1), 1, "pre: opponent has 1 Digimon");
+
+    runner.attack_player(attacker, 1, false);
+
+    assert!(
+        answer_owen_confirm(&mut runner, true),
+        "the optional processing condition must surface a decline prompt (rule 17)"
+    );
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !owen_is_suspended(&runner),
+        "declining the optional cost must NOT suspend the Tamer"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "with the optional condition declined, the processing after it can't execute — \
+         the opponent's 3000 DP Digimon must survive"
+    );
+}
+
+/// The accept half of the same prompt: taking the ACCEPT action pays the
+/// suspend cost and runs the delete. Drives the branch explicitly rather than
+/// letting `auto_resolve` pick, so the prompt's existence is load-bearing.
+#[test]
+fn bt18_087_clause2_accepting_the_optional_cost_suspends_and_deletes() {
+    let (mut runner, attacker) = owen_security_removal_runner();
+
+    runner.attack_player(attacker, 1, false);
+
+    assert!(
+        answer_owen_confirm(&mut runner, false),
+        "the optional processing condition must surface an accept prompt (rule 17)"
+    );
+    let _ = runner.auto_resolve();
+
+    assert!(
+        owen_is_suspended(&runner),
+        "accepting pays the printed cost — Owen suspends"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "accepting runs the processing after the condition — the 3000 DP Digimon is deleted"
     );
 }
 

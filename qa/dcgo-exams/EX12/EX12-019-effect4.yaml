@@ -1,0 +1,210 @@
+# Exam scenario: EX12-019 (Nezhamon), clause effect#4 -- "<Blocker>
+# (This Digimon can block in the blocker timing.)"
+#
+# The witness is that p0 GETS THE CHOICE AT ALL, and what it costs p1.
+# At T12 p1's Gasamon attacks p0's security. Our engine parks a "Declare a
+# blocker" prompt for p0 (step 31) -- a prompt that exists only if p0 controls
+# an unsuspended Digimon with <Blocker>, and Nezhamon is p0's only permanent.
+# Taking it redirects the attack into a battle Nezhamon wins 12000 to 2000, so
+# p0's security stays at 5 and Gasamon lands in p1's trash. Declining (or
+# lacking <Blocker>) would read as the mirror image: security 4, Gasamon alive.
+#
+# Note that this is the OTHER side of the same block machinery
+# EX12-019-effect1.yaml exercises: there <Collision> compels p1 to block, here
+# <Blocker> merely permits p0 to. The prompts are the same shape, the clauses
+# are not.
+#
+# Nezhamon is left UNSUSPENDED through T11 on purpose: it passes its whole main
+# phase and declines its own <Engage> end-of-turn gate (step 28), because a
+# suspended Digimon cannot block and the gate is the only thing in the line
+# that would have suspended it.
+#
+# The block changes the attack target, which also fires Nezhamon's [All Turns]
+# effect#6 (+4000 DP, mandatory, no prompt) -- so the projection at step 32
+# shows 16000 DP: 12000 base, no [Your Turn] inherited auras (it is p1's turn),
+# plus 4000. That clause is measured by EX12-019-effect6.yaml; here it is
+# simply part of the pinned board.
+#
+# Highway: the proven red breeding line from EX12-047-effect1.yaml --
+#   T1 Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) / T5 Karakurumon
+#   (alt, 3) / T7 Nezhamon (alt [Shambala], 3) / T9 move out;
+#   T10 p1 plays Gasamon, T11 p0 idles, T12 the clause.
+card: EX12-019
+clause: EX12-019#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-019
+      - EX12-070
+      # security (5-9), stack[9] = TOP. NEVER flipped either, because the
+      # block is what this file measures -- a missed block would flip it, so
+      # `p0.security: 5` at step 32 is half the witness. Digimon only, no
+      # [Security] text, so a missed block could not be excused as a prompt
+      # from some other card.
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18). No draw repeats
+      # EX12-009/011/063/019 -- a second copy in hand would make the `using:`
+      # intent ambiguous.
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+      - EX12-075
+      - EX12-031
+      - EX12-061
+    rest: toho-sw
+  p1:
+    stack:
+      # hand (0-4): Gasamon pinned at slot 0, the only card p1 ever plays
+      - EX12-020
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      # security (5-9) -- never checked: p0 never attacks in this line.
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Wankomon (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): Karakurumon over the red Lv.4 [Shambala] Seasarmon on
+  # its own alternate circle (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE -- Nezhamon over the purple/green Lv.5
+  # [Shambala] Karakurumon. Only the alternate circle can reach it (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-019 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): move Nezhamon to the battle area.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9's end: the <Engage> gate is already open here (Nezhamon is in the battle
+  # area) -- declined, so the clause is measured on a turn where the carrier
+  # has been in play since the start.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T10 (p1, memory 3): play Gasamon (3 -> 0). It cannot attack the turn it is
+  # played, which is why the clause waits for T12.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (p0, memory 3): do nothing at all. Nezhamon must still be UNSUSPENDED
+  # when p1 attacks, so even its own <Engage> gate is declined.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T12 (p1, memory 3): Gasamon attacks p0's security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: p0 declares Nezhamon as the blocker.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # MINIMAL and prefix-pinned: the attack never reached security (5, untouched)
+  # and the attacker died to the blocker instead.
+  - at: 32
+    that:
+      p0.security: 5
+      p1.field: []
+      p1.trash: [EX12-020]

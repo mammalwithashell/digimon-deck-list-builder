@@ -1,0 +1,117 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #0 -- the alternate
+# digivolution path "[Digivolve] Lv.5 w/[Puppet]/[Shambala] trait: Cost 3".
+#
+# Attribution -- and a deliberate DEVIATION from the recon sketch: the sketch
+# extended the Karakurumon spine, but Karakurumon (EX12-063) is purple/green,
+# which matches BOTH of Kaguyamon's standard cost-4 circles as well as the
+# cost-3 trait circle. Two distinct costs open the engine's digivolve
+# cost-choice EffectChoice prompt (`distinct_digivolve_routes_for_hand_card`,
+# game_actions/digivolve.rs:410-430), and `select:` steps are unsupported --
+# that line is unauthorable. The base here is MarineBullmon (EX12-031,
+# blue/yellow Lv.5, [Mollusk]/[Shambala]/[TB]): not purple, not green, so the
+# [Puppet]/[Shambala] trait circle is the single distinct-cost route.
+#
+# The whole line stays in the BREEDING area (pattern of EX12-026-effect2), so
+# every trigger on the spine is suppressed: Seasarmon's WD delete,
+# MarineBullmon's WD hand-place and Decode, Kaguyamon's WD play-from-trash
+# (trash is empty anyway) and its [All Turns] Blocker/Retaliation auras
+# (inactive in breeding). No hand-trait guards are needed.
+#
+#   T1 (memory 0): hatch Onibimon (purple), digivolve Hanimon over it
+#       (standard purple and Shambala circles both cost 0, one distinct cost).
+#   T3 (memory 3): digivolve Seasarmon (EX12-011) over the purple Hanimon --
+#       only its [Shambala] circle matches, cost 2, memory 3 -> 1.
+#   T5 (memory 3): digivolve MarineBullmon (EX12-031) over the RED Seasarmon
+#       -- only its [Aquatic]/[Shambala] circle matches, cost 3 -> 0.
+#   T7 (memory 3): THE CLAUSE -- digivolve Kaguyamon over the blue/yellow
+#       MarineBullmon, only the [Puppet]/[Shambala] circle matches, cost 3,
+#       memory 3 -> 0. Trailing pass one step after.
+#
+# Stack layout: hand [0..4], security [5..9], then the seven P0 draws in
+# order: [10] T1 digi-draw, [11] T3 draw, [12] T3 digi-draw, [13] T5 draw,
+# [14] T5 digi-draw, [15] T7 draw, [16] T7 digi-draw. Draw/security pins add
+# no second copy of any `using:` card (061/011/031/065), keeping the
+# card-id-matched digivolve steps unambiguous.
+card: EX12-065
+clause: EX12-065#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-061, EX12-011, EX12-031, EX12-065, EX12-009,
+            EX12-070, EX12-070, EX12-070, EX12-070, EX12-074,
+            EX12-046, EX12-046, EX12-046, EX12-046, EX12-026,
+            EX12-026, EX12-026]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Seasarmon over Hanimon, Shambala circle, cost 2 -> 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): MarineBullmon over the red Seasarmon, trait circle
+  # only, cost 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): the clause under exam -- Kaguyamon's
+  # [Puppet]/[Shambala] circle over MarineBullmon, the only legal route,
+  # cost 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      p0.memory: 0
+      p0.field: []
+      p0.trash: []

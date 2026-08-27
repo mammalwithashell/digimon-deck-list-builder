@@ -1,0 +1,60 @@
+# Exam scenario: EX12-012 Apemon, clause EX12-012#effect#2 -- the PAYOFF half of
+# "[On Play] [When Digivolving] By trashing 1 card with the [SW] trait from
+#  your hand, <Draw 2>."
+# (the extractor splits the printed line at the <Draw 2> keyword; #effect#1 is
+#  the cost half. One payment produces both halves, so the two files cannot
+#  isolate them -- what they DO isolate is the printed TIMING: this file takes
+#  the ON PLAY branch, EX12-012-effect1.yaml takes the WHEN DIGIVOLVING branch,
+#  and DCGO registers them as two ActivateClasses off one shared coroutine
+#  (EX12_012.cs `ActivateClassesForSharedEffects(onPlay: true,
+#  whenDigivolving: true)`), so both deserve a line.)
+#
+# The whole line is one turn:
+#
+#   T1 (P0, memory 0): hard-cast Apemon (cost 4, 0 -> -4). The overshoot ends
+#       the turn, but the [On Play] resolves first: a declinable hand pick
+#       (DCGO SelectHandEffect mode Discard, canNoSelect:true; ours
+#       `select_hand optional/cost`). Paying it trashes EX12-043 Hakubamon and
+#       draws stack[10] + stack[11].
+#
+# EX12-043 is the only [SW] card in hand once Apemon has left it, so the
+# identity answer is unambiguous. Both drawn cards are pinned, so the hand and
+# trash assertions rest only on the pinned prefix. Nothing digivolves on this
+# line, so no digivolve-draw perturbs the stack indices.
+card: EX12-012
+clause: EX12-012#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-012, EX12-043, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-020, EX12-031, EX12-039, EX12-046, EX12-061,   # security
+            EX12-020, EX12-031]                                 # [10][11] the <Draw 2>
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): hard-cast Apemon into an empty enemy board.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-012, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: pay the [SW] trash to draw 2.
+  - actor: 0
+    do: { select: { cards: [EX12-043] } }
+    expect: { prompt: SelectHandEffect }
+  # One step after the clause: the cost-4 overshoot already ended P0's turn,
+  # so this is P1's breeding question.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of the trailing pass: EX12-043 paid into the trash, both
+  # pinned cards drawn (hand 4 -> 3 -> 5), and Apemon on the field at its
+  # printed 4000 with no sources.
+  - at: 3
+    that:
+      p0.memory: -4
+      p0.trash: [EX12-043]
+      p0.hand: [EX12-009, EX12-011, EX12-020, EX12-026, EX12-031]
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: false, sources: [] }]

@@ -41,6 +41,7 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::action::space::PASS;
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::selection::TriggerSource;
 
@@ -430,6 +431,28 @@ fn place_lm_030_as_start_delay(runner: &mut DebugRunner) {
 
 /// Advance from P0's turn to the start of P0's next turn (P0 → P1 → P0),
 /// where `StartOfYourNextTurn` delays mature.
+/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+///
+/// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
+/// cost and run the body straight away. It is optional processing, so the
+/// controller is asked first; these tests exercise the ACCEPT branch, and
+/// `lm_030_delay_may_be_declined_leaving_the_option_on_the_field` covers the
+/// other one.
+fn accept_scheduled_delay(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the scheduled <Delay> window must offer its optional cost");
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the <Delay> cost");
+}
+
 fn advance_to_next_p0_turn(runner: &mut DebugRunner) {
     runner.end_turn(); // P0 → P1
     runner.end_turn(); // P1 → P0 (start fires matured delays)
@@ -486,6 +509,7 @@ fn lm_030_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
     push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -562,6 +586,7 @@ fn lm_030_delay_body_returns_green_digimon_to_top_of_deck() {
     runner.place_on_field(0, "OPP-DIGI", None);
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     // Pick the green Digimon in the mandatory trash selection.
     let view = runner
@@ -634,6 +659,7 @@ fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
     // P0 controls no Digimon (only the LM-030 Delay-Option permanent).
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     // Step 1: mandatory trash selection — return a green Digimon to deck top.
     let view = runner
@@ -1072,3 +1098,83 @@ fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
         "no Digimon played when trash play was declined"
     );
 }
+
+/// §16-16-2: "The processing from <Delay> is optional." Reaching the scheduled
+/// window must therefore OFFER the trash-this-card cost, not pay it, and
+/// §15-7-2 means declining skips the linked effect too.
+///
+/// Declining must also leave the Option ON THE FIELD: §16-16-1 makes the Delay
+/// available "while a card with this effect is in the battle area", and the
+/// printed timing here is [Start of Your Turn] -- a window that comes round
+/// every own turn -- so a decline is a pass on THIS window, not a forfeit.
+#[test]
+fn lm_030_delay_may_be_declined_leaving_the_option_on_the_field() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-TRASH-GREEN", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
+    let trash_before = runner.trash_size(0);
+
+    advance_to_next_p0_turn(&mut runner);
+
+    // The FIRST prompt at the scheduled window is the optional cost itself.
+    let outer = runner
+        .pending_selection_view()
+        .expect("the scheduled window must surface the optional <Delay> cost (rule 17)");
+    assert!(
+        outer.is_optional,
+        "the <Delay> confirm must expose PASS (§16-16-2)"
+    );
+
+    runner
+        .execute_action(outer.selecting_player, PASS)
+        .expect("declining the <Delay> must be reachable from the action space");
+    let _ = runner.auto_resolve();
+
+    // (a) the carrier is NOT trashed -- the cost was never paid.
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|permanent| {
+            permanent.top_card().card_id(&runner.game.card_data) == "LM-030"
+        }),
+        "declining must NOT trash the Option (the trash IS the unpaid cost)"
+    );
+    // (b) the linked effect did not resolve (§15-7-2): the green Digimon is
+    //     still in the trash, not returned to the top of the deck.
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "§15-7-2: with the cost declined, the processing after it can't execute"
+    );
+
+    // (c) the Option is still schedulable -- it must not be stranded on the
+    //     field forever with a window that can never match again.
+    let still_delayed = runner.game.player(0).battle_area.iter().any(|permanent| {
+        permanent.top_card().card_id(&runner.game.card_data) == "LM-030"
+            && matches!(permanent.option_state, OptionState::Delayed { .. })
+    });
+    assert!(
+        still_delayed,
+        "the declined Option must remain a Delayed Option, not become inert"
+    );
+}
+

@@ -1,0 +1,84 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival effect clause #0 -- the use
+# requirement "<Use Req. ([TB] trait)> (Specified cards let you ignore color
+# requirements.)".
+#
+# The observable is the LEGAL PLAY itself: EX12-070 is yellow/green and P0's
+# board provides no color, so the play lowering at all is explicable only by
+# the use requirement being met by Gasamon's [TB] trait (EX12-020, on the
+# battle area -- breeding does not satisfy a use requirement).
+#
+# The [Main] effect's discard prompt is DECLINED, keeping this file about the
+# use requirement alone (the paid path is EX12-070-effect1/effect2's exam).
+# A prior version of this scenario asserted the prompt would never OPEN,
+# reasoning that EX12-036/EX12-047 are not [TB] -- that is FALSE: both card
+# faces print the [TB] trait. The stale trait data is FIXED
+# (task_69f10a66 EX12-070 triage: cards.json + card_overrides.json + the
+# card YAMLs now carry [TB], and EX12-036 additionally the Rule-granted
+# [Aquatic]), so our engine now parks the same discard prompt DCGO opens
+# and the decline row answers it LIVE on both sides. Declined, the "By
+# trashing..." cost is unpaid, so there is no draw and the option is NOT
+# placed -- it lands in the trash, which the assert pins.
+#
+#   T1 (memory 0): pass breeding, hard-cast Gasamon (3 memory into 0 ->
+#       overshoot, memory -3, TURN ENDS -- no trailing main prompt).
+#   T2: P1 passes everything.
+#   T3 (memory 3): THE CLAUSE -- play EX12-070 (cost 3 -> 0). The discard
+#       prompt is declined; no draw; option to trash. Trailing pass one step
+#       after.
+#
+# Stack layout: hand [0..4], security [5..9], [10] = T3 turn draw. Hand after
+# T1 play of hand.0 is [070, 036, 036, 047]; the T3 draw appends 047, so the
+# option is played from hand.0.
+card: EX12-070
+clause: EX12-070#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-070, EX12-036, EX12-036, EX12-047,
+            EX12-074, EX12-074, EX12-074, EX12-074, EX12-075,
+            EX12-047]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): overshoot hard-cast of Gasamon -- memory 0 -> -3, the
+  # turn ends immediately, so P0 gets no second main-phase question.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- the option is playable ONLY
+  # because Gasamon's [TB] trait meets the use requirement (color ignored).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Decline the [Main] discard (every hand card here IS [TB] on its face, so
+  # DCGO opens the prompt; our stale-data engine auto-skips and the row just
+  # rides the wire). Unpaid cost => no draw, option to trash.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      p0.memory: 0
+      p0.trash: [EX12-070]
+      p0.hand: [EX12-036, EX12-036, EX12-047, EX12-047]
+      p0.security: 5
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

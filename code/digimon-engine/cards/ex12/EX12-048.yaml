@@ -80,10 +80,8 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - none_of:
-            - replacement_cause: own_effect
+      none_of:
+        - replacement_cause: own_effect
     summary: "[All Turns] When this would leave other than by your effects, play up to 2 level 5 [Gokuumon-text]/[SW] sources free"
     process:
       - select_material:

@@ -4,8 +4,14 @@ kind: tamer
 color: [yellow]
 cost: 3
 
-# [All Turns] When a card is removed from your security stack, by suspending
-# this Tamer, gain 1 memory.
+# Printed text (card face + official Bandai DB bundle data/card_bundles/BT4-097.md):
+#
+#   [All Turns] When a card is removed from your security stack, you may
+#   suspend this Tamer to gain 1 memory.
+#
+#   [Security] Play this card without paying its memory cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT4/Purple/BT4_097.cs
 #
 # Timing: on_own_security_removed carries the security owner as the affected
 # player and scans that player's battle area.
@@ -16,7 +22,27 @@ cost: 3
 effects:
   - when: on_own_security_removed
     active_when: { all_turns: true }
-    summary: "[All Turns] When own security is removed, suspend this Tamer to gain 1 memory"
+    # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
+    # — and the manual's own worked example is exactly this shape,
+    # "[On Deletion] By trashing 1 card in the hand, gain 1 memory". Kari's
+    # "you may suspend this Tamer to gain 1 memory" is that same optional
+    # processing condition (the JP/older wording is literally "by suspending
+    # this Tamer, gain 1 memory"), so §15-7-4 applies: "A player can choose
+    # whether or not to execute the content of optional processing conditions,
+    # regardless of whether or not the content of the conditions can be
+    # executed." Declining must skip BOTH halves (§15-7-2: "the processing
+    # after the conditions can't be executed") — no suspend AND no memory.
+    # Rule 17 (no auto-selections) requires that decline to reach the action
+    # space. DCGO agrees: BT4_097.cs:19 passes isOptional=true as the 4th
+    # argument of SetUpActivateClass(CanActivateCondition, ActivateCoroutine,
+    # -1, true, EffectDiscription()).
+    optional: true
+    # The body's FIRST step is a bare `suspend:` cost step, which is not itself
+    # declinable (`body_first_step_is_declinable` → false), so the clause needs
+    # the explicit outer accept/decline confirm — otherwise the printed
+    # "you may" has no PASS for the player to take.
+    outer_prompt: true
+    summary: "[All Turns] When own security is removed, MAY suspend this Tamer to gain 1 memory"
     condition:
       any_permanent:
         of: you
@@ -24,7 +50,10 @@ effects:
         card_number_is: "BT4-097"
         is_unsuspended: true
     process:
+      # Step 1: suspend this Tamer — the optional processing condition's cost.
       - suspend: { target: source }
+      # Step 2: gain 1 memory — the processing AFTER the condition (§15-7-2),
+      # reachable only once the cost above has actually been paid.
       - gain_memory: 1
 
   - when: on_security

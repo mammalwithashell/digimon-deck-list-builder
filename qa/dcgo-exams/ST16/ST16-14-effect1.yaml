@@ -1,0 +1,118 @@
+# Exam scenario: ST16-14 (Matt Ishida), clause ST16-14#effect#1 --
+# "[All Turns] When one of your effects trashes a card in your hand, by
+#  suspending this Tamer, gain 1 memory."
+#
+# The clause is an ACTIVATABLE window, not an automatic trigger: DCGO models it
+# as an ActivateClass on EffectTiming.OnDiscardHand whose CanUseCondition gates
+# on BOTH "the trashed card's owner is this Tamer's owner" and "the causing
+# effect's controller is this Tamer's owner", and whose CanActivateCondition
+# requires the Tamer to be unsuspended (CanActivateSuspendCostEffect). So the
+# line needs Matt on p0's battle area, unsuspended, and one of p0's OWN effects
+# trashing a card from p0's OWN hand.
+#
+# Hanimon (EX12-061) supplies the trash: its [On Play] is "By trashing 1 card
+# with the [Puppet] or [TB] trait from your hand, <Draw 2>", and DCGO routes
+# that pick through SelectHandEffect.Mode.Discard -- i.e. IDiscardHands, the one
+# site that raises EffectTiming.OnDiscardHand. Our side calls
+# `trash_from_hand_by_index` through the effect context, which is the site that
+# opens the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND). Wankomon
+# (EX12-009) is the card trashed: [Beast/Shambala/TB], so it satisfies the [TB]
+# half of Hanimon's cost.
+#
+# Turn 3 is deliberately entered on 3 memory (p1 passes rather than overshoots)
+# so that ST16-14#effect#0 -- the "2 or fewer -> 3" clause -- does NOT also fire
+# and muddy the memory witness. The +1 at step 8 is therefore this clause's
+# alone: 3 (turn start) - 3 (Hanimon) + 1 (this clause) = 1.
+#
+# PROMPT-SHAPE NOTE, recorded not resolved: DCGO surfaces this window as an
+# OptionalSkill (the ActivateClass is registered with isOptional = true), which
+# is what `expect:` claims below, while our engine parks it as a TriggerOrder
+# kind. The sim side cannot assert across that mapping, so it prints a note and
+# leaves the strict check to DCGO. Answering `decline: true` instead of
+# `yes: true` here leaves p0 on 0 memory and Matt unsuspended -- verified -- so
+# the +1 really is this clause's and not turn bookkeeping.
+#
+# Deck note: p0 uses `toho-matt` (toho-braves with 3x EX12-075 and 1x EX12-076
+# swapped for 4x ST16-14; same eggs).
+card: ST16-14
+clause: ST16-14#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Matt, the Hanimon that does the trashing, the Wankomon it
+      # trashes, and filler
+      - ST16-14
+      - EX12-061
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      # security (5-9): never flipped
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      - EX12-026
+      - EX12-036
+      # (10): p0's turn-3 draw
+      - EX12-020
+      # (11-12): Hanimon's <Draw 2>
+      - EX12-020
+      - EX12-031
+    rest: toho-matt
+  p1:
+    stack:
+      # hand (0-4): inert; p1 only passes
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      # security (5-9): never flipped
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      - EX12-031
+      - EX12-031
+      # (10): p1's turn-2 draw
+      - EX12-011
+    rest: toho-braves
+steps:
+  # Turn 1 (p0, memory 0): decline breeding, play Matt (cost 4 -> -4, turn ends).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST16-14, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1, memory 4): pass out, handing p0 exactly 3 -- above the
+  # "2 or fewer" gate of ST16-14#effect#0, which must not fire here.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0, memory 3): play Hanimon (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Hanimon's [On Play] cost: trash 1 [TB] card from hand -> Wankomon.
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: the hand-trash opens Matt's window; take it (suspend Matt, +1).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # 3 at turn start, -3 for Hanimon, +1 from this clause.
+  - at: 8
+    that:
+      p0.memory: 1
+      p0.trash: [EX12-009]

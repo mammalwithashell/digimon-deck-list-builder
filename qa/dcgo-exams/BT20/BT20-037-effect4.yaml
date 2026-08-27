@@ -1,0 +1,175 @@
+# Exam scenario: BT20-037 (Chaosmon: Valdur Arm), clause BT20-037#effect#4 --
+# "... effects or unsuspend until the end of their turn."
+#
+# That fragment is the tail of the [When Digivolving] sentence whose head is
+# BT20-037#effect#3: "Then, none of their Digimon or Tamers can activate
+# [On Play] effects or unsuspend until the end of their turn." clause_coverage
+# splits the sentence at the inline "[On Play]" marker, so the lock is its own
+# clause id.
+#
+# WITNESS: the "or unsuspend" half, because it is directly observable in the
+# projection and needs nothing else on the board. The clause suspends p1's
+# Tobucatmon, p0 then hands the turn over, and p1's turn-8 UNSUSPEND STEP runs
+# -- the first prompt of that turn (breeding) is therefore the state that shows
+# whether the lock held. Tobucatmon is still suspended there.
+#
+# The "[On Play] effects" half of the same fragment is NOT witnessed here: it
+# would need p1 to play a Digimon carrying an [On Play] on their turn 8, which
+# costs another memory rung and would put a second card's behaviour inside this
+# clause's assert.
+#
+# REACHING A Lv.7 WITHOUT A 40-STEP CHAIN. Chaosmon: Valdur Arm has a play cost
+# of 15 (unreachable) and a DNA Digivolve condition (Yellow Lv.6 + green/black
+# Lv.6: Cost 0), but the official Bandai DB also gives it ORDINARY digivolve
+# circles -- Yellow Lv.6 / cost 5 and Green Lv.6 / cost 5 (data/card_bundles/
+# BT20-037.md; mirrored in card_overrides.json). So one Lv.6 on the board is
+# enough, and it does not have to be grown through breeding: Cendrillmon
+# (ST19-12, Yellow Lv.6) is HARD-PLAYED for 11.
+#
+# The memory ladder is the whole line, and every rung is a legal play:
+#   T1 p0 passes                        -> p1 3
+#   T2 p1 plays Tobucatmon (5): 3 -> -2 -> p0 2   (p1 now has the Digimon the
+#                                                  clause will need to suspend)
+#   T3 p0 passes                        -> p1 3
+#   T4 p1 passes                        -> p0 3
+#   T5 p0 plays Cendrillmon (11): 3 -> -8 -> p1 8
+#   T6 p1 plays two ExTyrannomon (7+7): 8 -> 1 -> -6 -> p0 6
+#   T7 p0 digivolves Cendrillmon into Chaosmon for 5: 6 -> 1, and the clause's
+#      own +1 puts p0 on 2 -- still positive, so p0 KEEPS the turn.
+#
+# Tobucatmon (ST19-07, <Jamming>) and ExTyrannomon (ST19-10, <Armor Purge>) are
+# the p1 bodies on purpose: both are passive-only, neither is a <Blocker>, and
+# neither carries <Overclock>, so p1's side parks no prompt of its own and
+# opens no end-of-turn attack gate. Cendrillmon's [When Digivolving] token play
+# does NOT fire on a hard play, so the cost-11 play is silent too.
+#
+# Deck note: both seats use `st19-chaosmon` -- an ST19 LIBERATOR/Puppet list
+# with 4x BT20-037 and 4x P-136 swapped in; eggs 4x ST19-01. Nothing hatches
+# here; the breeding area is never used.
+card: BT20-037
+clause: BT20-037#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Cendrillmon that gets hard-played, the Chaosmon that
+      # digivolves onto it, and inert filler
+      - ST19-12
+      - BT20-037
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      # security (5-9): never flipped -- p0 is never attacked in this line
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      - ST19-09
+      # (10-12): p0's turn-3 / turn-5 / turn-7 draws
+      - ST19-04
+      - ST19-04
+      - ST19-04
+    rest: st19-chaosmon
+  p1:
+    stack:
+      # hand (0-4): the Tobucatmon and the two ExTyrannomon the ladder spends
+      - ST19-07
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      # security (5-9): stack[9] is the TOP. The two slots Chaosmon's
+      # <Security A.+1> reaches ([9] then [8]) are both PawnChessmon (ST19-04):
+      # 2000 DP, no [Security] text, no [On Deletion], no inherited effect, so
+      # a 15000 DP attacker resolves both checks as plain battles.
+      - ST19-11
+      - ST19-11
+      - ST19-09
+      - ST19-04
+      - ST19-04
+      # (10-13): p1's turn-2 / 4 / 6 / 8 draws
+      - ST19-03
+      - ST19-03
+      - ST19-03
+      - ST19-03
+    rest: st19-chaosmon
+steps:
+  # T1 (p0, memory 0): nothing to do -- pass the turn for 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): Tobucatmon (cost 5) overshoots to -2, handing p0 2. This
+  # is the Digimon the [When Digivolving] clause suspends five turns later.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST19-07, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 2) and T4 (p1, memory 3): both pass, walking p0 up to 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): hard-play Cendrillmon for 11 (3 -> -8). The overshoot
+  # ends the turn and hands p1 8 -- exactly the fuel p1 needs to hand p0 6 back.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST19-12, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 8): two ExTyrannomon at 7 each, 8 -> 1 -> -6; p0 gets 6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST19-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST19-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 6): digivolve Cendrillmon into Chaosmon: Valdur Arm for 5.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT20-037 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE (first half): "for each of this Digimon's level 6 digivolution
+  # cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory."
+  # Chaosmon has exactly ONE level 6 digivolution card here (Cendrillmon), so
+  # the prompt is capped at one pick -- Tobucatmon at p1's slot 0.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # p0 hands the turn over so p1's unsuspend step actually runs.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1): the unsuspend step has already happened when this prompt opens.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # THE CLAUSE: p1's turn has begun -- turn 8, past the unsuspend step -- and
+  # Tobucatmon is STILL suspended. The two ExTyrannomon were never suspended,
+  # so they are not evidence either way; Tobucatmon is.
+  - at: 17
+    that:
+      turn: 8
+      p1.field:
+        - { card_id: ST19-07, dp: 5000, suspended: true,  sources: [] }
+        - { card_id: ST19-10, dp: 7000, suspended: false, sources: [] }
+        - { card_id: ST19-10, dp: 7000, suspended: false, sources: [] }

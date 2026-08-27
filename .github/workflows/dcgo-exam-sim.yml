@@ -1,0 +1,98 @@
+name: DCGO Exam (sim-only)
+
+# The half of the card-clause exam that GitHub CAN run.
+#
+# Design: docs/superpowers/specs/2026-08-21-dcgo-scripted-scenario-exam-design.md
+# Scenarios: qa/dcgo-exams/ (see that directory's README.md for the format)
+#
+# --------------------------------------------------------------------------
+# Why the DCGO oracle itself cannot gate PRs here — four independent blockers
+# --------------------------------------------------------------------------
+# 1. Photon. DCGO's AI mode is NOT offline (docs/DCGO_HARNESS.md): it creates a
+#    private one-seat Photon room, so gating PRs on it would make every PR
+#    depend on a live third-party service.
+# 2. The build. Running the oracle needs a multi-GB Unity LFS checkout plus
+#    batchmode license activation. Layer A deliberately routes builds to
+#    D:\dcgo-build\, outside anything git sees.
+# 3. Display. Headless `-batchmode` PLAY is explicitly out of scope; the harness
+#    drives a real windowed player, which a GitHub-hosted runner does not have.
+# 4. Redistribution. A DCGO build contains Bandai card art and DCGO2 code;
+#    pushing one to a CI artifact store is a posture decision, not an
+#    implementation detail.
+#
+# --------------------------------------------------------------------------
+# What this job CAN and CANNOT do — read this before citing a green run
+# --------------------------------------------------------------------------
+# CAN: assert that our engine still agrees with what the oracle PREVIOUSLY
+#      confirmed. `exam backfill` writes confirmed DCGO state into each
+#      scenario's `assert:` block; `--sim-only` replays the scripted line in our
+#      engine alone and checks those assertions. That is the regression half.
+#
+# CANNOT: find a new divergence. There is no oracle in this job — nothing here
+#      observes DCGO. A green run means "no regression against previously
+#      recorded oracle state", never "our engine matches DCGO". Do not describe
+#      this gate as if it could discover a divergence, and never read a green
+#      run as a per-card pass: verdicts live in
+#      qa/qa-reports/dcgo_exam_verdicts.json and always print the full
+#      denominator (confirmed / diverged / unreachable / unavailable /
+#      unmeasured).
+#
+# Finding a NEW divergence requires the deliberate local oracle pass:
+#   cargo run -p dcgo-harness -- exam --card <CARD-ID>
+#
+# --------------------------------------------------------------------------
+# This job must never need the DCGO submodule (`submodules: false` below).
+# If it ever does, the design has drifted — the whole point of the split is
+# that the only thing needing Unity is Unity.
+# --------------------------------------------------------------------------
+
+on:
+  pull_request:
+    paths:
+      - 'qa/dcgo-exams/**'
+      - 'code/digimon-engine/**'
+      - 'code/digimon-dsl/**'
+      - 'code/tools/dcgo-harness/**'
+      - '.github/workflows/dcgo-exam-sim.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'qa/dcgo-exams/**'
+      - 'code/digimon-engine/**'
+      - 'code/digimon-dsl/**'
+      - 'code/tools/dcgo-harness/**'
+      - '.github/workflows/dcgo-exam-sim.yml'
+
+jobs:
+  exam-sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        # DCGO is a multi-GB LFS submodule and this job must never need it.
+        with:
+          submodules: false
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+
+      # Replays every committed scenario in OUR engine only and checks its
+      # backfilled `assert:` block. Exits non-zero and names the scenario when
+      # an assertion no longer holds.
+      - name: Run every exam scenario sim-only
+        run: |
+          cargo run -p dcgo-harness --release -- exam \
+            --scenario qa/dcgo-exams/ \
+            --sim-only \
+            --cards-json data/cards.json \
+            --decks qa/dcgo-exams/EX12/toho_pool.json
+
+      # Lowering, the normalized projection, the differ, the verdict store and
+      # the drafter are pure Rust over fixtures — the only thing that needs
+      # Unity to test is Unity.
+      - name: Differ unit + golden tests
+        run: cargo test -p dcgo-harness

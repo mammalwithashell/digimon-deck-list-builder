@@ -1,0 +1,99 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival security clause #0 --
+# "[Security] Activate this card's [Main] effects."
+#
+# EX12-070 is stacked as P0's TOP security card; P1's Gasamon attacks
+# security, the check flips the option, and the [Security] effect runs the
+# whole [Main] body: the [TB] discard prompt parks for P0 (the defender --
+# an off-turn selection), the select pays with Wankomon (EX12-009, [TB]),
+# <Draw 2> resolves, and the option places itself in P0's BATTLE AREA
+# instead of the trash. The assert pins all three observables: security
+# 5 -> 4, EX12-009 (and only it) in the trash, EX12-070 on the field as a
+# dp -1 permanent.
+#
+# P0's field stays empty so no blocker window precedes the check, and
+# NEITHER seat's security holds EX12-074 (its "[Security] [Your Turn]"
+# stack-trigger on [Shambala] attacks would bury the line under a
+# TriggerOrder when Gasamon declares).
+#
+#   T1 (P0): pass everything (memory 3 to P1).
+#   T2 (P1): play Gasamon (3 -> 0; only a [Your Turn] passive), pass
+#       (memory 3 to P0).
+#   T3 (P0): pass everything (memory 3 to P1) -- Gasamon shakes summoning
+#       sickness.
+#   T4 (P1, memory 3): THE CLAUSE -- Gasamon attacks security; the flipped
+#       EX12-070 activates its [Main]; P0 answers the discard prompt.
+#       Attacking costs no memory, so the trailing step is P1's main
+#       prompt.
+#
+# Stack layout: hand [0..4], security [5..9] with EX12-070 at [9] -- the
+# LAST security slot is the TOP of the stack (probed empirically: with the
+# option at [5] the check flipped the [9] card instead) -- then P0's draws:
+# [10] = T3 turn draw, [11]/[12] = the <Draw 2>.
+card: EX12-070
+clause: EX12-070#security#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-074, EX12-074, EX12-046, EX12-046,
+            EX12-046, EX12-075, EX12-075, EX12-075, EX12-070,
+            EX12-046, EX12-020, EX12-020]
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-046, EX12-046, EX12-046, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-047, EX12-047,
+            EX12-070, EX12-070]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): the attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): pass everything.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the clause under exam -- attack into the security
+  # option.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The flipped option's [Main]: P0 trashes the [TB] Wankomon off-turn.
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  # Attacking costs no memory; P1 keeps the turn after the check.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [EX12-009]
+      p0.hand: [EX12-074, EX12-074, EX12-046, EX12-046, EX12-046, EX12-020, EX12-020]
+      p0.field:
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+      p1.security: 5
+      p1.trash: []
+      p1.field:
+        - { card_id: EX12-020, dp: 2000, suspended: true, sources: [] }

@@ -85,15 +85,18 @@ def test_digimon_kind_card_gets_inherited_zone_clause():
     """Contrast with EX12-073 (Option): a real Digimon-kind card in the deck
     DOES get its inherited_effect_description_eng parsed. EX12-021's
     inherited text is "[When Attacking] [Once Per Turn] If your hand has 7
-    or fewer cards, ＜Draw 1＞ (...)" -- one compound-timing clause plus one
-    embedded keyword clause (the documented unconditional-keyword-splitting
-    behavior, see text_split.py / README "Known limitations")."""
+    or fewer cards, ＜Draw 1＞ (...)" -- ONE compound-timing clause. The
+    ＜Draw 1＞ sits mid-sentence (it is this clause's action, not a separate
+    ability), so the positional boundary rule keeps it inline; splitting it
+    out used to leave the timing clause reading "...or fewer cards," and the
+    keyword clause reading as bare reminder text. See text_split.py /
+    README "Positional boundary rule"."""
     clauses = _clauses_for("EX12-021")
     inherited = [c for c in clauses if c["zone"] == "inherited"]
-    assert len(inherited) == 2
+    assert len(inherited) == 1
     assert all(c["source"] == "cards_json" for c in inherited)
     assert inherited[0]["timings"] == ["When Attacking", "Once Per Turn"]
-    assert inherited[1]["keyword"] == "Draw 1"
+    assert "＜Draw 1＞" in inherited[0]["text"]
 
 
 def test_full_vb_deck_denominator_counts_are_internally_consistent():
@@ -105,7 +108,14 @@ def test_full_vb_deck_denominator_counts_are_internally_consistent():
         pool = json.load(f)
     deck_cards = pool["decks"][0]["cards"]
     distinct = sorted(set(deck_cards))
-    assert len(distinct) == 20  # the VB deck's 20 distinct card IDs
+    # Derived, never pinned. This test asserts INTERNAL CONSISTENCY -- every
+    # other assertion below relates the denominator to itself -- so the input
+    # size must track whatever the pool currently holds. A hard-coded count
+    # (it was `== 20`) broke the moment a2b0d9573 revised the decklist to 22
+    # distinct IDs, and that failure said nothing about extractor correctness.
+    # What IS worth guarding is that the pool is real and that dedup behaved.
+    assert deck_cards, "vb_pool.json's first deck is empty"
+    assert 0 < len(distinct) <= len(deck_cards)
 
     result = run(distinct, "test:vb-deck")
     denom = result["denominator"]

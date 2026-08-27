@@ -1,0 +1,123 @@
+# Exam scenario: EX12-061 (Hanimon), clause inherited#1 -- the "<Draw 1>"
+# keyword half of the inherited "[When Attacking] [Once Per Turn] <Draw 1> and
+# trash 1 card in your hand."
+#
+# Same line as EX12-061-inherited0 (the draw and the trash are one DCGO
+# ActivateClass), but this scenario's assertion is aimed at the keyword: the
+# pinned deck card at position 14 (EX12-047) MUST be in hand after the attack
+# window resolves -- a line where the trash happened but the draw did not
+# fails exactly here.
+#
+card: EX12-061
+clause: EX12-061#inherited#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-062
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- deliberately free of EX12-074, whose
+      # [Security]-area passive would trigger on our own [Shambala] attack.
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-009
+      - EX12-076
+      # draws: T1 digivolve (10), T3 turn (11), T5 turn (12),
+      # T5 digivolve (13), the clause's <Draw 1> (14)
+      - EX12-026
+      - EX12-065
+      - EX12-011
+      - EX12-020
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon, all under 5000 DP, so the
+      # security check neither fires an effect nor deletes the attacker.
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-061
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): hatch, digivolve Hanimon over the breeding Onibimon (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): move the Hanimon stack to the battle area.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (task_69f10a66 Family 1): Onibimon
+  # under the moved [TB] stack grants <Execute>; the gate opens at T3's end
+  # (moved stacks can attack the move turn). Decline -- the exam's attack
+  # is T5's. Our EndOfTurnAction PASS; DCGO OptionalSkill "no".
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Kokeshimon over the field Hanimon (cost 2, memory 3 -> 1),
+  # decline its [When Digivolving] payment, then attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The clause: attacking fires Hanimon's inherited -- <Draw 1> resolves, then
+  # the forced hand-trash parks. EX12-075 is the only copy in hand.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-075] } }
+    expect: { prompt: SelectHandEffect }
+  # Attack resolves (2000-DP security card loses the check); turn is still
+  # p0's at memory 1, so close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the clause: the <Draw 1> pulled EX12-047 (deck 14) and the forced
+  # trash removed EX12-075; Kokeshimon's cost-2 digivolve left memory at 1.
+  - at: 15
+    that:
+      memory: 1
+      p0.hand: [EX12-074, EX12-070, EX12-026, EX12-065, EX12-011, EX12-020, EX12-047]

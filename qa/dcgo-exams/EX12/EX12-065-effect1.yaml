@@ -1,0 +1,171 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #1 -- "<Fortitude>", i.e.
+# "(When this Digimon with digivolution cards is deleted, play this card
+# without paying the cost.)" (DCGO `DataBase.FortitudeEffectDiscription`).
+#
+# The observable is Kaguyamon coming BACK: it is deleted by P0's own Kokeshimon
+# and, in the same resolution, stands on P0's field again -- this time with an
+# EMPTY source stack, its former digivolution card (Shishimamon) left behind in
+# the trash. A deletion that leaves the carrier fielded and its sources trashed
+# is a signature nothing but the replay produces.
+#
+# Two gates make this line non-trivial, and both are engineered on purpose:
+#
+#  1. THE SOURCE GATE. `CanActivateFortitude` (DCGO
+#     `CardEffectCommons/KeyWordEffects/Fortitude.cs`) requires
+#     `CardSources.Count >= 1`; our engine gates on the deletion snapshot's
+#     `source_count_just_before >= 1`. A HARD-CAST Kaguyamon has no sources and
+#     the keyword is dead. So Kaguyamon must arrive by DIGIVOLUTION -- here over
+#     a hard-cast Shishimamon (EX12-046, Lv.5 [Shambala]) via the printed alt
+#     path "Lv.5 w/[Puppet]/[Shambala] trait: Cost 3".
+#
+#  2. THE TWO-TRIGGER GATE. Kaguyamon registers BOTH <Fortitude> and its
+#     "[On Deletion] Return 1 of your opponent's lowest level Digimon to the
+#     bottom of the deck" at the same deletion timing (DCGO EX12_065.cs, both
+#     under `EffectTiming.OnDestroyedAnyone`), so the deletion stacks two
+#     effects and each engine asks their order -- our `TriggerOrder`, DCGO's
+#     `MultipleSkills`. Both branches carry the SAME source id, which is
+#     exactly what the `ordinal:` disambiguator exists for. (This is why
+#     EX12-065#effect#6 was previously logged unauthorable; with sources under
+#     the carrier BOTH engines stack two triggers, so the prompt is symmetric
+#     rather than one-sided.)
+#
+# ISOLATION: P1 fields exactly one Digimon, Gasamon, and Kokeshimon's own
+# effect deletes it as its payload -- so by the time the [On Deletion] branch
+# resolves there is no opponent Digimon left to bottom-deck and clause #6
+# contributes NOTHING to the final state. Whatever brings Kaguyamon back can
+# only be <Fortitude>. (Clause #6 gets its own witness in EX12-065-effect6,
+# where a second opponent Digimon survives for it.)
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Shishimamon (cost 7, 0 -> -7
+#       overshoot -- legal above the -10 floor). Its [On Play] "give 1 of your
+#       opponent's Digimon ..." has zero candidates against P1's empty board.
+#   T2 (P1, memory 7): play Gasamon (7 -> 4; only a [Your Turn] passive, no
+#       prompt), pass out.
+#   T3 (P0, memory 3): digivolve Kaguyamon over Shishimamon (cost 3, 3 -> 0).
+#       Its [When Digivolving] revive (clause #2's exam) sees an EMPTY trash and
+#       parks nothing. Pass out.
+#   T4 (P1): all-pass.
+#   T5 (P0, memory 3): THE CLAUSE -- play Kokeshimon (cost 4, 3 -> -1). Its
+#       "[On Play] By deleting 1 of your Digimon, delete 1 of your opponent's
+#       level 4 or lower Digimon" takes KAGUYAMON as the cost and Gasamon as
+#       the payload; the deletion stacks the two Kaguyamon triggers and
+#       <Fortitude> replays it from the trash for free. The overshoot ends the
+#       turn, so the trailing step is P1's breeding decision.
+#
+# Stack layout: hand [0..4], security [5..9] (5 = bottom, 9 = TOP; never
+# checked -- neither seat attacks), then each seat's turn draws in order. No
+# pin puts a second EX12-065 / EX12-046 / EX12-062 / EX12-020 in a hand, so
+# every play and the `using:` intent stay unambiguous.
+card: EX12-065
+clause: EX12-065#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-046
+      - EX12-065
+      - EX12-062
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon.
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-011
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12)
+      - EX12-074
+      - EX12-075
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 that becomes Kaguyamon's digivolution card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): the level-4-or-lower body Kokeshimon will eat.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon arrives WITH a digivolution card -- the
+  # <Fortitude> source gate.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the clause under exam.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-062, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Kokeshimon's cost: delete KAGUYAMON (field.0), not Kokeshimon itself.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Kokeshimon's payload: P1's lone Lv.3 Gasamon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The deletion stacked <Fortitude> and the [On Deletion] bottom-deck; both
+  # branches are Kaguyamon's own, so the order is named by `ordinal:`.
+  - actor: 0
+    do: { select: { cards: [EX12-065], ordinal: 0 } }
+    expect: { prompt: MultipleSkills }
+  # The cost-4 play overshot to -1, ending P0's turn after resolution.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Minimal, and only over stack-pinned facts: Kaguyamon is BACK on P0's field
+  # with an EMPTY source stack while its former digivolution card sits in the
+  # trash -- the replay's signature.
+  - at: 15
+    that:
+      p0.trash: [EX12-046]
+      p0.field:
+        - { card_id: EX12-062, dp: 5000, suspended: false, sources: [] }
+        - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }
+      p1.field: []
+      p1.trash: [EX12-020]

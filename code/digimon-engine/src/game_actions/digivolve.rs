@@ -603,6 +603,7 @@ impl Game {
                 source_kind: Some(source_kind),
                 timing: None,
                 is_optional: false,
+                keyword: None,
                 observation_metadata: Default::default(),
             })
             .collect();
@@ -728,6 +729,7 @@ impl Game {
                 source_kind: Some(source_kind),
                 timing: Some(crate::enums::EffectTiming::BeforePayCost),
                 is_optional: true,
+                keyword: None,
                 observation_metadata: Default::default(),
             }]),
             source_card,
@@ -1435,7 +1437,6 @@ impl Game {
             first_player,
             evo_hand_index,
             effective_cost,
-            true,
             false,
         );
 
@@ -1454,8 +1455,11 @@ impl Game {
     ///
     /// Unlike `digivolve_from_hand`, this does **not** check `GamePhase::Main`
     /// or fire `check_turn_end` — it is designed for use inside effect
-    /// callbacks where those invariants don't apply. It also does **not**
-    /// draw a card (that's a player-action benefit, not an effect mechanic).
+    /// callbacks where those invariants don't apply. It DOES draw the
+    /// §8-1-3-3 card: the draw is part of the digivolution *procedure*
+    /// ("places the Digimon ... on top of the chosen card, draws 1 card, and
+    /// the digivolution process is resolved"), not a benefit of the main-phase
+    /// action, so it applies however the digivolution was initiated.
     ///
     /// Returns `true` on success, `false` if validation fails (bad index,
     /// no matching evo cost, or insufficient memory).
@@ -1576,7 +1580,7 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        let (base_level, base_colors) = {
+        let base_level = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
@@ -1585,23 +1589,48 @@ impl Game {
                     .log("[Rejected] effect_initiated_digivolve: target top card has no level");
                 return false;
             };
-            (base_level, identity.colors)
+            base_level
         };
 
-        let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
         let matching_memory_cost = if ignore_requirements {
             Some(0)
         } else {
-            evo_costs
-                .iter()
-                .find(|ec| {
-                    ec.level == base_level
-                        && (ignore_color
-                            || crate::action::mask::evo_color(ec.card_color)
-                                .map(|c| base_colors.contains(&c))
-                                .unwrap_or(false))
-                })
-                .map(|ec| ec.memory_cost)
+            // Route through the SAME machinery as the player main-phase
+            // digivolve action (`all_digivolve_routes_for_card`) so
+            // effect-initiated digivolves honor everything the player action
+            // does: printed evo-cost circles (`collect_rules_digivolve_routes`
+            // performs the identical synth_identity level+color match the old
+            // raw `evo_costs` scan did), trait-gated alternative digivolution
+            // circles authored as DSL `alt_paths: kind: digivolve` (e.g.
+            // EX12-047 "Lv.5 w/[Shambala] trait: Cost 3"), and the
+            // `CanOnlyDigivolveInto` restriction gate. App Fusion is excluded:
+            // it is an alt-PLAY mechanic with its own linked-card consumption
+            // commit path, not a digivolve circle. Costs auto-min (rule-17
+            // cost CHOICE for effect digivolves is a known follow-up).
+            let route_cost = self.card_source_ref_peek(source_ref).and_then(|card| {
+                self.all_digivolve_routes_for_card(card, target)
+                    .into_iter()
+                    .filter(|route| !route.app_fusion)
+                    .map(|route| route.memory_cost)
+                    .min()
+            });
+            if ignore_color {
+                // The alt-path predicate evaluation has no color-waiver hook,
+                // so keep the color-waived printed-circle scan as an
+                // ADDITIONAL candidate and take the min across both.
+                let waived = self.card_data[evo_card_data_index]
+                    .evo_costs
+                    .iter()
+                    .filter(|ec| ec.level == base_level)
+                    .map(|ec| ec.memory_cost)
+                    .min();
+                match (route_cost, waived) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (a, b) => a.or(b),
+                }
+            } else {
+                route_cost
+            }
         };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
@@ -1710,6 +1739,16 @@ impl Game {
             .get(target.index as usize)
             .map(|perm| perm.top_card().handle())
             .expect("effect digivolve target remains in battle area after stack mutation");
+
+        // 4b. §8-1-3-3: the digivolution procedure is "places the Digimon ...
+        // on top of the chosen card, draws 1 card, and the digivolution
+        // process is resolved". The draw belongs to the PROCEDURE, so an
+        // effect-initiated digivolve draws exactly like the main-phase action
+        // — and it lands here, after the stack mutation and BEFORE the
+        // WhenDigivolving fan-out, mirroring the player-action path above.
+        // (§8-1-2-10 covers the empty-deck case: digivolution still happens,
+        // just "without drawing a card" — which `draw()` already models.)
+        self.player_mut(player_id).draw();
 
         // 5. Fire WhenDigivolving triggers.
         self.enqueue_triggered(

@@ -39,6 +39,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 use digimon_engine::permanent::OptionState;
@@ -395,6 +396,26 @@ fn place_lm_032_as_start_delay(runner: &mut DebugRunner) {
 }
 
 /// Advance from P0's turn to the start of P0's next turn (P0 -> P1 -> P0).
+/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+///
+/// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
+/// cost and run the body straight away. It is optional processing, so the
+/// controller is asked first.
+fn accept_scheduled_delay(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the scheduled <Delay> window must offer its optional cost");
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("the accept branch must be offered");
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("accept the <Delay> cost");
+}
+
 fn advance_to_next_p0_turn(runner: &mut DebugRunner) {
     runner.end_turn(); // P0 -> P1
     runner.end_turn(); // P1 -> P0 (start fires matured delays)
@@ -450,6 +471,7 @@ fn lm_032_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
     push_trash(&mut runner, 0, "LM032-TRASH-PURPLE");
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -521,6 +543,7 @@ fn lm_032_delay_body_returns_purple_digimon_to_top_of_deck() {
     runner.place_on_field(0, "OPP-DIGI", None);
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     // Pick the purple Digimon in the mandatory trash selection.
     let view = runner
@@ -593,6 +616,7 @@ fn lm_032_delay_body_play_from_trash_only_when_no_field_digimon() {
     // P0 controls no Digimon (only the LM-032 Delay-Option permanent).
 
     advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
 
     // Step 1: mandatory trash selection — return a purple Digimon to deck top.
     let view = runner

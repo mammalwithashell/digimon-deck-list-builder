@@ -1,0 +1,101 @@
+# Exam scenario: ST16-14 (Matt Ishida), clause ST16-14#effect#0 --
+# "[Start of Your Turn] If you have 2 or fewer memory, set it to 3."
+#
+# The clause needs two things the opening position does not give you: Matt on
+# YOUR battle area, and your memory at 2 or less when YOUR turn starts. A pass
+# hands the opponent exactly 3, which is one too many -- so the opponent has to
+# END their turn by OVERSHOOTING, and the size of the overshoot is what pins
+# the pre-clause memory.
+#
+# Line: p0 plays Matt on turn 1 (cost 4, memory 0 -> -4; the overshoot ends the
+# turn and hands p1 4). p1 then plays two Gasamon (cost 3 each: 4 -> 1 -> -2),
+# the second of which overshoots and hands p0 exactly 2. Turn 3 starts with
+# p0's memory at 2, the clause fires, and the breeding prompt that opens turn 3
+# is the first observable state after it -- memory 3.
+#
+# Gasamon (EX12-020) is the quiet overshoot vehicle on purpose: its only
+# printed effect is a static [Your Turn] digivolve-cost reduction, so neither
+# copy parks a prompt or touches p0's side of the board. Both `play` steps pin
+# `hand.0`: p1 opens on two copies, and the second slides into index 0 when the
+# first leaves.
+#
+# Deck note: ST16-14 is not in toho-braves, and stacked cards must be members
+# of the `rest:` deck, so p0 uses `toho-matt` (toho-braves with 3x EX12-075 and
+# 1x EX12-076 swapped for 4x ST16-14; same eggs).
+card: ST16-14
+clause: ST16-14#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Matt plus inert filler -- nothing else is ever played
+      - ST16-14
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      - EX12-046
+      # security (5-9): never flipped (no attack in this line)
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      - EX12-026
+      - EX12-036
+      # (10): p0's turn-3 draw
+      - EX12-020
+    rest: toho-matt
+  p1:
+    stack:
+      # hand (0-4): the two Gasamon that build the -2 overshoot, plus filler
+      - EX12-020
+      - EX12-020
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      # security (5-9): never flipped
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      - EX12-031
+      - EX12-031
+      # (10): p1's turn-2 draw
+      - EX12-011
+    rest: toho-braves
+steps:
+  # Turn 1 (p0, memory 0): decline breeding, play Matt. Cost 4 overshoots to
+  # -4, which ends the turn and hands p1 4 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST16-14, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1, memory 4): two Gasamon, 4 -> 1 -> -2. The second overshoot ends
+  # the turn and hands p0 exactly 2 -- the "2 or fewer" the clause tests.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): THE CLAUSE fires at the start of the turn, before any prompt.
+  # This breeding decision is the first observable state after it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pinned corroboration that the clause did the work: before p1's second
+  # Gasamon, p1 sits on 1 memory (p0.memory -1), so the cost-3 play lands p1 on
+  # -2 and hands p0 exactly 2 -- the "2 or fewer" branch.
+  - at: 4
+    that:
+      p0.memory: -1
+  # ...and turn 3 opens on 3, not 2.
+  - at: 5
+    that:
+      p0.memory: 3

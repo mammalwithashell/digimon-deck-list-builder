@@ -48,13 +48,24 @@
 #          EffectDuration.UntilOpponentTurnEnd).
 #
 # Faithfulness note on "by returning 2 cards":
-#   This is a COST. Per DCGO the opponent must have >=2 trash cards for the
-#   sub-clause to run at all, and only `if (selectedCards.Count == 2)` do the
-#   tokens spawn and the DP boost apply. Modelled with `min: 2` on the
-#   count-capped multi-select (G-SELECT-MULTI-MIN: a min that cannot be met
-#   by the candidate pool silently no-ops — the cost is unpayable) plus a
-#   `binding_count_eq` gate so the token play + DP boost only fire when
-#   exactly 2 cards were actually returned.
+#   This is an OPTIONAL PROCESSING CONDITION (general_rule.pdf §15-7-1: "text
+#   such as 'by X, Y'"), i.e. a cost the player may REFUSE (§15-7-4) — and
+#   refusing skips everything after it (§15-7-2). Per DCGO the opponent must
+#   have >=2 trash cards for the sub-clause to run at all, its card pick is
+#   refusable (`canNoSelect: () => true`), and only
+#   `if (selectedCards.Count == 2)` do the tokens spawn and the DP boost apply.
+#   Modelled with (a) a `count_gte >= 2` gate mirroring DCGO's outer
+#   `if (Enemy.TrashCards.Count >= 2)`, (b) a `select_effect_choice`
+#   accept/decline that surfaces the §15-7-4 refusal to the RL action space
+#   (see the in-body comment on that step for why the decline cannot ride on
+#   the multi-select itself), (c) `min: 2` on the count-capped multi-select
+#   (G-SELECT-MULTI-MIN: a min that cannot be met by the candidate pool
+#   silently no-ops — the cost is unpayable), plus (d) a `binding_count_eq`
+#   gate so the token play + DP boost only fire when exactly 2 cards were
+#   actually returned.
+#   NOTE the scope: only THIS sentence is optional. The clause's leading
+#   "Delete 1 of your opponent's lowest DP Digimon" is mandatory, so the
+#   CLAUSE stays `optional: false`.
 #
 # ─── Engine / DSL gap re-verification (2026-05-21) ──────────────────────────
 #
@@ -122,71 +133,130 @@ effects:
           prompt: "Delete opponent's lowest-DP Digimon"
       - delete_permanent: { target: victim }
 
-      # Step 2 — opponent returns 2 trash cards to the bottom of their deck.
-      # DCGO: the ACTIVE player (card.Owner) selects which 2 cards from the
-      # opponent's trash to return. Modelled with `as_selecting_player:
-      # { of: you }` wrapping the count-capped multi-select over the
-      # opponent's trash zone.
+      # Step 2 — "Then, by returning 2 cards from their trash to the bottom
+      # of the deck, they play 2 [Petrification] Tokens."
       #
-      # `min: 2` enforces the "by returning 2 cards" cost: if the opponent
-      # has fewer than 2 trash cards the count-capped multi-select silently
-      # no-ops AND aborts the rest of the body (G-SELECT-MULTI-MIN: an
-      # unpayable required cost stops the slice) — so the token play and DP
-      # boost do NOT fire, matching DCGO's `if (Enemy.TrashCards.Count >= 2)`
-      # outer gate. `optional_zero: false` — when the cost CAN be paid it
-      # must be paid in full (DCGO maxCount 2, canEndNotMax false).
+      # ─── OPTIONAL PROCESSING CONDITION (§15-7-1 / §15-7-4) ────────────────
       #
-      # The trash-return / token-play / DP-boost steps live INSIDE the
-      # `as_selecting_player` body so they form the multi-select's captured
-      # tail and observe the `returned_cards` binding. (An outer sibling
-      # would run against a pre-callback bindings snapshot and never see it.)
-      - as_selecting_player:
-          of: you
-          body:
-            - select_count_capped_multi:
-                of: opponent
-                zone: trash
-                min: 2
-                max: 2
-                filter: {}
-                bind_as: returned_cards
-                optional_zero: false
-                prompt: "Return 2 cards from your opponent's trash to the bottom of their deck"
-            # Move exactly the 2 picked cards out of the opponent's trash to
-            # the bottom of their deck (G-ZONE-TRASH-TO-DECK verb).
-            - return_trash_list_to_deck_bottom:
-                of: opponent
-                cards: returned_cards
-            # Token play + DP boost are gated on the cost being paid in full
-            # (DCGO `if (selectedCards.Count == 2)`). `binding_count_eq` is
-            # true only when exactly 2 cards were returned.
+      # "by returning 2 cards from their trash to the bottom of the deck, they
+      # play 2 [Petrification] Tokens" is an optional processing condition.
+      # §15-7-1: "Optional processing conditions include text such as
+      # 'by X, Y.'" §15-7-4: "A player can choose whether or not to execute the
+      # content of optional processing conditions." §15-7-2: if the content is
+      # not executed, "the processing after the conditions can't be executed" —
+      # so declining returns NO cards, plays NO tokens, and grants NO DP boost.
+      #
+      # SCOPE — the choice belongs to this sub-clause ONLY. The leading
+      # "Delete 1 of your opponent's lowest DP Digimon" (Step 1 above) prints
+      # no "by ..." and is MANDATORY, so the clause itself must stay
+      # `optional: false`; a clause-level `optional: true` would wrongly expose
+      # a PASS on the delete. The decline is therefore surfaced here as an
+      # explicit accept/decline branch (`select_effect_choice`), the same shape
+      # BT23-057 uses for its mid-clause "You may play 1 [Hinukamuy] Token".
+      #
+      # Note the DSL cannot express the decline on the multi-select itself:
+      # PASS on `select_count_capped_multi` unlocks only at
+      # `picked >= effective_min = max(min, ...)`, so with `min: 2` there is no
+      # zero-pick PASS, and lowering `min` would expose an illegal PARTIAL
+      # payment (official Q&A on BT23-057: "A 'by' condition can't be met if
+      # only some of the required actions are performed").
+      #
+      # Before this fix the cost was auto-paid: the multi-select installed
+      # unconditionally and the player could not refuse — a rule-17
+      # (no-approximations) violation.
+      #
+      # The `count_gte` gate mirrors DCGO's `if (Enemy.TrashCards.Count >= 2)`
+      # (BT24_017.cs:91), evaluated AFTER the delete so the deleted Digimon
+      # counts toward the opponent's trash. DCGO does not prompt at all when
+      # the cost is structurally unpayable, and the engine's own convention
+      # (`outer_optional_guard`) follows DCGO on that; the outcome is identical
+      # either way, since accepting an unpayable cost pays nothing.
+      # DCGO itself surfaces the refusal on its `SelectCardEffect` with
+      # `canNoSelect: () => true` (BT24_017.cs:103) and only runs the token
+      # play + DP boost under `if (selectedCards.Count == 2)` (line 129).
+      - if:
+          condition:
+            count_gte:
+              filter:
+                owner: opponent
+                zone: [trash]
+              n: 2
+          then:
+            - select_effect_choice:
+                bind_as: return_choice
+                labels:
+                  - "Return 2 cards from your opponent's trash"
+                  - "Don't return any cards"
+                prompt: "By returning 2 cards from your opponent's trash to the bottom of their deck, they play 2 [Petrification] Tokens?"
             - if:
-                condition:
-                  binding_count_eq:
-                    binding: returned_cards
-                    n: 2
+                condition: { equals: [return_choice, 0] }
                 then:
-                  # Opponent plays 2 Petrification Tokens.
-                  - play_token:
-                      controller: opponent
-                      token_name: petrification
-                  - play_token:
-                      controller: opponent
-                      token_name: petrification
+                  # ─── ACCEPT branch — pay the cost in full, then run the tail ──────────
+                  #
+                  # DCGO: the ACTIVE player (card.Owner) selects which 2 cards from the
+                  # opponent's trash to return. Modelled with `as_selecting_player:
+                  # { of: you }` wrapping the count-capped multi-select over the
+                  # opponent's trash zone.
+                  #
+                  # `min: 2` enforces the "by returning 2 cards" cost: if the opponent
+                  # has fewer than 2 trash cards the count-capped multi-select silently
+                  # no-ops AND aborts the rest of the body (G-SELECT-MULTI-MIN: an
+                  # unpayable required cost stops the slice) — so the token play and DP
+                  # boost do NOT fire. `optional_zero: false` — when the cost CAN be paid
+                  # it must be paid in full (DCGO maxCount 2, canEndNotMax false); the
+                  # accept/decline above is the only way out.
+                  #
+                  # The trash-return / token-play / DP-boost steps live INSIDE the
+                  # `as_selecting_player` body so they form the multi-select's captured
+                  # tail and observe the `returned_cards` binding. (An outer sibling
+                  # would run against a pre-callback bindings snapshot and never see it.)
+                  - as_selecting_player:
+                      of: you
+                      body:
+                        - select_count_capped_multi:
+                            of: opponent
+                            zone: trash
+                            min: 2
+                            max: 2
+                            filter: {}
+                            bind_as: returned_cards
+                            optional_zero: false
+                            prompt: "Return 2 cards from your opponent's trash to the bottom of their deck"
+                        # Move exactly the 2 picked cards out of the opponent's trash to
+                        # the bottom of their deck (G-ZONE-TRASH-TO-DECK verb).
+                        - return_trash_list_to_deck_bottom:
+                            of: opponent
+                            cards: returned_cards
+                        # Token play + DP boost are gated on the cost being paid in full
+                        # (DCGO `if (selectedCards.Count == 2)`). `binding_count_eq` is
+                        # true only when exactly 2 cards were returned.
+                        - if:
+                            condition:
+                              binding_count_eq:
+                                binding: returned_cards
+                                n: 2
+                            then:
+                              # Opponent plays 2 Petrification Tokens.
+                              - play_token:
+                                  controller: opponent
+                                  token_name: petrification
+                              - play_token:
+                                  controller: opponent
+                                  token_name: petrification
 
-                  # After — BT24-017 gets +2000 DP per opponent Digimon
-                  # until the opponent's turn ends. The 2 Petrification
-                  # Tokens just played count toward the opponent's Digimon
-                  # total (they are on the opponent's battle area when this
-                  # modifier evaluates).
-                  - add_dp_modifier:
-                      target: source
-                      value:
-                        formula:
-                          base: 0
-                          per:
-                            card_count_in_zone:
-                              of: opponent
-                              zone: battle_area
-                          delta: 2000
-                      expiry: end_of_opponents_turn
+                              # After — BT24-017 gets +2000 DP per opponent Digimon
+                              # until the opponent's turn ends. The 2 Petrification
+                              # Tokens just played count toward the opponent's Digimon
+                              # total (they are on the opponent's battle area when this
+                              # modifier evaluates).
+                              - add_dp_modifier:
+                                  target: source
+                                  value:
+                                    formula:
+                                      base: 0
+                                      per:
+                                        card_count_in_zone:
+                                          of: opponent
+                                          zone: battle_area
+                                      delta: 2000
+                                  expiry: end_of_opponents_turn

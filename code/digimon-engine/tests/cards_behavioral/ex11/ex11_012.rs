@@ -408,3 +408,309 @@ fn would_leave_with_no_token_proceeds_normally() {
         "No token on field → Medusamon is deleted normally"
     );
 }
+
+// --- 7. Cross-card: the returned corpse MISSES ITS OWN [On Deletion] --------
+//
+// Medusamon's clause does two things in ONE effect: it deletes an opponent
+// Digimon, and then -- as the optional processing condition for the Token --
+// "by returning 1 card from your opponent's trash to the bottom of the deck".
+// Those can be the SAME card: the corpse it just made.
+//
+// When they are, the deleted Digimon's own [On Deletion] must NOT resolve.
+// 15-4-4-3: "when a card with an effect that's pending activation becomes a new
+// card before the effect activates, the effect can no longer be activated." The
+// deletion queues the trigger, but Medusamon's effect keeps resolving (15-4: an
+// effect resolves completely before queued triggers activate), and by the time
+// the queue drains the card has left the trash for the deck. It is a new card.
+// The trigger misses timing.
+//
+// Same rule as ex12_047_ascension_first_makes_the_on_deletion_miss_timing,
+// reached from the opposite direction: there the carrier moved ITSELF via
+// <Ascension>; here an OPPONENT'S effect moves it.
+//
+// WHAT ENFORCES IT HERE IS NOT KNOWN, and that is deliberately recorded rather
+// than guessed. The obvious candidate is the 15-4-4-3 guard in
+// `Game::queued_effect_source_is_live` (effect_queue.rs), which invalidates a
+// batched OnDeletion whose card has left the trash the deletion put it in --
+// but STUBBING THAT GUARD OUT (`return true`) leaves all three tests below
+// green, so it is not what produces this outcome. Measured mid-line: right
+// after the corpse reaches the deck the queue still holds 3 entries and the
+// TriggerOrder prompt is still up, so nothing has been culled at that point;
+// whatever stops them happens during resolution.
+//
+// The behaviour is RIGHT and these tests pin it. But correctness we cannot
+// attribute may be incidental -- e.g. <Fortitude> failing merely because the
+// card is no longer in the trash it would play from -- and incidental
+// correctness breaks silently. Treat the enforcement point as an open question,
+// not as covered.
+//
+// Both targets are 12000 DP, exactly Medusamon's own, so the "as much or less
+// DP as this Digimon" gate is satisfied at the boundary (12000 read off the
+// EX11-012 card face).
+
+/// Resolve the pending prompt by naming a TRASH card, so the pick cannot
+/// silently follow a reordering of the trash.
+fn pick_trash_by_id(r: &mut DebugRunner, card_id: &str) {
+    // A trash-selection action id is TRASH_EFFECT_START + index into the
+    // ZONE OWNER's trash (action/decode.rs:199-200), so the id can be resolved
+    // back to a card rather than picked positionally.
+    use digimon_engine::action::space::TRASH_EFFECT_START;
+    let (player, action) = {
+        let s = r
+            .pending_selection()
+            .expect("a trash-return prompt must be pending");
+        let owner = s.zone_owner.unwrap_or(s.selecting_player) as usize;
+        let trash = &r.game.players[owner].trash;
+        let hit = s
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| {
+                a.checked_sub(TRASH_EFFECT_START)
+                    .and_then(|i| trash.get(i as usize))
+                    .is_some_and(|c| c.card_id(&r.game.card_data) == card_id)
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "{card_id} must be offered by the trash-return prompt; ids {:?}",
+                    s.valid_action_ids
+                )
+            });
+        (s.selecting_player, hit)
+    };
+    r.execute_action(player, action)
+        .unwrap_or_else(|e| panic!("pick {card_id} from trash: {e:?}"));
+}
+
+fn deck_contains(r: &DebugRunner, player: usize, card_id: &str) -> bool {
+    r.game.players[player]
+        .deck
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == card_id)
+}
+
+fn field_has(r: &DebugRunner, player: usize, card_id: &str) -> bool {
+    r.game.players[player]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == card_id)
+}
+
+fn trash_has(r: &DebugRunner, player: usize, card_id: &str) -> bool {
+    r.game.players[player]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == card_id)
+}
+
+fn seed_decoy_trash(r: &mut DebugRunner) {
+    use digimon_engine::card_source::CardSource;
+    let idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "DECOY-TRASH")
+        .expect("DECOY-TRASH in card_data");
+    let card = CardSource::new(idx, 1, r.game.next_card_index());
+    r.game.players[1].trash.push(card);
+}
+
+fn fire_when_digivolving_on(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(h),
+    );
+    r.game.drain_effect_queue();
+}
+
+/// EX12-065 Kaguyamon carries BOTH <Fortitude> ("play this Digimon from the
+/// trash without paying the cost", 16-26, MANDATORY) and [On Deletion] ("Return
+/// 1 of your opponent's lowest level Digimon to the bottom of the deck").
+/// Returning it to the deck must cost it both.
+#[test]
+fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012")
+        .expect("EX11-012 in embedded pack")
+        .dsl_card("EX12-065")
+        .expect("EX12-065 in embedded pack")
+        .add_card(make_test_card("DECOY-TRASH", "DecoyTrash"))
+        .add_card(make_test_card("FODDER-SRC", "FodderSrc"))
+        .security(1, &[])
+        .memory(20)
+        .start();
+
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // cards, so Kaguyamon is stacked over a source. Without one its
+    // mandatory trigger legitimately no-ops and could not signal anything.
+    r.place_stack(1, &["FODDER-SRC", "EX12-065"]);
+    r.game.tick_declarative_effects();
+
+    // A second trash card so the return is a REAL choice between two cards
+    // rather than a forced single candidate -- otherwise this would pass even
+    // if the engine ignored the pick entirely.
+    seed_decoy_trash(&mut r);
+
+    fire_when_digivolving_on(&mut r, medusa);
+
+    r.accept_optional_trigger()
+        .expect("accept Medusamon's outer optional prompt");
+
+    let (pl, act) = {
+        let s = r.pending_selection().expect("delete-target prompt");
+        (s.selecting_player, s.valid_action_ids[0])
+    };
+    r.execute_action(pl, act).expect("delete Kaguyamon");
+
+    assert!(
+        trash_has(&r, 1, "EX12-065"),
+        "the deletion must put Kaguyamon in its owner's trash first"
+    );
+
+    // The processing condition: return the CORPSE, not the decoy.
+    pick_trash_by_id(&mut r, "EX12-065");
+    let _ = r.auto_resolve();
+    r.game.drain_effect_queue();
+
+    assert!(
+        deck_contains(&r, 1, "EX12-065"),
+        "Kaguyamon must have been returned to the bottom of its owner's deck"
+    );
+    assert!(
+        !field_has(&r, 1, "EX12-065"),
+        "Kaguyamon reached the deck, so its MANDATORY <Fortitude> (16-26) must NOT have played it back. The control below proves this is a real signal: leave Kaguyamon in the trash and <Fortitude> DOES return it to the field"
+    );
+    assert!(
+        field_has(&r, 0, "EX11-012"),
+        "Kaguyamon's [On Deletion] (return 1 of your opponent's lowest level Digimon to the bottom of the deck) must not have resolved either, so Medusamon must still be on the field"
+    );
+    assert!(
+        !deck_contains(&r, 0, "EX11-012"),
+        "Medusamon must not have been bottom-decked by a trigger that never should have activated"
+    );
+}
+
+/// EX12-047 Amaterasumon carries <Ascension> ("place this card as the top
+/// security card") alongside its [On Deletion]. Neither may resolve once the
+/// card has been returned to the deck.
+#[test]
+fn when_digivolving_returning_the_corpse_makes_amaterasumon_miss_both_triggers() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012")
+        .expect("EX11-012 in embedded pack")
+        .dsl_card("EX12-047")
+        .expect("EX12-047 in embedded pack")
+        .add_card(make_test_card("DECOY-TRASH", "DecoyTrash"))
+        .add_card(make_test_card("FODDER-SRC", "FodderSrc"))
+        .security(1, &[])
+        .memory(20)
+        .start();
+
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    r.place_on_field(1, "EX12-047", None);
+    r.game.tick_declarative_effects();
+    seed_decoy_trash(&mut r);
+    let security_before = r.game.players[1].security.len();
+
+    fire_when_digivolving_on(&mut r, medusa);
+
+    r.accept_optional_trigger()
+        .expect("accept Medusamon's outer optional prompt");
+
+    let (pl, act) = {
+        let s = r.pending_selection().expect("delete-target prompt");
+        (s.selecting_player, s.valid_action_ids[0])
+    };
+    r.execute_action(pl, act).expect("delete Amaterasumon");
+
+    pick_trash_by_id(&mut r, "EX12-047");
+    let _ = r.auto_resolve();
+    r.game.drain_effect_queue();
+
+    assert!(
+        deck_contains(&r, 1, "EX12-047"),
+        "Amaterasumon must have been returned to the bottom of its owner's deck"
+    );
+    assert_eq!(
+        r.game.players[1].security.len(),
+        security_before,
+        "<Ascension> would place Amaterasumon as the top security card; it reached the deck instead, so the security stack must be unchanged"
+    );
+    assert!(
+        !r.game.players[1]
+            .security
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "EX12-047"),
+        "Amaterasumon must not be in security -- it is in the deck"
+    );
+}
+
+/// POSITIVE CONTROL for the two miss-timing tests above.
+///
+/// A test that asserts "nothing happened" is worthless without a sibling that
+/// makes the same machinery visibly happen. Same board, same clause, same
+/// deletion -- the ONLY difference is which card the processing condition
+/// returns to the deck: the DECOY instead of the corpse.
+///
+/// Kaguyamon therefore STAYS in the trash where the deletion left it, so its
+/// triggers keep their timing and must fire:
+///   * <Fortitude> (16-26, MANDATORY) plays it back from the trash;
+///   * [On Deletion] returns Medusamon (P0's only, hence lowest-level, Digimon)
+///     to the bottom of P0's deck.
+///
+/// If this control ever goes quiet, the two negative tests above stop meaning
+/// anything and must be re-derived rather than trusted.
+#[test]
+fn when_digivolving_returning_the_decoy_leaves_kaguyamon_triggers_intact() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012")
+        .expect("EX11-012 in embedded pack")
+        .dsl_card("EX12-065")
+        .expect("EX12-065 in embedded pack")
+        .add_card(make_test_card("DECOY-TRASH", "DecoyTrash"))
+        .add_card(make_test_card("FODDER-SRC", "FodderSrc"))
+        .security(1, &[])
+        .memory(20)
+        .start();
+
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // cards, so Kaguyamon is stacked over a source. Without one its
+    // mandatory trigger legitimately no-ops and could not signal anything.
+    r.place_stack(1, &["FODDER-SRC", "EX12-065"]);
+    r.game.tick_declarative_effects();
+    seed_decoy_trash(&mut r);
+
+    fire_when_digivolving_on(&mut r, medusa);
+    r.accept_optional_trigger()
+        .expect("accept Medusamon's outer optional prompt");
+
+    let (pl, act) = {
+        let s = r.pending_selection().expect("delete-target prompt");
+        (s.selecting_player, s.valid_action_ids[0])
+    };
+    r.execute_action(pl, act).expect("delete Kaguyamon");
+    assert!(
+        trash_has(&r, 1, "EX12-065"),
+        "the deletion must put Kaguyamon in its owner's trash first"
+    );
+
+    // The ONLY divergence from the negative tests: return the decoy.
+    pick_trash_by_id(&mut r, "DECOY-TRASH");
+    let _ = r.auto_resolve();
+    r.game.drain_effect_queue();
+
+    assert!(
+        !deck_contains(&r, 1, "EX12-065"),
+        "Kaguyamon must NOT have been returned to the deck in the control"
+    );
+    assert!(
+        field_has(&r, 1, "EX12-065") || deck_contains(&r, 0, "EX11-012"),
+        "CONTROL FAILED: Kaguyamon kept its timing (it stayed in the trash), so \
+         at least one of its triggers had to resolve -- <Fortitude> playing it \
+         back to P1's field, or [On Deletion] bottom-decking Medusamon. Neither \
+         happened, which means the negative miss-timing tests above are passing \
+         for some unrelated reason and prove nothing."
+    );
+}

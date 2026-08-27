@@ -1,0 +1,73 @@
+# Exam scenario: EX12-043 Hakubamon effect clause #1 -- the alternate
+# digivolution path "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2".
+#
+# Hakubamon's PRINTED circle is yellow Lv.3 cost 2 and the alt circle is
+# Lv.3 w/[Shambala] cost 2 -- the SAME cost -- so a yellow [Shambala] base
+# would prove nothing (both circles match, one distinct cost, and the
+# digivolve action cannot say which route it took). The line therefore puts
+# a RED Lv.3 [Shambala] base underneath: Wankomon (EX12-009). The printed
+# yellow circle cannot match a red base, so the digivolve that lowers is
+# necessarily the alt trait circle, and it is still a single distinct cost
+# (no EffectChoice cost prompt).
+#
+# Line shape is the confirmed EX12-026-effect2 spine, entirely inside the
+# BREEDING area:
+#   - Hakubamon's only other effect is [Main] (field-activated, never fires
+#     on a digivolve) and its inherited <Barrier> is a source-only keyword,
+#     so the breeding digivolve triggers NOTHING;
+#   - Wankomon's [On Play] is not a digivolve trigger; and
+#   - Onibimon's <Execute>-granting inherited is inactive in breeding, so
+#     the end-of-turn passes prompt nothing.
+#
+#   T1 (memory 0): hatch Onibimon (purple), digivolve Wankomon over it (its
+#       own alt Lv.2/[Shambala] circle, cost 0 -- Onibimon is not red, so
+#       only that circle matches).
+#   T2: P1 passes everything.
+#   T3 (memory 3): THE CLAUSE -- digivolve Hakubamon over the red Wankomon,
+#       cost 2, memory 3 -> 1. Trailing pass one step after.
+#
+# P1 never acts and is never attacked, so its seat needs no stack.
+#
+# Deck: `sw-shambala` (appended to toho_pool.json for this batch) -- the
+# toho-braves shell with EX12-043 / EX12-025 / EX12-039 swapped in;
+# toho-braves itself has no Hakubamon.
+card: EX12-043
+clause: EX12-043#effect#1
+seed: 424242
+decks:
+  p0: { stack: [EX12-009, EX12-043, EX12-031, EX12-031, EX12-031, EX12-011, EX12-011, EX12-011, EX12-011, EX12-046, EX12-046], rest: sw-shambala }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): hatch, then the free alt-path digivolve in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- Hakubamon's [Shambala]
+  # circle over the RED Wankomon, the only legal route, cost 2 (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-043 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Cost-2 witness for the alt circle: memory 3 -> 1, stack still in breeding.
+  - at: 7
+    that: { p0.memory: 1, p0.field: [], p0.trash: [] }

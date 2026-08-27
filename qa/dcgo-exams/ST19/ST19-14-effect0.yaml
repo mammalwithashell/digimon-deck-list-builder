@@ -1,0 +1,94 @@
+# Exam scenario: ST19-14 (Arisa Kinosaki), clause ST19-14#effect#0 --
+# "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+#
+# Same shape as ST16-14#effect#0, with a one-play overshoot instead of two.
+# A pass hands the opponent 3, which is one too many for the clause's gate, so
+# the opponent must END their turn by overshooting: p0 plays Arisa on turn 1
+# (cost 4, memory 0 -> -4, handing p1 4), p1 answers with a single Tobucatmon
+# (cost 5: 4 -> -1), and p0's turn 3 therefore opens on exactly 1 memory. The
+# clause fires before any prompt, so the turn-3 breeding decision is the first
+# observable state after it -- and it reads 3.
+#
+# Tobucatmon (ST19-07) is the overshoot vehicle because its only printed effect
+# is <Jamming>, a passive: no prompt, no board interaction with p0.
+#
+# Deck note: ST19-14 is not in any pre-existing pool deck, so both seats use
+# `st19-arisa` (an ST19 LIBERATOR/Puppet list with 4x ST19-14 and 4x P-136;
+# eggs 4x ST19-01 Kyaromon).
+#
+# Security note: nothing is ever flipped here, but the pinned security slots
+# still avoid ST19-08 ShoeShoemon -- the one card in this list that FUNCTIONS
+# from the security stack ("[Security] You may play 1 [LIBERATOR] trait card
+# ... without paying the cost").
+card: ST19-14
+clause: ST19-14#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Arisa plus inert filler -- nothing else is ever played
+      - ST19-14
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      # security (5-9): never flipped, and no [Security] text among them
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      - ST19-12
+      # (10): p0's turn-3 draw
+      - ST19-05
+    rest: st19-arisa
+  p1:
+    stack:
+      # hand (0-4): the cost-5 overshoot vehicle plus inert filler
+      - ST19-07
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      # security (5-9): never flipped
+      - ST19-10
+      - ST19-10
+      - ST19-11
+      - ST19-11
+      - ST19-12
+      # (10): p1's turn-2 draw
+      - ST19-05
+    rest: st19-arisa
+steps:
+  # Turn 1 (p0, memory 0): decline breeding, play Arisa. Cost 4 overshoots to
+  # -4, ending the turn and handing p1 4 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST19-14, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1, memory 4): one cost-5 Tobucatmon, 4 -> -1. The overshoot ends
+  # the turn and hands p0 exactly 1 -- inside the clause's "2 or less" gate.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST19-07, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): THE CLAUSE fires at the start of the turn, before any prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pinned corroboration: p1 answers turn 2 holding 4 memory (p0.memory -4), so
+  # the single cost-5 play lands p1 on -1 and hands p0 exactly 1.
+  - at: 3
+    that:
+      p0.memory: -4
+  # ...and turn 3 opens on 3, not 1.
+  - at: 4
+    that:
+      p0.memory: 3

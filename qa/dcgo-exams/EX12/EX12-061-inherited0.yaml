@@ -1,0 +1,147 @@
+# Exam scenario: EX12-061 (Hanimon), clause inherited#0 -- "[When Attacking]
+# [Once Per Turn] <Draw 1> and trash 1 card in your hand." (inherited).
+#
+# The inherited text must be LIVE, so Hanimon is put under a carrier: hatch
+# Onibimon (EX12-004, the all-EX12-004 egg deck makes the hatch deterministic),
+# digivolve Hanimon over it in breeding (every matching route costs 0 -- see
+# EX12-061-effect2), move it out on T3, then on T5 digivolve Kokeshimon
+# (EX12-062) over it on the field. Kokeshimon is deliberate: its own printed
+# text has NO [When Attacking], and its identical inherited line is dormant on
+# the top card -- so the attack fires exactly ONE trigger, Hanimon's.
+#
+# Kokeshimon's routes over Hanimon (printed purple Lv.3 / alt Puppet-or-
+# Shambala Lv.3) both cost 2, so the rule-17 cost-choice prompt stays closed.
+# Its [When Digivolving] ("By deleting 1 of your Digimon, delete 1 of the
+# opponent's level 4 or lower Digimon") opens its payment SelectPermanentEffect
+# even against p1's empty board (DCGO gates the enemy check AFTER the payment,
+# EX12_062.cs) -- the decline step cancels it.
+#
+# The attack targets security; p1's pinned security is all blank-security
+# Digimon under 5000 DP, so the 5000 DP attacker survives the check and the
+# only selection in the attack window is the clause's forced hand-trash.
+#
+# GRANTED-<Execute> GATE (task_69f10a66 Family 1): Onibimon EX12-004 under
+# the stack grants its [TB] carrier <Execute> on the owner's turn, so ending
+# T3 (the stack moved to the battle area that turn and can attack) parks the
+# end-of-turn attack gate — our engine's EndOfTurnAction phase (attack bits +
+# PASS in the mask), DCGO's OptionalSkill yes/no (+ SelectAttackEffect on
+# yes). The surfaces are gate-for-gate equivalent (DCGO's CanActivateExecute
+# requires CanAttack, exactly our park condition), and the emitter maps our
+# `pass` row to OptionalSkill(select_bool: false) on the wire. The gate is
+# DECLINED here: the clause under exam is Hanimon's inherited
+# [When Attacking], not the granted Execute. T5's turn end parks no gate on
+# either side — the carrier is suspended from its attack, so CanAttack fails.
+card: EX12-061
+clause: EX12-061#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-062
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- deliberately free of EX12-074, whose
+      # [Security]-area passive would trigger on our own [Shambala] attack.
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-009
+      - EX12-076
+      # draws: T1 digivolve (10), T3 turn (11), T5 turn (12),
+      # T5 digivolve (13), the clause's <Draw 1> (14)
+      - EX12-026
+      - EX12-065
+      - EX12-011
+      - EX12-020
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon, all under 5000 DP, so the
+      # security check neither fires an effect nor deletes the attacker.
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-061
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): hatch, digivolve Hanimon over the breeding Onibimon (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): move the Hanimon stack to the battle area.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted-<Execute> end-of-turn gate (see header): decline it. Our side:
+  # PASS out of the EndOfTurnAction park. DCGO side: the emitter maps this
+  # row to OptionalSkill(select_bool: false).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Kokeshimon over the field Hanimon (cost 2, memory 3 -> 1),
+  # decline its [When Digivolving] payment, then attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The clause: attacking fires Hanimon's inherited -- <Draw 1> resolves, then
+  # the forced hand-trash parks. EX12-075 is the only copy in hand.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-075] } }
+    expect: { prompt: SelectHandEffect }
+  # Attack resolves (2000-DP security card loses the check); turn is still
+  # p0's at memory 1, so close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the clause: the <Draw 1> pulled EX12-047 (deck 14) and the forced
+  # trash removed EX12-075; Kokeshimon's cost-2 digivolve left memory at 1.
+  # (Step index 15, not 14: the T3 granted-Execute gate row shifted the tail
+  # of the line by one.)
+  - at: 15
+    that:
+      memory: 1
+      p0.hand: [EX12-074, EX12-070, EX12-026, EX12-065, EX12-011, EX12-020, EX12-047]

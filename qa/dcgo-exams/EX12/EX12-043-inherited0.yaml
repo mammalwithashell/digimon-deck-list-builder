@@ -1,0 +1,100 @@
+# Exam scenario: EX12-043 Hakubamon inherited clause #0 -- "<Barrier> (When
+# this Digimon would be deleted in battle, by trashing your top security
+# card, it isn't deleted.)" -- ACCEPTED: the prevention fires and the stack
+# survives its lost security battle.
+#
+# Line shape follows the confirmed EX12-036-effect0.yaml (the other Barrier
+# line in this suite): overspend the carrier onto the field, digivolve one
+# level over it, attack into a security Digimon of EQUAL DP, and answer the
+# single prevention prompt.
+#
+# Hakubamon must be a digivolution SOURCE for its inherited to be live, so
+# the line plays it on T1 (memory 0 -> -5, an overshoot that legally ends the
+# turn; Hakubamon's only other effect is a field [Main], so the play prompts
+# nothing) and digivolves Karakurumon (EX12-063) over it on T3. Karakurumon's
+# purple standard circle cannot match yellow Hakubamon, so only its
+# "Non-white Lv.4 w/[Puppet]/[Shambala]: Cost 3" route matches -- one
+# distinct cost, no cost-choice prompt -- and its [When Digivolving] suspend
+# is vacuous against P1's empty board.
+#
+# The tie is engineered: Karakurumon is 7000 DP and P1's LAST stacked
+# security slot (slot 9) is Shishimamon (EX12-046), also 7000 DP. Equal DP
+# deletes BOTH, which is what opens the Barrier window on the attacker.
+# EX12-046 is the quiet 7000: it has no [Security] text, no [On Deletion],
+# and its [On Play]/[When Digivolving] and [Your Turn] clauses cannot fire
+# from a security check.
+#
+# Exactly one prevention prompt parks, and it is the clause under exam:
+#   - Karakurumon has no <Evade>/<Barrier> of its own;
+#   - its inherited [On Deletion] never fires, because Barrier PREVENTS the
+#     deletion (same isolation EX12-036-effect0 relies on).
+# `yes: true` accepts: the top card of P0's security (slot 9, EX12-046) is
+# trashed and the attacker stays on the field, suspended from its attack.
+#
+# No egg is hatched on either seat, so no <Execute> gate ever opens.
+#
+# Stack layout (p0): hand [0..4], security [5..9] (slot 9 = the top card
+# Barrier trashes), [10] the T3 turn-draw, [11] the T3 digivolve-draw.
+#
+# Deck: `sw-shambala` for P0 (appended for this batch -- toho-braves has no
+# Hakubamon); P1 keeps toho-braves.
+card: EX12-043
+clause: EX12-043#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-043, EX12-063, EX12-031, EX12-031, EX12-031,   # opening hand
+            EX12-011, EX12-011, EX12-011, EX12-046, EX12-046,   # security
+            EX12-046, EX12-026]                                 # T3 draws
+    rest: sw-shambala
+  p1:
+    stack: [EX12-070, EX12-075, EX12-065, EX12-031, EX12-031,   # opening hand
+            EX12-011, EX12-011, EX12-031, EX12-031, EX12-046,   # security
+            EX12-020]                                           # T2 draw
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): overspend-play Hakubamon; the turn ends on resolution.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-043, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Karakurumon over Hakubamon via the alt route
+  # (cost 3, 3 -> 0), then attack security at memory 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: accept <Barrier> on the losing 7000-vs-7000 check.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Still P0's turn at memory 0; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Barrier resolved: the attacker SURVIVES its lost battle (still fielded,
+  # suspended from the attack, Hakubamon beneath it), P0 paid the top of
+  # security (5 -> 4, EX12-046 in trash), and the flipped EX12-046 is in
+  # P1's trash with P1 down to 4 security.
+  - at: 8
+    that:
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: true, sources: [EX12-043] }]
+      p0.security: 4
+      p0.trash: [EX12-046]
+      p1.security: 4
+      p1.trash: [EX12-046]

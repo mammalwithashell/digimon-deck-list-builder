@@ -1,0 +1,101 @@
+# Exam scenario: EX12-022 Kamemon, clause EX12-022#inherited#0 -- the GATE half
+# of the inherited "[When Attacking] [Once Per Turn] If your hand has 7 or
+# fewer cards, <Draw 1>."
+# (the extractor splits the printed line at the <Draw 1> keyword; #inherited#1
+#  is the payoff half and shares this line -- see EX12-022-inherited1.yaml.
+#  DCGO's EX12_022.cs makes the split visible: the hand-size test and the draw
+#  live in one ActivateCoroutine, and a failed test calls
+#  `activateClass.RemoveUse()` so the [Once Per Turn] charge is refunded.)
+#
+# Kamemon must be a digivolution SOURCE in the battle area when the stack
+# attacks, so the line builds the stack in breeding and moves it out:
+#
+#   T1 (P0, memory 0): hatch Mococomon; digivolve Kamemon over it via its alt
+#       circle (Lv.2 w/[Shambala]: Cost 0 -- the yellow egg cannot satisfy
+#       blue Kamemon's standard circle). Kamemon's [On Play] does not fire on a
+#       digivolve, so nothing prompts. Pass.
+#   T2 (P1, memory 3): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): move the stack out (a stack that moved this turn may
+#       still attack), digivolve Apemon EX12-012 over Kamemon (alt circle,
+#       cost 2 -> memory 1), then attack P1's security. THE CLAUSE fires during
+#       the attack: hand is 6 (<= 7), so the gate passes and the draw resolves
+#       automatically -- no prompt on either side.
+#
+# Why Apemon is the carrier: it is the one Lv.4 in this pool whose
+# [When Digivolving] can be STARVED (its "trash 1 [SW] card" condition finds no
+# [SW] card in hand once EX12-012 itself is spent), so no prompt competes with
+# the clause. Its <Raid> opens no window either -- P1's board is empty, so
+# there is no unsuspended Digimon to switch onto and the attack goes to
+# security uninterrupted.
+#
+# P1's top security card is pinned to stack[9] = EX12-061 Hanimon: 2000 DP with
+# no [Security] effect, so Apemon's 4000 wins the security battle cleanly and
+# nothing else triggers off the check.
+#
+# EVERY DIGIVOLVE DRAWS 1, so stack[10] and stack[12] are the two
+# digivolve-draws (stack[12] pinned non-[SW], to keep Apemon's own effect
+# starved), stack[11] the T3 turn draw, and stack[13] the clause's own
+# <Draw 1>. All four are pinned, so the hand assertion rests only on the
+# pinned prefix.
+card: EX12-022
+clause: EX12-022#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-022, EX12-012, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-020, EX12-031, EX12-039, EX12-043, EX12-046,   # security
+            EX12-020,                                           # [10] Kamemon digivolve-draw
+            EX12-031,                                           # [11] T3 turn draw
+            EX12-026,                                           # [12] Apemon digivolve-draw
+            EX12-061]                                           # [13] the clause's <Draw 1>
+    rest: toho-mococo
+  p1:
+    stack: [EX12-009, EX12-011, EX12-026, EX12-031, EX12-046,   # opening hand
+            EX12-009, EX12-011, EX12-026, EX12-031, EX12-061]   # security ([9] = TOP)
+    rest: toho-mococo
+steps:
+  # T1 (P0, memory 0): build Kamemon over the Digi-Egg in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-022 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): move the stack out...
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # ...bury Kamemon so its INHERITED box is what is live...
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-012 } }
+    expect: { prompt: main_phase }
+  # ...and attack. THE CLAUSE fires here: hand 6 <= 7, so <Draw 1> resolves.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # One step after the clause; attacking spends no memory, so P0 keeps the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: the gate passed and the pinned
+  # stack[13] EX12-061 is in hand (6 -> 7 cards), the alt-circle digivolve left
+  # memory at 1, the security check popped P1's top card (5 -> 4) and the
+  # 2000 DP security Digimon lost to Apemon's 4000.
+  - at: 8
+    that:
+      p0.memory: 1
+      p0.hand: [EX12-009, EX12-011, EX12-020, EX12-026, EX12-026, EX12-031, EX12-061]
+      p0.field: [{ card_id: EX12-012, dp: 4000, suspended: true, sources: [EX12-002, EX12-022] }]
+      p1.security: 4
+      p1.trash: [EX12-061]

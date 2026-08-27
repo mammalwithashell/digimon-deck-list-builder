@@ -170,3 +170,97 @@ fn retaliation_handles_mutual_destruction() {
     assert_eq!(r.game.players[0].trash.len(), 1);
     assert_eq!(r.game.players[1].trash.len(), 1);
 }
+
+// ─── G-ONDELETION-PARK-CLEARS-BATTLE-STATE (reproducer) ─────────────────────
+
+/// `<Retaliation>` reads its victim from the LIVE battle
+/// (`EffectContext::battle_opponent_of` → `Game::pending_attack`). When another
+/// `[On Deletion]` clause on the SAME carrier parks a selection, the parking
+/// unwinds `delete_permanents_batch`, which restores `pending_attack` /
+/// `current_deletion_cause` before the resume drains the rest of the
+/// OnDeletion bundle — so `<Retaliation>` resumes with no battle to read and
+/// silently no-ops.
+///
+/// The carrier below takes `<Retaliation>` through the DSL's printed-keyword
+/// form (`kind: grant_keyword`, the `Effect::granted_keyword` marker
+/// `Game::build_effects_for_card` synthesizes from), so this reproducer is
+/// independent of the aura-granted trigger dispatch added for
+/// `G-ENGINE-AURA-GRANT-NO-TRIGGER` — it isolates the battle-state lifetime.
+///
+/// `#[ignore]`d until the gap is fixed; see `docs/RUST_ENGINE_GAPS.md`.
+#[test]
+#[ignore = "engine gap: G-ONDELETION-PARK-CLEARS-BATTLE-STATE — a parked sibling [On Deletion] \
+clause unwinds the deletion batch and clears `pending_attack`, so <Retaliation> finds no battle \
+opponent on resume; see docs/RUST_ENGINE_GAPS.md"]
+fn retaliation_survives_a_parked_sibling_on_deletion_clause() {
+    use digimon_engine::action::space::PASS;
+
+    let yaml = r#"
+card: DSL-RETAL-PARK
+name: Retaliation Parker
+kind: digimon
+level: 5
+color: [blue]
+cost: 5
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation>"
+  - when: on_deletion
+    summary: "[On Deletion] Return 1 of your opponent's [Decoy] Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bottom_target
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Decoy
+          prompt: "Return 1 [Decoy] Digimon to the bottom of the deck"
+      - return_to_deck: { target: bottom_target, position: bottom }
+"#;
+
+    let mut winner = plain_digimon("BIG");
+    winner.dp = Some(20000);
+    let mut decoy_a = plain_digimon("DECOY-A");
+    decoy_a.traits = vec!["Decoy".to_string()];
+    let mut decoy_b = plain_digimon("DECOY-B");
+    decoy_b.traits = vec!["Decoy".to_string()];
+
+    let mut r = DebugRunner::builder()
+        .add_card(winner)
+        .add_card(decoy_a)
+        .add_card(decoy_b)
+        .from_dsl_yaml(yaml)
+        .expect("reproducer card compiles")
+        .start();
+
+    let carrier = r.place_on_field(0, "DSL-RETAL-PARK", Some(0));
+    let attacker = r.place_on_field(1, "BIG", Some(0));
+    // Two candidates so the sibling clause genuinely PARKS a selection.
+    r.place_on_field(1, "DECOY-A", Some(0));
+    r.place_on_field(1, "DECOY-B", Some(0));
+    r.game.tick_declarative_effects();
+
+    assert!(r.game.has_keyword(carrier, Keyword::Retaliation));
+
+    r.attack_digimon(attacker, carrier, false);
+    while let Some(view) = r.pending_selection_view() {
+        let action = if view.is_optional {
+            PASS
+        } else {
+            view.valid_action_ids[0]
+        };
+        r.execute_action(view.selecting_player, action)
+            .expect("resolve pending selection");
+    }
+
+    assert!(
+        r.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "BIG"),
+        "<Retaliation> must still delete the battle winner when a sibling \
+         [On Deletion] clause parked a selection first"
+    );
+}

@@ -75,10 +75,8 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - none_of:
-            - replacement_cause: battle
+      none_of:
+        - replacement_cause: battle
     summary: "[Inherited] <Decode (Lv.4 or lower w/[Gabumon]/[Garurumon] in name or [NSo]/[VB])>"
     process:
       - select_material:

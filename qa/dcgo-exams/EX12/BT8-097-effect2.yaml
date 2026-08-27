@@ -1,0 +1,141 @@
+# Exam scenario: BT8-097 (Crimson Blaze), clause BT8-097#effect#2 --
+# "[Security] Activate this card's [Main] effects."
+#
+# The printed sentence is ONE clause; the extractor splits it at the
+# [Main] marker into #effect#2 ("[Security] Activate this card's") and
+# #effect#3 ("[Main] effects."). This line exercises the whole sentence;
+# #effect#3 is the un-measurable second half of that split.
+#
+# THE SECURITY-TRIGGER SKELETON (see EX1-066-effect2.yaml for the full
+# derivation). A seat's `stack:` is a draw-order prefix on both engines and the
+# security pile is laid AFTER the mulligan from that same ordered deck, so:
+#
+#     stack[0..4]  -> the opening hand, drawn in that order
+#     stack[5..9]  -> the SECURITY stack, REVERSED:
+#                        stack[9] = TOP (flipped first) ... stack[5] = bottom
+#     stack[10..]  -> subsequent draws, in order
+#
+# Both engines are pinned to KEEP under a scripted line (our ScenarioAdapter
+# `construct()` calls `game.start_game()`; DCGO's `SetRedraw` forces
+# `isRedraw=false` while `InputDriver.IsActive`), so the pile is deterministic.
+# A scenario mulligan verb would break this -- mulligan is a true reshuffle
+# (§5-2-1-5).
+#
+# The card under exam therefore sits at P0's stack[9] and is the FIRST card the
+# single security check of the line flips.
+#
+# P1's line is the proven attacker skeleton (EX12-075-security0.yaml): Gasamon
+# (EX12-020, Lv.3, cost 3) is played on P1's first turn at memory 3 (3 -> 0, so
+# the turn continues and P1 passes out), sheds summoning sickness over T3, and
+# attacks security on T4. Gasamon's only printed effect is a [Your Turn]
+# would-digivolve cost reduction -- passive -- and its inherited [When
+# Attacking] <Draw 1> belongs to whatever digivolves OVER it, not to itself, so
+# neither the play nor the attack opens a prompt. P0's battle area stays empty
+# until the flip, so no blocker window precedes the check.
+#
+# BOTH seats' security stacks are fully pinned. EX12-074 must never sit in
+# either -- its "[Security] [Your Turn] [Once Per Turn] When one of your
+# [Shambala] trait Digimon attacks" functions FROM the security stack and
+# Gasamon IS [Shambala], so an unpinned P1 security pile would bury the line
+# under a TriggerOrder roughly a third of the time under DCGO's shuffle. The
+# EX12-074-free `toho-security-*` decks plus the pinned piles close that off on
+# both sides.
+#
+# The [Main] body is prompt-free on both sides: "delete all of your
+# opponent's Digimon with 6000 DP or less" takes no selection (our
+# `for_each`; DCGO re-runs the OptionSkill coroutine through
+# AddActivateMainOptionSecurityEffect), and the accompanying "can't play
+# Digimon by effects" floodgate is a player modifier. The only <=6000 DP
+# Digimon in play is P1's attacking Gasamon at 2000.
+#
+# The in-hand cost reduction (-1 per opponent Digimon) is out of scope
+# here: it only applies when the card is PLAYED from hand, and this line
+# never plays it -- the security effect activates the [Main] body
+# directly, off the security stack.
+card: BT8-097
+clause: BT8-097#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand [0-4]: cost 12/16 bricks -- unplayable at memory 3, no hand [Main]
+      - EX12-047
+      - EX12-047
+      - EX12-065
+      - EX12-065
+      - EX12-076
+      # security [5-8]: quiet filler, never flipped (one check only)
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      # security [9]: THE TOP CARD -- the clause under exam
+      - BT8-097
+      # [10]: P0's T3 turn draw
+      - EX12-011
+    rest: toho-security-options
+  p1:
+    stack:
+      # hand [0-4]: the attacker plus inert filler
+      - EX12-020
+      - EX12-011
+      - EX12-011
+      - EX12-026
+      - EX12-026
+      # security [5-9]: pinned and quiet; never flipped, and EX12-074-free
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): all-pass; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness. P0 draws stack[10].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE. Gasamon attacks security; the check flips
+  # P0's stack[9].
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Attacking spends no memory; P1 keeps the turn. One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over facts the stack prefix pins. The witness is the
+  # ATTACKER dying mid-attack: P1's field empties and Gasamon lands in P1's
+  # trash. BT8-097 is an Option, so no security battle follows
+  # (13-1-7-3-2) and it goes to P0's trash.
+  - at: 9
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [BT8-097]
+      p0.field: []
+      p1.field: []
+      p1.trash: [EX12-020]

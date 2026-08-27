@@ -694,10 +694,19 @@ fn bt22_026_hand_main_jump_digivolves_gabumon_at_cost6_with_nokia() {
         "BT22-026",
         "MetalGarurumon must be the top card of the Gabumon stack after the [Hand][Main] jump"
     );
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert MetalGarurumon's departure by identity instead of by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT22-026"),
+        "MetalGarurumon must leave the hand after digivolving onto the Gabumon"
+    );
     assert_eq!(
         runner.hand_size(0),
-        0,
-        "MetalGarurumon must leave the hand after digivolving onto the Gabumon"
+        1,
+        "the digivolve draw replaced it (§8-1-3-3)"
     );
     // The cost-6 digivolve must actually deduct 6 memory — assert the delta so
     // the test is robust to any starting-memory clamp. A silently-ignored cost

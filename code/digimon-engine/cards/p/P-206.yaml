@@ -180,7 +180,16 @@ effects:
   # the field from your hand with the play cost reduced by 4."
   # The select_hand filter wires kind:tamer + color_matches_any_field_digimon.
   - kind: delay
-    trigger: end_of_your_next_turn
+    # TRIGGER CORRECTION (2026-08-24): was `end_of_your_next_turn`, which
+    # lowers to a turn-keyed AUTO-FIRE at the end of the controller's next
+    # turn. The printed timing is `[Main]`, and DCGO registers this clause at
+    # `EffectTiming.OnDeclaration` -- its [Main] activated-declaration timing --
+    # so it is a player-activated §16-16 Delay, not a schedule. `trigger: delayed`
+    # lowers to `DelayTrigger::MainPhaseActivated`, which surfaces a [Main]
+    # mask bit; NOT activating is the §16-16-2 decline, and the option stays on
+    # the field (§16-16-1: "while a card with this effect is in the battle area").
+    # The old wiring both fired it at the wrong time and gave the player no say.
+    trigger: delayed
     summary: "[Main]<Delay> You may play 1 Tamer from hand matching field Digimon color, cost -4"
     process:
       # DCGO: canNoSelect: true -> optional: true ("you may")

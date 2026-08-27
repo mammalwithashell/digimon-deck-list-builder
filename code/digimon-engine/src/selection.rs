@@ -229,6 +229,20 @@ pub struct EffectChoiceEntry {
     pub source_kind: Option<EffectSourceKind>,
     pub timing: Option<EffectTiming>,
     pub is_optional: bool,
+    /// The KEYWORD this branch belongs to, when it is a keyword effect --
+    /// `<Fortitude>`, an aura-granted `<Retaliation>`, and so on. `None` for a
+    /// plain printed clause like `[On Deletion]`.
+    ///
+    /// This is the only field that separates the branches of a same-card
+    /// trigger stack. EX12-065 Kaguyamon deleted in battle raises THREE
+    /// simultaneous triggers -- `<Fortitude>`, the `[All Turns]` aura's
+    /// `<Retaliation>` (it is itself [Puppet]/[TB], so it grants to itself),
+    /// and its `[On Deletion]` -- and every other field is identical across all
+    /// three: same `source_card`, `timing: OnDeletion`, `is_optional: false`.
+    /// Without this the only remaining handle is the branch's POSITION in the
+    /// bundle, which is per-engine and so cannot answer one scripted line in
+    /// two engines (see the exam's `ordinal:`).
+    pub keyword: Option<crate::enums::Keyword>,
     pub observation_metadata: crate::effect::EffectObservationMetadata,
 }
 
@@ -432,6 +446,20 @@ pub struct QueuedEffect {
     /// metadata. Selection-driving bodies park on the queue identically
     /// to printed effects via the standard `pending_selection` path.
     pub granted_effect_id: Option<u64>,
+    /// `G-ENGINE-AURA-GRANT-NO-TRIGGER` — when `Some(kw)`, this entry runs a
+    /// KEYWORD-DERIVED effect that no card's effect list contains: the carrier
+    /// gained `kw` from a filtered-target aura ("all of your [X] gain `<KW>`"),
+    /// which installs the keyword on the RECIPIENT's modifier registry but
+    /// cannot advertise it through `Effect::granted_keyword` (that marker keys
+    /// the synthesized auto-effect to the GRANTOR).
+    ///
+    /// The drainer resolves the body by re-synthesizing
+    /// `keyword_effects::keyword_to_auto_effect(kw, source_card)` and indexing
+    /// it with `effect_slot`, so every downstream gate (source liveness,
+    /// condition, OPT, optionality) applies exactly as for a printed effect.
+    /// `card_id` is still the carrier's top card for labelling. Mirrors the
+    /// replacement side's `CandidateKind::GrantedKeywordEffect`.
+    pub keyword_effect: Option<crate::enums::Keyword>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a

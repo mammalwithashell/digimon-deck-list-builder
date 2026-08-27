@@ -246,10 +246,19 @@ fn bt25_009_somp_free_digivolves_into_beast_from_hand() {
         perm.card_sources.len() >= 2,
         "digivolution stack must now hold Bearmon underneath the Lv.4 result"
     );
+    // §8-1-3-3: digivolving draws 1 card, so the hand SIZE is unchanged --
+    // assert the [Beast] card's departure by identity, not by arithmetic.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BEAST-LV4"),
+        "the [Beast] card left hand to become the new top card"
+    );
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 1,
-        "the [Beast] card left hand to become the new top card"
+        hand_before,
+        "the digivolve draw replaced it (§8-1-3-3)"
     );
 }
 

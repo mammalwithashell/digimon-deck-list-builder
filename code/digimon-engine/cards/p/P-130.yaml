@@ -45,10 +45,22 @@ cost: 3
 #        → The moved permanent belongs to P-130's controller and is a Digimon.
 #
 # Body: suspend self (target: source) then gain 1 memory.
-#   "by suspending this Tamer, gain 1 memory" — the suspend IS the cost.
-#   The body is NOT clause-level optional; once the condition is met the
-#   effect fires unconditionally (analogous to Owen Dreadnought BT18-087
-#   which uses the same suspend-as-cost shape).
+#   "by suspending this Tamer, gain 1 memory" — the suspend IS the cost, and
+#   §15-7-1 names exactly this shape an OPTIONAL PROCESSING CONDITION
+#   ("Optional processing conditions include text such as 'by X, Y.'", with
+#   the manual's own example being "[On Deletion] By trashing 1 card in the
+#   hand, gain 1 memory"). §15-7-4: "A player can choose whether or not to
+#   execute the content of optional processing conditions" — so the clause is
+#   optional and MUST surface a decline (rule 17: no auto-selections).
+#   DCGO agrees: P_130.cs passes isOptional=true to SetUpActivateClass.
+#
+#   `outer_prompt: true` because the body's first step (suspend self) is not
+#   itself declinable, so without it there is no PASS for the player to take.
+#
+#   This clause previously fired unconditionally, justified by BT18-087 Owen
+#   Dreadnought "which uses the same suspend-as-cost shape" — true, and that
+#   card carries the same defect. Found by the DCGO card-clause exam
+#   (`qa/dcgo-exams/EX12/P-130-effect0.yaml`).
 #
 # G-OPT-TRIGGERED: Not applicable — printed text has no [Once Per Turn].
 #   The suspend cost naturally limits activation (Owen is suspended after
@@ -76,7 +88,11 @@ effects:
   # ─── Clause 2: [Your Turn] on_move — IMPLEMENTED ─────────────────────────
   - when: on_move
     active_when: { your_turn: true }
-    summary: "[Your Turn] When own Digimon moves from breeding: suspend self, gain 1 memory"
+    # §15-7-1/§15-7-4: "by suspending this Tamer" is an optional processing
+    # condition — the player chooses whether to pay it.
+    optional: true
+    outer_prompt: true
+    summary: "[Your Turn] When own Digimon moves from breeding: MAY suspend self to gain 1 memory"
     condition:
       all_of:
         - any_permanent:

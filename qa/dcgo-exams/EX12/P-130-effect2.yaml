@@ -1,0 +1,137 @@
+# Exam scenario: P-130 (Lui Ohwada), clause P-130#effect#2 --
+# "[Security] Play this card without paying the cost."
+#
+# THE SECURITY-TRIGGER SKELETON (see EX1-066-effect2.yaml for the full
+# derivation). A seat's `stack:` is a draw-order prefix on both engines and the
+# security pile is laid AFTER the mulligan from that same ordered deck, so:
+#
+#     stack[0..4]  -> the opening hand, drawn in that order
+#     stack[5..9]  -> the SECURITY stack, REVERSED:
+#                        stack[9] = TOP (flipped first) ... stack[5] = bottom
+#     stack[10..]  -> subsequent draws, in order
+#
+# Both engines are pinned to KEEP under a scripted line (our ScenarioAdapter
+# `construct()` calls `game.start_game()`; DCGO's `SetRedraw` forces
+# `isRedraw=false` while `InputDriver.IsActive`), so the pile is deterministic.
+# A scenario mulligan verb would break this -- mulligan is a true reshuffle
+# (§5-2-1-5).
+#
+# The card under exam therefore sits at P0's stack[9] and is the FIRST card the
+# single security check of the line flips.
+#
+# P1's line is the proven attacker skeleton (EX12-075-security0.yaml): Gasamon
+# (EX12-020, Lv.3, cost 3) is played on P1's first turn at memory 3 (3 -> 0, so
+# the turn continues and P1 passes out), sheds summoning sickness over T3, and
+# attacks security on T4. Gasamon's only printed effect is a [Your Turn]
+# would-digivolve cost reduction -- passive -- and its inherited [When
+# Attacking] <Draw 1> belongs to whatever digivolves OVER it, not to itself, so
+# neither the play nor the attack opens a prompt. P0's battle area stays empty
+# until the flip, so no blocker window precedes the check.
+#
+# BOTH seats' security stacks are fully pinned. EX12-074 must never sit in
+# either -- its "[Security] [Your Turn] [Once Per Turn] When one of your
+# [Shambala] trait Digimon attacks" functions FROM the security stack and
+# Gasamon IS [Shambala], so an unpinned P1 security pile would bury the line
+# under a TriggerOrder roughly a third of the time under DCGO's shuffle. The
+# EX12-074-free `toho-security-*` decks plus the pinned piles close that off on
+# both sides.
+#
+# P-130 DOES carry an [On Play] ("You may move 1 of your level 3 or higher
+# Digimon from the breeding area to the battle area"), and the free play
+# fires it. It is VACUOUS here by construction: P0 never hatches, so P0's
+# breeding area is empty for the whole line and the clause has no legal
+# target. Both engines agree there is nothing to ask -- ours because
+# `select_own_breeding_permanent` has an empty candidate set, DCGO because
+# P_130.cs's CanActivateCondition requires
+# `GetBreedingAreaPermanents().Count(lvl>=3 && CanMove) >= 1`.
+# Deliberately NOT engineered live: filling P0's breeding needs a hatch +
+# digivolve prefix, and a Digimon in P0's breeding area also changes what
+# the T4 attack sees. That belongs on a P-130#effect#0 line; this file is
+# scoped to the [Security] clause.
+card: P-130
+clause: P-130#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand [0-4]: cost 12/16 bricks -- unplayable at memory 3, no hand [Main]
+      - EX12-047
+      - EX12-047
+      - EX12-065
+      - EX12-065
+      - EX12-076
+      # security [5-8]: quiet filler, never flipped (one check only)
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      # security [9]: THE TOP CARD -- the clause under exam
+      - P-130
+      # [10]: P0's T3 turn draw
+      - EX12-011
+    rest: toho-security-tamers
+  p1:
+    stack:
+      # hand [0-4]: the attacker plus inert filler
+      - EX12-020
+      - EX12-011
+      - EX12-011
+      - EX12-026
+      - EX12-026
+      # security [5-9]: pinned and quiet; never flipped, and EX12-074-free
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-031
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): all-pass; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness. P0 draws stack[10].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE. Gasamon attacks security; the check flips
+  # P0's stack[9].
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Attacking spends no memory; P1 keeps the turn. One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over facts the stack prefix pins. The witness is the
+  # Tamer standing on P0's FIELD (played, not trashed) with P1's memory
+  # untouched at 3 -- "without paying the cost".
+  - at: 9
+    that:
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - { card_id: P-130, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: EX12-020, dp: 2000, suspended: true, sources: [] }

@@ -1,0 +1,215 @@
+# Exam scenario: EX12-020 Gasamon, clause inherited#0 -- the whole printed
+# inherited line:
+#   "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards,
+#    <Draw 1>."
+#
+# PRINTED TEXT read off the card face,
+# DCGO_Application/Assets/Textures/Card/EX12-020.webp (Lv.3, 2000 DP, Blue,
+# Rookie/Virus/Mollusk-Shambala-TB). The clause denominator splits the
+# inherited box into exactly ONE span, so `#0` IS the whole line -- an older
+# decomposition that also emitted `EX12-020#inherited#1` is stale and the
+# verdict store still carries that dead key.
+#
+# DCGO REFERENCE (base repo, CLAUDE.md rule 29):
+#   DCGO/Assets/Scripts/CardEffect/EX12/Blue/EX12_020.cs
+#     :62  registered at `EffectTiming.OnAllyAttack` (gated to this card's own
+#          permanent by `CardEffectCommons.CanTriggerOnAttack`)
+#     :66  `SetUpActivateClass(..., useCount: 1, ...)` -- the [Once Per Turn]
+#     :89  `if (card.Owner.HandCards.Count <= 7)` -- the gate is INCLUSIVE and
+#          is read at ACTIVATION time: after the attack is declared, before any
+#          security card is flipped
+#     :93  `new DrawClass(card.Owner, 1, activateClass).Draw()` -- mandatory
+#          once the gate passes; no optional yes/no, no selection
+#     :98  `activateClass.RemoveUse()` on a failed gate, so a hand of 8+
+#          refunds the once-per-turn use instead of consuming it
+#   Both engines therefore resolve this clause with NO prompt, which is why the
+#   line below never answers a selection.
+#
+# THE LINE
+# Gasamon's inherited text is only live while Gasamon is a digivolution SOURCE,
+# so the line plays Gasamon to the battle area and stacks Shellmon (EX12-026)
+# over it there. Deliberately NOT through breeding: hatching would put Onibimon
+# (EX12-004) under the stack, whose granted end-of-turn <Execute> parks an extra
+# gate this line must not depend on (see EX12-061-inherited0's header for it).
+#
+#   T1 (p0): pass. p0 is on the play, so there is no turn-1 draw.
+#   T2 (p1): pass.
+#   T3 (p0, memory 3): draw stack[10] EX12-047; play Gasamon (3 -> 0); pass.
+#   T4 (p1): pass.
+#   T5 (p0, memory 3): draw stack[11] EX12-065; digivolve Shellmon over Gasamon
+#       -- printed cost 2 minus 1 from Gasamon's OWN [Your Turn] [TB] reduction
+#       (effect#0), so memory goes 3 -> 2, and the digivolution draw pulls
+#       stack[12] EX12-063. Shellmon's [When Digivolving] is vacuous against
+#       p1's empty board, so nothing is asked. Then pass WITHOUT attacking.
+#   T6 (p1): pass.
+#   T7 (p0, memory 3): draw stack[13] EX12-075 -- this is the step that sets the
+#       hand to exactly SEVEN -- then attack the player with the Shellmon stack.
+#
+# WHY THE EXTRA TURN: the boundary is the clause
+# The shortest line (attack on T5) declares the attack with a six-card hand,
+# which passes the gate but never distinguishes "7 or fewer" from any looser
+# reading. Spending T5 on the digivolve and attacking on T7 puts the hand at
+# exactly 7 at the declaration -- the INCLUSIVE edge of `<= 7`
+# (EX12_020.cs:89). An engine that read the gate as `< 7` draws nothing here and
+# the assertion at step 16 fails; that is the discriminating observation this
+# file exists to make.
+#
+# WHAT THE CLAUSE DOES HERE
+# Hand is 7 at the declaration, the gate passes, and <Draw 1> pulls stack[14]
+# EX12-009. p0's deck is pinned 15 deep precisely so the drawn card has a NAME:
+# the assertion is then the clause's own observable, not merely "the hand got
+# one longer". Drop the clause and the hand at step 16 is the same seven cards
+# without EX12-009.
+#
+# The attack then checks p1's top security. p1's stack pins the whole security
+# stage -- security is stack[5..10] and stack[9] is flipped FIRST -- so the
+# checked card is EX12-061 Hanimon: 2000 DP, no [Security] text. It loses the
+# check to Shellmon (5000 DP) and is trashed. No prompts; the attacker survives,
+# suspended.
+#
+# p0's own security (stack[5..9]) is four Hanimon plus EX12-009, all plain
+# Digimon with no [Security] text: p1 never attacks, so it is never checked, and
+# nothing there can fire from the security area. EX12-074 is kept out of p0's
+# security on purpose -- its "[Security] [Your Turn] ... when one of your
+# [Shambala] Digimon attacks" passive fires from the security area on OUR turn
+# and would open a prompt in the attack window.
+#
+# The line ends one step after the attack with a trailing pass, which closes
+# p0's turn. Safe: with no Onibimon under the stack there is no end-of-turn
+# <Execute> window to answer.
+#
+# NOT COVERED BY THIS LINE: the [Once Per Turn] limiter (needs two attacks in
+# one turn) and the failing side of the gate (hand >= 8 -> no draw AND the use
+# refunded, EX12_020.cs:98). Both are separate lines against this same clause
+# id; this file exams the positive branch at its exact boundary.
+card: EX12-020
+clause: EX12-020#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020   # Gasamon -- the card under exam
+      - EX12-026   # Shellmon -- the Lv.4 stacked over it
+      - EX12-011
+      - EX12-031
+      - EX12-046
+      # security (5-9): plain Digimon, no [Security] text, never checked.
+      - EX12-061
+      - EX12-061
+      - EX12-061
+      - EX12-061
+      - EX12-009
+      # draws, in order -- these are what make the hand size (and the clause's
+      # drawn card) route-independent:
+      - EX12-047   # 10: T3 turn draw
+      - EX12-065   # 11: T5 turn draw
+      - EX12-063   # 12: T5 digivolution draw
+      - EX12-075   # 13: T7 turn draw -- brings the hand to exactly 7
+      - EX12-009   # 14: THE CLAUSE'S <Draw 1>
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-011
+      - EX12-011
+      - EX12-031
+      - EX12-031
+      - EX12-046
+      # security (5-9): stack[9] is the card the single check flips.
+      - EX12-046
+      - EX12-046
+      - EX12-031
+      - EX12-031
+      - EX12-061   # Hanimon, 2000 DP, no [Security] text
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): nothing affordable.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Gasamon to the battle area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): stack Shellmon over Gasamon (cost 2-1 = 1, memory -> 2),
+  # then end the turn WITHOUT attacking -- the attack is saved for T7 so the
+  # clause is read against a seven-card hand.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): the T7 turn draw has already brought the hand to 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # The clause under exam fires during THIS step: hand is exactly 7 (<= 7), so
+  # Gasamon's inherited [When Attacking] draws EX12-009 before the check.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Step 15 -- the attack declaration is the NEXT step, so this is the hand the
+  # gate reads: exactly seven cards, the inclusive edge of "7 or fewer".
+  # The board is untouched: security still 5, the attacker still unsuspended.
+  - at: 15
+    that:
+      p0.hand: [EX12-011, EX12-031, EX12-046, EX12-047, EX12-063, EX12-065, EX12-075]
+      p1.security: 5
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: false, sources: [EX12-020] }]
+  # Step 16 -- the clause resolved. The ONLY difference from step 15's hand is
+  # EX12-009 (deck position 14): that card is the <Draw 1>.
+  - at: 16
+    that:
+      p0.hand: [EX12-011, EX12-031, EX12-046, EX12-047, EX12-063, EX12-065, EX12-075, EX12-009]
+      p1.security: 4
+      p1.trash: [EX12-061]
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: true, sources: [EX12-020] }]
+  # Step 17 -- not a transient: the drawn card is still in hand a step later,
+  # with the attack fully resolved and nothing else moved.
+  - at: 17
+    that:
+      p0.hand: [EX12-011, EX12-031, EX12-046, EX12-047, EX12-063, EX12-065, EX12-075, EX12-009]
+      p1.security: 4
+      p1.trash: [EX12-061]
+      p0.trash: []
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: true, sources: [EX12-020] }]

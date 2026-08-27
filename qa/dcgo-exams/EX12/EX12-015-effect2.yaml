@@ -1,0 +1,144 @@
+# Exam scenario: EX12-015 (Gokuumon), clause effect#2 -- the <Alliance> that
+# its [On Play][When Digivolving] grants:
+# "(When this Digimon attacks, by suspending 1 of your other Digimon, add the
+#   suspended Digimon's DP to this Digimon and it gains <Security A. +1> for
+#   the attack.)"
+#
+# This file's mark is the COST AND THE SURVIVAL. Gokuumon ends the turn
+# SUSPENDED (step 25) although it never attacked -- suspending an ally is the
+# only thing in the line that could have done that -- and Kakamon, a 2000 DP
+# Lv.3 with no digivolution cards, walks through TWO security battles against
+# 5000 DP Digimon and is still on the board. Only the "add the suspended
+# Digimon's DP" half explains a 2000 DP attacker beating 5000 twice.
+#
+# THE LINE. At T7 Gokuumon digivolves onto the moved Seasarmon in the battle
+# area. Its [When Digivolving] deletes p1's Gasamon with -4000 DP (clause
+# effect#1's own file measures that), then picks p0's other [SW] Digimon --
+# Kakamon, played a turn earlier so it is attack-legal -- grants it <Alliance>
+# and sends it at p1's now-undefended security. Kakamon then spends the
+# <Alliance> window: it suspends Gokuumon, adds Gokuumon's 11000 DP to its own
+# 2000, and checks TWO security cards instead of one.
+#
+# The ally is deliberately an [SW] card. The printed clause and our DSL filter
+# that pick on the [SW] trait; DCGO filters it on [Shambala]
+# (EX12_015.cs `CanSelectOwnerPermanentCondition` -> `EqualsTraits("Shambala")`,
+# and its own effect description prints "[Shambala]"). Every [SW] card in EX12
+# also carries [Shambala], so Kakamon is offered by BOTH engines and this line
+# cannot fail over that disagreement -- but a [Shambala]-only Digimon
+# (EX12-009 / -011 / -020 ...) would be offered by DCGO and refused by ours,
+# which is a real divergence somebody should chase in its own scenario.
+#
+# The two security cards flipped are EX12-062 and EX12-011, both quiet 5000 DP
+# Digimon with no [Security] text, so each check resolves as a silent security
+# battle and the only prompts in the whole T7 sequence are the ones named
+# above.
+#
+# Highway: the proven red breeding line from EX12-047-effect1.yaml, truncated
+# at Lv.5 -- T1 hatch + Wankomon (alt [Shambala], 0) / T3 Seasarmon (2) /
+# T5 move + Kakamon / T7 Gokuumon (alt [Shambala], 3) and the clause.
+card: EX12-015
+clause: EX12-015#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      - EX12-009
+      - EX12-011
+      - EX12-015
+      - EX12-006
+      - EX12-070
+      - EX12-026
+      - EX12-062
+      - EX12-031
+      - EX12-065
+      - EX12-046
+      - EX12-070
+      - EX12-061
+      - EX12-075
+      - EX12-031
+      - EX12-061
+      - EX12-070
+    rest: toho-sw
+  p1:
+    stack:
+      - EX12-020
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-046
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, then Wankomon over the egg (alt [Shambala], 0).
+  - { actor: 0, do: { hatch: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-009 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  # T3 (p0, memory 3): Seasarmon over Wankomon IN BREEDING (cost 2 -> 1); a
+  # breeding-area digivolve activates no effect on either side.
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { digivolve: { from: breeding, using: EX12-011 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  # T4 (p1, memory 3): play Gasamon -- the -4000 DP target (3 -> 0).
+  - { actor: 1, do: { play: { card: EX12-020, from: hand.0 } }, expect: { prompt: main_phase } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  # T5 (p0, memory 3): move Seasarmon out AND play Kakamon (3 -> 0). Kakamon
+  # is the [SW] ally this clause needs; playing it a turn early is what lets
+  # it attack at T7.
+  - { actor: 0, do: { move: { from: breeding } }, expect: { prompt: breeding_action } }
+  - { actor: 0, do: { play: { card: EX12-006, from: hand.1 } }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+  # T5's end: the <Execute> Onibimon grants the moved, [TB]-trait Seasarmon.
+  # Declined -- it is not this file's clause and taking it would suspend the
+  # stack the Alliance cost needs.
+  - { actor: 0, do: { pass: {} }, expect: { prompt: OptionalSkill } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+  - { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+  # T7 (p0, memory 3). Kakamon's own [Start of Your Main Phase] "by trashing
+  # 1 [SW] card from hand ..." fires first (Gokuumon is in hand and is [SW]).
+  # Declined: it is a different card's clause, and paying it would draw and
+  # gain memory, moving numbers this file reasons about.
+  - { actor: 0, do: { select: { decline: true } }, expect: { prompt: SelectHandEffect } }
+  # Gokuumon onto the moved Seasarmon, in the BATTLE area so its
+  # [When Digivolving] actually activates.
+  - { actor: 0, do: { digivolve: { from: field.0, using: EX12-015 } }, expect: { prompt: main_phase } }
+  # Seasarmon is a red Lv.4 [Shambala], so BOTH of Gokuumon's circles are
+  # open and both engines ask which cost to pay. The answer is the VALUE.
+  - { actor: 0, do: { select: { value: 3 } }, expect: { prompt: SelectCountEffect } }
+  # First half of Gokuumon's [When Digivolving] (clause effect#1, measured in
+  # its own file): -4000 DP deletes the 2000 DP Gasamon.
+  - { actor: 0, do: { select: { targets: [opp.field.0] } }, expect: { prompt: SelectPermanentEffect } }
+  # Second half: the ally pick. Kakamon gains <Alliance> for the turn.
+  - { actor: 0, do: { select: { targets: [own.field.1] } }, expect: { prompt: SelectPermanentEffect } }
+  # ... "and attack": p1's board is empty by now, so the only attack the
+  # prompt can offer is against the player -- one accept id, answered `yes`.
+  - { actor: 0, do: { select: { yes: true } }, expect: { prompt: SelectAttackEffect } }
+  # THE <Alliance> WINDOW: suspend 1 of your other Digimon (Gokuumon) to add
+  # its DP to the attacker and give it <Security A. +1>.
+  - { actor: 0, do: { select: { targets: [own.field.0] } }, expect: { prompt: SelectPermanentEffect } }
+  - { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+assert:
+  # MINIMAL and prefix-pinned. Both marks in one block: Gokuumon suspended
+  # without attacking (the <Alliance> cost) and Kakamon alive after two
+  # security battles (the DP it borrowed). The DP values are the resting ones
+  # -- <Alliance>'s boost lasts only "for the attack" -- which is why the
+  # witness is SURVIVAL rather than a number.
+  - at: 25
+    that:
+      p0.field:
+        - card_id: EX12-006
+          dp: 2000
+          suspended: true
+          sources: []
+        - card_id: EX12-015
+          dp: 11000
+          suspended: true
+          sources: [EX12-004, EX12-009, EX12-011]
+      p1.trash: [EX12-011, EX12-020, EX12-062]

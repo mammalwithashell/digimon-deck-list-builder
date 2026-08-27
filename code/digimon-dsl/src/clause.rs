@@ -248,6 +248,12 @@ pub enum ClauseScope {
     Both,
     Linked,
     Security,
+    /// Printed `[Trash]` timing scope: the clause is active ONLY while the
+    /// card sits in its owner's trash (e.g. BT20-084 "[Trash] When any of
+    /// your Digimon are played, ..."). Lowered to `Effect::trash_zone`; the
+    /// engine's `EnteredField` trash scan enqueues ONLY trash-scoped
+    /// clauses, and the battle-area top-card scan skips them.
+    Trash,
 }
 
 impl ClauseScope {

@@ -1,0 +1,105 @@
+# Exam scenario: BT11-089 (Akiho Rindou), clause BT11-089#effect#0 --
+# "[On Play] Reveal the top 4 cards of your deck. Add 1 red Digimon card with
+#  the [Vaccine] trait among them to your hand. Place the rest at the bottom of
+#  your deck in any order."
+#
+# Akiho is a Tamer (play cost 3, no color gate on a hand play), so the clause is
+# reachable on turn 1: decline breeding, play the Tamer (memory 0 -> -3; the
+# overshoot ends the turn AFTER the effect resolves), then answer the reveal.
+# The first player takes no turn-1 draw, so the top of the deck at play time is
+# stack indexes 10-13 exactly.
+#
+# Those four are engineered so the "add 1" pick is a REAL choice and the
+# remainder ordering is unambiguous by identity:
+#   [10] ST1-02 Biyomon   -- red, Digimon, Vaccine  -> ELIGIBLE
+#   [11] ST1-13 Shadow Wing -- Option               -> ineligible (not a Digimon)
+#   [12] ST1-03 Agumon    -- red, Digimon, Vaccine  -> ELIGIBLE
+#   [13] ST1-04 Dracomon  -- red, Digimon, DATA     -> ineligible (attribute)
+# Two eligible candidates, so neither engine can auto-resolve the pick, and all
+# four ids are distinct so every ordering answer names exactly one card.
+#
+# ("[Vaccine] trait" is printed as a trait but lives in cards.json's
+# `attribute_eng`; our card loader folds type/form/attribute into one trait set,
+# which is why `trait_has: Vaccine` in BT11-089.yaml matches these.)
+#
+# Deck note: BT11-089 is in no pre-existing pool deck, so both seats use
+# `st1-akiho` -- the ST1 Gaia Red list with ST1-12 / ST1-15 / ST1-16 (the three
+# cards in it that FUNCTION from the security stack) swapped out for 4x
+# BT11-089 and 4x P-156; eggs unchanged (4x ST1-01 Koromon).
+card: BT11-089
+clause: BT11-089#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Akiho plus inert filler -- nothing else is ever played
+      - BT11-089
+      - ST1-05
+      - ST1-05
+      - ST1-06
+      - ST1-06
+      # security (5-9): never flipped (no attack in this line)
+      - ST1-05
+      - ST1-05
+      - ST1-06
+      - ST1-06
+      - ST1-08
+      # (10-13): the four cards the clause reveals
+      - ST1-02
+      - ST1-13
+      - ST1-03
+      - ST1-04
+    rest: st1-akiho
+  p1:
+    stack:
+      # hand (0-4) / security (5-9): inert; p1 only answers one breeding prompt
+      - ST1-05
+      - ST1-05
+      - ST1-06
+      - ST1-06
+      - ST1-08
+      - ST1-05
+      - ST1-05
+      - ST1-06
+      - ST1-06
+      - ST1-08
+      - ST1-02
+    rest: st1-akiho
+steps:
+  # Turn 1 (p0, memory 0): no breeding needs, straight to the Tamer.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT11-089, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, half 1: add 1 red [Vaccine] Digimon among the four. Biyomon by
+  # identity; Agumon was the other legal answer.
+  - actor: 0
+    do: { select: { cards: [ST1-02] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, half 2: the remaining three go to the bottom "in any order" --
+  # a real ordered permutation, answered as ONE row naming all three in order.
+  #
+  # It MUST be one row, not three. DCGO's `ReturnRevealedCardsToLibraryBottom`
+  # (RevealLibrary.cs:469) opens a SINGLE `SelectCardEffect` with
+  # `maxCount = remainingCards.Count` and `canEndNotMax: false` -- one prompt
+  # carrying the whole permutation -- while our engine re-parks
+  # `OrderedPermutation` per pick. Three rows would put two answers on the
+  # wire that DCGO never asks for, and the strict cursor aborts. The collapsed
+  # shape is the one EX12-075-effect1 (`confirmed`) already validated against
+  # the oracle. It also avoids the 1-card leftover trap: DCGO AUTO-PLACES a
+  # single remaining card with no prompt at all (RevealLibrary.cs:478), which
+  # is why EX12-009#effect#0 is recorded `unreachable`.
+  - actor: 0
+    do: { select: { cards: [ST1-13, ST1-03, ST1-04] } }
+    expect: { prompt: SelectCardEffect }
+  # Memory -3 ended p0's turn after resolution: p1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 4
+    that:
+      p0.hand: [ST1-02, ST1-05, ST1-05, ST1-06, ST1-06]
+      p0.trash: []

@@ -1,0 +1,75 @@
+# Exam scenario: EX12-012 Apemon, clause EX12-012#inherited#0 --
+# "[Your Turn] This Digimon gets +2000 DP." (the inherited-effect box).
+#
+# An inherited effect only functions while its card is a DIGIVOLUTION SOURCE,
+# so the line buries Apemon under Karakurumon EX12-063 and reads the carrier's
+# effective DP on both sides of a turn boundary -- the [Your Turn] gate is the
+# whole clause, and a scenario that only measured P0's turn could not tell
+# "+2000 always" from "+2000 on your turn".
+#
+#   T1 (P0, memory 0): hard-cast Apemon (cost 4, 0 -> -4; the overshoot ends
+#       the turn). Its own "[On Play] trash 1 [SW] card -> <Draw 2>" is
+#       starved: once Apemon leaves the hand it holds EX12-063 / EX12-009 /
+#       EX12-011 / EX12-026, none of them [SW], so both engines skip the effect
+#       on their condition and nothing prompts.
+#   T2 (P1, memory 4): all-pass, handing P0 3 memory.
+#   T3 (P0, memory 3): digivolve Karakurumon over Apemon via its
+#       "non-white Lv.4 w/[Puppet] or [Shambala]: Cost 3" circle (memory
+#       3 -> 0). THE CLAUSE is live: 7000 + 2000 = 9000. Karakurumon's own
+#       [When Digivolving] (suspend 1 opponent Digimon or Tamer, then lock one)
+#       is vacuous against an empty opponent board and prompts on neither side.
+#   T4 (P1): the same board on the OPPONENT's turn -- the gate shuts and
+#       Karakurumon reads its printed 7000.
+#
+# The digivolve draws 1 (the core rule); stack[11] pins it so the line owns
+# every card it touches.
+card: EX12-012
+clause: EX12-012#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-012, EX12-063, EX12-009, EX12-011, EX12-026,   # opening hand
+            EX12-020, EX12-031, EX12-039, EX12-043, EX12-046,   # security
+            EX12-061,                                           # [10] T3 turn draw
+            EX12-020]                                           # [11] digivolve-draw
+    rest: toho-mococo
+  p1: { stack: [], rest: toho-mococo }
+steps:
+  # T1 (P0, memory 0): hard-cast Apemon; the overshoot ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-012, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): bury Apemon under Karakurumon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # Pass out of P0's turn so the same board can be read on P1's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # ON P0's TURN: Karakurumon's printed 7000 plus Apemon's inherited +2000.
+  - at: 6
+    that:
+      p0.memory: 0
+      p0.field: [{ card_id: EX12-063, dp: 9000, suspended: false, sources: [EX12-012] }]
+  # ON P1's TURN: identical board, the [Your Turn] gate shut -- printed 7000.
+  - at: 7
+    that:
+      p0.field: [{ card_id: EX12-063, dp: 7000, suspended: false, sources: [EX12-012] }]

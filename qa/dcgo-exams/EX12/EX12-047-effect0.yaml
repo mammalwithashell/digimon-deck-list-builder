@@ -1,0 +1,188 @@
+# Exam scenario: EX12-047 Amaterasumon effect clause #0 -- "<Piercing> (When
+# this Digimon attacks and deletes an opponent's Digimon in battle, it checks
+# security before the attack ends.)".
+#
+# The observable is a security check that has no other cause. Amaterasumon
+# attacks a SUSPENDED Gasamon -- a Digimon, not the player -- so the attack
+# resolves entirely in the battle area and touches no security stack of its
+# own. P1's security nonetheless drops. Only <Piercing> converts a
+# Digimon-target attack into a security check (DCGO registers it at
+# `EffectTiming.OnDetermineDoSecurityCheck`, EX12_047.cs -- a determination
+# hook, so it fires once for the attack rather than recursing on the security
+# battles it causes).
+#
+# Amaterasumon also prints <Security A. +1> (clause #1, already confirmed), so
+# the Piercing check runs at the attacker's Strike and flips MORE than one
+# card; the exact count is left to backfill rather than guessed here.
+#
+# GETTING A SUSPENDED TARGET WITHOUT A SECOND BOARD: P1's Gasamon attacks P0's
+# security on T6 and survives, because P0's TOP security card is pinned to
+# EX12-075, an Option whose "[Security] Place this card in the battle area"
+# resolves prompt-free and opens no security battle (that flip is the already-
+# confirmed EX12-075-security0 line). Gasamon ends the turn suspended and
+# alive, which is exactly the target this clause needs.
+#
+# ORDER IS LOAD-BEARING: Amaterasumon arrives on T3, BEFORE Gasamon exists.
+# Its [On Play]/[When Digivolving] "Delete 1 of your opponent's lowest DP
+# Digimon..." (clause #3) is MANDATORY and would eat the future target on
+# arrival; against an empty enemy board with an empty enemy trash it has zero
+# candidates and stays silent -- the same engineering the confirmed
+# EX12-047-effect1 / -effect5 lines rely on.
+#
+# THE BASE IS KARAKURUMON (EX12-063), NOT SHISHIMAMON. Amaterasumon prints two
+# digivolution paths off a Lv.5 -- "Lv.5 yellow: Cost 4" and "Lv.5 w/[Shambala]
+# trait: Cost 3" -- and BOTH match a yellow [Shambala] Lv.5, which makes our
+# engine park an `EffectChoice` "Choose which digivolution cost to pay" that
+# the select vocabulary has no form for. Karakurumon is purple/green, so only
+# the trait path applies and the digivolve lowers to a single action; the
+# confirmed EX12-047-effect1 / -effect5 lines use the same base for the same
+# reason. Its [On Play] "suspend 1 of your opponent's Digimon or Tamers" is
+# silent against T1's empty board, and its inherited effect is an
+# [On Deletion] -- nothing this line ever triggers.
+#
+# TWO QUIET REQUIREMENTS, both pinned by the stack:
+#  * P0's hand holds ONLY Option cards from T3 onward, so nothing on the board
+#    or in hand can offer a free-play prompt during the attack under exam.
+#  * P1's security holds no [Security]-functioning card and no [On Deletion]
+#    body: the same five ids the confirmed EX12-047-effect1 line uses
+#    (EX12-063 in particular is EXCLUDED -- its "[On Deletion] you may play 1
+#    level 4 or lower [Puppet]/[TB] Digimon from your trash" would fire off a
+#    security battle with Gasamon's corpse already in the trash as a legal
+#    candidate).
+#
+#   T1 (P0, memory 0): hard-cast Karakurumon (cost 7, 0 -> -7 overshoot).
+#   T2 (P1): all-pass.
+#   T3 (P0, memory 3): digivolve Amaterasumon over Karakurumon (alt "Lv.5
+#       w/[Shambala]: Cost 3", 3 -> 0), pass out.
+#   T4 (P1, memory 3): play Gasamon (3 -> 0), pass out.
+#   T5 (P0): all-pass -- Gasamon sheds summoning sickness. Amaterasumon has no
+#       egg under it, so no <Execute> gate opens at the turn end.
+#   T6 (P1, memory 3): Gasamon attacks security; the flipped EX12-075 places
+#       itself on P0's field; Gasamon ends suspended and alive.
+#   T7 (P0, memory 3): THE CLAUSE -- Amaterasumon attacks the suspended
+#       Gasamon, deletes it in battle, and Piercing checks P1's security.
+#
+# Stack layout: hand [0..4], security [5..9] with 5 = BOTTOM and 9 = TOP, then
+# each seat's turn draws in order (P0: T3, T5, T7; P1: T2, T4, T6).
+card: EX12-047
+clause: EX12-047#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Karakurumon (T1), Amaterasumon (T3), then Options only.
+      - EX12-063
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9): [9] is the TOP card P1's T6 attack flips -- EX12-075,
+      # whose [Security] places it in the battle area with no prompt and no
+      # security battle, so Gasamon survives suspended.
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-009
+      - EX12-075
+      # draws: T3 (10), T5 (11), T7 (12) -- Options only.
+      - EX12-070
+      - EX12-074
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon.
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9): the confirmed EX12-047-effect1 set -- Digimon with no
+      # [Security] text, no [On Deletion] body, DP far below the attacker.
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+      # draws: T2 (10), T4 (11), T6 (12)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 base -- purple/green, so the T3 digivolve has
+  # exactly one printed path and parks no cost choice.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass -- the board must stay empty for T3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Amaterasumon arrives into an empty enemy board, so its
+  # mandatory [When Digivolving] delete has no candidate. Karakurumon's own
+  # [On Play] suspend already fired (and fizzled) back on T1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-047 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the future target arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): Gasamon attacks security to SUSPEND ITSELF. P0 has no
+  # blocker, and the flipped EX12-075 places itself rather than battling.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): the clause under exam -- attack the SUSPENDED Gasamon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: the security checks the clause causes only land in the
+  # projection at the next step boundary (same reason EX12-047-effect1 asserts
+  # after its trailing pass, not after the attack step).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Minimal, and only over stack-pinned facts: the Digimon-target attack
+  # deleted Gasamon AND took P1's security down -- a stack the attack itself
+  # never targeted.
+  - at: 18
+    that:
+      p1.field: []
+      p1.security: 3

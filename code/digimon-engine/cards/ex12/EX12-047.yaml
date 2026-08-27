@@ -5,7 +5,9 @@ level: 6
 color: [yellow, red]
 cost: 12
 dp: 12000
-traits: [Shaman, Sanmyojin, Tentei Hachibushu, Shambala]
+# Card face prints .../Shambala/TB (TB dropped by the cards.json API
+# ingest; task_69f10a66 EX12-070 triage).
+traits: [Shaman, Sanmyojin, Tentei Hachibushu, Shambala, TB]
 attribute: Vaccine
 
 alt_paths:

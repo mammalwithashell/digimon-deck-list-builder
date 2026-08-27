@@ -181,6 +181,14 @@ impl Game {
             .player_mut(handle.player)
             .battle_area
             .remove(handle.index as usize);
+        // `battle_area` is a Vec, so the remove above COMPACTS it and every
+        // queued effect whose carrier sat at a LATER slot now addresses the
+        // wrong permanent. Re-key them, as the deletion and link paths already
+        // do. Without this a SURVIVING carrier reads as dead in
+        // `queued_effect_source_is_live` and its MANDATORY trigger is silently
+        // dropped -- measured on EX12-036 Ryugumon, where the standing carrier
+        // reported index 1 while the battle area held one permanent at index 0.
+        self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
 
         let mut sources = perm.card_sources;
         let Some(top) = sources.pop() else {
@@ -437,6 +445,14 @@ impl Game {
             .player_mut(player_id)
             .battle_area
             .remove(handle.index as usize);
+        // `battle_area` is a Vec, so the remove above COMPACTS it and every
+        // queued effect whose carrier sat at a LATER slot now addresses the
+        // wrong permanent. Re-key them, as the deletion and link paths already
+        // do. Without this a SURVIVING carrier reads as dead in
+        // `queued_effect_source_is_live` and its MANDATORY trigger is silently
+        // dropped -- measured on EX12-036 Ryugumon, where the standing carrier
+        // reported index 1 while the battle area held one permanent at index 0.
+        self.shift_effect_queue_after_battle_area_remove(player_id, handle.index);
 
         let Some(top) = perm.card_sources.pop() else {
             return false;

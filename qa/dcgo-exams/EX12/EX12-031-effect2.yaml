@@ -1,0 +1,85 @@
+# Exam scenario: EX12-031 MarineBullmon effect clause #2 -- the alternate
+# digivolution path "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3".
+#
+# The observable is a digivolve that ONLY the alt path can explain:
+# MarineBullmon's standard circles are blue/yellow Lv.4, so the line puts a
+# RED Lv.4 with the [Shambala] trait under it -- Seasarmon (EX12-011) -- and
+# the digivolve that lowers is necessarily the alt path, a single cost-3
+# action with no EffectChoice.
+#
+# Red breeding highway, and the whole line stays in the BREEDING area:
+#   - no [On Play]/[When Digivolving] triggers fire in breeding (Wankomon's,
+#     Seasarmon's and MarineBullmon's are all suppressed there), and
+#   - Onibimon's <Execute>-granting inherited is inactive in breeding, so the
+#     end-of-turn passes prompt nothing.
+#
+#   T1 (memory 0): hatch Onibimon, digivolve Wankomon over it (alt path,
+#       cost 0 -- Onibimon is not red, only the alt circle matches).
+#   T3 (memory 3): digivolve Seasarmon over the red Wankomon. Its standard
+#       red-Lv.3 circle (cost 2) and its alt [Shambala] path (cost 2) BOTH
+#       match, but the costs are equal, so there is a single action and no
+#       EffectChoice. Memory 3 -> 1.
+#   T5 (memory 3): the clause under exam -- MarineBullmon over the red Lv.4
+#       Seasarmon: blue/yellow standard circles cannot match, alt path only,
+#       single cost-3 action, memory 3 -> 0. Trailing pass one step after the
+#       clause fires.
+#
+# P1 never acts and is never attacked, so its seat needs no stack.
+card: EX12-031
+clause: EX12-031#effect#2
+seed: 424242
+decks:
+  p0: { stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-046, EX12-020, EX12-020, EX12-020, EX12-020, EX12-061, EX12-046, EX12-046], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): hatch, then the free alt-path digivolve in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Seasarmon over Wankomon (equal-cost dual circle, one
+  # action, no prompt; memory 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the clause under exam -- MarineBullmon's alt path over
+  # the red Seasarmon, the only legal digivolve circle, at cost 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Cost-3 witness for the alt circle: memory 3 -> 0, stack still in breeding.
+  - at: 12
+    that: { p0.memory: 0, p0.field: [], p0.trash: [] }
