@@ -315,7 +315,7 @@ analogue of the existing key-vs-clause_id check."
 
 **Interfaces:**
 - Consumes: `VerdictStore::{load, save_dir}` from Task 1.
-- Produces: CLI `dcgo-harness exam migrate-verdicts --from <blob.json> --to <dir>`; prints `migrated N verdicts across M cards`.
+- Produces: CLI `dcgo-harness migrate-verdicts --from <blob.json> --to <dir>`; prints `migrated N verdicts across M cards`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -360,7 +360,7 @@ If it passes at this step, proceed — the CLI in Step 3 is still required.
 
 - [ ] **Step 3: Add the CLI subcommand**
 
-In `main.rs`, find the `Exam` subcommand enum variant. Add a sibling variant:
+In `main.rs`, `Commands` is a FLAT enum (`Submit`, `Exam`, `Build`, `Up`, `Down`, `Watch`, ...). Add a sibling variant, which clap renders as the top-level `migrate-verdicts` subcommand:
 
 ```rust
     /// Split a single-blob verdict store into per-card files (one-time).
@@ -396,7 +396,7 @@ And in the matching `match` arm block:
 - [ ] **Step 4: Run the migration for real and verify the counts**
 
 ```bash
-cargo run -p dcgo-harness -- exam migrate-verdicts
+cargo run -p dcgo-harness -- migrate-verdicts
 ```
 
 Expected: `migrated 148 verdicts across 35 cards: qa/qa-reports/dcgo_exam_verdicts.json -> qa/qa-reports/exam-verdicts`
