@@ -192,6 +192,60 @@ def test_load_verdict_store_missing_directory_is_empty(tmp_path):
     assert load_verdict_store(tmp_path / "does-not-exist") == {}
 
 
+def test_load_verdict_store_directory_raises_loudly_on_corrupt_file(tmp_path):
+    """A corrupt verdict file must raise, never silently degrade to `{}`.
+
+    This is deliberate and pre-existing, not a bug: returning `{}` for an
+    unreadable file would silently downgrade already-confirmed clauses back
+    to `unmeasured` with no indication anything went wrong -- exactly the
+    silent wrongness this ledger exists to prevent. Do NOT "fix" this into a
+    silent `{}` return; the loud failure is the contract.
+    """
+    d = tmp_path / "exam-verdicts"
+    d.mkdir()
+    (d / "EX12-073.json").write_text("{bad json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        load_verdict_store(d)
+
+
+def test_load_verdict_store_directory_rejects_a_row_filed_under_the_wrong_card(tmp_path):
+    """A row's card_id must agree with the file that holds it.
+
+    Mirrors the Rust `VerdictStore::load_dir` check in
+    `code/tools/dcgo-harness/src/exam/verdict.rs`: a BT8-084 row hand-edited
+    or badly merged into EX12-035.json would otherwise be silently accepted
+    by the Python reader (via plain dict.update) while the Rust reader
+    refuses it -- and `bind()` feeds this straight into the human-facing
+    denominator report.
+    """
+    d = tmp_path / "exam-verdicts"
+    d.mkdir()
+    (d / "EX12-035.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "BT8-084#effect#0": {
+                        "clause_id": "BT8-084#effect#0",
+                        "card_id": "BT8-084",
+                        "verdict": "confirmed",
+                        "text_sha256": "abc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        load_verdict_store(d)
+
+    message = str(exc_info.value)
+    assert "EX12-035" in message, message
+    assert "BT8-084" in message, message
+
+
 def test_load_verdict_store_still_reads_a_single_file(tmp_path):
     """The single-file form stays supported: tests and fixtures use it."""
     p = tmp_path / "verdicts.json"

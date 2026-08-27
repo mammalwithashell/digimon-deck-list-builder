@@ -162,6 +162,16 @@ def load_verdict_store(path: Path | str | None) -> dict:
 
     A missing path is NOT an error (fresh checkout): it yields an empty store,
     and every clause then honestly reports `unmeasured`.
+
+    In the directory branch only, a row whose ``card_id`` does not match the
+    file it was found in is rejected with a ``ValueError`` naming both the
+    file and the offending card -- the same check the Rust
+    ``VerdictStore::load_dir`` (`code/tools/dcgo-harness/src/exam/verdict.rs`)
+    performs, so a misfiled row (a bad hand-edit or a bad merge) cannot be
+    silently absorbed into a card's clause list by one reader while the other
+    refuses it. The single-file branch is exempt: fixtures and tests load
+    arbitrarily-named single files on purpose, and the filename there carries
+    no claim about which card the contents belong to.
     """
     if not path:
         return {}
@@ -172,7 +182,16 @@ def load_verdict_store(path: Path | str | None) -> dict:
     if p.is_dir():
         merged: dict = {}
         for f in sorted(p.glob("*.json")):
-            merged.update(_load_verdict_file(f))
+            expected_card = f.stem
+            for clause_id, record in _load_verdict_file(f).items():
+                actual_card = record.get("card_id")
+                if actual_card != expected_card:
+                    raise ValueError(
+                        f"verdict file {f} holds a verdict for card {actual_card!r} "
+                        f"(clause {clause_id!r}); each file holds exactly one card's "
+                        "verdicts"
+                    )
+                merged[clause_id] = record
         return merged
 
     return _load_verdict_file(p)
