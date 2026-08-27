@@ -359,6 +359,11 @@ mod tests {
         assert_eq!(out.held_by_others.len(), 1);
         assert_eq!(out.held_by_others[0].0, "EX7-005");
         assert_eq!(out.held_by_others[0].1.job_id, "musketeers-01");
+
+        // Verify the other job's claim was left intact on disk.
+        let live = read_claims(&dir, now).unwrap();
+        assert!(live.contains_key("EX7-005"), "other job's claim survives on disk");
+        assert_eq!(live["EX7-005"].job_id, "musketeers-01");
     }
 
     #[test]
@@ -388,6 +393,37 @@ mod tests {
         claim_cards(&dir, &["BT12-042".to_string()], &c, now).unwrap();
 
         let out = claim_cards(&dir, &["BT12-042".to_string()], &c, now).unwrap();
+
+        assert_eq!(out.granted, vec!["BT12-042".to_string()]);
+        assert!(out.held_by_others.is_empty());
+    }
+
+    #[test]
+    fn reclaiming_your_own_expired_claim_succeeds() {
+        // Resuming a crashed job must not deadlock against itself. The machine
+        // died, its lease lapsed, and it must be able to pick its own work back up.
+        let dir = std::env::temp_dir().join("exam_claims_crash_resume");
+        let _ = std::fs::remove_dir_all(&dir);
+        let first_now = "2026-08-27T12:00:00+00:00";
+        let second_now = "2026-08-28T12:00:00+00:00";
+
+        // Claim with an expiry in the past relative to the second call.
+        claim_cards(
+            &dir,
+            &["BT12-042".to_string()],
+            &claim("hunters-01", "2026-08-27T11:00:00+00:00"),
+            first_now,
+        )
+        .unwrap();
+
+        // The same job tries to reclaim after the lease expires.
+        let out = claim_cards(
+            &dir,
+            &["BT12-042".to_string()],
+            &claim("hunters-01", "2026-08-28T12:00:00+00:00"),
+            second_now,
+        )
+        .unwrap();
 
         assert_eq!(out.granted, vec!["BT12-042".to_string()]);
         assert!(out.held_by_others.is_empty());
