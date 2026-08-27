@@ -477,6 +477,13 @@ mod tests {
     /// test, so widening it weakens no assertion. It stays finite rather than
     /// `-t` (infinite) so a panic before the reap leaves a process that cleans
     /// itself up instead of an immortal orphan.
+    // Windows-only: the decoy is spawned with Windows `ping` syntax
+    // (`-n <count>`) and read back through `pid_alive` / `pid_is_image`,
+    // which shell out to `tasklist`. On Linux `-n` means "no DNS lookup",
+    // the decoy exits immediately, and `tasklist` does not exist -- so these
+    // assert nothing there and fail for reasons unrelated to the code under
+    // test. The daemon itself is Windows-only today (it also uses `taskkill`).
+    #[cfg(target_os = "windows")]
     fn spawn_decoy() -> std::process::Child {
         let child = Command::new("ping")
             .args(["-n", "30", "127.0.0.1"])
@@ -491,6 +498,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn pid_is_image_is_true_for_the_actual_image_and_false_for_another() {
         let mut decoy = spawn_decoy();
         let pid = decoy.id();
@@ -507,6 +515,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn pid_is_image_is_false_for_a_dead_pid() {
         let mut decoy = spawn_decoy();
         let pid = decoy.id();
@@ -538,6 +547,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn up_relaunches_when_the_recorded_pid_is_a_different_image() {
         let root = std::env::temp_dir().join("dcgo_daemon_wrong_image_root");
         let build = std::env::temp_dir().join("dcgo_daemon_wrong_image_build");
@@ -590,6 +600,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn down_refuses_to_kill_when_the_image_name_is_missing() {
         let root = std::env::temp_dir().join("dcgo_daemon_down_no_image");
         let _ = std::fs::remove_dir_all(&root);
