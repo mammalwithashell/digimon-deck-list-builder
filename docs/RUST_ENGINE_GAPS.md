@@ -2374,7 +2374,7 @@ Both exam scenarios that pinned the wrong behaviour were updated:
 `qa/dcgo-exams/EX12/EX12-076-effect0.yaml` (`at: 34/36/37` field + trash, and
 the attack step's `field.5` → `field.8`) and
 `qa/dcgo-exams/EX12/EX12-047-effect4.yaml` (`at: 25`). NOTE: the two
-`diverged` verdicts in `qa/qa-reports/dcgo_exam_verdicts.json`
+`diverged` verdicts in `qa/qa-reports/exam-verdicts/`
 (`EX12-047#effect#4`, `EX12-076#effect#0`) are **not** re-classified here —
 sim-only cannot legitimately flip an oracle verdict; they need a fresh Unity
 oracle pass.

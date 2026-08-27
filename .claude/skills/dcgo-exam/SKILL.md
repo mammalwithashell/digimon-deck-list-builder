@@ -1,6 +1,6 @@
 ---
 name: dcgo-exam
-description: Cross-examine an implemented Digimon card against the DCGO oracle, clause by clause. Binds the card's printed text to the `clause_coverage` denominator, authors/runs scripted scenarios in both engines, and reports a per-clause verdict — `confirmed | diverged | unreachable | unavailable | unmeasured` — with the full denominator ALWAYS printed. Triggers on "exam <CARD>", "cross-examine <card> against DCGO", "which clauses of <card> are actually verified", authoring or running scenarios under `qa/dcgo-exams/`, reading `qa/qa-reports/dcgo_exam_verdicts.json`, or triaging an exam divergence. Runs AFTER a card is implemented and its per-card tests are green. Does NOT fix the engine.
+description: Cross-examine an implemented Digimon card against the DCGO oracle, clause by clause. Binds the card's printed text to the `clause_coverage` denominator, authors/runs scripted scenarios in both engines, and reports a per-clause verdict — `confirmed | diverged | unreachable | unavailable | unmeasured` — with the full denominator ALWAYS printed. Triggers on "exam <CARD>", "cross-examine <card> against DCGO", "which clauses of <card> are actually verified", authoring or running scenarios under `qa/dcgo-exams/`, reading `qa/qa-reports/exam-verdicts/`, or triaging an exam divergence. Runs AFTER a card is implemented and its per-card tests are green. Does NOT fix the engine.
 argument-hint: <CARD_ID | SET | --suite> [--sim-only]
 ---
 
@@ -57,7 +57,7 @@ triaged findings. Fixes stay a decision — **ask before fixing**.
 | `unavailable` | DCGO has no script for this card, so no oracle exists |
 | `unmeasured` | No scenario authored yet — **the default, and the point of the table** |
 
-Store: `qa/qa-reports/dcgo_exam_verdicts.json`, one row per `(card, clause)`.
+Store: `qa/qa-reports/exam-verdicts/`, one row per `(card, clause)`.
 Clause identity is **not invented here** — it is `clause_coverage.models.Clause.id`,
 formatted `{card_id}#{zone}#{idx}` (e.g. `EX12-073#security#0`). A verdict also stores the
 clause `label` and a `text_sha256`; if the card's text drifts, the id re-points at a

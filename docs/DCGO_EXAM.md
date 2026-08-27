@@ -659,7 +659,7 @@ derivation back into a reading; the lead stays labelled `LEAD`.
 
 ## The five verdict classes
 
-`qa/qa-reports/dcgo_exam_verdicts.json`, one row per `(card, clause)`.
+`qa/qa-reports/exam-verdicts/`, one row per `(card, clause)`.
 
 | Verdict | Meaning |
 |---|---|
@@ -732,6 +732,28 @@ DCGO is source-priority #2, below `general_rule.pdf`. A drafted test encodes
 **strong evidence, not truth.** An auto-generated test asserting a behavior
 nobody read would launder a DCGO quirk into a permanent guard, which under the
 no-approximations policy is worse than no test.
+
+## The ledger (fleet layout)
+
+Three files, each shaped by how it merges:
+
+| Path | What | Merge |
+|---|---|---|
+| `qa/qa-reports/exam-verdicts/<CARD-ID>.json` | Current per-clause verdicts | Disjoint writers touch disjoint files |
+| `qa/qa-reports/exam-log.jsonl` | Append-only attempt history | `merge=union` (see `.gitattributes`) |
+| `qa/qa-reports/exam-claims/<CARD-ID>.claim` | Advisory leases with expiry | One file per card |
+| `qa/qa-reports/exam-index.md` | Generated rollup | Regenerated, never hand-edited |
+
+**Claims are advisory.** Two nodes pushing in the same instant can both claim a
+card; git is the only coordinator. That is an accepted trade rather than an
+oversight — a duplicate costs one card's authoring and is visible at merge,
+where a lease server would cost standing infrastructure. Claims expire so a
+crashed node cannot park a card forever.
+
+**The log answers what the store cannot.** `unmeasured` cannot distinguish
+"nobody looked" from "three nodes each burned an afternoon on the same dead
+end". Check the log before re-attempting a clause that has been `unmeasured`
+for a while.
 
 ## The two run modes, and the CI split
 
@@ -922,4 +944,4 @@ list in `docs/DCGO_HARNESS.md`.
 - `code/tools/clause_coverage/` — the clause denominator and `exam_binding.py`
 - `code/tools/dcgo-harness/src/exam/` — scenario, lowering, projection, differ,
   verdict store, backfill, drafter
-- `qa/qa-reports/dcgo_exam_verdicts.json` — the verdict store itself
+- `qa/qa-reports/exam-verdicts/` — the verdict store itself
