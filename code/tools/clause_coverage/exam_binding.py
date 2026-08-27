@@ -155,14 +155,31 @@ def _parse_scenario_header(text: str) -> dict:
 def load_verdict_store(path: Path | str | None) -> dict:
     """Load the verdict store -> ``{clause_id: entry}``.
 
-    A missing path/file is NOT an error (fresh checkout) -- it yields an empty
-    store, and every clause then honestly reports `unmeasured`.
+    Accepts either the **fleet layout** -- a directory of per-card
+    ``<CARD-ID>.json`` files, which is what nodes write, because disjoint
+    writers must touch disjoint files -- or a **single file**, which fixtures
+    and tests still use.
+
+    A missing path is NOT an error (fresh checkout): it yields an empty store,
+    and every clause then honestly reports `unmeasured`.
     """
     if not path:
         return {}
     p = Path(path)
     if not p.exists():
         return {}
+
+    if p.is_dir():
+        merged: dict = {}
+        for f in sorted(p.glob("*.json")):
+            merged.update(_load_verdict_file(f))
+        return merged
+
+    return _load_verdict_file(p)
+
+
+def _load_verdict_file(p: Path) -> dict:
+    """One store file -> ``{clause_id: entry}``. Shape errors yield ``{}`."""
     with open(p, encoding="utf-8") as f:
         data = json.load(f)
     clauses = data.get("clauses") if isinstance(data, dict) else None

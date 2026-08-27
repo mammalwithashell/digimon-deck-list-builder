@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.clause_coverage.exam_binding import bind
+from tools.clause_coverage.exam_binding import bind, load_verdict_store
 
 
 def _write_scenario(d: Path, name: str, card: str, clause: str) -> Path:
@@ -142,3 +142,73 @@ def test_a_stored_verdict_whose_clause_text_drifted_is_invalidated_not_trusted(t
     assert bound["invalidated"] is True
     assert clause["id"] in result["invalidated_clause_ids"]
     assert result["denominator"]["by_verdict"]["confirmed"] == 0
+
+
+def test_load_verdict_store_reads_a_directory_of_per_card_files(tmp_path):
+    """The fleet layout: one file per card, merged on read."""
+    d = tmp_path / "exam-verdicts"
+    d.mkdir()
+    (d / "EX12-073.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "EX12-073#effect#0": {
+                        "clause_id": "EX12-073#effect#0",
+                        "card_id": "EX12-073",
+                        "verdict": "confirmed",
+                        "text_sha256": "abc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (d / "BT8-084.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "BT8-084#effect#0": {
+                        "clause_id": "BT8-084#effect#0",
+                        "card_id": "BT8-084",
+                        "verdict": "unreachable",
+                        "text_sha256": "def",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store = load_verdict_store(d)
+
+    assert set(store) == {"EX12-073#effect#0", "BT8-084#effect#0"}
+    assert store["EX12-073#effect#0"]["verdict"] == "confirmed"
+
+
+def test_load_verdict_store_missing_directory_is_empty(tmp_path):
+    """A fresh checkout has no ledger; everything is honestly unmeasured."""
+    assert load_verdict_store(tmp_path / "does-not-exist") == {}
+
+
+def test_load_verdict_store_still_reads_a_single_file(tmp_path):
+    """The single-file form stays supported: tests and fixtures use it."""
+    p = tmp_path / "verdicts.json"
+    p.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "clauses": {
+                    "EX12-073#effect#0": {
+                        "clause_id": "EX12-073#effect#0",
+                        "card_id": "EX12-073",
+                        "verdict": "confirmed",
+                        "text_sha256": "abc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert set(load_verdict_store(p)) == {"EX12-073#effect#0"}
