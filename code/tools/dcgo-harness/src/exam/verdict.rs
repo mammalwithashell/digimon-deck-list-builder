@@ -280,22 +280,24 @@ impl VerdictStore {
         }
 
         // Prune files for cards we no longer carry.
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) != Some("json") {
-                    continue;
-                }
-                let stem = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or_default()
-                    .to_string();
-                if !by_card.contains_key(&stem) {
-                    std::fs::remove_file(&path).map_err(|e| {
-                        format!("failed to prune stale verdict file {}: {e}", path.display())
-                    })?;
-                }
+        let entries = std::fs::read_dir(dir)
+            .map_err(|e| format!("failed to read verdict directory {}: {e}", dir.display()))?;
+        for entry in entries {
+            let entry =
+                entry.map_err(|e| format!("failed to read {}: {e}", dir.display()))?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("json") {
+                continue;
+            }
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_string();
+            if !by_card.contains_key(&stem) {
+                std::fs::remove_file(&path).map_err(|e| {
+                    format!("failed to prune stale verdict file {}: {e}", path.display())
+                })?;
             }
         }
         Ok(())
