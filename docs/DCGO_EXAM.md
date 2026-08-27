@@ -735,14 +735,14 @@ no-approximations policy is worse than no test.
 
 ## The ledger (fleet layout)
 
-Three files, each shaped by how it merges:
+Three merged write-targets plus a generated rollup, each shaped by how it merges:
 
 | Path | What | Merge |
 |---|---|---|
 | `qa/qa-reports/exam-verdicts/<CARD-ID>.json` | Current per-clause verdicts | Disjoint writers touch disjoint files |
 | `qa/qa-reports/exam-log.jsonl` | Append-only attempt history | `merge=union` (see `.gitattributes`) |
 | `qa/qa-reports/exam-claims/<CARD-ID>.claim` | Advisory leases with expiry | One file per card |
-| `qa/qa-reports/exam-index.md` | Generated rollup | Regenerated, never hand-edited |
+| `qa/qa-reports/exam-index.md` | Generated rollup, sorted by `unmeasured` descending | Regenerated, never hand-edited |
 
 **Claims are advisory.** Two nodes pushing in the same instant can both claim a
 card; git is the only coordinator. That is an accepted trade rather than an

@@ -95,7 +95,7 @@ pub struct SelectWire {
     /// in opposite order (measured: EX12-047, DCGO stacks `<Ascension>` at
     /// EX12_047.cs:41 BEFORE the printed `[On Deletion]` at :182, we stack them
     /// the other way) an ordinal cannot name the branch portably and a keyword
-    /// can — which is what `qa/qa-reports/dcgo_exam_verdicts.json`'s
+    /// can — which is what `qa/qa-reports/exam-verdicts/`'s
     /// `EX12-047#effect#2` (confirmed via `select_trigger`) rests on.
     pub trigger: Option<String>,
     /// The branch to EXCLUDE, normalized -- the complement of
