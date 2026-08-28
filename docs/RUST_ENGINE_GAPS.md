@@ -2577,31 +2577,56 @@ Settling it needs the rules position on whether an effect-initiated DNA digivolu
 grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
 cited test correction.
 
-## G-ENGINE-DELAY-PREVENTION-WITHOUT-COST (BT20-100)
+## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100)
 
 **Found:** 2026-08-27, by the clone-safety guard. **Pre-existing on main** — the
 same two tests fail there with byte-identical counts (4419 passed / 2 failed /
-28 ignored). Neither is fixed here; this entry records the finding.
+28 ignored), and this branch touches no engine source.
 
 `code/digimon-engine/tests/cards_behavioral/bt20/bt20_100.rs::bt20_100_unpaid_delay_cost_does_not_prevent_original_leave`
 
-**Symptom.** The test cancels the Delay's cost payment (a `CancelCostDeletion`
-effect), then accepts the replacement. It asserts the protected Digimon still
-leaves, because the cost was never paid. It now stays on the field: **the
-prevention applied without its cost.**
+**Corrected diagnosis.** An earlier revision of this entry called it "the Delay
+prevention applied without its cost". That was wrong, and instrumenting the test
+showed why: nothing is applied at all. **The replacement dispatcher livelocks.**
 
-**Why this is not a stale test.** §16-16-1 makes trashing the card the *cost* of
-activating a `<Delay>`. An effect that resolves when its cost was cancelled is a
-rule-17 / no-approximations violation, not a changed convention — so unlike the
-`tests/dsl/delay.rs` failures fixed in the same pass, the assertion here is
-right and the behaviour is wrong. It must not be re-baselined or `#[ignore]`d to
-make CI green.
+Observed state after the accept, and after six further accepts:
 
-**Likely origin.** The `<Delay>` rework in `73733429d` / `72ad6e5ee` (16-16-1
-/ 16-16-2), which changed decline handling so a declined Delay leaves its
-carrier on the field and reschedules. The sibling test
-`bt20_100_delay_decline_allows_original_leave_to_proceed` still passes, so the
-decline path is intact and the **cost-cancelled** path is the one that regressed.
+```
+prompt kind=Replacement valid=[59]   (identical every iteration)
+on-field OMNI-TARGET: true   COST-GATE: true   BT20-100: true
+trash: []                    pending_selection: still Some
+```
+
+Every `resolve_selection(0, REPLACEMENT_ACCEPT)` returns `Ok(())`, no state
+changes, and the same window is re-offered indefinitely. The test's assertion
+never gets a meaningful answer because the game never advances past the loop.
+
+**Shape.** BT20-100's `when_would_leave_battle_area` replacement fires for
+OMNI-TARGET. Its process is `delete_permanent {target: source}` (the §16-16-1
+cost — trashing the card is what activates a `<Delay>`) followed by
+`cancel_replacement`. That nested deletion opens its own `WhenWouldBeDeleted`
+window on BT20-100, which the test's `CancelCostDeletion` double answers by
+cancelling any `ReplacementCause::Cost` deletion. When that nested commit
+unwinds, the outer event appears to re-dispatch instead of concluding.
+
+**Why this is severe beyond one red test.** A non-terminating selection is a
+stuck action space: under rule 17 the RL agent is offered a choice that can
+never advance the game. That is worse than a wrong outcome, because a wrong
+outcome at least terminates.
+
+**Why it was not fixed here.** The relevant guard is `replacement_fired`, a
+`(timing, subject)` set cleared in `replacement.rs` when
+`replacement_depth == 0 && !in_replacement_commit`. Its strictness is
+deliberately different for FIRED vs DECLINED commits, and those branches carry
+rules citations (§7.5 once-per-event; 15-8-5-4 "activated one at a time") plus a
+pinned interaction — a declined `<Decode>` must not eat `<Evade>` on the same
+event. Tightening the guard to stop this loop could silently break that. It
+needs someone with the replacement state machine loaded, not a guard tweak from
+a passing branch.
+
+**Likely origin.** The `<Delay>` / optional-processing rework in `73733429d`,
+`72ad6e5ee` and `8d435d06b` (13 auto-paid optional conditions now offer a
+decline), which added prompts on paths that previously auto-resolved.
 
 ## G-ENGINE-WOULD-LEAVE-OBSERVER-NOT-FULLY-RESOLVED (BT13-040)
 
@@ -2616,4 +2641,5 @@ only the play-from-sources branch leaves the observer unresolved.
 
 An unresolved pending selection is not cosmetic — it is a stuck action space,
 which under rule 17 means the RL agent is offered a choice the game cannot
-complete.
+complete. Given BT20-100 above livelocks in the same dispatcher, these two are
+probably one bug seen from two angles rather than two.
