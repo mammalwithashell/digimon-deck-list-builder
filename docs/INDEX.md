@@ -57,3 +57,12 @@ Related top-level docs:
 Related agent workflows:
 - `.codex/skills/assess-rust-engine-archetype/` — Codex read-only DSL readiness assessment for archetypes, decks, card groups, or card lists
 - `.claude/skills/assess-archetype-rust/` — legacy Claude gap-filing audit workflow that appends to `RUST_ENGINE_GAPS.md` and emits `.claude/plans/rust-engine-gaps-*.md`
+
+Archetype campaign fleet — the design that turned the DCGO card-clause exam
+(above) into a per-archetype dispatchable job (`/archetype-campaign`), and the
+four plans that implemented it, in build order:
+- `docs/superpowers/specs/2026-08-27-archetype-campaign-fleet-design.md` — the design: fleet-safe ledger, MCP surface, oracle node bootstrap, `/archetype-campaign` skill
+- `docs/superpowers/plans/2026-08-27-exam-ledger-fleet-safety.md` — plan 1: per-card verdict files, append-only attempt log, advisory claims, generated index
+- `docs/superpowers/plans/2026-08-27-exam-mcp-surface.md` — plan 2: the ten `dcgo-harness mcp` tools (`exam_status` … `node_health`)
+- `docs/superpowers/plans/2026-08-27-oracle-node-bootstrap.md` — plan 3: the ~544 MB payload recipe, `node up`/`down`/`status`, preflight
+- `docs/superpowers/plans/2026-08-27-archetype-campaign-skill.md` — plan 4: the `/archetype-campaign` skill itself

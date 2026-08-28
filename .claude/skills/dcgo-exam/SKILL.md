@@ -169,9 +169,16 @@ gate as if it could catch a new divergence.
 Oracle runs go through the existing harness (`docs/DCGO_HARNESS.md`): `exam` submits jobs;
 `dcgo-harness up --build <dir>` / `watch` keep the player draining them.
 
-Agent surface, once registered: `dcgo-harness mcp` exposes `exam_status(card_id)` (the
-`VerdictSummary`, **always including `unmeasured`**), `run_scenario(path, sim_only)` (the
-`DiffReport`), and `exam_card(card_id)` (bind + run + per-clause verdicts).
+Agent surface, once registered: `dcgo-harness mcp` exposes ten tools — `exam_status`
+(the `VerdictSummary` for a card, **always including `unmeasured`**), `exam_plan`
+(outstanding clauses for a card), `exam_validate` (lints a draft scenario before
+running it), `exam_authoring_guide` (the scenario-composition contract by topic),
+`exam_keyword_brief` (a keyword's optional-vs-mandatory kind + rule pages),
+`run_scenario` (runs a committed scenario, returns the `DiffReport`), `exam_probe`
+(tries a line without committing a file — `sim_only: false` is not wired to a live
+job yet), `claim` / `release` (advisory per-card leases), and `node_health`
+(preflight before authoring). See `docs/DCGO_EXAM.md`'s "The agent surface (MCP)"
+section for the full table.
 
 ## Phase 3 — Report the full denominator
 

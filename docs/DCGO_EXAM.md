@@ -963,6 +963,7 @@ large outputs) was the largest single line item of the first campaign.
 | `exam_probe` | Tries a line without committing a scenario file — see the `sim_only` note below. |
 | `claim` | Takes advisory leases on cards so another node does not duplicate the work. |
 | `release` | Releases this job's claims; never removes another job's claim. |
+| `node_health` | Preflight — every check (build present, action-space hash, …) with a status and, on `fail`, a remedy; never errors, so a node that cannot answer still produces a readable report. |
 
 > `run_scenario` and `exam_probe` with `sim_only: true` **cannot find a new
 > divergence**. They re-check what an oracle previously confirmed. Only an
@@ -994,6 +995,71 @@ Registration (`.mcp.json`):
       "args": ["run", "-q", "-p", "dcgo-harness", "--", "mcp"]
     }
 ```
+
+## Running a campaign
+
+Everything above answers "is this one card's clause confirmed". `/archetype-campaign`
+is the dispatch unit built on top of it: point it at one archetype and it
+resolves the card pool, claims it, drives the missing cards through
+`/batch-implement-cards-rust-dsl`, drives the outstanding clauses through the
+exact exam loop documented above, triages divergences, and releases its claims
+with a ledger entry — so a second node asking for the same archetype sees the
+work already done instead of repeating it. `qa/qa-reports/exam-index.md`
+(regenerated rollup, sorted by `unmeasured` descending) is what to dispatch
+next; don't pick an archetype by hand when that ranking exists.
+
+**One-line dispatch:** `/archetype-campaign "<Archetype Name>"`. Under the
+hood, Phase 1 runs `PYTHONPATH=code python -m tools.clause_coverage.campaign
+--archetype "<NAME>" --json`, which binds the archetype to its pool and splits
+the work three ways:
+
+| Bucket | What it means | Toho Braves | Hunters |
+|---|---|---|---|
+| `implement` | Cards with no YAML spec yet — cannot be examined until they exist | 0 | 42 |
+| `exam` | Outstanding clauses, core-first | 56 | 88 |
+| `skipped` | Already `confirmed` or `unavailable`, each with a reason — never silently dropped | 110 | 3 |
+
+(Toho Braves: 42 cards total, core 18, present in ≥32 of 45 decklists. Hunters:
+65 cards total, core 16, present in ≥19 of 27 decklists.)
+
+**The finish line is the core, adjudicated — not the pool, confirmed.** The
+`core` a campaign is judged against is a fraction of decklists, not a raw card
+count picked by feel:
+
+> Every core clause is `confirmed`, or carries a named, *measured* reason — and
+> zero untriaged `diverged`. Pool coverage (the support-card and 1-of tail) is
+> reported, never gated.
+
+Toho Braves is the worked example: core landed at **69/74 (93%)** clauses
+adjudicated, each of the remaining five carrying a measured cause (an
+`unreachable` background-process card, a `generic_int` row with no candidate
+list, …) rather than a blank `unmeasured`. That is a **finished** campaign —
+grinding toward 74/74 on the strength of $8+/clause oracle time is not the
+goal.
+
+**Fix gate.** A `diverged` clause may be fixed autonomously only with all
+three: a citation to the `general_rule.pdf` section or DCGO C# it rests on, a
+test that fails before the fix and passes after, and `cards_behavioral` green.
+Card/YAML fixes land under that gate directly. Engine fixes proceed under the
+same gate but land on their own branch, flagged for human review, not merged
+inline. Anything that can't be justified by citation is a **logged finding,
+not a fix** — see "Known gaps" above.
+
+**The oracle route today.** `exam_probe(sim_only: false)` is not wired to a
+live job yet (`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`, "The agent surface (MCP)"
+above) — a campaign still gets its oracle answers by committing the scenario,
+submitting it through the phase-1 harness queue, and running `/dcgo-exam`, the
+same route "Quick start" describes.
+
+A campaign needs a warm oracle node, preflighted with `node_health` before any
+authoring — never author "in the meantime" on a NO-GO. Provisioning, the
+payload recipe, and the headless-play / Photon-concurrency platform findings
+the fleet design rests on: `docs/runbooks/oracle-node.md` (this doc doesn't
+restate those numbers so there is one copy of the finding).
+
+Full non-negotiables and the phase-by-phase driver live in the skill itself:
+`.claude/skills/archetype-campaign/SKILL.md`. Design rationale:
+`docs/superpowers/specs/2026-08-27-archetype-campaign-fleet-design.md`.
 
 ## See also
 
