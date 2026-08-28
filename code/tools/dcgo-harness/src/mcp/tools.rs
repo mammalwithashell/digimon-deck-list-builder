@@ -90,7 +90,7 @@ pub fn list() -> Vec<serde_json::Value> {
         }),
         json!({
             "name": "exam_probe",
-            "description": "Try a line WITHOUT committing a scenario file. sim_only \n                (the DEFAULT) lowers it in our engine only and CANNOT see DCGO's prompt \n                sequence; pass sim_only=false to ask the oracle, which is what returns \n                the prompt sequence DCGO actually walks. Use the oracle form while \n                composing: prompt sequence is where lines break, and sim-only is blind \n                to it.",
+            "description": "Try a line WITHOUT committing a scenario file. sim_only \n                (the DEFAULT, and today the ONLY working mode) lowers it in our engine \n                alone and CANNOT see DCGO's prompt sequence -- which is where lines \n                actually break, so a clean result here is NOT confirmation. sim_only=false \n                returns a clear error until an oracle node can be queued: to get a real \n                oracle answer today, submit the scenario through the harness queue and \n                diff against the sidecar it writes.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

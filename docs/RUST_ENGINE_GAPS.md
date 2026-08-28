@@ -2643,3 +2643,30 @@ An unresolved pending selection is not cosmetic — it is a stuck action space,
 which under rule 17 means the RL agent is offered a choice the game cannot
 complete. Given BT20-100 above livelocks in the same dispatcher, these two are
 probably one bug seen from two angles rather than two.
+
+## G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE
+
+**Status:** open seam, not a defect. Logged 2026-08-28 while building the exam MCP.
+
+`exam_probe(sim_only: false)` returns a clear, actionable error rather than an
+oracle answer. `exam::run::run_one` explains why at the call site: an oracle
+result needs a DCGO **state sidecar** written next to a real recording, and a
+scratch scenario has no Unity trace behind it.
+
+**Why it is a seam rather than a bug.** An oracle round-trip is inherently
+asynchronous — submit a job to the harness queue, let the DCGO player drain it,
+then read the sidecar — so the synchronous `probe → answer` shape only becomes
+possible once a node is running (`dcgo-harness node up`, the oracle-node plan).
+Wiring it before then would mean inventing a queue-and-poll loop with nothing to
+poll.
+
+**Why it matters.** `exam_probe`'s whole rationale is asking the oracle *while
+composing*: in the first campaign the corpus lowered 144/144 under sim-only, yet
+six sim-green scenarios put to the oracle **all six failed, every one on prompt
+sequence**. Until this seam closes, an agent gets the cheap half (does it lower?)
+and not the half that finds the real breakage.
+
+**Closing it** belongs with the node work: submit through the queue, return the
+job id, and let the caller collect the sidecar diff when the player has drained
+it. The tool description currently states the limitation on the wire so no agent
+reads a sim-green probe as an oracle answer.
