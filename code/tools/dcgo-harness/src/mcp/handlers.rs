@@ -212,4 +212,64 @@ mod tests {
         assert!(out["elided"].as_u64().unwrap() >= 1,
                 "a silent truncation reads as 'that is all of it'");
     }
+    #[test]
+    fn a_missing_verdict_directory_is_a_fresh_checkout_not_an_error() {
+        // VerdictStore::load_dir returns an empty store for a missing directory
+        // (verdict.rs::load_dir_missing_directory_is_empty_not_an_error). This
+        // pins that the HANDLERS inherit it: on a fresh checkout every clause is
+        // honestly unmeasured, and neither tool errors.
+        let dir = std::env::temp_dir().join("mcp_handlers_no_ledger_at_all");
+        let _ = std::fs::remove_dir_all(&dir);
+        let params = json!({"arguments": {"cards": ["EX12-004"]}});
+
+        let status = exam_status(&params, Some(&dir)).expect("status on a fresh checkout");
+        assert_eq!(status["total_clauses"], json!(0));
+        for class in ["confirmed", "diverged", "unreachable", "unavailable", "unmeasured"] {
+            assert_eq!(status["by_verdict"][class], json!(0), "{class} must still be reported");
+        }
+
+        let plan = exam_plan(&params, Some(&dir)).expect("plan on a fresh checkout");
+        assert_eq!(plan["outstanding_total"], json!(0));
+    }
+
+    #[test]
+    fn plan_keeps_diverged_and_drops_unavailable() {
+        // Diverged is outstanding work -- it is a finding to triage. Unavailable
+        // is NOT work: DCGO has no script, so no oracle exists. Neither is
+        // hidden; exam_status still counts both.
+        use crate::exam::verdict::{ClauseVerdict, Verdict, VerdictStore};
+        let dir = std::env::temp_dir().join("mcp_plan_diverged_unavailable");
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = VerdictStore::default();
+        for (clause, v) in [
+            ("EX12-009#effect#0", Verdict::Diverged),
+            ("EX12-009#effect#1", Verdict::Unavailable),
+        ] {
+            store.record(ClauseVerdict {
+                clause_id: clause.to_string(),
+                card_id: "EX12-009".to_string(),
+                verdict: v,
+                label: "[On Play]".to_string(),
+                text_sha256: crate::exam::verdict::sha256_hex(clause),
+                scenario_path: None,
+                reason: None,
+                dcgo_build: None,
+                job_id: None,
+                recorded_at: "2026-08-28T00:00:00+00:00".to_string(),
+            });
+        }
+        store.save_dir(&dir.join("exam-verdicts")).unwrap();
+
+        let params = json!({"arguments": {"cards": ["EX12-009"]}});
+        let plan = exam_plan(&params, Some(&dir)).expect("plan");
+        let ids: Vec<&str> = plan["clauses"].as_array().unwrap().iter()
+            .map(|c| c["clause_id"].as_str().unwrap()).collect();
+        assert!(ids.contains(&"EX12-009#effect#0"), "diverged is work to triage");
+        assert!(!ids.contains(&"EX12-009#effect#1"), "unavailable has no oracle, so no work");
+
+        let status = exam_status(&params, Some(&dir)).expect("status");
+        assert_eq!(status["by_verdict"]["unavailable"], json!(1),
+                   "unavailable is excluded from the PLAN but never hidden from STATUS");
+    }
+
 }
