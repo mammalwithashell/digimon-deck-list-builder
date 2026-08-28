@@ -193,6 +193,27 @@ enum Command {
     },
     /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
     Mcp,
+    /// Bring this machine up as an oracle node: preflight, then launch.
+    Node {
+        #[command(subcommand)]
+        action: NodeAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum NodeAction {
+    /// Preflight and start the oracle.
+    Up {
+        #[arg(long)]
+        build: PathBuf,
+    },
+    /// Stop the oracle.
+    Down,
+    /// Report readiness without changing anything.
+    Status {
+        #[arg(long)]
+        build: Option<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -536,6 +557,26 @@ fn run(args: &Args) -> Result<ExitCode, String> {
         Command::Mcp => {
             dcgo_harness::mcp::serve(args.root.clone())?;
             Ok(ExitCode::SUCCESS)
+        }
+        Command::Node { action } => {
+            let root = args.require_root()?;
+            match action {
+                NodeAction::Up { build } => {
+                    println!("{}", dcgo_harness::node::up(root, build)?);
+                    Ok(ExitCode::SUCCESS)
+                }
+                NodeAction::Down => {
+                    println!("{}", dcgo_harness::node::down(root)?);
+                    Ok(ExitCode::SUCCESS)
+                }
+                NodeAction::Status { build } => {
+                    let h = dcgo_harness::node::health(root, build.as_deref());
+                    println!("{}", h.describe());
+                    // Scripts and CI gate on this: a NO-GO must exit non-zero
+                    // rather than requiring the caller to parse the text.
+                    Ok(if h.go { ExitCode::SUCCESS } else { ExitCode::from(1) })
+                }
+            }
         }
     }
 }

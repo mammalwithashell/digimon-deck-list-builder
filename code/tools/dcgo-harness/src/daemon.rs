@@ -209,16 +209,26 @@ fn executable_path(build_dir: &Path, m: &manifest::BuildManifest) -> PathBuf {
 }
 
 /// Build the command used to launch the player: log to `log_path` instead of
-/// stdout, and detach stdin/stdout/stderr from this process entirely.
+/// stdout, run headless, and detach stdin/stdout/stderr from this process
+/// entirely.
 ///
 /// Split out from `up` so the regression this guards against -- launching
 /// with `-logFile -` and inherited stdio, which holds a caller's pipe open
 /// for the oracle's whole lifetime -- can be pinned by asserting on
 /// `Command::get_args()` without spawning a real player.
+///
+/// `-batchmode -nographics`: measured against `scripted-v9` on 2026-08-28
+/// (`qa/dcgo-harness/node-platform-findings.md`) to bootstrap, load the card
+/// database, claim a job, and drain it to `done/` with only a non-fatal "UI/
+/// Default shader is not supported on this GPU" warning. Headless is
+/// *required* on a node with no display and was confirmed to work identically
+/// on one with a display, so it is unconditional rather than detected.
 fn player_command(exe: &Path, log_path: &Path) -> Command {
     let mut cmd = Command::new(exe);
     cmd.arg("-logFile")
         .arg(log_path)
+        .arg("-batchmode")
+        .arg("-nographics")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -703,5 +713,13 @@ mod tests {
             "must not tell Unity to write its log to stdout"
         );
         assert_eq!(*log_arg, log_path.as_os_str());
+
+        // Measured (qa/dcgo-harness/node-platform-findings.md, 2026-08-28):
+        // `-batchmode -nographics` plays a full game -- bootstraps, loads the
+        // card database, claims a job, and drains it to done/ -- with only a
+        // non-fatal shader warning. Required on a node with no display;
+        // confirmed harmless on one with a display, so it is unconditional.
+        assert!(args.iter().any(|a| *a == "-batchmode"), "must run headless: {:?}", args);
+        assert!(args.iter().any(|a| *a == "-nographics"), "must run headless: {:?}", args);
     }
 }
