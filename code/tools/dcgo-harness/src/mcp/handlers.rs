@@ -30,6 +30,8 @@ pub fn dispatch(
         "exam_keyword_brief" => exam_keyword_brief(params),
         "run_scenario" => run_scenario(params, root),
         "exam_probe" => exam_probe(params, root),
+        "claim" => claim(params, root),
+        "release" => release(params, root),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -291,6 +293,59 @@ pub fn exam_probe(
     Ok(value)
 }
 
+/// Where the claim ledger lives under `root` (or the repo default when root
+/// is None).
+fn claims_dir(root: Option<&Path>) -> std::path::PathBuf {
+    match root {
+        Some(r) => r.join("exam-claims"),
+        None => std::path::PathBuf::from(crate::exam::ledger::DEFAULT_CLAIMS),
+    }
+}
+
+/// Take advisory leases on cards so another node does not duplicate the work.
+/// See `exam::ledger` for why this is advisory on purpose.
+pub fn claim(params: &serde_json::Value, root: Option<&Path>) -> Result<serde_json::Value, String> {
+    let cards = tools::vec_arg(params, "cards");
+    if cards.is_empty() {
+        return Err("`cards` must name at least one card".to_string());
+    }
+    let job_id = tools::str_arg(params, "job_id")?;
+    let ttl_hours = tools::usize_arg(params, "ttl_hours", 24) as i64;
+
+    let now = chrono::Utc::now();
+    let expires = now + chrono::Duration::hours(ttl_hours);
+    let c = crate::exam::ledger::Claim {
+        job_id,
+        node: tools::opt_str_arg(params, "node").unwrap_or_else(|| "unnamed".to_string()),
+        archetype: tools::opt_str_arg(params, "archetype").unwrap_or_default(),
+        claimed_at: now.to_rfc3339(),
+        expires_at: expires.to_rfc3339(),
+    };
+    let outcome = crate::exam::ledger::claim_cards(&claims_dir(root), &cards, &c, &now.to_rfc3339())?;
+
+    Ok(serde_json::json!({
+        "granted": outcome.granted,
+        "held_by_others": outcome.held_by_others.iter().map(|(card, held)| serde_json::json!({
+            "card": card, "job_id": held.job_id, "node": held.node,
+            "archetype": held.archetype, "expires_at": held.expires_at,
+        })).collect::<Vec<_>>(),
+        "note": "claims are ADVISORY: git is the only coordinator, so simultaneous \
+                 pushes can both claim. Duplicates are detectable at merge.",
+    }))
+}
+
+/// Release this job's claims. Another job's claim is never removed --
+/// releasing is not a stealing primitive.
+pub fn release(
+    params: &serde_json::Value,
+    root: Option<&Path>,
+) -> Result<serde_json::Value, String> {
+    let cards = tools::vec_arg(params, "cards");
+    let job_id = tools::str_arg(params, "job_id")?;
+    let released = crate::exam::ledger::release_cards(&claims_dir(root), &cards, &job_id)?;
+    Ok(serde_json::json!({ "released": released }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -486,4 +541,32 @@ steps:
     do:     { play: {card: EX12-004, from: hand} }
     expect: { prompt: main_phase }
 "#;
+
+    #[test]
+    fn claim_reports_who_holds_a_contended_card() {
+        let dir = std::env::temp_dir().join("mcp_claim_contended");
+        let _ = std::fs::remove_dir_all(&dir);
+        let first = json!({"arguments": {
+            "cards": ["EX7-005"], "job_id": "musketeers-01", "archetype": "Three Musketeers"}});
+        claim(&first, Some(&dir)).expect("first claim");
+
+        let second = json!({"arguments": {
+            "cards": ["EX7-005", "EX7-008"], "job_id": "beelstar-01", "archetype": "Beelstar"}});
+        let out = claim(&second, Some(&dir)).expect("second claim");
+
+        assert_eq!(out["granted"], json!(["EX7-008"]));
+        assert_eq!(out["held_by_others"][0]["card"], json!("EX7-005"));
+        assert_eq!(out["held_by_others"][0]["job_id"], json!("musketeers-01"));
+    }
+
+    #[test]
+    fn release_does_not_take_another_jobs_claim() {
+        let dir = std::env::temp_dir().join("mcp_claim_release");
+        let _ = std::fs::remove_dir_all(&dir);
+        claim(&json!({"arguments": {"cards": ["EX7-005"], "job_id": "musketeers-01"}}),
+              Some(&dir)).unwrap();
+        let out = release(&json!({"arguments": {"cards": ["EX7-005"], "job_id": "beelstar-01"}}),
+                          Some(&dir)).expect("release");
+        assert_eq!(out["released"], json!(0), "releasing is not a stealing primitive");
+    }
 }

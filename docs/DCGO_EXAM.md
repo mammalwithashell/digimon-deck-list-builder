@@ -744,12 +744,12 @@ Three merged write-targets plus a generated rollup, each shaped by how it merges
 | `qa/qa-reports/exam-claims/<CARD-ID>.claim` | Advisory leases with expiry | One file per card |
 | `qa/qa-reports/exam-index.md` | Generated rollup, sorted by `unmeasured` descending | Regenerated, never hand-edited |
 
-**Not written yet.** `exam-log.jsonl`, the `exam-claims/` leases, and
-`exam-index.md` are produced by the campaign driver, which has not landed —
-`ledger.rs` currently has no caller, and no `dcgo-harness` subcommand writes
-any of the three. Only `qa/qa-reports/exam-verdicts/<CARD-ID>.json` is live
-today (written by `exam` and by `migrate-verdicts`). Until the driver lands,
-do not go looking for the other three on disk; the advice below describes
+**Partially written.** `exam-claims/` leases are live: the `claim`/`release`
+MCP tools call `ledger::{claim_cards, release_cards}` directly (see "The agent
+surface (MCP)" below). `exam-log.jsonl` and `exam-index.md` are still produced
+only by the campaign driver, which has not landed — no `dcgo-harness`
+subcommand or MCP tool writes either of them yet. Until the driver lands, do
+not go looking for those two on disk; the advice below about them describes
 the design, not the current state.
 
 **Claims are advisory.** Two nodes pushing in the same instant can both claim a
@@ -942,6 +942,58 @@ list in `docs/DCGO_HARNESS.md`.
 - **After ANY change to `code/digimon-engine/src/action/space.rs`**, regenerate
   `ActionSpace.cs` in the base-repo DCGO (rule 27). Lowered action IDs are the
   wire between the two engines; drift there silently re-points every step.
+
+## The agent surface (MCP)
+
+`dcgo-harness mcp` serves a JSON-RPC 2.0 MCP server over stdio (`code/tools/dcgo-harness/src/mcp/`).
+Every tool is a thin projection over machinery documented above — the verdict
+store, the ledger, `validate_yaml`, the committed rules derivations — so each
+stays unit-testable with no MCP client in the loop. Payloads are kept small
+deliberately: orchestration (an agent shelling out to the CLI and re-reading
+large outputs) was the largest single line item of the first campaign.
+
+| Tool | What it answers |
+|---|---|
+| `exam_status` | Per-clause verdict summary for a card/archetype; always all five classes, so a card is never "passed". |
+| `exam_plan` | The outstanding (non-confirmed, non-unavailable) clauses for a card/archetype — what still needs work. |
+| `exam_validate` | Lints a draft scenario YAML before running it — unknown clause ids, bad verbs/prompts, missing stack cards. |
+| `exam_authoring_guide` | The scenario-composition contract by topic (`format`, `steps`, `prompts`, `decks`, `assert`, `verdicts`). |
+| `exam_keyword_brief` | A keyword's optional-vs-mandatory kind, its rule section, and the exact `general_rule.pdf` pages. |
+| `run_scenario` | Runs one committed scenario file and returns the structured diff report. |
+| `exam_probe` | Tries a line without committing a scenario file — see the `sim_only` note below. |
+| `claim` | Takes advisory leases on cards so another node does not duplicate the work. |
+| `release` | Releases this job's claims; never removes another job's claim. |
+
+> `run_scenario` and `exam_probe` with `sim_only: true` **cannot find a new
+> divergence**. They re-check what an oracle previously confirmed. Only an
+> oracle pass moves a clause to `confirmed`.
+
+**`exam_probe`'s `sim_only: false` mode is not implemented yet.** It returns a
+clear error until an oracle node can be queued — there is no wiring today from
+a probe call to a live DCGO/Unity job. This is tracked as
+`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE` in `docs/RUST_ENGINE_GAPS.md`. To get a
+real oracle answer today, submit the scenario through the phase-1 harness
+queue (`--emit-job`, see "Quick start" above) and diff against the sidecar it
+writes, rather than expecting `exam_probe` to do it.
+
+**`claim`/`release` are per card, not per archetype.** Archetype card pools
+genuinely overlap — one archetype's cards can be a strict subset of another's
+— so a lease keyed to an archetype would either under- or over-claim. They are
+also advisory on purpose: git is the only coordinator, so two nodes pushing in
+the same instant can both claim. That is an accepted trade, not a defect —
+a duplicate costs one card's authoring and is visible at merge, where a lease
+server would cost standing infrastructure. See `exam::ledger` and "The ledger
+(fleet layout)" above.
+
+Registration (`.mcp.json`):
+
+```json
+    "dcgo-exam": {
+      "type": "stdio",
+      "command": "cargo",
+      "args": ["run", "-q", "-p", "dcgo-harness", "--", "mcp"]
+    }
+```
 
 ## See also
 

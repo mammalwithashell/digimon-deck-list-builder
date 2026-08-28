@@ -27,6 +27,11 @@
       "type": "stdio",
       "command": "python",
       "args": ["-m", "digimon_scenario_mcp", "--browser-url", "http://127.0.0.1:8000"]
+    },
+    "dcgo-exam": {
+      "type": "stdio",
+      "command": "cargo",
+      "args": ["run", "-q", "-p", "dcgo-harness", "--", "mcp"]
     }
   }
 }
