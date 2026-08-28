@@ -90,9 +90,7 @@ pub fn list() -> Vec<serde_json::Value> {
         }),
         json!({
             "name": "exam_probe",
-            "description": "Ask the oracle about a line WITHOUT committing a scenario file. \
-                Returns the prompt sequence DCGO actually walks. Use this while composing: \
-                sim-only cannot see prompt sequence, and that is where lines break.",
+            "description": "Try a line WITHOUT committing a scenario file. sim_only \n                (the DEFAULT) lowers it in our engine only and CANNOT see DCGO's prompt \n                sequence; pass sim_only=false to ask the oracle, which is what returns \n                the prompt sequence DCGO actually walks. Use the oracle form while \n                composing: prompt sequence is where lines break, and sim-only is blind \n                to it.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

@@ -75,11 +75,17 @@ fn handle(req: &JsonRpcRequest, root: Option<&std::path::Path>) -> JsonRpcRespon
         ),
         "tools/call" => {
             let params = req.params.clone().unwrap_or(serde_json::Value::Null);
-            let name = params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_string();
+            // A missing `name` is a malformed CALL, not a tool that happens to
+            // be named "": report it at the protocol level, as the sibling
+            // server does, so it cannot be mistaken for a tool failure.
+            let Some(name) = params.get("name").and_then(|v| v.as_str()).map(str::to_string)
+            else {
+                return JsonRpcResponse::error(
+                    req.id.clone(),
+                    protocol::INVALID_PARAMS,
+                    "tools/call: missing 'name'",
+                );
+            };
             match handlers::dispatch(&name, &params, root) {
                 Ok(value) => JsonRpcResponse::result(
                     req.id.clone(),
