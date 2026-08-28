@@ -2670,3 +2670,44 @@ and not the half that finds the real breakage.
 job id, and let the caller collect the sidecar diff when the player has drained
 it. The tool description currently states the limitation on the wire so no agent
 reads a sim-green probe as an oracle answer.
+
+## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards)
+
+**Found:** 2026-08-28, surfaced by the exam MCP's denominator fix. It was
+invisible before, because `exam_status` used to count only the clauses already
+in the verdict store — a number that cannot notice a shrinking denominator.
+
+**Symptom.** Ten Lv.2 Digi-Eggs carry their INHERITED text inside
+`effect_description_eng`, prefixed with the literal words "Inherited Effect":
+
+```
+BT25-001 Tokomon   BT25-002 Wanyamon  BT25-003 Frimon    BT25-004 Tapmon
+BT25-005 Pagumon   BT25-006 Dorimon   EX12-001 Nyaromon  EX12-002 Mococomon
+EX12-003 Kapurimon EX12-004 Onibimon
+```
+
+EX12-004 is the worst: its `inherited_effect_description_eng` is also **truncated
+mid-sentence at 38 characters** — `"This Digimon with the [TB] trait gains"` —
+with the rest of the sentence living in the effect field instead.
+
+**Why it matters beyond tidiness.** The clause extractor reads these fields, so
+EX12-004 now yields **2 clauses where the Toho Braves campaign measured 5**. Two
+consequences:
+
+1. Three stored verdicts for EX12-004 are now **orphans** — clause ids the
+   extractor no longer produces. `exam_binding` flags orphans; they cover nothing
+   in the denominator.
+2. The card reads **2 clauses, 2 confirmed — 100%**. A card whose printed effect
+   text has gone missing reports as fully verified. That is precisely the "reads
+   as passed" failure the five-class denominator exists to prevent, arriving
+   through corrupt source data rather than through the wrong denominator.
+
+**Where to fix it.** `cards.json` is API-ingested and lossy by design; the
+project's own source priority puts the official Bandai DB above it, and
+`data/card_overrides.json` is the durable place for corrections that survive
+re-ingestion. No `data/card_bundles/EX12-004.md` exists yet, so the official text
+needs fetching for these ten before an override can be written from it. Do NOT
+hand-write the text from memory — read the card face or the official DB.
+
+**Do not re-baseline the Toho report to 2 clauses.** Its 5 were measured against
+the correct text; the data regressed afterwards.
