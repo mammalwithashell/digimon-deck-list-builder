@@ -52,15 +52,18 @@ impl Finding {
     }
 }
 
-/// The 13 prompt kinds a `expect:` may name: the 8 typed DCGO selection
-/// classes recorded via `LogSelectionRow` (see CLAUDE.md rule 27), the 2
-/// `UserSelectionManager` fallback kinds (`generic_int` / `generic_bool`),
-/// and the 3 non-select sim-side labels (`mulligan`, `breeding_action`,
-/// `main_phase`) threaded through `main.rs`'s scripted-input job builder.
+/// The 13 prompt kinds a `expect:` may name.
 ///
-/// No single reusable definition of this list exists elsewhere in the crate
-/// today (see the module docs) — it is declared here as the fallback the task
-/// brief anticipates for exactly that case.
+/// **Canonical source: `docs/DCGO_EXAM.md`, "DCGO has 13 decision kinds".**
+/// This is a hand-kept copy, because the crate has no single reusable Rust
+/// definition -- `adapter.rs` computes DCGO names through scattered match
+/// arms and several kinds (`SelectCountEffect`, `SelectDigiXrosClass`,
+/// `generic_int`) never appear there as literals at all.
+///
+/// Nothing guards the two against drift. If a 14th decision kind is ever
+/// added to that table, add it HERE too -- otherwise this linter rejects a
+/// legitimately new prompt kind, which is the false-positive class it exists
+/// to avoid.
 const PROMPT_KINDS: &[&str] = &[
     "SelectCardEffect",
     "SelectHandEffect",
