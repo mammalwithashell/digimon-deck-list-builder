@@ -28,6 +28,8 @@ pub fn dispatch(
         "exam_validate" => exam_validate(params),
         "exam_authoring_guide" => exam_authoring_guide(params),
         "exam_keyword_brief" => exam_keyword_brief(params),
+        "run_scenario" => run_scenario(params, root),
+        "exam_probe" => exam_probe(params, root),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -221,6 +223,74 @@ pub fn exam_keyword_brief(params: &serde_json::Value) -> Result<serde_json::Valu
     Ok(value)
 }
 
+/// Note attached to every sim-only payload. Stated on the wire, not left to the
+/// agent's memory: six sim-green scenarios were put to the oracle in the first
+/// campaign and ALL SIX failed, every one on prompt sequence.
+const SIM_ONLY_NOTE: &str = "sim-only ran our engine alone: it proves the line is legal HERE \
+    and cannot see DCGO's prompt sequence, which is where lines actually break. It cannot \
+    find a new divergence -- only an oracle pass moves a clause to confirmed.";
+
+pub fn run_scenario(
+    params: &serde_json::Value,
+    root: Option<&Path>,
+) -> Result<serde_json::Value, String> {
+    let path = tools::str_arg(params, "path")?;
+    let sim_only = tools::bool_arg(params, "sim_only", true);
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("no scenario at {path}"));
+    }
+    let report = crate::exam::run_one(p, sim_only, root)?;
+    let mut value = serde_json::to_value(&report)
+        .map_err(|e| format!("serializing the diff report: {e}"))?;
+    if sim_only {
+        value["note"] = serde_json::json!(SIM_ONLY_NOTE);
+    }
+    Ok(value)
+}
+
+pub fn exam_probe(
+    params: &serde_json::Value,
+    root: Option<&Path>,
+) -> Result<serde_json::Value, String> {
+    let yaml = tools::str_arg(params, "yaml")?;
+    let sim_only = tools::bool_arg(params, "sim_only", true);
+
+    // Lint first: milliseconds, and it catches the families that would
+    // otherwise burn a lowering pass or a Unity run.
+    let findings = crate::exam::validate::validate_yaml(&yaml, None);
+    if !findings.is_empty() {
+        return Ok(serde_json::json!({
+            "clean": false,
+            "stage": "validate",
+            "findings": findings.iter().map(|f| serde_json::json!({
+                "rule": f.rule, "message": f.message, "guide_topic": f.guide_topic
+            })).collect::<Vec<_>>(),
+        }));
+    }
+
+    // Scratch file: a probe never commits a scenario.
+    let scratch = std::env::temp_dir().join(format!(
+        "exam-probe-{}.yaml",
+        crate::exam::verdict::sha256_hex(&yaml)[..16].to_string()
+    ));
+    std::fs::write(&scratch, &yaml)
+        .map_err(|e| format!("writing the probe scratch file: {e}"))?;
+
+    let report = crate::exam::run_one(&scratch, sim_only, root);
+    let _ = std::fs::remove_file(&scratch);
+    let report = report?;
+
+    let mut value = serde_json::to_value(&report)
+        .map_err(|e| format!("serializing the diff report: {e}"))?;
+    value["clean"] = serde_json::json!(true);
+    value["stage"] = serde_json::json!(if sim_only { "sim" } else { "oracle" });
+    if sim_only {
+        value["note"] = serde_json::json!(SIM_ONLY_NOTE);
+    }
+    Ok(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,4 +441,49 @@ mod tests {
                    "unavailable is excluded from the PLAN but never hidden from STATUS");
     }
 
+    #[test]
+    fn probe_rejects_a_draft_that_fails_the_linter_before_running_it() {
+        // Linting first is the cheap gate: milliseconds instead of a lowering
+        // pass, and far cheaper than a Unity run.
+        let params = json!({"arguments": {"yaml": "card: EX12-004\nsteps: []\n"}});
+        let out = exam_probe(&params, None);
+        match out {
+            Err(e) => assert!(e.contains("clause"), "must name the missing clause: {e}"),
+            Ok(v) => assert_eq!(v["clean"], json!(false), "a bad draft must not report clean"),
+        }
+    }
+
+    #[test]
+    fn probe_says_which_question_it_answered() {
+        // sim-only cannot see DCGO's prompt sequence, and a payload that does
+        // not say so invites an agent to treat sim-green as confirmation.
+        let params = json!({"arguments": {"yaml": GOOD_YAML, "sim_only": true}});
+        if let Ok(v) = exam_probe(&params, None) {
+            let note = v["note"].as_str().unwrap_or_default();
+            assert!(
+                note.contains("sim-only") && note.contains("cannot"),
+                "the payload must state sim-only's limit: {note}"
+            );
+        }
+    }
+
+    #[test]
+    fn run_scenario_defaults_to_sim_only() {
+        let params = json!({"arguments": {"path": "does/not/exist.yaml"}});
+        let err = run_scenario(&params, None).expect_err("missing file must fail");
+        assert!(err.contains("does/not/exist.yaml"), "error names the path: {err}");
+    }
+
+    const GOOD_YAML: &str = r#"
+card: EX12-004
+clause: EX12-004#effect#0
+seed: 424242
+decks:
+  p0: { stack: [EX12-004], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  - actor: 0
+    do:     { play: {card: EX12-004, from: hand} }
+    expect: { prompt: main_phase }
+"#;
 }
