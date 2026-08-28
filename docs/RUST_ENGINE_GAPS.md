@@ -2577,7 +2577,7 @@ Settling it needs the rules position on whether an effect-initiated DNA digivolu
 grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
 cited test correction.
 
-## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100)
+## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100) — half fixed
 
 **Found:** 2026-08-27, by the clone-safety guard. **Pre-existing on main** — the
 same two tests fail there with byte-identical counts (4419 passed / 2 failed /
@@ -2777,3 +2777,47 @@ what the extractor actually uses.
 
 **Zero cards pool-wide** now show the defect (checked across all 4,294 after
 overrides are merged).
+
+### Update 2026-08-28 — livelock fixed; the cost-propagation half is not
+
+Systematic tracing separated this into **two** defects. The first is fixed; the
+second is the one still failing `bt20_100_unpaid_delay_cost_does_not_prevent_original_leave`.
+
+**FIXED — the once-per-event guard did not survive a parked replacement.**
+`replacement_fired` was cleared on any dispatcher entry at
+`depth == 0 && !in_replacement_commit`. That is a proxy for "fresh unrelated
+event" and it is false for OPTIONAL replacements, whose fire-site unwinds when
+the selection installs. Traced entry-by-entry: entry 1 records
+`(WhenWouldLeaveBattleArea, subject)` and parks; the accepted callback
+re-enters at depth 0 and clears it; the commit continuation re-dispatches the
+same pair, finds itself unblocked, and re-offers the window. Fixed by not
+clearing while `parked_replacement.is_some()`. `bt13_040` green;
+cards_behavioral 7816/1 (was 7816/2); replacements 125/125.
+
+**OPEN — `CompiledStep::DeletePermanent` swallows a cancelled deletion.**
+`code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs`:
+
+```rust
+ctx.delete_permanent(h);
+if existed { bindings.record_deleted(h, dp); }
+true            // <-- unconditional
+```
+
+Nothing checks whether the deletion actually happened. A replacement can cancel
+it, and the step still reports success, so the clause runs on. For BT20-100 the
+process is `delete_permanent {target: source}` (the §16-16-1 `<Delay>` cost —
+trashing the card IS what activates it) followed by `cancel_replacement`, so a
+prevented cost still buys the prevention. The card's own YAML says this must not
+happen: *"Only if that deletion succeeds does it mark the selected would-leave
+Omnimon as no longer leaving."* Rule 17 / no-approximations.
+
+**Why it was not fixed here.** The obvious patch — abort the clause when a
+delete is prevented — is wrong in general: for *"Delete 1 of your opponent's
+Digimon. Then draw 1."*, an `<Evade>` must not eat the draw. Only a **cost**
+delete should abort, and `permanent_mutations::try_run(step, ctx, bindings)`
+receives no `runtime`, so the step cannot see its clause kind. Distinguishing
+them needs either a threaded clause-kind or a distinct compiled verb (there is
+precedent: `DeleteForCostReduction` is already separate). That is a design call
+in the DSL step vocabulary, not a local patch — the codebase already has the
+concept it needs under `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`
+(`dsl_clause_aborted`), which is what a cost-delete failure should set.
