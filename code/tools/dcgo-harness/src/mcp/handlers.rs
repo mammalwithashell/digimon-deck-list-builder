@@ -26,6 +26,7 @@ pub fn dispatch(
         "exam_status" => exam_status(params, root),
         "exam_plan" => exam_plan(params, root),
         "exam_validate" => exam_validate(params),
+        "exam_authoring_guide" => exam_authoring_guide(params),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -136,6 +137,48 @@ pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, St
         "note": "clause ids are checked for shape only here; run the extractor \
                  to check them against the real denominator"
     }))
+}
+
+/// Where the generated guide lives.
+const GUIDE_PATH: &str = "qa/exam-authoring-guide.json";
+
+pub fn exam_authoring_guide(params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let text = std::fs::read_to_string(GUIDE_PATH).map_err(|e| {
+        format!(
+            "cannot read {GUIDE_PATH}: {e}. Generate it with \
+             `python -m tools.clause_coverage.authoring_guide`."
+        )
+    })?;
+    let guide: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{GUIDE_PATH} is not valid JSON: {e}"))?;
+
+    match tools::opt_str_arg(params, "topic") {
+        None => {
+            let names: Vec<&str> = guide["topics"]
+                .as_object()
+                .map(|o| o.keys().map(|k| k.as_str()).collect())
+                .unwrap_or_default();
+            Ok(serde_json::json!({
+                "topics": names,
+                "overview": "Author one scenario per clause. Both seats are fully scripted. \
+                    `expect:` is asserted BEFORE the step is answered, so a prompt mismatch \
+                    reports itself as a finding. `do:` is symbolic and lowered against our \
+                    live action mask -- never hand-write action ids. Ask for a topic for the \
+                    part you need.",
+                "source": guide["source"],
+            }))
+        }
+        Some(topic) => guide["topics"]
+            .get(&topic)
+            .cloned()
+            .ok_or_else(|| {
+                let names: Vec<&str> = guide["topics"]
+                    .as_object()
+                    .map(|o| o.keys().map(|k| k.as_str()).collect())
+                    .unwrap_or_default();
+                format!("unknown topic {topic:?}; available: {names:?}")
+            }),
+    }
 }
 
 #[cfg(test)]
