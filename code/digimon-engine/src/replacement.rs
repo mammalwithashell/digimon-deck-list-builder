@@ -269,7 +269,20 @@ pub(crate) fn try_replace_impl(
     // the fired-set must carry through so the super-timing + route-specific
     // timing already fired in the original chain stay blocked. Nested calls
     // (depth > 0) inherit the outer chain's set unconditionally.
-    if game.replacement_depth == 0 && !game.in_replacement_commit {
+    // ...and EXCEPT while a replacement is PARKED. `depth == 0` is a proxy for
+    // "outermost entry, therefore a fresh unrelated event", and that proxy
+    // breaks for OPTIONAL replacements: installing the selection unwinds the
+    // original fire-site, so work done afterwards for the SAME event re-enters
+    // here at depth 0 with `in_replacement_commit` still false. Clearing there
+    // destroys the parked event's own `(timing, subject)` record, and the
+    // commit continuation then re-offers the very window it is committing —
+    // the player accepts, the callback runs again, and the event never
+    // terminates. Pinned by `bt13_040_when_leaving_draws_and_may_play_veemon_
+    // from_hand_or_source`, which livelocked on exactly that cycle.
+    if game.replacement_depth == 0
+        && !game.in_replacement_commit
+        && game.parked_replacement.is_none()
+    {
         game.replacement_fired.clear();
     }
 
