@@ -2576,3 +2576,44 @@ into a permanent guard — the no-approximations violation this suite exists to 
 Settling it needs the rules position on whether an effect-initiated DNA digivolution
 grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
 cited test correction.
+
+## G-ENGINE-DELAY-PREVENTION-WITHOUT-COST (BT20-100)
+
+**Found:** 2026-08-27, by the clone-safety guard. **Pre-existing on main** — the
+same two tests fail there with byte-identical counts (4419 passed / 2 failed /
+28 ignored). Neither is fixed here; this entry records the finding.
+
+`code/digimon-engine/tests/cards_behavioral/bt20/bt20_100.rs::bt20_100_unpaid_delay_cost_does_not_prevent_original_leave`
+
+**Symptom.** The test cancels the Delay's cost payment (a `CancelCostDeletion`
+effect), then accepts the replacement. It asserts the protected Digimon still
+leaves, because the cost was never paid. It now stays on the field: **the
+prevention applied without its cost.**
+
+**Why this is not a stale test.** §16-16-1 makes trashing the card the *cost* of
+activating a `<Delay>`. An effect that resolves when its cost was cancelled is a
+rule-17 / no-approximations violation, not a changed convention — so unlike the
+`tests/dsl/delay.rs` failures fixed in the same pass, the assertion here is
+right and the behaviour is wrong. It must not be re-baselined or `#[ignore]`d to
+make CI green.
+
+**Likely origin.** The `<Delay>` rework in `73733429d` / `72ad6e5ee` (16-16-1
+/ 16-16-2), which changed decline handling so a declined Delay leaves its
+carrier on the field and reschedules. The sibling test
+`bt20_100_delay_decline_allows_original_leave_to_proceed` still passes, so the
+decline path is intact and the **cost-cancelled** path is the one that regressed.
+
+## G-ENGINE-WOULD-LEAVE-OBSERVER-NOT-FULLY-RESOLVED (BT13-040)
+
+**Found:** same run, same provenance — pre-existing on main.
+
+`code/digimon-engine/tests/cards_behavioral/bt13/bt13_040.rs::bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source`
+
+**Symptom.** After choosing to play Veemon from Magnamon's sources, a
+`pending_selection` remains: "source choice should resolve the full would-leave
+observer". The hand-source variant and the decline variant both still pass, so
+only the play-from-sources branch leaves the observer unresolved.
+
+An unresolved pending selection is not cosmetic — it is a stuck action space,
+which under rule 17 means the RL agent is offered a choice the game cannot
+complete.
