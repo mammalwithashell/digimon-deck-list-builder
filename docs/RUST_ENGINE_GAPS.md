@@ -2549,3 +2549,30 @@ Reproducers, both `#[ignore]`d with this gap code, in
 `ex12_036_decode_play_offers_only_the_played_cards_own_trigger`.
 The positive control `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`
 is what any candidate fix must keep green -- it is what caught the reorder.
+
+## G-ENGINE-DNA-EFFECT-PATH-DOUBLE-DRAW
+
+**Found:** 2026-08-27, by the verification ladder once the stale impact index stopped
+masking tier 1. **Pre-existing on main.**
+
+`code/digimon-engine/tests/dsl/phase2g_on_dna_digivolve.rs::dsl_on_dna_digivolve_fires_from_effect_path`
+is `#[ignore]`d, not deleted and not re-baselined.
+
+**Symptom.** The fixture (`cards/_examples/TST_DNA_TRIGGER.yaml`) has exactly one
+`on_dna_digivolve` clause drawing 1. On `EffectContext::effect_initiated_dna_digivolve`
+the hand ends at 2 instead of 1 — one extra draw. The sibling user-action-path test
+still passes, so the normal digivolve path is unaffected.
+
+**Hypothesis (unconfirmed).** Both DNA paths document the firing sequence
+`WhenDigivolving → OnDnaDigivolve → OnDigivolve` (global). The clause may be matching
+both the `OnDnaDigivolve` pass and the global `OnDigivolve` pass — a double fire, the
+same defect class as `2aa3bfa94` (`<Decode>` offered its optional processing twice,
+16-35-3). The alternative is that the effect path now grants the digivolution bonus
+draw the test says it should not.
+
+**Why it was not "fixed" by changing the expected count.** A card printing one
+[On DNA Digivolving] effect must resolve it once. Asserting 2 would launder the defect
+into a permanent guard — the no-approximations violation this suite exists to catch.
+Settling it needs the rules position on whether an effect-initiated DNA digivolution
+grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
+cited test correction.

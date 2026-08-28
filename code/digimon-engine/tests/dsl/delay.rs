@@ -24,6 +24,28 @@ use std::sync::Arc;
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
+/// `fixture_delay` builds a clause with `process: []`, which `lower_delay.rs`
+/// treats as a **marker-only** Delay (ST23-15 / ST24-15 print no `<Delay>` and
+/// carry `kind: delay` with an empty process purely so the Option stays in the
+/// battle area for their real clause). A marker is deliberately not activatable
+/// and therefore not optional.
+///
+/// Tests about `<Delay>`'s §16-16-2 optionality need an ACTIVATABLE Delay, so
+/// they use this instead. Added rather than changing `fixture_delay`, which
+/// seven passing tests depend on for its marker-only shape.
+fn fixture_delay_activatable(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard {
+    let mut card = fixture_delay(scope, trigger);
+    if let CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) =
+        &mut card.effects[0]
+    {
+        *process = vec![CompiledStep::Draw {
+            of: digimon_dsl::compiled::CompiledPlayerRef::You,
+            count: 1,
+        }];
+    }
+    card
+}
+
 fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard {
     CompiledCard {
         card: "F-DELAY".into(),
@@ -100,10 +122,15 @@ fn delay_delayed_trigger_maps_to_main_phase_activated() {
     );
 }
 
-/// (b) A non-`EndOfYourTurn` timing (e.g. `OnPlay`) maps to
-/// `DelayTrigger::EndOfYourNextTurn`.
+/// (b) A non-turn-scheduled timing (e.g. `OnPlay`) is **event-gated**.
+///
+/// This used to assert `EndOfYourNextTurn`, which was the `_ =>` catch-all that
+/// `73733429d` removed and its message calls "THE BIGGER DEFECT ... the silent
+/// default": a Delay on any unlisted timing became a turn-scheduled auto-fire —
+/// wrong trigger, wrong time. Turn-scheduled forms are now enumerated
+/// explicitly and everything else is event-gated by construction.
 #[test]
-fn delay_other_timing_maps_to_end_of_your_next_turn() {
+fn delay_other_timing_is_event_gated() {
     let dsl = DslCardEffect::new(Arc::new(fixture_delay(
         CompiledScope::FaceUp,
         CompiledTiming::OnPlay,
@@ -117,8 +144,8 @@ fn delay_other_timing_maps_to_end_of_your_next_turn() {
     );
     assert_eq!(
         effects[0].delay_trigger,
-        Some(DelayTrigger::EndOfYourNextTurn),
-        "non-EndOfYourTurn must map to EndOfYourNextTurn"
+        Some(DelayTrigger::OnEvent(EffectTiming::OnPlay)),
+        "a non-turn-scheduled timing must be event-gated, not silently          turned into a turn-scheduled auto-fire (16-16-1)"
     );
 }
 
@@ -180,7 +207,7 @@ fn delay_start_of_your_turn_maps_to_start_of_your_next_turn() {
 
 #[test]
 fn delay_event_trigger_lowers_to_on_event_delay() {
-    let mut card = fixture_delay(CompiledScope::FaceUp, CompiledTiming::OnSuspend);
+    let mut card = fixture_delay_activatable(CompiledScope::FaceUp, CompiledTiming::OnSuspend);
     if let CompiledClause::Declarative(CompiledDeclarativeClause::Delay { active_when, .. }) =
         &mut card.effects[0]
     {
@@ -246,7 +273,10 @@ fn delay_attack_triggers_lower_to_on_event_delay() {
             EffectTiming::OnOpponentAttack,
         ),
     ] {
-        let dsl = DslCardEffect::new(Arc::new(fixture_delay(CompiledScope::FaceUp, compiled)));
+        let dsl = DslCardEffect::new(Arc::new(fixture_delay_activatable(
+            CompiledScope::FaceUp,
+            compiled,
+        )));
         let effects = dsl.effects(CardHandle(0));
 
         assert_eq!(
