@@ -27,6 +27,7 @@ pub fn dispatch(
         "exam_plan" => exam_plan(params, root),
         "exam_validate" => exam_validate(params),
         "exam_authoring_guide" => exam_authoring_guide(params),
+        "exam_keyword_brief" => exam_keyword_brief(params),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -179,6 +180,45 @@ pub fn exam_authoring_guide(params: &serde_json::Value) -> Result<serde_json::Va
                 format!("unknown topic {topic:?}; available: {names:?}")
             }),
     }
+}
+
+/// A keyword's optional-vs-mandatory kind, its rule section, and the exact
+/// `general_rule.pdf` pages -- the kind predicts the PROMPT SHAPE (see
+/// `tools::list`'s description for this tool).
+///
+/// Shells out to the Python parser deliberately: the Markdown keyword table
+/// has exactly one owner. A second Rust parser of the same table would drift
+/// from it exactly as a second prose copy would.
+pub fn exam_keyword_brief(params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let keyword = tools::str_arg(params, "keyword")?;
+    let out = std::process::Command::new("python")
+        .args([
+            "-c",
+            "import json,sys;from pathlib import Path;\
+             from tools.clause_coverage.keyword_brief import load_briefs,lookup;\
+             b=load_briefs(Path('docs/digimon-rules/keyword-semantics.md'),\
+             Path('docs/digimon-rules/rules-index.json'));\
+             print(json.dumps(lookup(b,sys.argv[1])))",
+            &keyword,
+        ])
+        .env("PYTHONPATH", "code")
+        .output()
+        .map_err(|e| format!("running the keyword-brief lookup: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "keyword-brief lookup failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let value: serde_json::Value = serde_json::from_slice(&out.stdout)
+        .map_err(|e| format!("keyword-brief returned invalid JSON: {e}"))?;
+    if value.is_null() {
+        return Err(format!(
+            "no brief for {keyword:?}. It may not be a §16 keyword -- \
+             [DigiXros]/[Assembly], DNA Digivolution and [Counter] are defined elsewhere."
+        ));
+    }
+    Ok(value)
 }
 
 #[cfg(test)]
