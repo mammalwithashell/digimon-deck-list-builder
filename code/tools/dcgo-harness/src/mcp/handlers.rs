@@ -25,6 +25,7 @@ pub fn dispatch(
     match name {
         "exam_status" => exam_status(params, root),
         "exam_plan" => exam_plan(params, root),
+        "exam_validate" => exam_validate(params),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -119,6 +120,21 @@ pub fn exam_plan(
         "returned": outstanding.len(),
         "outstanding_total": total_outstanding,
         "elided": total_outstanding.saturating_sub(outstanding.len()),
+    }))
+}
+
+/// Lint a draft scenario before spending Unity time on it. See
+/// `exam::validate` for the rule catalog and why each one exists.
+pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let yaml = tools::str_arg(params, "yaml")?;
+    let findings = crate::exam::validate::validate_yaml(&yaml, None);
+    Ok(serde_json::json!({
+        "clean": findings.is_empty(),
+        "findings": findings.iter().map(|f| serde_json::json!({
+            "rule": f.rule, "message": f.message, "guide_topic": f.guide_topic
+        })).collect::<Vec<_>>(),
+        "note": "clause ids are checked for shape only here; run the extractor \
+                 to check them against the real denominator"
     }))
 }
 

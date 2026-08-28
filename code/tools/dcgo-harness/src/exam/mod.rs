@@ -48,6 +48,7 @@ pub mod ledger;
 pub mod lower;
 pub mod projection;
 pub mod scenario;
+pub mod validate;
 pub mod verdict;
 
 #[cfg(test)]
@@ -68,6 +69,6 @@ pub use projection::{
 };
 pub use scenario::{
     Assertion, Expect, Scenario, ScenarioDecks, ScenarioSeat, ScenarioStep, SelectPayload,
-    StepAction,
+    StepAction, STEP_VERBS,
 };
 pub use verdict::{ClauseVerdict, Verdict, VerdictStore, VerdictSummary};

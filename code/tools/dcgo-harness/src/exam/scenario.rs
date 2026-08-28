@@ -174,7 +174,11 @@ pub enum SelectPayload {
 
 /// Every verb this format understands, in the order shown to an author whose
 /// spelling was wrong.
-const STEP_VERBS: &[&str] =
+///
+/// `pub` so `exam::validate`'s lint can check a step's verb against the same
+/// list this parser enforces, rather than keeping a second copy that could
+/// drift from it.
+pub const STEP_VERBS: &[&str] =
     &["hatch", "pass", "move", "play", "digivolve", "attack", "main", "select"];
 
 fn hand() -> String {
