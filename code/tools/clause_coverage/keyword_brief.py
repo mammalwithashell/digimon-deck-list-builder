@@ -27,9 +27,19 @@ from pathlib import Path
 #: Kinds where the player is asked before the effect resolves.
 PROMPTING_KINDS = frozenset({"Optional", "Opt-cost→Mand"})
 
+#: A table row. The keyword cell is captured WHOLE and mined for backticked
+#: names afterwards, because it is not always a single token: row 16-3 reads
+#: ``| `<Security A. +x / -x>` (was `<Security Attack>`) | ...`` -- two
+#: backticked spans plus prose. A pattern demanding exactly one span silently
+#: dropped that row, leaving one of the most common keywords in the game
+#: impossible to look up.
 _ROW = re.compile(
-    r"^\|\s*`?<?([^`|<>]+?)>?`?\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*(.*?)\s*\|\s*([\d-]+)\s*\|\s*$"
+    r"^\|\s*(?P<keyword>[^|]+?)\s*\|\s*(?P<kind>[^|]+?)\s*\|\s*(?P<when>[^|]*?)\s*"
+    r"\|\s*(?P<semantics>.*?)\s*\|\s*(?P<rule>[\d-]+)\s*\|\s*$"
 )
+
+#: Every backticked span inside a keyword cell.
+_BACKTICKED = re.compile(r"`([^`]+)`")
 
 
 def _normalize(keyword: str) -> str:
@@ -52,9 +62,18 @@ def load_briefs(semantics_md: Path, rules_index: Path) -> dict[str, dict]:
         m = _ROW.match(line)
         if not m:
             continue
-        keyword, kind, when, semantics, rule = (g.strip() for g in m.groups())
-        if keyword.lower() == "keyword" or set(keyword) <= set("- "):
+        cell = m.group("keyword").strip()
+        kind = m.group("kind").strip()
+        when = m.group("when").strip()
+        semantics = m.group("semantics").strip()
+        rule = m.group("rule").strip()
+        if cell.lower().strip("`<> ") == "keyword" or set(cell) <= set("-| :"):
             continue  # header / separator row
+        # A cell may name the keyword more than once -- 16-3 gives both the
+        # current "<Security A. +x / -x>" and the retired "<Security Attack>".
+        # Register every one; the first is the canonical label.
+        cell_names = _BACKTICKED.findall(cell) or [cell]
+        keyword = cell_names[0]
         index_entry = pages_by_section.get(rule, {})
         brief = {
             "keyword": keyword,
@@ -74,7 +93,7 @@ def load_briefs(semantics_md: Path, rules_index: Path) -> dict[str, dict]:
         # actually asks for ("Recovery", "<Fragment", "<Draw"). Register those
         # as aliases onto the SAME brief rather than requiring a caller to know
         # the exact printed suffix, and never let an alias shadow a real row.
-        for name in index_entry.get("names", []):
+        for name in list(cell_names[1:]) + list(index_entry.get("names", [])):
             alias = _normalize(name)
             if alias:
                 briefs.setdefault(alias, brief)

@@ -48,3 +48,28 @@ def test_every_table_row_parses():
     """A row the parser silently drops is a keyword an agent cannot look up."""
     briefs = load_briefs(SEMANTICS, INDEX)
     assert len(briefs) >= 35, f"only parsed {len(briefs)} keywords from the table"
+
+
+def test_every_table_row_parses_including_multi_name_cells():
+    """Row 16-3's cell names the keyword TWICE -- the current
+    `<Security A. +x / -x>` and the retired `<Security Attack>` -- plus prose.
+
+    A pattern demanding exactly one backticked span dropped that row silently,
+    which left one of the most common keywords in the game impossible to look
+    up. 38 distinct briefs is the whole table; anything less means a row is
+    being skipped again.
+    """
+    briefs = load_briefs(SEMANTICS, INDEX)
+    distinct = {id(v) for v in briefs.values()}
+    assert len(distinct) == 38, f"expected all 38 table rows, got {len(distinct)}"
+
+
+def test_security_attack_resolves_under_both_its_printed_names():
+    briefs = load_briefs(SEMANTICS, INDEX)
+    current = lookup(briefs, "Security A.")
+    retired = lookup(briefs, "Security Attack")
+    assert current is not None and retired is not None
+    assert current is retired, "both names must reach the same brief"
+    assert current["rule"] == "16-3"
+    assert current["kind"] == "Persistent"
+    assert current["expects_prompt"] is False, "a persistent keyword asks nothing"
