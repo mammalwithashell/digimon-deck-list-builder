@@ -3717,10 +3717,8 @@
     ]
   },
   "BT25-004": {
-    "type_eng": [
-      "Tap (App Name)",
-      "Tap"
-    ]
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1."
   },
   "EX10-001": {
     "type_eng": [
@@ -15946,5 +15944,38 @@
   "EX12-004": {
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
+  },
+  "_note_digi_egg_inherited_ingest": "BT25-001..006 and EX12-001..003 are Lv.2 Digi-Eggs sharing one digimoncard.io ingest defect with EX12-004: the card's single Inherited Effect box was written into effect_description_eng, prefixed with the literal label \"Inherited Effect\", while inherited_effect_description_eng got a lossy copy. Healthy Digi-Eggs (BT1-001/002/003) carry an EMPTY effect field with their text in the inherited field. Each correction below was read off that card's face in DCGO_Application/Assets/Textures/Card/<ID>.webp and matches the (complete) text the ingest had misfiled into the effect field, so keyword rendering and reminder text follow the corpus's own conventions rather than being retyped. Two of the lossy inherited copies had lost real content, not just formatting: BT25-005 dropped \"[Three Musketeers] in its text\" from its digivolve condition, and BT25-004 rendered \"[Social], [Tool] or [Game]\" as \"[Social|Tool|Game]\". Six more had lost their leading timing tag ([Your Turn], [Opponent's Turn], [End of Your Turn]). See docs/RUST_ENGINE_GAPS.md#g-data-egg-inherited-text-in-effect-field. Source-priority nuance: BT25-001..006 have official Bandai DB bundles under data/card_bundles/, and the extractor prefers a bundle over this sidecar. For those six the inherited_effect_description_eng value here is a FALLBACK that documents the truth and would apply if the bundle went missing; the load-bearing half of their override is the empty effect_description_eng, which removes the phantom effect clause the ingest created. EX12-001..003 have no bundle, so their text here is what the extractor actually uses. The bundle renders <Draw 1> without the trailing reminder text; this sidecar keeps the reminder because that is how cards.json renders the keyword elsewhere (BT1-003, BT1-006, BT1-022).",
+  "BT25-001": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [TS] trait, ＜Draw 1＞ (Draw 1 card from your deck.)"
+  },
+  "BT25-002": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your [DATA SQUAD] trait Tamers are played, both players ＜Draw 1＞ (Draw 1 card from your deck.)"
+  },
+  "BT25-003": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By trashing your top security card, this Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost reduced by 1."
+  },
+  "BT25-005": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2."
+  },
+  "BT25-006": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your [Titan] trait Digimon unsuspends."
+  },
+  "EX12-001": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack."
+  },
+  "EX12-002": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2."
+  },
+  "EX12-003": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand."
   }
 }

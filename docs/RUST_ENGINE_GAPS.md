@@ -2671,7 +2671,7 @@ job id, and let the caller collect the sidecar diff when the player has drained
 it. The tool description currently states the limitation on the wire so no agent
 reads a sim-green probe as an oracle answer.
 
-## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards — 1 fixed, 9 open)
+## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards — ALL FIXED 2026-08-28)
 
 **Found:** 2026-08-28, surfaced by the exam MCP's denominator fix. It was
 invisible before, because `exam_status` used to count only the clauses already
@@ -2741,3 +2741,39 @@ The extractor now yields **1 clause** (`EX12-004#inherited#0`) where it yielded
 **Nine still open:** BT25-001…006 and EX12-001…003. Same ingest defect. Each
 needs its own card face read before an override is written — do not batch them
 from a template, and do not write the text from memory.
+
+### The remaining nine — FIXED 2026-08-28
+
+BT25-001…006 and EX12-001…003, each read off its own card face in
+`DCGO_Application/Assets/Textures/Card/<ID>.webp`. All nine are Lv.2 Digi-Eggs
+with a single Inherited Effect box, so all nine now carry an empty
+`effect_description_eng` and their real text in the inherited field. The
+extractor yields **9 cards → 9 clauses, all `inherited`, 0 image-required**,
+where before it produced a phantom effect clause per card.
+
+The corrected text was taken from the (complete) string the ingest had misfiled
+into the effect field, with the literal `"Inherited Effect"` label stripped and
+non-breaking spaces normalised — then checked against the card face. That keeps
+the corpus's own keyword and reminder-text conventions instead of retyping from
+scratch.
+
+**Two of the lossy inherited copies had lost real content, not just formatting:**
+
+- **BT25-005 Pagumon** dropped `[Three Musketeers] in its text` from its
+  digivolve condition, leaving the nonsense `"a Digimon card with or the [TS]
+  trait"`.
+- **BT25-004 Tapmon** rendered `[Social], [Tool] or [Game]` as the mangled
+  `[Social|Tool|Game]`.
+
+Six more had silently lost their leading timing tag — `[Your Turn]`,
+`[Opponent's Turn]`, `[End of Your Turn]` — which is the difference between an
+effect that fires on your turn and one with no stated window at all.
+
+**Source-priority nuance:** BT25-001…006 have official Bandai DB bundles, and
+the extractor prefers a bundle over `card_overrides.json`. For those six the
+override's load-bearing half is the empty effect field; its inherited text is a
+documented fallback. EX12-001…003 have no bundle, so their override text is
+what the extractor actually uses.
+
+**Zero cards pool-wide** now show the defect (checked across all 4,294 after
+overrides are merged).
