@@ -29,7 +29,7 @@
 # OptionalSkill decline bridge in DCGO's harness mod (select_cancel = "no",
 # OptionalSkill.cs) is landed, so declines no longer abort the job.
 card: EX12-004
-clause: EX12-004#effect#2
+clause: EX12-004#inherited#0
 seed: 424242
 decks:
   p0:

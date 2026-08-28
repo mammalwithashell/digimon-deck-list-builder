@@ -15941,5 +15941,10 @@
       "Shambala",
       "TB"
     ]
+  },
+  "_note_EX12-004": "EX12-004 Onibimon is a Lv.2 Digi-Egg whose card face carries exactly ONE text box, an Inherited Effect. The digimoncard.io ingest put that inherited text into effect_description_eng -- prefixed with the literal label \"Inherited Effect\" and with the <Execute> reminder text appended -- and left inherited_effect_description_eng truncated mid-sentence at 38 characters (\"This Digimon with the [TB] trait gains\"). Healthy Digi-Eggs (BT1-001, BT1-002, BT1-003) have an EMPTY effect field and their text in the inherited field; this restores that shape. Text read off the card image (DCGO_Application/Assets/Textures/Card/EX12-004.webp), which is the authoritative source for printed text. Nine sibling Digi-Eggs share the same ingest defect: BT25-001..006 and EX12-001..003. See docs/RUST_ENGINE_GAPS.md#g-data-egg-inherited-text-in-effect-field.",
+  "EX12-004": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
   }
 }

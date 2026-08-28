@@ -59,7 +59,7 @@
 # EndOfTurnAction park); the emitter maps that single row to DCGO's
 # OptionalSkill(yes) + SelectAttackEffect pair.
 card: EX12-004
-clause: EX12-004#effect#0
+clause: EX12-004#inherited#0
 seed: 424242
 decks:
   p0:

@@ -2671,7 +2671,7 @@ job id, and let the caller collect the sidecar diff when the player has drained
 it. The tool description currently states the limitation on the wire so no agent
 reads a sim-green probe as an oracle answer.
 
-## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards)
+## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards — 1 fixed, 9 open)
 
 **Found:** 2026-08-28, surfaced by the exam MCP's denominator fix. It was
 invisible before, because `exam_status` used to count only the clauses already
@@ -2711,3 +2711,33 @@ hand-write the text from memory — read the card face or the official DB.
 
 **Do not re-baseline the Toho report to 2 clauses.** Its 5 were measured against
 the correct text; the data regressed afterwards.
+
+### EX12-004 — FIXED 2026-08-28
+
+Corrected in `data/card_overrides.json`, read off the card face
+(`DCGO_Application/Assets/Textures/Card/EX12-004.webp`): Onibimon is a Lv.2
+Digi-Egg with exactly one text box, an Inherited Effect reading
+`[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞.` The override
+empties `effect_description_eng` and restores the full inherited text, matching
+the shape healthy Digi-Eggs have (BT1-001/002/003: empty effect, text in
+inherited).
+
+The extractor now yields **1 clause** (`EX12-004#inherited#0`) where it yielded
+2 before the fix and 5 when the campaign ran. Three consequences, all handled:
+
+- The four scenarios written against the phantom ids
+  (`EX12-004-effect0/1/2.yaml`) were re-pointed at `#inherited#0`. Their own
+  header comments already said they were testing one clause from different
+  angles — the grant, the `<Execute>` body, and the decline/accept pair — so
+  none was wasted work; only their clause ids were wrong.
+- The four verdict rows for clause ids that no longer exist
+  (`#effect#0/1/2`, `#security#0`) were pruned. They measured text the card does
+  not print.
+- `#inherited#0`'s stored `confirmed` is now **invalidated** by the text-drift
+  guard, because the clause text changed from the truncated 38-char version to
+  the full sentence. EX12-004 therefore reads **1 clause, 0 confirmed, 1
+  unmeasured** — honest — rather than the pre-fix "2 of 2 confirmed, 100%".
+
+**Nine still open:** BT25-001…006 and EX12-001…003. Same ingest defect. Each
+needs its own card face read before an override is written — do not batch them
+from a template, and do not write the text from memory.

@@ -30,7 +30,7 @@
 # OptionalSkill (or the hook accepts cancel as "don't use").
 # Here: the Execute-window decline row.
 card: EX12-004
-clause: EX12-004#effect#1
+clause: EX12-004#inherited#0
 seed: 424242
 decks:
   p0:
