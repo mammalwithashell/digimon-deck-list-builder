@@ -154,6 +154,19 @@ pub fn list() -> Vec<serde_json::Value> {
                 "required": ["cards", "job_id"]
             }
         }),
+        json!({
+            "name": "node_health",
+            "description": "Is this machine able to answer as an oracle? Reports every \
+                preflight check with a remedy: the player, the action-space gate, whether the \
+                harness is enabled, the queue, and whether a player is already running. Run \
+                this BEFORE authoring -- a NO-GO discovered afterwards wastes the authoring.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "build": {"type": "string", "description": "Player build directory"}
+                }
+            }
+        }),
     ]
 }
 
@@ -226,6 +239,7 @@ mod tests {
         "exam_probe",
         "claim",
         "release",
+        "node_health",
     ];
 
     #[test]

@@ -90,6 +90,7 @@ pub fn dispatch(
         "exam_probe" => exam_probe(params, root),
         "claim" => claim(params, root),
         "release" => release(params, root),
+        "node_health" => node_health(params, root),
         _ => Err(format!("tool {name:?} is not implemented yet")),
     }
 }
@@ -538,6 +539,29 @@ pub fn release(
     let job_id = tools::str_arg(params, "job_id")?;
     let released = crate::exam::ledger::release_cards(&claims_dir(root), &cards, &job_id)?;
     Ok(serde_json::json!({ "released": released }))
+}
+
+pub fn node_health(
+    params: &serde_json::Value,
+    root: Option<&Path>,
+) -> Result<serde_json::Value, String> {
+    let root = root
+        .map(|r| r.to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let build = tools::opt_str_arg(params, "build").map(std::path::PathBuf::from);
+
+    // node::health never fails -- a node that cannot answer must produce a
+    // readable report, not an error string.
+    let h = crate::node::health(&root, build.as_deref());
+    Ok(serde_json::json!({
+        "go": h.go,
+        "checks": h.checks.iter().map(|c| serde_json::json!({
+            "name": c.name,
+            "status": c.status.as_str(),
+            "detail": c.detail,
+            "remedy": c.remedy,
+        })).collect::<Vec<_>>(),
+    }))
 }
 
 #[cfg(test)]
@@ -1002,5 +1026,21 @@ steps:
         let out = release(&json!({"arguments": {"cards": ["EX7-005"], "job_id": "beelstar-01"}}),
                           Some(&dir)).expect("release");
         assert_eq!(out["released"], json!(0), "releasing is not a stealing primitive");
+    }
+
+    #[test]
+    fn node_health_reports_go_and_every_check() {
+        let dir = std::env::temp_dir().join("mcp_node_health");
+        let _ = std::fs::remove_dir_all(&dir);
+        let params = json!({"arguments": {"build": "does/not/exist"}});
+        let out = node_health(&params, Some(&dir)).expect("health never errors");
+
+        assert_eq!(out["go"], json!(false));
+        let checks = out["checks"].as_array().expect("checks array");
+        assert!(checks.len() >= 3, "every check reports, not just the first failure");
+        assert!(
+            checks.iter().any(|c| c["status"] == json!("fail") && c["remedy"].is_string()),
+            "a failing check must tell the agent what to do: {checks:?}"
+        );
     }
 }
