@@ -954,8 +954,8 @@ large outputs) was the largest single line item of the first campaign.
 
 | Tool | What it answers |
 |---|---|
-| `exam_status` | Per-clause verdict summary for a card/archetype; always all five classes, so a card is never "passed". |
-| `exam_plan` | The outstanding (non-confirmed, non-unavailable) clauses for a card/archetype — what still needs work. |
+| `exam_status` | Per-clause verdict summary for a card (or an explicit card list), over the full printed denominator (a `clause_coverage extract` output); always all five classes, so a card is never "passed". |
+| `exam_plan` | The outstanding (non-confirmed, non-unavailable) clauses for a card (or an explicit card list) — what still needs work, including a clause with no stored verdict at all. |
 | `exam_validate` | Lints a draft scenario YAML before running it — unknown clause ids, bad verbs/prompts, missing stack cards. |
 | `exam_authoring_guide` | The scenario-composition contract by topic (`format`, `steps`, `prompts`, `decks`, `assert`, `verdicts`). |
 | `exam_keyword_brief` | A keyword's optional-vs-mandatory kind, its rule section, and the exact `general_rule.pdf` pages. |

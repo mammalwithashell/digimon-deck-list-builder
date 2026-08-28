@@ -13,42 +13,64 @@ pub fn list() -> Vec<serde_json::Value> {
     vec![
         json!({
             "name": "exam_status",
-            "description": "Per-clause verdict summary for a card or archetype. Always \
-                returns all five classes (confirmed / diverged / unreachable / unavailable / \
-                unmeasured) summing to the full denominator. A card is never 'passed'.",
+            "description": "Per-clause verdict summary for a card (or an explicit list of \
+                cards). Always returns all five classes (confirmed / diverged / unreachable / \
+                unavailable / unmeasured) summing to the FULL PRINTED denominator — a \
+                `clause_coverage extract` output, not just the clauses someone happened to \
+                record a verdict for. A card is never 'passed'.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "card": {"type": "string", "description": "Card id, e.g. EX12-004"},
-                    "archetype": {"type": "string", "description": "Archetype name"}
+                    "cards": {"type": "array", "items": {"type": "string"},
+                              "description": "Explicit card list instead of a single card"},
+                    "clause_text_json": {"type": "string",
+                        "description": "Path to a `clause_coverage extract` output supplying \
+                            the printed denominator; defaults to the repo's tracked extract. \
+                            When unreadable, the response degrades to a stored-rows-only count \
+                            and says so via `denominator_source` — never a silent fallback."}
                 }
             }
         }),
         json!({
             "name": "exam_plan",
-            "description": "The OUTSTANDING clauses for an archetype — what still needs work. \
-                Confirmed clauses whose text has not drifted are omitted by construction. Each \
-                clause is tagged with the keywords its printed text carries, so the prompt shape \
-                is predictable before a line is written.",
+            "description": "The OUTSTANDING clauses for a card (or an explicit list of cards) — \
+                what still needs work, over the FULL PRINTED denominator. Confirmed clauses \
+                whose text has not drifted, and unavailable clauses, are omitted by \
+                construction; everything else is outstanding, including a clause with NO \
+                stored verdict at all.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "archetype": {"type": "string"},
                     "cards": {"type": "array", "items": {"type": "string"},
-                              "description": "Explicit card list instead of an archetype"},
-                    "limit": {"type": "integer", "description": "Max clauses to return (default 40)"}
+                              "description": "Explicit card list"},
+                    "card": {"type": "string", "description": "Single card id instead of `cards`"},
+                    "limit": {"type": "integer", "description": "Max clauses to return (default 40)"},
+                    "clause_text_json": {"type": "string",
+                        "description": "Path to a `clause_coverage extract` output supplying \
+                            the printed denominator; defaults to the repo's tracked extract. \
+                            When unreadable, the response degrades to a stored-rows-only count \
+                            (a clause with no stored row cannot appear) and says so via \
+                            `denominator_source`."}
                 }
             }
         }),
         json!({
             "name": "exam_validate",
-            "description": "Lint a draft scenario BEFORE running it. Catches unknown clause ids, \
-                verbs outside the vocabulary, prompt kinds outside the 13, a stack: missing a card \
-                the line names, and asserts over security contents. Milliseconds; cheaper than \
-                sim-only and far cheaper than Unity.",
+            "description": "Lint a draft scenario BEFORE running it. Catches unknown clause ids \
+                (when a clause-text book is available — see `clause_text_json`), verbs outside \
+                the vocabulary, prompt kinds outside the 13, a stack: missing a card the line \
+                names, and asserts over security contents. Milliseconds; cheaper than sim-only \
+                and far cheaper than Unity.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"yaml": {"type": "string", "description": "Scenario YAML text"}},
+                "properties": {
+                    "yaml": {"type": "string", "description": "Scenario YAML text"},
+                    "clause_text_json": {"type": "string",
+                        "description": "Path to a `clause_coverage extract` output; defaults to \
+                            the repo's tracked extract (see exam_status). Without one, the \
+                            unknown-clause-id check degrades to a card-prefix check only."}
+                },
                 "required": ["yaml"]
             }
         }),
@@ -78,7 +100,9 @@ pub fn list() -> Vec<serde_json::Value> {
             "description": "Run one scenario file and return the structured diff report. \
                 sim_only=true runs our engine alone (milliseconds, no Unity) and CANNOT find a \
                 new divergence — it only re-checks what an oracle previously confirmed. Only an \
-                oracle pass moves a clause to confirmed.",
+                oracle pass moves a clause to confirmed. sim_only=false does NOT reach the \
+                oracle today — it is refused with a clear error (same refusal as `exam_probe`; \
+                there is no DCGO state sidecar behind a bare scenario path).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -95,7 +119,8 @@ pub fn list() -> Vec<serde_json::Value> {
                 "type": "object",
                 "properties": {
                     "yaml": {"type": "string", "description": "Scenario YAML text"},
-                    "sim_only": {"type": "boolean", "description": "Default true; false queues an oracle job"}
+                    "sim_only": {"type": "boolean", "description": "Default true; false returns \
+                        an error today (no oracle wiring yet) -- see the description above"}
                 },
                 "required": ["yaml"]
             }
@@ -225,6 +250,25 @@ mod tests {
                 t["name"]
             );
             assert!(t["inputSchema"]["type"] == "object", "{} needs a schema", t["name"]);
+        }
+    }
+
+    #[test]
+    fn exam_status_and_exam_plan_do_not_advertise_archetype() {
+        // Archetype resolution was never wired up (`requested_cards` in
+        // `mcp::handlers` refuses it with a named error). Advertising
+        // `archetype` in the schema while `exam_plan`'s description led with
+        // it promised a capability the tool did not have; the fix is to stop
+        // advertising it here, not to build resolution just to match the
+        // schema. The handler still refuses an `archetype` argument passed
+        // anyway (pinned in `mcp::handlers::tests`).
+        let listed = list();
+        for name in ["exam_status", "exam_plan"] {
+            let tool = listed.iter().find(|t| t["name"] == name).unwrap();
+            assert!(
+                tool["inputSchema"]["properties"].get("archetype").is_none(),
+                "{name} must not advertise `archetype` in its schema"
+            );
         }
     }
 

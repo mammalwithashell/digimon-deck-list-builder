@@ -42,6 +42,23 @@ pub const DEFAULT_CARDS_JSON: &str = "data/cards.json";
 /// decks that `DeckBook::load` always tries first.
 pub const DEFAULT_DECK_POOL: &str = "qa/dcgo-exams/EX12/toho_pool.json";
 
+/// Resolve a repo-relative default path.
+///
+/// In production this crate is always invoked from the repo root (the CLI's
+/// own `--cards-json`/`--decks` are given relative to it, same convention),
+/// so the bare relative path resolves as-is. `DIGIMON_REPO_ROOT` is consulted
+/// first so a test -- whose CWD under `cargo test` is the *package* root, not
+/// the repo root (see `exam::test_support::load_card_data`, which resolves
+/// the same override) -- can point this at the real repo without mutating the
+/// process's working directory, which would race every other test thread
+/// sharing that CWD.
+fn resolve_default(rel: &str) -> std::path::PathBuf {
+    match std::env::var("DIGIMON_REPO_ROOT") {
+        Ok(root) => std::path::Path::new(&root).join(rel),
+        Err(_) => std::path::PathBuf::from(rel),
+    }
+}
+
 /// What lowering and stepping one scenario through our engine produced.
 ///
 /// Deliberately does NOT fail when the replay session stalls partway through
@@ -140,10 +157,11 @@ pub fn run_one(
         );
     }
 
-    let cards_json = Path::new(DEFAULT_CARDS_JSON);
-    let card_data = dcgo_replay::load_card_data_at(cards_json)
+    let cards_json = resolve_default(DEFAULT_CARDS_JSON);
+    let card_data = dcgo_replay::load_card_data_at(&cards_json)
         .map_err(|e| format!("loading {}: {e}", cards_json.display()))?;
-    let book = DeckBook::load(Some(Path::new(DEFAULT_DECK_POOL)), cards_json)?;
+    let deck_pool = resolve_default(DEFAULT_DECK_POOL);
+    let book = DeckBook::load(Some(&deck_pool), &cards_json)?;
     let deck_p0 = ordered_deck(&s.decks.p0, &book)?;
     let deck_p1 = ordered_deck(&s.decks.p1, &book)?;
 

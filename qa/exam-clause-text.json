@@ -1,0 +1,1851 @@
+{
+  "generated_at": "2026-08-28T14:19:44.117620+00:00",
+  "source": "--card-ids (35 explicit ids)",
+  "cards": [
+    "BT11-089",
+    "BT8-097",
+    "EX1-066",
+    "EX12-002",
+    "EX12-004",
+    "EX12-006",
+    "EX12-009",
+    "EX12-011",
+    "EX12-012",
+    "EX12-015",
+    "EX12-019",
+    "EX12-020",
+    "EX12-022",
+    "EX12-025",
+    "EX12-026",
+    "EX12-031",
+    "EX12-036",
+    "EX12-043",
+    "EX12-046",
+    "EX12-047",
+    "EX12-061",
+    "EX12-062",
+    "EX12-063",
+    "EX12-065",
+    "EX12-070",
+    "EX12-071",
+    "EX12-074",
+    "EX12-075",
+    "EX12-076",
+    "P-130",
+    "ST1-08",
+    "ST1-12",
+    "ST1-15",
+    "ST16-14",
+    "ST19-14"
+  ],
+  "clauses": [
+    {
+      "id": "BT11-089#effect#0",
+      "card_id": "BT11-089",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 4 cards of your deck. Add 1 red Digimon card with the [Vaccine] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-089#effect#1",
+      "card_id": "BT11-089",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When an effect plays any of your red Digimon with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of their traits, by suspending this Tamer, those Digimon gain ＜Rush＞ for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-089#effect#2",
+      "card_id": "BT11-089",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#effect#0",
+      "card_id": "BT8-097",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "For each of your opponent's Digimon, reduce this card's use cost in the hand by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#effect#1",
+      "card_id": "BT8-097",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Your opponent's effects can't play Digimon until their turn ends. Then, delete all of your opponent's Digimon with 6000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#effect#2",
+      "card_id": "BT8-097",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#effect#0",
+      "card_id": "EX1-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 Digimon card among them to your hand. Trash the remaining cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#effect#1",
+      "card_id": "EX1-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When one of your level 5 or higher Digimon with a digivolution card is deleted, you may suspend this Tamer. If you do, gain 1 memory, then hatch 1 Digi-Egg card to your Breeding Area if it's empty.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#effect#2",
+      "card_id": "EX1-066",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying its memory cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-002#effect#0",
+      "card_id": "EX12-002",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Inherited Effect [Your Turn]",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-002#effect#1",
+      "card_id": "EX12-002",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-002#inherited#0",
+      "card_id": "EX12-002",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-004#effect#0",
+      "card_id": "EX12-004",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Inherited Effect [Your Turn] This Digimon with the [TB] trait gains ＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-004#inherited#0",
+      "card_id": "EX12-004",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "This Digimon with the [TB] trait gains",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-006#effect#0",
+      "card_id": "EX12-006",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [SW] trait from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-006#effect#1",
+      "card_id": "EX12-006",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Shambala] trait: Cost 0",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-006#inherited#0",
+      "card_id": "EX12-006",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-009#effect#0",
+      "card_id": "EX12-009",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with the [Shambala] trait and 1 card with the [TB] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-009#effect#1",
+      "card_id": "EX12-009",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Shambala] trait: Cost 0",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-009#inherited#0",
+      "card_id": "EX12-009",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-011#effect#0",
+      "card_id": "EX12-011",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "(When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-011#effect#1",
+      "card_id": "EX12-011",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "delete 1 of your opponent's Digimon with 5000 DP or less.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-011#effect#2",
+      "card_id": "EX12-011",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-011#inherited#0",
+      "card_id": "EX12-011",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-012#effect#0",
+      "card_id": "EX12-012",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "(When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-012#effect#1",
+      "card_id": "EX12-012",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [SW] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.).",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-012#effect#2",
+      "card_id": "EX12-012",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-012#inherited#0",
+      "card_id": "EX12-012",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-015#effect#0",
+      "card_id": "EX12-015",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "(When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-015#effect#1",
+      "card_id": "EX12-015",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, 1 of your other Digimon with the [SW] trait may gain ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and attack.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-015#effect#2",
+      "card_id": "EX12-015",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-015#inherited#0",
+      "card_id": "EX12-015",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may delete 1 of your opponent's Digimon with 6000 DP or less.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#0",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "(This Digimon can attack the turn it was played.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#1",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Collision",
+      "text": "(During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#2",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "(When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#3",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "(This Digimon can block in the blocker timing.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#4",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Engage",
+      "text": "(At the end of your turn, this Digimon may attack.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#5",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When attack targets change, until your opponent's turn ends, their Digimon effects don't affect this Digimon and it gets +4000 DP.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#6",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When security stacks are removed from, this Digimon may unsuspend.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-019#effect#7",
+      "card_id": "EX12-019",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-020#effect#0",
+      "card_id": "EX12-020",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon would digivolve into a Digimon card with the [TB] trait, reduce the cost by 1.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-020#effect#1",
+      "card_id": "EX12-020",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Shambala] trait: Cost 0",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-020#inherited#0",
+      "card_id": "EX12-020",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-022#effect#0",
+      "card_id": "EX12-022",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with the [Shambala] trait and 1 card with the [SW] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-022#effect#1",
+      "card_id": "EX12-022",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Shambala] trait: Cost 0",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-022#inherited#0",
+      "card_id": "EX12-022",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.).",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-025#effect#0",
+      "card_id": "EX12-025",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "(This Digimon can block in the blocker timing.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-025#effect#1",
+      "card_id": "EX12-025",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may return 1 of your opponent's level 4 or lower Digimon to the hand.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-025#effect#2",
+      "card_id": "EX12-025",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-025#inherited#0",
+      "card_id": "EX12-025",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.).",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-026#effect#0",
+      "card_id": "EX12-026",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "(This Digimon can block in the blocker timing.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-026#effect#1",
+      "card_id": "EX12-026",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-026#effect#2",
+      "card_id": "EX12-026",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-026#inherited#0",
+      "card_id": "EX12-026",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-031#effect#0",
+      "card_id": "EX12-031",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Decode",
+      "text": "(When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-031#effect#1",
+      "card_id": "EX12-031",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-031#effect#2",
+      "card_id": "EX12-031",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-031#inherited#0",
+      "card_id": "EX12-031",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Decode",
+      "text": "(When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#0",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Barrier",
+      "text": "(When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#1",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "(When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#2",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Decode",
+      "text": "(When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#3",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or with the [TB] trait from your hand as this Digimon's bottom digivolution card, 1 of your Digimon may unsuspend.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#4",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon are played or digivolve, 1 of your opponent's Digimon can't activate [When Digivolving] effects or suspend until their turn ends.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-036#effect#5",
+      "card_id": "EX12-036",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Aquatic]/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-043#effect#0",
+      "card_id": "EX12-043",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may play or use 1 card with the [SW] trait from your hand with the cost reduced by 2.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-043#effect#1",
+      "card_id": "EX12-043",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-043#inherited#0",
+      "card_id": "EX12-043",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Barrier",
+      "text": "(When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-046#effect#0",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and -3000 DP until their turn ends.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-046#effect#1",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-046#effect#2",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-046#inherited#0",
+      "card_id": "EX12-046",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "End of Attack",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#0",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "(When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#1",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Security A. +1",
+      "text": "(This Digimon checks 1 additional security card.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#2",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Ascension",
+      "text": "(When this Digimon is deleted, you may place this card as the top security card.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#3",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's lowest DP Digimon. Then, by returning 2 cards from their trash to the bottom of the deck, for the turn, this Digimon gets +6000 DP and, to 1 of their Digimon, give -5000 DP for each of those returned cards' colors.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#4",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may return 1 [TB] trait card from your trash to the hand. Then, you may play 1 level 5 or lower [TB] trait Digimon card from your hand without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-047#effect#5",
+      "card_id": "EX12-047",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-061#effect#0",
+      "card_id": "EX12-061",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [Puppet] or [TB] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-061#effect#1",
+      "card_id": "EX12-061",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Shambala] trait: Cost 0",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-061#inherited#0",
+      "card_id": "EX12-061",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-061#inherited#1",
+      "card_id": "EX12-061",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 1",
+      "text": "(Draw 1 card from your deck.) and trash 1 card in your hand.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-062#effect#0",
+      "card_id": "EX12-062",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By deleting 1 of your Digimon, delete 1 of your opponent's level 4 or lower Digimon.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-062#effect#1",
+      "card_id": "EX12-062",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Puppet]/[Shambala] trait: Cost 2",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-062#inherited#0",
+      "card_id": "EX12-062",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-062#inherited#1",
+      "card_id": "EX12-062",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 1",
+      "text": "(Draw 1 card from your deck.) and trash 1 card in your hand.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-063#effect#0",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-063#effect#1",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-063#effect#2",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-063#inherited#0",
+      "card_id": "EX12-063",
+      "zone": "inherited",
+      "label": "inherited_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-065#effect#0",
+      "card_id": "EX12-065",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Puppet]/[Shambala] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-065#effect#1",
+      "card_id": "EX12-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Fortitude",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-065#effect#2",
+      "card_id": "EX12-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may play 1 play cost 5 or lower [Puppet] or [Shambala] trait card from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-065#effect#3",
+      "card_id": "EX12-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "All of your [Puppet] or [TB] trait Digimon gain ＜Blocker＞ and ＜Retaliation＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-065#effect#4",
+      "card_id": "EX12-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Return 1 of your opponent's lowest level Digimon to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX12-070#effect#0",
+      "card_id": "EX12-070",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-070#effect#1",
+      "card_id": "EX12-070",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 [TB] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, place this card in the battle area.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-070#effect#2",
+      "card_id": "EX12-070",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your level 5 or higher [TB] trait Digimon would leave the battle area, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\n・You may play 1 [Sanmyojin] trait Digimon card from your hand without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-070#security#0",
+      "card_id": "EX12-070",
+      "zone": "security",
+      "label": "image-required",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "",
+      "source": "image-required",
+      "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-070.webp"
+    },
+    {
+      "id": "EX12-071#effect#0",
+      "card_id": "EX12-071",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-071#effect#1",
+      "card_id": "EX12-071",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 [SW] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, place this card in the battle area.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-071#effect#2",
+      "card_id": "EX12-071",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your [SW] trait Digimon are played, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\n・1 of your [SW] trait Digimon may digivolve into a [Saneiketsu] trait Digimon card in the hand without paying the cost.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-071#security#0",
+      "card_id": "EX12-071",
+      "zone": "security",
+      "label": "image-required",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "",
+      "source": "image-required",
+      "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-071.webp"
+    },
+    {
+      "id": "EX12-074#effect#0",
+      "card_id": "EX12-074",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-074#effect#1",
+      "card_id": "EX12-074",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Security",
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When one of your [Shambala] trait Digimon attacks, it may digivolve into a [Shambala] trait Digimon card in the hand with the cost reduced by 1.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-074#effect#2",
+      "card_id": "EX12-074",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 [Shambala] trait card from your hand with the cost reduced by 3.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-074#security#0",
+      "card_id": "EX12-074",
+      "zone": "security",
+      "label": "image-required",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "",
+      "source": "image-required",
+      "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-074.webp"
+    },
+    {
+      "id": "EX12-075#effect#0",
+      "card_id": "EX12-075",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-075#effect#1",
+      "card_id": "EX12-075",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 [Shambala] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-075#effect#2",
+      "card_id": "EX12-075",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "(By trashing this card after the placing turn, activate the effect below.)\n・Gain 2 memory.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-075#security#0",
+      "card_id": "EX12-075",
+      "zone": "security",
+      "label": "image-required",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "",
+      "source": "image-required",
+      "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-075.webp"
+    },
+    {
+      "id": "EX12-076#effect#0",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "(This Digimon can attack the turn it was played.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-076#effect#1",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "(When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-076#effect#2",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "(This Digimon can block in the blocker timing.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-076#effect#3",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-076#effect#4",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "EX12-076#effect#5",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "xros_req",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5",
+      "source": "cards_json",
+      "image_path": null
+    },
+    {
+      "id": "P-130#effect#0",
+      "card_id": "P-130",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-130#effect#1",
+      "card_id": "P-130",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When one of your Digimon moves from the breeding area to the battle area, by suspending this Tamer, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-130#effect#2",
+      "card_id": "P-130",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST1-08#effect#0",
+      "card_id": "ST1-08",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "1 of your Digimon gets +3000 DP for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST1-12#effect#0",
+      "card_id": "ST1-12",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "All of your Digimon get +1000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST1-12#effect#1",
+      "card_id": "ST1-12",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying its memory cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST1-15#effect#0",
+      "card_id": "ST1-15",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete up to 2 of your opponent's Digimon with 4000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST1-15#effect#1",
+      "card_id": "ST1-15",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effect.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST16-14#effect#0",
+      "card_id": "ST16-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or fewer memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST16-14#effect#1",
+      "card_id": "ST16-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When one of your effects trashes a card in your hand, by suspending this Tamer, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST16-14#effect#2",
+      "card_id": "ST16-14",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST19-14#effect#0",
+      "card_id": "ST19-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or less memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST19-14#effect#1",
+      "card_id": "ST19-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When effects play any of your Tokens or [Puppet] trait Digimon, by suspending this Tamer, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST19-14#effect#2",
+      "card_id": "ST19-14",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    }
+  ],
+  "denominator": {
+    "total_clauses": 130,
+    "total_cards": 35,
+    "by_zone": {
+      "effect": 107,
+      "inherited": 19,
+      "security": 4
+    },
+    "by_source": {
+      "bundle": 28,
+      "cards_json": 98,
+      "image-required": 4
+    },
+    "image_required_count": 4,
+    "image_required_clause_ids": [
+      "EX12-070#security#0",
+      "EX12-071#security#0",
+      "EX12-074#security#0",
+      "EX12-075#security#0"
+    ]
+  }
+}
