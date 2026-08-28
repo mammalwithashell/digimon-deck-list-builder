@@ -94,27 +94,63 @@ def render_index(rows: list[dict], generated_from: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=Path, default=Path("qa/qa-reports/exam-index.md"))
+    parser.add_argument("--verdicts", type=Path, default=Path("qa/qa-reports/exam-verdicts"))
+    parser.add_argument("--library", type=Path, default=Path("data/deck_library.json"))
+    parser.add_argument("--cards-dir", type=Path, default=Path("code/digimon-engine/cards"))
+    parser.add_argument("--scenarios-dir", type=Path, default=Path("qa/dcgo-exams"))
     parser.add_argument(
-        "--out",
-        type=Path,
-        default=Path("qa/qa-reports/exam-index.md"),
-        help="where to write the index",
+        "--min-clauses",
+        type=int,
+        default=1,
+        help="skip archetypes whose pool yields fewer clauses than this",
     )
     parser.add_argument(
-        "--verdicts",
-        type=Path,
-        default=Path("qa/qa-reports/exam-verdicts"),
-        help="per-card verdict directory",
+        "--only",
+        action="append",
+        default=None,
+        help="restrict to these archetypes (repeatable, or comma-separated); "
+        "for scoping a slow run, never for silently sampling the full index",
     )
     args = parser.parse_args(argv)
 
-    # Archetype -> card list resolution lands with the campaign skill (plan 4).
-    # Until then the index renders whatever rows a caller supplies; this
-    # entrypoint writes an empty index rather than inventing an archetype map.
-    text = render_index([], generated_from=str(args.verdicts))
+    from tools.clause_coverage import archetype as archetype_mod
+    from tools.clause_coverage.campaign import build_plan
+
+    library = archetype_mod.load_archetypes(args.library)
+    names = sorted(library)
+    if args.only:
+        wanted: list[str] = []
+        for entry in args.only:
+            wanted.extend(part.strip() for part in entry.split(",") if part.strip())
+        names = sorted({archetype_mod.resolve(library, w) for w in wanted})
+
+    rows = []
+    for name in names:
+        try:
+            plan = build_plan(
+                name,
+                library_path=args.library,
+                cards_dir=args.cards_dir,
+                scenarios_dir=args.scenarios_dir,
+                verdicts_path=args.verdicts,
+            )
+        except (LookupError, ValueError):
+            # An archetype the library lists but cannot be resolved into a pool
+            # is skipped rather than rendered as zeros -- a row of zeros reads
+            # as "measured and empty", which is the opposite of the truth.
+            continue
+        total = plan["denominator"].get("total_clauses", 0)
+        if total < args.min_clauses:
+            continue
+        rows.append({"archetype": plan["archetype"], "cards": plan["pool"],
+                     "binding": {"denominator": plan["denominator"],
+                                 "total_clauses": total}})
+
+    text = render_index(rows, generated_from=str(args.verdicts))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(text, encoding="utf-8")
-    print(f"wrote {args.out}")
+    print(f"wrote {args.out} ({len(rows)} archetypes)")
     return 0
 
 

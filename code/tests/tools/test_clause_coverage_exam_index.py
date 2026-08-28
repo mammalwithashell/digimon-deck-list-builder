@@ -72,3 +72,36 @@ def test_archetypes_sort_by_unmeasured_descending():
     ]
     out = render_index(rows, "ledger")
     assert out.index("Untouched") < out.index("Nearly Done")
+
+
+def test_main_renders_archetypes_that_have_exam_activity(tmp_path, monkeypatch):
+    """The index exists to answer 'what should I dispatch next', which it
+    cannot do while it renders nothing."""
+    import json
+
+    from tools.clause_coverage import exam_index
+
+    lib = tmp_path / "deck_library.json"
+    lib.write_text(json.dumps({
+        "version": 1,
+        "archetypes": {
+            "Fixtures": {"archetype_name": "Fixtures", "decklists": [
+                {"deck_id": "1", "decklist": json.dumps(["EX12-004"])}]}
+        },
+    }), encoding="utf-8")
+
+    cards = tmp_path / "cards"
+    cards.mkdir()
+    verdicts = tmp_path / "exam-verdicts"
+    verdicts.mkdir()
+    scenarios = tmp_path / "scenarios"
+    scenarios.mkdir()
+    out = tmp_path / "exam-index.md"
+
+    rc = exam_index.main([
+        "--out", str(out), "--library", str(lib), "--cards-dir", str(cards),
+        "--scenarios-dir", str(scenarios), "--verdicts", str(verdicts),
+    ])
+    assert rc == 0
+    text = out.read_text(encoding="utf-8")
+    assert "Fixtures" in text, "an archetype with a pool must appear in the index"
