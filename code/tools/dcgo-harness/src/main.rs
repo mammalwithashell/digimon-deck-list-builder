@@ -192,6 +192,8 @@ enum Command {
         #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
         to: PathBuf,
     },
+    /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
+    Mcp,
 }
 
 fn main() -> ExitCode {
@@ -226,7 +228,7 @@ impl Args {
     /// The harness root, for the subcommands that actually queue DCGO work.
     fn require_root(&self) -> Result<&std::path::Path, String> {
         self.root.as_deref().ok_or_else(|| {
-            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam` and `migrate-verdicts` run without one."
+            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam`, `migrate-verdicts`, and `mcp` run without one."
                 .to_string()
         })
     }
@@ -237,13 +239,17 @@ impl Args {
 /// `exam` does not: it lowers scenarios and replays them in our engine, and
 /// with `--sim-only` never involves DCGO. `migrate-verdicts` does not either:
 /// it is a pure file-to-file conversion of the verdict store, unrelated to
-/// the DCGO job queue. Creating jobs/ claimed/ done/ failed/ for either would
-/// litter the CI workspace with empty directories at best, and at worst
+/// the DCGO job queue. `mcp` does not either: most of its tools (validate,
+/// authoring guide, keyword brief, scenario probing) run entirely against
+/// files and the engine, not the job queue -- the few that do need a root
+/// (e.g. `exam_probe` with `sim_only: false`) resolve it themselves and say
+/// so in their error. Creating jobs/ claimed/ done/ failed/ for any of these
+/// would litter the CI workspace with empty directories at best, and at worst
 /// require a root the run has no use for.
 fn needs_root(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Exam { .. } | Command::MigrateVerdicts { .. }
+        Command::Exam { .. } | Command::MigrateVerdicts { .. } | Command::Mcp
     )
 }
 
@@ -526,6 +532,10 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 from.display(),
                 to.display()
             );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Mcp => {
+            dcgo_harness::mcp::serve(args.root.clone())?;
             Ok(ExitCode::SUCCESS)
         }
     }
