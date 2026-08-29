@@ -2577,7 +2577,7 @@ Settling it needs the rules position on whether an effect-initiated DNA digivolu
 grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
 cited test correction.
 
-## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100) — half fixed
+## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100) — FIXED 2026-08-28
 
 **Found:** 2026-08-27, by the clone-safety guard. **Pre-existing on main** — the
 same two tests fail there with byte-identical counts (4419 passed / 2 failed /
@@ -2821,3 +2821,43 @@ precedent: `DeleteForCostReduction` is already separate). That is a design call
 in the DSL step vocabulary, not a local patch — the codebase already has the
 concept it needs under `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`
 (`dsl_clause_aborted`), which is what a cost-delete failure should set.
+
+### Both halves closed 2026-08-28
+
+The second half was **not** what the first write-up predicted, and the
+prediction is worth correcting because it would have sent the next reader at
+the wrong file.
+
+`CompiledStep::DeletePermanent`'s unconditional `true` is real, but it is not
+what broke BT20-100. The card never reaches the generic step runner: its
+`[delete_permanent{source}, cancel_replacement]` process is recognised as
+`DelaySelfCancelFlow`, and that flow was **already correct** —
+`trash_delay_source_status()` returned `Unpaid` and the `Unpaid => {}` arm
+applied no cancel, exactly as §16-16-1 requires. Instrumenting it showed
+`matched=true, status=Unpaid` on every pass.
+
+What actually failed was the event CONCLUDING. Both commit paths could
+re-offer the very window they were committing, because neither deferred-state
+object remembered which window it belonged to:
+
+- `ParkedReplacement` — the parked-drain path.
+- `OptionalReplacementState` — the accept-callback path that commits an
+  accepted-but-non-replacing outcome. **This is the one BT20-100 takes**; the
+  parked drain never ran for it, which is why the first fix (preserving the
+  fired-set while parked) closed `bt13_040` and not this.
+
+Both now carry their `timing`, and `run_commit_with_flag` publishes it as
+`Game::replacement_commit_key` while the commit runs, so the dispatcher refuses
+that exact `(timing, subject)` regardless of what happened to `replacement_fired`.
+DECLINED-mode breadth is untouched: other `Would*` windows for the same subject
+still dispatch, which is what stops a declined `<Decode>` eating `<Evade>`
+(15-8-5-4).
+
+`cards_behavioral` 7817/0, `replacements` 125/125, `dsl` 920/0.
+
+**Still true, still worth doing separately:** `CompiledStep::DeletePermanent`
+ignores whether the deletion happened, so a card whose cost-delete is prevented
+and which is NOT recognised as one of the fused Delay flows would still run the
+rest of its clause. Fixing that needs the cost-vs-effect distinction described
+above (an `<Evade>` on "Delete 1 of your opponent's Digimon. Then draw 1." must
+not eat the draw), and no test currently demonstrates a card hitting it.
