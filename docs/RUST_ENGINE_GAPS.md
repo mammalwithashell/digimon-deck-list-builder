@@ -2374,7 +2374,7 @@ Both exam scenarios that pinned the wrong behaviour were updated:
 `qa/dcgo-exams/EX12/EX12-076-effect0.yaml` (`at: 34/36/37` field + trash, and
 the attack step's `field.5` → `field.8`) and
 `qa/dcgo-exams/EX12/EX12-047-effect4.yaml` (`at: 25`). NOTE: the two
-`diverged` verdicts in `qa/qa-reports/dcgo_exam_verdicts.json`
+`diverged` verdicts in `qa/qa-reports/exam-verdicts/`
 (`EX12-047#effect#4`, `EX12-076#effect#0`) are **not** re-classified here —
 sim-only cannot legitimately flip an oracle verdict; they need a fresh Unity
 oracle pass.
@@ -2549,3 +2549,315 @@ Reproducers, both `#[ignore]`d with this gap code, in
 `ex12_036_decode_play_offers_only_the_played_cards_own_trigger`.
 The positive control `ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field`
 is what any candidate fix must keep green -- it is what caught the reorder.
+
+## G-ENGINE-DNA-EFFECT-PATH-DOUBLE-DRAW
+
+**Found:** 2026-08-27, by the verification ladder once the stale impact index stopped
+masking tier 1. **Pre-existing on main.**
+
+`code/digimon-engine/tests/dsl/phase2g_on_dna_digivolve.rs::dsl_on_dna_digivolve_fires_from_effect_path`
+is `#[ignore]`d, not deleted and not re-baselined.
+
+**Symptom.** The fixture (`cards/_examples/TST_DNA_TRIGGER.yaml`) has exactly one
+`on_dna_digivolve` clause drawing 1. On `EffectContext::effect_initiated_dna_digivolve`
+the hand ends at 2 instead of 1 — one extra draw. The sibling user-action-path test
+still passes, so the normal digivolve path is unaffected.
+
+**Hypothesis (unconfirmed).** Both DNA paths document the firing sequence
+`WhenDigivolving → OnDnaDigivolve → OnDigivolve` (global). The clause may be matching
+both the `OnDnaDigivolve` pass and the global `OnDigivolve` pass — a double fire, the
+same defect class as `2aa3bfa94` (`<Decode>` offered its optional processing twice,
+16-35-3). The alternative is that the effect path now grants the digivolution bonus
+draw the test says it should not.
+
+**Why it was not "fixed" by changing the expected count.** A card printing one
+[On DNA Digivolving] effect must resolve it once. Asserting 2 would launder the defect
+into a permanent guard — the no-approximations violation this suite exists to catch.
+Settling it needs the rules position on whether an effect-initiated DNA digivolution
+grants the digivolution bonus (`general_rule.pdf` §8), then either an engine fix or a
+cited test correction.
+
+## G-ENGINE-REPLACEMENT-LIVELOCK-ON-CANCELLED-COST (BT20-100) — FIXED 2026-08-28
+
+**Found:** 2026-08-27, by the clone-safety guard. **Pre-existing on main** — the
+same two tests fail there with byte-identical counts (4419 passed / 2 failed /
+28 ignored), and this branch touches no engine source.
+
+`code/digimon-engine/tests/cards_behavioral/bt20/bt20_100.rs::bt20_100_unpaid_delay_cost_does_not_prevent_original_leave`
+
+**Corrected diagnosis.** An earlier revision of this entry called it "the Delay
+prevention applied without its cost". That was wrong, and instrumenting the test
+showed why: nothing is applied at all. **The replacement dispatcher livelocks.**
+
+Observed state after the accept, and after six further accepts:
+
+```
+prompt kind=Replacement valid=[59]   (identical every iteration)
+on-field OMNI-TARGET: true   COST-GATE: true   BT20-100: true
+trash: []                    pending_selection: still Some
+```
+
+Every `resolve_selection(0, REPLACEMENT_ACCEPT)` returns `Ok(())`, no state
+changes, and the same window is re-offered indefinitely. The test's assertion
+never gets a meaningful answer because the game never advances past the loop.
+
+**Shape.** BT20-100's `when_would_leave_battle_area` replacement fires for
+OMNI-TARGET. Its process is `delete_permanent {target: source}` (the §16-16-1
+cost — trashing the card is what activates a `<Delay>`) followed by
+`cancel_replacement`. That nested deletion opens its own `WhenWouldBeDeleted`
+window on BT20-100, which the test's `CancelCostDeletion` double answers by
+cancelling any `ReplacementCause::Cost` deletion. When that nested commit
+unwinds, the outer event appears to re-dispatch instead of concluding.
+
+**Why this is severe beyond one red test.** A non-terminating selection is a
+stuck action space: under rule 17 the RL agent is offered a choice that can
+never advance the game. That is worse than a wrong outcome, because a wrong
+outcome at least terminates.
+
+**Why it was not fixed here.** The relevant guard is `replacement_fired`, a
+`(timing, subject)` set cleared in `replacement.rs` when
+`replacement_depth == 0 && !in_replacement_commit`. Its strictness is
+deliberately different for FIRED vs DECLINED commits, and those branches carry
+rules citations (§7.5 once-per-event; 15-8-5-4 "activated one at a time") plus a
+pinned interaction — a declined `<Decode>` must not eat `<Evade>` on the same
+event. Tightening the guard to stop this loop could silently break that. It
+needs someone with the replacement state machine loaded, not a guard tweak from
+a passing branch.
+
+**Likely origin.** The `<Delay>` / optional-processing rework in `73733429d`,
+`72ad6e5ee` and `8d435d06b` (13 auto-paid optional conditions now offer a
+decline), which added prompts on paths that previously auto-resolved.
+
+## G-ENGINE-WOULD-LEAVE-OBSERVER-NOT-FULLY-RESOLVED (BT13-040)
+
+**Found:** same run, same provenance — pre-existing on main.
+
+`code/digimon-engine/tests/cards_behavioral/bt13/bt13_040.rs::bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source`
+
+**Symptom.** After choosing to play Veemon from Magnamon's sources, a
+`pending_selection` remains: "source choice should resolve the full would-leave
+observer". The hand-source variant and the decline variant both still pass, so
+only the play-from-sources branch leaves the observer unresolved.
+
+An unresolved pending selection is not cosmetic — it is a stuck action space,
+which under rule 17 means the RL agent is offered a choice the game cannot
+complete. Given BT20-100 above livelocks in the same dispatcher, these two are
+probably one bug seen from two angles rather than two.
+
+## G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE
+
+**Status:** open seam, not a defect. Logged 2026-08-28 while building the exam MCP.
+
+`exam_probe(sim_only: false)` returns a clear, actionable error rather than an
+oracle answer. `exam::run::run_one` explains why at the call site: an oracle
+result needs a DCGO **state sidecar** written next to a real recording, and a
+scratch scenario has no Unity trace behind it.
+
+**Why it is a seam rather than a bug.** An oracle round-trip is inherently
+asynchronous — submit a job to the harness queue, let the DCGO player drain it,
+then read the sidecar — so the synchronous `probe → answer` shape only becomes
+possible once a node is running (`dcgo-harness node up`, the oracle-node plan).
+Wiring it before then would mean inventing a queue-and-poll loop with nothing to
+poll.
+
+**Why it matters.** `exam_probe`'s whole rationale is asking the oracle *while
+composing*: in the first campaign the corpus lowered 144/144 under sim-only, yet
+six sim-green scenarios put to the oracle **all six failed, every one on prompt
+sequence**. Until this seam closes, an agent gets the cheap half (does it lower?)
+and not the half that finds the real breakage.
+
+**Closing it** belongs with the node work: submit through the queue, return the
+job id, and let the caller collect the sidecar diff when the player has drained
+it. The tool description currently states the limitation on the wire so no agent
+reads a sim-green probe as an oracle answer.
+
+## G-DATA-EGG-INHERITED-TEXT-IN-EFFECT-FIELD (10 cards — ALL FIXED 2026-08-28)
+
+**Found:** 2026-08-28, surfaced by the exam MCP's denominator fix. It was
+invisible before, because `exam_status` used to count only the clauses already
+in the verdict store — a number that cannot notice a shrinking denominator.
+
+**Symptom.** Ten Lv.2 Digi-Eggs carry their INHERITED text inside
+`effect_description_eng`, prefixed with the literal words "Inherited Effect":
+
+```
+BT25-001 Tokomon   BT25-002 Wanyamon  BT25-003 Frimon    BT25-004 Tapmon
+BT25-005 Pagumon   BT25-006 Dorimon   EX12-001 Nyaromon  EX12-002 Mococomon
+EX12-003 Kapurimon EX12-004 Onibimon
+```
+
+EX12-004 is the worst: its `inherited_effect_description_eng` is also **truncated
+mid-sentence at 38 characters** — `"This Digimon with the [TB] trait gains"` —
+with the rest of the sentence living in the effect field instead.
+
+**Why it matters beyond tidiness.** The clause extractor reads these fields, so
+EX12-004 now yields **2 clauses where the Toho Braves campaign measured 5**. Two
+consequences:
+
+1. Three stored verdicts for EX12-004 are now **orphans** — clause ids the
+   extractor no longer produces. `exam_binding` flags orphans; they cover nothing
+   in the denominator.
+2. The card reads **2 clauses, 2 confirmed — 100%**. A card whose printed effect
+   text has gone missing reports as fully verified. That is precisely the "reads
+   as passed" failure the five-class denominator exists to prevent, arriving
+   through corrupt source data rather than through the wrong denominator.
+
+**Where to fix it.** `cards.json` is API-ingested and lossy by design; the
+project's own source priority puts the official Bandai DB above it, and
+`data/card_overrides.json` is the durable place for corrections that survive
+re-ingestion. No `data/card_bundles/EX12-004.md` exists yet, so the official text
+needs fetching for these ten before an override can be written from it. Do NOT
+hand-write the text from memory — read the card face or the official DB.
+
+**Do not re-baseline the Toho report to 2 clauses.** Its 5 were measured against
+the correct text; the data regressed afterwards.
+
+### EX12-004 — FIXED 2026-08-28
+
+Corrected in `data/card_overrides.json`, read off the card face
+(`DCGO_Application/Assets/Textures/Card/EX12-004.webp`): Onibimon is a Lv.2
+Digi-Egg with exactly one text box, an Inherited Effect reading
+`[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞.` The override
+empties `effect_description_eng` and restores the full inherited text, matching
+the shape healthy Digi-Eggs have (BT1-001/002/003: empty effect, text in
+inherited).
+
+The extractor now yields **1 clause** (`EX12-004#inherited#0`) where it yielded
+2 before the fix and 5 when the campaign ran. Three consequences, all handled:
+
+- The four scenarios written against the phantom ids
+  (`EX12-004-effect0/1/2.yaml`) were re-pointed at `#inherited#0`. Their own
+  header comments already said they were testing one clause from different
+  angles — the grant, the `<Execute>` body, and the decline/accept pair — so
+  none was wasted work; only their clause ids were wrong.
+- The four verdict rows for clause ids that no longer exist
+  (`#effect#0/1/2`, `#security#0`) were pruned. They measured text the card does
+  not print.
+- `#inherited#0`'s stored `confirmed` is now **invalidated** by the text-drift
+  guard, because the clause text changed from the truncated 38-char version to
+  the full sentence. EX12-004 therefore reads **1 clause, 0 confirmed, 1
+  unmeasured** — honest — rather than the pre-fix "2 of 2 confirmed, 100%".
+
+**Nine still open:** BT25-001…006 and EX12-001…003. Same ingest defect. Each
+needs its own card face read before an override is written — do not batch them
+from a template, and do not write the text from memory.
+
+### The remaining nine — FIXED 2026-08-28
+
+BT25-001…006 and EX12-001…003, each read off its own card face in
+`DCGO_Application/Assets/Textures/Card/<ID>.webp`. All nine are Lv.2 Digi-Eggs
+with a single Inherited Effect box, so all nine now carry an empty
+`effect_description_eng` and their real text in the inherited field. The
+extractor yields **9 cards → 9 clauses, all `inherited`, 0 image-required**,
+where before it produced a phantom effect clause per card.
+
+The corrected text was taken from the (complete) string the ingest had misfiled
+into the effect field, with the literal `"Inherited Effect"` label stripped and
+non-breaking spaces normalised — then checked against the card face. That keeps
+the corpus's own keyword and reminder-text conventions instead of retyping from
+scratch.
+
+**Two of the lossy inherited copies had lost real content, not just formatting:**
+
+- **BT25-005 Pagumon** dropped `[Three Musketeers] in its text` from its
+  digivolve condition, leaving the nonsense `"a Digimon card with or the [TS]
+  trait"`.
+- **BT25-004 Tapmon** rendered `[Social], [Tool] or [Game]` as the mangled
+  `[Social|Tool|Game]`.
+
+Six more had silently lost their leading timing tag — `[Your Turn]`,
+`[Opponent's Turn]`, `[End of Your Turn]` — which is the difference between an
+effect that fires on your turn and one with no stated window at all.
+
+**Source-priority nuance:** BT25-001…006 have official Bandai DB bundles, and
+the extractor prefers a bundle over `card_overrides.json`. For those six the
+override's load-bearing half is the empty effect field; its inherited text is a
+documented fallback. EX12-001…003 have no bundle, so their override text is
+what the extractor actually uses.
+
+**Zero cards pool-wide** now show the defect (checked across all 4,294 after
+overrides are merged).
+
+### Update 2026-08-28 — livelock fixed; the cost-propagation half is not
+
+Systematic tracing separated this into **two** defects. The first is fixed; the
+second is the one still failing `bt20_100_unpaid_delay_cost_does_not_prevent_original_leave`.
+
+**FIXED — the once-per-event guard did not survive a parked replacement.**
+`replacement_fired` was cleared on any dispatcher entry at
+`depth == 0 && !in_replacement_commit`. That is a proxy for "fresh unrelated
+event" and it is false for OPTIONAL replacements, whose fire-site unwinds when
+the selection installs. Traced entry-by-entry: entry 1 records
+`(WhenWouldLeaveBattleArea, subject)` and parks; the accepted callback
+re-enters at depth 0 and clears it; the commit continuation re-dispatches the
+same pair, finds itself unblocked, and re-offers the window. Fixed by not
+clearing while `parked_replacement.is_some()`. `bt13_040` green;
+cards_behavioral 7816/1 (was 7816/2); replacements 125/125.
+
+**OPEN — `CompiledStep::DeletePermanent` swallows a cancelled deletion.**
+`code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs`:
+
+```rust
+ctx.delete_permanent(h);
+if existed { bindings.record_deleted(h, dp); }
+true            // <-- unconditional
+```
+
+Nothing checks whether the deletion actually happened. A replacement can cancel
+it, and the step still reports success, so the clause runs on. For BT20-100 the
+process is `delete_permanent {target: source}` (the §16-16-1 `<Delay>` cost —
+trashing the card IS what activates it) followed by `cancel_replacement`, so a
+prevented cost still buys the prevention. The card's own YAML says this must not
+happen: *"Only if that deletion succeeds does it mark the selected would-leave
+Omnimon as no longer leaving."* Rule 17 / no-approximations.
+
+**Why it was not fixed here.** The obvious patch — abort the clause when a
+delete is prevented — is wrong in general: for *"Delete 1 of your opponent's
+Digimon. Then draw 1."*, an `<Evade>` must not eat the draw. Only a **cost**
+delete should abort, and `permanent_mutations::try_run(step, ctx, bindings)`
+receives no `runtime`, so the step cannot see its clause kind. Distinguishing
+them needs either a threaded clause-kind or a distinct compiled verb (there is
+precedent: `DeleteForCostReduction` is already separate). That is a design call
+in the DSL step vocabulary, not a local patch — the codebase already has the
+concept it needs under `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`
+(`dsl_clause_aborted`), which is what a cost-delete failure should set.
+
+### Both halves closed 2026-08-28
+
+The second half was **not** what the first write-up predicted, and the
+prediction is worth correcting because it would have sent the next reader at
+the wrong file.
+
+`CompiledStep::DeletePermanent`'s unconditional `true` is real, but it is not
+what broke BT20-100. The card never reaches the generic step runner: its
+`[delete_permanent{source}, cancel_replacement]` process is recognised as
+`DelaySelfCancelFlow`, and that flow was **already correct** —
+`trash_delay_source_status()` returned `Unpaid` and the `Unpaid => {}` arm
+applied no cancel, exactly as §16-16-1 requires. Instrumenting it showed
+`matched=true, status=Unpaid` on every pass.
+
+What actually failed was the event CONCLUDING. Both commit paths could
+re-offer the very window they were committing, because neither deferred-state
+object remembered which window it belonged to:
+
+- `ParkedReplacement` — the parked-drain path.
+- `OptionalReplacementState` — the accept-callback path that commits an
+  accepted-but-non-replacing outcome. **This is the one BT20-100 takes**; the
+  parked drain never ran for it, which is why the first fix (preserving the
+  fired-set while parked) closed `bt13_040` and not this.
+
+Both now carry their `timing`, and `run_commit_with_flag` publishes it as
+`Game::replacement_commit_key` while the commit runs, so the dispatcher refuses
+that exact `(timing, subject)` regardless of what happened to `replacement_fired`.
+DECLINED-mode breadth is untouched: other `Would*` windows for the same subject
+still dispatch, which is what stops a declined `<Decode>` eating `<Evade>`
+(15-8-5-4).
+
+`cards_behavioral` 7817/0, `replacements` 125/125, `dsl` 920/0.
+
+**Still true, still worth doing separately:** `CompiledStep::DeletePermanent`
+ignores whether the deletion happened, so a card whose cost-delete is prevented
+and which is NOT recognised as one of the fused Delay flows would still run the
+rest of its clause. Fixing that needs the cost-vs-effect distinction described
+above (an `<Evade>` on "Delete 1 of your opponent's Digimon. Then draw 1." must
+not eat the draw), and no test currently demonstrates a card hitting it.

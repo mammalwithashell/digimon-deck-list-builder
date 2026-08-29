@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-24T17:20:23.607899+00:00",
+  "clauses": {
+    "EX12-074#effect#0": {
+      "clause_id": "EX12-074#effect#0",
+      "card_id": "EX12-074",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-074-effect0.yaml",
+      "recorded_at": "2026-08-22T15:00:56.551602400+00:00"
+    },
+    "EX12-074#effect#1": {
+      "clause_id": "EX12-074#effect#1",
+      "card_id": "EX12-074",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "b8ebafac725d3b6fbbce06db9c12cf296e6506fb54de515d381f530ce062ddde",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-074-effect1.yaml",
+      "recorded_at": "2026-08-24T17:20:23.607899+00:00"
+    },
+    "EX12-074#effect#2": {
+      "clause_id": "EX12-074#effect#2",
+      "card_id": "EX12-074",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "5c68e55799b3660627b606c113cb4a5e843a854ebfe2d8ae15922b782602402b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-074-effect2.yaml",
+      "recorded_at": "2026-08-22T15:02:22.896127500+00:00"
+    },
+    "EX12-074#security#0": {
+      "clause_id": "EX12-074#security#0",
+      "card_id": "EX12-074",
+      "verdict": "confirmed",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-074-security0.yaml",
+      "recorded_at": "2026-08-23T22:14:22.935789400+00:00"
+    }
+  }
+}

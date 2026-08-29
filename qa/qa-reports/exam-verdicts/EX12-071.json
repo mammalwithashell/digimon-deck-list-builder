@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:14:20.135772400+00:00",
+  "clauses": {
+    "EX12-071#security#0": {
+      "clause_id": "EX12-071#security#0",
+      "card_id": "EX12-071",
+      "verdict": "confirmed",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-071-security0.yaml",
+      "recorded_at": "2026-08-23T22:14:20.135772400+00:00"
+    }
+  }
+}

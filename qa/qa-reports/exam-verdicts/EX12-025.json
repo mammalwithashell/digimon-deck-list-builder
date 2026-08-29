@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:13:09.721697+00:00",
+  "clauses": {
+    "EX12-025#effect#0": {
+      "clause_id": "EX12-025#effect#0",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect0.yaml",
+      "recorded_at": "2026-08-23T22:12:59.846522800+00:00"
+    },
+    "EX12-025#effect#1": {
+      "clause_id": "EX12-025#effect#1",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "daf88b23fc1e6bfb3aa0bfa8941f5128bbdc9f5641e1f397cd2ad93021cefb4d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:02.215956900+00:00"
+    },
+    "EX12-025#effect#2": {
+      "clause_id": "EX12-025#effect#2",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect2.yaml",
+      "recorded_at": "2026-08-23T22:13:04.739604900+00:00"
+    },
+    "EX12-025#inherited#0": {
+      "clause_id": "EX12-025#inherited#0",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "ed6ae462b769af6c7dd4e3f2563728f81ad9fe9b0230e1a3a9b9075ea20bcc91",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:13:07.247716+00:00"
+    },
+    "EX12-025#inherited#1": {
+      "clause_id": "EX12-025#inherited#1",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "55311f4a7383e65b8f68e93b41e9222d6b8690d45c8b5d5023ba9bc672deee86",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-inherited1.yaml",
+      "recorded_at": "2026-08-23T22:13:09.721697+00:00"
+    }
+  }
+}

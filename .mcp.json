@@ -3,7 +3,10 @@
     "pinecone-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@pinecone-database/mcp"],
+      "args": [
+        "-y",
+        "@pinecone-database/mcp"
+      ],
       "env": {
         "PINECONE_API_KEY": "${PINECONE_API_KEY}"
       }
@@ -11,22 +14,52 @@
     "obsidian": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@mauricio.wolff/mcp-obsidian@latest", "C:\\Users\\james\\OneDrive\\Documents\\Obsidian Vault"]
+      "args": [
+        "-y",
+        "@mauricio.wolff/mcp-obsidian@latest",
+        "C:\\Users\\james\\OneDrive\\Documents\\Obsidian Vault"
+      ]
     },
     "digimon-engine-mcp": {
       "type": "stdio",
-      "command": "target/debug/digimon-engine-mcp.exe",
-      "args": ["--pool", "implemented"]
+      "command": "python",
+      "args": [
+        "scripts/mcp_launch.py",
+        "digimon-engine-mcp",
+        "--pool",
+        "implemented"
+      ]
     },
     "digimon-training-mcp": {
       "type": "stdio",
       "command": "python",
-      "args": ["-m", "digimon_training_mcp", "--runs-dir", "./runs", "--models-dir", "./models"]
+      "args": [
+        "-m",
+        "digimon_training_mcp",
+        "--runs-dir",
+        "./runs",
+        "--models-dir",
+        "./models"
+      ]
     },
     "digimon-scenario-mcp": {
       "type": "stdio",
       "command": "python",
-      "args": ["-m", "digimon_scenario_mcp", "--browser-url", "http://127.0.0.1:8000"]
+      "args": [
+        "-m",
+        "digimon_scenario_mcp",
+        "--browser-url",
+        "http://127.0.0.1:8000"
+      ]
+    },
+    "dcgo-exam": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "scripts/mcp_launch.py",
+        "dcgo-harness",
+        "mcp"
+      ]
     }
   }
 }

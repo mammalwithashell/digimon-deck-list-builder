@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-24T02:07:42.203340100+00:00",
+  "clauses": {
+    "P-130#effect#0": {
+      "clause_id": "P-130#effect#0",
+      "card_id": "P-130",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "74665ee731b6a1b0274b17e7eeaf2872f648281b5f67704f5d6b3aa02fc4490d",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect0.yaml",
+      "recorded_at": "2026-08-24T02:07:40.537905200+00:00"
+    },
+    "P-130#effect#1": {
+      "clause_id": "P-130#effect#1",
+      "card_id": "P-130",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "ad6e9dd66ee456596356043fb63ff57bc9c0385cd23e026abf097a6e4a054578",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect1.yaml",
+      "recorded_at": "2026-08-24T02:07:42.203340100+00:00"
+    },
+    "P-130#effect#2": {
+      "clause_id": "P-130#effect#2",
+      "card_id": "P-130",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:34.774784800+00:00"
+    }
+  }
+}

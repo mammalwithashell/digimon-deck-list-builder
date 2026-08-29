@@ -714,6 +714,22 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) replacement_commit_fired: bool,
 
+    /// The exact `(timing, subject)` window a callback-commit continuation is
+    /// currently committing, or `None` outside a commit.
+    ///
+    /// The §7.5 once-per-event guard normally remembers an offered window in
+    /// `replacement_fired`, but that set is cleared on any dispatcher entry at
+    /// `depth == 0` — and an OPTIONAL replacement unwinds its fire-site when
+    /// the selection installs, so the event's OWN later work re-enters at
+    /// depth 0 and can wipe its record. The commit then re-offered the very
+    /// window it was committing, the player accepted, and the event never
+    /// terminated. This key does not depend on that bookkeeping surviving: a
+    /// commit may never re-offer the window it is committing, full stop.
+    pub(crate) replacement_commit_key: Option<(
+        crate::enums::EffectTiming,
+        crate::replacement::ReplacementSubject,
+    )>,
+
     /// Controller of the effect whose `process` is currently running, if
     /// any. Set by `run_queued_effect` at dispatch time and cleared at the
     /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's

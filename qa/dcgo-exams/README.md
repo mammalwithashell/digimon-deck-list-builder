@@ -8,7 +8,7 @@ only reporting whatever its AI happened to do.
 - **Verified API facts / plan corrections:** `docs/superpowers/plans/2026-08-21-dcgo-exam-recon-facts.md`
 - **Harness operating manual:** `docs/DCGO_HARNESS.md`
 - **Recording format:** `docs/DCGO_RECORDING_SCHEMA.md`
-- **Verdict store:** `qa/qa-reports/dcgo_exam_verdicts.json`
+- **Verdict store:** `qa/qa-reports/exam-verdicts/`
 
 ## Layout
 

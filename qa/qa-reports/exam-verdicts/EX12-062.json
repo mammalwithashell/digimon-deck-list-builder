@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-25T00:00:06.641209200+00:00",
+  "clauses": {
+    "EX12-062#effect#0": {
+      "clause_id": "EX12-062#effect#0",
+      "card_id": "EX12-062",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "c543b9da4154ff844f6f626b6e3cfa2e96c689c8d8ba96e89d9ce92182d94f5e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-effect0.yaml",
+      "recorded_at": "2026-08-24T19:21:45.955646200+00:00"
+    },
+    "EX12-062#effect#1": {
+      "clause_id": "EX12-062#effect#1",
+      "card_id": "EX12-062",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "d5fcb2c56946d3306d6dc8b2eb9ee8ea7961af3f1ec0d0fd0a2a28a6f3224d4c",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:53.577081800+00:00"
+    },
+    "EX12-062#inherited#0": {
+      "clause_id": "EX12-062#inherited#0",
+      "card_id": "EX12-062",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-inherited0.yaml",
+      "recorded_at": "2026-08-25T00:00:06.641209200+00:00"
+    },
+    "EX12-062#inherited#1": {
+      "clause_id": "EX12-062#inherited#1",
+      "card_id": "EX12-062",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "b6635794790963847e7cdf33242fd6a31e885de8ed139686cc2aeb84654d2478",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-062-inherited1.yaml",
+      "recorded_at": "2026-08-24T19:31:24.657973300+00:00"
+    },
+    "EX12-062#security#0": {
+      "clause_id": "EX12-062#security#0",
+      "card_id": "EX12-062",
+      "verdict": "unreachable",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    }
+  }
+}

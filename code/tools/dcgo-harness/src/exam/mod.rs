@@ -29,35 +29,52 @@
 //! renders that observation as a draft `cards_behavioral` test for a human to
 //! review.
 //!
+//! Running the exam across a fleet of parallel nodes needs one more thing
+//! [`verdict`]'s current-state store cannot express: history. [`ledger`]
+//! records that as an append-only log of attempts, so nodes don't each burn
+//! an afternoon rediscovering the same dead end.
+//!
 //! The `pub use` block below is a convenience surface only. Each module
 //! remains the owner of its own names — import from the module when you want
 //! to be explicit, and note that nothing may be re-exported here under a name
 //! that differs from the one its module gave it.
 
 pub mod adapter;
+pub mod assertions;
 pub mod backfill;
 pub mod dcgo_pool;
+pub mod deckbook;
 pub mod differ;
 pub mod drafter;
+pub mod ledger;
 pub mod lower;
 pub mod projection;
+pub mod run;
 pub mod scenario;
+pub mod validate;
 pub mod verdict;
 
 #[cfg(test)]
 pub mod test_support;
 
 pub use adapter::ScenarioAdapter;
+pub use assertions::{check_assertions, ASSERTION_KEYS};
 pub use backfill::{backfill, backfill_from_diff, GENERATED_MARKER};
 pub use dcgo_pool::has_dcgo_script;
+pub use deckbook::{ordered_deck, DeckBook, DeckEntry};
 pub use differ::{diff, diff_paired, DiffReport, FieldDiff, StepDivergence};
 pub use drafter::{draft_test, Provenance};
+pub use ledger::{
+    append_attempt, claim_cards, read_attempts, read_claims, release_cards, Attempt, Claim,
+    ClaimOutcome, DEFAULT_CLAIMS, DEFAULT_LOG,
+};
 pub use lower::{lower_step, LowerError};
 pub use projection::{
     parse_sidecar, PermanentProjection, SeatProjection, StateProjection, KEYWORD_PROBES,
 };
+pub use run::{lower_and_run, run_one, LoweredRun, DEFAULT_CARDS_JSON, DEFAULT_DECK_POOL};
 pub use scenario::{
     Assertion, Expect, Scenario, ScenarioDecks, ScenarioSeat, ScenarioStep, SelectPayload,
-    StepAction,
+    StepAction, STEP_VERBS,
 };
 pub use verdict::{ClauseVerdict, Verdict, VerdictStore, VerdictSummary};

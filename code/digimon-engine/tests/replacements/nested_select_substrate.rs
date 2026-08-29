@@ -45,6 +45,9 @@ fn fighter(id: &str) -> CardData {
 
 fn install_parked(game: &mut digimon_engine::game::Game, target: PermanentHandle) {
     game.install_parked_replacement_for_test(ParkedReplacement {
+        // This fixture installs a park directly, bypassing the dispatcher that
+        // normally stamps the window; no commit-key behaviour is under test here.
+        timing: None,
         subject: ReplacementSubject::Permanent(target),
         cause: ReplacementCause::OpponentEffect,
         event_cause_override: None,

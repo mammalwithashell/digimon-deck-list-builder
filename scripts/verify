@@ -167,6 +167,12 @@ def tier0_suites() -> list[Suite]:
             "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
             "--check",
         ),
+        py_suite(
+            0,
+            "authoring_guide_check",
+            "code/tools/clause_coverage/authoring_guide.py",
+            "--check",
+        ),
         Suite(
             tier=0,
             name="verification_tool_tests",
@@ -180,6 +186,7 @@ def tier0_suites() -> list[Suite]:
                 "code/tests/tools/test_impact_scope.py",
                 "code/tests/tools/test_keyword_semantics_matrix.py",
                 "code/tests/tools/test_faq_conformance_generator.py",
+                "code/tests/tools/test_clause_coverage_authoring_guide.py",
                 "code/tests/tools/test_verification_tier_manifest.py",
                 "code/tests/tools/test_nextest_config.py",
                 "code/tests/tools/test_verify_script.py",

@@ -21,6 +21,8 @@ pub mod daemon;
 pub mod exam;
 pub mod job;
 pub mod manifest;
+pub mod mcp;
+pub mod node;
 pub mod pool;
 pub mod queue;
 pub mod triage;

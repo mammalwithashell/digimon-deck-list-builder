@@ -6,12 +6,11 @@
 //!   1 — command ran but reported failures (e.g. triage found divergences).
 //!   2 — argument or I/O error.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use dcgo_harness::job::{JobLimits, DIR_CLAIMED, DIR_DONE, DIR_FAILED, DIR_JOBS};
 
@@ -114,7 +113,7 @@ enum Command {
         #[arg(
             long,
             num_args = 0..=1,
-            default_missing_value = "qa/qa-reports/dcgo_exam_verdicts.json"
+            default_missing_value = "qa/qa-reports/exam-verdicts"
         )]
         verdicts: Option<PathBuf>,
         /// `clause_coverage extract` output supplying each clause's label and
@@ -183,6 +182,38 @@ enum Command {
         #[arg(long, default_value_t = dcgo_harness::watch::DEFAULT_PROGRESS_STALE_SECONDS)]
         progress_stale_seconds: u64,
     },
+    /// Split a single-blob verdict store into per-card files (one-time).
+    MigrateVerdicts {
+        /// The existing single-file store.
+        #[arg(long, default_value = "qa/qa-reports/dcgo_exam_verdicts.json")]
+        from: PathBuf,
+        /// Destination directory for per-card files.
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        to: PathBuf,
+    },
+    /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
+    Mcp,
+    /// Bring this machine up as an oracle node: preflight, then launch.
+    Node {
+        #[command(subcommand)]
+        action: NodeAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum NodeAction {
+    /// Preflight and start the oracle.
+    Up {
+        #[arg(long)]
+        build: PathBuf,
+    },
+    /// Stop the oracle.
+    Down,
+    /// Report readiness without changing anything.
+    Status {
+        #[arg(long)]
+        build: Option<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -217,7 +248,7 @@ impl Args {
     /// The harness root, for the subcommands that actually queue DCGO work.
     fn require_root(&self) -> Result<&std::path::Path, String> {
         self.root.as_deref().ok_or_else(|| {
-            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam` runs without one."
+            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam`, `migrate-verdicts`, and `mcp` run without one."
                 .to_string()
         })
     }
@@ -226,11 +257,44 @@ impl Args {
 /// Whether this subcommand touches the job queue at all.
 ///
 /// `exam` does not: it lowers scenarios and replays them in our engine, and
-/// with `--sim-only` never involves DCGO. Creating jobs/ claimed/ done/
-/// failed/ for it would litter the CI workspace with empty directories at
-/// best, and at worst require a root the run has no use for.
+/// with `--sim-only` never involves DCGO. `migrate-verdicts` does not either:
+/// it is a pure file-to-file conversion of the verdict store, unrelated to
+/// the DCGO job queue. `mcp` does not either: most of its tools (validate,
+/// authoring guide, keyword brief, scenario probing) run entirely against
+/// files and the engine, not the job queue -- the few that do need a root
+/// (e.g. `exam_probe` with `sim_only: false`) resolve it themselves and say
+/// so in their error. Creating jobs/ claimed/ done/ failed/ for any of these
+/// would litter the CI workspace with empty directories at best, and at worst
+/// require a root the run has no use for.
 fn needs_root(command: &Command) -> bool {
-    !matches!(command, Command::Exam { .. })
+    !matches!(
+        command,
+        Command::Exam { .. } | Command::MigrateVerdicts { .. } | Command::Mcp
+    )
+}
+
+/// Whether `to` looks like the destination of a migration that already ran:
+/// a directory that exists and already holds at least one `*.json` file.
+///
+/// A non-existent or empty directory is fine to migrate into. Anything else
+/// -- including a directory that holds unrelated `*.json` files -- is
+/// treated as "already migrated" on purpose: `migrate-verdicts` is a
+/// one-shot conversion, and the caller (`Command::MigrateVerdicts`) refuses
+/// rather than let `save_dir`'s prune step delete files it doesn't
+/// recognize.
+fn migrate_verdicts_destination_already_populated(to: &Path) -> Result<bool, String> {
+    if !to.is_dir() {
+        return Ok(false);
+    }
+    let entries = std::fs::read_dir(to)
+        .map_err(|e| format!("failed to read {}: {e}", to.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("failed to read {}: {e}", to.display()))?;
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn run(args: &Args) -> Result<ExitCode, String> {
@@ -461,6 +525,59 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             })
         }
+        Command::MigrateVerdicts { from, to } => {
+            // `save_dir` prunes any *.json under `to` that isn't a card the
+            // store being written carries. Re-running this migration against
+            // a recovered copy of the old blob -- a plausible operator move
+            // after a bad merge -- would otherwise silently delete every
+            // card file the live ledger has grown since the migration ran,
+            // while printing a cheerful success line. Refuse instead.
+            if migrate_verdicts_destination_already_populated(to)? {
+                return Err(format!(
+                    "{} already contains *.json files -- the migration has already \
+                     run against this directory. Refusing to re-run it: save_dir \
+                     prunes any file not present in the source store, so doing so \
+                     here would delete every card file added since the migration.",
+                    to.display()
+                ));
+            }
+            let store = dcgo_harness::exam::verdict::VerdictStore::load(from)?;
+            let cards: std::collections::BTreeSet<String> =
+                store.iter().map(|(_, cv)| cv.card_id.clone()).collect();
+            let rows = store.len();
+            store.save_dir(to)?;
+            println!(
+                "migrated {rows} verdicts across {} cards: {} -> {}",
+                cards.len(),
+                from.display(),
+                to.display()
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Mcp => {
+            dcgo_harness::mcp::serve(args.root.clone())?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Node { action } => {
+            let root = args.require_root()?;
+            match action {
+                NodeAction::Up { build } => {
+                    println!("{}", dcgo_harness::node::up(root, build)?);
+                    Ok(ExitCode::SUCCESS)
+                }
+                NodeAction::Down => {
+                    println!("{}", dcgo_harness::node::down(root)?);
+                    Ok(ExitCode::SUCCESS)
+                }
+                NodeAction::Status { build } => {
+                    let h = dcgo_harness::node::health(root, build.as_deref());
+                    println!("{}", h.describe());
+                    // Scripts and CI gate on this: a NO-GO must exit non-zero
+                    // rather than requiring the caller to parse the text.
+                    Ok(if h.go { ExitCode::SUCCESS } else { ExitCode::from(1) })
+                }
+            }
+        }
     }
 }
 
@@ -539,11 +656,7 @@ fn run_exam(
                     .to_string()
             })?;
             let book = ClauseTextBook::load(ctj)?;
-            let store = if path.exists() {
-                VerdictStore::load(path)?
-            } else {
-                VerdictStore::default()
-            };
+            let store = VerdictStore::load_dir(path)?;
             Some((path.to_path_buf(), book, store))
         }
         None => None,
@@ -639,7 +752,7 @@ fn run_exam(
                 store.set_current_text_sha(id, &dcgo_harness::exam::verdict::sha256_hex(&ct.text));
             }
         }
-        store.save(store_path)?;
+        store.save_dir(store_path)?;
         println!(
             "exam: verdict store {} -- {}",
             store_path.display(),
@@ -704,13 +817,10 @@ fn exam_one(
     ran: &mut u32,
     diffed: &mut u32,
 ) -> Result<(ExamOutcome, Option<VerdictEvent>), String> {
-    use dcgo_harness::exam::adapter::ScenarioAdapter;
     use dcgo_harness::exam::differ::diff_paired;
-    use dcgo_harness::exam::projection::{
-        align_to_scenario_origin, pair_by_wire_rows, parse_sidecar, StateProjection,
-    };
+    use dcgo_harness::exam::projection::{align_to_scenario_origin, pair_by_wire_rows, parse_sidecar};
+    use dcgo_harness::exam::run::lower_and_run;
     use dcgo_harness::exam::scenario::Scenario;
-    use digimon_engine::runners::replay::ReplaySession;
 
     let text = std::fs::read_to_string(path)
         .map_err(|e| format!("reading {}: {e}", path.display()))?;
@@ -764,13 +874,17 @@ fn exam_one(
 
     // Lowering resolves every symbolic step against the live mask, so an
     // illegal or ambiguous line fails HERE -- in milliseconds, before any
-    // Unity time is spent.
-    let adapter = ScenarioAdapter::from_scenario(&s, deck_p0, deck_p1, card_data)?;
+    // Unity time is spent. Shared with the MCP probe surface
+    // (`dcgo_harness::exam::run::lower_and_run`) precisely so this and
+    // `exam_probe` can never disagree about what a line lowers to -- see
+    // that function's doc comment.
+    let run = lower_and_run(&s, deck_p0, deck_p1, card_data)?;
     *lowered += 1;
-    println!("  lowered {} step(s): {:?}", s.steps.len(), adapter.lowered_steps());
-    // Captured BEFORE the adapter moves into the replay session: this is how
-    // the differ pairs our per-STEP rows against DCGO's per-DECISION rows.
-    let wire_rows_per_step = adapter.dcgo_wire_rows_per_step();
+    println!(
+        "  lowered {} step(s): {:?}",
+        s.steps.len(),
+        run.lowered_steps
+    );
 
     // Sim-only path (checked in run_exam): the line lowered cleanly, so emit
     // the DCGO scripted job that runs the same line against the oracle.
@@ -781,7 +895,7 @@ fn exam_one(
             .ok_or_else(|| format!("unnamed scenario {}", path.display()))?;
         let e0 = book.resolve(&s.decks.p0.rest)?;
         let e1 = book.resolve(&s.decks.p1.rest)?;
-        let job = build_exam_job(stem, &s, e0, e1, adapter.lowered_steps())?;
+        let job = build_exam_job(stem, &s, e0, e1, &run.lowered_steps)?;
         std::fs::create_dir_all(dir)
             .map_err(|e| format!("creating {}: {e}", dir.display()))?;
         let out = dir.join(format!("{}.json", job.job_id));
@@ -792,29 +906,20 @@ fn exam_one(
         println!("  emitted job {}", out.display());
     }
 
-    let mut session = ReplaySession::with_source(Box::new(adapter), card_data, false)
-        .map_err(|e| format!("building the replay session: {e:?}"))?;
-
-    // Step exactly as many times as the line is long, projecting after each.
-    // A bounded loop rather than `while !is_complete()`: a source that stops
-    // advancing would otherwise spin forever and read as a hang.
-    let mut projections = vec![StateProjection::from_game(&session.game, 0)];
-    for i in 0..s.steps.len() as u32 {
-        session.step();
-        projections.push(StateProjection::from_game(&session.game, i + 1));
-    }
     *ran += 1;
-
-    if !session.is_complete() {
+    if !run.complete {
         return Ok((
             fail(format!(
                 "the line did not run to completion: {} of {} steps",
-                session.current_step(),
-                session.total_steps()
+                run.steps_run, run.steps_total
             )),
             None,
         ));
     }
+    // This is how the differ pairs our per-STEP rows against DCGO's
+    // per-DECISION rows.
+    let wire_rows_per_step = run.wire_rows_per_step;
+    let projections = run.projections;
 
     if sim_only {
         let (checked, failures) = check_assertions(&s, &projections);
@@ -1037,292 +1142,11 @@ fn resolve_sidecar(
     Ok(sidecar.to_path_buf())
 }
 
-// --- assertions -------------------------------------------------------------
-
-/// Check every `assert:` block against the projected trace.
-///
-/// Returns `(checks_made, failures)`. An unknown key is a **failure**, not a
-/// skip: silently ignoring it would let a typo'd assertion report a pass while
-/// checking nothing.
-fn check_assertions(
-    s: &dcgo_harness::exam::scenario::Scenario,
-    projections: &[dcgo_harness::exam::projection::StateProjection],
-) -> (u32, Vec<String>) {
-    let mut checked = 0u32;
-    let mut failures = Vec::new();
-
-    for a in &s.assertions {
-        let Some(p) = projections.iter().find(|p| p.step == a.at) else {
-            failures.push(format!(
-                "at {}: no projected state for that step (the trace has {:?})",
-                a.at,
-                projections.iter().map(|p| p.step).collect::<Vec<_>>()
-            ));
-            continue;
-        };
-        for (key, expected) in &a.that {
-            if key == dcgo_harness::exam::backfill::GENERATED_MARKER {
-                continue; // provenance metadata, not a projection path
-            }
-            checked += 1;
-            match projected_value(p, key) {
-                None => failures.push(format!(
-                    "at {}: unknown assertion key `{key}` -- supported: {}",
-                    a.at,
-                    ASSERTION_KEYS.join(", ")
-                )),
-                Some(actual) => {
-                    if !values_equal(expected, &actual) {
-                        failures.push(format!(
-                            "at {}: {key} expected {} but our engine has {}",
-                            a.at,
-                            render_value(expected),
-                            render_value(&actual)
-                        ));
-                    }
-                }
-            }
-        }
-    }
-
-    (checked, failures)
-}
-
-const ASSERTION_KEYS: &[&str] = &[
-    "turn",
-    "phase",
-    "memory",
-    "p0.memory",
-    "p1.memory",
-    "p{0,1}.security",
-    "p{0,1}.hand",
-    "p{0,1}.trash",
-    "p{0,1}.field",
-];
-
-fn projected_value(
-    p: &dcgo_harness::exam::projection::StateProjection,
-    key: &str,
-) -> Option<serde_yml::Value> {
-    let v = |x: Result<serde_yml::Value, _>| x.ok();
-    match key {
-        "turn" => v(serde_yml::to_value(p.turn)),
-        "phase" => v(serde_yml::to_value(&p.phase)),
-        // The projection pins memory to player 0's perspective, so `p1.memory`
-        // is its negation rather than a second stored field.
-        "memory" | "p0.memory" => v(serde_yml::to_value(p.memory)),
-        "p1.memory" => v(serde_yml::to_value(-p.memory)),
-        _ => {
-            let (seat, field) = key.split_once('.')?;
-            let s = match seat {
-                "p0" => &p.p0,
-                "p1" => &p.p1,
-                _ => return None,
-            };
-            match field {
-                "security" => v(serde_yml::to_value(s.security)),
-                "hand" => v(serde_yml::to_value(&s.hand)),
-                "trash" => v(serde_yml::to_value(&s.trash)),
-                "field" => v(serde_yml::to_value(&s.field)),
-                _ => None,
-            }
-        }
-    }
-}
-
-/// Compare an authored value with a projected one.
-///
-/// Sequences compare as **multisets**: the projection sorts zones on
-/// construction because zone order is representation, not semantics, and an
-/// author who wrote a hand in a different order is making the same claim.
-/// Numbers compare numerically so `5` and `5.0` are not a divergence.
-fn values_equal(expected: &serde_yml::Value, actual: &serde_yml::Value) -> bool {
-    use serde_yml::Value;
-    match (expected, actual) {
-        (Value::Sequence(a), Value::Sequence(b)) => {
-            if a.len() != b.len() {
-                return false;
-            }
-            let mut a: Vec<String> = a.iter().map(render_value).collect();
-            let mut b: Vec<String> = b.iter().map(render_value).collect();
-            a.sort();
-            b.sort();
-            a == b
-        }
-        (Value::Number(a), Value::Number(b)) => match (a.as_f64(), b.as_f64()) {
-            (Some(x), Some(y)) => x == y,
-            _ => a == b,
-        },
-        _ => expected == actual,
-    }
-}
-
-fn render_value(v: &serde_yml::Value) -> String {
-    serde_yml::to_string(v)
-        .unwrap_or_else(|_| format!("{v:?}"))
-        .trim_end()
-        .replace('\n', " ")
-}
-
-// --- decks ------------------------------------------------------------------
-
-/// One named deck, main and eggs kept apart. `ordered_deck` flattens them for
-/// our engine (`Game::new_inner` re-splits by card kind), while `--emit-job`
-/// needs the boundary: a DCGO job's flat list is main-then-eggs by
-/// convention, and a job silently emitted with no eggs would run a different
-/// game than the scenario claims.
-#[derive(Debug, Clone)]
-struct DeckEntry {
-    main: Vec<String>,
-    eggs: Vec<String>,
-}
-
-/// Resolves a scenario's `rest:` name to a card list.
-///
-/// Two sources, both already in the repo: the harness deck-pool JSON that
-/// `submit --decks` consumes, and `data/starter_decks.json`. Nothing here
-/// invents a deck — an unknown name is an error naming what IS available,
-/// because a silently-substituted deck would change the line under test.
-struct DeckBook {
-    /// lowercased name -> deck entry.
-    by_name: BTreeMap<String, DeckEntry>,
-    source: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct StarterDeckFile {
-    starter_decks: Vec<StarterDeck>,
-}
-
-#[derive(Debug, Deserialize)]
-struct StarterDeck {
-    #[serde(default)]
-    id: String,
-    #[serde(default)]
-    name: String,
-    #[serde(default)]
-    set: String,
-    #[serde(default)]
-    main_deck: Vec<String>,
-    #[serde(default)]
-    egg_deck: Vec<String>,
-}
-
-impl DeckBook {
-    /// Build the deck book as a UNION: the stock starter decks first, then any
-    /// `--decks` pool overlaid on top (the pool wins on a name collision).
-    ///
-    /// It used to be either/or -- supplying `--decks` returned early with ONLY
-    /// the pool -- which made a directory-wide run impossible. The committed
-    /// corpus spans both books: the EX12 scenarios name `toho-braves` /
-    /// `toho-analog` / `toho-matt` / `st19-arisa` from
-    /// `qa/dcgo-exams/EX12/toho_pool.json`, while `qa/dcgo-exams/ST1/*` name
-    /// `starter_st1_gaia_red` from `data/starter_decks.json`. Under either/or
-    /// there was no single invocation that could lower all 144 scenarios: the
-    /// pool book failed the 3 ST1 files and the default book failed the other
-    /// 141. Since `exam --scenario <dir>` is exactly how CI runs the corpus,
-    /// that alone kept the gate unusable even once its missing `--root` was
-    /// fixed.
-    fn load(decks: Option<&Path>, cards_json: &Path) -> Result<DeckBook, String> {
-        let mut by_name: BTreeMap<String, DeckEntry> = BTreeMap::new();
-        let mut sources: Vec<String> = Vec::new();
-
-        // Base layer: the stock starter decks. Required when no pool is given
-        // (there would otherwise be no book at all); best-effort when one is,
-        // so a pool-only checkout still works.
-        let starter_path = cards_json
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join("starter_decks.json");
-        match std::fs::read_to_string(&starter_path) {
-            Ok(text) => {
-                let file: StarterDeckFile = serde_json::from_str(&text)
-                    .map_err(|e| format!("parsing {}: {e}", starter_path.display()))?;
-                for d in file.starter_decks {
-                    let entry = DeckEntry {
-                        main: d.main_deck.clone(),
-                        eggs: d.egg_deck.clone(),
-                    };
-                    // Registered under every name a scenario might reasonably use.
-                    for alias in [&d.id, &d.name, &d.set] {
-                        if !alias.is_empty() {
-                            by_name.insert(alias.to_lowercase(), entry.clone());
-                        }
-                    }
-                }
-                sources.push(starter_path.display().to_string());
-            }
-            Err(e) if decks.is_none() => {
-                return Err(format!(
-                    "no --decks given and the default deck book {} is unreadable: {e}",
-                    starter_path.display()
-                ));
-            }
-            Err(_) => {}
-        }
-
-        // Overlay: the explicit pool, which wins on a name collision.
-        if let Some(path) = decks {
-            let pool = pool::load_pool(path)?;
-            for d in pool.decks {
-                by_name.insert(
-                    d.name.to_lowercase(),
-                    DeckEntry {
-                        main: d.cards.clone(),
-                        eggs: d.eggs.clone(),
-                    },
-                );
-            }
-            sources.push(path.display().to_string());
-        }
-
-        Ok(DeckBook {
-            by_name,
-            source: sources.join(" + "),
-        })
-    }
-
-    fn resolve(&self, rest: &str) -> Result<&DeckEntry, String> {
-        self.by_name.get(&rest.to_lowercase()).ok_or_else(|| {
-            format!(
-                "unknown deck `{rest}` (from the scenario's `rest:`); {} knows: {}",
-                self.source,
-                self.by_name.keys().cloned().collect::<Vec<_>>().join(", ")
-            )
-        })
-    }
-}
-
-/// Build one seat's ordered deck: the named list, with the scenario's `stack`
-/// moved to the top.
-///
-/// `Player::draw` **pops the end** of the list, so the top of the deck is the
-/// LAST element. The stack is therefore appended in reverse, which makes
-/// `stack[0]` the first card drawn — the order an author reads it in.
-fn ordered_deck(
-    seat: &dcgo_harness::exam::scenario::ScenarioSeat,
-    book: &DeckBook,
-) -> Result<Vec<String>, String> {
-    let entry = book.resolve(&seat.rest)?;
-    let mut remainder = entry.main.clone();
-    remainder.extend(entry.eggs.iter().cloned());
-    for id in &seat.stack {
-        match remainder.iter().position(|c| c == id) {
-            Some(i) => {
-                remainder.remove(i);
-            }
-            None => {
-                return Err(format!(
-                    "stacked card {id} is not in deck `{}` -- stacking it would \
-                     silently change the deck list the scenario claims to use",
-                    seat.rest
-                ))
-            }
-        }
-    }
-    remainder.extend(seat.stack.iter().rev().cloned());
-    Ok(remainder)
-}
+// `check_assertions`, `DeckEntry`/`DeckBook`/`ordered_deck` moved to
+// `dcgo_harness::exam` (2026-08-28, MCP task 6) so the CLI and the MCP's
+// `run_scenario` / `exam_probe` share one definition of both -- see
+// `exam::assertions` and `exam::deckbook` for the code and the rationale.
+use dcgo_harness::exam::{check_assertions, DeckBook, DeckEntry, ordered_deck};
 
 // --- scripted-job emission (`--emit-job`) -----------------------------------
 
@@ -2212,5 +2036,90 @@ steps:
         assert_eq!(v["inputs"][2]["select_has_bool"], true);
         assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
         assert!(v["inputs"][2].get("select_cancel").is_none());
+    }
+}
+
+#[cfg(test)]
+mod migrate_verdicts_guard_tests {
+    use super::*;
+
+    #[test]
+    fn missing_destination_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_missing");
+        let _ = std::fs::remove_dir_all(&tmp);
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn empty_destination_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_empty");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn destination_holding_a_json_file_is_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_populated");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(tmp.join("EX12-035.json"), "{}").unwrap();
+        assert!(migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn destination_holding_only_non_json_files_is_not_already_migrated() {
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_non_json");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(tmp.join("README.md"), "notes").unwrap();
+        assert!(!migrate_verdicts_destination_already_populated(&tmp).unwrap());
+    }
+
+    #[test]
+    fn migrate_verdicts_refuses_when_destination_is_already_populated() {
+        // End-to-end: a recovered copy of the old blob, re-migrated against a
+        // `--to` that already has per-card files (added since the real
+        // migration ran), must be refused rather than pruned.
+        let tmp = std::env::temp_dir().join("migrate_verdicts_guard_end_to_end");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        let mut blob = dcgo_harness::exam::verdict::VerdictStore::default();
+        blob.record(dcgo_harness::exam::verdict::ClauseVerdict {
+            clause_id: "EX12-035#effect#0".to_string(),
+            card_id: "EX12-035".to_string(),
+            verdict: dcgo_harness::exam::verdict::Verdict::Confirmed,
+            label: String::new(),
+            text_sha256: "sha-ex12-035".to_string(),
+            scenario_path: None,
+            reason: None,
+            dcgo_build: None,
+            job_id: None,
+            recorded_at: "2026-01-01T00:00:00Z".to_string(),
+        });
+        let from = tmp.join("dcgo_exam_verdicts.json");
+        blob.save(&from).unwrap();
+
+        // The live ledger has grown a card since the real migration ran.
+        let to = tmp.join("exam-verdicts");
+        std::fs::create_dir_all(&to).unwrap();
+        std::fs::write(to.join("BT8-084.json"), "{}").unwrap();
+
+        let args = Args {
+            root: None,
+            command: Command::MigrateVerdicts {
+                from: from.clone(),
+                to: to.clone(),
+            },
+        };
+        let err = run(&args).expect_err("must refuse a populated destination");
+        assert!(err.contains("already contains"), "{err}");
+        assert!(err.contains(&to.display().to_string()), "{err}");
+
+        // Refused before ever touching save_dir: the pre-existing file
+        // survives untouched.
+        assert!(to.join("BT8-084.json").exists());
+        assert!(!to.join("EX12-035.json").exists());
     }
 }

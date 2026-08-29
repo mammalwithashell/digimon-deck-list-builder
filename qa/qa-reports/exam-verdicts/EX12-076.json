@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-26T16:20:31.932881400+00:00",
+  "clauses": {
+    "EX12-076#effect#0": {
+      "clause_id": "EX12-076#effect#0",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "0607df73a20b8899abe82f76ee9ac09f0d66cb52e60b9f2ad0ebf85ef0da5276",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect0.yaml",
+      "recorded_at": "2026-08-26T16:20:31.932881400+00:00"
+    },
+    "EX12-076#effect#1": {
+      "clause_id": "EX12-076#effect#1",
+      "card_id": "EX12-076",
+      "verdict": "unreachable",
+      "label": "effect_description_eng",
+      "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
+      "reason": "MEASURED 2026-08-25 against DCGO scripted-v12 (dcgo_commit 4db6ee409). DCGO aborted: \"prompt mismatch: step 23 expected prompt 'SelectPermanentEffect' but DCGO asked 'MultipleSkills'\". DCGO raises a simultaneous-trigger stack where we go straight to a target prompt -- i.e. the two engines disagree about how many effects triggered at that point, not about how to answer one. Distinct from the optional-accept family. (Supersedes the 'structurally unmeasurable with the current line vocabulary' recon note, which was never measured.) The line lowers CLEAN sim-side (the corpus is 144/144 green), so this is not an authoring error our own engine can see -- it is a real prompt-SHAPE disagreement between the engines, which is exactly what sim-only cannot catch. Job outcome was `failed` (DCGO aborted mid-line), so no sidecar exists and nothing could be diffed: this stays `unreachable`, NOT `diverged` -- `diverged` requires both engines to have run the line end-to-end and disagreed about STATE.",
+      "dcgo_build": "scripted-v7 f6f726088",
+      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-076#effect#2": {
+      "clause_id": "EX12-076#effect#2",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect2.yaml",
+      "recorded_at": "2026-08-24T19:46:30.887808900+00:00"
+    },
+    "EX12-076#effect#3": {
+      "clause_id": "EX12-076#effect#3",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "761d70381bc91f1b0f5383a3158e5ae513698307b7928492906d94f7650609a3",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect3.yaml",
+      "recorded_at": "2026-08-24T17:23:54.349189+00:00"
+    },
+    "EX12-076#effect#4": {
+      "clause_id": "EX12-076#effect#4",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "b4f8ae728b642deae7d7c907759f090ecdf11847e11c12461d6b564915b11d41",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect4.yaml",
+      "recorded_at": "2026-08-24T19:51:05.566771700+00:00"
+    },
+    "EX12-076#effect#5": {
+      "clause_id": "EX12-076#effect#5",
+      "card_id": "EX12-076",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "51c3a09b0f76e0767bdd01be2147fdb7ce1aacc5a2cecaa927ce195928925455",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-076-effect5.yaml",
+      "recorded_at": "2026-08-25T00:35:03.432117+00:00"
+    }
+  }
+}

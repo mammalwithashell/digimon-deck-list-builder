@@ -42,6 +42,7 @@
 | [qa/dsl-vocab-gaps.md](../qa/dsl-vocab-gaps.md) | DSL vocabulary and lowering gaps surfaced by Rust archetype assessments and batch card implementation |
 | [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) | DCGO ↔ Rust per-keyword behavioral parity tracker — every printed keyword cross-referenced against the C# source of truth |
 | [DCGO_BUILD.md](DCGO_BUILD.md) | Building the modded DCGO client from source — Unity 2021.3.45f2 setup, asset-bundle acquisition, submodule pinning, bot-match smoke test |
+| [runbooks/oracle-node.md](runbooks/oracle-node.md) | Provisioning a DCGO "oracle node" — a machine that runs a prebuilt player (no Unity licence needed) against the job queue; the ~550 MB payload recipe (`scripts/build-oracle-node.sh`), provisioning, `node up`/`watch`/`down`, the action-space invalidation rule, headless/Photon platform findings, troubleshooting, and the cost case for keeping nodes warm |
 | [DCGO_RECORDING_SCHEMA.md](DCGO_RECORDING_SCHEMA.md) | JSONL recording format produced by the DCGO mod and consumed by `dcgo-replay` — game_start / action / encoder_failure / reveal / game_end row shapes, opaque-mode `opp_decklist_composition`, schema versioning |
 | [DCGO_EXAM.md](DCGO_EXAM.md) | DCGO card-clause exam — scripted scenarios (`qa/dcgo-exams/<SET>/<CARD-ID>.yaml`) that make DCGO answer "what does it do HERE" per printed clause; scenario format, the five verdict classes (`confirmed`/`diverged`/`unreachable`/`unavailable`/`unmeasured`, denominator always printed), the sim-only PR gate vs the local oracle pass, and the known gaps |
 | [RULES_CONTEXT.md](RULES_CONTEXT.md) | Official Digimon TCG rules reference |
@@ -56,3 +57,12 @@ Related top-level docs:
 Related agent workflows:
 - `.codex/skills/assess-rust-engine-archetype/` — Codex read-only DSL readiness assessment for archetypes, decks, card groups, or card lists
 - `.claude/skills/assess-archetype-rust/` — legacy Claude gap-filing audit workflow that appends to `RUST_ENGINE_GAPS.md` and emits `.claude/plans/rust-engine-gaps-*.md`
+
+Archetype campaign fleet — the design that turned the DCGO card-clause exam
+(above) into a per-archetype dispatchable job (`/archetype-campaign`), and the
+four plans that implemented it, in build order:
+- `docs/superpowers/specs/2026-08-27-archetype-campaign-fleet-design.md` — the design: fleet-safe ledger, MCP surface, oracle node bootstrap, `/archetype-campaign` skill
+- `docs/superpowers/plans/2026-08-27-exam-ledger-fleet-safety.md` — plan 1: per-card verdict files, append-only attempt log, advisory claims, generated index
+- `docs/superpowers/plans/2026-08-27-exam-mcp-surface.md` — plan 2: the ten `dcgo-harness mcp` tools (`exam_status` … `node_health`)
+- `docs/superpowers/plans/2026-08-27-oracle-node-bootstrap.md` — plan 3: the ~544 MB payload recipe, `node up`/`down`/`status`, preflight
+- `docs/superpowers/plans/2026-08-27-archetype-campaign-skill.md` — plan 4: the `/archetype-campaign` skill itself

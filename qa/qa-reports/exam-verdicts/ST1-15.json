@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-23T22:14:49.849919200+00:00",
+  "clauses": {
+    "ST1-15#effect#0": {
+      "clause_id": "ST1-15#effect#0",
+      "card_id": "ST1-15",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "45873d5865b9972ea303c699455434309b9480e1d449bc0ee3f29a5a903dbc21",
+      "scenario_path": "qa/dcgo-exams/ST1/ST1-15-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:49.849919200+00:00"
+    },
+    "ST1-15#effect#1": {
+      "clause_id": "ST1-15#effect#1",
+      "card_id": "ST1-15",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "d6627b6f7acc8431f74514b83fc5c9f6f054e8cfdf034ec33d7d78d2773e0cfe",
+      "scenario_path": "qa/dcgo-exams/EX12/ST1-15-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:39.559693700+00:00"
+    }
+  }
+}

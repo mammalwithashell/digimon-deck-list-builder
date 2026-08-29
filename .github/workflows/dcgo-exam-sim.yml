@@ -33,7 +33,7 @@ name: DCGO Exam (sim-only)
 #      recorded oracle state", never "our engine matches DCGO". Do not describe
 #      this gate as if it could discover a divergence, and never read a green
 #      run as a per-card pass: verdicts live in
-#      qa/qa-reports/dcgo_exam_verdicts.json and always print the full
+#      qa/qa-reports/exam-verdicts/ and always print the full
 #      denominator (confirmed / diverged / unreachable / unavailable /
 #      unmeasured).
 #

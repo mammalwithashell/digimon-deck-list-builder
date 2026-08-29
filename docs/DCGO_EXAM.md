@@ -659,7 +659,7 @@ derivation back into a reading; the lead stays labelled `LEAD`.
 
 ## The five verdict classes
 
-`qa/qa-reports/dcgo_exam_verdicts.json`, one row per `(card, clause)`.
+`qa/qa-reports/exam-verdicts/`, one row per `(card, clause)`.
 
 | Verdict | Meaning |
 |---|---|
@@ -732,6 +732,36 @@ DCGO is source-priority #2, below `general_rule.pdf`. A drafted test encodes
 **strong evidence, not truth.** An auto-generated test asserting a behavior
 nobody read would launder a DCGO quirk into a permanent guard, which under the
 no-approximations policy is worse than no test.
+
+## The ledger (fleet layout)
+
+Three merged write-targets plus a generated rollup, each shaped by how it merges:
+
+| Path | What | Merge |
+|---|---|---|
+| `qa/qa-reports/exam-verdicts/<CARD-ID>.json` | Current per-clause verdicts | Disjoint writers touch disjoint files |
+| `qa/qa-reports/exam-log.jsonl` | Append-only attempt history | `merge=union` (see `.gitattributes`) |
+| `qa/qa-reports/exam-claims/<CARD-ID>.claim` | Advisory leases with expiry | One file per card |
+| `qa/qa-reports/exam-index.md` | Generated rollup, sorted by `unmeasured` descending | Regenerated, never hand-edited |
+
+**Partially written.** `exam-claims/` leases are live: the `claim`/`release`
+MCP tools call `ledger::{claim_cards, release_cards}` directly (see "The agent
+surface (MCP)" below). `exam-log.jsonl` and `exam-index.md` are still produced
+only by the campaign driver, which has not landed — no `dcgo-harness`
+subcommand or MCP tool writes either of them yet. Until the driver lands, do
+not go looking for those two on disk; the advice below about them describes
+the design, not the current state.
+
+**Claims are advisory.** Two nodes pushing in the same instant can both claim a
+card; git is the only coordinator. That is an accepted trade rather than an
+oversight — a duplicate costs one card's authoring and is visible at merge,
+where a lease server would cost standing infrastructure. Claims expire so a
+crashed node cannot park a card forever.
+
+**The log answers what the store cannot.** `unmeasured` cannot distinguish
+"nobody looked" from "three nodes each burned an afternoon on the same dead
+end". Check the log before re-attempting a clause that has been `unmeasured`
+for a while.
 
 ## The two run modes, and the CI split
 
@@ -913,6 +943,124 @@ list in `docs/DCGO_HARNESS.md`.
   `ActionSpace.cs` in the base-repo DCGO (rule 27). Lowered action IDs are the
   wire between the two engines; drift there silently re-points every step.
 
+## The agent surface (MCP)
+
+`dcgo-harness mcp` serves a JSON-RPC 2.0 MCP server over stdio (`code/tools/dcgo-harness/src/mcp/`).
+Every tool is a thin projection over machinery documented above — the verdict
+store, the ledger, `validate_yaml`, the committed rules derivations — so each
+stays unit-testable with no MCP client in the loop. Payloads are kept small
+deliberately: orchestration (an agent shelling out to the CLI and re-reading
+large outputs) was the largest single line item of the first campaign.
+
+| Tool | What it answers |
+|---|---|
+| `exam_status` | Per-clause verdict summary for a card (or an explicit card list), over the full printed denominator (a `clause_coverage extract` output); always all five classes, so a card is never "passed". |
+| `exam_plan` | The outstanding (non-confirmed, non-unavailable) clauses for a card (or an explicit card list) — what still needs work, including a clause with no stored verdict at all. |
+| `exam_validate` | Lints a draft scenario YAML before running it — unknown clause ids, bad verbs/prompts, missing stack cards. |
+| `exam_authoring_guide` | The scenario-composition contract by topic (`format`, `steps`, `prompts`, `decks`, `assert`, `verdicts`). |
+| `exam_keyword_brief` | A keyword's optional-vs-mandatory kind, its rule section, and the exact `general_rule.pdf` pages. |
+| `run_scenario` | Runs one committed scenario file and returns the structured diff report. |
+| `exam_probe` | Tries a line without committing a scenario file — see the `sim_only` note below. |
+| `claim` | Takes advisory leases on cards so another node does not duplicate the work. |
+| `release` | Releases this job's claims; never removes another job's claim. |
+| `node_health` | Preflight — every check (build present, action-space hash, …) with a status and, on `fail`, a remedy; never errors, so a node that cannot answer still produces a readable report. |
+
+> `run_scenario` and `exam_probe` with `sim_only: true` **cannot find a new
+> divergence**. They re-check what an oracle previously confirmed. Only an
+> oracle pass moves a clause to `confirmed`.
+
+**`exam_probe`'s `sim_only: false` mode is not implemented yet.** It returns a
+clear error until an oracle node can be queued — there is no wiring today from
+a probe call to a live DCGO/Unity job. This is tracked as
+`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE` in `docs/RUST_ENGINE_GAPS.md`. To get a
+real oracle answer today, submit the scenario through the phase-1 harness
+queue (`--emit-job`, see "Quick start" above) and diff against the sidecar it
+writes, rather than expecting `exam_probe` to do it.
+
+**`claim`/`release` are per card, not per archetype.** Archetype card pools
+genuinely overlap — one archetype's cards can be a strict subset of another's
+— so a lease keyed to an archetype would either under- or over-claim. They are
+also advisory on purpose: git is the only coordinator, so two nodes pushing in
+the same instant can both claim. That is an accepted trade, not a defect —
+a duplicate costs one card's authoring and is visible at merge, where a lease
+server would cost standing infrastructure. See `exam::ledger` and "The ledger
+(fleet layout)" above.
+
+Registration (`.mcp.json`):
+
+```json
+    "dcgo-exam": {
+      "type": "stdio",
+      "command": "cargo",
+      "args": ["run", "-q", "-p", "dcgo-harness", "--", "mcp"]
+    }
+```
+
+## Running a campaign
+
+Everything above answers "is this one card's clause confirmed". `/archetype-campaign`
+is the dispatch unit built on top of it: point it at one archetype and it
+resolves the card pool, claims it, drives the missing cards through
+`/batch-implement-cards-rust-dsl`, drives the outstanding clauses through the
+exact exam loop documented above, triages divergences, and releases its claims
+with a ledger entry — so a second node asking for the same archetype sees the
+work already done instead of repeating it. `qa/qa-reports/exam-index.md`
+(regenerated rollup, sorted by `unmeasured` descending) is what to dispatch
+next; don't pick an archetype by hand when that ranking exists.
+
+**One-line dispatch:** `/archetype-campaign "<Archetype Name>"`. Under the
+hood, Phase 1 runs `PYTHONPATH=code python -m tools.clause_coverage.campaign
+--archetype "<NAME>" --json`, which binds the archetype to its pool and splits
+the work three ways:
+
+| Bucket | What it means | Toho Braves | Hunters |
+|---|---|---|---|
+| `implement` | Cards with no YAML spec yet — cannot be examined until they exist | 0 | 42 |
+| `exam` | Outstanding clauses, core-first | 56 | 88 |
+| `skipped` | Already `confirmed` or `unavailable`, each with a reason — never silently dropped | 110 | 3 |
+
+(Toho Braves: 42 cards total, core 18, present in ≥32 of 45 decklists. Hunters:
+65 cards total, core 16, present in ≥19 of 27 decklists.)
+
+**The finish line is the core, adjudicated — not the pool, confirmed.** The
+`core` a campaign is judged against is a fraction of decklists, not a raw card
+count picked by feel:
+
+> Every core clause is `confirmed`, or carries a named, *measured* reason — and
+> zero untriaged `diverged`. Pool coverage (the support-card and 1-of tail) is
+> reported, never gated.
+
+Toho Braves is the worked example: core landed at **69/74 (93%)** clauses
+adjudicated, each of the remaining five carrying a measured cause (an
+`unreachable` background-process card, a `generic_int` row with no candidate
+list, …) rather than a blank `unmeasured`. That is a **finished** campaign —
+grinding toward 74/74 on the strength of $8+/clause oracle time is not the
+goal.
+
+**Fix gate.** A `diverged` clause may be fixed autonomously only with all
+three: a citation to the `general_rule.pdf` section or DCGO C# it rests on, a
+test that fails before the fix and passes after, and `cards_behavioral` green.
+Card/YAML fixes land under that gate directly. Engine fixes proceed under the
+same gate but land on their own branch, flagged for human review, not merged
+inline. Anything that can't be justified by citation is a **logged finding,
+not a fix** — see "Known gaps" above.
+
+**The oracle route today.** `exam_probe(sim_only: false)` is not wired to a
+live job yet (`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`, "The agent surface (MCP)"
+above) — a campaign still gets its oracle answers by committing the scenario,
+submitting it through the phase-1 harness queue, and running `/dcgo-exam`, the
+same route "Quick start" describes.
+
+A campaign needs a warm oracle node, preflighted with `node_health` before any
+authoring — never author "in the meantime" on a NO-GO. Provisioning, the
+payload recipe, and the headless-play / Photon-concurrency platform findings
+the fleet design rests on: `docs/runbooks/oracle-node.md` (this doc doesn't
+restate those numbers so there is one copy of the finding).
+
+Full non-negotiables and the phase-by-phase driver live in the skill itself:
+`.claude/skills/archetype-campaign/SKILL.md`. Design rationale:
+`docs/superpowers/specs/2026-08-27-archetype-campaign-fleet-design.md`.
+
 ## See also
 
 - `docs/DCGO_HARNESS.md` — the phase-1 job harness this runs on top of
@@ -922,4 +1070,4 @@ list in `docs/DCGO_HARNESS.md`.
 - `code/tools/clause_coverage/` — the clause denominator and `exam_binding.py`
 - `code/tools/dcgo-harness/src/exam/` — scenario, lowering, projection, differ,
   verdict store, backfill, drafter
-- `qa/qa-reports/dcgo_exam_verdicts.json` — the verdict store itself
+- `qa/qa-reports/exam-verdicts/` — the verdict store itself

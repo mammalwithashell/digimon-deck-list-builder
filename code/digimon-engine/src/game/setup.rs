@@ -246,6 +246,7 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             replacement_commit_fired: false,
+            replacement_commit_key: None,
             effect_source_player: None,
             effect_source_card: None,
             effect_source_permanent: None,

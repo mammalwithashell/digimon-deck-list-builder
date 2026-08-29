@@ -11,3 +11,8 @@ Caddyfile text eol=lf
 # Force LF on every platform so the generator's output matches the on-disk
 # tree on Windows checkouts.
 data/card_meta/** text eol=lf
+
+# The exam attempt log is append-only history from parallel oracle nodes.
+# Union merge concatenates both sides instead of conflicting; the log is
+# one JSON object per line precisely so this is correct.
+qa/qa-reports/exam-log.jsonl merge=union

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-24T17:12:45.214652300+00:00",
+  "clauses": {
+    "EX12-004#inherited#0": {
+      "clause_id": "EX12-004#inherited#0",
+      "card_id": "EX12-004",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "2f8294e6613ee827f4e522a1548d33c057083ea556c682119f8f67cd9f673ae8",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-004-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:11:53.853981800+00:00"
+    }
+  }
+}

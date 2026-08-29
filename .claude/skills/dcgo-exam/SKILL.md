@@ -1,6 +1,6 @@
 ---
 name: dcgo-exam
-description: Cross-examine an implemented Digimon card against the DCGO oracle, clause by clause. Binds the card's printed text to the `clause_coverage` denominator, authors/runs scripted scenarios in both engines, and reports a per-clause verdict — `confirmed | diverged | unreachable | unavailable | unmeasured` — with the full denominator ALWAYS printed. Triggers on "exam <CARD>", "cross-examine <card> against DCGO", "which clauses of <card> are actually verified", authoring or running scenarios under `qa/dcgo-exams/`, reading `qa/qa-reports/dcgo_exam_verdicts.json`, or triaging an exam divergence. Runs AFTER a card is implemented and its per-card tests are green. Does NOT fix the engine.
+description: Cross-examine an implemented Digimon card against the DCGO oracle, clause by clause. Binds the card's printed text to the `clause_coverage` denominator, authors/runs scripted scenarios in both engines, and reports a per-clause verdict — `confirmed | diverged | unreachable | unavailable | unmeasured` — with the full denominator ALWAYS printed. Triggers on "exam <CARD>", "cross-examine <card> against DCGO", "which clauses of <card> are actually verified", authoring or running scenarios under `qa/dcgo-exams/`, reading `qa/qa-reports/exam-verdicts/`, or triaging an exam divergence. Runs AFTER a card is implemented and its per-card tests are green. Does NOT fix the engine.
 argument-hint: <CARD_ID | SET | --suite> [--sim-only]
 ---
 
@@ -57,7 +57,7 @@ triaged findings. Fixes stay a decision — **ask before fixing**.
 | `unavailable` | DCGO has no script for this card, so no oracle exists |
 | `unmeasured` | No scenario authored yet — **the default, and the point of the table** |
 
-Store: `qa/qa-reports/dcgo_exam_verdicts.json`, one row per `(card, clause)`.
+Store: `qa/qa-reports/exam-verdicts/`, one row per `(card, clause)`.
 Clause identity is **not invented here** — it is `clause_coverage.models.Clause.id`,
 formatted `{card_id}#{zone}#{idx}` (e.g. `EX12-073#security#0`). A verdict also stores the
 clause `label` and a `text_sha256`; if the card's text drifts, the id re-points at a
@@ -169,9 +169,16 @@ gate as if it could catch a new divergence.
 Oracle runs go through the existing harness (`docs/DCGO_HARNESS.md`): `exam` submits jobs;
 `dcgo-harness up --build <dir>` / `watch` keep the player draining them.
 
-Agent surface, once registered: `dcgo-harness mcp` exposes `exam_status(card_id)` (the
-`VerdictSummary`, **always including `unmeasured`**), `run_scenario(path, sim_only)` (the
-`DiffReport`), and `exam_card(card_id)` (bind + run + per-clause verdicts).
+Agent surface, once registered: `dcgo-harness mcp` exposes ten tools — `exam_status`
+(the `VerdictSummary` for a card, **always including `unmeasured`**), `exam_plan`
+(outstanding clauses for a card), `exam_validate` (lints a draft scenario before
+running it), `exam_authoring_guide` (the scenario-composition contract by topic),
+`exam_keyword_brief` (a keyword's optional-vs-mandatory kind + rule pages),
+`run_scenario` (runs a committed scenario, returns the `DiffReport`), `exam_probe`
+(tries a line without committing a file — `sim_only: false` is not wired to a live
+job yet), `claim` / `release` (advisory per-card leases), and `node_health`
+(preflight before authoring). See `docs/DCGO_EXAM.md`'s "The agent surface (MCP)"
+section for the full table.
 
 ## Phase 3 — Report the full denominator
 
