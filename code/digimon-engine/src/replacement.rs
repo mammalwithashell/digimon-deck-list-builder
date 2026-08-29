@@ -137,6 +137,10 @@ impl<'g> ReplacementContext<'g> {
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct ParkedReplacement {
+    /// The window this event parked on, stamped by `try_replace_impl` on the
+    /// way out (it has `timing` in scope; the park site, several frames
+    /// deeper, does not). Replayed as `Game::replacement_commit_key`.
+    pub timing: Option<EffectTiming>,
     pub subject: ReplacementSubject,
     pub cause: ReplacementCause,
     /// Observer-facing deletion-cause override (e.g. `Overclock`) captured
@@ -158,6 +162,10 @@ pub struct ParkedReplacement {
 
 #[derive(Debug, Clone)]
 pub struct OptionalReplacementState {
+    /// The window this optional replacement was offered for. Replayed as
+    /// `Game::replacement_commit_key` when the accepted-but-non-replacing
+    /// outcome is committed, so that commit cannot re-offer it.
+    pub(crate) timing: EffectTiming,
     pub(crate) candidate_kind: CandidateKind,
     pub(crate) source_card: CardHandle,
     pub(crate) source_permanent: Option<PermanentHandle>,
@@ -320,7 +328,12 @@ pub(crate) fn try_replace_impl(
     let blocked = if game.in_replacement_commit && game.replacement_commit_fired {
         game.replacement_fired.iter().any(|(_t, s)| *s == subject)
     } else {
+        // `replacement_fired` is the normal record, but the event's own later
+        // work can re-enter at depth 0 and wipe it. The commit key does not
+        // depend on that surviving: the window a commit is currently
+        // committing is never re-offered.
         game.replacement_fired.contains(&key)
+            || (game.in_replacement_commit && game.replacement_commit_key == Some(key))
     };
     if blocked {
         return ReplacementOutcome::None;
@@ -330,6 +343,15 @@ pub(crate) fn try_replace_impl(
     game.replacement_depth = game.replacement_depth.saturating_add(1);
 
     let outcome = try_replace_inner(game, timing, subject, cause, original_destination);
+
+    // If that call PARKED (an optional replacement installed its selection),
+    // record which window it parked on: the park site is several frames deeper
+    // and has no `timing`, this frame does.
+    if let Some(parked) = game.parked_replacement.as_mut() {
+        if parked.timing.is_none() {
+            parked.timing = Some(timing);
+        }
+    }
 
     game.replacement_depth = game.replacement_depth.saturating_sub(1);
     outcome
@@ -391,6 +413,7 @@ fn try_replace_inner(
         } else {
             install_optional_selection(
                 game,
+                timing,
                 &cand,
                 subject_controller,
                 subject,
@@ -1065,6 +1088,7 @@ fn run_effect_inner(
         // it so OnDeletion observers see the same refined cause.
         let event_cause_override = game.current_deletion_event_cause_override;
         game.parked_replacement = Some(ParkedReplacement {
+            timing: None,
             subject,
             cause,
             event_cause_override,
@@ -1138,6 +1162,7 @@ fn record_source_permanent_activation(
 /// `game.replacement_pending_outcome`.
 fn install_optional_selection(
     game: &mut crate::game::Game,
+    timing: EffectTiming,
     cand: &Candidate,
     subject_controller: PlayerId,
     subject: ReplacementSubject,
@@ -1210,6 +1235,7 @@ fn install_optional_selection(
     game.pending_selection_resume = Some(crate::resume::ResumeStack {
         frames: vec![crate::resume::ResumeFrame::OptionalReplacement(
             OptionalReplacementState {
+                timing,
                 candidate_kind,
                 source_card,
                 source_permanent,
@@ -1238,16 +1264,22 @@ fn install_optional_selection(
 /// comment there — FIRED commits keep the broadened subject-wide block;
 /// DECLINED / no-op commits block exact `(timing, subject)` only so the
 /// remaining Would* windows of the same event still dispatch).
-fn run_commit_with_flag<F>(game: &mut crate::game::Game, fired: bool, body: F)
-where
+fn run_commit_with_flag<F>(
+    game: &mut crate::game::Game,
+    fired: bool,
+    key: Option<(EffectTiming, ReplacementSubject)>,
+    body: F,
+) where
     F: FnOnce(&mut crate::game::Game),
 {
     use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 
     let prior = game.in_replacement_commit;
     let prior_fired = game.replacement_commit_fired;
+    let prior_key = game.replacement_commit_key;
     game.in_replacement_commit = true;
     game.replacement_commit_fired = fired;
+    game.replacement_commit_key = key;
 
     // `Game` isn't `UnwindSafe` in general (it holds mutable state, interior
     // mutability via closures, etc.), but for the purposes of restoring these
@@ -1258,6 +1290,7 @@ where
 
     game.in_replacement_commit = prior;
     game.replacement_commit_fired = prior_fired;
+    game.replacement_commit_key = prior_key;
 
     if let Err(payload) = result {
         resume_unwind(payload);
@@ -1291,7 +1324,8 @@ pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Ga
     );
 
     let fired = parked.outcome != ReplacementOutcome::None;
-    run_commit_with_flag(game, fired, move |game| {
+    let commit_key = parked.timing.map(|tm| (tm, parked.subject));
+    run_commit_with_flag(game, fired, commit_key, move |game| {
         commit_deferred_outcome(
             game,
             parked.subject,
@@ -1367,7 +1401,7 @@ fn make_accept_callback(
         // (a non-replacing rider like <Decode>, or a whiffed process) commits
         // in DECLINED mode — the event proceeds unchanged, so the remaining
         // Would* windows must still dispatch.
-        run_commit_with_flag(game, outcome != ReplacementOutcome::None, |game| {
+        run_commit_with_flag(game, outcome != ReplacementOutcome::None, None, |game| {
             commit_deferred_outcome(
                 game,
                 subject,
@@ -1402,7 +1436,7 @@ fn make_decline_callback(
         // of the same event must still dispatch during the commit.
         // `run_commit_with_flag` is panic-safe — if anything in the commit
         // body panics, the flag is restored before the unwind propagates.
-        run_commit_with_flag(game, false, |game| {
+        run_commit_with_flag(game, false, None, |game| {
             commit_deferred_outcome(
                 game,
                 subject,
@@ -1422,7 +1456,7 @@ pub(crate) fn run_optional_replacement_step(
 ) {
     if is_pass {
         // DECLINED mode — see `make_decline_callback`.
-        run_commit_with_flag(game, false, |game| {
+        run_commit_with_flag(game, false, None, |game| {
             commit_deferred_outcome(
                 game,
                 state.subject,
@@ -1462,7 +1496,9 @@ pub(crate) fn run_optional_replacement_step(
     game.replacement_pending_outcome = Some(outcome);
     // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —
     // see `make_accept_callback`.
-    run_commit_with_flag(game, outcome != ReplacementOutcome::None, |game| {
+    run_commit_with_flag(game, outcome != ReplacementOutcome::None,
+        // Accepted but non-replacing: this commit must not re-offer its own window.
+        Some((state.timing, state.subject)), |game| {
         commit_deferred_outcome(
             game,
             state.subject,
