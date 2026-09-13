@@ -10833,6 +10833,125 @@
         "E2"
       ],
       "notes": "All printed clauses green: [Start of Your Main Phase] optional clause gated on a [Three Musketeers]-trait Option in hand or trash; select_union_zone (cost: true, declinable) -> mandatory select_own_permanent over own non-token Digimon (DCGO !IsToken; Sparrowmon itself always qualifies) -> place_as_bottom_source -> Draw 1; does not fire on the opponent's main phase. Inherited <Retaliation>; std Purple Lv.2/0 + special TM-text Lv.2/0 alt-paths."
+    },
+    "BT7-056": {
+      "card_name": "Dorumon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "three-musketeers",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "A2",
+        "OnAddDigivolutionCards"
+      ],
+      "notes": "BLOCKED (engine): the inherited [Your Turn][OPT] 'when one of your effects places a digivolution card under this Digimon, gain 1 memory' needs the `OnAddDigivolutionCards` trigger timing (DCGO BT7_056.cs OnAddDigivolutionCards + CanTriggerOnAddDigivolutionCard; see docs/RUST_ENGINE_GAPS.md). The [On Play] reveal-3 / add 1 [X Antibody] + 1 [Kota Domoto] / bottom-the-rest body is expressible (BT18-007 shape) but the card is not authored without its inherited clause (no stubs). Shared with BT25-005 / EX7-005 / EX11-074 / BT7-005 / RB1-001 / BT8-005 / BT9-066."
+    },
+    "BT8-071": {
+      "card_name": "Psychemon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_071.rs",
+      "test_count": 8,
+      "patterns": [
+        "D6"
+      ],
+      "notes": "[All Turns] Players can't reduce play costs -> player-scoped flood_gate CannotReducePlayCost target_player any (ST13-08 idiom; DCGO CannotReduceCostClass, PlayerCondition = all, TargetPermanentsCondition = no permanents = play costs only). Tests: lock on both players, persists on opponent's turn, digivolve-cost lock untouched, lifts when the card leaves the field. Circle Purple Lv.2/0."
+    },
+    "BT6-060": {
+      "card_name": "Deputymon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_060.rs",
+      "test_count": 13,
+      "patterns": [
+        "A2",
+        "direction:into",
+        "ignore_requirements"
+      ],
+      "notes": "[On Play] reveal 4, two mandatory-if-present buckets (Digimon w/ [Three Musketeers] trait; Option with play cost exactly 7 via play_cost_lte+gte) -> hand, remainder TRASHED (per_selected + trash_from_reveal). [Your Turn] warp INTO a [Three Musketeers] Digimon from hand for 6 ignoring requirements -> alt_path direction: into + ignore_requirements + condition your_turn (ST20-10 idiom); tests prove the route via a Lv.5 with empty evo_costs, reject non-TM, reject on the opponent's turn. Circle Black Lv.3/2. Card image not in the local mirror; text from the official DB bundle."
+    },
+    "BT7-071": {
+      "card_name": "Loweemon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_071.rs",
+      "test_count": 8,
+      "patterns": [
+        "hybrid-tamer-digivolve",
+        "source_treated_as"
+      ],
+      "notes": "'You may digivolve this card from your hand onto one of your purple Tamers as if the Tamer is a level 3 purple Digimon' -> alt_path from { kind: tamer, color_is: purple } + source_treated_as: level_3_purple_digimon, cost 2 (the printed Purple Lv.3 circle cost; DCGO AddSelfDigivolutionRequirementStaticEffect cost 2). Tests: mask exposes the purple Tamer base, digivolve lands with the Tamer as bottom source for 2 (+ draw), red Tamer / opponent's Tamer / red Lv.3 rejected, standard circle intact. No printed effects."
+    },
+    "BT7-073": {
+      "card_name": "KaiserLeomon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_073.rs",
+      "test_count": 10,
+      "patterns": [
+        "hybrid-tamer-digivolve",
+        "source_treated_as",
+        "D1-keyword-grant-expiry"
+      ],
+      "notes": "Purple-Tamer route for 2 (source_treated_as, printed literal cost) + circles Lv.3/3 and Lv.4/1. [When Digivolving] mandatory, gated on self_digivolution_sources_trait_has Hybrid OR self_digivolution_sources_contain_name 'Koichi Kimura' (sources only, not the top card = DCGO DigivolutionCards) -> grant_keyword Retaliation expiry end_of_opponents_next_turn. Tests: Koichi Tamer / Hybrid Lv.4 (BT7-071 real fixture) / Hybrid Lv.3 grant; plain Tamer / plain Lv.4 don't; keyword present through the opponent's next turn and gone after it."
+    },
+    "BT17-070": {
+      "card_name": "Gulfmon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_070.rs",
+      "test_count": 14,
+      "patterns": [
+        "A6",
+        "E2",
+        "UnionZone",
+        "CountCappedMultiSelect"
+      ],
+      "notes": "[OP][WD] optional (outer_prompt = DCGO isOptional true) 'By placing 1 Lv.5 [Dark Masters]-in-text card from hand or trash as bottom source' (select_union_zone cost:true + place_as_bottom_source) -> mandatory delete of 1 opp Lv.<=5 Digimon (select_opponent_permanent gates itself on a target). [WA] optional 'By returning 7 cards from your opponent's trash to the bottom of the deck' (select_count_capped_multi of: opponent min 7 max 7 + return_trash_list_to_deck_bottom of: opponent -> the OPPONENT's deck bottom) -> unsuspend self; gated on >= 7 opp trash. Alt-paths: Purple Lv.5/3 + Lv.5 w/[Dark Masters] in text/3 (in_text_contains = whole-card scan). Tests cover hand/trash/both/none/decline/Lv.6-excluded/WD, and WA pay/decline/unpayable."
+    },
+    "BT24-081": {
+      "card_name": "Titamon + SkullBaluchimon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_081.rs",
+      "test_count": 15,
+      "patterns": [
+        "H1",
+        "H3",
+        "Execute",
+        "Assembly",
+        "F5",
+        "aggregate-mass-delete"
+      ],
+      "notes": "<Rush> <Piercing> <Execute> face-up grants; Assembly -6 [Titamon]x[SkullBaluchimon] (two name_is trash materials, stack_under; tests drive the full play for 14-6=8 with both under); [OP][WD][WA] optional 'By trashing 1 card in your hand' (select_hand optional+cost) -> for_each delete of ALL opp Digimon at the lowest level (level_matches_aggregate lowest_level; no selection), gated on >= 1 hand card; [On Deletion] 'You may play 1 [Titamon] (name_is) or 1 Lv.<=5 [Titan] Digimon from trash free' (optional clause + select_trash + play_from_trash_free; Lv.6 Titan / non-Titan excluded). Traits Shaman/Titan/TS + (Rule) Demon (card image + official DB; the card_overrides 'Olympos XII' entry is not on the printed type line). Circles Purple Lv.6/4 + Green Lv.6/4."
     }
   }
 }

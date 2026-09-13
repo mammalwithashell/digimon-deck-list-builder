@@ -1,0 +1,45 @@
+# BT8-071 Psychemon — Digimon, Lv.3, Purple, DP 3000, Cost 3. Traits: Reptile.
+# Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT8-071.md; card image
+# confirms):
+#   [All Turns] Players can't reduce play costs.
+#   Official Q&A: "This effect prevents costs from being reduced when play
+#   costs are to be paid. This effect affects both players."
+#
+# Digivolution: Purple Lv.2 / cost 0 (official DB circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Purple/BT8_071.cs
+#   EffectTiming.None → CannotReduceCostClass:
+#     PlayerCondition            = every player            → target_player: any
+#     TargetPermanentsCondition  = no target permanents    → PLAY costs only
+#                                                            (not digivolution)
+#     CardCondition              = cardSource.HasPlayCost
+#     CanUseCondition            = IsExistOnBattleArea(card)
+#
+# Identical printed text to ST13-08 Chikurimon — same `flood_gate` idiom:
+# a player-scoped `CannotReducePlayCost` lock on BOTH players while this
+# card is on the field (G-PLAYER-FLOOD-GATE-DSL).
+
+card: BT8-071
+name: Psychemon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 3000
+traits: [Reptile]
+attribute: Data
+
+alt_paths:
+  # Printed circle: Purple Lv.2 / cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    active_when: { all_turns: true }
+    modifier: CannotReducePlayCost
+    target_player: any
+    summary: "[All Turns] Players can't reduce play costs"

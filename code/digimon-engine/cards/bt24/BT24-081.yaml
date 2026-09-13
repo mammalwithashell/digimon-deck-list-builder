@@ -1,0 +1,149 @@
+# BT24-081 Titamon + SkullBaluchimon — Digimon, Lv.7, Purple/Green,
+# DP 14000, Cost 14. Traits: Shaman / Titan / TS (+ (Rule) Has [Demon] Type).
+# Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT24-081.md; card image
+# confirms):
+#   ＜Rush＞ ＜Piercing＞ ＜Execute＞
+#   [On Play] [When Digivolving] [When Attacking] By trashing 1 card in your
+#   hand, delete all of your opponent's Digimon with the lowest level.
+#   [On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card
+#   with the [Titan] trait from your trash without paying the cost.
+#   (Rule) Trait: Has [Demon] Type.
+#   Assembly -6: [Titamon]×[SkullBaluchimon]
+#
+# Digivolution: Purple Lv.6 / cost 4; Green Lv.6 / cost 4 (official DB circles;
+# both rows in data/card_overrides.json).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_081.cs
+#   - ExecuteSelfEffect / PierceSelfEffect / RushSelfStaticEffect (face-up).
+#   - AddAssemblyConditionClass: elements [Titamon]×1 + [SkullBaluchimon]×1
+#     (own Digimon cards, EqualsCardName), reduceCost: 6. Rules §7-3:
+#     Assembly materials come from the TRASH and go under the played card.
+#   - Shared [OP]/[WD]/[WA] (three ActivateClasses, same body):
+#     SetUpActivateClass(..., -1, false, ...); CanActivateCondition: ≥1 card
+#     in hand. Body: SelectHandEffect Mode.Discard max 1, canNoSelect: TRUE;
+#     if a card was discarded and a min-level opponent Digimon exists →
+#     DestroyPermanentsClass over EVERY opponent Digimon with
+#     CardEffectCommons.IsMinLevel (no selection).
+#   - [On Deletion]: SetUpActivateClass(..., -1, false, ...);
+#     CanActivateCondition: CanActivateOnDeletion && an eligible own trash
+#     card (IsDigimon && (EqualsCardName "Titamon" || (EqualsTraits "Titan" &&
+#     Level <= 5)) && CanPlayAsNewPermanent(payCost: false));
+#     SelectCardEffect over own trash, canNoSelect: TRUE →
+#     PlayPermanentCards(payCost: false, activateETB: true).
+#
+# Source-priority notes:
+#   - "By trashing 1 card in your hand" is an optional processing condition
+#     (§15-7): `optional: true` with the hand pick as a declinable COST
+#     (`optional: true, cost: true`) — declining skips the delete (§15-7-2).
+#     DCGO's isOptional=false + canNoSelect=true is exactly one declinable
+#     prompt, so no separate outer confirm (the inner PASS is the decline).
+#   - "delete all ... with the lowest level": `for_each` over opponent
+#     battle-area Digimon matching the `lowest_level` aggregate (BT23-058 /
+#     BT25-093 idiom) — no selection, every tied Digimon goes.
+#   - [On Deletion] "You may play": optional clause whose first step is a
+#     mandatory trash pick → the lowering installs the outer accept/decline
+#     (BT19-065 idiom). `[Titamon]` = exact name (DCGO EqualsCardName).
+#   - (Rule) Trait: Has [Demon] Type → `Demon` in `traits` (the official DB
+#     type line prints Shaman/Titan/TS; the Rule grant adds Demon).
+
+card: BT24-081
+name: Titamon + SkullBaluchimon
+kind: digimon
+level: 7
+color: [purple, green]
+cost: 14
+dp: 14000
+traits: [Shaman, Titan, TS, Demon]
+attribute: Virus
+
+alt_paths:
+  # Printed circles: Purple Lv.6 / cost 4; Green Lv.6 / cost 4.
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 4
+
+  # ─── Assembly -6: [Titamon] × [SkullBaluchimon] (from trash, stacked under)
+  - kind: assembly
+    materials:
+      - { kind: digimon, name_is: "Titamon", zones: [trash], stack_under: true }
+      - { kind: digimon, name_is: "SkullBaluchimon", zones: [trash], stack_under: true }
+    cost: 6
+
+effects:
+  # ─── Printed keywords ────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Execute
+    summary: "<Execute>"
+
+  # ─── [OP][WD][WA] By trashing 1 hand card, delete all opp lowest-level Digimon
+  - when: [on_play, when_digivolving, when_attacking]
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete all of your opponent's Digimon with the lowest level"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_matches_aggregate:
+              selector: lowest_level
+              of: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+
+  # ─── [On Deletion] may play 1 [Titamon] or 1 Lv.≤5 [Titan] Digimon from trash free
+  - when: on_deletion
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          any_of:
+            - name_is: "Titamon"
+            - all_of:
+                - level_lte: 5
+                - trait_has: Titan
+        n: 1
+    summary: "[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: "Titamon"
+                  - all_of:
+                      - level_lte: 5
+                      - trait_has: Titan
+          prompt: "Play 1 [Titamon] or 1 level 5 or lower [Titan] Digimon card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive }

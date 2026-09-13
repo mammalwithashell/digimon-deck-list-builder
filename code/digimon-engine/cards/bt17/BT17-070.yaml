@@ -1,0 +1,143 @@
+# BT17-070 Gulfmon — Digimon, Lv.6, Purple, DP 11000, Cost 12.
+# Traits: Dark Animal. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT17-070.md; card image
+# confirms):
+#   [Digivolve] Lv.5 w/[Dark Masters] in text: Cost 3
+#   [On Play] [When Digivolving] By placing 1 level 5 card with [Dark Masters]
+#   in its text from your hand or trash as this Digimon's bottom digivolution
+#   card, delete 1 of your opponent's level 5 or lower Digimon.
+#   [When Attacking] By returning 7 cards from your opponent's trash to the
+#   bottom of the deck, unsuspend this Digimon.
+#
+# Digivolution: Purple Lv.5 / cost 3 (official DB circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/Purple/BT17_070.cs
+#   - Alt digivolve: AddSelfDigivolutionRequirementStaticEffect(
+#       TopCard.IsLevel5 && HasText("Dark Masters"), cost 3, ignore false).
+#   - [OP] and [WD] are two ActivateClasses with an identical body,
+#     SetUpActivateClass(..., -1, TRUE, ...) → DCGO's outer yes/no.
+#     CanActivateCondition: a Lv.5 [Dark Masters]-text Digimon card in hand
+#       OR trash → clause `condition:`.
+#     Body: hand-vs-trash zone bool, then a card pick with canNoSelect: TRUE,
+#       AddDigivolutionCardsBottom(selected); if a `Level <= 5` opponent
+#       Digimon exists → MANDATORY SelectPermanentEffect Mode.Destroy.
+#   - [WA]: SetUpActivateClass(..., -1, TRUE, ...); CanActivateCondition:
+#       ≥7 cards in the opponent's trash; SelectCardEffect maxCount 7,
+#       canEndNotMax FALSE (exactly 7), canNoSelect TRUE; on 7 picked →
+#       AddLibraryBottomCards (each card to its OWNER's deck = the opponent's
+#       deck), then IUnsuspendPermanents(self).
+#
+# Source-priority notes (general_rule.pdf §15-7 "By X, Y"):
+#   - Both clauses are optional processing conditions → `optional: true`.
+#     DCGO passes isOptional=TRUE on all three timings, so the explicit outer
+#     accept/decline is authored (`outer_prompt: true`, BT19-101 idiom).
+#   - "[Dark Masters] in its text" = the whole-card scan `in_text_contains`
+#     (official ruling: name / traits / effects / requirements), same for the
+#     [Digivolve] box.
+#   - The union pick is the cost (`cost: true`): declining it aborts the
+#     delete (§15-7-2). The delete pick itself is mandatory (DCGO
+#     canNoSelect: false) — `select_opponent_permanent` only installs when a
+#     legal target exists (no dead prompt), matching DCGO's
+#     HasMatchConditionPermanent guard.
+#   - The 7-card return: `select_count_capped_multi` min 7 / max 7 over the
+#     OPPONENT's trash, `optional_zero: false` (the outer prompt already
+#     carries the decline; allowing 0 picks would run the tail with nothing
+#     returned), then `return_trash_list_to_deck_bottom { of: opponent }` (the
+#     step routes each card to its owner's deck bottom) and `unsuspend`.
+
+card: BT17-070
+name: Gulfmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 11000
+traits: [Dark Animal]
+attribute: Virus
+
+alt_paths:
+  # Printed circle: Purple Lv.5 / cost 3.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+  # [Digivolve] Lv.5 w/[Dark Masters] in text: Cost 3 (any colour).
+  - kind: digivolve
+    from: { level_eq: 5, in_text_contains: "Dark Masters" }
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] tuck a Lv.5 [Dark Masters] card → delete ≤5
+  - when: [on_play, when_digivolving]
+    optional: true
+    outer_prompt: true
+    condition:
+      any_of:
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              level_eq: 5
+              in_text_contains: "Dark Masters"
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              level_eq: 5
+              in_text_contains: "Dark Masters"
+            n: 1
+    summary: "[On Play][When Digivolving] By placing 1 level 5 card with [Dark Masters] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 5 or lower Digimon"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: dark_master
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 5
+              - in_text_contains: "Dark Masters"
+          prompt: "Place 1 level 5 card with [Dark Masters] in its text from your hand or trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: dark_master
+          target: source
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+      - delete_permanent: { target: victim }
+
+  # ─── [When Attacking] return 7 opponent-trash cards to their deck bottom → unsuspend
+  - when: when_attacking
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [trash]
+        n: 7
+    summary: "[When Attacking] By returning 7 cards from your opponent's trash to the bottom of the deck, unsuspend this Digimon"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: trash
+          min: 7
+          max: 7
+          filter: {}
+          bind_as: returned
+          optional_zero: false
+          prompt: "Return 7 cards from your opponent's trash to the bottom of their deck"
+      - return_trash_list_to_deck_bottom:
+          of: opponent
+          cards: returned
+      - unsuspend: { target: source }
