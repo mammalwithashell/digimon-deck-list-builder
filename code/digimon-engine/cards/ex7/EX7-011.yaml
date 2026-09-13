@@ -1,0 +1,137 @@
+# EX7-011 Megadramon — Digimon, Lv.5, Red, DP 7000, Cost 7.
+# Traits: Cyborg. Form: Ultimate. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX7-011.md — official Bandai DB,
+# verbatim; the card image is not in the local mirror):
+#
+#   [On Play] [When Digivolving] By placing 1 Option card with the [Three
+#   Musketeers] trait from your hand or trash as this Digimon's bottom
+#   digivolution card, delete 1 of your opponent's Digimon with 6000 DP or
+#   less.
+#
+#   Inherited Effect: ＜Piercing＞ (When this Digimon attacks and deletes your
+#   opponent's Digimon in battle, it checks security before the attack ends.)
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Red Lv.4 / cost 3
+#   - xros_req: "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Red/EX7_011.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.HasText("Three Musketeers") && Level == 4`, cost
+#   3 → `in_text_contains`. Standard Red Lv.4 / 3 also authored.
+#
+# [On Play] / [When Digivolving] — two ActivateClass entries (isOptional
+#   TRUE) with identical bodies. CanActivate = a `IsOption &&
+#   ContainsTraits("Three Musketeers")` card in hand OR trash. Body:
+#   hand/trash area choice → SelectHandEffect / SelectCardEffect(Root.Trash)
+#   (canNoSelect: true, maxCount 1) → `PermanentOfThisCard()
+#   .AddDigivolutionCardsBottom(selected)` → `if (HasMatchConditionPermanent(
+#   opp Digimon with DP <= MaxDP_DeleteEffect(6000)))` MANDATORY
+#   SelectPermanentEffect(Mode.Destroy, canNoSelect: false).
+#   → ONE clause `when: [on_play, when_digivolving]`, `optional: true`,
+#     `condition: count_gte 1` TM-trait Option across hand+trash (DCGO's
+#     payability gate). `select_union_zone { optional: true, cost: true }`
+#     (the two DCGO zone prompts collapse into one union pick — BT25-082
+#     idiom; a decline aborts the clause) → `place_as_bottom_source { source:
+#     pick, target: source }` → nested `if any_permanent(opp Digimon dp_lte
+#     6000)` guarding the mandatory `select_opponent_permanent { kind:
+#     digimon, dp_lte: 6000 }` → `delete_permanent`. The placement is the
+#     COST: it is paid even when no legal delete target exists (DCGO places
+#     first, then checks for targets).
+#
+# ESS — PierceSelfEffect(isInheritedEffect: true) → inherited `grant_keyword`
+#   Piercing.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|-------------|
+# | Std digivolve Red Lv.4 / 3                                    | IMPLEMENTED |
+# | Special digivolve Lv.4 w/[Three Musketeers] in text / 3       | IMPLEMENTED |
+# | [OP][WD] place TM Option (hand/trash) under self → delete opp | IMPLEMENTED |
+# |   Digimon with 6000 DP or less                                |             |
+# | Inherited <Piercing>                                          | IMPLEMENTED |
+
+card: EX7-011
+name: Megadramon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+attribute: Virus
+form: Ultimate
+
+alt_paths:
+  # Standard printed circle: Red Lv.4 / cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: red
+    cost: 3
+  # Special: "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - in_text_contains: "Three Musketeers"
+    cost: 3
+
+effects:
+  # ─── [OP][WD] place a TM Option under this Digimon → delete opp Digimon ≤6000 DP
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] By placing 1 [Three Musketeers] Option from hand or trash as this Digimon's bottom digivolution card, delete 1 opponent Digimon with 6000 DP or less"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - kind: option
+            - trait_has: "Three Musketeers"
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tm_option
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "Place 1 Option card with the [Three Musketeers] trait from your hand or trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: tm_option
+          target: source
+      # Mandatory delete, silently skipped when no opponent Digimon has
+      # 6000 DP or less (DCGO HasMatchConditionPermanent guard).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              dp_lte: 6000
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 6000
+                prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+            - delete_permanent: { target: victim }
+
+  # ─── Inherited <Piercing> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited <Piercing>"

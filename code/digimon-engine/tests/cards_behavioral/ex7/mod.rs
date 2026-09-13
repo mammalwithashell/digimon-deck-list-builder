@@ -14,3 +14,10 @@ mod ex7_073;
 mod ex7_074;
 
 mod ex7_070;
+mod ex7_008;
+mod ex7_010;
+mod ex7_011;
+mod ex7_040;
+mod ex7_043;
+mod ex7_044;
+mod ex7_051;

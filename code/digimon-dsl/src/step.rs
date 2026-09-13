@@ -286,6 +286,18 @@ pub enum StepSpec {
     /// for costs that can be paid by trashing a card from hand or from one of
     /// your Digimon's digivolution cards.
     TrashUnionBound(UnionBoundArgs),
+    /// G-DSL-RETURN-UNION-BOUND-TO-DECK (EX7-043 Tankmon "By returning 3
+    /// cards with the [Three Musketeers] trait from your hand or trash to the
+    /// top of the deck"). Return a `select_union_zone`-bound card from its
+    /// TRUE origin zone (hand, trash, or a carrier's digivolution sources) to
+    /// the top or bottom of its OWNER's deck. A return, not a trash — fires no
+    /// `OnDiscardHand` / `OnDigivolutionCardTrashed`. Sibling of
+    /// `trash_union_bound` / `play_union_bound_free`. Each call moves ONE
+    /// card, so a "return N" cost is authored as N sequential union picks,
+    /// each immediately returned — the pick order IS the deck order (the last
+    /// card returned to `top` ends up on top), so every ordering DCGO's
+    /// "specify the order" prompt can reach is reachable here too.
+    ReturnUnionBoundToDeck(ReturnUnionBoundToDeckArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
@@ -591,6 +603,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
             StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::TrashUnionBound(v) => kv!(s, "trash_union_bound", v),
+            StepSpec::ReturnUnionBoundToDeck(v) => kv!(s, "return_union_bound_to_deck", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
@@ -868,6 +881,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "trash_union_bound" => StepSpec::TrashUnionBound(map.next_value()?),
+            "return_union_bound_to_deck" => {
+                StepSpec::ReturnUnionBoundToDeck(map.next_value()?)
+            }
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -2511,6 +2527,17 @@ pub struct UnionBoundArgs {
     /// the selected card's origin zone so consumers can move it from the right
     /// place without re-prompting.
     pub binding: String,
+}
+
+/// Args for `return_union_bound_to_deck` (G-DSL-RETURN-UNION-BOUND-TO-DECK).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnUnionBoundToDeckArgs {
+    /// Name of the `select_union_zone` binding to consume (origin-tagged).
+    pub binding: String,
+    /// Deck end the card returns to: `top` (drawn first) or `bottom`.
+    /// `random` / `choice` are not supported by this verb.
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

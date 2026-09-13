@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-22",
+  "last_updated": "2026-09-12",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -10701,6 +10701,138 @@
       ],
       "notes": "DNA path (0 from Lv.4+Lv.4) + [When Digivolving] optional place Lv.5- Digimon from trash as BOTTOM digivolution card authored. Remaining 3 clauses gap-blocked, NOT approximated: up-to-4 -1000xColors DP-minus (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), [Your Turn] treated-as-source-colors (G-ENGINE-ADDITIVE-COLOR-TREATMENT), 4-color +4000 DP (G-DSL-OWN-STACK-COLOR-COUNT-GTE). Tripwire tests pin the omissions. See qa/dsl-vocab-gaps.md entries dated 2026-08-22.",
       "audit_note": "Authored 2026-08-22 (toho-braves-exam); three clauses on genuine residual gaps -- see YAML header for the DCGO crosscheck."
+    },
+    "EX7-005": {
+      "card_name": "Kapurimon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "three-musketeers",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "BLOCKED (engine): inherited '[Your Turn][OPT] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory' needs the OnAddDigivolutionCards trigger timing (DCGO EffectTiming.OnAddDigivolutionCards / CanTriggerOnAddDigivolutionCard) which the engine still lacks - same open gap as BT25-005 Pagumon in docs/RUST_ENGINE_GAPS.md (card list updated). No YAML authored (a stub or a mis-bound timing would be a silent approximation)."
+    },
+    "EX7-008": {
+      "card_name": "ToyAgumon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_008.rs",
+      "test_count": 9,
+      "patterns": [
+        "A2",
+        "D1",
+        "D4"
+      ],
+      "notes": "All printed clauses green: [On Play] reveal 3 with TWO mandatory min1/max1 buckets (any card with [Three Musketeers] in its text via in_text_contains = DCGO HasText; 1 Option with use cost 6 via play_cost eq 6), no_duplicate_cards, rest to bottom (official Q&A: add as many as possible); inherited [Your Turn] +2000 DP self aura; std Red Lv.2/0 + special 'Lv.2 w/[Three Musketeers] in text' /0 alt-paths (end-to-end with real EX7-070 Der Blitz filling one bucket only)."
+    },
+    "EX7-010": {
+      "card_name": "Deputymon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_010.rs",
+      "test_count": 13,
+      "patterns": [
+        "E2",
+        "E3",
+        "D1",
+        "D4"
+      ],
+      "notes": "All printed clauses green (official DB text carries the [Once Per Turn] that cards.json drops). ONE shared [When Digivolving][When Attacking][OPT] optional clause (DCGO shared hash TrashOption_EX7_010): select_any_permanent over Digimon of EITHER owner carrying >=1 Option source (official Q&A), then owner-routed select_own_sources / select_opponent_sources (kind option, exactly 1) -> trash_selected_sources; OPT lockout across attacks + clears next turn. [Your Turn] 'gains the [Three Musketeers] trait' authored with the NEW aura grant_traits vocabulary (G-DSL-AURA-GRANT-TRAITS, landed with this card: ChangeTraits modifier w/ Traits payload read by synth_identity; face-up only). Inherited [Your Turn] +2000 DP. Std Red Lv.3/2 + special TM-text Lv.3/2 alt-paths."
+    },
+    "EX7-011": {
+      "card_name": "Megadramon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_011.rs",
+      "test_count": 11,
+      "patterns": [
+        "A6",
+        "E2",
+        "H3"
+      ],
+      "notes": "All printed clauses green: shared [On Play][When Digivolving] optional clause - select_union_zone (hand/trash) over [Three Musketeers]-trait Options as a declinable cost -> place_as_bottom_source under self -> nested-guarded mandatory delete of 1 opp Digimon with dp_lte 6000 (cost paid even with no legal target, per DCGO order); inherited <Piercing>; std Red Lv.4/3 + special TM-text Lv.4/3 alt-paths (end-to-end with real EX7-070)."
+    },
+    "EX7-040": {
+      "card_name": "ToyAgumon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_040.rs",
+      "test_count": 11,
+      "patterns": [
+        "E2",
+        "H7"
+      ],
+      "notes": "All printed clauses green: [On Play] optional select_hand (cost: true) over [Three Musketeers]-trait hand cards -> trash -> Draw 2 (decline aborts: no trash, no draw); inherited <Reboot>; std Black Lv.2/0 + special 'Lv.2 w/[Three Musketeers] in text' /0 alt-paths (printed 'in text' is broader than DCGO's trait-only check - printed data governs)."
+    },
+    "EX7-043": {
+      "card_name": "Tankmon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_043.rs",
+      "test_count": 12,
+      "patterns": [
+        "E2",
+        "A4",
+        "H7"
+      ],
+      "notes": "All printed clauses green: shared [On Play][When Digivolving] optional clause gated on >=3 [Three Musketeers]-trait cards across hand+trash; three sequential select_union_zone picks (any hand/trash combination per official Q&A - pick 1 declinable+cost, picks 2-3 mandatory once engaged) each immediately returned to the deck TOP via the NEW return_union_bound_to_deck verb (G-DSL-RETURN-UNION-BOUND-TO-DECK, landed with this card + EffectContext::return_hand_card_to_deck); pick order = deck order so every DCGO ordering is reachable; then nested-guarded mandatory De-Digivolve 1 (stop_at_level 3) on 1 opp Digimon. Inherited <Reboot>; std Black Lv.3/2 + special TM-text Lv.3/2 alt-paths."
+    },
+    "EX7-044": {
+      "card_name": "Gigadramon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_044.rs",
+      "test_count": 9,
+      "patterns": [
+        "A2",
+        "A6",
+        "H5"
+      ],
+      "notes": "All printed clauses green: shared [On Play][When Digivolving] mandatory clause - reveal 4, mandatory select_reveal of 1 [Three Musketeers]-trait Option (skipped when none), place_as_bottom_source under self with bind_placed_as (the 'If this effect placed' bit - validator now declares bind_placed_as as an optional binding), place_remainder_on_deck position: choice (top/bottom + ordering prompts), then guarded mandatory delete of 1 opp Digimon OR Tamer with play_cost_lte 3. Inherited <Collision>. Std Black Lv.4/3 + special TM-text Lv.4/3 alt-paths (end-to-end with real EX7-070)."
+    },
+    "EX7-051": {
+      "card_name": "Sparrowmon",
+      "validated_date": "2026-09-12",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_051.rs",
+      "test_count": 12,
+      "patterns": [
+        "B1",
+        "A6",
+        "E2"
+      ],
+      "notes": "All printed clauses green: [Start of Your Main Phase] optional clause gated on a [Three Musketeers]-trait Option in hand or trash; select_union_zone (cost: true, declinable) -> mandatory select_own_permanent over own non-token Digimon (DCGO !IsToken; Sparrowmon itself always qualifies) -> place_as_bottom_source -> Draw 1; does not fire on the opponent's main phase. Inherited <Retaliation>; std Purple Lv.2/0 + special TM-text Lv.2/0 alt-paths."
     }
   }
 }

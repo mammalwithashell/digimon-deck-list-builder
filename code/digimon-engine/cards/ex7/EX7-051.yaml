@@ -1,0 +1,130 @@
+# EX7-051 Sparrowmon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Traits: Avian. Form: Rookie. Attribute: Data.
+#
+# Printed card text (data/card_bundles/EX7-051.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-051.webp):
+#
+#   [Start of Your Main Phase] By placing 1 Option card with the [Three
+#   Musketeers] trait from your hand or trash as 1 of your Digimon's bottom
+#   digivolution card, ＜Draw 1＞.
+#
+#   Inherited Effect: ＜Retaliation＞ (When only this Digimon is deleted in
+#   battle, delete the Digimon it battled.)
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Purple Lv.2 / cost 0
+#   - xros_req: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_051.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.HasText("Three Musketeers") && Level == 2`, cost
+#   0 → `in_text_contains`. Standard Purple Lv.2 / 0 also authored
+#   (G-DSL-FIXTURE-EVO-COSTS).
+#
+# [Start of Your Main Phase] — ActivateClass(isOptional: TRUE) at
+#   OnStartMainPhase; CanUse = IsExistOnBattleAreaDigimon && IsOwnerTurn;
+#   CanActivate = (hand >= 1 || trash >= 1) && an own non-token Digimon
+#   exists. Body: hand/trash area choice (SetBoolSelection) → SelectHandEffect
+#   / SelectCardEffect(Root.Trash) over `IsOption && ContainsTraits("Three
+#   Musketeers")` (canNoSelect: true) → SelectPermanentEffect over own
+#   battle-area Digimon with `!permanent.IsToken` →
+#   `AddDigivolutionCardsBottom` → DrawClass(owner, 1).
+#   → `optional: true` clause gated on a TM-trait Option existing in hand OR
+#     trash (DCGO's payability gate, tightened to the actual selectable set),
+#     `select_union_zone { zones: [hand, trash], optional: true, cost: true }`
+#     (the two DCGO zone prompts collapse into ONE union pick — the area
+#     choice is implicit in which card is picked; BT25-082 idiom), then a
+#     MANDATORY `select_own_permanent { kind: digimon, not: { kind: token } }`
+#     (DCGO offers canNoSelect: true here, but once the card is picked the
+#     printed cost is being paid and at least one legal host — Sparrowmon
+#     itself, on the battle area — always exists; a post-pick decline would
+#     leave the picked card in limbo, so the host pick is not declinable),
+#     `place_as_bottom_source { source: pick, target: host }`, `draw 1`.
+#
+# ESS — RetaliationSelfEffect(isInheritedEffect: true) → inherited
+#   `grant_keyword` Retaliation.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                          | Status      |
+# |-------------------------------------------------------------|-------------|
+# | Std digivolve Purple Lv.2 / 0                               | IMPLEMENTED |
+# | Special digivolve Lv.2 w/[Three Musketeers] in text / 0     | IMPLEMENTED |
+# | [SoMP] place TM Option (hand/trash) under own Digimon → Draw 1 | IMPLEMENTED |
+# | Inherited <Retaliation>                                     | IMPLEMENTED |
+
+card: EX7-051
+name: Sparrowmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Avian]
+attribute: Data
+form: Rookie
+
+alt_paths:
+  # Standard printed circle: Purple Lv.2 / cost 0.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: purple
+    cost: 0
+  # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - in_text_contains: "Three Musketeers"
+    cost: 0
+
+effects:
+  # ─── [Start of Your Main Phase] place a TM Option under 1 own Digimon → Draw 1
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] By placing 1 [Three Musketeers] Option from hand or trash as 1 of your Digimon's bottom digivolution card, Draw 1"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - kind: option
+            - trait_has: "Three Musketeers"
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tm_option
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "Place 1 Option card with the [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card"
+      # DCGO `CanSelectPermanentCondition`: own battle-area Digimon that is
+      # NOT a token. `kind: digimon` accepts tokens on the field
+      # (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT), so exclude them explicitly.
+      - select_own_permanent:
+          bind_as: host
+          filter:
+            all_of:
+              - kind: digimon
+              - not: { kind: token }
+          prompt: "Choose 1 of your Digimon to receive the Option as its bottom digivolution card"
+      - place_as_bottom_source:
+          source: tm_option
+          target: host
+      - draw: { of: you, count: 1 }
+
+  # ─── Inherited <Retaliation> ────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "Inherited <Retaliation>"

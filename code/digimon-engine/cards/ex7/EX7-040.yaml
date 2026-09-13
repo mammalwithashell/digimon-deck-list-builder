@@ -1,0 +1,110 @@
+# EX7-040 ToyAgumon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Puppet. Form: Rookie. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX7-040.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-040.webp):
+#
+#   [On Play] By trashing 1 card with the [Three Musketeers] trait in your
+#   hand, ＜Draw 2＞.
+#
+#   Inherited Effect: ＜Reboot＞ (This Digimon also unsuspends in your
+#   opponent's unsuspend phase.)
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Black Lv.2 / cost 0
+#   - xros_req: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_040.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect gated on
+#   `TopCard.IsLevel2 && TopCard.ContainsTraits("Three Musketeers")`, cost 0,
+#   ignoreDigivolutionRequirement: false. The PRINTED condition (official DB)
+#   is "w/[Three Musketeers] IN TEXT", a whole-card HasText scan — broader
+#   than DCGO's trait check. Printed data governs (CLAUDE.md "Printed card
+#   data"), so `in_text_contains` is authored (EX7-048 idiom; a trait carrier
+#   still matches via the trait scan, G-DSL-IN-TEXT-CONTAINS). The standard
+#   Black Lv.2 / 0 circle is ALSO authored as an alt_path so the route exists
+#   for DSL-loaded fixtures (G-DSL-FIXTURE-EVO-COSTS).
+#
+# [On Play] — ActivateClass(isOptional: TRUE); CanActivateCondition =
+#   IsExistOnBattleAreaDigimon && HasMatchConditionOwnersHand(ContainsTraits
+#   "Three Musketeers"). SelectHandEffect(canNoSelect: true, maxCount 1,
+#   canEndNotMax: false, Mode.Discard) → AfterSelect: `if (count > 0)
+#   DrawClass(owner, 2)`.
+#   → `optional: true` clause, `condition: count_gte 1 TM-trait card in hand`
+#     (DCGO's CanActivate gate — the cost must be payable for the trigger to
+#     surface), `select_hand { optional: true, cost: true }` (AD1-002 Step 1
+#     idiom: the inner PASS is the decline; `cost: true` aborts the tail on
+#     decline — G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE), `trash_from_hand_by_index`,
+#     `draw 2`.
+#
+# ESS — RebootSelfStaticEffect(isInheritedEffect: true) → `scope: inherited`
+#   `kind: grant_keyword` Reboot.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                          | Status      |
+# |-------------------------------------------------------------|-------------|
+# | Std digivolve Black Lv.2 / 0                                | IMPLEMENTED |
+# | Special digivolve Lv.2 w/[Three Musketeers] in text / 0     | IMPLEMENTED |
+# | [On Play] trash 1 TM-trait hand card → Draw 2               | IMPLEMENTED |
+# | Inherited <Reboot>                                          | IMPLEMENTED |
+
+card: EX7-040
+name: ToyAgumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Puppet]
+attribute: Virus
+form: Rookie
+
+alt_paths:
+  # Standard printed circle: Black Lv.2 / cost 0.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: black
+    cost: 0
+  # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - in_text_contains: "Three Musketeers"
+    cost: 0
+
+effects:
+  # ─── [On Play] By trashing 1 [Three Musketeers] card in hand, Draw 2 ────────
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 [Three Musketeers] trait card from your hand, Draw 2"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "Three Musketeers"
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Trash 1 card with the [Three Musketeers] trait from your hand to Draw 2"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  # ─── Inherited <Reboot> ─────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "Inherited <Reboot>"

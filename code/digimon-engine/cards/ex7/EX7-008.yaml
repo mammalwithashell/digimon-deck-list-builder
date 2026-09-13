@@ -1,0 +1,120 @@
+# EX7-008 ToyAgumon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Puppet. Form: Rookie. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/EX7-008.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-008.webp):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Three
+#   Musketeers] in its text and 1 Option card with a use cost of 6 among
+#   them to the hand. Return the rest to the bottom of the deck.
+#
+#   Inherited Effect: [Your Turn] This Digimon gets +2000 DP.
+#
+# Official Q&A: "Yes, you must add as many cards to your hand as possible."
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Red Lv.2 / cost 0
+#   - xros_req: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Red/EX7_008.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.HasText("Three Musketeers") && Level == 2`, cost
+#   0, ignoreDigivolutionRequirement: false → `in_text_contains` (EX7-048
+#   idiom). The standard Red Lv.2 / 0 circle is also authored as an alt_path
+#   (G-DSL-FIXTURE-EVO-COSTS).
+#
+# [On Play] — ActivateClass(isOptional: false); CanActivate = deck >= 1.
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount 3) with TWO conditions,
+#   each maxCount 1, Mode.AddHand:
+#     1. `HasText("Three Musketeers")` — ANY card kind (the UI message says
+#        "Digimon card" but the condition is the bare HasText scan; the
+#        printed text says "1 card"), so no `kind:` filter.
+#     2. `IsOption && GetCostItself == 6`.
+#   remainingCardsPlace: DeckBottom.
+#   → `reveal_top_deck 3` + `select_reveal_buckets` (min 1 / max 1 per bucket
+#     — mandatory when a candidate exists, per the official Q&A "you must add
+#     as many cards as possible"; a bucket with no candidate is skipped),
+#     `no_duplicate_cards: true` (one physical card cannot fill both slots —
+#     BT12-021 idiom), `add_to_hand_from_reveal` ×2, `place_remainder_on_deck
+#     { position: bottom }`.
+#
+# ESS — ChangeSelfDPStaticEffect(+2000, isInherited) gated IsOwnerTurn →
+#   `scope: inherited`, `kind: aura`, `target: {}`, `active_when: your_turn`,
+#   `dp_modifier: 2000` (AD1-002 idiom).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                          | Status      |
+# |-------------------------------------------------------------|-------------|
+# | Std digivolve Red Lv.2 / 0                                  | IMPLEMENTED |
+# | Special digivolve Lv.2 w/[Three Musketeers] in text / 0     | IMPLEMENTED |
+# | [On Play] reveal 3, add TM-text card + cost-6 Option, rest  | IMPLEMENTED |
+# |   to bottom                                                 |             |
+# | Inherited [Your Turn] +2000 DP                              | IMPLEMENTED |
+
+card: EX7-008
+name: ToyAgumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Puppet]
+attribute: Vaccine
+form: Rookie
+
+alt_paths:
+  # Standard printed circle: Red Lv.2 / cost 0.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: red
+    cost: 0
+  # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - in_text_contains: "Three Musketeers"
+    cost: 0
+
+effects:
+  # ─── [On Play] reveal 3; add 1 TM-text card + 1 cost-6 Option; bottom rest ──
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 card with [Three Musketeers] in its text and 1 Option with use cost 6; return the rest to the bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            # Bucket 1: "1 card with [Three Musketeers] in its text" — DCGO
+            # HasText (name + traits + all printed text), any card kind.
+            - bind_as: tm_text_pick
+              min: 1
+              max: 1
+              filter:
+                in_text_contains: "Three Musketeers"
+            # Bucket 2: "1 Option card with a use cost of 6".
+            - bind_as: cost6_option_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: option
+                  - play_cost: { op: eq, value: 6 }
+          no_duplicate_cards: true
+          prompt: "Add 1 card with [Three Musketeers] in its text and 1 Option card with a use cost of 6 to your hand"
+      - add_to_hand_from_reveal: { of: you, card: tm_text_pick }
+      - add_to_hand_from_reveal: { of: you, card: cost6_option_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [Your Turn] +2000 DP ─────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

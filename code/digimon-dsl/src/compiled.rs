@@ -997,6 +997,12 @@ pub enum CompiledDeclarativeClause {
         security_attack: Option<i32>,
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
+        /// Traits ADDED to each matched permanent while the aura is active
+        /// (`ModifierType::ChangeTraits`, `ModifierPayload::Traits { add,
+        /// replace: false }`). No `skip_serializing_if`: bincode round-trip.
+        /// G-DSL-AURA-GRANT-TRAITS (EX7-010 Deputymon).
+        #[serde(default)]
+        grant_traits: Vec<String>,
         modifier: Option<String>,
         /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
         /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
@@ -1783,6 +1789,12 @@ pub enum CompiledStep {
     },
     TrashUnionBound {
         binding: String,
+    },
+    /// G-DSL-RETURN-UNION-BOUND-TO-DECK — return a `select_union_zone`-bound
+    /// card from its true origin zone to the top/bottom of its owner's deck.
+    ReturnUnionBoundToDeck {
+        binding: String,
+        position: CompiledStackPosition,
     },
     PlayFromSecurity,
     PlayFromMaterials {

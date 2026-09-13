@@ -262,15 +262,26 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 if b.dp_modifier.is_none()
                                     && b.security_attack.is_none()
                                     && b.grant_keyword.is_none()
+                                    && b.grant_traits.is_empty()
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, or effect_immunity"
                                             .to_string(),
                                     });
+                                }
+                                for (i, t) in b.grant_traits.iter().enumerate() {
+                                    if t.trim().is_empty() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.grant_traits[{i}]"),
+                                            message: "grant_traits entries must be non-empty trait names"
+                                                .to_string(),
+                                        });
+                                    }
                                 }
                                 // `effect_immunity` only lowers on the
                                 // self-aura declarative-tick path
@@ -1639,6 +1650,12 @@ fn validate_step_binding_scope(
         StepSpec::RevealTopDeck(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        // `bind_placed_as` names the placed card ONLY on a successful
+        // placement — it is a legitimate optional binding for a downstream
+        // `if { binding_present }` "If this effect placed" gate (EX7-044).
+        StepSpec::PlaceAsBottomSource(args) => {
+            declare_optional_binding(scope, &args.bind_placed_as);
+        }
         StepSpec::PlayFromMaterials(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
@@ -1687,6 +1704,26 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+        }
+        StepSpec::ReturnUnionBoundToDeck(args) => {
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
+            if !matches!(
+                args.position,
+                crate::step::StackPosition::Top | crate::step::StackPosition::Bottom
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.position"),
+                    message: "return_union_bound_to_deck supports only position: top | bottom"
+                        .to_string(),
+                });
+            }
         }
         StepSpec::UseOptionBound(args) => {
             // The `binding` must name an in-scope `select_union_zone` bind_as.

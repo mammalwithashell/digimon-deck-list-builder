@@ -418,6 +418,15 @@ pub struct AuraBody {
     pub security_attack: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
+    /// G-DSL-AURA-GRANT-TRAITS (EX7-010 Deputymon "[Your Turn] This Digimon
+    /// gains the [Three Musketeers] trait"). Each listed trait is ADDED to the
+    /// matched permanent's rules identity while the aura is active — lowers
+    /// to `ModifierType::ChangeTraits` with `ModifierPayload::Traits { add,
+    /// replace: false }` (DCGO `ChangeTraitsClass` appending to `CardTraits`).
+    /// Printed traits are never removed; `trait_has` / alt-path `trait_has`
+    /// gates read the overlay through `Permanent::synth_identity`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub grant_traits: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
     /// Scalar value for the named `modifier` grant (the modifier's `value`

@@ -527,6 +527,37 @@ pub fn try_run(
             true
         }
 
+        // G-DSL-RETURN-UNION-BOUND-TO-DECK (EX7-043 Tankmon): return a
+        // `select_union_zone`-bound card from its TRUE origin zone to the
+        // top/bottom of its owner's deck. A return, not a trash — no
+        // `OnDiscardHand` / `OnDigivolutionCardTrashed` fires. The moved
+        // handle is recorded so `returned_card_matching` /
+        // `effect_returned_any_card` predicates can inspect it.
+        CompiledStep::ReturnUnionBoundToDeck { binding, position } => {
+            let to_bottom =
+                super::map_stack_position(*position) == crate::enums::StackPosition::Bottom;
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                let moved = match origin {
+                    UnionZoneOrigin::Hand => ctx.return_hand_card_to_deck(owner, card, to_bottom),
+                    UnionZoneOrigin::Trash => {
+                        let moved = if to_bottom {
+                            ctx.return_trash_cards_to_deck_bottom(owner, &[card])
+                        } else {
+                            ctx.return_trash_cards_to_deck_top(owner, &[card])
+                        };
+                        !moved.is_empty()
+                    }
+                    UnionZoneOrigin::Material { carrier, .. } => {
+                        ctx.return_card_source_to_deck(carrier, card, to_bottom)
+                    }
+                };
+                if moved {
+                    bindings.record_returned_to_deck(card);
+                }
+            }
+            true
+        }
+
         CompiledStep::MarkSecurityFaceUp { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;

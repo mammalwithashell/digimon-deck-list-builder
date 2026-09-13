@@ -2153,6 +2153,7 @@ fn compile_declarative(
                     keyword: gk.keyword,
                     value: gk.value,
                 }),
+                grant_traits: a.grant_traits.clone(),
                 modifier: a.modifier,
                 modifier_value: a.modifier_value,
                 modifier_name: a.modifier_name,
@@ -3103,6 +3104,10 @@ fn compile_step(
         },
         S::TrashUnionBound(a) => CompiledStep::TrashUnionBound {
             binding: a.binding.clone(),
+        },
+        S::ReturnUnionBoundToDeck(a) => CompiledStep::ReturnUnionBoundToDeck {
+            binding: a.binding.clone(),
+            position: compile_stack_position(a.position),
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {

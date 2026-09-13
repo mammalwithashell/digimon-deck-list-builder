@@ -1,0 +1,165 @@
+# EX7-010 Deputymon — Digimon, Lv.4, Red, DP 6000, Cost 6.
+# Traits: Mutant. Form: Champion. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/EX7-010.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-010.webp — note the
+# API-ingested cards.json text DROPS the printed [Once Per Turn]):
+#
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may trash any 1
+#   Option card from 1 Digimon's digivolution cards.
+#   [Your Turn] This Digimon gains the [Three Musketeers] trait.
+#
+#   Inherited Effect: [Your Turn] This Digimon gets +2000 DP.
+#
+# Official Q&A: "Yes, you can choose either your Digimon or an opponent's
+# Digimon."
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Red Lv.3 / cost 2
+#   - xros_req: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Red/EX7_010.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.HasText("Three Musketeers") && Level == 3`, cost
+#   2 → `in_text_contains`. Standard Red Lv.3 / 2 also authored.
+#
+# [When Digivolving] / [When Attacking] [OPT] — TWO ActivateClass entries
+#   (OnEnterFieldAnyone + OnAllyAttack) sharing hash `TrashOption_EX7_010`,
+#   timesPerTurn 1, isOptional TRUE. Body `SelectTrashDigivolutionCards(
+#   permanentCondition: IsPermanentExistsOnBattleAreaDigimon — ANY owner,
+#   cardCondition: IsOption && !CanNotTrashFromDigivolutionCards, maxCount 1,
+#   canNoTrash: false, isFromOnly1Permanent: true)`: pick the host Digimon
+#   first, then exactly 1 Option among its digivolution cards.
+#   → ONE clause `when: [when_digivolving, when_attacking]` +
+#     `once_per_turn: true` (the shared hash = one OPT slot across both
+#     timings) + `optional: true`. Gated on some battle-area Digimon (either
+#     owner) carrying >= 1 Option source (`source_count`), so the trigger only
+#     surfaces when it can do something. Body: `select_any_permanent` over
+#     Digimon with >= 1 Option source (the RL-visible host pick — official
+#     Q&A: own OR opponent's), then — because the source-select verbs are
+#     owner-scoped — branch on `binding_owner` into `select_own_sources` /
+#     `select_opponent_sources { target: host, filter: kind option, min 1,
+#     max 1 }` → `trash_selected_sources` (fires OnDigivolutionCardTrashed,
+#     which is what makes Der Blitz / Hurricane Screw Shot trashed this way
+#     trigger).
+#
+# [Your Turn] trait grant — ChangeTraitsClass gated IsOwnerTurn &&
+#   IsExistOnBattleAreaDigimon && `PermanentOfThisCard().TopCard == card`
+#   (top card only) appending "Three Musketeers" to CardTraits.
+#   → face-up `kind: aura`, `target: {}`, `active_when: your_turn`,
+#     `grant_traits: ["Three Musketeers"]` (G-DSL-AURA-GRANT-TRAITS, landed
+#     with this card: lowers to ModifierType::ChangeTraits with
+#     ModifierPayload::Traits { add, replace: false }; the overlay is read by
+#     `Permanent::synth_identity`, so `trait_has` filters / alt-path gates on
+#     OTHER cards see Deputymon as a [Three Musketeers] Digimon on your turn).
+#
+# ESS — ChangeSelfDPStaticEffect(+2000, isInherited) gated IsOwnerTurn →
+#   inherited your-turn self DP aura (AD1-002 idiom).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|-------------|
+# | Std digivolve Red Lv.3 / 2                                    | IMPLEMENTED |
+# | Special digivolve Lv.3 w/[Three Musketeers] in text / 2       | IMPLEMENTED |
+# | [WD][WA][OPT] may trash 1 Option from ANY Digimon's sources   | IMPLEMENTED |
+# | [Your Turn] gains the [Three Musketeers] trait (face-up)      | IMPLEMENTED |
+# | Inherited [Your Turn] +2000 DP                                | IMPLEMENTED |
+
+card: EX7-010
+name: Deputymon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 6000
+traits: [Mutant]
+attribute: Vaccine
+form: Champion
+
+alt_paths:
+  # Standard printed circle: Red Lv.3 / cost 2.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - color_is: red
+    cost: 2
+  # Special: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - in_text_contains: "Three Musketeers"
+    cost: 2
+
+effects:
+  # ─── [WD][WA][OPT] You may trash any 1 Option card from 1 Digimon's sources ─
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] You may trash 1 Option card from 1 Digimon's digivolution cards (either player's)"
+    condition:
+      any_permanent:
+        of: any
+        zone: [battle_area]
+        kind: digimon
+        source_count:
+          filter: { kind: option }
+          at_least: 1
+    process:
+      # Host pick — ANY Digimon on either battle area that carries at least
+      # one Option digivolution card (official Q&A: yours or the opponent's).
+      - select_any_permanent:
+          bind_as: host
+          filter:
+            all_of:
+              - kind: digimon
+              - source_count:
+                  filter: { kind: option }
+                  at_least: 1
+          prompt: "Choose 1 Digimon (yours or your opponent's) with an Option card in its digivolution cards"
+      # The source-select verbs are owner-scoped; route by the host's owner.
+      - if:
+          condition:
+            binding_owner: { binding: host, of: you }
+          then:
+            - select_own_sources:
+                target: host
+                filter: { kind: option }
+                min: 1
+                max: 1
+                bind_as: own_option
+                prompt: "Trash 1 Option card from that Digimon's digivolution cards"
+            - trash_selected_sources: { source_refs: own_option }
+      - if:
+          condition:
+            binding_owner: { binding: host, of: opponent }
+          then:
+            - select_opponent_sources:
+                target: host
+                filter: { kind: option }
+                min: 1
+                max: 1
+                bind_as: opp_option
+                prompt: "Trash 1 Option card from that Digimon's digivolution cards"
+            - trash_selected_sources: { source_refs: opp_option }
+
+  # ─── [Your Turn] This Digimon gains the [Three Musketeers] trait ────────────
+  # Face-up only (DCGO `TopCard == card` gate) — as a digivolution card
+  # Deputymon grants nothing.
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    grant_traits: ["Three Musketeers"]
+    summary: "[Your Turn] This Digimon gains the [Three Musketeers] trait"
+
+  # ─── Inherited [Your Turn] +2000 DP ─────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"
