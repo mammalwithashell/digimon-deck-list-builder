@@ -355,13 +355,63 @@ impl ScenarioAdapter {
                     lowered.push(LoweredStep::Select(wire));
                     advance_through_selection(&mut game, i, actor, &row)?;
                 }
-                StepAction::SelectDcgoOnly(payload) => {
-                    if let Some(pending) = game.pending_selection.as_ref() {
+                // A SIM-ONLY row: answer OUR prompt, emit NO wire row.
+                //
+                // The exact mirror of the DCGO-only branch below. It DOES
+                // contribute a StepSpec and DOES advance our game, because the
+                // prompt is real on our side; what it must not do is advance
+                // DCGO past a prompt DCGO never asks, which is why it lowers to
+                // `LoweredStep::SimOnlySelect` (zero wire rows).
+                //
+                // Guard rail, mirroring the DCGO-only one: our engine MUST have
+                // a live prompt here. Without a prompt to answer, the flag is
+                // mislabelling a DCGO-only or shared decision, and silently
+                // accepting it would desync every later step in the OTHER
+                // direction -- the exact failure this pair of guards exists to
+                // make loud.
+                StepAction::SelectSimOnly(payload) => {
+                    if game.pending_selection.is_none() {
                         return Err(format!(
-                            "step {i}: `dcgo_only: true` but OUR engine has a live                              {:?} prompt here. A DCGO-only row is for a decision only                              DCGO asks; this one is shared, so answer it as a normal                              `select:` step.",
-                            pending.kind
+                            "step {i}: `sim_only: true` but OUR engine has NO live prompt                              here. A sim-only row answers a decision only WE ask; with                              nothing parked it answers nothing, so drop the step (or, if                              DCGO is the side asking, use `dcgo_only: true`)."
                         ));
                     }
+                    let (row, wire) =
+                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
+                    let _ = wire;
+                    check_select_expectations(&game, i, payload, step.expect.as_ref())?;
+                    steps.push(StepSpec {
+                        actor,
+                        action_id: 0,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: Some(row.clone()),
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    lowered.push(LoweredStep::SimOnlySelect);
+                    advance_through_selection(&mut game, i, actor, &row)?;
+                }
+                StepAction::SelectDcgoOnly(payload) => {
+                    // A live prompt of OURS here is NOT an error. The two
+                    // engines can order a prompt pair differently: Medusamon
+                    // (BT24-017)'s attack declaration parks our <Raid> target
+                    // pick immediately, while DCGO asks a MultipleSkills
+                    // trigger-order prompt FIRST (its <Raid> versus a [TS]-gated
+                    // inherited effect it offers and we never queue). The wire
+                    // then legitimately reads DCGO-only row, then our pick.
+                    //
+                    // The mislabelling this used to guard against -- an author
+                    // marking a SHARED decision `dcgo_only` and leaving our
+                    // prompt unanswered -- is still caught, by the
+                    // pending-selection invariant at the bottom of this loop:
+                    // it skips DCGO-only rows and REQUIRES the next row that is
+                    // not one to answer our parked prompt. Rejecting here as
+                    // well only made interleaved orders unauthorable.
                     let wire = build_dcgo_only_wire(payload)?;
                     lowered.push(LoweredStep::DcgoOnlySelect(wire));
                 }
@@ -416,10 +466,31 @@ impl ScenarioAdapter {
             // DCGO side the same prompt would sit unanswered until the job
             // timeout, indistinguishable from a hung Unity.
             if let Some(pending) = game.pending_selection.as_ref() {
-                let answered_next = matches!(
-                    s.steps.get(i + 1).map(|n| &n.act),
-                    Some(StepAction::Select(_))
-                );
+                // `SelectSimOnly` counts: it answers OUR prompt (it just emits
+                // no DCGO wire row). `SelectDcgoOnly` does NOT answer it -- it
+                // answers a prompt only DCGO has -- but it also does not BLOCK
+                // the answer, so it is SKIPPED rather than rejected while
+                // looking for the answering step.
+                //
+                // That distinction is load-bearing where the two engines order a
+                // prompt pair differently. Medusamon (BT24-017): declaring an
+                // attack parks our <Raid> target pick immediately, while DCGO
+                // first asks a MultipleSkills trigger-order prompt (its <Raid>
+                // versus the [TS]-gated Tokomon (BT25-001) inherited effect it
+                // offers but our engine never queues). The wire needs the
+                // DCGO-only row FIRST and our pick straight after; treating the
+                // DCGO-only row as "not an answer" and stopping there made that
+                // shape unauthorable, even though the very next row answers us.
+                let answered_next = s.steps[i + 1..]
+                    .iter()
+                    .find(|n| !matches!(n.act, StepAction::SelectDcgoOnly(_)))
+                    .map(|n| {
+                        matches!(
+                            n.act,
+                            StepAction::Select(_) | StepAction::SelectSimOnly(_)
+                        )
+                    })
+                    .unwrap_or(false);
                 if !answered_next {
                     return Err(format!(
                         "step {i}: our engine asks a selection here; the scenario must \
@@ -473,6 +544,18 @@ impl ScenarioAdapter {
     /// the input the differ's step pairing is derived from.
     pub fn dcgo_wire_rows_per_step(&self) -> Vec<usize> {
         self.lowered.iter().map(LoweredStep::dcgo_wire_rows).collect()
+    }
+
+    /// Whether each scenario step is one OUR engine also makes, in line order.
+    ///
+    /// False only for `dcgo_only` rows. The differ needs this because such a
+    /// step consumes a DCGO row while our trace stands still: pairing our
+    /// (already-advanced) state against it compares two different moments.
+    pub fn ours_present_per_step(&self) -> Vec<bool> {
+        self.lowered
+            .iter()
+            .map(|l| !matches!(l, LoweredStep::DcgoOnlySelect(_)))
+            .collect()
     }
 }
 

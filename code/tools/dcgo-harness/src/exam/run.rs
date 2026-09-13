@@ -32,6 +32,7 @@ use crate::exam::assertions::check_assertions;
 use crate::exam::deckbook::{ordered_deck, DeckBook};
 use crate::exam::differ::{diff, DiffReport};
 use crate::exam::projection::StateProjection;
+use crate::exam::scenario::StepAction;
 use crate::exam::scenario::Scenario;
 
 /// Default `cards.json`, used when the caller (the MCP) has no natural place
@@ -78,6 +79,8 @@ pub struct LoweredRun {
     /// The normalized state after every step run, plus one leading entry for
     /// the position before step 0.
     pub projections: Vec<StateProjection>,
+    /// Per scenario step: is this a decision OUR engine also makes?
+    pub ours_present_per_step: Vec<bool>,
     /// Whether the replay session ran every step of the line. `false` means
     /// it stalled -- still lowered, still (partially) stepped, just short.
     pub complete: bool,
@@ -103,14 +106,28 @@ pub fn lower_and_run(
     let lowered_steps = adapter.lowered_steps().to_vec();
     // Captured BEFORE the adapter moves into the replay session below.
     let wire_rows_per_step = adapter.dcgo_wire_rows_per_step();
+    let ours_present_per_step = adapter.ours_present_per_step();
 
     let mut session = ReplaySession::with_source(Box::new(adapter), card_data, false)
         .map_err(|e| format!("building the replay session: {e:?}"))?;
 
+    // One projection per SCENARIO step (plus a trailing one), because that is
+    // the index `assert: { at: N }` and the differ's pairing both speak.
+    //
+    // A `dcgo_only` step has NO StepSpec -- it is a decision only DCGO makes --
+    // so it must NOT consume one from the replay session. Calling `step()` for
+    // it would pull the NEXT StepSpec forward, and every projection after it
+    // would describe a game one step further along than the scenario index says.
+    // That is not a hypothetical: it made BT24-017#effect#3 report a divergence
+    // in which "our" post-clause state was compared against DCGO's pre-clause
+    // row. Our state genuinely does not move at such a step, so the previous
+    // projection is repeated.
     let mut projections = vec![StateProjection::from_game(&session.game, 0)];
-    for i in 0..s.steps.len() as u32 {
-        session.step();
-        projections.push(StateProjection::from_game(&session.game, i + 1));
+    for (i, step) in s.steps.iter().enumerate() {
+        if !matches!(step.act, StepAction::SelectDcgoOnly(_)) {
+            session.step();
+        }
+        projections.push(StateProjection::from_game(&session.game, i as u32 + 1));
     }
 
     Ok(LoweredRun {
@@ -120,6 +137,7 @@ pub fn lower_and_run(
         steps_run: session.current_step(),
         steps_total: session.total_steps(),
         projections,
+        ours_present_per_step,
     })
 }
 

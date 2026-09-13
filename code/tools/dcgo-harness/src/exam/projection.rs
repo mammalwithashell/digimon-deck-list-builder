@@ -398,6 +398,59 @@ pub struct StepPairing {
 /// Rows beyond what the line predicts are left unaccounted on purpose: they
 /// then show up as a denominator shortfall, which is exactly what a DCGO trace
 /// that ran long or short *is*.
+/// Pair the two traces when some steps are DCGO's alone.
+///
+/// `ours_present[i]` is false for a step our engine never makes -- today only
+/// `dcgo_only`. Such a step still CONSUMES DCGO rows (DCGO really did decide),
+/// but there is no state of ours to compare against them: our engine already
+/// stands past that point. Pairing one anyway compares two different moments
+/// and manufactures a divergence, which is exactly what BT24-017#effect#3 hit.
+/// The rows are counted in `dcgo_unpairable` so the denominator still shows
+/// they were not compared.
+pub fn pair_by_wire_rows_with_ownership(
+    rows_per_step: &[usize],
+    ours_present: &[bool],
+    dcgo_len: usize,
+) -> StepPairing {
+    let mut pairing = StepPairing::default();
+    let mut cursor = 0usize;
+    for (i, &rows) in rows_per_step.iter().enumerate() {
+        let ours = ours_present.get(i).copied().unwrap_or(true);
+        if !ours {
+            // Counted on BOTH sides. `ours_for_diff` is indexed by scenario
+            // step, so a `dcgo_only` step still occupies a row of our trace --
+            // we simply decline to pair it. Counting it only against DCGO
+            // leaves `compared + ours_unpairable != ours_steps`, and
+            // `every_row_is_accounted_for` then reports TRUNCATED on a run that
+            // compared everything it could. A truncated run is never clean, so
+            // that miscount alone would record `diverged` for a clause whose
+            // every comparable row matched.
+            pairing.ours_unpairable += 1;
+            for extra in 0..rows {
+                if cursor + extra < dcgo_len {
+                    pairing.dcgo_unpairable += 1;
+                }
+            }
+            cursor += rows;
+            continue;
+        }
+        if rows == 0 {
+            pairing.ours_unpairable += 1;
+            continue;
+        }
+        if cursor < dcgo_len {
+            pairing.pairs.push((i, cursor));
+        }
+        for extra in 1..rows {
+            if cursor + extra < dcgo_len {
+                pairing.dcgo_unpairable += 1;
+            }
+        }
+        cursor += rows;
+    }
+    pairing
+}
+
 pub fn pair_by_wire_rows(rows_per_step: &[usize], dcgo_len: usize) -> StepPairing {
     let mut pairing = StepPairing::default();
     let mut cursor = 0usize;

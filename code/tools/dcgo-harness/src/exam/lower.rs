@@ -126,7 +126,9 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         // Neither select form matches against the main-phase mask: both resolve
         // against a live PendingSelection instead. A DCGO-only row resolves
         // against nothing at all on our side, by definition.
-        StepAction::Select { .. } | StepAction::SelectDcgoOnly { .. } => false,
+        StepAction::Select { .. }
+        | StepAction::SelectDcgoOnly { .. }
+        | StepAction::SelectSimOnly { .. } => false,
     }
 }
 
