@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-08-28T14:19:44.117620+00:00",
-  "source": "--card-ids (35 explicit ids)",
+  "source": "--card-ids (38 explicit ids)",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -36,7 +36,10 @@
     "ST1-12",
     "ST1-15",
     "ST16-14",
-    "ST19-14"
+    "ST19-14",
+    "BT21-029",
+    "BT24-017",
+    "EX11-012"
   ],
   "clauses": [
     {
@@ -1825,18 +1828,218 @@
       "text": "Play this card without paying the cost.",
       "source": "bundle",
       "image_path": null
+    },
+    {
+      "id": "BT21-029#effect#0",
+      "card_id": "BT21-029",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Security A. +1",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-029#effect#1",
+      "card_id": "BT21-029",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Progress",
+      "text": "(While attacking, your opponent's effects don't affect this Digimon.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-029#effect#2",
+      "card_id": "BT21-029",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "End of Attack",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may delete 1 of your opponent's lowest DP Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-029#effect#3",
+      "card_id": "BT21-029",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your opponent's Digimon are deleted or their security stack is removed from, they play 1 [Petrification] Token. (Digimon/white/3000 DP/[Your Turn] This Digimon can't suspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-029#effect#4",
+      "card_id": "BT21-029",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Trash your top security card.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-017#effect#0",
+      "card_id": "BT24-017",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-017#effect#1",
+      "card_id": "BT24-017",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Progress",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-017#effect#2",
+      "card_id": "BT24-017",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-017#effect#3",
+      "card_id": "BT24-017",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's lowest DP Digimon. Then, by returning 2 cards from their trash to the bottom of the deck, they play 2 [Petrification] Tokens. (Digimon/white/3000 DP/[Your Turn] This Digimon can't suspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-017#effect#4",
+      "card_id": "BT24-017",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Trash your top security card.) After, this Digimon gets +2000 DP for each of your opponent's Digimon until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX11-012#effect#0",
+      "card_id": "EX11-012",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX11-012#effect#1",
+      "card_id": "EX11-012",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Progress",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX11-012#effect#2",
+      "card_id": "EX11-012",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "End of Attack"
+      ],
+      "keyword": null,
+      "text": "You may delete 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, by returning 1 card from your opponent's trash to the bottom of the deck, they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX11-012#effect#3",
+      "card_id": "EX11-012",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Trash your top security card.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX11-012#effect#4",
+      "card_id": "EX11-012",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When this Digimon would leave the battle area, by deleting 1 Token, it doesn't leave.",
+      "source": "bundle",
+      "image_path": null
     }
   ],
   "denominator": {
-    "total_clauses": 130,
-    "total_cards": 35,
+    "total_clauses": 145,
+    "total_cards": 38,
     "by_zone": {
-      "effect": 107,
+      "effect": 122,
       "inherited": 19,
       "security": 4
     },
     "by_source": {
-      "bundle": 28,
+      "bundle": 43,
       "cards_json": 98,
       "image-required": 4
     },

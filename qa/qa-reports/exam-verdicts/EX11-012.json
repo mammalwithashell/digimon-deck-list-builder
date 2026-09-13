@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-08-30T14:07:08.317621700+00:00",
+  "clauses": {
+    "EX11-012#effect#2": {
+      "clause_id": "EX11-012#effect#2",
+      "card_id": "EX11-012",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "9ead404c28a4d7aac1043a332ec203ce9deaac084ce51038cbb2ae3a417ae391",
+      "scenario_path": "qa/dcgo-exams/EX11/EX11-012-effect2.yaml",
+      "recorded_at": "2026-08-30T14:07:08.317621700+00:00"
+    }
+  }
+}

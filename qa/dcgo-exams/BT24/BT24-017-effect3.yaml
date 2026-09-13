@@ -1,0 +1,192 @@
+# Exam scenario: BT24-017 Medusamon, clause BT24-017#effect#3 --
+# "[When Digivolving] Delete 1 of your opponent's lowest DP Digimon. Then, by
+#  returning 2 cards from their trash to the bottom of the deck, they play 2
+#  [Petrification] Tokens. ... After, this Digimon gets +2000 DP for each of
+#  your opponent's Digimon until their turn ends."
+#
+# Unlike BT21-029's clause, this one is MANDATORY -- the printed text has no
+# "you may" on the delete -- so no outer accept/decline window is installed and
+# the delete target prompt parks directly. The "by returning 2 cards" sentence
+# IS an optional processing condition (general_rule.pdf 15-7-1 / 15-7-4), and it
+# surfaces as its own EffectChoice accept/decline BEFORE the 2-card pick, which
+# is what this line exercises end to end: accept the cost, pay it in full, and
+# collect both tails (tokens + DP boost) that 15-7-2 gates behind it.
+#
+# THE LINE reuses the verified Red LIBERATOR prefix from
+# qa/dcgo-exams/BT21/BT21-029-effect2.yaml -- Tokomon BT25-001 (egg) ->
+# Elizamon BT23-005 -> Cyclonemon BT21-015 -> Cyberdramon BT21-024 -- chosen
+# because every inherited effect on it is DP-only. See that file's header for
+# the turn-by-turn memory accounting and the two prompt conventions the oracle
+# corrected there (breeding-area digivolve is a MAIN-phase action; the declared
+# actor is enforced by DCGO but not by our engine).
+#
+# BT24-017 digivolves for 3 (not BT21-029's 4), so memory lands on 0 rather
+# than -1 and P0's turn is still live at the trailing step -- hence `actor: 0`
+# here where the BT21-029 file needs `actor: 1`.
+#
+# WHY THE OPPONENT HAS >=2 TRASH CARDS. The cost gate mirrors DCGO's
+# `if (Enemy.TrashCards.Count >= 2)` and is evaluated AFTER the delete, so the
+# deleted Elizamon stack (BT23-005 + its BT25-001 egg) counts toward it,
+# alongside the BT21-024 that Cyberdramon's own [When Digivolving] trashed off
+# the top of P1's security. Three cards available, two required.
+#
+# ─── ORACLE BLOCKER (2026-08-30): prompt-shape mismatch, not a rules finding ──
+#
+# This line passes `--sim-only` but ABORTS on the DCGO wire with
+#   "prompt needs select_card_ids or select_cancel, got: select_bool=true"
+#
+# Cause, verified in the DCGO C#: our engine splits this card's optional
+# decision into TWO prompts (an outer accept/decline gate, then a mandatory
+# pick), while DCGO asks ONE cancellable pick -- it builds the effect
+# NON-optional and puts the "may" on the pick's `canNoSelect` instead:
+#
+#   BT21-029:  SetUpActivateClass(..., 1, TRUE, ...)   -> DCGO gates. Shapes
+#              match ours, and that card's clause CONFIRMED cleanly.
+#   BT24-017:  SetUpActivateClass(..., -1, FALSE, ...) + canNoSelect: () => true
+#   EX11-012:  SetUpActivateClass(..., -1, FALSE, ...) + canNoSelect: true
+#
+# Both engines let the player refuse, so the SEMANTICS agree; only the prompt
+# CARDINALITY differs. Per the exam's own authoring guide this is a translation
+# failure, not a divergence -- and a line that aborts on prompt sequence
+# measures NOTHING, so this clause stays `unmeasured`, never "passed".
+#
+# The format already has `dcgo_only:` for a row only DCGO asks. The mirror --
+# a row only OUR engine asks, answering the sim prompt and emitting zero wire
+# rows -- is described in scenario.rs as `SimOnlySelect` but is NOT implemented.
+# Adding it is what unblocks this file; the `select: { yes: true }` step below
+# is the row that would carry the flag.
+card: BT24-017
+clause: BT24-017#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, BT24-017, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-liberator
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-024]
+    rest: medusamon-liberator
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-017 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  # SIM-ONLY. This accept/decline gate is OUR engine's rendering of the
+  # "by returning 2 cards" optional processing condition (15-7-1). DCGO has no
+  # such gate: BT24_017.cs builds the effect NON-optional and carries the
+  # refusal on the trash pick's `canNoSelect: () => true` instead, so it asks
+  # ONE cancellable prompt where we ask two. The row answers our prompt and
+  # emits no wire row; the pick below is the shared decision both engines make.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT23-005, BT25-001] } }
+  # DCGO-ONLY: the deck-bottom ORDERING prompt.
+  #
+  # With 2 cards, DCGO's `ReturnRevealedCardsToLibraryBottom` takes its
+  # `remainingCards.Count == 1` ELSE branch and opens a SECOND
+  # SelectCardEffect -- "Specify the order to place the card at the bottom of
+  # the deck" (RevealLibrary.cs:469+, canNoSelect: false, canEndNotMax:
+  # false). Our engine has no such prompt: `return_trash_list_to_deck_bottom`
+  # takes the bound list and orders it itself, so this row is DCGO's alone.
+  #
+  # DO NOT answer it with `decline: true`. Cancelling the ORDER prompt leaves
+  # the cards in the trash while the caller goes on to play both tokens and
+  # grant the DP boost -- which reads as "DCGO plays the tokens without
+  # paying the cost" and is an artifact of the answer, not DCGO behaviour.
+  # That mis-answer is exactly what produced the first `diverged` verdict on
+  # this clause; the only surviving field was p1.trash.
+  - actor: 0
+    do: { select: { cards: [BT23-005, BT25-001], dcgo_only: true } }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  # Pre-step state of the trailing pass, still inside P0's turn 7 Main phase.
+  #
+  # BT24-017 reads 23000: printed 11000, +8000 from the three DP-granting
+  # inherited effects on its Digimon sources (Elizamon +2000, Cyclonemon +2000,
+  # Cyberdramon +4000) while it is P0's turn, and +2000 for EACH of the
+  # opponent's Digimon -- which, after the clause resolves, is the two
+  # [Petrification] Tokens it just gave them. 11000 + 8000 + 4000 = 23000.
+  #
+  # p1.trash holds ONLY BT21-024. The deleted Elizamon and its egg went to the
+  # trash and were then the two cards returned to the bottom of P1's deck as
+  # the cost -- so their absence here is the positive evidence that the cost
+  # was actually paid, not merely offered.
+  - at: 19
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 0
+      p0.field:
+        - card_id: BT24-017
+          dp: 23000
+          suspended: false
+          sources: [BT21-015, BT21-024, BT23-005, BT25-001]
+      p1.field:
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: [BT21-024]

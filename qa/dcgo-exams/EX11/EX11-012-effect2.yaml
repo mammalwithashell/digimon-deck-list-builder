@@ -1,0 +1,177 @@
+# Exam scenario: EX11-012 Medusamon, clause EX11-012#effect#2 --
+# "[When Digivolving] [End of Attack] You may delete 1 of your opponent's
+#  Digimon with as much or less DP as this Digimon. Then, by returning 1 card
+#  from your opponent's trash to the bottom of the deck, they play 1
+#  [Petrification] Token."
+#
+# This file exercises the [When Digivolving] arm. The [End of Attack] arm is
+# the same clause and is NOT reachable in a scripted line today -- see the
+# note at the bottom of this header.
+#
+# Like BT21-029 and unlike BT24-017, this clause is OPTIONAL ("You may
+# delete"), so our engine installs an outer accept/decline window before the
+# target prompt; step 15 answers it.
+#
+# THE LINE reuses the oracle-verified Red LIBERATOR prefix from
+# qa/dcgo-exams/BT21/BT21-029-effect2.yaml -- Tokomon BT25-001 (egg) ->
+# Elizamon BT23-005 -> Cyclonemon BT21-015 -> Cyberdramon BT21-024 -- chosen
+# because every inherited effect on it is DP-only. See that file's header for
+# the memory accounting and the two prompt conventions the oracle corrected.
+#
+# EX11-012 digivolves for 3, so memory lands on 0 and P0's turn is still live
+# at the trailing step (`actor: 0`).
+#
+# THE DP THRESHOLD IS SELF-REFERENTIAL. "with as much or less DP as this
+# Digimon" is measured against EX11-012's CURRENT DP, which here is 20000
+# (printed 12000 plus the +8000 its three Digimon sources grant on P0's turn),
+# not its printed 12000. The opponent's 1000 DP Elizamon is far under either
+# figure, so this line does not discriminate between the two readings -- our
+# YAML currently hard-codes `dp_lte: 12000`, and a scenario that pins a target
+# BETWEEN 12000 and 20000 is what would actually put that hard-coding under
+# exam. Logged as a follow-up rather than silently assumed correct here.
+#
+# NOT MEASURED BY THIS FILE: the [End of Attack] arm. Reaching it needs
+# EX11-012 to attack, and our engine re-parks this clause's activation window
+# on every Main phase of its controller with no trigger event in flight; the
+# only answer that clears it (`pass`) also ends the turn. Same blocker as
+# BT21-029 -- see that card's triage. Until it is fixed, the [End of Attack]
+# half of this clause is unreachable, and this file measures the digivolve
+# half only.
+#
+# ─── ORACLE BLOCKER (2026-08-30): prompt-shape mismatch, not a rules finding ──
+#
+# This line passes `--sim-only` but ABORTS on the DCGO wire with
+#   "prompt needs select_card_ids or select_cancel, got: select_bool=true"
+#
+# Cause, verified in the DCGO C#: our engine splits this card's optional
+# decision into TWO prompts (an outer accept/decline gate, then a mandatory
+# pick), while DCGO asks ONE cancellable pick -- it builds the effect
+# NON-optional and puts the "may" on the pick's `canNoSelect` instead:
+#
+#   BT21-029:  SetUpActivateClass(..., 1, TRUE, ...)   -> DCGO gates. Shapes
+#              match ours, and that card's clause CONFIRMED cleanly.
+#   BT24-017:  SetUpActivateClass(..., -1, FALSE, ...) + canNoSelect: () => true
+#   EX11-012:  SetUpActivateClass(..., -1, FALSE, ...) + canNoSelect: true
+#
+# Both engines let the player refuse, so the SEMANTICS agree; only the prompt
+# CARDINALITY differs. Per the exam's own authoring guide this is a translation
+# failure, not a divergence -- and a line that aborts on prompt sequence
+# measures NOTHING, so this clause stays `unmeasured`, never "passed".
+#
+# The format already has `dcgo_only:` for a row only DCGO asks. The mirror --
+# a row only OUR engine asks, answering the sim prompt and emitting zero wire
+# rows -- is described in scenario.rs as `SimOnlySelect` but is NOT implemented.
+# Adding it is what unblocks this file; the `select: { yes: true }` step below
+# is the row that would carry the flag.
+card: EX11-012
+clause: EX11-012#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, EX11-012, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-liberator
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-024]
+    rest: medusamon-liberator
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX11-012 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY. Our engine's outer accept/decline gate for the optional clause.
+  # DCGO has no gate here: EX11_012.cs is `SetUpActivateClass(..., -1, false,
+  # ...)` with `canNoSelect: true` on the permanent pick, so its "may" rides
+  # the pick and it asks ONE prompt where we ask two. Answers our prompt,
+  # emits no wire row.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  - actor: 0
+    do: { select: { cards: [BT25-001] } }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  # Pre-step state of the trailing pass, still inside P0's turn 7 Main phase.
+  #
+  # EX11-012 reads 20000: printed 12000 plus the +8000 its three DP-granting
+  # inherited sources supply on P0's turn (Elizamon +2000, Cyclonemon +2000,
+  # Cyberdramon +4000). Unlike BT24-017 this printing grants itself no
+  # per-opponent-Digimon bonus, so the token does not raise it further.
+  #
+  # p1.trash holds BT21-024 (Cyberdramon trashed it off P1's security) and
+  # BT23-005 (the deleted Elizamon). BT25-001 -- the egg beneath it -- is
+  # ABSENT because it is the one card returned to the bottom of P1's deck as
+  # the clause's cost, which is the positive evidence the cost was paid.
+  - at: 19
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 0
+      p0.field:
+        - card_id: EX11-012
+          dp: 20000
+          suspended: false
+          sources: [BT21-015, BT21-024, BT23-005, BT25-001]
+      p1.field:
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: [BT21-024, BT23-005]

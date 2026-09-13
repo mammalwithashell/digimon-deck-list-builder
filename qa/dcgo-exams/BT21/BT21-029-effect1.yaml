@@ -1,0 +1,153 @@
+# Exam scenario: Medusamon (BT21-029), clause BT21-029#effect#1 -- <Progress>.
+#
+# "While attacking, your opponent's effects don't affect this Digimon."
+#
+# THE INSTRUMENT: a security bomb. <Progress> is awkward to measure because it
+# needs an OPPONENT effect that would hit the attacker DURING its attack, and the
+# Red LIBERATOR pool has almost none. Raging Serpentine (BT21-093) is the
+# exception and is already in the archetype: its Security Effect reads
+# "[Security] Delete 1 of your opponent's Digimon with the highest DP". Flipped
+# by Medusamon (BT21-029)'s own attack, it is an opponent effect aimed squarely
+# at the attacker -- which is the highest-DP Digimon P0 has -- at the exact
+# moment <Progress> is active. If <Progress> does nothing, Medusamon dies to the
+# security card it just flipped.
+#
+# STAGING. BT21-093 is pinned at the DEFENDER's stack[9] -- the TOP of security,
+# so it is the first card checked (see the exam's deck-stacking mapping). The
+# second check lands on Lamiamon (BT21-025), which has no [Security] effect and
+# is inert here; Medusamon (BT21-029) has <Security A. +1>, so this attack checks
+# TWO cards (that keyword is measured on its own in BT21-029-effect0.yaml).
+#
+# DECK. This is the one scenario that needs a card outside the confirmed
+# `medusamon-liberator` list, so the pool carries a SECOND deck,
+# `medusamon-progress`, identical except two Agumon (BT21-007) swapped for two
+# Raging Serpentine (BT21-093). The original deck is byte-identical, so the
+# already-confirmed scenarios that name it are unaffected.
+#
+# CONTROL, AND ITS LIMIT. Raging Serpentine (BT21-093)'s [Security] clause IS
+# implemented on our side (clause 4 of its YAML spec), so "Medusamon survived"
+# cannot be explained by the effect being absent. What this single line does NOT
+# prove on its own is that the effect FIRED and found no legal target rather than
+# fizzling earlier -- the oracle diff is what settles that, since DCGO runs the
+# same flip. A stronger variant worth authoring later: give P0 a SECOND, smaller
+# Digimon. If the deletion falls through to that one, it proves the effect fired
+# AND that <Progress> excluded Medusamon from candidacy.
+#
+# THE LINE reuses the oracle-CONFIRMED prefix from BT21-029-effect0.yaml.
+card: BT21-029
+clause: BT21-029#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, BT21-029, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-progress
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-093]
+    rest: medusamon-progress
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-029 } }
+    expect: { prompt: main_phase }
+  # The clause is "You may ..." -- take the optional gate, then pick the target.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  # One step past the clause. Paying 4 for Medusamon took memory to -1, so the
+  # turn has ALREADY handed over by the time this step is answered -- the seat
+  # here is P1, not P0. (Our engine does not enforce the declared actor; DCGO
+  # does, and rejected `actor: 0` here on the second oracle run.)
+  - actor: 1
+    do: { pass: {} }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+  # T9 (P0): skip the breeding action, then attack the player.
+  - actor: 0
+    do: { pass: {} }
+  # THE CLAUSE. Medusamon (BT21-029) has <Security A. +1>, so this attack must
+  # check TWO security cards, not one.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+  # Medusamon (BT21-029)'s [End of Attack] arm of clause (c) fires here. DECLINE
+  # it: accepting would delete the opponent's [Petrification] Token, whose own
+  # [On Deletion] trashes another security card and whose deletion re-triggers
+  # the token clause -- three security cards gone and two effects tangled into
+  # what is supposed to be a measurement of ONE keyword. Declining leaves the
+  # security delta attributable to <Security A. +1> alone.
+  - actor: 0
+    do: { select: { decline: true } }
+assert:
+  # The witness is Medusamon (BT21-029) still standing, and P0's trash EMPTY.
+  # Security fell 5 -> 3, so both checks happened and Raging Serpentine
+  # (BT21-093) was among the cards flipped -- its [Security] delete simply could
+  # not touch the attacker. Medusamon is suspended because it attacked, and
+  # still reads 20000 (12000 printed + 8000 from its three DP-granting inherited
+  # sources on its controller's turn).
+  - at: 23
+    that:
+      turn: 9
+      p1.security: 3
+      p0.trash: []
+      p0.field:
+        - card_id: BT21-029
+          dp: 20000
+          suspended: true
+          sources: [BT21-015, BT21-024, BT23-005, BT25-001]
