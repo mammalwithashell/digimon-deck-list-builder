@@ -1,0 +1,109 @@
+# Exam scenario: Scopemon (BT21-071), clause BT21-071#effect#0 --
+# "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+#
+# The printed purple circle is ALSO "Lv.3 / cost 2", so a purple base cannot
+# tell the two apart. The base must be a NON-purple Lv.3 that prints "[Three
+# Musketeers]" somewhere in its text: ToyAgumon EX7-008 (BLACK Lv.3, its [On
+# Play] names "[Three Musketeers]"). Only the clause under exam makes
+# Scopemon's digivolution onto it legal.
+#
+# ToyAgumon's [On Play] would prompt (a 3-card reveal), so it is never PLAYED:
+# it is DIGIVOLVED in the breeding area from a RED Digi-Egg (ToyAgumon EX7-008
+# is red: cards.json card_colors [0], the DSL spec `color: [red]`) -- which is
+# why this file needs its own deck book (qa/dcgo-exams/BT21/tm_bt21_071_pool
+# .json): the same three-musketeers 50 with Koromon ST1-01 x4 as the egg deck.
+# Each digivolution draws 1 (T3 and T5), so the stack carries four draws.
+#
+#   T1 (P0): hatch Koromon, pass.          T2 (P1): pass.
+#   T3 (P0): digivolve the egg into ToyAgumon (cost 0, draw 1; [On Play] does NOT
+#            fire on a digivolve, and ToyAgumon has no [When Digivolving]).
+#   T4 (P1): pass.
+#   T5 (P0, 3): promote ToyAgumon, then THE CLAUSE -- digivolve it into
+#            Scopemon for 2 (3 -> 1, draw 1). Scopemon's [When Digivolving]
+#            has nothing to place (no [Appmon]/[Three Musketeers] TRAIT card
+#            in hand or trash -- the hand holds only Tamers and Sparrowmon),
+#            but DCGO still asks its vacuous OptionalSkill: a DCGO-only
+#            decline. Pass (turn over).
+#
+# The assert sits on P1's turn so ToyAgumon's inherited "[Your Turn] +2000
+# DP" is off and Scopemon reads its printed 4000.
+card: BT21-071
+clause: BT21-071#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-008, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092, EX7-051]
+    rest: tm-red-egg
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Koromon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve into ToyAgumon (red Lv.3, cost 0). NO
+  # breeding-action step this turn: the breeding area holds a Lv.2 (cannot be
+  # moved) and is occupied (cannot hatch), so neither engine asks -- the same
+  # shape as the oracle-confirmed BT21-029 lines at their T3.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote, then THE CLAUSE.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-071 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Scopemon's [When Digivolving] OptionalSkill is VACUOUS here. BT21_071.cs
+  # gates it on CanActivateConditionShared -- "hand or trash non-empty and an
+  # own non-token Digimon exists" -- and only checks for an ELIGIBLE
+  # [Appmon]/[Three Musketeers] trait card inside the coroutine, so DCGO asks
+  # the yes/no even though there is nothing to place. Our engine installs no
+  # prompt when the pick has zero candidates (docs/DCGO_EXAM.md, "DCGO parks
+  # vacuous optional-cost gates our engine skips"). Declined on the wire.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [EX7-008, ST1-01] }
+      p1.field: []

@@ -1,0 +1,191 @@
+# Exam scenario: Bind Red Trigger (P-180), clause P-180#effect#0 --
+# "When effects trash this card from digivolution cards, delete 1 of your
+#  opponent's 7000 DP or lower Digimon. While you have a [Three Musketeers]
+#  trait Digimon, you can ignore this card's color requirements."
+#
+# BOTH halves are exercised. The ignore-colour half is what makes T5 legal at
+# all (a RED Option used in a PURPLE deck because BeelStarmon BT25-085 prints
+# the [Three Musketeers] trait). The trigger half is the measurement: P-180
+# sits under BeelStarmon (its own [Main] put it there), LadyDevimon BT25-083's
+# [When Attacking] effect trashes it from those digivolution cards, and the
+# trigger deletes P1's Biyomon (3000 DP).
+#
+# THE REUSE IS DECLINED ON PURPOSE. LadyDevimon's effect also offers "you may
+# use 1 [Three Musketeers] trait Option card from your trash with the cost
+# reduced by 3". DCGO STACKS P-180's trigger (ITrashDigivolutionCards ->
+# StackSkillInfos) and resolves it only after LadyDevimon's effect finishes,
+# gated on IsExistOnTrash -- accepting the reuse would re-tuck P-180 and void
+# the trigger on DCGO's side. Declining keeps P-180 in the trash.
+#
+# PREDICTED DIVERGENCE (prompt ORDER, see the step comment): our engine fires
+# P-180's trigger mid-effect, before the reuse prompt; DCGO asks the reuse
+# prompt first (rules-correct per 15-8-3-2). The line is authored in our
+# order so it lowers; the oracle abort at the trigger row IS the finding.
+#
+#   T1 (P0): pass.
+#   T2 (P1, 3): play Biyomon ST1-02 (3 -> 1), pass.
+#   T3 (P0, 3): play BeelStarmon (3 -> -3).
+#   T4 (P1): pass.
+#   T5 (P0, 3): use P-180 (3 -> -3): trash P1's top security, tuck under
+#            BeelStarmon.
+#   T6 (P1): pass.
+#   T7 (P0, 3): play LadyDevimon (3 -> -4); its [On Play] is inert (no
+#            [Three Musketeers] trait card in hand or trash).
+#   T8 (P1): pass.
+#   T9 (P0, 3): LadyDevimon attacks security. [When Attacking]: trash P-180
+#            from BeelStarmon; decline the reuse. THE CLAUSE: P-180's trigger
+#            deletes Biyomon. The attack then checks 1 security card
+#            (Agumon 2000 loses to 7000). Attacking costs nothing, so the
+#            trailing step is P0's pass.
+#
+# PROMPT SHAPE (P_180.cs, region "When Trashed from digivolutions cards"):
+# SetUpActivateClass(..., isOptional: false) -- mandatory, no OptionalSkill
+# (SetIsOptionEffect marks it as an Option card's effect, not as optional);
+# one SelectPermanentEffect(Destroy, canNoSelect: false) over opponent Digimon
+# with DP <= 7000.
+card: P-180
+clause: P-180#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-085, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, P-180, BT25-092, EX7-051]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-03, ST1-04, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-03, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): the trigger's eventual target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): BeelStarmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-085, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): P-180 under BeelStarmon (ignore-colour half of the clause).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-180, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): LadyDevimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, 3): LadyDevimon attacks; its [When Attacking] trashes P-180.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  # DCGO: which Digimon's digivolution cards (wire-only, see BT25-083-effect2).
+  # OUR engine parks a yes/no gate here for the effect's `optional: true`
+  # (SelectionKind::Replacement); DCGO's ActivateClass is optional: false and
+  # asks nothing -- its picks are individually declinable instead. A
+  # prompt-EXISTENCE difference (both decision spaces are equivalent), so the
+  # gate is answered sim-side only and puts nothing on the wire.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT25-085], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The Option to trash: P-180.
+  # OUR union-material pick names the Option directly; its only candidate is
+  # P-180, and the harness resolves a card identity against a UnionZone prompt
+  # by scanning HAND and TRASH only (selection_resolve.rs, the
+  # `Hand | UnionZone` arm) -- a digivolution-card candidate cannot be named
+  # by `cards:`. So the pick is answered sim-side through the resolver's
+  # single-accept-id `yes:` path, and DCGO's own card row rides the wire
+  # alone below.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE: P-180's trigger deletes P1's 7000-or-lower Digimon.
+  #
+  # ORDER IS THE PREDICTED FINDING. Our engine parks this pick IMMEDIATELY
+  # after the trash, in the middle of LadyDevimon's still-resolving effect.
+  # DCGO stacks the trigger (StackSkillInfos) and asks LadyDevimon's
+  # use-from-trash SelectCardEffect FIRST; general_rule.pdf 15-8-3-2 (a
+  # trigger-type effect "can't activate during rule/effect processing" -- it
+  # waits as pending activation) says DCGO has the rules-correct order. The
+  # line is authored in OUR order because a line must lower here to run at
+  # all; the oracle is expected to abort at THIS row ("our engine expected
+  # SelectPermanentEffect, DCGO asked SelectCardEffect"), and that abort is the
+  # measurement. See NOTES-P-180.md.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Decline the reduced-cost reuse so P-180 stays in the trash (in DCGO's
+  # order this row comes first).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectCardEffect }
+  # Security check (Agumon 2000 vs 7000) resolves with no prompt; memory 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 26
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.trash: [P-180]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: BT25-085, dp: 12000, suspended: false, sources: [] }
+        - { card_id: BT25-083, dp: 7000, suspended: true, sources: [] }
+      p1.field: []
+      p1.security: 3
+      p1.trash: [ST1-04, ST1-02, ST1-03]

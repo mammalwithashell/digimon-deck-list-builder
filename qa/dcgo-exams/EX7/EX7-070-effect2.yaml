@@ -1,0 +1,85 @@
+# Exam scenario: Der Blitz (EX7-070), clause EX7-070#effect#2 --
+# "[Security] Delete 1 of your opponent's Digimon with the lowest play cost."
+#
+# EX7-070 is pinned as P0's TOP security card (stack[9]; stack[5..9] is the
+# security stack, [9] flipped first -- see docs/DCGO_EXAM.md "What each stack
+# position becomes"). P1 fields Biyomon ST1-02 (cost 2) and Dracomon ST1-04
+# (cost 3) and attacks security with DRACOMON, so the flipped clause has a
+# unique lowest-cost target that is NOT the attacker: Biyomon. EX7-070 is an
+# Option, so no security battle follows; Dracomon stays suspended on the field.
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, memory 3): play Biyomon (3 -> 1), play Dracomon (1 -> -2, over).
+#   T3 (P0): pass everything (P1's bodies shake summoning sickness).
+#   T4 (P1, memory 3): Dracomon attacks security. THE CLAUSE: EX7-070 flips,
+#            P0 (the defender) picks Biyomon. Attacking costs no memory, so
+#            the trailing step is P1's main prompt.
+#
+# PROMPT SHAPE (EX7_070.cs, region "Security Effect"): mandatory; one
+# SelectPermanentEffect(Destroy, canNoSelect: false) for card.Owner = P0.
+card: EX7-070
+clause: EX7-070#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-070,
+            BT25-058]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-04, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, BT1-009, BT1-009,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE -- Dracomon (field.1) into security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  # The flipped Option's [Security]: P0 deletes P1's lowest-cost Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [EX7-070]
+      p0.field: []
+      p1.security: 5
+      p1.trash: [ST1-02]
+      p1.field:
+        - { card_id: ST1-04, dp: 4000, suspended: true, sources: [] }
