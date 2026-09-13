@@ -321,6 +321,34 @@ impl Permanent {
         )
     }
 
+    /// Whether this permanent counts as a Digimon for RULES purposes.
+    ///
+    /// `CardKind::Token` is included, and that is not a convenience: every token
+    /// this engine can materialize IS a printed Digimon. `TokenDef` carries no
+    /// kind field at all, and `TokenDef::to_card_data` hardcodes
+    /// `card_kind: CardKind::Token` for all of them, so `Token` here means "a
+    /// Digimon whose card has no printed number", not "some other card type".
+    /// The Petrification Token prints as `(Digimon/white/3000 DP/...)`.
+    ///
+    /// Leaving it out made every rule phrased "your opponent's Digimon" skip
+    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-22-1 switches the
+    /// attack to the opponent's unsuspended DIGIMON with the highest DP) never
+    /// offered a Petrification Token, because `raid_switch_candidates` gates on
+    /// this predicate -- every other filter passed (unsuspended, Standard option
+    /// state, 3000 DP). DCGO applies no token filter there either
+    /// (`CardEffectCommons/KeyWordEffects/Raid.cs`: `!permanent1.IsSuspended`
+    /// plus `IsMaxDP`), so the rules manual and DCGO agreed against us.
+    ///
+    /// The engine already treated tokens as Digimon everywhere this predicate is
+    /// not consulted -- `EffectContext::play_token` routes
+    /// `CannotPlayDigimonByEffect` for them precisely because "a Token is a
+    /// Digimon", and Medusamon (BT21-029)'s "when any of your opponent's Digimon
+    /// are deleted" fires on a token deletion (oracle-confirmed). This closes
+    /// that inconsistency rather than creating a new behaviour.
+    ///
+    /// `is_digimon` (the PRINTED-kind check, above) is deliberately NOT changed:
+    /// it answers "what card type is on top", which for a token is genuinely
+    /// `Token`.
     pub fn is_digimon_for_rules(
         &self,
         data: &[CardData],
@@ -329,7 +357,7 @@ impl Permanent {
     ) -> bool {
         matches!(
             self.synth_identity(data, modifiers, handle).kind,
-            CardKind::Digimon | CardKind::Dual
+            CardKind::Digimon | CardKind::Dual | CardKind::Token
         )
     }
 

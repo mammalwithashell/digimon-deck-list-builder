@@ -1,0 +1,144 @@
+# Exam scenario: Medusamon (BT21-029), clause BT21-029#effect#0 -- <Security A. +1>.
+#
+# "This Digimon checks 1 additional security card." Measured as a DELTA: the
+# opponent's security stack must fall by exactly 2 across one attack on the
+# player, not by 1.
+#
+# THE LINE reuses the oracle-CONFIRMED prefix from BT21-029-effect2.yaml (see
+# that file's header for the Red LIBERATOR chain, the memory accounting, and the
+# two prompt conventions the oracle corrected). It then idles one turn so
+# Medusamon (BT21-029) is unsuspended and P0 holds memory 3 on turn 9, and
+# attacks.
+#
+# WHY THE SECURITY DELTA IS 2 AND NOT 3. The attack also removes from security,
+# which fires the [All Turns] arm of clause (d) and gives the opponent a second
+# [Petrification] Token -- that is expected and asserted. What is deliberately
+# NOT taken is the [End of Attack] delete (clause (c)); see the step comment.
+#
+# NOTE ON THE OPPONENT'S TOKEN AND <Blocker>. The opponent holds a Token when
+# the attack is declared. It has no <Blocker>, and its "[Your Turn] This Digimon
+# can't suspend" clause is inactive on P0's turn, so it neither blocks nor
+# redirects; the attack reaches security as declared and neither engine prompts
+# for a block.
+card: BT21-029
+clause: BT21-029#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, BT21-029, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-liberator
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-024]
+    rest: medusamon-liberator
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-029 } }
+    expect: { prompt: main_phase }
+  # The clause is "You may ..." -- take the optional gate, then pick the target.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  # One step past the clause. Paying 4 for Medusamon took memory to -1, so the
+  # turn has ALREADY handed over by the time this step is answered -- the seat
+  # here is P1, not P0. (Our engine does not enforce the declared actor; DCGO
+  # does, and rejected `actor: 0` here on the second oracle run.)
+  - actor: 1
+    do: { pass: {} }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+  # T9 (P0): skip the breeding action, then attack the player.
+  - actor: 0
+    do: { pass: {} }
+  # THE CLAUSE. Medusamon (BT21-029) has <Security A. +1>, so this attack must
+  # check TWO security cards, not one.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+  # Medusamon (BT21-029)'s [End of Attack] arm of clause (c) fires here. DECLINE
+  # it: accepting would delete the opponent's [Petrification] Token, whose own
+  # [On Deletion] trashes another security card and whose deletion re-triggers
+  # the token clause -- three security cards gone and two effects tangled into
+  # what is supposed to be a measurement of ONE keyword. Declining leaves the
+  # security delta attributable to <Security A. +1> alone.
+  - actor: 0
+    do: { select: { decline: true } }
+assert:
+  # Pre-step state of the declining step -- i.e. after the attack has resolved
+  # its security checks. Security is 3, down from the 5 it held before the
+  # attack: exactly two cards checked. One check is the base attack; the second
+  # is the clause under exam.
+  #
+  # The opponent's field carries TWO [Petrification] Tokens: the one Medusamon
+  # (BT21-029) gave them when it digivolved, plus one more from the [All Turns]
+  # clause firing on this attack's security removal.
+  - at: 23
+    that:
+      turn: 9
+      p1.security: 3
+      p1.field:
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []

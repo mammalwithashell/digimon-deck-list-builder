@@ -1,0 +1,182 @@
+# Exam scenario: Medusamon (BT24-017), clause BT24-017#effect#0 -- <Raid>.
+#
+# "When this Digimon attacks, you may switch the target of attack to 1 of your
+#  opponent's unsuspended Digimon with the highest DP."
+#
+# WHY THIS LINE EXISTS AT ALL. Until 2026-09-05 our engine could not reach it:
+# `Permanent::is_digimon_for_rules` matched only `CardKind::Digimon | Dual`, and
+# a token's CardData is `CardKind::Token`, so `raid_switch_candidates` filtered
+# every Token out and no Raid window ever opened. general_rule.pdf 16-22-1 says
+# the switch targets the opponent's unsuspended DIGIMON, and the Petrification
+# Token prints as "(Digimon/white/3000 DP/...)"; DCGO applies no token filter
+# either (CardEffectCommons/KeyWordEffects/Raid.cs gates only on
+# `!permanent1.IsSuspended` + `IsMaxDP`). The predicate now admits
+# `CardKind::Token`.
+#
+# NOTE the two Tokens are the opponent's ONLY Digimon, and an unsuspended Digimon
+# cannot be attacked directly -- so the attack landing on one is itself proof the
+# Raid switch happened.
+#
+# THE LINE reuses the oracle-CONFIRMED prefix from BT24-017-effect3.yaml, then
+# idles to turn 9 so Medusamon (BT24-017) is unsuspended.
+card: BT24-017
+clause: BT24-017#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, BT24-017, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-liberator
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-024]
+    rest: medusamon-liberator
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-017 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  # SIM-ONLY. This accept/decline gate is OUR engine's rendering of the
+  # "by returning 2 cards" optional processing condition (15-7-1). DCGO has no
+  # such gate: BT24_017.cs builds the effect NON-optional and carries the
+  # refusal on the trash pick's `canNoSelect: () => true` instead, so it asks
+  # ONE cancellable prompt where we ask two. The row answers our prompt and
+  # emits no wire row; the pick below is the shared decision both engines make.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT23-005, BT25-001] } }
+  # DCGO-ONLY: the deck-bottom ORDERING prompt.
+  #
+  # With 2 cards, DCGO's `ReturnRevealedCardsToLibraryBottom` takes its
+  # `remainingCards.Count == 1` ELSE branch and opens a SECOND
+  # SelectCardEffect -- "Specify the order to place the card at the bottom of
+  # the deck" (RevealLibrary.cs:469+, canNoSelect: false, canEndNotMax:
+  # false). Our engine has no such prompt: `return_trash_list_to_deck_bottom`
+  # takes the bound list and orders it itself, so this row is DCGO's alone.
+  #
+  # DO NOT answer it with `decline: true`. Cancelling the ORDER prompt leaves
+  # the cards in the trash while the caller goes on to play both tokens and
+  # grant the DP boost -- which reads as "DCGO plays the tokens without
+  # paying the cost" and is an artifact of the answer, not DCGO behaviour.
+  # That mis-answer is exactly what produced the first `diverged` verdict on
+  # this clause; the only surviving field was p1.trash.
+  - actor: 0
+    do: { select: { cards: [BT23-005, BT25-001], dcgo_only: true } }
+  - actor: 0
+    do: { pass: {} }
+  # P1's turn 8: breeding action, then main phase -- TWO steps for the one
+  # turn. Then P0's turn 9 breeding action. (Declaring these 1/0/1 instead of
+  # 1/1/0 is what the oracle rejected: our engine does not enforce the
+  # declared actor, DCGO does.)
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  # T9 (P0): declare an attack on the player. <Raid> opens immediately after
+  # declaration (general_rule.pdf 16-22-2: it triggers when the Digimon ATTACKS).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+  # DCGO-ONLY: a MultipleSkills trigger-order prompt.
+  #
+  # Declaring the attack triggers TWO effects simultaneously on DCGO's side --
+  # Medusamon (BT24-017)'s <Raid>, and the Tokomon (BT25-001) egg at the bottom
+  # of the digivolution stack, whose inherited "[When Attacking] [Once Per Turn]
+  # If this Digimon has the [TS] trait, <Draw 1>" is offered even though
+  # Medusamon is Dragonkin/LIBERATOR and NOT [TS]. DCGO evaluates that condition
+  # when the effect RESOLVES; our engine evaluates it up front and never queues
+  # the effect, so it opens no trigger-order prompt at all.
+  #
+  # Outcome is identical either way (the [TS] branch does nothing), so this is
+  # the documented TriggerOrder CARDINALITY mismatch, not a rules divergence --
+  # see the exam authoring guide's prompt table. The row picks Raid so DCGO
+  # resolves the same effect our engine went straight to.
+  - actor: 0
+    do: { select: { cards: [BT24-017], dcgo_only: true } }
+  # Take the switch onto a [Petrification] Token. Both Tokens are unsuspended and
+  # tied at 3000 DP, which is 16-22-5's tie case: the attacker chooses.
+  #
+  # THE FOLD. general_rule.pdf 16-22-3 makes Raid's processing optional, and DCGO
+  # renders that as a separate OptionalSkill yes/no BEFORE the target pick, while
+  # our engine surfaces ONE declinable pick that is gate and target at once.
+  # `expect: {prompt: OptionalSkill}` is the declared fold marker: the emitter
+  # splits this single authored row into OptionalSkill(yes) + the pick on the
+  # wire, so both engines answer their own shape from one line.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+assert:
+  # The witness is the opponent's board: TWO [Petrification] Tokens before the
+  # attack, ONE after. The attack was declared on the player and ended up
+  # deleting a Digimon, which only the Raid switch can produce.
+  #
+  # Security also falls 5 -> 3: one check from <Piercing> (measured on its own in
+  # BT24-017-effect2.yaml) and one from the deleted Token's [On Deletion].
+  - at: 27
+    that:
+      turn: 9
+      p1.security: 3
+      p1.field:
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: [BT21-008, BT21-024, BT21-025]

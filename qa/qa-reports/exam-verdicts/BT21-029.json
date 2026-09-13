@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-05T15:27:04.108573100+00:00",
+  "clauses": {
+    "BT21-029#effect#0": {
+      "clause_id": "BT21-029#effect#0",
+      "card_id": "BT21-029",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect0.yaml",
+      "recorded_at": "2026-09-04T09:35:45.648529700+00:00"
+    },
+    "BT21-029#effect#1": {
+      "clause_id": "BT21-029#effect#1",
+      "card_id": "BT21-029",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "958e00cdd5e68550cee0715faa5a13ad254bce54080c82c408e67f8a6df546f2",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect1.yaml",
+      "recorded_at": "2026-09-05T15:27:04.108573100+00:00"
+    },
+    "BT21-029#effect#2": {
+      "clause_id": "BT21-029#effect#2",
+      "card_id": "BT21-029",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "6aa798586f3ffc479fdafe2e4824d6f8549171bce317269710839dabb2c731d8",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect2.yaml",
+      "recorded_at": "2026-08-30T14:07:08.928433400+00:00"
+    },
+    "BT21-029#effect#3": {
+      "clause_id": "BT21-029#effect#3",
+      "card_id": "BT21-029",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "1affe9724dd243388605a0fd54831396c0bf2096a2f1bc6b2e50e49ecc0d1ef5",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect3.yaml",
+      "recorded_at": "2026-09-04T09:47:58.946425100+00:00"
+    },
+    "BT21-029#effect#4": {
+      "clause_id": "BT21-029#effect#4",
+      "card_id": "BT21-029",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4c05ccfb71d2dbfcb481dcd736b6bd0bce91d795bcf8211c1682ffdc67c8f3d9",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect4.yaml",
+      "recorded_at": "2026-09-05T01:05:09.115355500+00:00"
+    }
+  }
+}

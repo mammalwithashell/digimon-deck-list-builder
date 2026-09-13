@@ -79,6 +79,32 @@ pub enum StepAction {
     /// candidate list like any other select. This widens the vocabulary; it
     /// does not weaken the comparison.
     SelectDcgoOnly(SelectPayload),
+    /// A selection OUR engine parks that DCGO never asks -- authored
+    /// `select: { ..., sim_only: true }`. The exact mirror of
+    /// `SelectDcgoOnly`, and the implementation of the `SimOnlySelect`
+    /// padding this module's docs already describe.
+    ///
+    /// The motivating family is a "You may ..." clause. DCGO's optionality
+    /// lives in ONE C# argument -- `SetUpActivateClass(cond, body, times,
+    /// isOptional, desc)`. With `isOptional: true` DCGO parks an
+    /// `OptionalSkill` gate and our outer accept/decline gate lines up 1:1.
+    /// With `isOptional: false` DCGO instead carries the "may" on the pick
+    /// itself (`canNoSelect: true`) and asks ONE cancellable prompt, while our
+    /// engine still installs a separate gate -- so the line is one answer LONG
+    /// on our side and aborts on prompt sequence. Both engines let the player
+    /// refuse, so the semantics agree; only cardinality differs.
+    ///
+    /// Observed across the three Medusamon printings: BT21_029 is
+    /// `..., 1, true, ...` (shapes match, clause confirms), while BT24_017 and
+    /// EX11_012 are `..., -1, false, ...` and abort with "prompt needs
+    /// select_card_ids or select_cancel, got: select_bool=true".
+    ///
+    /// This answers OUR prompt and emits ZERO wire rows, so the DCGO trace is
+    /// never advanced past a prompt it does not have. It widens the authoring
+    /// vocabulary; it does not weaken the comparison -- every SHARED decision
+    /// still lowers to the same action id on both sides, and the guard in the
+    /// adapter refuses the flag when our engine has no prompt to answer.
+    SelectSimOnly(SelectPayload),
 }
 
 /// The answer a `select:` step gives to the engine's parked selection prompt.
@@ -265,6 +291,11 @@ struct SelectArgs {
     /// count toward the exactly-one rule.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     dcgo_only: Option<bool>,
+    /// Marks the step as a SIM-ONLY row (see `StepAction::SelectSimOnly`).
+    /// A MODIFIER like `dcgo_only:`, so it does not count toward the
+    /// exactly-one answer-form rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sim_only: Option<bool>,
     /// Multi-pick material declaration -- see [`SelectPayload::Materials`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     materials: Option<Vec<String>>,
@@ -573,11 +604,19 @@ impl<'de> Deserialize<'de> for StepAction {
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
                 let dcgo_only = a.dcgo_only.unwrap_or(false);
+                let sim_only = a.sim_only.unwrap_or(false);
+                if dcgo_only && sim_only {
+                    return Err(D::Error::custom(
+                        "step `do: select`: `dcgo_only: true` and `sim_only: true` are                          mutually exclusive -- a row belongs to exactly one engine's                          prompt sequence, and carrying both would advance neither trace                          coherently",
+                    ));
+                }
                 let payload = a
                     .into_payload()
                     .map_err(|e| D::Error::custom(format!("step `do: select`: {e}")))?;
                 if dcgo_only {
                     StepAction::SelectDcgoOnly(payload)
+                } else if sim_only {
+                    StepAction::SelectSimOnly(payload)
                 } else {
                     StepAction::Select(payload)
                 }
@@ -636,6 +675,11 @@ impl Serialize for StepAction {
             StepAction::SelectDcgoOnly(payload) => {
                 let mut a = SelectArgs::from_payload(payload);
                 a.dcgo_only = Some(true);
+                map.serialize_entry("select", &a)?
+            }
+            StepAction::SelectSimOnly(payload) => {
+                let mut a = SelectArgs::from_payload(payload);
+                a.sim_only = Some(true);
                 map.serialize_entry("select", &a)?
             }
         }

@@ -818,7 +818,9 @@ fn exam_one(
     diffed: &mut u32,
 ) -> Result<(ExamOutcome, Option<VerdictEvent>), String> {
     use dcgo_harness::exam::differ::diff_paired;
-    use dcgo_harness::exam::projection::{align_to_scenario_origin, pair_by_wire_rows, parse_sidecar};
+    use dcgo_harness::exam::projection::{
+        align_to_scenario_origin, pair_by_wire_rows_with_ownership, parse_sidecar,
+    };
     use dcgo_harness::exam::run::lower_and_run;
     use dcgo_harness::exam::scenario::Scenario;
 
@@ -919,6 +921,7 @@ fn exam_one(
     // This is how the differ pairs our per-STEP rows against DCGO's
     // per-DECISION rows.
     let wire_rows_per_step = run.wire_rows_per_step;
+    let ours_present_per_step = run.ours_present_per_step;
     let projections = run.projections;
 
     if sim_only {
@@ -981,7 +984,8 @@ fn exam_one(
     // slides apart from the first multi-row step onward and manufactures
     // divergences out of the offset -- measured on EX12-011#effect#0, where our
     // post-battle row was compared against DCGO's pre-battle mid-fold row.
-    let pairing = pair_by_wire_rows(&wire_rows_per_step, dcgo.len());
+    let pairing =
+        pair_by_wire_rows_with_ownership(&wire_rows_per_step, &ours_present_per_step, dcgo.len());
     let report = diff_paired(&ours_for_diff, &dcgo, &pairing);
     *diffed += 1;
     if all_diffs {

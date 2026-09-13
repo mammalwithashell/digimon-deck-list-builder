@@ -1,0 +1,147 @@
+# Exam scenario: BT21-029 Medusamon, clause BT21-029#effect#2 --
+# "[When Digivolving] [End of Attack] [Once Per Turn] You may delete 1 of your
+#  opponent's lowest DP Digimon."
+#
+# This file exercises the [When Digivolving] arm. (The [End of Attack] arm is
+# the same ActivateClass in DCGO -- BT21_029.cs registers it twice, under
+# OnEnterFieldAnyone and OnEndAttack, sharing SetHashString("Delete_BT21_029")
+# so the Once Per Turn lockout is shared across both timings.)
+#
+# THE LINE. Medusamon is a Lv.6, so the legal prefix is long: both seats build
+# a Digimon in the breeding area for free, and only P0 promotes and digivolves
+# up the Red LIBERATOR chain.
+#
+#   T1 (P0): hatch Tokomon BT25-001.
+#   T2 (P1): hatch Tokomon BT25-001.
+#   T3 (P0): breeding-digivolve into Elizamon BT21-008 (Red Lv.2 / cost 0).
+#            BT21-008's [On Play] does NOT fire on a digivolve.
+#   T4 (P1): breeding-digivolve into Elizamon BT23-005 (Red Lv.2 / cost 0).
+#   T5 (P0, memory 3): move the stack out, then digivolve TWICE in the one
+#            turn -- Dimetromon BT21-017 (Red Lv.3 / cost 2, memory 3 -> 1),
+#            then Lamiamon BT21-025 (Red Lv.4 / cost 3, memory 1 -> -2, which
+#            hands the turn over).
+#   T6 (P1, memory 2): move Elizamon BT23-005 out to the battle area, free.
+#   T7 (P0): digivolve into Medusamon BT21-029 (Red Lv.5 / cost 4).
+#            THE CLAUSE fires as a [When Digivolving] trigger.
+#
+# WHY BT23-005 IS THE OPPONENT'S DIGIMON. It is the only Lv.3 in this pool with
+# no [On Play] at all -- its two clauses are both [Your Turn], so on P0's turn
+# it is an inert 1000 DP body and its "+2000 DP" passive is switched off. That
+# makes it (a) the unambiguous lowest-DP target, and (b) free of prompts that
+# would add divergence surface unrelated to this clause.
+#
+# THE CASCADE IS DELIBERATE, NOT NOISE. Deleting the opponent's Digimon
+# immediately satisfies clause BT21-029#effect#3 ("[All Turns] [Once Per Turn]
+# When any of your opponent's Digimon are deleted ... they play 1
+# [Petrification] Token"), which is mandatory in DCGO
+# (SetUpActivateClass(..., 1, false, ...)) and so resolves with no prompt. The
+# token therefore appears on the OPPONENT's field, and the assertion records
+# it. That is this line's honest end state.
+card: BT21-029
+clause: BT21-029#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT23-005, BT21-015, BT21-024, BT21-029, BT21-007,
+            BT21-008, BT24-008, EX11-008, BT24-012, BT21-017]
+    rest: medusamon-liberator
+  p1:
+    stack: [BT23-005, BT21-007, BT24-008, EX11-008, BT24-012,
+            BT21-015, BT21-017, BT21-008, BT21-025, BT21-024]
+    rest: medusamon-liberator
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elizamon BT21-008.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Elizamon BT23-005.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: BT23-005 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, then two digivolutions in the one turn.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-024 } }
+    expect: { prompt: main_phase }
+  # Cyberdramon BT21-024's own [When Digivolving]: the OPPONENT places 1 card
+  # from hand as their bottom security card, then their top security card is
+  # trashed. Net security is unchanged at 5. Medusamon is not on the field yet,
+  # so this security removal does NOT trigger the clause under exam.
+  - actor: 1
+    do: { select: { cards: [BT21-007] } }
+  # T6 (P1, memory 2): promote Elizamon to the battle area.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): digivolve into Medusamon -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-029 } }
+    expect: { prompt: main_phase }
+  # The clause is "You may ..." -- take the optional gate, then pick the target.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  # One step past the clause. Paying 4 for Medusamon took memory to -1, so the
+  # turn has ALREADY handed over by the time this step is answered -- the seat
+  # here is P1, not P0. (Our engine does not enforce the declared actor; DCGO
+  # does, and rejected `actor: 0` here on the second oracle run.)
+  - actor: 1
+    do: { pass: {} }
+assert:
+  # Pre-step state of the trailing pass. Medusamon caps the full Red LIBERATOR
+  # chain; the opponent's Elizamon is gone and the cascaded [Petrification]
+  # Token stands in its place.
+  #
+  # Medusamon reads its printed 12000 HERE because P0's turn has already
+  # ended: paying 4 to digivolve took memory to -1 and handed the turn over,
+  # so the "[Your Turn]" inherited DP bonuses on its three Digimon sources
+  # (Elizamon BT23-005 +2000, Cyclonemon BT21-015 +2000, Cyberdramon
+  # BT21-024 +4000) are switched off. Mid-turn -- e.g. at the target pick one
+  # step earlier -- it reads 20000. That DP-only inherited set is the whole
+  # reason this chain was chosen: an attack down this line fires NO trigger
+  # but Medusamon's own.
+  - at: 18
+    that:
+      p0.memory: -1
+      p0.field:
+        - card_id: BT21-029
+          dp: 12000
+          suspended: false
+          sources: [BT21-015, BT21-024, BT23-005, BT25-001]
+      p1.field:
+        - card_id: TOKEN_PETRIFICATION
+          dp: 3000
+          suspended: false
+          sources: []
