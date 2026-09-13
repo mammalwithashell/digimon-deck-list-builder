@@ -12,9 +12,11 @@
   another drive (`CARGO_TARGET_DIR`), so that path does not exist in a worktree
   at all.
 
-This resolves the binary the same way cargo does — `CARGO_TARGET_DIR` when set,
-otherwise `<repo>/target` — prefers `release` over `debug`, and **execs it
-directly**. No build happens here on purpose: a missing binary exits non-zero
+This resolves the binary where cargo actually put it — `CARGO_TARGET_DIR` when
+set, else the per-worktree dir derived from `CARGO_TARGET_BASE` exactly as
+`~/.bashrc` derives it (the app's MCP environment has the base but not the
+derived dir), else `<repo>/target` — prefers `release` over `debug`, and
+**execs it directly**. No build happens here on purpose: a missing binary exits non-zero
 with the exact command to run, which the client surfaces immediately, instead
 of stalling the handshake until it times out.
 
@@ -41,24 +43,60 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def target_dir() -> Path:
-    """Where cargo writes build output, resolved as cargo itself would."""
+def derived_target_dir() -> Path:
+    """The per-worktree target dir, derived exactly as `~/.bashrc` derives it.
+
+    `CARGO_TARGET_DIR` is NOT a User environment variable here: `~/.bashrc`
+    computes it per worktree (CLAUDE.md rule 31), so it exists in a bash shell
+    and is ABSENT in the environment the desktop app hands its MCP servers. The
+    launcher used to fall straight back to `<repo>/target` in that case — a
+    directory that never exists under the isolation scheme — so every Rust MCP
+    server failed to connect with "no built binary" while the binary sat in
+    `D:/cargo-target/<worktree>`. A health check run from a bash shell passed,
+    because that shell had the variable; only the app's launch reproduced it.
+
+    `CARGO_TARGET_BASE` IS a User variable, so it is visible to the app. Mirror
+    the bashrc rule: `<base>/<worktree-name>` inside `.claude/worktrees/`, else
+    `<base>/<repo basename>`.
+    """
+    base = Path(os.environ.get("CARGO_TARGET_BASE") or "D:/cargo-target")
+    root = repo_root()
+    parts = root.parts
+    for i in range(len(parts) - 2):
+        if parts[i] == ".claude" and parts[i + 1] == "worktrees":
+            return base / parts[i + 2]
+    return base / root.name
+
+
+def target_dirs() -> list[Path]:
+    """Where cargo may have written build output, most-authoritative first.
+
+    An explicit `CARGO_TARGET_DIR` wins outright (a bash shell, CI, or a pinned
+    build). Otherwise the per-worktree derived dir, then `<repo>/target` for a
+    machine that does not use the isolation scheme at all.
+    """
     env = os.environ.get("CARGO_TARGET_DIR")
-    if env:
-        return Path(env)
-    return repo_root() / "target"
+    dirs = [Path(env)] if env else []
+    for d in (derived_target_dir(), repo_root() / "target"):
+        if d not in dirs:
+            dirs.append(d)
+    return dirs
 
 
 def candidates(binary: str) -> list[Path]:
     """Plausible locations, most-preferred first.
 
-    `release` wins over `debug`: if someone has built an optimized server they
-    almost certainly want it, and a stale debug build alongside it would
-    otherwise shadow it silently.
+    Directories in `target_dirs()` order; within each, `release` wins over
+    `debug`: if someone has built an optimized server they almost certainly
+    want it, and a stale debug build alongside it would otherwise shadow it
+    silently.
     """
-    root = target_dir()
     exe = ".exe" if os.name == "nt" else ""
-    return [root / profile / f"{binary}{exe}" for profile in ("release", "debug")]
+    return [
+        root / profile / f"{binary}{exe}"
+        for root in target_dirs()
+        for profile in ("release", "debug")
+    ]
 
 
 def main(argv: list[str]) -> int:
@@ -83,8 +121,9 @@ def main(argv: list[str]) -> int:
         f"mcp_launch: no built binary for {binary!r}.\n"
         f"  looked in: {', '.join(str(p) for p in tried)}\n"
         f"  build it once with:  cargo build -p {binary}\n"
-        f"  (CARGO_TARGET_DIR is "
-        f"{os.environ.get('CARGO_TARGET_DIR') or '<unset, using ./target>'})",
+        f"  (CARGO_TARGET_DIR={os.environ.get('CARGO_TARGET_DIR') or '<unset>'}, "
+        f"CARGO_TARGET_BASE={os.environ.get('CARGO_TARGET_BASE') or '<unset>'}; "
+        f"build from this worktree so cargo writes to the first dir above)",
         file=sys.stderr,
     )
     return 1
