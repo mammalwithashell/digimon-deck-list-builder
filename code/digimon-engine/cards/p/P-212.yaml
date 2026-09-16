@@ -1,0 +1,99 @@
+# P-212 Asuna Shiroki — Tamer, Purple, Cost 3. Traits: [TS].
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/P-212.webp — authoritative; official DB bundle
+# data/card_bundles/P-212.md):
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [On Play] <Draw 1> and trash 1 card in your hand. If this effect trashed a
+#   card with the [Three Musketeers] or [TS] trait, delete 1 of your
+#   opponent's level 3 Digimon.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_212.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase` →
+#   `CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect`:
+#   CanActivateCondition = `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1`
+#   (battle-area Digimon only — breeding does not count) → `AddMemory(1)`.
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` + `CanTriggerOnPlay(card)`
+#   (this Tamer's own [On Play]), isOptional = FALSE.
+#   `DrawAndDiscardCards(draw 1, trash 1)` — draw first, then a MANDATORY
+#   hand pick to trash. `trashedTargetCard` = the picked card
+#   `HasThreeMusketeersTraits || HasTSTraits`. If so AND an opponent
+#   battle-area Digimon with `HasLevel && IsLevel3` exists: mandatory
+#   `SelectPermanentEffect(Destroy, maxCount Min(1, count), canNoSelect false)`.
+#
+# Clause 3 — `EffectTiming.SecuritySkill` → `PlaySelfTamerSecurityEffect`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# Clause 2's "If this effect trashed a card with the … trait" is a RESULT
+# condition on the card this same effect just trashed. `select_hand` binds a
+# hand INDEX, which is stale once the card has moved, so the check reads the
+# per-effect result log instead: `trash_from_hand_by_index` records the trashed
+# card's identity and `trashed_hand_card_matching` (G-DSL-EFFECT-TRASHED-HAND-
+# CARD — widened for this card; sibling of `returned_card_matching`) evaluates
+# the printed trait test against it. The delete is a mandatory
+# `select_opponent_permanent` over `level_eq: 3` Digimon; with zero candidates
+# the selection installer short-circuits (nothing to delete) — DCGO's
+# `HasMatchConditionPermanent` gate.
+
+card: P-212
+name: "Asuna Shiroki"
+kind: tamer
+color: [purple]
+cost: 3
+traits: [TS]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] opponent has a Digimon → +1 ──────
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [On Play] Draw 1, trash 1; TM/TS trashed → delete opp Lv.3 ──
+  - when: on_play
+    optional: false
+    summary: "[On Play] <Draw 1> and trash 1 card in hand; if it had the [Three Musketeers]/[TS] trait, delete 1 opponent level 3 Digimon"
+    process:
+      - draw: { of: you, count: 1 }
+      # Mandatory pick — DCGO DrawAndDiscardCards(trashAmount 1), no canNoSelect.
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - if:
+          condition:
+            trashed_hand_card_matching:
+              any_of:
+                - trait_has: "Three Musketeers"
+                - trait_has: TS
+          then:
+            - select_opponent_permanent:
+                bind_as: tgt
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                prompt: "Delete 1 of your opponent's level 3 Digimon"
+            - delete_permanent: { target: tgt }
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

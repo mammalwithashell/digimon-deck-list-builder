@@ -1,0 +1,100 @@
+# BT3-105 Breath of the Gods — Option, Black, Cost 2. Traits: (none).
+#
+# Printed card text (card image — authoritative; official DB bundle
+# data/card_bundles/BT3-105.md):
+#
+#   [Main] 1 of your Digimon gains <Reboot> (Unsuspend this Digimon during
+#   your opponent's unsuspend phase) and "This Digimon can't have its DP
+#   reduced or be returned to its owner's hand or deck" until the end of your
+#   opponent's next turn.
+#
+# Inherited (Security):
+#   Security Effect [Security] Your opponent's Digimon can't attack players
+#   for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT3/Black/BT3_105.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill`, isOptional = FALSE.
+#   `SelectPermanentEffect` over `IsPermanentExistsOnOwnerBattleAreaDigimon`
+#   (maxCount Min(1, count), canNoSelect FALSE — mandatory when a candidate
+#   exists, silently no-op when none). On the pick: `GainReboot`,
+#   `GainImmuneFromDPMinus` (no cardEffectCondition — ANY source),
+#   `GainCanNotReturnToHand`, `GainCanNotReturnToDeck`, each
+#   `EffectDuration.UntilOpponentTurnEnd`.
+#
+# Clause 2 — `EffectTiming.SecuritySkill`, `SetIsSecurityEffect(true)`.
+#   `GainCanNotAttackPlayerEffect(attackerCondition: opponent battle-area
+#   Digimon — a CONDITION re-evaluated per attack, so opponent Digimon that
+#   enter after resolution are bound too; defenderCondition: Defender == null
+#   → player attacks only, Digimon attacks stay legal;
+#   EffectDuration.UntilEachTurnEnd)`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# Clause 1: `grant_keyword: Reboot` + three `add_modifier`s on the picked
+# Digimon. `ImmuneFromDPMinus` without an `effect_immunity_filter` is the
+# BROAD scope (BT19-089 precedent — the printed text has no "by your
+# opponent's effects" qualifier). `CannotBeReturnedToHand` /
+# `CannotBeReturnedToDeck` are the passive-replacement modifiers that cancel a
+# would-return (tests/replacements/passive_modifier_migration.rs).
+# Expiry `end_of_opponents_next_turn` = the printed "until the end of your
+# opponent's next turn"; used on the controller's own turn it expires at the
+# end of the immediately following opponent turn (DCGO UntilOpponentTurnEnd).
+#
+# Clause 2: a CONTINUOUS mass modifier (`add_modifier` with `continuous:
+# true` over `{ of: opponent, kind: digimon }` — the BT13-075 Alphamon idiom)
+# so late entrants are bound, matching DCGO's per-attack `attackerCondition`.
+# `of: opponent` is relative to the security effect's controller (the
+# defending player), i.e. the attacking turn player's Digimon. Expiry
+# `end_of_turn` = "for the turn" (DCGO UntilEachTurnEnd).
+
+card: BT3-105
+name: "Breath of the Gods"
+kind: option
+color: [black]
+cost: 2
+
+effects:
+  # ─── Clause 1: [Main] 1 of your Digimon gains Reboot + protections ─────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] 1 of your Digimon gains <Reboot> and can't have its DP reduced or be returned to hand/deck until the end of your opponent's next turn"
+    process:
+      - select_own_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Reboot> and protection"
+      - grant_keyword:
+          target: tgt
+          keyword: Reboot
+          expiry: end_of_opponents_next_turn
+      - add_modifier:
+          target: { binding: tgt }
+          modifier: ImmuneFromDPMinus
+          value: 1
+          expiry: end_of_opponents_next_turn
+      - add_modifier:
+          target: { binding: tgt }
+          modifier: CannotBeReturnedToHand
+          value: 1
+          expiry: end_of_opponents_next_turn
+      - add_modifier:
+          target: { binding: tgt }
+          modifier: CannotBeReturnedToDeck
+          value: 1
+          expiry: end_of_opponents_next_turn
+
+  # ─── Clause 2: [Security] opponent's Digimon can't attack players this turn ─
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Your opponent's Digimon can't attack players for the turn"
+    process:
+      - add_modifier:
+          continuous: true
+          target: { of: opponent, kind: digimon }
+          modifier: CannotAttackPlayer
+          value: 1
+          expiry: end_of_turn

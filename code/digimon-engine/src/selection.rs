@@ -837,11 +837,18 @@ pub enum OptionPlayResult {
 /// Variants appear in typical execution order: Link Options begin with
 /// `LinkSelectHost` (pay cost → select host → fire `OptionMain` → attach →
 /// fire `OnLink` → `Done`); Standard / Delay / Training Options begin with
-/// `MainEffectDrain`; all Options terminate at `Done`.
+/// `MainEffectDrain`, then `OnUseOptionDrain` (the board-wide "when a player
+/// uses an Option card" observers fire AFTER the body — DCGO stacks
+/// `OnUseOption` and runs `OptionSkill` inline; official BT3-096 Q&A); all
+/// Options terminate at `Done`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionResolutionPhase {
     LinkSelectHost,
     MainEffectDrain,
+    /// The Option's own body has fully resolved; the `OnUseOption` observers
+    /// (BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons) are draining. A
+    /// selection parked here resumes straight into arts / disposal.
+    OnUseOptionDrain,
     ArtsSelectTarget,
     Disposing,
     Done,

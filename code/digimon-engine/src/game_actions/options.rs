@@ -560,15 +560,20 @@ impl Game {
             subtype: mode.subtype(),
         });
 
-        // 6. Fire OnUseOption (global observer across every battle area) +
-        // OptionMain (this card's body). Drain between — OnUseOption fires
-        // first per spec §4 (global observer fires before body).
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnUseOption,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        // 6. Arm the board-wide `OnUseOption` observers ("when a player uses
+        // an Option card" — BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons).
+        // They fire AFTER this card's own body has fully resolved, NOT
+        // before it: DCGO `UseOptionClass.UseOption` STACKS the OnUseOption
+        // skill infos (`StackSkillInfos` → `PutStackedSkill`) and then runs
+        // `OptionSkill` inline, so the stacked observers resolve once the
+        // body is done; the official BT3-096 Q&A states it outright ("It can
+        // be activated after activating the used Option card's [Main]
+        // effect."). `fire_on_use_option_observers` consumes the flag from
+        // both the synchronous path below and the selection-resume path
+        // (`advance_pending_option`), so a body that parks a selection — or
+        // CLAIMS `pending_option` (`place_self_under_permanent`) — still
+        // fires the observers exactly once.
+        self.on_use_option_armed = true;
 
         // Phase 9 Task 3 — Counter-window overlay: when this Option is
         // being played as a defender's counter, the `.counter()` +
@@ -598,6 +603,17 @@ impl Game {
         self.drain_effect_queue();
 
         // 7. If an effect parked a selection, suspend and let the caller drive.
+        // The resume path (`advance_pending_option`) fires the armed
+        // `OnUseOption` observers once the body's selection chain clears.
+        if self.pending_selection.is_some() {
+            return OptionPlayResult::Pending;
+        }
+
+        // 7b. Body fully resolved — fire the board-wide OnUseOption observers
+        // (see step 6). A parked observer prompt (BT3-096's optional
+        // suspend-cost gate) resumes into arts / disposal via
+        // `advance_pending_option`'s `OnUseOptionDrain` arm.
+        self.fire_on_use_option_observers();
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }

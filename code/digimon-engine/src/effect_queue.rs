@@ -4341,26 +4341,41 @@ impl Game {
     ///   window for Option self-trash).
     /// - `Done`: terminal.
     fn advance_pending_option(&mut self) {
-        let Some(pending) = self.pending_option.as_ref() else {
-            return;
-        };
         if !self.effect_queue.is_empty() {
             return;
         }
+        let Some(pending) = self.pending_option.as_ref() else {
+            // The body CLAIMED `pending_option` (`place_self_under_permanent`,
+            // `add_this_option_to_hand`, a link plug-in) while a selection was
+            // parked. The board-wide OnUseOption observers are still owed —
+            // fire them now that the claimed body has finished.
+            // (`resolve_generic_selection`'s tail owns `check_turn_end`
+            // here, exactly as it did when this arm returned early before.)
+            if self.on_use_option_armed {
+                self.fire_on_use_option_observers();
+            }
+            return;
+        };
         match pending.resolution_phase {
             crate::selection::OptionResolutionPhase::MainEffectDrain => {
-                // Dispatch on the card's subtype flags. Standard → trash;
-                // Delay → park on field (Task 3). Link / Training land in
-                // Tasks 4-5 via the same dispatcher.
-                if self.pending_option_can_arts_digivolve()
-                    && self.install_arts_digivolve_selection()
-                {
-                    return;
+                // The body's selection chain has cleared: fire the armed
+                // board-wide OnUseOption observers (DCGO stacks them and runs
+                // the body inline; BT3-096 Q&A — "after activating the used
+                // Option card's [Main] effect"). A parked observer prompt
+                // resumes into the `OnUseOptionDrain` arm below.
+                if self.on_use_option_armed {
+                    self.fire_on_use_option_observers();
+                    if self.pending_selection.is_some() {
+                        return;
+                    }
                 }
-                self.dispose_option();
-                if self.pending_selection.is_none() {
-                    self.check_turn_end();
-                }
+                self.finish_option_after_body();
+            }
+            crate::selection::OptionResolutionPhase::OnUseOptionDrain => {
+                // An OnUseOption observer's prompt (e.g. Mimi's optional
+                // suspend-cost gate) has resolved — continue into arts /
+                // disposal exactly as the synchronous path does.
+                self.finish_option_after_body();
             }
             crate::selection::OptionResolutionPhase::ArtsSelectTarget => {
                 // Arts selection callbacks finish the flow directly.
@@ -4394,6 +4409,52 @@ impl Game {
             crate::selection::OptionResolutionPhase::Done => {
                 // Terminal; no-op.
             }
+        }
+    }
+
+    /// Fire the board-wide `OnUseOption` observers ("when a player uses an
+    /// Option card" — BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons) for
+    /// the Option use armed by `use_option_from`, AFTER the Option's own body
+    /// has fully resolved. DCGO `UseOptionClass.UseOption` STACKS the
+    /// `OnUseOption` skill infos (`StackSkillInfos` → `PutStackedSkill`) and
+    /// runs `OptionSkill` inline, so the stacked observers resolve once the
+    /// body is done; the official BT3-096 Q&A: "It can be activated after
+    /// activating the used Option card's [Main] effect."
+    ///
+    /// Consumes `on_use_option_armed` (exactly-once across the synchronous
+    /// and selection-resume paths) and moves a still-present `pending_option`
+    /// into `OnUseOptionDrain` so `advance_pending_option` does not re-enter
+    /// the `MainEffectDrain` arm after an observer's prompt resolves.
+    pub(crate) fn fire_on_use_option_observers(&mut self) {
+        if !std::mem::take(&mut self.on_use_option_armed) {
+            return;
+        }
+        if let Some(p) = self.pending_option.as_mut() {
+            p.resolution_phase = crate::selection::OptionResolutionPhase::OnUseOptionDrain;
+        }
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnUseOption,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
+    /// Shared post-body tail of an Option use: offer <Arts Digivolve>, then
+    /// dispose per subtype (trash / park as Delay / Link host-select /
+    /// Training). Reached from `advance_pending_option` once the body AND the
+    /// OnUseOption observers have drained.
+    fn finish_option_after_body(&mut self) {
+        // Dispatch on the card's subtype flags. Standard → trash;
+        // Delay → park on field (Task 3). Link / Training land in
+        // Tasks 4-5 via the same dispatcher.
+        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            return;
+        }
+        self.dispose_option();
+        if self.pending_selection.is_none() {
+            self.check_turn_end();
         }
     }
 }

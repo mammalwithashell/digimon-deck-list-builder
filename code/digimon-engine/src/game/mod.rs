@@ -641,6 +641,15 @@ pub struct Game {
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub(crate) interactive_option_use_reducer_prompted: bool,
 
+    /// Armed by `use_option_from` once an Option's use cost is paid; consumed
+    /// by `fire_on_use_option_observers` AFTER the Option's own body has
+    /// fully resolved. Lives on `Game` (not on `PendingOption`) because a body
+    /// may CLAIM `pending_option` mid-resolution (`place_self_under_permanent`,
+    /// `add_this_option_to_hand`, link plug-ins) — the board-wide "when a
+    /// player uses an Option card" observers (BT3-096, BT25-091) must still
+    /// fire once the claimed body finishes.
+    pub(crate) on_use_option_armed: bool,
+
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
     /// (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`). BT13-103 Akihiro

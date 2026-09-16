@@ -113,6 +113,102 @@ Test command (all green, 2026-09-13):
 
 ---
 
+# Slice `tamers-options` (campaign three-musketeers-1) — 2026-09-15
+Pipeline: batch-implement-cards-rust-dsl (single-agent run; scout/implement/review
+folded). Authoring agent crashed mid-verification (session limit); the slice was
+finished, audited and committed by the resume stage on 2026-09-15.
+Slice: BT18-093, BT3-096, P-212, BT3-105, BT6-105, P-108 (the archetype's Tamers
+and Options). Sources: card images (`.webp`) + official Bandai DB bundles
+(`data/card_bundles/<ID>.md`) for printed text and the official Q&A, DCGO
+`<ID>.cs` for resolution order.
+
+## Summary
+- IMPLEMENTED: 6
+- PARTIAL: 0
+- BLOCKED (engine): 0
+- BLOCKED (dsl): 0
+- SKIPPED (prior verdict): 0
+
+## Per-Card Verdicts
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| BT18-093 | Violet Inboots | IMPLEMENT | IMPLEMENTED | resume-stage audit | 8/8 | [SoYT] memory ≤2 → 3; [SoYMP] optional trash Option/[Ghost]/[TM] from hand (cost, declinable) → Draw 1, gated on an eligible hand card (DCGO CanActivate); [Security] play self free |
+| BT3-096 | Mimi Tachikawa | IMPLEMENT | IMPLEMENTED | resume-stage audit | 6/6 | [All Turns] `on_use_option` (NEW timing) optional suspend-self → +1 memory, fires on either player's Option use, never offered while suspended; [Security] play self free. **Engine fix**: OnUseOption now fires AFTER the used Option's body |
+| P-212 | Asuna Shiroki | IMPLEMENT | IMPLEMENTED | resume-stage audit | 9/9 | [SoYMP] +1 memory if opp has a Digimon; [On Play] Draw 1 → mandatory hand trash → `trashed_hand_card_matching` (NEW result predicate) TM/TS → delete 1 opp Lv.3; [Security] play self free |
+| BT3-105 | Breath of the Gods | IMPLEMENT | IMPLEMENTED | resume-stage audit | 7/7 | [Main] 1 own Digimon gains Reboot + DP-minus immunity + no-return-to-hand/deck until end of opp's next turn; [Security] continuous opp-wide CannotAttackPlayer for the turn |
+| BT6-105 | Gewalt Schwärmer | IMPLEMENT | IMPLEMENTED | resume-stage audit | 7/7 | `use_requirement` colour bypass with a [TM] battle-area Digimon; [Main] `delete_all_permanents` (NEW step) both sides play cost ≤7, tokens excluded, one batch; [Security] add self to hand |
+| P-108 | Wisdom Training | IMPLEMENT | IMPLEMENTED | resume-stage audit | 9/9 | [Main] reveal 2 → add 1 purple → bottom the rest (ordering choice) → seat as Delay; [Main]<Delay> optional: 1 Digimon digivolves into a purple hand card, cost −2; inherited [Security] place self as Delay |
+
+Test command (all green, 2026-09-15 — 46/46):
+`cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt18_093 bt3_096 p_212 bt3_105 bt6_105 p_108`
+
+## Resume-stage audit — what the crashed slice had wrong (9 failing tests → 0)
+All nine failures were in this slice; every ex7-tops test was already green.
+- **BT3-096 (3 tests) — ENGINE ordering bug, fixed.** `Game::use_option_from` enqueued
+  `OnUseOption` (both battle areas) together with the Option's own `OptionMain` and
+  drained once, so Mimi's trigger and Death Claw's `[Main]` landed in one
+  same-controller bundle → a spurious non-optional `TriggerOrder` prompt (and on the
+  opponent's turn the Option's body simply parked first). Evidence for the correct
+  order: DCGO `UseOptionClass.UseOption` calls `StackSkillInfos(hashtable,
+  OnUseOption)` (→ `PutStackedSkill`, deferred) and then runs the `OptionSkill`
+  effects inline via `ActivateEffectProcess`; the official BT3-096 Q&A reads "It can
+  be activated after activating the used Option card's [Main] effect." Fix:
+  `Game::on_use_option_armed` is set when the use cost is paid;
+  `fire_on_use_option_observers` consumes it AFTER the body's drain (synchronous
+  path) or from `advance_pending_option` (selection-resume path, including a body
+  that CLAIMED `pending_option` such as `place_self_under_permanent`), moving the
+  pending Option into the new `OptionResolutionPhase::OnUseOptionDrain` so an
+  observer's parked prompt resumes into arts/disposal without re-firing. Test 3 now
+  declines Death Claw's own optional pick first, then answers Mimi.
+- **BT3-105 (1 test) — test bug.** `.security(0, &[CARD_ID, "FILL"])` lists bottom →
+  top (combat reveals via `security.pop()`), so the attack revealed FILL. Reordered.
+- **BT6-105 (1 test) — YAML re-authored.** The colour bypass was a `kind: flood_gate`
+  granting `IgnoreColorRequirement` (BT22-099 / P-151 / BT23-096 shape). That
+  declarative is only ticked for permanents on the field — on a hand-resident Option
+  it never reaches `option_use_requirement_or_color_available`, and the sibling
+  authorings are asserted structurally only (no live `play_option_from_hand`).
+  Re-authored as the top-level `use_requirement:` (EX7-066 / EX7-071 idiom — the
+  identical printed clause), which lowers to the [Main] effect's
+  `option_color_requirement_bypass` that the use-time check consults. Positive and
+  negative live checks pass. (Latent finding for the three sibling cards — logged
+  below, not changed in this slice.)
+- **P-108 (4 tests) — test bugs.** `.deck()` lists bottom → top (`Player::draw` pops
+  the last element) and `deck_bottom_ids` read the Vec tail (= the top); the three
+  reveal tests had their decks reversed. The structural check for the Delay body's
+  `effect_initiated_digivolve` did not recurse into the `if binding_exists` wrapper.
+
+## Substrate widened by this slice (rule 28)
+- **`when: on_use_option` timing** (G-DSL-ON-USE-OPTION-TIMING — RESOLVED): lowers to
+  `EffectTiming::OnUseOption`, the board-wide "when a player uses an Option card"
+  observer; scope the actor with `active_when: { your_turn | all_turns }`. Driver
+  BT3-096; also unblocks BT25-091 Monica Simmons clause 3 (still authored as BLOCKED
+  in its YAML — follow-up).
+- **Engine: OnUseOption fires after the Option body** (see audit above) —
+  `Game::on_use_option_armed`, `fire_on_use_option_observers`,
+  `OptionResolutionPhase::OnUseOptionDrain`, `finish_option_after_body`.
+- **`delete_all_permanents { over }` step** (G-DSL-DELETE-ALL-PERMANENTS — RESOLVED):
+  one up-front scan of both battle areas → `Game::delete_permanents_batch` (rule 25),
+  so "Delete all …" leaves the field as ONE simultaneous deletion. Driver BT6-105.
+- **`trashed_hand_card_matching { <card predicate> }` result predicate** and the
+  bare-bool `effect_trashed_any_hand_card` (G-DSL-EFFECT-TRASHED-HAND-CARD —
+  RESOLVED): read the per-effect hand-trash log written by
+  `trash_from_hand_by_index` / hand-origin `trash_union_bound`. Driver P-212.
+
+## New Patterns / findings
+- DebugRunner list orientation: `.deck(...)` AND `.security(...)` are bottom → top
+  (last element = the card drawn / revealed first). Assert the bottom of the deck
+  via `deck[..n]`, not the tail.
+- Structural clause checks must recurse into `CompiledStep::If { then, else_branch }`
+  when the body nests a mandatory step under an optional pick's `if binding_exists`.
+- LATENT (not changed here): BT22-099, P-151 (has a `use_requirement` too, so it
+  works), BT23-096, BT19-093, BT21-097 author the colour bypass as a hand-Option
+  `flood_gate` + `IgnoreColorRequirement`; their tests assert the clause shape only.
+  Any card relying on that shape alone (BT22-099, BT23-096) is likely NOT bypassing
+  colour at use time — worth a live-use regression pass and a `use_requirement`
+  re-author.
+
+---
+
 # Slice `splash-digimon` (campaign three-musketeers-1) — 2026-09-13
 Pipeline: batch-implement-cards-rust-dsl (single-agent run; scout/implement/review folded)
 Slice: BT7-056, BT8-071, BT6-060, BT7-071, BT7-073, BT17-070, BT24-081

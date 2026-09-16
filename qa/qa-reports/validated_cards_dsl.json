@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-13",
+  "last_updated": "2026-09-15",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -11062,6 +11062,113 @@
         "aggregate-mass-delete"
       ],
       "notes": "<Rush> <Piercing> <Execute> face-up grants; Assembly -6 [Titamon]x[SkullBaluchimon] (two name_is trash materials, stack_under; tests drive the full play for 14-6=8 with both under); [OP][WD][WA] optional 'By trashing 1 card in your hand' (select_hand optional+cost) -> for_each delete of ALL opp Digimon at the lowest level (level_matches_aggregate lowest_level; no selection), gated on >= 1 hand card; [On Deletion] 'You may play 1 [Titamon] (name_is) or 1 Lv.<=5 [Titan] Digimon from trash free' (optional clause + select_trash + play_from_trash_free; Lv.6 Titan / non-Titan excluded). Traits Shaman/Titan/TS + (Rule) Demon (card image + official DB; the card_overrides 'Olympos XII' entry is not on the printed type line). Circles Purple Lv.6/4 + Green Lv.6/4."
+    },
+    "BT18-093": {
+      "card_name": "Violet Inboots",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_093.rs",
+      "test_count": 8,
+      "patterns": [
+        "tamer",
+        "B1",
+        "E2",
+        "cost"
+      ],
+      "notes": "All printed clauses green: [Start of Your Turn] memory_lte 2 -> set_memory 3; [Start of Your Main Phase] optional clause (condition mirrors DCGO CanActivateCondition: an Option / [Ghost] / [Three Musketeers] card in hand) with select_hand {optional, cost} -> trash_from_hand_by_index -> draw 1 (declining draws nothing, BT18-092 Zenith idiom); [Security] play_from_security."
+    },
+    "BT3-096": {
+      "card_name": "Mimi Tachikawa",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-096.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_096.rs",
+      "test_count": 6,
+      "patterns": [
+        "tamer",
+        "B3",
+        "E2",
+        "on_use_option"
+      ],
+      "notes": "All printed clauses green: [All Turns] `when: on_use_option` (NEW timing, G-DSL-ON-USE-OPTION-TIMING) + `active_when: all_turns`, optional with `activation_cost: { suspend_self: true }` -> gain_memory 1 (accept/decline both exercised; a suspended Mimi is never offered, DCGO CanActivateSuspendCostEffect); fires on the OPPONENT's Option use too (P0 chooses on P1's turn). ENGINE FIX shipped with this card: OnUseOption observers now fire AFTER the used Option's [Main] body (DCGO UseOptionClass stacks OnUseOption and runs OptionSkill inline; official BT3-096 Q&A) via Game::on_use_option_armed + OptionResolutionPhase::OnUseOptionDrain -- previously enqueued before the body, which bundled Mimi with the Option's own [Main] into a spurious TriggerOrder. [Security] play_from_security."
+    },
+    "P-212": {
+      "card_name": "Asuna Shiroki",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/p/P-212.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_212.rs",
+      "test_count": 9,
+      "patterns": [
+        "tamer",
+        "B1",
+        "A",
+        "result-condition"
+      ],
+      "notes": "All printed clauses green: [Start of Your Main Phase] gain 1 memory if the opponent has a battle-area Digimon; [On Play] draw 1 then MANDATORY select_hand trash -> `trashed_hand_card_matching { trait_has TM | TS }` (NEW result predicate over the per-effect trash log, G-DSL-EFFECT-TRASHED-HAND-CARD) -> mandatory select_opponent_permanent level_eq 3 -> delete (self-skips with no level-3 target; a plain trashed card deletes nothing); [Security] play_from_security."
+    },
+    "BT3-105": {
+      "card_name": "Breath of the Gods",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-105.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_105.rs",
+      "test_count": 7,
+      "patterns": [
+        "option",
+        "H7",
+        "D4",
+        "continuous"
+      ],
+      "notes": "All printed clauses green: [Main] mandatory select_own_permanent -> grant_keyword Reboot + ImmuneFromDPMinus (broad scope, no printed qualifier) + CannotBeReturnedToHand + CannotBeReturnedToDeck, all `expiry: end_of_opponents_next_turn` (persist through the opponent's next turn, expire after; Reboot unsuspends in their unsuspend phase; -3000 suppressed); [Security] CONTINUOUS mass `CannotAttackPlayer` over opponent Digimon for the turn (BT13-075 idiom; late entrants bound; Digimon attacks stay legal; expires next turn). Test fix this pass: `.security()` lists bottom -> top."
+    },
+    "BT6-105": {
+      "card_name": "Gewalt Schw\u00e4rmer",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-105.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_105.rs",
+      "test_count": 7,
+      "patterns": [
+        "option",
+        "D3",
+        "board-wipe"
+      ],
+      "notes": "All printed clauses green: colour bypass while you have a [Three Musketeers] battle-area Digimon = top-level `use_requirement` (EX7-066 idiom; a `kind: flood_gate` IgnoreColorRequirement on a hand-resident Option is never ticked, so it was re-authored -- positive AND negative live `play_option_from_hand` checks); [Main] `delete_all_permanents` (NEW step, G-DSL-DELETE-ALL-PERMANENTS) over BOTH players' Digimon with play_cost_lte 7 excluding tokens (DCGO HasPlayCost) as ONE `delete_permanents_batch`; [Security] add_this_option_to_hand."
+    },
+    "P-108": {
+      "card_name": "Wisdom Training",
+      "validated_date": "2026-09-15",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice tamers-options)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/p/P-108.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_108.rs",
+      "test_count": 9,
+      "patterns": [
+        "option",
+        "delay",
+        "reveal",
+        "A3"
+      ],
+      "notes": "All printed clauses green: [Main] reveal_top_deck 2 -> single-bucket select_reveal_buckets {color_is purple, 1..1} (mandatory when a purple is revealed, silently empty otherwise; two purples = a real choice) -> add_to_hand_from_reveal -> order_remainder deck_bottom -> auto-seated as a Delay permanent; [Main]<Delay> (trigger: delayed, not activatable on the placing turn): optional select_own_permanent -> mandatory select_hand purple Digimon -> effect_initiated_digivolve cost reduce 2; inherited [Security] place_self_as_delay_option. Test fixes this pass: `.deck()` lists bottom -> top, `deck_bottom_ids` reads the Vec front, structural check recurses into `if`."
     }
   }
 }

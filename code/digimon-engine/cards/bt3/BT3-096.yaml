@@ -1,0 +1,76 @@
+# BT3-096 Mimi Tachikawa — Tamer, Purple, Cost 2. Traits: (none).
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/BT3-096.webp — authoritative; official DB bundle
+# data/card_bundles/BT3-096.md):
+#
+#   [All Turns] When a player uses an Option card, you may suspend this Tamer
+#   to gain 1 memory.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying its memory cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT3/Purple/BT3_096.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnUseOption`, `SetUpActivateClass(…, -1, TRUE, …)`
+#   → isOptional. `CanUseCondition` = IsExistOnBattleArea +
+#   `CanTriggerWhenUseOption(hashtable, null, null, card)` — null player /
+#   null option filters, i.e. ANY player's Option use ([All Turns], "a
+#   player"). `CanActivateCondition` = `CanActivateSuspendCostEffect(card)`
+#   (Mimi must be unsuspended). `ActivateCoroutine`: `SuspendPermanentsClass
+#   (self).Tap()` then `card.Owner.AddMemory(1)`.
+#
+# Clause 2 — `EffectTiming.SecuritySkill` → `PlaySelfTamerSecurityEffect`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# `when: on_use_option` (G-DSL-ON-USE-OPTION-TIMING — the timing widened for
+# this card) rides the engine's `EffectTiming::OnUseOption`, which
+# `Game::use_option_from` arms when the use cost is paid and fires against
+# BOTH battle areas AFTER the Option's own [Main] body has fully resolved.
+# Ordering evidence: DCGO `UseOptionClass.UseOption` STACKS the OnUseOption
+# skill infos (`StackSkillInfos` → `PutStackedSkill`) and then runs
+# `OptionSkill` inline, so the stacked trigger resolves once the body is
+# done; the official Q&A on this card says the same — "It can be activated
+# after activating the used Option card's [Main] effect." (The engine used
+# to enqueue OnUseOption BEFORE the body; fixed for this card —
+# `Game::on_use_option_armed` / `OptionResolutionPhase::OnUseOptionDrain`.)
+# `active_when: { all_turns: true }` = the printed [All Turns].
+#
+# "you may suspend this Tamer to gain 1 memory" = §15-7-1 optional
+# processing condition: `optional: true` + `activation_cost: { suspend_self:
+# true }` (BT11-089 / BT9-092 / BT24-083 idiom). The queue drainer's
+# `needs_pre_cost_prompt` branch installs an accept/decline (PASS) prompt
+# BEFORE the suspend, and silently aborts the whole trigger when Mimi is
+# already suspended — exactly DCGO's `CanActivateSuspendCostEffect`. The
+# `source_is_unsuspended` condition mirrors that payability pre-check at
+# offer time so a suspended Mimi is never prompted.
+#
+# No [Once Per Turn] is printed and none is authored — the suspend cost
+# self-limits Mimi to one activation per unsuspend.
+
+card: BT3-096
+name: "Mimi Tachikawa"
+kind: tamer
+color: [purple]
+cost: 2
+
+effects:
+  # ─── Clause 1: [All Turns] when a player uses an Option → may suspend, +1 ──
+  - when: on_use_option
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When a player uses an Option card, you may suspend this Tamer to gain 1 memory"
+    condition:
+      source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  # ─── Clause 2: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}
