@@ -1,0 +1,167 @@
+# P-170 AvengeKidmon — Digimon, Lv.6, Red/Purple, DP 13000, Cost 13.
+# Traits: Dragonkin + (Rule) Trait: Has [Three Musketeers]. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/P-170.md — official Bandai DB):
+#
+#   When this card would be played, by returning 3 cards with [Three
+#   Musketeers] in their texts from your trash to the bottom of the deck,
+#   reduce the play cost by 6. ＜Raid＞＜Blocker＞＜Retaliation＞ [On Deletion]
+#   You may play 1 [Three Musketeers] trait Digimon card with a play cost of
+#   12 or less from your hand or trash without paying the cost. (Rule) Trait:
+#   Has [Three Musketeers].
+#
+# Digivolution requirements (official Bandai DB):
+#   Standard circles: Red Lv.5 / cost 5; Purple Lv.5 / cost 5.
+#   [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Red/P_170.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# (Rule) Trait: the API-ingested trait line drops the Rule grant; the
+#   official DB (data/card_overrides.json type_eng) carries it → `traits:`
+#   lists [Three Musketeers] so `trait_has` / EqualsTraits checks on other
+#   cards see it.
+#
+# Alternate Digivolution Requirement: TopCard.HasText("Three Musketeers") &&
+#   Level == 5, cost 4, ignoreDigivolutionRequirement: false → `in_text_contains`
+#   + `level_eq: 5`, cost 4; both standard circles authored (EX7-048 idiom).
+#
+# BeforePayCost (CanActivate: ≥3 HasText("Three Musketeers") cards in own
+#   trash): SelectCardEffect over trash, maxCount 3, canEndNotMax: false;
+#   `canNoSelect` is true only when the FULL cost is affordable (DCGO UI
+#   convenience — when the player could not otherwise afford the card the
+#   reduction is forced); on exactly 3 selected → selectedCards.Reverse() +
+#   AddLibraryBottomCards; register ChangeCostClass(-6). The "Reduce Play
+#   Cost - Not Shown" static ChangeCostClass is DCGO's affordability preview
+#   of the same -6 and has no printed-text counterpart.
+#   → `kind: cost_reduction, when_playing_this: true, optional: true, condition: count_gte(trash,
+#     in_text_contains TM, 3), amount: 6, pay_cost: select_count_capped_multi
+#     { zone: trash, min 3, max 3, in_text_contains } +
+#     return_trash_list_to_deck_bottom` (BT23-057 / BT13-083 idiom). The
+#     reduction stays a player choice (printed "by returning …"); DCGO's
+#     forced-when-unaffordable variant is a client-side affordability
+#     shortcut, not printed behaviour.
+#
+# Raid / Retaliation / Blocker: RaidSelfEffect (OnAllyAttack),
+#   RetaliationSelfEffect (OnDestroyedAnyone), BlockerSelfStaticEffect (None)
+#   → three `grant_keyword` declaratives.
+#
+# On Deletion (`-1, true` = OPTIONAL): hand-or-trash SetBoolSelection (or
+#   forced when only one zone has candidates), then SelectHandEffect /
+#   SelectCardEffect(Root.Trash) (canNoSelect: true) over
+#   CanPlayAsNewPermanent && EqualsTraits("Three Musketeers") && HasPlayCost
+#   && GetCostItself ≤ 12 → PlayPermanentCards(payCost: false, activateETB).
+#   → `optional: true` + `select_union_zone { zones: [hand, trash], filter:
+#     kind digimon + trait_has TM + play_cost_lte 12 }` (one player-visible
+#     union pick encodes DCGO's zone-then-card two-step; BT25-083 idiom) +
+#     `play_union_bound_free`.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                  | Status      |
+# |----------------------------------------------------------------------|-----------|
+# | (Rule) Trait: Has [Three Musketeers]                                 | IMPLEMENTED |
+# | Alt-source Lv.5 w/[Three Musketeers] in text / 4 (+ Red/Purple circles) | IMPLEMENTED |
+# | When played: return 3 TM-text cards from trash to deck bottom → cost -6 | IMPLEMENTED |
+# | <Raid> <Blocker> <Retaliation>                                       | IMPLEMENTED |
+# | [On Deletion] may play 1 TM Digimon (cost ≤12) from hand or trash free | IMPLEMENTED |
+
+card: P-170
+name: AvengeKidmon
+kind: digimon
+level: 6
+color: [red, purple]
+cost: 13
+dp: 13000
+traits: [Dragonkin, Three Musketeers]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: red
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: purple
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: "Three Musketeers"
+    cost: 4
+
+effects:
+  # ─── When this card would be played: return 3 TM-text cards → cost -6 ─────
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          zone: [trash]
+          owner: you
+          in_text_contains: "Three Musketeers"
+        n: 3
+    amount: 6
+    summary: "When this card would be played, by returning 3 cards with [Three Musketeers] in their texts from your trash to the bottom of the deck, reduce the play cost by 6"
+    pay_cost:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 3
+          max: 3
+          optional_zero: false
+          filter:
+            in_text_contains: "Three Musketeers"
+          bind_as: returned_cards
+          prompt: "Return 3 cards with [Three Musketeers] in their texts from your trash to the bottom of your deck"
+      - return_trash_list_to_deck_bottom:
+          of: you
+          cards: returned_cards
+
+  # ─── <Raid> <Blocker> <Retaliation> ──────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation>"
+
+  # ─── [On Deletion] may play 1 TM Digimon (cost ≤ 12) from hand or trash ───
+  - when: on_deletion
+    optional: true
+    # DCGO CanActivateCondition: an eligible card exists in hand OR trash —
+    # without one the optional gate is not offered at all.
+    condition:
+      count_gte:
+        filter:
+          zone: [hand, trash]
+          owner: you
+          kind: digimon
+          trait_has: "Three Musketeers"
+          play_cost_lte: 12
+        n: 1
+    summary: "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: revive_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Three Musketeers"
+              - play_cost_lte: 12
+          prompt: "Play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: revive_pick

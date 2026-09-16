@@ -487,6 +487,16 @@ fn evaluate_per(
                 .collect::<HashSet<_>>()
                 .len() as i32
         }
+        CompiledPerSelector::DistinctNamesCountScoped { zone, of, filter } => {
+            let read = ctx.as_read();
+            players_for_ref(*of, ctx)
+                .into_iter()
+                .flat_map(|player| {
+                    distinct_names_in_zone(*zone, player, &read, filter.as_deref(), bindings)
+                })
+                .collect::<HashSet<_>>()
+                .len() as i32
+        }
         CompiledPerSelector::SourceStackCountFiltered { filter } => {
             let read = ctx.as_read();
             source_stack_count_filtered(filter.as_deref(), &read, bindings)
@@ -598,6 +608,15 @@ fn evaluate_per_read(
                 .into_iter()
                 .flat_map(|player| {
                     distinct_colors_in_zone(*zone, player, ctx, filter.as_deref(), bindings)
+                })
+                .collect::<HashSet<_>>()
+                .len() as i32
+        }
+        CompiledPerSelector::DistinctNamesCountScoped { zone, of, filter } => {
+            players_for_ref_read(*of, ctx)
+                .into_iter()
+                .flat_map(|player| {
+                    distinct_names_in_zone(*zone, player, ctx, filter.as_deref(), bindings)
                 })
                 .collect::<HashSet<_>>()
                 .len() as i32
@@ -1169,6 +1188,156 @@ fn distinct_colors_in_zone(
     }
 }
 
+/// G-DSL-FORMULA-DISTINCT-NAMES-COUNT — every card name contributed by the
+/// cards / permanents in `zone` for `player` that satisfy `filter` (duplicates
+/// included; the caller de-duplicates). Battle-area permanents contribute
+/// their synth-identity `card_names` — the same normalisation the
+/// `distinct_named_count_gte` predicate uses — so a `ChangeBaseCardName`
+/// overlay or a multi-name card counts each distinct name; other zones read
+/// each card's printed name(s).
+fn distinct_names_in_zone(
+    zone: CompiledZone,
+    player: PlayerId,
+    ctx: &EffectReadContext<'_>,
+    filter: Option<&CompiledPredicate>,
+    bindings: Option<&Bindings>,
+) -> Vec<String> {
+    let player_state = ctx.game.player(player);
+    match zone {
+        CompiledZone::BattleArea => player_state
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter_map(|(index, perm)| {
+                let handle = PermanentHandle {
+                    player,
+                    index: index as u8,
+                };
+                if filter.is_some_and(|filter| {
+                    !eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::Permanent(handle),
+                        bindings,
+                    )
+                }) {
+                    return None;
+                }
+                Some(
+                    perm.synth_identity(ctx.card_data(), &ctx.game.modifiers, handle)
+                        .card_names,
+                )
+            })
+            .flatten()
+            .collect(),
+        CompiledZone::Breeding => player_state
+            .breeding_area
+            .as_ref()
+            .filter(|_| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::BreedingPermanent(player),
+                        bindings,
+                    )
+                })
+            })
+            .map(|perm| {
+                perm.top_card()
+                    .card_names(ctx.card_data())
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default(),
+        CompiledZone::Hand => distinct_names_from_cards(&player_state.hand, filter, ctx, bindings),
+        CompiledZone::Deck => distinct_names_from_cards(&player_state.deck, filter, ctx, bindings),
+        CompiledZone::Trash => {
+            distinct_names_from_cards(&player_state.trash, filter, ctx, bindings)
+        }
+        CompiledZone::Security => {
+            distinct_names_from_cards(&player_state.security, filter, ctx, bindings)
+        }
+        CompiledZone::DigiEggDeck => {
+            distinct_names_from_cards(&player_state.digitama_deck, filter, ctx, bindings)
+        }
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .filter(|card| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::RevealedCard(card.handle()),
+                        bindings,
+                    )
+                })
+            })
+            .flat_map(|card| {
+                card.card_names(ctx.card_data())
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+        CompiledZone::Material => player_state
+            .battle_area
+            .iter()
+            .chain(player_state.breeding_area.iter())
+            .flat_map(|perm| perm.card_sources.iter().rev().skip(1))
+            .filter(|source| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::Card(source.handle()),
+                        bindings,
+                    )
+                })
+            })
+            .flat_map(|source| {
+                source
+                    .card_names(ctx.card_data())
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .collect(),
+    }
+}
+
+fn distinct_names_from_cards(
+    cards: &[crate::card_source::CardSource],
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> Vec<String> {
+    cards
+        .iter()
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .flat_map(|source| {
+            source
+                .card_names(ctx.card_data())
+                .into_iter()
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
 fn distinct_colors_from_cards(
     cards: &[crate::card_source::CardSource],
     filter: Option<&CompiledPredicate>,
@@ -1364,6 +1533,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.materials_count_lte.is_some()
         || pred.materials_count_gte.is_some()
         || pred.source_count.is_some()
+        || pred.link_card_count.is_some()
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()

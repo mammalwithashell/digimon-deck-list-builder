@@ -59,6 +59,58 @@ Test command (all green, 2026-09-12):
 - "Trash 1 Option from ANY 1 Digimon's digivolution cards" (either owner): `select_any_permanent` over `{ kind: digimon, source_count: { filter: { kind: option }, at_least: 1 } }` then owner-routed `if binding_owner` → `select_own_sources` / `select_opponent_sources { target: host, min: 1, max: 1 }` → `trash_selected_sources` (EX7-010). Worth a RUST_DSL_TEST_API.md §8 note.
 - "Return N cards from hand or trash to the top of the deck" cost: N sequential `select_union_zone` picks (first `optional: true, cost: true`, the rest mandatory) each followed by `return_union_bound_to_deck { position: top }`; pick order = deck order (EX7-043).
 
+
+---
+
+# Slice `ex7-tops` (campaign three-musketeers-1) — 2026-09-13
+Pipeline: batch-implement-cards-rust-dsl (single-agent run; scout/implement/review folded)
+Slice: EX7-013, EX7-059, EX7-066, BT25-005, BT25-085, P-170, BT21-054, BT21-074
+(ordered low → high digivolution stage). Sources: official Bandai DB bundles
+(`data/card_bundles/<ID>.md`) for printed text / digivolution circles, card
+images (`.webp`) for EX7-013 / EX7-059 / BT25-085 / BT21-074 (the image
+carries Satellamon's `Sup. 4` circle the DB bundle omits), DCGO `<ID>.cs` for
+resolution order.
+
+## Summary
+- IMPLEMENTED: 7
+- PARTIAL: 0
+- BLOCKED (engine): 1 (BT25-005 — re-confirmed, `OnAddDigivolutionCards`)
+- BLOCKED (dsl): 0 (BT25-085's prior dsl block closed in-slice)
+- SKIPPED (prior verdict): 0
+
+## Per-Card Verdicts
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| EX7-013 | MagnaKidmon | IMPLEMENT | IMPLEMENTED | self-audit | 14/14 | [OP][WD] may use TM Option free then draw until 6 (NEW formula `draw.count`); [EoYT][OPT] trash Option from own sources → TM Digimon gains SA+1 for the turn + force_attack |
+| EX7-059 | BeelStarmon ACE | IMPLEMENT | IMPLEMENTED | self-audit | 13/13 | <Blast Digivolve>, Overflow -4; [OP][WD] return 1 Option from trash then may use TM Option free; [WA][OPT] trash own Option source → may use TM Option free |
+| EX7-066 | Chaos Triangular | IMPLEMENT | IMPLEMENTED | self-audit | 10/10 | Inherited effect-trash → +3000 DP until opp EoT; use_requirement; [Main] delete ≤9000 +3000 per differently-named TM Digimon (NEW `distinct_names_count`) then place self under a TM Digimon; [Security] delete ≤12000 |
+| BT25-005 | Pagumon | IMPLEMENT | BLOCKED (engine) | n/a | 0/0 | `OnAddDigivolutionCards` trigger timing still absent (re-confirmed) |
+| BT25-085 | BeelStarmon (DUAL) | IMPLEMENT | IMPLEMENTED | self-audit | 18/18 | Prior dsl block closed: use TM/TS Option from hand OR own sources (union + `use_option_bound` Material origin); trash Option from any own stack/link cards → unsuspend ([WD][WA][Counter]); Option face Use Req + [Main] highest-level delete + optional TM bottom-source; Arts Digivolve |
+| P-170 | AvengeKidmon | IMPLEMENT | IMPLEMENTED | self-audit | 10/10 | Rule trait; when-played −6 by returning 3 TM-text cards (optional, interactive pay_cost); Raid/Blocker/Retaliation; [On Deletion] may play TM Digimon cost ≤12 from hand/trash free |
+| BT21-054 | Shotmon | IMPLEMENT | IMPLEMENTED | self-audit | 9/9 | [On Play] optional trash Appmon/TM source from any own Digimon → De-Digivolve 1; Link cost 1 + link box +2000; [When Linking] delete cost ≤3 |
+| BT21-074 | Satellamon | IMPLEMENT | IMPLEMENTED | self-audit | 13/13 | [OP][WD] union tuck → return/De-Digivolve protection until opp EoT; [WD][WA][OPT] trash Appmon/TM source → De-Digivolve 1; Link cost 3 + link box +4000; [When Linking] delete level ≤4; Sup. circle |
+
+Test command (all green, 2026-09-13):
+`cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex7_013 ex7_059 ex7_066 p_170 bt21_054 bt21_074 bt25_085`
+
+## Engine-Gap Blocked Cards
+### BT25-005 Pagumon
+- Effect text (inherited): "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2."
+- Missing engine API: `OnAddDigivolutionCards` trigger timing (see `docs/RUST_ENGINE_GAPS.md`); the downstream body (`effect_initiated_digivolve` from hand, `cost: { reduce: 2 }`) is expressible once the trigger exists.
+
+## Substrate widened by this slice (rule 28)
+- **Formula-valued `draw.count`** (G-DSL-DRAW-FORMULA-COUNT): `draw: { of, count: <formula> }` compiles to the new `CompiledStep::DrawFn` (literal counts keep `Draw`). Driver EX7-013 "draw until you have 6 in your hand" = `max(6 - hand, 0)`.
+- **`distinct_names_count` per-selector** (G-DSL-FORMULA-DISTINCT-NAMES-COUNT): `per: { distinct_names_count: { of, zone, filter } }` — synth-identity-aware distinct card names (same normalisation as `distinct_named_count_gte`). Driver EX7-066's per-different-name DP cap.
+- **`use_option_bound` Material origin** (G-DSL-USE-OPTION-FROM-SOURCES facet): a `select_union_zone` pick from a carrier's digivolution cards now routes through `OptionSource::Source { host, card }` instead of silently no-op'ing. Driver BT25-085.
+- **`link_card_count` predicate leaf** (G-DSL-LINK-CARD-COUNT-FILTERED): the link-card sibling of `source_count` (`{ filter, at_least }` over `Permanent.linked_cards`). Driver BT25-085's "digivolution cards OR link cards" activation gate.
+
+## New Patterns / findings
+- `source_count`'s nested filter is evaluated with the card-leaf evaluator (no `any_of`/`all_of` combinators) — express an OR as two `any_permanent { source_count }` legs under a top-level `any_of` (BT21-054 / BT21-074 conditions).
+- A trigger whose first body step is an optional selection gets no separate outer gate; add a `condition` mirroring DCGO's `CanActivateCondition` so a no-candidate trigger is not queued (otherwise a 2-clause timing still surfaces a spurious `TriggerOrder`).
+- DCGO `RemoveUse` (OPT not spent when nothing executed): `refund_opt` on `binding_absent` after an optional pick (BT25-085 use clause), or a clause-level optional gate (declining it refunds the OPT — G-OPT-REFUND-ON-DECLINE; BT25-085 unsuspend clause).
+- `runner.play(0, i)` on an Option seats it as a field permanent — drive Option [Main] tests through `game.play_option_from_hand` (BT25-043 idiom); EX7-070's tests still use `play` and never assert the post-use trash (latent).
+- A digivolution-source trash emits no `GameEvent::Trash`; assert the trash zone instead.
+
 ---
 
 # Slice `splash-digimon` (campaign three-musketeers-1) — 2026-09-13

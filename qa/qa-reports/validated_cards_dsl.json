@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-12",
+  "last_updated": "2026-09-13",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -5816,16 +5816,16 @@
     },
     "BT25-005": {
       "card_name": "Pagumon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
       "status": "BLOCKED",
       "gap_kind": "engine",
-      "archetype": "orphan-staples-1 (BT25)",
+      "archetype": "three-musketeers",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "OnAddDigivolutionCards trigger ('when [Three Musketeers] placed in this Digimon's digivolution cards') \u2014 no such timing. New gap entry in docs/RUST_ENGINE_GAPS.md."
+      "notes": "Re-confirmed BLOCKED 2026-09-13 by the three-musketeers-1 campaign (slice ex7-tops): the sole clause needs the `OnAddDigivolutionCards` trigger timing (DSL `Timing` enum still has no source-ADDED sibling of on_digivolution_card_trashed; no engine dispatch site). Shared with EX7-005 Kapurimon / EX11-074. See docs/RUST_ENGINE_GAPS.md `OnAddDigivolutionCards`."
     },
     "BT25-007": {
       "card_name": "Gatchmon",
@@ -6681,16 +6681,21 @@
     },
     "BT25-085": {
       "card_name": "BeelStarmon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "BT25 orphan-d slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "use-Option-from-digivolution-cards (use_option_from_hand is hand-only) + trash-Option-from-digivolution|link-cards as cost. See qa/dsl-vocab-gaps.md orphan-d."
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_085.rs",
+      "test_count": 18,
+      "patterns": [
+        "DUAL",
+        "E2",
+        "A6",
+        "counter"
+      ],
+      "notes": "Previously BLOCKED (dsl) \u2014 both facets now closed. DUAL card: Digimon face <Blocker>; [WD][WA][OPT] use 1 TM/TS Option from hand OR this Digimon's digivolution cards free via ONE select_union_zone {hand, material, material_of: source} + use_option_bound (Material origin WIDENED this slice to route OptionSource::Source) with refund_opt on decline (DCGO RemoveUse) and a condition mirroring DCGO's additionalActivateCondition; [WD][WA][Counter][OPT] optional clause: trash_option_from_own_stacks (digivolution OR link cards; both verified) -> unsuspend self, gated by source_count / the NEW `link_card_count` leaf (G-DSL-LINK-CARD-COUNT-FILTERED). Option face: Use Req ([Three Musketeers] in text, battle area + breeding), [Main] delete opp highest-level Digimon then optional union (hand|trash) TM card as any own Digimon's bottom source, <Arts Digivolve>. Alt-paths: Purple/Black Lv.5/4, Lv.5 w/TM-in-text or [TS] cost 3 (ignore_requirements per DCGO)."
     },
     "BT25-076": {
       "card_name": "Ghoulmon",
@@ -10833,6 +10838,111 @@
         "E2"
       ],
       "notes": "All printed clauses green: [Start of Your Main Phase] optional clause gated on a [Three Musketeers]-trait Option in hand or trash; select_union_zone (cost: true, declinable) -> mandatory select_own_permanent over own non-token Digimon (DCGO !IsToken; Sparrowmon itself always qualifies) -> place_as_bottom_source -> Draw 1; does not fire on the opponent's main phase. Inherited <Retaliation>; std Purple Lv.2/0 + special TM-text Lv.2/0 alt-paths."
+    },
+    "EX7-013": {
+      "card_name": "MagnaKidmon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_013.rs",
+      "test_count": 14,
+      "patterns": [
+        "H",
+        "A",
+        "E2",
+        "F"
+      ],
+      "notes": "All printed clauses green: [On Play][WD] optional use_option_from_hand (TM Option, free) then draw until 6 in hand via the NEW formula-valued `draw.count` (G-DSL-DRAW-FORMULA-COUNT: max(6 - hand, 0), DCGO deck>=1 guard); [End of Your Turn][OPT] optional: trash 1 Option from THIS Digimon's sources (select_union_zone material_of: source) -> 1 own [Three Musketeers] Digimon (printed trait filter; DCGO is looser) gains SecurityAttackChange +1 for the turn -> force_attack. Std Red Lv.5/4 + special TM-in-text Lv.5/4 alt-paths."
+    },
+    "EX7-059": {
+      "card_name": "BeelStarmon ACE",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_059.rs",
+      "test_count": 13,
+      "patterns": [
+        "H",
+        "A3",
+        "E2"
+      ],
+      "notes": "All printed clauses green: <Blast Digivolve> (grant_keyword + burst_digivolve marker), ace_overflow -4, [On Play][WD] mandatory return-1-Option-from-trash then optional free TM Option use from hand (hand half runs even with an empty trash, per DCGO); [WA][OPT] optional trash-1-Option-from-this-Digimon's-sources cost (cost: true) -> optional free TM Option use. Name carries the printed ACE suffix (AD1-005 idiom). Std Purple Lv.5/3 + special TM-in-text Lv.5/3."
+    },
+    "EX7-066": {
+      "card_name": "Chaos Triangular",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_066.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "G",
+        "A6"
+      ],
+      "notes": "All printed clauses green: inherited on_digivolution_card_trashed (self-identity gate, mandatory) -> +3000 DP to 1 own Digimon until end of opponent's turn (expiry verified; whole-stack deletion does not fire it); use_requirement color bypass while you have a TM Digimon; [Main] delete opp Digimon with DP <= 9000 + 3000 per differently-named own TM Digimon via the NEW `distinct_names_count` per-selector (G-DSL-FORMULA-DISTINCT-NAMES-COUNT; duplicates count once) then place_self_under_permanent under a TM Digimon; [Security] delete opp Digimon <= 12000 DP."
+    },
+    "P-170": {
+      "card_name": "AvengeKidmon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/p/P-170.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_170.rs",
+      "test_count": 10,
+      "patterns": [
+        "H",
+        "C",
+        "E"
+      ],
+      "notes": "All printed clauses green: (Rule) Trait [Three Musketeers] in traits; when-played optional cost_reduction -6 by returning 3 [Three Musketeers]-in-text cards from trash to deck bottom (select_count_capped_multi pay_cost; declining pays 13 \u2014 read off the MemoryChange event since 13 from 10 crosses the gauge); <Raid><Blocker><Retaliation>; [On Deletion] optional union (hand|trash) play of a TM Digimon with play cost <= 12 free (condition mirrors DCGO CanActivate). Std Red/Purple Lv.5/5 + special TM-in-text Lv.5/4. Note: DCGO forces the reduction when the full cost is unaffordable (client affordability shortcut) \u2014 kept as a player choice per the printed text."
+    },
+    "BT21-054": {
+      "card_name": "Shotmon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_054.rs",
+      "test_count": 9,
+      "patterns": [
+        "G-DSL-DIGILINK",
+        "E",
+        "when_linked"
+      ],
+      "notes": "All printed clauses green: <Link> [Appmon] cost 1 + link box +2000 DP (scope: linked aura); [On Play] optional: trash 1 [Appmon]/[Three Musketeers] card from ANY own Digimon's sources (select_union_zone material, condition = DCGO CanActivate via source_count legs) -> De-Digivolve 1 an opp Digimon; [When Linking] delete opp Digimon with play cost <= 3. Std Black Lv.2/0 + special Lv.2 w/TM-in-text or [Appmon] cost 0."
+    },
+    "BT21-074": {
+      "card_name": "Satellamon",
+      "validated_date": "2026-09-13",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_074.rs",
+      "test_count": 13,
+      "patterns": [
+        "H",
+        "A6",
+        "E2",
+        "G-DSL-DIGILINK",
+        "when_linked"
+      ],
+      "notes": "All printed clauses green: [On Play][WD] optional union (hand|trash) place 1 [Appmon]/[TM] card as any own non-token Digimon's bottom source (tail nested in `then:`) -> CannotBeReturnedToHand/Deck + CannotBeDeDigivolved (opponent-effect cause filter) until opp's turn ends (expiry verified); [WD][WA][OPT] optional trash Appmon/TM source from own Digimon -> De-Digivolve 1; <Link> [Appmon] cost 3 + link box +4000 DP; [When Linking] delete opp level <= 4. Alt-paths: Purple/Black Lv.4/4, [Sup.] trait/4 (card image + DCGO; DB bundle omits the circle), Lv.4 w/TM-in-text cost 3."
     },
     "BT7-056": {
       "card_name": "Dorumon",

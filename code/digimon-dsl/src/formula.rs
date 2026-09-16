@@ -216,6 +216,18 @@ pub enum PerSelector {
     },
     CardCountInZone(CardCountInZoneSpec),
     DistinctColorsCount(CardCountInZoneSpec),
+    /// Number of DISTINCT card names among the cards / permanents in `zone`
+    /// for `of` that match `filter`. Battle-area permanents contribute their
+    /// synth-identity `card_names` (so a `ChangeBaseCardName` overlay or a
+    /// multi-name card counts each distinct name — same normalisation as the
+    /// `distinct_named_count_gte` predicate); every other zone reads the
+    /// card's printed name(s). YAML form: `per: { distinct_names_count: { of:
+    /// you, zone: battle_area, filter: { kind: digimon, trait_has: "Three
+    /// Musketeers" } } }`. Drives EX7-066 Chaos Triangular's "for each of your
+    /// [Three Musketeers] trait Digimon with different names, add 3000 to
+    /// this DP-deletion effect's maximum" (DCGO: `choices.Filter(...)`
+    /// de-duplicated by `HasSameCardName`). G-DSL-FORMULA-DISTINCT-NAMES-COUNT.
+    DistinctNamesCount(CardCountInZoneSpec),
     /// Count of the effect carrier's *own* digivolution sources (the cards
     /// beneath its top card) that match `filter`. YAML form:
     /// `source_stack_count: { filter: { any_of: [...] } }`. Composes inside a
@@ -316,6 +328,11 @@ impl Serialize for PerSelector {
             Self::DistinctColorsCount(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("distinct_colors_count", spec)?;
+                outer.end()
+            }
+            Self::DistinctNamesCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("distinct_names_count", spec)?;
                 outer.end()
             }
             Self::SourceStackCount(spec) => {

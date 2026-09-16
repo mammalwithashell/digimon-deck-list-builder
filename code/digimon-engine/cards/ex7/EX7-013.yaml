@@ -1,0 +1,172 @@
+# EX7-013 MagnaKidmon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Dragonkin / Three Musketeers. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX7-013.md — official Bandai DB,
+# confirmed against the card image EX7-013.webp):
+#
+#   [On Play] [When Digivolving] You may use 1 [Three Musketeers] trait
+#   Option card from your hand without paying the cost. Then, draw cards from
+#   the top of your deck until you have 6 in your hand.
+#   [End of Your Turn] [Once Per Turn] By trashing 1 Option card from this
+#   Digimon's digivolution cards, 1 of your [Three Musketeers] trait Digimon
+#   gains ＜Security A. +1＞ for the turn, and attacks.
+#
+# Digivolution requirements (official Bandai DB):
+#   Standard circle: Red Lv.5 / cost 4.
+#   [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Red/EX7_013.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Digivolution Condition (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText("Three
+#   Musketeers") && Level == 5, cost 4, ignoreDigivolutionRequirement: false).
+#   → `in_text_contains` (whole-card HasText scan — name + traits + all
+#   printed text, G-DSL-IN-TEXT-CONTAINS), NOT `trait_has`. The standard Red
+#   Lv.5 / 4 circle is ALSO authored (G-DSL-FIXTURE-EVO-COSTS; EX7-048
+#   "standard + special" idiom). No `ignore_requirements` (DCGO false).
+#
+# On Play / When Digivolving (two identical ActivateClass bodies,
+#   `SetUpActivateClass(..., -1, false, ...)` = unlimited, MANDATORY clause):
+#   SelectHandEffect (canNoSelect: true) over IsOption && ContainsTraits
+#   ("Three Musketeers") && HasUseCost && !CanNotPlayThisOption →
+#   PlayOptionCards(payCost: false, root: Hand). Then
+#   `if (Library.Count >= 1 && Hand.Count < 6) while (Hand.Count < 6) Draw(1)`.
+#   → `use_option_from_hand { filter: kind option + trait_has, optional: true }`
+#     (the optional pick; declining continues into the tail), then an `if`
+#     guard mirroring DCGO's `LibraryCards.Count >= 1` (an EMPTY deck draws
+#     nothing — no deck-out), then `draw { count: max(6 - hand, 0) }` via the
+#     formula-valued draw count (G-DSL-DRAW-FORMULA-COUNT, widened for this
+#     card: `CompiledStep::DrawFn`). A hand already at 6+ evaluates to 0 → no
+#     draw. Drawing past a partially-empty deck follows the normal draw rule.
+#
+# End of Your Turn (`SetUpActivateClass(..., 1, true, ...)` = OPT + OPTIONAL;
+#   CanUse: IsOwnerTurn; CanActivate: THIS permanent's DigivolutionCards
+#   contain ≥1 IsOption card that CanNotTrashFromDigivolutionCards == false):
+#   mandatory SelectCardEffect (canNoSelect: () => false, customRootCardList:
+#   this permanent's DigivolutionCards, IsOption) → ITrashDigivolutionCards;
+#   then SelectPermanentEffect (canNoSelect: false) → ChangeDigimonSAttack(+1,
+#   UntilEachTurnEnd) → `if (selectedPermanent.CanAttack(activateClass))`
+#   SelectAttackEffect with SetCanNotSelectNotAttack (mandatory attack; any
+#   legal target — player or Digimon).
+#   NOTE (printed text wins): DCGO's target filter is ANY own battle-area
+#   Digimon (IsPermanentExistsOnOwnerBattleAreaDigimon); the printed text says
+#   "1 of your [Three Musketeers] trait Digimon" → `trait_has: "Three
+#   Musketeers"` is applied here.
+#   → `when: end_of_your_turn`, `once_per_turn: true`, `optional: true`,
+#     `condition: self_source_count { filter: { kind: option }, op: gte, value: 1 }`
+#     (DCGO CanActivate — the clause is not offered without a payable cost),
+#     cost = `select_union_zone { zones: [material], material_of: source,
+#     filter: { kind: option } }` (rooted at THIS Digimon's digivolution
+#     cards; mandatory once activated) + `trash_union_bound`; then
+#     `select_own_permanent { kind: digimon, trait_has: "Three Musketeers" }`
+#     → `add_modifier SecurityAttackChange +1, expiry: end_of_turn` →
+#     `force_attack { attacker, targets: any }` (mandatory attack; a Digimon
+#     that cannot attack — DCGO `CanAttack` false — simply gets no legal
+#     attack action, matching the `if (CanAttack)` guard).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                  | Status      |
+# |----------------------------------------------------------------------|-----------|
+# | Alt-source Lv.5 w/[Three Musketeers] in text / cost 4 (+ Red circle)| IMPLEMENTED |
+# | [On Play][WD] may use 1 TM Option from hand free                    | IMPLEMENTED |
+# | [On Play][WD] then draw until 6 in hand (deck ≥ 1 guard)            | IMPLEMENTED |
+# | [EoYT][OPT] trash 1 Option from this Digimon's sources (cost)        | IMPLEMENTED |
+# | [EoYT][OPT] 1 own TM Digimon gains Security A.+1 for the turn, attacks | IMPLEMENTED |
+
+card: EX7-013
+name: MagnaKidmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragonkin, Three Musketeers]
+attribute: Virus
+
+alt_paths:
+  # Standard printed Red Lv.5 / cost 4 circle.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: red
+    cost: 4
+  # [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4 (whole-card HasText).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: "Three Musketeers"
+    cost: 4
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] may use TM Option free; draw to 6 ─
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may use 1 [Three Musketeers] Option from hand free; then draw until you have 6 in hand"
+    process:
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "You may use 1 [Three Musketeers] trait Option card from your hand without paying the cost"
+      # DCGO: `if (LibraryCards.Count >= 1 && HandCards.Count < 6) while (Hand < 6) Draw(1)`.
+      - if:
+          condition:
+            count_gte:
+              filter: { zone: [deck], owner: you }
+              n: 1
+          then:
+            - draw:
+                of: you
+                count:
+                  max:
+                    - subtract:
+                        - 6
+                        - base: 0
+                          per:
+                            card_count_in_zone: { of: you, zone: hand }
+                          delta: 1
+                    - 0
+
+  # ─── Clause 2: [End of Your Turn][OPT] trash Option source → SA+1 + attack ─
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    condition:
+      self_source_count:
+        filter: { kind: option }
+        op: gte
+        value: 1
+    summary: "[End of Your Turn][OPT] By trashing 1 Option from this Digimon's digivolution cards, 1 of your [Three Musketeers] Digimon gains <Security A. +1> for the turn and attacks"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          material_of: source
+          filter: { kind: option }
+          bind_as: option_source
+          prompt: "Trash 1 Option card from this Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: option_source
+      - select_own_permanent:
+          bind_as: attacker
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Three Musketeers"
+          prompt: "Choose 1 of your [Three Musketeers] trait Digimon to gain <Security A. +1> for the turn and attack"
+      - add_modifier:
+          target: attacker
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+      - force_attack:
+          attacker: attacker
+          targets: any
+          prompt: "That Digimon attacks"

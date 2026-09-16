@@ -194,6 +194,17 @@ pub struct PredicateSpec {
     /// G-DSL-SOURCE-COUNT-FILTERED.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_count: Option<SourceCountPredicate>,
+    /// Permanent-subject predicate — the LINK-CARD sibling of `source_count`.
+    /// True when the candidate carries at least `at_least` **link cards**
+    /// (`Permanent.linked_cards`, the cards plugged in sideways via ＜Link＞)
+    /// matching the nested `filter`. Drives BT25-085 BeelStarmon's activation
+    /// gate "By trashing 1 Option card from any of your Digimon's digivolution
+    /// cards OR LINK CARDS" (DCGO `permanent.DigivolutionOrLinkCards.Any(IsOption)`
+    /// = `source_count` OR `link_card_count`). Breeding-area permanents carry
+    /// no link cards, so the leaf is false there for `at_least ≥ 1`.
+    /// G-DSL-LINK-CARD-COUNT-FILTERED.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_card_count: Option<SourceCountPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -733,6 +744,23 @@ pub struct PredicateSpec {
     /// G-ANY-RETURNED-CARD-PREDICATE — driver BT17-077 clause 1c.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub returned_card_matching: Option<Box<PredicateSpec>>,
+    /// True when the current effect's result log records at least one card
+    /// trashed FROM A HAND by a preceding `trash_from_hand_by_index` (or a
+    /// hand-origin `trash_union_bound`) step in the SAME effect. Bare-bool
+    /// sibling of `effect_returned_any_card`. G-DSL-EFFECT-TRASHED-HAND-CARD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_trashed_any_hand_card: Option<bool>,
+    /// Filtered variant of `effect_trashed_any_hand_card`: true when at least
+    /// one hand card trashed by THIS effect satisfies the inner card-shape
+    /// predicate (evaluated as a `Card` subject against each recorded card
+    /// identity — zone-agnostic, so it reads the card now sitting in the
+    /// trash). Driver P-212 Asuna Shiroki — "<Draw 1> and trash 1 card in
+    /// your hand. If this effect trashed a card with the [Three Musketeers]
+    /// or [TS] trait, delete 1 of your opponent's level 3 Digimon."
+    /// Example: `trashed_hand_card_matching: { any_of: [{ trait_has: TS }] }`.
+    /// G-DSL-EFFECT-TRASHED-HAND-CARD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trashed_hand_card_matching: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_deleted_any_own_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

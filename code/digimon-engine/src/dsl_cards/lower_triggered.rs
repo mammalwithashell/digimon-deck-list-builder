@@ -639,6 +639,7 @@ fn permanent_zone_has_match(
 fn step_provides_resource_flow(step: &CompiledStep) -> bool {
     match step {
         CompiledStep::Draw { .. }
+        | CompiledStep::DrawFn { .. }
         | CompiledStep::AddToHandFromDeck { .. }
         | CompiledStep::AddToHandFromTrash { .. }
         | CompiledStep::AddToHandFromReveal { .. } => true,

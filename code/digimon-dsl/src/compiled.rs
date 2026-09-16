@@ -375,6 +375,11 @@ pub struct CompiledPredicate {
     /// G-DSL-SOURCE-COUNT-FILTERED.
     #[serde(default)]
     pub source_count: Option<(Box<CompiledPredicate>, u8)>,
+    /// `(filter, at_least)` — count of LINK cards (`Permanent.linked_cards`)
+    /// matching `filter` must be ≥ `at_least`. Compiled form of the
+    /// `link_card_count` leaf. G-DSL-LINK-CARD-COUNT-FILTERED.
+    #[serde(default)]
+    pub link_card_count: Option<(Box<CompiledPredicate>, u8)>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -577,6 +582,14 @@ pub struct CompiledPredicate {
     /// predicate is evaluated as a `Card` subject against each returned card
     /// identity in the per-effect result log. G-ANY-RETURNED-CARD-PREDICATE.
     pub returned_card_matching: Option<Box<CompiledPredicate>>,
+    /// Bare-bool "this effect trashed >=1 hand card" result predicate.
+    /// G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub effect_trashed_any_hand_card: Option<bool>,
+    /// Filtered variant of `effect_trashed_any_hand_card`: the inner predicate
+    /// is evaluated as a `Card` subject against each hand card trashed by
+    /// this effect (result log `trashed_from_hand`). Driver P-212.
+    /// G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub trashed_hand_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
     /// DP-threshold sibling of `effect_deleted_any_opponent_digimon`: true iff
@@ -871,6 +884,14 @@ pub enum CompiledPerSelector {
         filter: Box<CompiledPredicate>,
     },
     DistinctColorsCountScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+        filter: Option<Box<CompiledPredicate>>,
+    },
+    /// Number of distinct card names among the matching cards / permanents in
+    /// `zone` for `of` (synth-identity-aware on the field). Drives EX7-066's
+    /// per-different-name DP cap. G-DSL-FORMULA-DISTINCT-NAMES-COUNT.
+    DistinctNamesCountScoped {
         zone: CompiledZone,
         of: CompiledPlayerRef,
         filter: Option<Box<CompiledPredicate>>,
@@ -1207,6 +1228,8 @@ pub enum CompiledTiming {
     OnSecurity,
     OnOptionPlaced,
     OnOptionTrashed,
+    /// Board-wide "a player uses an Option card" observer. G-DSL-ON-USE-OPTION-TIMING.
+    OnUseOption,
     OnPlaceSecurity,
     OnAddedToSecurity,
     Main,
@@ -1337,6 +1360,15 @@ pub enum CompiledStep {
     Draw {
         of: CompiledPlayerRef,
         count: u8,
+    },
+    /// Formula-valued draw (`draw: { of, count: <formula> }`), evaluated at
+    /// resolution time against the effect carrier and clamped at 0. Mirror of
+    /// the literal `Draw` with runtime-computed magnitude — EX7-013 "draw
+    /// until you have 6 in your hand" = `max(6 - hand_count, 0)`.
+    /// G-DSL-DRAW-FORMULA-COUNT.
+    DrawFn {
+        of: CompiledPlayerRef,
+        formula: CompiledFormula,
     },
     TrashFromTop {
         of: CompiledPlayerRef,
@@ -1470,6 +1502,11 @@ pub enum CompiledStep {
     },
     DeleteBoundPermanents {
         binding: String,
+    },
+    /// Batched "delete all permanents matching `over`" (BT6-105).
+    /// G-DSL-DELETE-ALL-PERMANENTS.
+    DeleteAllPermanents {
+        over: CompiledPredicate,
     },
     /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR (EX9-074 Kimeramon Branch B):
     /// per game-color, a mandatory pick of 1 not-yet-chosen opponent Digimon of

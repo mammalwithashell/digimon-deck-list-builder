@@ -607,6 +607,15 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(sub) = &pred.trashed_hand_card_matching {
+        validate_predicate(
+            sub,
+            &format!("{prefix}.trashed_hand_card_matching"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
     if let Some(ssc) = &pred.self_source_count {
         if let Some(filter) = &ssc.filter {
             validate_predicate(
@@ -710,6 +719,15 @@ fn validate_predicate(
         validate_predicate(
             &sc.filter,
             &format!("{prefix}.source_count.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(sc) = &pred.link_card_count {
+        validate_predicate(
+            &sc.filter,
+            &format!("{prefix}.link_card_count.filter"),
             card_id,
             ctx,
             errors,
@@ -1209,6 +1227,9 @@ fn validate_step(
             for (k, s) in f.body.iter().enumerate() {
                 validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
             }
+        }
+        StepSpec::DeleteAllPermanents(a) => {
+            validate_predicate(&a.over, &format!("{prefix}.over"), card_id, ctx, errors);
         }
         StepSpec::PerSelected(ps) => {
             for (k, s) in ps.body.iter().enumerate() {
@@ -1787,6 +1808,15 @@ fn validate_step_binding_scope(
             // already grant via their post-step `declare_optional_binding`.
             scope.extend(then_scope);
         }
+        StepSpec::DeleteAllPermanents(args) => {
+            validate_predicate_binding_scope(
+                &args.over,
+                &format!("{prefix}.over"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
         StepSpec::ForEach(args) => {
             validate_predicate_binding_scope(
                 &args.over,
@@ -1990,6 +2020,15 @@ fn validate_predicate_binding_scope(
             errors,
         );
     }
+    if let Some(sub) = &pred.trashed_hand_card_matching {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.trashed_hand_card_matching"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(
             inh,
@@ -2170,7 +2209,8 @@ fn validate_per_selector_binding_scope(
     errors: &mut Vec<ValidationError>,
 ) {
     if let crate::formula::PerSelector::CardCountInZone(spec)
-    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    | crate::formula::PerSelector::DistinctColorsCount(spec)
+    | crate::formula::PerSelector::DistinctNamesCount(spec) = per
     {
         if let Some(filter) = &spec.filter {
             validate_predicate_binding_scope(
@@ -2360,7 +2400,8 @@ fn validate_per_selector(
     errors: &mut Vec<ValidationError>,
 ) {
     if let crate::formula::PerSelector::CardCountInZone(spec)
-    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    | crate::formula::PerSelector::DistinctColorsCount(spec)
+    | crate::formula::PerSelector::DistinctNamesCount(spec) = per
     {
         if let Some(filter) = &spec.filter {
             validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
@@ -2410,7 +2451,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
 fn per_uses_dp_aggregate(per: &crate::formula::PerSelector) -> bool {
     match per {
         crate::formula::PerSelector::CardCountInZone(spec)
-        | crate::formula::PerSelector::DistinctColorsCount(spec) => spec
+        | crate::formula::PerSelector::DistinctColorsCount(spec)
+        | crate::formula::PerSelector::DistinctNamesCount(spec) => spec
             .filter
             .as_deref()
             .is_some_and(predicate_uses_dp_aggregate),

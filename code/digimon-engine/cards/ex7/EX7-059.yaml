@@ -1,0 +1,157 @@
+# EX7-059 BeelStarmon ACE — Digimon, Lv.6, Purple, DP 11000, Cost 6.
+# Traits: Wizard / Three Musketeers. Attribute: Virus. ACE card.
+#
+# Printed card text (data/card_bundles/EX7-059.md — official Bandai DB,
+# confirmed against the card image EX7-059.webp, whose name box reads
+# "BeelStarmon ACE" — the ACE suffix is part of the printed name, so
+# [BeelStarmon]-name effects do NOT match this card; AD1-005 "Gaiamon ACE"
+# idiom):
+#
+#   [Hand] [Counter] ＜Blast Digivolve＞
+#   [On Play] [When Digivolving] Return 1 Option card from your trash to the
+#   hand. Then, you may use 1 [Three Musketeers] trait Option card from your
+#   hand without paying the cost.
+#   [When Attacking] [Once Per Turn] By trashing 1 Option card from this
+#   Digimon's digivolution cards, you may use 1 [Three Musketeers] trait
+#   Option card from your hand without paying the cost.
+#   ＜Overflow (-4)＞ (As this card moves from the field or under a card to an
+#   area other than those, lose 4 memory.)
+#
+# Digivolution requirements (official Bandai DB):
+#   Standard circle: Purple Lv.5 / cost 3.
+#   [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_059.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Digivolution Condition: AddSelfDigivolutionRequirementStaticEffect(
+#   TopCard.HasText("Three Musketeers"), cost 3, ignoreDigivolutionRequirement:
+#   false, level: 5) → `in_text_contains` + `level_eq: 5`, cost 3; the standard
+#   Purple Lv.5 / 3 circle is also authored (EX7-048 idiom).
+#
+# Blast Digivolve: CardEffectFactory.BlastDigivolveEffect at OnCounterTiming
+#   → `grant_keyword: BlastDigivolve` + the `burst_digivolve` marker alt-path
+#   (AD1-005 / BT16-027 idiom — the marker is what the counter window scans).
+#
+# Overflow (-4): `ace_overflow: -4`.
+#
+# On Play / When Digivolving (`-1, false` = MANDATORY clause): mandatory
+#   SelectCardEffect (Mode.AddHand, Root.Trash, canNoSelect: () => false)
+#   over IsOption (any Option — no trait gate on the return); then
+#   SelectHandEffect (canNoSelect: true) over IsOption && TM trait &&
+#   HasUseCost && !CanNotPlayThisOption → PlayOptionCards(payCost: false).
+#   Each half is wrapped in its own candidate check, so the hand-use half
+#   still runs when the trash half found nothing (and vice versa).
+#   → `select_trash { kind: option }` (mandatory; self-skips on 0 candidates)
+#     + `add_to_hand_from_trash`, then `use_option_from_hand { optional }`.
+#
+# When Attacking (`1, true` = OPT + OPTIONAL; CanActivate: THIS permanent's
+#   DigivolutionCards contain ≥1 trashable Option): SelectCardEffect over
+#   this permanent's DigivolutionCards filtered IsOption with canNoSelect:
+#   () => true → ITrashDigivolutionCards; ONLY `if (trashed)` → the same
+#   optional hand use.
+#   → `optional: true` clause + `condition: self_source_count { kind: option }`
+#     (DCGO CanActivate), cost = `select_union_zone { zones: [material],
+#     material_of: source, kind: option, optional: true, cost: true }`
+#     (declining the pick = nothing trashed AND the tail is skipped — the
+#     printed "By trashing X, you may Y") + `trash_union_bound`, then
+#     `use_option_from_hand { optional: true }`.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status      |
+# |------------------------------------------------------------------|-----------|
+# | Alt-source Lv.5 w/[Three Musketeers] in text / 3 (+ Purple circle)| IMPLEMENTED |
+# | [Hand][Counter] <Blast Digivolve>                                | IMPLEMENTED |
+# | [On Play][WD] return 1 Option from trash to hand (mandatory)      | IMPLEMENTED |
+# | [On Play][WD] then may use 1 TM Option from hand free             | IMPLEMENTED |
+# | [WA][OPT] by trashing 1 Option from this Digimon's sources, may use TM Option free | IMPLEMENTED |
+# | <Overflow (-4)>                                                  | IMPLEMENTED |
+
+card: EX7-059
+name: BeelStarmon ACE
+kind: digimon
+level: 6
+color: [purple]
+cost: 6
+dp: 11000
+traits: [Wizard, Three Musketeers]
+attribute: Virus
+ace_overflow: -4
+
+alt_paths:
+  # Standard printed Purple Lv.5 / cost 3 circle.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: purple
+    cost: 3
+  # [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: "Three Musketeers"
+    cost: 3
+  # [Hand][Counter] <Blast Digivolve> — counter-window marker path, cost 0.
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── <Blast Digivolve> keyword marker ─────────────────────────────────────
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "[Hand][Counter] <Blast Digivolve>"
+
+  # ─── Clause 1: [On Play][WD] return 1 Option from trash; may use TM Option ─
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return 1 Option card from your trash to the hand. Then, you may use 1 [Three Musketeers] Option from hand free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: returned_option
+          filter: { kind: option }
+          prompt: "Return 1 Option card from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: returned_option }
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "You may use 1 [Three Musketeers] trait Option card from your hand without paying the cost"
+
+  # ─── Clause 2: [WA][OPT] by trashing 1 Option source, may use TM Option ────
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition:
+      self_source_count:
+        filter: { kind: option }
+        op: gte
+        value: 1
+    summary: "[When Attacking][OPT] By trashing 1 Option from this Digimon's digivolution cards, you may use 1 [Three Musketeers] Option from hand free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          material_of: source
+          filter: { kind: option }
+          optional: true
+          cost: true
+          bind_as: option_source
+          prompt: "Trash 1 Option card from this Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: option_source
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "You may use 1 [Three Musketeers] trait Option card from your hand without paying the cost"

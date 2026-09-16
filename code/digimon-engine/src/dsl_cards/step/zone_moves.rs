@@ -492,7 +492,12 @@ pub fn try_run(
                     owner, p,
                     "trash_from_hand_by_index used a binding from a different player than `of`"
                 );
-                ctx.trash_from_hand_by_index(owner, i as usize);
+                // Record the trashed identity so the `trashed_hand_card_matching`
+                // / `effect_trashed_any_hand_card` result predicates can read
+                // it (P-212). G-DSL-EFFECT-TRASHED-HAND-CARD.
+                if let Some(trashed) = ctx.trash_from_hand_by_index(owner, i as usize) {
+                    bindings.record_trashed_from_hand(trashed);
+                }
             }
             true
         }
@@ -508,7 +513,9 @@ pub fn try_run(
                             .iter()
                             .position(|source| source.handle() == card)
                         {
-                            ctx.trash_from_hand_by_index(owner, index);
+                            if let Some(trashed) = ctx.trash_from_hand_by_index(owner, index) {
+                                bindings.record_trashed_from_hand(trashed);
+                            }
                         }
                     }
                     UnionZoneOrigin::Material { carrier, .. } => {

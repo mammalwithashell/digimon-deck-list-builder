@@ -79,6 +79,11 @@ pub struct EffectResultLog {
     pub played: Vec<PermanentHandle>,
     pub digivolved: Vec<PermanentHandle>,
     pub added_to_hand: Vec<CardHandle>,
+    /// Cards trashed FROM A HAND by this effect (`trash_from_hand_by_index`,
+    /// hand-origin `trash_union_bound`). Read by the
+    /// `effect_trashed_any_hand_card` / `trashed_hand_card_matching` result
+    /// predicates (P-212). G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub trashed_from_hand: Vec<CardHandle>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,6 +95,7 @@ pub struct EffectResultLogCursor {
     played: usize,
     digivolved: usize,
     added_to_hand: usize,
+    trashed_from_hand: usize,
 }
 
 impl Bindings {
@@ -139,6 +145,7 @@ impl Bindings {
             played: self.result_log.played.len(),
             digivolved: self.result_log.digivolved.len(),
             added_to_hand: self.result_log.added_to_hand.len(),
+            trashed_from_hand: self.result_log.trashed_from_hand.len(),
         }
     }
 
@@ -174,6 +181,13 @@ impl Bindings {
         self.result_log.added_to_hand.push(card);
     }
 
+    /// Record a card this effect trashed from a hand. Consumed by the
+    /// `effect_trashed_any_hand_card` / `trashed_hand_card_matching` result
+    /// predicates. G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub fn record_trashed_from_hand(&mut self, card: CardHandle) {
+        self.result_log.trashed_from_hand.push(card);
+    }
+
     pub fn merge_result_log_from_since(&mut self, other: &Bindings, cursor: EffectResultLogCursor) {
         self.result_log.suspended.extend(
             other.result_log.suspended[cursor.suspended..]
@@ -203,6 +217,11 @@ impl Bindings {
         );
         self.result_log.added_to_hand.extend(
             other.result_log.added_to_hand[cursor.added_to_hand..]
+                .iter()
+                .copied(),
+        );
+        self.result_log.trashed_from_hand.extend(
+            other.result_log.trashed_from_hand[cursor.trashed_from_hand..]
                 .iter()
                 .copied(),
         );

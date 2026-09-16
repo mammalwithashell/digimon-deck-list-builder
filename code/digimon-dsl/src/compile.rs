@@ -296,6 +296,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnSecurity => CompiledTiming::OnSecurity,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
         S::OnOptionTrashed => CompiledTiming::OnOptionTrashed,
+        S::OnUseOption => CompiledTiming::OnUseOption,
         S::OnPlaceSecurity => CompiledTiming::OnPlaceSecurity,
         S::OnAddedToSecurity => CompiledTiming::OnAddedToSecurity,
         S::Main => CompiledTiming::Main,
@@ -412,6 +413,18 @@ fn compile_per_selector(
             }
         }
         S::DistinctColorsCount(spec) => CompiledPerSelector::DistinctColorsCountScoped {
+            zone: compile_zone(spec.zone),
+            of: compile_player_ref(spec.of),
+            filter: spec.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
+        S::DistinctNamesCount(spec) => CompiledPerSelector::DistinctNamesCountScoped {
             zone: compile_zone(spec.zone),
             of: compile_player_ref(spec.of),
             filter: spec.filter.as_ref().map(|filter| {
@@ -973,6 +986,17 @@ fn compile_predicate(
                 sc.at_least,
             )
         }),
+        link_card_count: p.link_card_count.as_ref().map(|sc| {
+            (
+                Box::new(compile_predicate(
+                    &sc.filter,
+                    &format!("{prefix}.link_card_count.filter"),
+                    card_id,
+                    errors,
+                )),
+                sc.at_least,
+            )
+        }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -1270,6 +1294,15 @@ fn compile_predicate(
             Box::new(compile_predicate(
                 b,
                 &format!("{prefix}.returned_card_matching"),
+                card_id,
+                errors,
+            ))
+        }),
+        effect_trashed_any_hand_card: p.effect_trashed_any_hand_card,
+        trashed_hand_card_matching: p.trashed_hand_card_matching.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.trashed_hand_card_matching"),
                 card_id,
                 errors,
             ))
@@ -2552,10 +2585,18 @@ fn compile_step(
             }
         }
 
-        S::Draw(a) => CompiledStep::Draw {
-            of: compile_player_ref(a.of),
-            count: a.count,
-        },
+        S::Draw(a) => {
+            match split_scalar_formula(&a.count, &format!("{prefix}.draw.count"), card_id, errors) {
+                Ok(n) => CompiledStep::Draw {
+                    of: compile_player_ref(a.of),
+                    count: n.clamp(0, u8::MAX as i32) as u8,
+                },
+                Err(formula) => CompiledStep::DrawFn {
+                    of: compile_player_ref(a.of),
+                    formula,
+                },
+            }
+        }
         S::TrashFromTop(a) => {
             let (count_lit, count_fn) = match split_scalar_formula(
                 &a.count,
@@ -2732,6 +2773,9 @@ fn compile_step(
         },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
+        },
+        S::DeleteAllPermanents(a) => CompiledStep::DeleteAllPermanents {
+            over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors),
         },
         S::DeleteOnePerOpponentColor(a) => CompiledStep::DeleteOnePerOpponentColor {
             filter: a.filter.as_ref().map(|f| {
@@ -3299,10 +3343,24 @@ fn compile_step(
                     .collect()
             }),
         },
-        S::Recover(a) => CompiledStep::Recover {
-            of: compile_player_ref(a.of),
-            count: a.count,
-        },
+        S::Recover(a) => {
+            let count = match &a.count {
+                crate::formula::FormulaSpec::Literal(n) => (*n).clamp(0, u8::MAX as i32) as u8,
+                _ => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.recover.count"),
+                        message: "recover count must be a literal integer (no formula variant)"
+                            .to_string(),
+                    });
+                    0
+                }
+            };
+            CompiledStep::Recover {
+                of: compile_player_ref(a.of),
+                count,
+            }
+        }
         S::MarkSecurityFaceUp(a) => CompiledStep::MarkSecurityFaceUp {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),

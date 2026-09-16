@@ -21,3 +21,6 @@ mod ex7_040;
 mod ex7_043;
 mod ex7_044;
 mod ex7_051;
+mod ex7_013;
+mod ex7_059;
+mod ex7_066;

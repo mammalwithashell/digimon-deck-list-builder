@@ -394,6 +394,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.materials_count_lte.is_some()
         || pred.materials_count_gte.is_some()
         || pred.source_count.is_some()
+        || pred.link_card_count.is_some()
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()

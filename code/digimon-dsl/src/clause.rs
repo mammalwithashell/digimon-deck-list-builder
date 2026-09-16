@@ -178,6 +178,22 @@ pub enum Timing {
     OnSecurity,
     OnOptionPlaced,
     OnOptionTrashed,
+    /// `when: on_use_option` — board-wide observer that fires when ANY player
+    /// uses an Option card (engine `EffectTiming::OnUseOption`, dispatched to
+    /// every battle-area permanent of BOTH players after the use cost is paid
+    /// and AFTER the Option's own [Main] body has fully resolved — DCGO
+    /// `UseOptionClass.UseOption` STACKS the `OnUseOption` skill infos and
+    /// runs `OptionSkill` inline, and the official BT3-096 Q&A reads "It can
+    /// be activated after activating the used Option card's [Main] effect").
+    /// The engine defers the observers via `Game::on_use_option_armed` /
+    /// `fire_on_use_option_observers` (`OptionResolutionPhase::OnUseOptionDrain`)
+    /// so a body that parks a selection or claims `pending_option` still
+    /// fires them exactly once. Printed
+    /// shapes: "[All Turns] When a player uses an Option card, …" (BT3-096
+    /// Mimi Tachikawa) and "[Your Turn] When you use [TS] trait Option cards,
+    /// …" (BT25-091 Monica Simmons). Scope the actor with `active_when:`
+    /// (`your_turn` / `all_turns`). G-DSL-ON-USE-OPTION-TIMING.
+    OnUseOption,
     OnPlaceSecurity,
     OnAddedToSecurity,
     Main,

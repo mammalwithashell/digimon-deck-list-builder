@@ -934,6 +934,8 @@ fn eval_result_bound_fields(
             && pred.effect_suspended_any_opponent_digimon != Some(true)
             && pred.effect_returned_any_card != Some(true)
             && pred.returned_card_matching.is_none()
+            && pred.effect_trashed_any_hand_card != Some(true)
+            && pred.trashed_hand_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
             && pred.effect_deleted_opponent_digimon_dp_gte.is_none()
@@ -971,6 +973,32 @@ fn eval_result_bound_fields(
     // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
     if let Some(inner) = &pred.returned_card_matching {
         let any_match = log.returned_cards.iter().any(|&handle| {
+            eval_predicate_with_bindings(
+                inner,
+                rctx,
+                PredicateSubject::Card(handle),
+                Some(bindings),
+            )
+        });
+        if !any_match {
+            return false;
+        }
+    }
+    // G-DSL-EFFECT-TRASHED-HAND-CARD — hand-trash siblings of the returned-card
+    // result predicates. `trash_from_hand_by_index` / hand-origin
+    // `trash_union_bound` record the trashed card's identity; the filtered
+    // variant evaluates each recorded handle as a `Card` subject (zone-agnostic
+    // identity read, so the card now sitting in the trash is what is tested).
+    // Driver P-212 Asuna Shiroki ("If this effect trashed a card with the
+    // [Three Musketeers] or [TS] trait, ...").
+    if let Some(want) = pred.effect_trashed_any_hand_card {
+        let actual = !log.trashed_from_hand.is_empty();
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.trashed_hand_card_matching {
+        let any_match = log.trashed_from_hand.iter().any(|&handle| {
             eval_predicate_with_bindings(
                 inner,
                 rctx,
@@ -3405,6 +3433,22 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // `link_card_count` — the LINK-CARD sibling of `source_count`: count
+    // `perm.linked_cards` satisfying the nested `filter` (each evaluated as a
+    // card subject, like a `select_own_sources` filter) and require ≥
+    // `at_least`. DCGO `permanent.LinkedCards.Count(predicate) >= N` — paired
+    // with `source_count` it models `DigivolutionOrLinkCards.Any(...)`
+    // (BT25-085). G-DSL-LINK-CARD-COUNT-FILTERED.
+    if let Some((filter, at_least)) = &pred.link_card_count {
+        let matching = perm
+            .linked_cards
+            .iter()
+            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .count();
+        if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
     if !pred.zone.is_empty()
         && !pred.zone.contains(if in_breeding {
             &CompiledZone::Breeding
@@ -3685,6 +3729,20 @@ fn eval_breeding_permanent_fields(
                 .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
                 .count()
         };
+        if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `link_card_count` on a breeding-area Digimon: link cards only exist on
+    // battle-area permanents (`Permanent.linked_cards` of a breeding permanent
+    // is always empty), so any `at_least >= 1` gate is false here.
+    // G-DSL-LINK-CARD-COUNT-FILTERED.
+    if let Some((filter, at_least)) = &pred.link_card_count {
+        let matching = perm
+            .linked_cards
+            .iter()
+            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .count();
         if matching < usize::from(*at_least) {
             return false;
         }
