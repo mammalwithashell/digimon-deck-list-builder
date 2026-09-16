@@ -1,0 +1,94 @@
+# Exam scenario: Asuna Shiroki (BT25-092), clause BT25-092#effect#0 --
+# "[Start of Your Main Phase] By trashing 1 card with [Three Musketeers] in
+#  its text or the [TS] trait from your hand, <Draw 1> and gain 1 memory."
+#
+# THE LINE (P0 = three-musketeers, P1 = quiet-opponent) is three turns:
+#   T1 (P0, memory 0): hatch Pagumon; play Asuna for 4 (memory -4, the turn
+#            hands over).
+#   T2 (P1, memory 4): hatch Koromon; play Agumon ST1-03 (4 -> 1); pass, which
+#            resets P0 to 3.
+#   T3 (P0, memory 3): the breeding area holds a Lv.2 in an occupied slot, so
+#            there is no breeding prompt; the main phase opens and THE CLAUSE
+#            fires. Gazimon (BT25-078, [TS] trait) is trashed from hand; P0
+#            draws 1 and gains 1 memory (3 -> 4).
+#
+# PROMPT SHAPE (BT25_092.cs "Start of your Main Phase"):
+#   StartOfYourMainPhaseClass(..., optional: false, isSkippable: true) with an
+#   AdditionalActivateCondition of "a [Three Musketeers]-text or [TS] card in
+#   hand". `isSkippable` only feeds the MultipleSkills "don't activate" gate;
+#   it opens no prompt of its own. The body is ONE SelectHandEffect
+#   (maxCount 1, canNoSelect: true, Mode.Discard) whose AfterSelect runs
+#   DrawClass(1) and AddMemory(1) only if a card was picked.
+#   Our engine authors the effect `optional: true` over a mandatory hand pick,
+#   so it installs an outer accept/decline gate (kind `Replacement`) that DCGO
+#   never asks -> that row is SIM-ONLY; the hand pick is the shared row.
+#
+# The witness is the pair (memory 4, Gazimon in the trash): 3 + 1 for the
+# gain, and the hand size unchanged at 5 (one trashed, one drawn).
+# <Draw 1> is Mandatory (keyword-semantics: 16-7).
+card: BT25-092
+clause: BT25-092#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 turn draw, stack[11] = the clause's <Draw 1>.
+    stack: [BT25-092, BT25-078, EX7-051, BT25-082, BT25-085,
+            EX7-008, EX7-008, EX7-008, BT25-083, BT25-083,
+            BT21-071, BT21-074, BT25-083]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch, then play Asuna Shiroki for her full cost of 4.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): hatch, play Agumon, pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE fires at the start of the main phase.
+  # SIM-ONLY outer gate (see header), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-078] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause: P0 holds memory 4, so the pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. Memory 4 = 3 + 1; Gazimon is the
+  # trashed cost; the hand is back to five cards (BT21-071 drawn on the turn,
+  # BT21-074 drawn by the clause).
+  - at: 7
+    that:
+      turn: 3
+      phase: Main
+      p0.memory: 4
+      p0.trash: [BT25-078]
+      p0.hand: [BT21-071, BT21-074, BT25-082, BT25-085, EX7-051]
+      p0.field:
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p1.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: false
+          sources: []

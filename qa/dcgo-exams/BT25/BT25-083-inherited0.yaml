@@ -113,6 +113,21 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.1, using: BT25-085 } }
     expect: { prompt: main_phase }
+  # BeelStarmon opens TWO routes from LadyDevimon -- the printed Purple Lv.5 /
+  # cost 4 circle and "[Digivolve] Lv.5 w/[Three Musketeers] in text or
+  # w/[TS] trait: Cost 3" (LadyDevimon satisfies both) -- so both engines ask
+  # which cost to pay: DCGO through the digivolution-cost SelectCountEffect
+  # (BT25_085.cs registers the alt route with `ignoreDigivolutionRequirement:
+  # true`, which Player.CanIgnoreDigivolutionRequirement answers `true` by
+  # default -- it only returns false under a "can't ignore" effect), ours
+  # through the rule-17 distinct-cost EffectChoice. The answer is the VALUE
+  # (EX12-015 idiom): 4 keeps the printed route and the 3 -> -1 arithmetic
+  # this line is built on. (Added 2026-09-16: the row was missing when this
+  # file was first committed; BT25-085's alt route landed in the card spec
+  # afterwards, 9aa21ed0f.)
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
   # T8 (P1)
   - actor: 1
     do: { pass: {} }
@@ -147,7 +162,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 23
+  - at: 24
     that:
       turn: 9
       p0.memory: 3

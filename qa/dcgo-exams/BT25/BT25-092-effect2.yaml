@@ -1,0 +1,99 @@
+# Exam scenario: Asuna Shiroki (BT25-092), clause BT25-092#effect#2 --
+# "[Security] Play this card without paying the cost."
+#
+# SEATS ARE SWAPPED for this file: P0 is the quiet-opponent ATTACKER and P1 is
+# the three-musketeers DEFENDER with Asuna pinned at stack[9] -- the TOP of the
+# security stack, the first card a security check flips (docs/DCGO_EXAM.md,
+# "What each stack position becomes").
+#
+# THE LINE:
+#   T1 (P0, memory 0): hatch Koromon; play Agumon ST1-03 for 3 (memory -3,
+#            the turn hands over).
+#   T2 (P1, memory 3): hatch Pagumon; pass (P0 resets to 3).
+#   T3 (P0): Koromon is a Lv.2 in an occupied slot -> no breeding prompt.
+#            Agumon (played last turn, unsuspended) attacks the player. P1 has
+#            no Digimon and no <Blocker>, so the attack reaches security and
+#            flips Asuna: THE CLAUSE plays her onto P1's battle area.
+#
+# PROMPT SHAPE (BT25_092.cs "Security" -> CardEffectFactory
+# PlaySelfTamerSecurityEffect): SetUpActivateClass(..., -1, false, ...) --
+# mandatory, no prompt; the body is PlayPermanentCards(payCost: false,
+# root: Execution). Our `play_from_security` asks nothing either. The security
+# card is a Tamer, so no security battle occurs and nothing else triggers
+# during the attack (Asuna's own effects are [Start of Your Main Phase] /
+# [Main] -- the former fires on P1's NEXT turn, see the trailing rows).
+#
+# The witness is Asuna standing on the DEFENDER's field with P1's security at
+# 4 and P1's trash EMPTY -- a flipped Tamer that was NOT played would be in
+# the trash instead.
+card: BT25-092
+clause: BT25-092#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009]
+    rest: quiet-opponent
+  p1:
+    # stack[9] = Asuna = top of security. stack[10] = the T2 draw.
+    stack: [BT25-078, EX7-008, EX7-008, BT25-083, BT25-083,
+            EX7-008, BT21-071, BT21-071, BT21-071, BT25-092,
+            BT21-074]
+    rest: three-musketeers
+steps:
+  # T1 (P0): hatch, play Agumon (0 -> -3).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): hatch, pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Agumon attacks the player. THE CLAUSE resolves inside
+  # the security check with no prompt on either side.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # One step past the clause. This pass ENDS P0's turn, and the newly played
+  # Asuna immediately matters on P1's turn 4: its [Start of Your Main Phase]
+  # fires (P1's hand is all [Three Musketeers]-text / [TS] cards). The line
+  # may not end on a parked prompt, so P1 declines it -- our outer gate
+  # (sim-only) plus DCGO's cancellable SelectHandEffect (DCGO-only), the same
+  # two-row shape the BT25-082 / EX7-073 files use for this trigger. P1's
+  # breeding area holds a Lv.2 in an occupied slot, so no breeding prompt
+  # precedes it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 1
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+assert:
+  # Pre-step state of the trailing pass. Asuna is on P1's field, played from
+  # security for free; P1's security is 4 and its trash is empty.
+  - at: 5
+    that:
+      turn: 3
+      phase: Main
+      p0.memory: 3
+      p0.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: true
+          sources: []
+      p1.field:
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p1.security: 4
+      p1.trash: []

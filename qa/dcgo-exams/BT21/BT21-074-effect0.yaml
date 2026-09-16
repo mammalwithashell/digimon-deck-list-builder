@@ -1,0 +1,137 @@
+# Exam scenario: Satellamon (BT21-074), clause BT21-074#effect#0 --
+# "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+#
+# Satellamon's OTHER routes are Purple Lv.4 / 4, Black Lv.4 / 4 (printed
+# circles) and the [Sup.] trait circle / 4. A purple or black base (Scopemon,
+# BlackGatomon) would open one of those beside the clause and force the
+# digivolution-cost choice (DCGO SelectCountEffect / our EffectChoice). The
+# base here is Deputymon EX7-010 -- a RED Lv.4, trait [Mutant], whose effect
+# text prints "[Three Musketeers]" ("[Your Turn] This Digimon gains the
+# [Three Musketeers] trait.") -- so every printed circle FAILS and the ONLY
+# legal route is the clause under exam. No cost prompt opens on either side
+# (a single applicable path), and the memory delta pins the cost at 3.
+#
+# Deputymon is red, so this file needs its own deck book
+# (qa/dcgo-exams/BT21/tm_bt21_074_pool.json, deck `tm-deputymon`: the shared
+# three-musketeers 50 with BT24-081 and one EX7-070 swapped for EX7-010 x2).
+#
+# WHY NOTHING PROMPTS AFTER THE DIGIVOLVE. Satellamon's two [When Digivolving]
+# effects both need material this line withholds:
+#   - the tuck ("By placing 1 [Appmon] or [Three Musketeers] trait card from
+#     your hand or trash ...", BT21_074.cs `-1, false` = mandatory): DCGO's
+#     CanActivateConditionSharedOP is true (hand non-empty, own Digimon), but
+#     the coroutine only prompts when the hand or trash holds an eligible
+#     TRAIT card -- P0's hand is three BT24-088 + three BT25-092 (both [TS]),
+#     trash empty -> canSelectHand = canSelectTrash = false -> silent. Ours:
+#     the union pick self-skips on zero candidates.
+#   - the OPT De-Digivolve ("By trashing 1 card with the [Appmon] or [Three
+#     Musketeers] trait from your Digimon's digivolution cards", `1, true` =
+#     optional): needs such a card UNDER a Digimon. Deputymon is the only
+#     source and its trait grant is gated on `PermanentOfThisCard().TopCard
+#     == card` (EX7_010.cs ChangeTraitsClass CanUseCondition), so as a
+#     digivolution card it is plain [Mutant] on both sides -> DCGO's
+#     CanActivateConditionAtkShared is false, no OptionalSkill; our
+#     `condition:` (source_count trait_has) is false, no trigger.
+#
+# MEMORY IS ENGINEERED AWAY FROM ZERO (BT21-071-effect1 convention): P1
+# overspends on T4 (Biyomon ST1-02 for 2, then Garudamon ST1-08 from hand for
+# 6: 3 -> 1 -> -5), handing P0 FIVE memory on T5, so the cost-3 digivolve
+# lands on 2 and P0 still holds the turn for the trailing pass. Garudamon has
+# only a [When Digivolving] effect, so playing it prompts nothing.
+#
+#   T1 (P0): pass.   T2 (P1): pass.
+#   T3 (P0, 3): play Deputymon EX7-010 (cost 6: 3 -> -3, turn over).
+#   T4 (P1, 3): Biyomon (3 -> 1), Garudamon (1 -> -5).
+#   T5 (P0, 5): THE CLAUSE -- digivolve Deputymon into Satellamon for 3
+#            (5 -> 2, draw 1). Pass (turn over).
+#   T6 (P1): the trailing step.
+#
+# The assert sits on P1's turn so Deputymon's inherited "[Your Turn] +2000 DP"
+# is off and Satellamon reads its printed 7000.
+card: BT21-074
+clause: BT21-074#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw, stack[11] = T5 draw, stack[12] = the digivolve draw.
+    stack: [EX7-010, BT21-074, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092]
+    rest: tm-deputymon
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-04, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Deputymon -- the red Lv.4 with "[Three Musketeers]" in text.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 5): THE CLAUSE. Only the alt path is open (red base), so no
+  # cost-choice prompt on either side; both [When Digivolving] effects stay
+  # silent (see the header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-074 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of P1's T6 breeding prompt. p0.memory -3 is P1's fresh 3
+  # seen from P0's side; the witness for "Cost 3" is the T5 arithmetic
+  # (5 -> 2) -- had the printed cost 4 been paid the turn would still have
+  # held, but the hand/field would be identical, so the memory value at the
+  # trailing P0 pass (step 11) is asserted as well.
+  - at: 11
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 2
+  - at: 12
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: BT21-074, dp: 7000, suspended: false, sources: [EX7-010] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+      p1.security: 5

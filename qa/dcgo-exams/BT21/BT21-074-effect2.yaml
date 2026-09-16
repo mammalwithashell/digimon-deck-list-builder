@@ -1,0 +1,164 @@
+# Exam scenario: Satellamon (BT21-074), clause BT21-074#effect#2 --
+# "[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card
+#  with the [Appmon] or [Three Musketeers] trait from your Digimon's
+#  digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon."
+#
+# This file exercises the [When Attacking] arm. The [When Digivolving] arm is
+# unreachable without a MultipleSkills stack: any digivolve that leaves an
+# [Appmon]/[Three Musketeers] card under Satellamon also activates its
+# mandatory tuck effect (DCGO CanActivateConditionSharedOP only needs a
+# non-empty hand), so DCGO would ask an order first. Attacking sidesteps that.
+#
+# The [Appmon] source is Scopemon BT21-071, put under Satellamon by its own
+# [On Play] on T3 (the line measured in BT21-074-effect1.yaml). The
+# De-Digivolve target is P1's Kokatorimon BT1-014 stack (Lv.4 over Biyomon
+# ST1-02): trashing its top card leaves Biyomon, which is the witness.
+# Kokatorimon is vanilla, so P1's digivolve prompts nothing on either side.
+#
+#   T1 (P0): pass.
+#   T2 (P1, 3): play Biyomon ST1-02 (3 -> 1), pass.
+#   T3 (P0, 3): play Satellamon (3 -> -4); [On Play] tucks Scopemon under it.
+#   T4 (P1, 4): digivolve Biyomon into Kokatorimon (4 -> 2), pass.
+#   T5 (P0, 3): Satellamon attacks security. THE CLAUSE fires as [When
+#            Attacking]: trash Scopemon from Satellamon's digivolution cards,
+#            <De-Digivolve 1> the Kokatorimon stack (Kokatorimon to trash,
+#            Biyomon remains). The attack then checks 1 security card: Agumon
+#            ST1-03 (2000) loses the security battle to Satellamon (7000).
+#            Attacks cost nothing -- the trailing step is P0's pass.
+#
+# PROMPT SHAPE (BT21_074.cs, region "When Attacking"): SetUpActivateClass(...,
+# 1, true, ...) -> OPTIONAL: DCGO asks OptionalSkill, and our engine parks
+# its `Replacement` accept/decline gate for the clause's `optional: true`
+# (the body's first step is a mandatory material pick) -> ONE shared row.
+# Then CardEffectCommons.SelectTrashDigivolutionCards(isFromOnly1Permanent:
+# false, canNoTrash: false): SelectPermanentEffect over own Digimon holding an
+# eligible source (canNoSelect: false) THEN SelectCardEffect over that
+# permanent's DigivolutionCards; our engine asks ONE union-material pick that
+# names the source card directly, so the permanent row is `dcgo_only` and the
+# card row is answered sim-side through the resolver's single-accept-id
+# `yes:` path (selection_resolve.rs's `Hand | UnionZone` arm scans hand and
+# trash only -- a digivolution-card candidate cannot be named by `cards:`;
+# same convention as BT25-083-effect2.yaml). Then the De-Digivolve target:
+# SelectPermanentEffect(canNoSelect: false) on both sides. Then DCGO's
+# IDegeneration(target, 1, activateClass) -- constructed WITHOUT a
+# DegenerationCountRuling -- opens SelectCountEffect("How many cards do you
+# trash?") with the single candidate {1}; SelectCountEffect.Activate()
+# auto-picks it but does so through SetCount, whose harness intercept
+# (TryAnswerStep, KindSelectCount) CONSUMES a scripted row. Our engine parks
+# nothing for <De-Digivolve 1> (keyword-semantics 16-11: mandatory, no
+# choice at x = 1), hence the `dcgo_only` count row.
+card: BT21-074
+clause: BT21-074#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw, stack[11] = T5 draw.
+    stack: [BT21-074, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092]
+    rest: three-musketeers
+  p1:
+    # stack[9] = Agumon ST1-03 = TOP of security, the card Satellamon's attack
+    # flips. stack[10] = T2 draw, stack[11] = T4 draw, stack[12] = the T4
+    # digivolve draw.
+    stack: [ST1-02, BT1-014, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-03,
+            ST1-04, ST1-04, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future De-Digivolve remainder.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Satellamon; its [On Play] tucks Scopemon (the [Appmon] source
+  # this clause will trash). Mandatory in DCGO: no OptionalSkill, no zone
+  # menu (trash empty -> SetBool(true) with no RPC).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT21-071] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1, 4): Kokatorimon over Biyomon -- the De-Digivolve target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: BT1-014 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # "[Once Per Turn] By trashing ..." is optional on BOTH sides: DCGO's
+  # OptionalSkill (isOptional: true) and our Replacement gate. Take it.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # DCGO: which Digimon's digivolution cards (Satellamon). Wire-only: our
+  # engine's single union-material pick names the source directly.
+  - actor: 0
+    do: { select: { cards: [BT21-074], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The source to trash: Scopemon. OUR union-material pick (single candidate,
+  # answered through the resolver's single-accept-id path, sim-side only);
+  # DCGO's own card row rides the wire alone below.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # <De-Digivolve 1> 1 of your opponent's Digimon: the Kokatorimon stack.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: IDegeneration's SelectCountEffect over the single candidate
+  # {1} (see the header). The VALUE, not an index.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: SelectCountEffect }
+  # The attack's security check (Agumon 2000 vs 7000) resolves with no
+  # prompt. Memory is 3: still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 20
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 3
+      p0.trash: [BT21-071]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: BT21-074, dp: 7000, suspended: true, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.security: 4
+      p1.trash: [BT1-014, ST1-03]
