@@ -2872,6 +2872,20 @@ fn eval_card_fields(
             return false;
         }
     }
+    // `can_digivolve_onto: <binding>` — the binding-targeted sibling of
+    // `can_digivolve_from_source`: the candidate has ≥1 normal-digivolve
+    // route onto the permanent bound under `binding` (DCGO
+    // `CanPlayCardTargetFrame(selectedPermanent.PermanentFrame, …)`).
+    // Absent / non-permanent binding → false (no target, no route).
+    // G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(binding) = &pred.can_digivolve_onto {
+        let Some(target) = bindings.and_then(|b| b.get_permanent(binding)) else {
+            return false;
+        };
+        if !can_card_digivolve_onto(rctx, card, target) {
+            return false;
+        }
+    }
     if let Some(ref alt_kind) = pred.has_alt_path {
         if !card_has_alt_path(rctx, &data.card_id, alt_kind) {
             return false;
@@ -2935,16 +2949,73 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
     let Some(source_handle) = rctx.source_permanent else {
         return false;
     };
-    if permanent_for_handle(rctx, source_handle).is_none() {
+    can_card_digivolve_onto(rctx, card, source_handle)
+}
+
+/// Shared route probe behind `can_digivolve_from_source` (target = the
+/// effect's source permanent) and `can_digivolve_onto` / `has_digivolve_candidate`
+/// (target = an arbitrary bound permanent): true when `card` has at least one
+/// non-App-Fusion normal-digivolve route onto `target` per
+/// `Game::all_digivolve_routes_for_card` — printed evo circles, DSL
+/// alt-digivolve paths, and the `CanOnlyDigivolveInto` gate, exactly what the
+/// `effect_initiated_digivolve` commit path accepts. A target handle that no
+/// longer addresses a permanent yields false.
+fn can_card_digivolve_onto(
+    rctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    target: PermanentHandle,
+) -> bool {
+    if permanent_for_handle(rctx, target).is_none() {
         return false;
     }
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
     rctx.game
-        .all_digivolve_routes_for_card(candidate, source_handle)
+        .all_digivolve_routes_for_card(candidate, target)
         .iter()
         .any(|route| !route.app_fusion)
+}
+
+/// `has_digivolve_candidate` — permanent-subject probe: does any card in the
+/// listed hand/trash zones of `of` satisfy `filter` AND have a normal-digivolve
+/// route onto `handle`? DCGO BT25_092 `CanDigivolveDigimon(permanent)` =
+/// `HasMatchConditionOwnersHand(ValidTarget(…, Root.Hand, permanent)) ||
+/// HasMatchConditionOwnersCardInTrash(ValidTarget(…, Root.Trash, permanent))`.
+/// The nested filter is evaluated as a card subject (same evaluator a
+/// `select_union_zone` hand/trash pick uses), so the permanent gate and the
+/// later result pick agree on the candidate set.
+/// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+fn permanent_has_digivolve_candidate(
+    spec: &digimon_dsl::compiled::CompiledDigivolveCandidate,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> bool {
+    for player in resolve_predicate_players(spec.of, rctx) {
+        let state = rctx.game.player(player);
+        for zone in &spec.zones {
+            let cards: &[crate::card_source::CardSource] = match zone {
+                CompiledZone::Hand => &state.hand,
+                CompiledZone::Trash => &state.trash,
+                // Validated away at compile time; defensively contribute
+                // nothing rather than scanning an unsupported zone.
+                _ => continue,
+            };
+            for card in cards {
+                let h = card.handle();
+                if let Some(filter) = &spec.filter {
+                    if !eval_card_fields(filter, rctx, h, false, None, bindings) {
+                        continue;
+                    }
+                }
+                if can_card_digivolve_onto(rctx, h, handle) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
@@ -3491,6 +3562,14 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // `has_digivolve_candidate` — DCGO's per-permanent `CanDigivolveDigimon`
+    // gate: some hand/trash card matching the nested filter can digivolve
+    // onto THIS permanent. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(spec) = &pred.has_digivolve_candidate {
+        if !permanent_has_digivolve_candidate(spec, rctx, handle, bindings) {
+            return false;
+        }
+    }
     if !pred.zone.is_empty()
         && !pred.zone.contains(if in_breeding {
             &CompiledZone::Breeding
@@ -3786,6 +3865,18 @@ fn eval_breeding_permanent_fields(
             .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
             .count();
         if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `has_digivolve_candidate` on a breeding permanent — probe routes onto
+    // the BREEDING_TARGET sentinel handle (the route enumerator branches on
+    // it). G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(spec) = &pred.has_digivolve_candidate {
+        let sentinel = PermanentHandle {
+            player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        if !permanent_has_digivolve_candidate(spec, rctx, sentinel, bindings) {
             return false;
         }
     }

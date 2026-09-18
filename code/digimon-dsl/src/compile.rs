@@ -967,6 +967,7 @@ fn compile_predicate(
             )
         }),
         can_digivolve_from_source: p.can_digivolve_from_source,
+        can_digivolve_onto: p.can_digivolve_onto.clone(),
         dp_eq,
         dp_lte,
         dp_gte,
@@ -997,6 +998,20 @@ fn compile_predicate(
                 )),
                 sc.at_least,
             )
+        }),
+        has_digivolve_candidate: p.has_digivolve_candidate.as_ref().map(|hdc| {
+            crate::compiled::CompiledDigivolveCandidate {
+                of: compile_player_ref(hdc.of),
+                zones: hdc.zone.iter().map(|z| compile_zone(*z)).collect(),
+                filter: hdc.filter.as_ref().map(|f| {
+                    Box::new(compile_predicate(
+                        f,
+                        &format!("{prefix}.has_digivolve_candidate.filter"),
+                        card_id,
+                        errors,
+                    ))
+                }),
+            }
         }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(

@@ -6175,18 +6175,21 @@
     },
     "BT25-092": {
       "card_name": "Asuna Shiroki",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "validated_date": "2026-09-17",
+      "report": "three-musketeers-1 / gap-closure (G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST)",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "archetype": "Three Musketeers (BT25 TS staples)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-092.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_092.rs",
-      "test_count": 3,
+      "test_count": 12,
       "patterns": [
-        "B1"
+        "B1",
+        "main-suspend-cost",
+        "union-cost-trash",
+        "digivolve-into-hand-or-trash-onto-chosen-target"
       ],
-      "notes": "Clause 1 (start-of-main trash-to-draw+memory) + Security implemented + tested. Clause 2 [Main] digivolve-from-{hand|trash}-with-{hand|digivolution-card}-trash-cost BLOCKED-dsl (G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST)."
+      "notes": "All three printed effects implemented + tested. Clause 1 (start-of-main trash-to-draw+memory), clause 2 [Main] suspend + trash 1 Option from hand OR any own Digimon's digivolution cards (ONE select_union_zone{hand,material} prompt) -> optional own-Digimon pick gated by has_digivolve_candidate{hand,trash} (DCGO CanDigivolveDigimon) -> optional select_union_zone{hand,trash} result pick gated by can_digivolve_onto: target (DCGO ValidTarget) -> effect_initiated_digivolve cost reduce 1 (trash-resident result verified), [Security] play-self. Gap closed 2026-09-17 with the two predicate leaves (qa/resolved-gaps.md). DCGO's zone bool + per-zone pick pairs fold into single union prompts (BT25-085 convention)."
     },
     "BT25-093": {
       "card_name": "Ignition Flare",

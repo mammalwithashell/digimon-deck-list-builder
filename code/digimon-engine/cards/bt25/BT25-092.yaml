@@ -38,21 +38,121 @@ effects:
   # Digimon card with [Three Musketeers] in its text or the [TS] trait in the
   # hand or trash with the cost reduced by 1.
   #
-  # BLOCKED (dsl): no faithful encoding exists yet for the compound effect:
-  #   (a) the digivolve RESULT card must be chosen from a union of {hand, trash}
-  #       and fed to `effect_initiated_digivolve` — the `from_hand` binding does
-  #       not accept a `select_union_zone` (hand-or-trash) result, and
-  #       digivolve-into-a-card-from-trash is unverified in lowering;
-  #   (b) the COST trash must come from a union of {your hand, your Digimon's
-  #       digivolution cards} — `select_union_zone` does not span a permanent's
-  #       own digivolution sources, and there is no single verb to trash an
-  #       Option from "hand OR digivolution cards" as a cost.
-  # Tracked as DSL gap G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
-  # The suspend-self cost + cost-reduction (`cost_delta: { reduce: 1 }`) and the
-  # target select are individually expressible; the multi-zone source/cost union
-  # is the blocker. Authoring a reduced version (hand-only result, hand-only
-  # cost) would silently drop player choices and violate the no-approximations
-  # policy, so this clause is left BLOCKED rather than approximated.
+  # DCGO BT25_092.cs (OnDeclaration ActivateClass, `SetUpActivateClass(null,
+  # ActivateCoroutine, -1 /* unlimited per turn */, false /* no yes/no */)`):
+  #   CanUseCondition = CanActivateSuspendCostEffect(card)
+  #                     && (hand.Any(IsOption)
+  #                         || ownDigimon.Any(p => p.DigivolutionCards.Any(IsOption)))
+  #   Body:  1. SuspendPermanent(this Tamer)                       — cost
+  #          2. [bool "From hand" / "From digivolution cards" iff both hold]
+  #             → SelectHandEffect(IsOption, canNoSelect: FALSE)  — cost
+  #               | SelectTrashDigivolutionCards(IsOption, canNoTrash: FALSE,
+  #                 isFromOnly1Permanent: true)
+  #          3. if ownDigimon.Any(CanDigivolveDigimon):
+  #               SelectPermanentEffect(CanDigivolveDigimon, canNoSelect: TRUE)
+  #               CanDigivolveDigimon(p) = hand.Any(ValidTarget(Hand, p))
+  #                                        || trash.Any(ValidTarget(Trash, p))
+  #               ValidTarget(c, root, p) = (HasText("Three Musketeers") || HasTSTraits)
+  #                                         && c.CanPlayCardTargetFrame(p.Frame, …, root)
+  #          4. [bool "From hand" / "From trash" iff both hold]
+  #             → DigivolveIntoHandOrTrashCard(p, Valid3MOrTSCard, payCost: true,
+  #               reduceCostTuple: (1, null), isHand: …, isOptional default TRUE)
+  #
+  # DSL modelling (G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST, closed):
+  #   - `when: main_on_field` + `condition: { source_is_unsuspended }` encodes
+  #     `CanActivateSuspendCostEffect` (the BT11-061 / P-224 idiom: the [Main]
+  #     mask does not auto-gate on suspension) AND-ed with the Option-availability
+  #     gate (`count_gte` over hand ∪ `any_permanent … source_count`).
+  #   - `suspend: { target: source }` is the unconditional cost (paid first).
+  #   - DCGO's zone bool + per-zone pick collapse into ONE `select_union_zone`
+  #     over `[hand, material]` (the material scan spans every own Digimon's
+  #     digivolution cards — the BT25-085 convention); mandatory (DCGO
+  #     canNoSelect/canNoTrash FALSE) and `trash_union_bound` trashes from the
+  #     true origin (hand → OnDiscardHand; source → OnDigivolutionCardTrashed).
+  #   - `select_own_permanent { optional: true }` (DCGO canNoSelect TRUE) filtered
+  #     by `has_digivolve_candidate` = DCGO `CanDigivolveDigimon` — only Digimon
+  #     with a legal result card in hand OR trash are offered; with none, the
+  #     step has zero candidates and the clause ends (DCGO's outer `if`).
+  #   - Result pick = ONE `select_union_zone` over `[hand, trash]` (DCGO zone
+  #     bool + hand/trash pick), `optional: true` (DCGO isOptional), filtered by
+  #     `can_digivolve_onto: target` = DCGO `CanPlayCardTargetFrame(p.Frame)` so
+  #     no pick the commit would reject is surfaced.
+  #   - `effect_initiated_digivolve { target, source: evo, cost: { reduce: 1 } }`
+  #     — the union binding resolves to its true hand/trash `CardSourceRef`
+  #     (trash-resident digivolve: BT16-040 precedent); payCost true + reduce 1.
+  #   - "in its text" → `in_text_contains` (official Q&A whole-card scan, as
+  #     BT25-005). The digivolution draw (§8-1-3-3) and [When Digivolving] fire
+  #     from the engine's digivolve procedure.
+  - when: main_on_field
+    summary: "[Main] By suspending this Tamer and trashing 1 Option card from your hand or your Digimon's digivolution cards, 1 of your Digimon may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand or trash with the cost reduced by 1"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_of:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  kind: option
+                n: 1
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+                source_count:
+                  filter: { kind: option }
+                  at_least: 1
+    process:
+      # Cost 1: suspend this Tamer (unconditional, paid before any pick).
+      - suspend: { target: source }
+      # Cost 2: trash 1 Option from hand OR any of your Digimon's digivolution
+      # cards — one prompt spanning both origins; mandatory.
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          filter: { kind: option }
+          bind_as: cost_option
+          prompt: "Trash 1 Option card from your hand or your Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: cost_option
+      # "1 of your Digimon may digivolve" — only Digimon with a legal result
+      # card in hand or trash are offered (DCGO CanDigivolveDigimon).
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand, trash]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - in_text_contains: "Three Musketeers"
+                          - trait_has: TS
+          prompt: "Select 1 of your Digimon to digivolve"
+      # Result: a [Three Musketeers]-text / [TS] Digimon card from hand OR
+      # trash that can digivolve onto the chosen Digimon; declinable.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto: target
+              - any_of:
+                  - in_text_contains: "Three Musketeers"
+                  - trait_has: TS
+          bind_as: evo
+          prompt: "Digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait from your hand or trash, with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: target
+          source: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
 
   # [Security] Play this card without paying the cost.
   - when: on_security

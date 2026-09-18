@@ -733,6 +733,39 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(hdc) = &pred.has_digivolve_candidate {
+        if hdc.zone.is_empty() {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.has_digivolve_candidate.zone"),
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash`"
+                    .to_string(),
+            });
+        }
+        for z in &hdc.zone {
+            if !matches!(
+                z,
+                crate::predicate::Zone::Hand | crate::predicate::Zone::Trash
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.has_digivolve_candidate.zone"),
+                    message: format!(
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` (got {z:?})"
+                    ),
+                });
+            }
+        }
+        if let Some(filter) = &hdc.filter {
+            validate_predicate(
+                filter,
+                &format!("{prefix}.has_digivolve_candidate.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+    }
     if let Some(d) = &pred.distinct_named_count_gte {
         validate_predicate(
             &d.filter,
@@ -1960,6 +1993,7 @@ fn validate_predicate_binding_scope(
         ("binding_exists", &pred.binding_exists),
         ("binding_present", &pred.binding_present),
         ("binding_absent", &pred.binding_absent),
+        ("can_digivolve_onto", &pred.can_digivolve_onto),
     ] {
         if let Some(binding) = binding {
             report_if_undeclared_binding(
@@ -2037,6 +2071,17 @@ fn validate_predicate_binding_scope(
             scope,
             errors,
         );
+    }
+    if let Some(hdc) = &pred.has_digivolve_candidate {
+        if let Some(filter) = &hdc.filter {
+            validate_predicate_binding_scope(
+                filter,
+                &format!("{prefix}.has_digivolve_candidate.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
     }
     if let Some(ssc) = &pred.self_source_count {
         if let Some(filter) = &ssc.filter {

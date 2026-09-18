@@ -359,6 +359,11 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
+    /// Card-subject leaf: the candidate has ≥1 non-App-Fusion digivolve
+    /// route onto the permanent bound under this name. Compiled form of
+    /// `can_digivolve_onto`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    #[serde(default)]
+    pub can_digivolve_onto: Option<String>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,
@@ -380,6 +385,11 @@ pub struct CompiledPredicate {
     /// `link_card_count` leaf. G-DSL-LINK-CARD-COUNT-FILTERED.
     #[serde(default)]
     pub link_card_count: Option<(Box<CompiledPredicate>, u8)>,
+    /// Permanent-subject leaf: some card in `zones` of `of` matches `filter`
+    /// AND can digivolve onto this permanent. Compiled form of
+    /// `has_digivolve_candidate`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    #[serde(default)]
+    pub has_digivolve_candidate: Option<CompiledDigivolveCandidate>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -774,6 +784,17 @@ pub struct CompiledSelfSourceCountPredicate {
 pub struct CompiledExistential {
     pub of: CompiledPlayerRef,
     pub predicate: CompiledPredicate,
+}
+
+/// Compiled form of `has_digivolve_candidate` — "some card in `zones` of `of`
+/// matches `filter` and has a normal-digivolve route onto the subject
+/// permanent". `zones` is validated to `Hand` / `Trash` only.
+/// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDigivolveCandidate {
+    pub of: CompiledPlayerRef,
+    pub zones: Vec<CompiledZone>,
+    pub filter: Option<Box<CompiledPredicate>>,
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of

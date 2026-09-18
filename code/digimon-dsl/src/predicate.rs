@@ -165,6 +165,19 @@ pub struct PredicateSpec {
     pub play_or_use_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
+    /// Card-subject leaf — the BINDING-TARGETED sibling of
+    /// `can_digivolve_from_source`. True when the candidate card has at least
+    /// one normal-digivolve route (printed evo circles, DSL alt-digivolve
+    /// paths, `CanOnlyDigivolveInto` gate honoured; App Fusion excluded) onto
+    /// the permanent bound under this name — e.g. the Digimon a preceding
+    /// `select_own_permanent { bind_as: target }` picked. Mirrors DCGO
+    /// `cardSource.CanPlayCardTargetFrame(selectedPermanent.PermanentFrame, …)`
+    /// so a "1 of your Digimon may digivolve into a card in the hand or trash"
+    /// pick offers exactly the cards the commit would accept. False when the
+    /// binding is absent or no longer a battle-area permanent.
+    /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_onto: Option<String>,
 
     // Leaf — permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,6 +218,17 @@ pub struct PredicateSpec {
     /// G-DSL-LINK-CARD-COUNT-FILTERED.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub link_card_count: Option<SourceCountPredicate>,
+    /// Permanent-subject predicate. True when at least one card in the listed
+    /// zones (`hand` / `trash`) of player `of` satisfies the nested card
+    /// `filter` AND can normally digivolve onto this permanent (same route
+    /// enumeration as `can_digivolve_onto`). Models DCGO's per-permanent
+    /// `CanDigivolveDigimon` gate — `HasMatchConditionOwnersHand(ValidTarget(…,
+    /// Root.Hand, permanent)) || HasMatchConditionOwnersCardInTrash(ValidTarget(…,
+    /// Root.Trash, permanent))` — used to restrict "1 of your Digimon may
+    /// digivolve into …" target picks to Digimon that actually have a legal
+    /// result card. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_digivolve_candidate: Option<DigivolveCandidatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1210,6 +1234,25 @@ pub struct SourceCountPredicate {
     pub filter: Box<PredicateSpec>,
     /// Minimum number of matching sources required for the leaf to hold.
     pub at_least: u8,
+}
+
+/// Payload for the `has_digivolve_candidate` permanent-subject leaf — "some
+/// card in `zone` of player `of` matches `filter` and can digivolve onto this
+/// permanent". Only `hand` and `trash` are valid zones (DCGO
+/// `SelectCardEffect.Root.Hand` / `Root.Trash`).
+/// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DigivolveCandidatePredicate {
+    /// Whose hand / trash to scan. Defaults to `you`.
+    #[serde(default = "default_level_aggregate_of")]
+    pub of: PlayerRef,
+    /// Zones to scan — each must be `hand` or `trash`.
+    pub zone: Vec<Zone>,
+    /// Card-shape filter each candidate result card must satisfy (evaluated
+    /// as a `Card` subject). Omit to accept any Digimon card with a route.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<PredicateSpec>>,
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.
