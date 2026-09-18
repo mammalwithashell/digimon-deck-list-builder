@@ -208,6 +208,11 @@ impl LoweredStep {
             // A follow-on material pick: ours only, already covered by the
             // first pick's single wire row.
             LoweredStep::SimOnlySelect => 0,
+            // Every main-phase action id, the `link:` verb's FIELD_EFFECT
+            // link sub-slot included: DCGO consumes it as ONE `main_phase`
+            // row (`InputDriver.BuildMainPhaseAction` -> the LinkEffect
+            // `ActivatePermanentAction`). The host pick both engines then
+            // park is the NEXT scenario step's row, not this one's.
             LoweredStep::Action(_) => 1,
             // A folded DECLINE is one row (DCGO never opens the pick after a
             // declined gate); a folded PICK is the gate row plus the pick row.

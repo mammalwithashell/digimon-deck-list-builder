@@ -61,6 +61,48 @@ pub enum StepAction {
     /// DCGO's `CanDeclareOptionDelayEffect` gates its own on the same
     /// not-the-placing-turn rule.
     Main { on: String },
+    /// Declare a DigiLink: the Appmon Link Digimon `card` at `from` activates
+    /// its printed `<Link>` and plugs itself sideways into one of the
+    /// controller's Digimon -- from either origin the keyword prints ("Plug
+    /// this card from the hand or battle area ..."):
+    ///
+    ///   * `from: field[.N]` -- a standing, un-linked permanent. Lowers to the
+    ///     per-permanent `FIELD_EFFECT` range at sub-slot
+    ///     `FIELD_EFFECT_SLOT_FOR_LINK` (`mask.rs` emits it for a self
+    ///     link-condition with a legal host and an affordable cost). DCGO's
+    ///     `Harness/InputDriver.cs` dispatches that id to the
+    ///     `CardEffectFactory.LinkEffect` `ActivateClass` on the permanent --
+    ///     the "Link (Cost: N)" command a human clicks. The whole permanent is
+    ///     absorbed (under-sources trashed, top card becomes the linked card).
+    ///   * `from: hand[.N]` -- a card in hand. Lowers to that hand slot's
+    ///     `HAND_EFFECT` bit, which the engine makes the link whenever the card
+    ///     has no `[Hand] [Main]` of its own (`Game::hand_effect_slot_is_link`;
+    ///     the decoder dispatches `[Main]` first, so a card carrying both
+    ///     exposes only its `[Main]` on that bit -- the same one-declarable-
+    ///     per-hand-slot limit DCGO's recorder has). DCGO dispatches it to
+    ///     `ActivateCardAction` on the hand card's `LinkEffect`. The card is
+    ///     lifted out of the hand and attached; nothing is absorbed and no
+    ///     `[On Play]` fires.
+    ///
+    /// `from` defaults to the bare `field`.
+    ///
+    /// The HOST is NOT named on this step. Both engines park a host pick the
+    /// moment the link is declared (ours: `install_digimon_link_host_selection`,
+    /// an `OwnField` prompt; DCGO: `SelectPermanentEffect` "Select 1 Digimon to
+    /// link."), and that pick is answered by the NEXT step,
+    /// `select: { targets: [own.field.N] }` -- exactly how every other
+    /// action-then-prompt pair (attack -> blocker, play -> [On Play] target)
+    /// is authored. Folding the host into this verb would make one scenario
+    /// step consume two decisions on both wires, which the replay session
+    /// (one `step()` per scenario step) and the differ's per-step pairing do
+    /// not model; the pending-selection invariant in the adapter already
+    /// forces the answering `select:` to follow.
+    ///
+    /// (Before 2026-09-17 the hand origin was an engine gap,
+    /// `G-ENGINE-DIGIMON-LINK-FROM-HAND`: the only hand-side link was the
+    /// Plug-In *Option* play mode. It closed in the same change that added
+    /// this verb.)
+    Link { card: String, from: String },
     Select(SelectPayload),
     /// A selection DCGO asks that OUR engine never parks -- authored
     /// `select: { ..., dcgo_only: true }`.
@@ -204,8 +246,9 @@ pub enum SelectPayload {
 /// `pub` so `exam::validate`'s lint can check a step's verb against the same
 /// list this parser enforces, rather than keeping a second copy that could
 /// drift from it.
-pub const STEP_VERBS: &[&str] =
-    &["hatch", "pass", "move", "play", "digivolve", "attack", "main", "select"];
+pub const STEP_VERBS: &[&str] = &[
+    "hatch", "pass", "move", "play", "digivolve", "attack", "main", "link", "select",
+];
 
 fn hand() -> String {
     "hand".to_string()
@@ -213,6 +256,10 @@ fn hand() -> String {
 
 fn breeding() -> String {
     "breeding".to_string()
+}
+
+fn field() -> String {
+    "field".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -255,6 +302,30 @@ struct AttackArgs {
 struct MainArgs {
     on: String,
 }
+
+/// `do: { link: { card: BT21-071, from: field.1 } }`.
+///
+/// `from` is `field[.N]` or `hand[.N]` and defaults to the bare `field`; pin
+/// it when two copies share the zone, exactly as `play`'s `hand.N` pin works. `into:` is deliberately NOT a
+/// field -- see [`StepAction::Link`] -- but it is declared here (rather than
+/// left to `deny_unknown_fields`) so an author who writes it is told what to
+/// write instead, not just "unknown field".
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LinkArgs {
+    card: String,
+    #[serde(default = "field")]
+    from: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    into: Option<String>,
+}
+
+/// Rendered when a `link:` step names its host inline.
+const LINK_INTO_RULE: &str = "step `do: link`: `into:` is not a field of the link verb. The \
+host is a SEPARATE decision on both wires -- our engine parks an own-field pick and DCGO opens \
+`SelectPermanentEffect` (\"Select 1 Digimon to link.\") the moment the link is declared -- so \
+answer it with the NEXT step: `select: { targets: [own.field.N] }` with \
+`expect: { prompt: select_permanent, count: 1 }`";
 
 /// The raw YAML surface of a `select:` step. All five forms are optional here
 /// so the exactly-one rule can be validated with a message that names every
@@ -601,6 +672,16 @@ impl<'de> Deserialize<'de> for StepAction {
                 let a: MainArgs = args_of::<MainArgs, D::Error>(verb, args)?;
                 StepAction::Main { on: a.on }
             }
+            "link" => {
+                let a: LinkArgs = args_of::<LinkArgs, D::Error>(verb, args)?;
+                if a.into.is_some() {
+                    return Err(D::Error::custom(LINK_INTO_RULE));
+                }
+                StepAction::Link {
+                    card: a.card,
+                    from: a.from,
+                }
+            }
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
                 let dcgo_only = a.dcgo_only.unwrap_or(false);
@@ -669,6 +750,14 @@ impl Serialize for StepAction {
             StepAction::Main { on } => {
                 map.serialize_entry("main", &MainArgs { on: on.clone() })?
             }
+            StepAction::Link { card, from } => map.serialize_entry(
+                "link",
+                &LinkArgs {
+                    card: card.clone(),
+                    from: from.clone(),
+                    into: None,
+                },
+            )?,
             StepAction::Select(payload) => {
                 map.serialize_entry("select", &SelectArgs::from_payload(payload))?
             }
@@ -983,6 +1072,120 @@ assert:
         let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
         let err = Scenario::from_yaml(&bad).unwrap_err();
         assert!(err.contains("main"), "the verb list must name `main`: {err}");
+    }
+
+    // ── link: DigiLink declaration from the battle area ─────────────────
+
+    #[test]
+    fn link_verb_parses_with_a_pinned_field_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: field.1 } }",
+        ))
+        .expect("link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field.1".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_defaults_from_to_the_bare_field() {
+        // The dominant Appmon shape links a Digimon already on the field, so
+        // `from:` may be omitted and means `field`. The bare form stays
+        // AMBIGUOUS at lowering when two copies stand on the board, exactly
+        // as `play: { from: hand }` is with two copies in hand.
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071 } }",
+        ))
+        .expect("bare link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_accepts_the_hand_origin() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: hand.3 } }",
+        ))
+        .expect("hand-origin link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "hand.3".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_requires_card() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { from: field.0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("link"), "got: {err}");
+        assert!(err.contains("card"), "must name the missing field: {err}");
+    }
+
+    #[test]
+    fn link_verb_refuses_an_inline_host_and_says_what_to_write_instead() {
+        // The host is a separate decision on BOTH wires (our own-field pick /
+        // DCGO's SelectPermanentEffect), answered by the next `select:` step.
+        // A bare "unknown field `into`" would leave the author guessing.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: field.1, into: field.0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("into"), "got: {err}");
+        assert!(
+            err.contains("select: { targets: [own.field.N] }"),
+            "must say how to answer the host: {err}"
+        );
+    }
+
+    #[test]
+    fn link_verb_rejects_an_unknown_argument() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, cost: 2 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("cost"), "got: {err}");
+    }
+
+    #[test]
+    fn link_verb_round_trips_through_yaml() {
+        // The codec is hand-written, so an asymmetric arm would emit
+        // drafter/backfill output that fails to re-parse.
+        let act = StepAction::Link {
+            card: "BT21-074".to_string(),
+            from: "field.2".to_string(),
+        };
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(!yaml.contains("into"), "the absent host key must be omitted: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act, "round trip of {yaml}");
+    }
+
+    #[test]
+    fn link_is_listed_among_the_verbs_an_author_is_offered() {
+        let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
+        let err = Scenario::from_yaml(&bad).unwrap_err();
+        assert!(err.contains("link"), "the verb list must name `link`: {err}");
+        assert!(STEP_VERBS.contains(&"link"));
     }
 
     // ── select: the five symbolic forms ─────────────────────────────────

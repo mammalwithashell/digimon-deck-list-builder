@@ -45,6 +45,19 @@ accepts the link sub-slot), these three clauses stay `unreachable` with this
 reason — never a silent skip, never `confirmed`. This is a tooling gap in the
 exam surface, not a finding about Scopemon's behaviour.
 
+**Update 2026-09-17 — the gap above is closed; the three clauses are now
+reachable and simply `unmeasured` until their lines are authored.** The
+format gained `link: { card: BT21-071, from: field.N | hand.N }`, followed by
+`select: { targets: [own.field.N] }` for the host (both engines park that
+pick; `docs/DCGO_EXAM.md` "`link:`"). Points 2 and 3 above no longer hold:
+our engine now exposes the from-hand Digimon link on the hand slot's
+`HAND_EFFECT` bit (`G-ENGINE-DIGIMON-LINK-FROM-HAND`, resolved), and DCGO's
+`InputDriver` (base DCGO `c98bab2a4`, player `D:/dcgo-build/scripted-v15`)
+dispatches both the FIELD_EFFECT link sub-slot and the hand bit to the
+`LinkEffect` `ActivateClass`. The three lines still need a book that puts an
+`[Appmon]` host beside Scopemon (e.g. BT21-009 Gatchmon) and were not
+authored in the tooling stage.
+
 DCGO does script the link half (`BT21_071.cs`: `CardEffectFactory.LinkEffect`,
 `AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2)`, and the
 `WhenLinked` ActivateClass with `isOptional: false` → mandatory `DrawClass(2)`

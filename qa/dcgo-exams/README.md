@@ -124,6 +124,23 @@ and a lowering pass resolves each against our engine's live action mask, failing
 loudly on illegal or ambiguous intent — in milliseconds, before any Unity time
 is spent.
 
+The verbs are `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`,
+`link`, `select` (`scenario::STEP_VERBS`; `exam_validate` lints against the same
+list). Two that are easy to confuse:
+
+- `main: { on: field.N | breeding }` — a `[Main]` / `<Delay>` / `<Training>`
+  activation on a permanent already in play. Matches the `[Main]` sub-slot only.
+- `link: { card: <ID>, from: field[.N] | hand[.N] }` — an Appmon Link Digimon
+  declares its `<Link>` from the battle area (default) or from hand (added
+  2026-09-17; this is what makes `[When Linking]` and the `[Link]` DP box
+  reachable). The HOST is the **next** step, `select: { targets: [own.field.N] }`
+  with `expect: { prompt: select_permanent, count: 1 }` — both engines park that
+  pick as a separate decision, even with a single candidate. `into:` is refused.
+  A hand link needs the card to have no `[Hand] [Main]` of its own (the slot's
+  single bit goes to the `[Main]` first, on both sides). Needs a DCGO build at
+  or after `scripted-v15`; older builds abort a field link on "field-effect
+  sub-slot 3 is not the [Main] slot".
+
 ### `assert` is backfilled, not hand-guessed
 
 You author the line; the oracle records what happened; on a `confirmed` verdict

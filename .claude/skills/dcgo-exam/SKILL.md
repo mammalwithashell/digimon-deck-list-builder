@@ -130,9 +130,12 @@ Rules that are structural, not stylistic:
   and DCGO never asked" is a divergence class that never surfaces as an illegal action —
   a prompt mismatch aborts the job and **reports itself as a finding**.
 - **`do` is symbolic** (`hatch` / `pass` / `move` / `play` / `digivolve` / `attack` /
-  `main` / `select`) and lowered to a 2192-space action id against our engine's live
-  mask. Never hand-write ids. `main: { on: field.0 }` activates a `[Main]` / `<Delay>`
+  `main` / `link` / `select`) and lowered to a 2192-space action id against our engine's
+  live mask. Never hand-write ids. `main: { on: field.0 }` activates a `[Main]` / `<Delay>`
   on a permanent already in play — `play:` is the from-hand surface, not this one.
+  `link: { card: <ID>, from: field.N | hand.N }` declares an Appmon Link Digimon's
+  `<Link>`; the host is the NEXT step (`select: { targets: [own.field.N] }`,
+  `expect: { prompt: select_permanent, count: 1 }`). Needs `D:/dcgo-build/scripted-v15`+.
 - A clause no legal line can reach is **not skipped silently** — record `unreachable`
   with the reason.
 

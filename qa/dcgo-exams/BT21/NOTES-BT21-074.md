@@ -38,6 +38,15 @@ both stay `unreachable` with this reason — never a silent skip, never
 ActivateClass with a `SelectPermanentEffect(Mode.Destroy)` over opponent Digimon
 with `HasLevel && Level <= 4`), so the oracle exists; the wire cannot reach it.
 
+**Update 2026-09-17 — reachable now.** See the same-dated update in
+`NOTES-BT21-071.md`: the `link:` verb exists on both sides of the wire
+(`from: field.N` or `from: hand.N`, host answered by the next `select:`
+step), so `effect#3` and `inherited#0` are `unmeasured`, not `unreachable`,
+until their lines are authored. `inherited#0`'s line will need an opponent
+Lv.4-or-lower Digimon on the board for the mandatory `WhenLinked` delete pick
+(`select_permanent` over `opp.field.N`), and `effect#3` an assertion on the
+host's DP after the link.
+
 ## Authoring decisions worth knowing before the oracle run
 
 ### `effect#0` — base choice and the vacuous-trigger check

@@ -12,6 +12,10 @@
 use crate::exam::scenario::StepAction;
 use digimon_engine::action::explain::{explain_action, ActionExplanation, ActionKind, ActionZone};
 use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    decode_field_effect, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_SLOT_FOR_MAIN,
+    FIELD_EFFECT_START,
+};
 use digimon_engine::{Game, PlayerId};
 
 #[derive(Debug)]
@@ -67,7 +71,7 @@ pub fn lower_step(game: &Game, actor: PlayerId, act: &StepAction) -> Result<u16,
 
     let matches: Vec<u16> = legal
         .iter()
-        .filter(|(_, e)| matches_intent(e, act))
+        .filter(|(_, e)| matches_intent(game, actor, e, act))
         .map(|(id, _)| *id)
         .collect();
 
@@ -84,7 +88,7 @@ pub fn lower_step(game: &Game, actor: PlayerId, act: &StepAction) -> Result<u16,
     }
 }
 
-fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
+fn matches_intent(game: &Game, actor: PlayerId, e: &ActionExplanation, act: &StepAction) -> bool {
     match act {
         StepAction::Pass(_) => e.kind == ActionKind::Pass,
         StepAction::Hatch(_) => e.kind == ActionKind::Hatch,
@@ -116,9 +120,45 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         // `source_index = slot`) and the bare `breeding` sentinel for the
         // breeding area's `<Training>` [Main] (`source_zone = Breeding`, no
         // index).
+        //
+        // Matched on the [Main] SUB-SLOT too, not on the `FieldEffect` kind
+        // alone: the per-permanent effect range packs several semantic
+        // sub-slots (0 = Overclock, 2 = [Main], 3 = DigiLink), and `explain`
+        // reports every one of them as `FieldEffect` on the same slot. Without
+        // the sub-slot check a `main:` on an Appmon Link Digimon lowered to its
+        // LINK bit whenever the card had no [Main] of its own -- an id DCGO's
+        // `InputDriver` then refused as "not the [Main] slot" -- and was
+        // AMBIGUOUS whenever it had both.
         StepAction::Main { on } => {
             e.kind == ActionKind::FieldEffect
+                && field_effect_sub_slot(e.action_id) == Some(FIELD_EFFECT_SLOT_FOR_MAIN)
                 && slot_matches(e.source_zone, e.source_index, on)
+        }
+        // A DigiLink declaration, from either origin the keyword prints:
+        //   * `field[.N]` -- the link sub-slot on the standing permanent whose
+        //     top card is `card`;
+        //   * `hand[.N]`  -- the hand slot's HAND_EFFECT bit, which is the
+        //     link only when the engine says so (`hand_effect_slot_is_link`:
+        //     no `[Hand] [Main]` on the card, a legal host, an affordable
+        //     cost). Asking the engine rather than the explanation keeps this
+        //     in lock-step with the decoder, which dispatches `[Main]` first.
+        // `zone_ref_matches` gives the same pinned / unpinned semantics as
+        // `play`'s hand reference, so two copies are ambiguous until pinned.
+        StepAction::Link { card, from } => {
+            if e.card_id.as_deref() != Some(card.as_str())
+                || !zone_ref_matches(e.source_zone, e.source_index, from)
+            {
+                return false;
+            }
+            match e.kind {
+                ActionKind::FieldEffect => {
+                    field_effect_sub_slot(e.action_id) == Some(FIELD_EFFECT_SLOT_FOR_LINK)
+                }
+                ActionKind::HandEffect => e
+                    .source_index
+                    .is_some_and(|i| game.hand_effect_slot_is_link(actor, i as usize)),
+                _ => false,
+            }
         }
         // Selections resolve against the live PendingSelection rather than the
         // main mask; Task 3 threads them through ScenarioAdapter, which is why
@@ -129,6 +169,18 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         StepAction::Select { .. }
         | StepAction::SelectDcgoOnly { .. }
         | StepAction::SelectSimOnly { .. } => false,
+    }
+}
+
+/// The semantic sub-slot of a `FIELD_EFFECT`-range action id, or `None` for an
+/// id outside that range. Mirrors `space::decode_field_effect`, which is what
+/// the engine's decoder dispatches on (`FIELD_EFFECT_SLOT_FOR_MAIN` -> the
+/// [Main] ability, `FIELD_EFFECT_SLOT_FOR_LINK` -> `activate_field_link`).
+fn field_effect_sub_slot(action_id: u16) -> Option<u16> {
+    if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+        Some(decode_field_effect(action_id).1)
+    } else {
+        None
     }
 }
 
@@ -580,6 +632,185 @@ mod tests {
             }
         )
         .is_err());
+    }
+
+    // ── link: DigiLink declaration from the battle area ─────────────────
+
+    /// A live game whose battle area holds an Appmon host (BT21-009 Gatchmon,
+    /// `form: Appmon`) at slot 0 and an un-linked Appmon Link Digimon
+    /// (BT21-071 Scopemon: `<Link>` [Appmon] trait, Cost 2) at slot 1, in the
+    /// Main phase -- so the mask's DigiLink emitter sets Scopemon's link bit.
+    /// Staged for the same reason `game_with_a_field_main` is: this is a unit
+    /// test of the lowering function against a real mask, not an oracle line.
+    fn game_with_a_linkable_digimon() -> digimon_engine::Game {
+        let mut g = game();
+        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        g.decode_action(pass, 0);
+        assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
+
+        let mut r = digimon_engine::DebugRunner::wrap(g);
+        r.place_on_field(0, "BT21-009", Some(0));
+        r.place_on_field(0, "BT21-071", Some(0));
+        r.game
+    }
+
+    #[test]
+    fn a_link_step_lowers_to_the_link_sub_slot_of_its_permanent() {
+        use digimon_engine::action::space::{decode_field_effect, FIELD_EFFECT_SLOT_FOR_LINK};
+        let g = game_with_a_linkable_digimon();
+        let id = lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field.1".to_string(),
+            },
+        )
+        .expect("Scopemon's <Link> should lower");
+
+        // The load-bearing invariant: never emit an action the mask forbids.
+        let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
+        assert_eq!(mask[id as usize], 1.0, "lowered to a forbidden action");
+
+        // ...and it is the LINK sub-slot on slot 1, not a [Main] bit.
+        assert_eq!(decode_field_effect(id), (1, FIELD_EFFECT_SLOT_FOR_LINK));
+        let e = digimon_engine::action::explain::explain_action(&g, 0, id);
+        assert_eq!(e.kind, digimon_engine::action::explain::ActionKind::FieldEffect);
+        assert_eq!(e.source_index, Some(1));
+        assert_eq!(e.card_id.as_deref(), Some("BT21-071"));
+
+        // The bare `field` form names the same single copy.
+        let bare = lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field".to_string(),
+            },
+        )
+        .expect("one copy on the board -> unpinned form lowers");
+        assert_eq!(bare, id);
+
+        // Declaring the link parks the host pick our engine asks next -- the
+        // decision the FOLLOWING `select: { targets: [own.field.N] }` answers.
+        let mut g = g;
+        g.decode_action(id, 0);
+        let pending = g
+            .pending_selection
+            .as_ref()
+            .expect("declaring a link installs the host-selection prompt");
+        assert_eq!(pending.kind, digimon_engine::selection::SelectionKind::OwnField);
+    }
+
+    #[test]
+    fn a_main_step_never_lowers_to_the_link_sub_slot() {
+        // Scopemon has NO [Main] of its own, so before the sub-slot check a
+        // `main:` on its slot matched its LINK bit -- an id DCGO's InputDriver
+        // refuses. The two verbs must name disjoint bits.
+        let g = game_with_a_linkable_digimon();
+        let err = lower_step(
+            &g,
+            0,
+            &StepAction::Main {
+                on: "field.1".to_string(),
+            },
+        )
+        .expect_err("a `main:` must not lower to the link bit");
+        assert!(matches!(err, LowerError::NoMatch { .. }), "got {err:?}");
+    }
+
+    /// The from-hand origin: Gatchmon (an Appmon host) on the field, Scopemon
+    /// in hand at a known slot, Main phase -- the mask's hand-link emitter sets
+    /// Scopemon's HAND_EFFECT bit (it has no `[Hand] [Main]` of its own).
+    fn game_with_a_linkable_digimon_in_hand() -> (digimon_engine::Game, usize) {
+        let mut g = game();
+        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        g.decode_action(pass, 0);
+        assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
+
+        let mut r = digimon_engine::DebugRunner::wrap(g);
+        r.place_on_field(0, "BT21-009", Some(0));
+        r.add_to_hand(0, "BT21-071");
+        let slot = r.game.player(0).hand.len() - 1;
+        (r.game, slot)
+    }
+
+    #[test]
+    fn a_link_step_from_hand_lowers_to_the_hand_slots_effect_bit() {
+        use digimon_engine::action::space::HAND_EFFECT_START;
+        let (g, slot) = game_with_a_linkable_digimon_in_hand();
+
+        let id = lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: format!("hand.{slot}"),
+            },
+        )
+        .expect("Scopemon's <Link> from hand should lower");
+        let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
+        assert_eq!(mask[id as usize], 1.0, "lowered to a forbidden action");
+        assert_eq!(id, HAND_EFFECT_START + slot as u16, "the hand slot's own bit");
+        let e = digimon_engine::action::explain::explain_action(&g, 0, id);
+        assert_eq!(e.kind, digimon_engine::action::explain::ActionKind::HandEffect);
+        assert_eq!(e.card_id.as_deref(), Some("BT21-071"));
+
+        // The unpinned form names the same single copy.
+        let bare = lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "hand".to_string(),
+            },
+        )
+        .expect("one copy in hand -> unpinned form lowers");
+        assert_eq!(bare, id);
+
+        // ...and it parks the same host pick the field origin does.
+        let mut g = g;
+        g.decode_action(id, 0);
+        let pending = g
+            .pending_selection
+            .as_ref()
+            .expect("declaring a hand link installs the host-selection prompt");
+        assert_eq!(pending.kind, digimon_engine::selection::SelectionKind::OwnField);
+    }
+
+    #[test]
+    fn a_link_step_from_hand_does_not_match_a_plain_hand_card() {
+        // The verb names the DECISION, not the bit: a hand slot holding a card
+        // with no link condition must not match, whatever else the slot's
+        // HAND_EFFECT bit might mean.
+        let (g, slot) = game_with_a_linkable_digimon_in_hand();
+        let other = (0..g.player(0).hand.len()).find(|i| *i != slot).expect("ST-1 hand");
+        let other_id = g.player(0).hand[other].card_id(&g.card_data).to_string();
+        assert!(lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: other_id,
+                from: format!("hand.{other}"),
+            },
+        )
+        .is_err(), "a plain hand card has no <Link> to declare");
+    }
+
+    #[test]
+    fn a_link_step_on_a_card_without_a_link_condition_does_not_match() {
+        // Gatchmon at slot 0 is the HOST here; it also carries its own
+        // `<Link>`, so naming the wrong card must not silently lower to it.
+        let g = game_with_a_linkable_digimon();
+        assert!(lower_step(
+            &g,
+            0,
+            &StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field.0".to_string(),
+            },
+        )
+        .is_err(), "slot 0 holds Gatchmon, not Scopemon");
     }
 
     #[test]

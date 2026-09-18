@@ -1944,6 +1944,14 @@ steps:
         let s = select_line("{ cards: [ST1-03] }");
         let variants: Vec<LoweredStep> = vec![
             LoweredStep::Action(62),
+            // A `link:` step is a plain main-phase action on the wire: the
+            // FIELD_EFFECT link sub-slot (slot 0 -> 1003). Its host pick is
+            // the NEXT scenario step's own row, never folded into this one,
+            // so it must count exactly like any other Action.
+            LoweredStep::Action(
+                digimon_engine::action::space::FIELD_EFFECT_START
+                    + digimon_engine::action::space::FIELD_EFFECT_SLOT_FOR_LINK,
+            ),
             LoweredStep::SimOnlyAction(62),
             // The mirror of SimOnlyAction: one wire row, no sim-side row.
             LoweredStep::DcgoOnlySelect(SelectWire {

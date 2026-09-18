@@ -103,7 +103,7 @@ cost is a known risk — see "Known gaps".
 | `decks.<seat>.stack` | Prefix of the draw order. See below. |
 | `decks.<seat>.rest` | Named deck the remainder is seeded-shuffled from. |
 | `steps[].actor` | `0` or `1`. Both seats are scripted. |
-| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `select`. |
+| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `link`, `select`. |
 | `steps[].expect` | The prompt this step expects to be answering. Optional per step, asserted **before** answering. |
 | `assert` | `at: <step index>` + `that: {path: value}`. Backfilled from the oracle — see "Assertion backfill". |
 
@@ -308,16 +308,101 @@ Matching is on the SLOT, never on `card_id` alone — two copies of the same Opt
 on the field are two different decisions, and this format refuses an ambiguous
 intent rather than picking.
 
-Nothing is needed on the DCGO side: `InputDriver` already maps the
-`FIELD_EFFECT_START..FIELD_EFFECT_END` range to `ActivatePermanentAction(slot, 0)`
-(refusing any sub-slot but `FIELD_EFFECT_SLOT_FOR_MAIN`), so a `main:` step
-lowers to a plain `Action(id)` and rides the wire like any other.
+Matching is also on the `[Main]` **sub-slot** (`FIELD_EFFECT_SLOT_FOR_MAIN`, 2),
+not on the `FieldEffect` kind alone: the per-permanent effect range packs several
+semantic sub-slots (0 = Overclock, 2 = `[Main]`, 3 = DigiLink) and `explain`
+reports them all as `FieldEffect` on the same slot. Until 2026-09-17 a `main:` on
+an Appmon Link Digimon with no `[Main]` of its own silently lowered to its LINK
+bit — which DCGO then refused — and was ambiguous when the card had both.
+
+On the DCGO side `InputDriver.BuildMainPhaseAction` maps the
+`FIELD_EFFECT_START..FIELD_EFFECT_END` range to `ActivatePermanentAction(slot,
+skillIndex)`, resolving the sub-slot to a POSITIONAL index into the permanent's
+`EffectList(EffectTiming.OnDeclaration)`: the `[Main]` sub-slot takes the first
+activatable effect that is **not** the `<Link>` declaration, the link sub-slot
+takes the `<Link>` declaration (see `link:` below). Any other sub-slot is refused.
+So a `main:` step lowers to a plain `Action(id)` and rides the wire like any other.
 
 `<Delay>` in particular: our engine offers a placed Delay Option's activation on
 the same action bit once `turn_count > placed_on_turn`
 (`Game::delayed_option_main_activation_available`), and DCGO gates its own with
 `CanDeclareOptionDelayEffect` on the same not-the-placing-turn rule. So the line
 is "flip/place it on turn N, `main:` it on turn N+1".
+
+### `link:` — DigiLink declaration from the battle area (added 2026-09-17)
+
+`<Link>` on an Appmon Link *Digimon* ("Plug this card from the hand or battle
+area sideways into the specified Digimon") is a player-declared action, not a
+triggered effect, so every `[When Linking]` / `[Link]`-box clause was
+`unreachable` until the format could declare one
+(`qa/dcgo-exams/BT21/NOTES-BT21-071.md`, `NOTES-BT21-074.md` are the measured
+record). `link:` is that verb:
+
+```yaml
+- actor: 0
+  do: { link: { card: BT21-071, from: field.1 } }   # Scopemon declares its <Link>
+- actor: 0
+  do: { select: { targets: [own.field.0] } }        # ...onto the Appmon at slot 0
+  expect: { prompt: select_permanent, count: 1 }
+```
+
+`card:` is required; `from:` is `field[.N]` (default: the bare `field`) or
+`hand[.N]` — both origins the keyword prints — and takes the same pin grammar as
+`play:`'s `hand.N`, so two copies in one zone are ambiguous until pinned.
+
+- `field` lowers to the per-permanent `FIELD_EFFECT` range at sub-slot
+  `FIELD_EFFECT_SLOT_FOR_LINK` (3), which `mask.rs` emits for an un-linked
+  standing Digimon whose `link_condition` has at least one legal host and an
+  affordable cost. The whole permanent is absorbed (under-sources trashed, top
+  card becomes the linked card — DCGO `IPlacePermanentToLinkCards`).
+- `hand` lowers to that hand slot's `HAND_EFFECT` bit, which the engine makes
+  the link whenever the card has no `[Hand] [Main]` of its own
+  (`Game::hand_effect_slot_is_link` — the decoder dispatches `[Main]` first, so
+  a card carrying both exposes only its `[Main]` on the bit, the same
+  one-declarable-per-hand-slot limit DCGO's recorder has). The card is lifted
+  out of the hand and attached; nothing is absorbed and no `[On Play]` fires
+  (DCGO `Permanent.AddLinkCard`, root `Hand`).
+
+Either way it is the same bit an RL agent takes.
+
+**The host is the NEXT step, never an `into:` on this one.** Both engines park
+the host pick the moment the link is declared (ours:
+`install_digimon_link_host_selection`, an `OwnField` prompt; DCGO:
+`SelectPermanentEffect` "Select 1 Digimon to link.", `maxCount 1`,
+`canNoSelect: false`), and both ask it even with a single candidate. That is one
+decision per scenario step, exactly like attack → blocker or play → `[On Play]`
+target; folding it into the verb would make one scenario step consume two
+decisions on both wires, which the replay session (one `step()` per scenario
+step) and the differ's per-step pairing do not model. Writing `into:` is refused
+with a message that says this.
+
+DCGO side: `InputDriver.BuildMainPhaseAction` dispatches the link sub-slot to
+`ActivatePermanentAction(slot, i)` where `i` is the positional index of the
+`CardEffectFactory.LinkEffect` `ActivateClass` in the permanent's
+`EffectList(EffectTiming.OnDeclaration)` — the "Link (Cost: N)" command a human
+clicks on the field card's panel — and a `HAND_EFFECT` bit to
+`ActivateCardAction(card, i)` over `CanDeclareSkillList` with the engine's order
+(first non-link declarable, else the link). The link declaration is recognised
+structurally (an `ActivateICardEffect` whose `EffectDiscription` is
+`DataBase.LinkEffectDiscription()`, with the `"Link (Cost: "` name prefix as a
+fallback), not by position, because a card that adds its `[Main]` after its
+`LinkEffect` would otherwise have the two swapped. Requires a build at or after
+DCGO `c98bab2a4` (`D:/dcgo-build/scripted-v15`); `scripted-v14` and earlier
+abort a field link with "field-effect sub-slot 3 is not the [Main] slot" and
+send a hand link to positional skill 0.
+
+The from-hand origin was an engine gap until this change
+(`G-ENGINE-DIGIMON-LINK-FROM-HAND`: the only hand-side link was the Plug-In
+*Option* play mode). It is closed — `Game::activate_hand_link` /
+`DigimonLinkOrigin::Hand` in `game_actions/link.rs`, tests
+`dsl_digimon_link_from_hand_*` in `tests/option_flow/link_flow.rs`.
+
+What the recorder writes for that row is a separate, known limit:
+`ActionEncoder.EncodeActivatePermanent` still labels EVERY `ActivatePermanentAction`
+with `SkillIndex 0` as the `[Main]` sub-slot, so a link DCGO's own AI declares is
+recorded as a `[Main]` activation. The exam is unaffected (the differ pairs by
+wire-row count and compares state projections, never action ids), but
+`dcgo-replay` will read such a corpus row as an illegal `[Main]`.
 
 ## Selection steps (`select:`) — added 2026-08-22
 

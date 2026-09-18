@@ -103,6 +103,10 @@ fn single_id_constants_match_engine() {
         space::FIELD_EFFECT_SLOT_FOR_OVERCLOCK as u64
     );
     assert_eq!(
+        consts["FIELD_EFFECT_SLOT_FOR_LINK"].as_u64().unwrap(),
+        space::FIELD_EFFECT_SLOT_FOR_LINK as u64
+    );
+    assert_eq!(
         consts["BREEDING_SOURCE_CARRIERS"].as_u64().unwrap(),
         space::BREEDING_SOURCE_CARRIERS as u64
     );
