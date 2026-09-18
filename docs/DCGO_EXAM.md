@@ -627,6 +627,25 @@ entries.
   zone-declaration step as part of choosing a card, and DCGO's own code skips
   its zone menu when only one zone qualifies. It is a UI affordance; the exam
   should fold it, not model it as a decision.
+- **`RevealBucket` add timing — ours is the one the rules endorse (DCGO
+  quirk).** On a multi-bucket reveal ("Add 1 card with [X] … **and** 1 Option
+  card … among them to the hand" — ToyAgumon (EX7-008), Dorumon (BT7-056), every
+  `SimplifiedRevealDeckTopCardsAndSelect` card with ≥2 conditions) DCGO runs
+  one `SelectCardEffect` per condition (`RevealLibrary.cs`
+  `RevealDeckTopCardsAndSelect`, the `foreach` over `selectCardConditions`),
+  and each one, being `Mode.AddHand`, moves its pick to the hand when that
+  prompt closes (`SelectCardEffect.cs` ~726) — so the state row at the SECOND
+  pick already shows the first card in hand. We collect every bucket's pick,
+  then add. The printed text is ONE "Add" with two targets: §15-15-10-1 treats
+  that as "a single effect [that] allows you to select multiple targets with
+  different conditions" — targets are selected, then the one action is
+  performed — and DCGO's own comment in that loop says the conditions are
+  "chosen at once (per card game rules)". Outcome-neutral: nothing can trigger
+  or resolve between the two picks (mid-effect), candidate sets do not read the
+  hand, and the end state agrees. The exam
+  reads it as a one-field `p0.hand` divergence on the 2nd pick row with **no
+  downstream rows**; triage it as a DCGO quirk, do not "fix" the engine to add
+  per bucket. (Measured: EX7-008#effect#1, BT7-056 [On Play].)
 
 ## Execution
 
