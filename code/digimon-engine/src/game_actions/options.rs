@@ -573,7 +573,7 @@ impl Game {
         // (`advance_pending_option`), so a body that parks a selection — or
         // CLAIMS `pending_option` (`place_self_under_permanent`) — still
         // fires the observers exactly once.
-        self.on_use_option_armed = true;
+        self.on_use_option_armed = Some((player_id, card_handle));
 
         // Phase 9 Task 3 — Counter-window overlay: when this Option is
         // being played as a defender's counter, the `.counter()` +

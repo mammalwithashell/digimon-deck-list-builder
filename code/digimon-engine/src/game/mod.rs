@@ -688,7 +688,11 @@ pub struct Game {
     /// `add_this_option_to_hand`, link plug-ins) — the board-wide "when a
     /// player uses an Option card" observers (BT3-096, BT25-091) must still
     /// fire once the claimed body finishes.
-    pub(crate) on_use_option_armed: bool,
+    /// Carries the using player and the used card so the observers'
+    /// trigger context can expose them (`event_card` / `source_player`):
+    /// "When YOU use [TS] trait Option cards" (BT25-091) needs both.
+    /// G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+    pub(crate) on_use_option_armed: Option<(PlayerId, crate::card_source::CardHandle)>,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`

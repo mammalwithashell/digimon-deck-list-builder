@@ -494,6 +494,21 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::OptionUsed { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::OptionTrashed { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -1563,6 +1578,20 @@ impl Game {
                 event_source_card: Some(card),
                 event_host_card: linked_host.and_then(|h| self.top_card_handle(h)),
                 event_host_permanent: linked_host,
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            // NO `target_permanent` / `target_card`: every `event_*`
+            // predicate falls back to those when `event_permanent` is absent,
+            // and an Option use has no event permanent — seeding them with
+            // the OBSERVER would make `event_target_owner: you` read the
+            // observer's own controller (vacuously "you"). With them unset
+            // the owner resolves from `event_card` (the used Option), which
+            // is DCGO's `cardSource.Owner == card.Owner`
+            // (WhenUseOption.cs:13).
+            TriggerSource::OptionUsed { player, card } => TriggerContext {
+                event_card: Some(card),
+                event_source_card: Some(card),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -4478,7 +4507,7 @@ impl Game {
             // fire them now that the claimed body has finished.
             // (`resolve_generic_selection`'s tail owns `check_turn_end`
             // here, exactly as it did when this arm returned early before.)
-            if self.on_use_option_armed {
+            if self.on_use_option_armed.is_some() {
                 self.fire_on_use_option_observers();
             }
             return;
@@ -4490,7 +4519,7 @@ impl Game {
                 // the body inline; BT3-096 Q&A — "after activating the used
                 // Option card's [Main] effect"). A parked observer prompt
                 // resumes into the `OnUseOptionDrain` arm below.
-                if self.on_use_option_armed {
+                if self.on_use_option_armed.is_some() {
                     self.fire_on_use_option_observers();
                     if self.pending_selection.is_some() {
                         return;
@@ -4553,18 +4582,24 @@ impl Game {
     /// into `OnUseOptionDrain` so `advance_pending_option` does not re-enter
     /// the `MainEffectDrain` arm after an observer's prompt resolves.
     pub(crate) fn fire_on_use_option_observers(&mut self) {
-        if !std::mem::take(&mut self.on_use_option_armed) {
+        let Some((player, card)) = self.on_use_option_armed.take() else {
             return;
-        }
+        };
         if let Some(p) = self.pending_option.as_mut() {
             p.resolution_phase = crate::selection::OptionResolutionPhase::OnUseOptionDrain;
         }
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnUseOption,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        // One board-wide scan (both battle areas) carrying the using player
+        // and the used card, so an observer can gate on "when YOU use [TS]
+        // trait Option cards" (`event_target_owner: you` +
+        // `event_card_trait_has: TS`, BT25-091) — DCGO
+        // `CanTriggerWhenOwnerUseOption(hashtable, OptionTrigger, ..)` reads
+        // the same two facts off its hashtable. The used card is still the
+        // in-flight `pending_option` (or already linked / placed), which the
+        // handle resolvers now see. G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+        self.enqueue_triggered(
+            EffectTiming::OnUseOption,
+            TriggerSource::OptionUsed { player, card },
+        );
         self.drain_effect_queue();
     }
 

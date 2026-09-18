@@ -597,6 +597,16 @@ pub enum TriggerSource {
         cause: crate::option_lifecycle::OptionTrashCause,
         last_state: crate::option_lifecycle::OptionFieldState,
     },
+    /// Observer timing fired AFTER an Option's own body has resolved (the
+    /// board-wide "when a player uses an Option card" window,
+    /// `EffectTiming::OnUseOption`). Scans every player's battle area while
+    /// carrying the using player (`source_player`) and the used card
+    /// (`event_card`) so an observer can gate on WHO used WHAT — "[Your Turn]
+    /// When you use [TS] trait Option cards" (BT25-091 Monica Simmons; DCGO
+    /// `CanTriggerWhenOwnerUseOption(hashtable, OptionTrigger, ..)`). The
+    /// card is the in-flight `pending_option` (or already linked / placed);
+    /// `card_data_for_handle` resolves it. G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+    OptionUsed { player: PlayerId, card: CardHandle },
     /// Generic observer timing carrying the permanent/card that caused the
     /// event. Used by event-gated delayed Options such as suspend watchers.
     ///
