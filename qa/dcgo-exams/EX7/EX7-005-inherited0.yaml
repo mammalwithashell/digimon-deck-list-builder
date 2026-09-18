@@ -1,0 +1,142 @@
+# Exam scenario: Kapurimon (EX7-005), clause EX7-005#inherited#0 --
+# "[Your Turn] [Once Per Turn] When effects place Option cards with the
+#  [Three Musketeers] trait in this Digimon's digivolution cards, gain 1
+#  memory."
+#
+# THE LINE is qa/dcgo-exams/EX7/EX7-051-effect1.yaml with the BLACK Kapurimon
+# EX7-005 as the egg (book: tm_ex7_005_pool.json, deck
+# tm-kapurimon-ex7-005-egg -- the shared 50 with EX7-005 x4 in the egg deck).
+# Sparrowmon EX7-051 is breeding-digivolved onto Kapurimon on T3 (the
+# printed alt-circle "Lv.2 w/[Three Musketeers] in text: Cost 0" -- Kapurimon
+# prints "[Three Musketeers]" in its inherited text; Sparrowmon's purple
+# standard circle fails on colour, so exactly ONE route opens at cost 0 on
+# both engines and no cost prompt is asked: the oracle-authored
+# EX7-051-effect0 line) and promoted on T5. The breeding phase precedes the
+# main phase, so Sparrowmon's [Start of Your Main Phase] fires at the very
+# start of T5's main phase with Bind Red Trigger P-180 -- an OPTION with the
+# [Three Musketeers] TRAIT -- in hand. Sparrowmon's EFFECT places it as the
+# bottom digivolution card of Sparrowmon itself (P0's only Digimon), and
+# THE CLAUSE fires: Kapurimon sits in that Digimon's digivolution cards, it
+# is P0's turn, and an effect (Sparrowmon's ActivateClass -- DCGO
+# `cardEffect.EffectSourceCard != null`) placed a [Three Musketeers] Option
+# there. P0 gains 1 memory: 3 -> 4. Sparrowmon's <Draw 1> also resolves.
+# Memory is otherwise untouched, so the trailing step is P0's own pass at 4.
+#
+# WHY THIS PLACER. The three OnAddDigivolutionCards observers of this
+# campaign (BT25-005, EX7-005, BT7-056) all need an EFFECT to place a card
+# under the host: normal / DNA digivolution never fires the timing (DCGO
+# passes cardEffect: null). Sparrowmon's [Start of Your Main Phase] is the
+# cheapest such effect in the pool (no memory cost, fires on its own at T5)
+# and its prompt shape is oracle-authored in EX7-051-effect1.yaml.
+#
+# PROMPT SHAPE:
+#   Sparrowmon (EX7_051.cs, region "Start of Your Main Phase"):
+#   1. SetUpActivateClass(..., -1, TRUE, ...) -> OptionalSkill (yes). Our
+#      engine's clause is `optional: true` over a body whose FIRST step is
+#      the declinable union pick, so its ONE prompt is gate and pick at once
+#      (the `Replacement` row of docs/DCGO_EXAM.md's surface table); the
+#      union kind is not fold-shaped, so DCGO's gate is a DCGO-ONLY row.
+#   2. Only the hand holds a candidate (the trash is empty), so DCGO's
+#      hand-or-trash choice is `userSelectionManager.SetBool(canSelectHand)`
+#      -- a direct set, not the SetBoolForPlayer RPC the driver hooks: no row.
+#   3. SelectHandEffect (maxCount 1, canNoSelect: true) over `IsOption &&
+#      ContainsTraits("Three Musketeers")` -- SHARED with our union pick.
+#   4. SelectPermanentEffect (canNoSelect: true) over own non-token Digimon
+#      -- Sparrowmon is the lone candidate; SHARED with our mandatory host
+#      pick (under the harness the AI branch's SetTargetFrames hook consumes
+#      the row).
+#   5. AddDigivolutionCardsBottom(..., activateClass) -> StackSkillInfos
+#      (OnAddDigivolutionCards); then DrawClass(1) -- no prompt.
+#   Kapurimon (EX7_005.cs): the stacked trigger is a single mandatory
+#   ActivateClass -- SetUpActivateClass(..., 1 /* OPT */, FALSE, ...) -- so
+#   DCGO asks NOTHING (no OptionalSkill; at bundle length 1 no
+#   MultipleSkills) and AddMemory(1) resolves. Our engine: the per-host
+#   batch window flushes at the outermost drain, one firing, no `optional`,
+#   `gain_memory: 1` -- no prompt either side. The clause is measured by
+#   the memory delta (3 -> 4) in the state projection, not by a prompt.
+card: EX7-005
+clause: EX7-005#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10..] = draws: T3 turn draw, T3 digivolve draw, T5 turn draw, and
+    # stack[13] = the card Sparrowmon's <Draw 1> draws. No second
+    # [Three Musketeers] Option reaches the hand, so the hand pick is a
+    # single-copy `cards:` answer.
+    stack: [EX7-051, P-180, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-083, BT21-071]
+    rest: tm-kapurimon-ex7-005-egg
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Kapurimon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve Sparrowmon onto the BLACK Kapurimon through
+  # its "[Three Musketeers] in text" alt-circle for 0 (draw 1). No breeding
+  # prompt: Kapurimon is a Lv.2 in an occupied breeding area. [Start of Your
+  # Main Phase] needs Sparrowmon on the BATTLE area (DCGO CanUseCondition:
+  # IsExistOnBattleAreaDigimon), so nothing fires this turn on either side.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote Sparrowmon; the main phase then opens with
+  # Sparrowmon's [Start of Your Main Phase] -- the PLACING effect.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's OptionalSkill gate (see header, item 1).
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # SHARED: the [Three Musketeers] Option to place -- Bind Red Trigger.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: the Digimon that receives it -- Sparrowmon (over Kapurimon), P0's
+  # only Digimon. THE CLAUSE fires off this placement: +1 memory (3 -> 4),
+  # no prompt on either engine; Sparrowmon's <Draw 1> resolves too.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: memory 4 (the +1 is the measurement).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 4
+      p0.trash: []
+      p0.hand: [BT21-071, BT24-088, BT24-088, BT24-088, BT25-083, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: EX7-051, dp: 1000, suspended: false, sources: [EX7-005, P-180] }
+      p1.field: []
+      p1.security: 5

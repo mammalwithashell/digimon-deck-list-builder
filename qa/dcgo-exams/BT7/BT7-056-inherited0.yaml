@@ -1,0 +1,190 @@
+# Exam scenario: Dorumon (BT7-056), clause BT7-056#inherited#0 --
+# "[Your Turn] [Once Per Turn] When your effects add to this Digimon's
+#  digivolution cards, gain 1 memory."
+#
+# THE LINE. Dorumon has to be a DIGIVOLUTION CARD for its inherited effect
+# to be live, so it is breeding-digivolved onto Kapurimon EX7-005 on T3
+# (Black Lv.2 / cost 0 -- Dorumon's only circle; Kapurimon is black; ONE
+# route, no cost prompt; Dorumon's [On Play] does not fire on a digivolve)
+# and, after the T5 promote, BlackGatomon BT25-082 is digivolved onto it
+# for 3 (its BLACK Lv.3 / 3 circle; the purple circle fails on colour and
+# the "[Three Musketeers] in text or [TS] trait" alt-circle fails on
+# Dorumon -- ONE route, no cost prompt). On T7 LadyDevimon BT25-083 is
+# played (cost 7: 3 -> -4) and her [On Play] is the PLACING EFFECT: its
+# cost puts BeelStarmon (X Antibody) EX7-073 -- a [Three Musketeers] TRAIT
+# card -- from the hand as the bottom digivolution card of the BlackGatomon
+# stack (P0's field.0), then <Draw 1>. THE CLAUSE fires from the stacked
+# OnAddDigivolutionCards window: Dorumon sits in that Digimon's
+# digivolution cards, it is P0's turn, and the placing effect belongs to
+# P0 (DCGO `EffectSourceCard.Owner == card.Owner`; our
+# `event_caused_by_own_effect`). P0 gains 1 memory: -4 -> -3. The turn
+# still ends (memory is on P1's side), so the trailing step is P1's.
+#
+# WHY EX7-073 AND NOT AN OPTION. The egg under Dorumon is Kapurimon, whose
+# own inherited effect (EX7-005#inherited#0) fires when an effect places a
+# [Three Musketeers] OPTION under the same stack -- that would stack TWO
+# mandatory triggers on one event and bury the clause under a
+# MultipleSkills / TriggerOrder row. BeelStarmon (X Antibody) carries the
+# [Three Musketeers] TRAIT (so LadyDevimon's cost accepts it) but is a
+# Digimon card, so Kapurimon stays silent and Dorumon's trigger is the
+# ONLY stacked effect. Pagumon BT25-005 (fires on ANY [Three Musketeers]
+# trait card) is not the egg for the same reason.
+#
+# MEMORY IS ENGINEERED AWAY FROM ZERO (the BT21-071-effect1 convention):
+# P1 overspends on T4 (Biyomon ST1-02 for 2, then Garudamon ST1-08 from
+# hand for 6: 3 -> 1 -> -5), handing P0 FIVE memory on T5; BlackGatomon
+# takes it to 2 and P0 passes (P1 starts T6 at 3). Garudamon has only a
+# [When Digivolving] effect and Biyomon prompts nothing, so P1's plays
+# put nothing on the wire beyond the actions themselves.
+#
+# WHY NO [Three Musketeers]-TEXT TAMER IN HAND. BlackGatomon's [When
+# Digivolving] is gated in DCGO by AdditionalActivateCondition (a TM-text
+# Tamer in HAND && <= 1 Tamers on the field): with no Asuna in hand DCGO
+# activates nothing and asks nothing after the T5 digivolve. Every draw is
+# stacked so no BT24-088 / BT25-092 reaches the hand.
+#
+# Book: qa/dcgo-exams/BT7/tm_bt7_056_pool.json, deck tm-dorumon (eggs
+# Kapurimon EX7-005 x4).
+#
+# PROMPT SHAPE:
+#   LadyDevimon (BT25_083.cs, region "OP/WD Shared"; same rows as
+#   BT25-083-effect1.yaml): optional: false -> NO OptionalSkill. The body
+#   opens with UserSelectionManager.SetIntSelection over {Hand=1, Trash=2
+#   (only if the trash qualifies -- it is empty), Don't place=3}: a
+#   `generic_int` row our engine never parks (our single UnionZone pick
+#   folds the zone into the pick) -> `dcgo_only`. Then SelectHandEffect
+#   (canNoSelect: true) over HasThreeMusketeersTraits -- EX7-073 is the
+#   only candidate -- SHARED; then SelectPermanentEffect (canNoSelect: true)
+#   over own Digimon -- the BlackGatomon stack (field.0) or LadyDevimon
+#   (field.1) -- SHARED; then AddDigivolutionCardsBottom(..., activateClass)
+#   -> StackSkillInfos(OnAddDigivolutionCards); DrawClass(1).
+#   Dorumon (BT7_056.cs, region OnAddDigivolutionCards): the stacked lone
+#   trigger is a mandatory ActivateClass -- SetUpActivateClass(..., 1 /* OPT
+#   */, FALSE, ...) -- so DCGO asks NOTHING (no OptionalSkill; at bundle
+#   length 1 no MultipleSkills) and AddMemory(1) resolves. Our engine: one
+#   firing from the per-host batch window, no `optional`, `gain_memory: 1`
+#   -- no prompt either side. The clause is measured by the memory delta
+#   (-4 -> -3) in the state projection, not by a prompt.
+card: BT7-056
+clause: BT7-056#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand: Dorumon, BlackGatomon, LadyDevimon,
+    # BeelStarmon (X Antibody), Titamon+SkullBaluchimon (Lv.7 filler; never
+    # played). stack[5..9] = security (never flipped: P1 never attacks).
+    # stack[10..] = draws in order: T3 turn draw, T3 digivolve draw, T5 turn
+    # draw, T5 digivolve draw, T7 turn draw, LadyDevimon's <Draw 1>. No
+    # TM-text Tamer and no second [Three Musketeers] TRAIT card ever
+    # reaches the hand.
+    stack: [BT7-056, BT25-082, BT25-083, EX7-073, BT24-081,
+            BT21-074, BT21-074, BT25-085, BT25-085, BT25-085,
+            BT25-078, BT25-078, BT25-078, BT25-078, BT25-058, EX7-051]
+    rest: tm-dorumon
+  p1:
+    # stack[0..4] = opening hand: Biyomon + Garudamon (the T4 overspend) and
+    # three Agumon; stack[5..9] = security; stack[10..] = draws T2, T4, T6,
+    # T8.
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Kapurimon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve Dorumon onto Kapurimon (Black Lv.2 / 0;
+  # draw 1). No breeding prompt: Kapurimon is a Lv.2 in an occupied
+  # breeding area. Dorumon's [On Play] does not fire on a digivolve.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT7-056 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): overspend to 5 on P0's side -- Biyomon (2), Garudamon (6).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 5): promote the Dorumon stack (no [When Moving]).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # BlackGatomon onto Dorumon through its BLACK Lv.3 / 3 circle (5 -> 2;
+  # draw 1). Its [When Digivolving] is DCGO-gated off (no TM-text Tamer in
+  # hand); nothing is asked.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): empty breeding area -> breeding prompt; pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # The PLACING EFFECT: play LadyDevimon (3 -> -4); her [On Play] resolves
+  # before the turn passes.
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO's zone menu: 1 = "Hand". Wire-only -- our engine folds the zone into
+  # the pick below.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the [Three Musketeers] trait card from hand -- BeelStarmon
+  # (X Antibody), a Digimon card (see header).
+  - actor: 0
+    do: { select: { cards: [EX7-073] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: the Digimon that receives it -- the BlackGatomon stack over
+  # Dorumon over Kapurimon (P0's field.0; LadyDevimon is field.1). THE
+  # CLAUSE fires off this placement: +1 memory (-4 -> -3), no prompt on
+  # either engine; LadyDevimon's <Draw 1> resolves too.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: memory -3 -> seat P1 (T8; P1's breeding area
+  # is empty, so its breeding prompt opens).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 19
+    that:
+      turn: 8
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-081, BT25-058, BT25-078, BT25-078, BT25-078, BT25-078, EX7-051]
+      p0.field:
+        - { card_id: BT25-082, dp: 6000, suspended: false, sources: [BT7-056, EX7-005, EX7-073] }
+        - { card_id: BT25-083, dp: 7000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+      p1.security: 5
