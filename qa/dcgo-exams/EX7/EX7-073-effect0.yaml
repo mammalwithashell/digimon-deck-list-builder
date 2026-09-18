@@ -159,7 +159,11 @@ steps:
   # Trigger order between EX7-073's two [When Digivolving] effects (see header).
   - actor: 0
     do: { select: { cards: [EX7-073], ordinal: 0 } }
-    expect: { prompt: MultipleSkills, count: 2 }
+    # `count` on a MultipleSkills row is the PICK count (MultipleSkills.cs
+    # SetTargetSkill hands TryAnswerStep a literal 1), never the number of
+    # stacked triggers -- the first oracle run aborted on `count: 2` for exactly
+    # that reason (triage 2026-09-18). The two-trigger claim is `candidates:`.
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
   # DCGO-ONLY: effect (b)'s gate. Only one [Three Musketeers]-trait source
   # exists, so the two-card cost cannot be paid: DCGO still asks the
   # OptionalSkill (its CanActivateCondition is >= 1, not >= 2) and it is

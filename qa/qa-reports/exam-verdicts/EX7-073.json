@@ -1,16 +1,15 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T07:59:27.824845+00:00",
+  "last_updated": "2026-09-18T10:38:11.320256700+00:00",
   "clauses": {
     "EX7-073#effect#0": {
       "clause_id": "EX7-073#effect#0",
       "card_id": "EX7-073",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "2e1c4783e59be226bd96910a2e66eae161160766c8510bb0a18447b9112bcb28",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-073-effect0.yaml",
-      "reason": "Oracle job aborted: prompt mismatch: step 18 expected count 2 but DCGO asked for count 1 (differ: TRUNCATED, no state divergence in the 16 rows compared). The clause's own observable agreed before the abort: DCGO's action_detail shows EX7-073 onto BeelStarmon BT25-085 paid cost 1 (memory 3 -> 2). The mismatch is in the [When Digivolving] trigger set: ours orders two EX7-073 triggers, DCGO's prompt carried one.",
-      "recorded_at": "2026-09-18T07:57:20.595122700+00:00"
+      "recorded_at": "2026-09-18T10:38:11.320256700+00:00"
     },
     "EX7-073#effect#1": {
       "clause_id": "EX7-073#effect#1",
