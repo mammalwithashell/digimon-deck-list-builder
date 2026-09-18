@@ -1,0 +1,183 @@
+# Exam scenario: Sparrowmon (EX7-051), clause EX7-051#inherited#0 --
+# "<Retaliation> (When only this Digimon is deleted in battle, delete the
+#  Digimon it battled.)"
+#
+# Sparrowmon must be a DIGIVOLUTION CARD for the inherited keyword to apply.
+# The line breeding-digivolves Sparrowmon onto the black Kapurimon EX7-005
+# (Sparrowmon's own alt-circle, EX7-051#effect#0), promotes it on T5 and
+# digivolves BlackGatomon BT25-082 onto it (alt-circle cost 2; its [When
+# Digivolving] free-plays Asuna BT25-092). P1 fields Vermilimon BT4-014
+# (Lv.5, 8000 DP, vanilla) on T2, attacks P0's security with it on T6 (so it
+# is SUSPENDED, and therefore attackable, during P0's T7), and on T7
+# BlackGatomon (6000) attacks it and LOSES the battle. THE CLAUSE: only
+# BlackGatomon is deleted in that battle, so <Retaliation> deletes
+# Vermilimon too. Both battle areas end empty of Digimon.
+#
+# WHY KAPURIMON AND NOT THE SHARED BOOK'S PAGUMON. The whole stack is deleted,
+# and Pagumon ST6-01's inherited "[On Deletion] Trash the top 2 cards of your
+# deck" would stack a SECOND same-timing trigger beside <Retaliation>
+# (MultipleSkills / TriggerOrder), turning this line into an ordering exam of
+# a card that is not under exam. Kapurimon EX7-005 has no [On Deletion] and
+# its own trigger (an Option placed under it) never fires here (implemented
+# on both sides: code/digimon-engine/cards/ex7/EX7-005.yaml, DCGO
+# EX7/Black/EX7_005.cs). Book: qa/dcgo-exams/EX7/tm_ex7_051_pool.json.
+#
+#   T1 (P0): hatch Kapurimon.
+#   T2 (P1, 3): play Vermilimon (3 -> -2, turn over).
+#   T3 (P0, 2): Sparrowmon onto Kapurimon for 0; pass.
+#   T4 (P1, 3): pass.
+#   T5 (P0, 3): promote; DCGO-only decline of Sparrowmon's vacuous [Start of
+#            Your Main Phase]; BlackGatomon for 2 (memory 1; cost prompt
+#            answered 2); [When Digivolving] free-plays Asuna; pass.
+#   T6 (P1, 3): Vermilimon attacks security: ToyAgumon EX7-008 (1000, no
+#            [Security]) is flipped and loses, no prompt; pass.
+#   T7 (P0, 3): skip breeding; decline Asuna's [Start of Your Main Phase];
+#            BlackGatomon attacks the suspended Vermilimon. THE CLAUSE.
+#            Attacking costs nothing, so the trailing step is P0's pass.
+#
+# PROMPT SHAPE. <Retaliation> in DCGO (CardEffectFactory/KeyWordEffects/
+# Retaliation.cs, RetaliationSelfEffect -> RetaliationEffect) is an
+# ActivateClass at OnDestroyedAnyone with isOptional FALSE -- mandatory, no
+# OptionalSkill, no target pick (the battled Digimon is implicit). Keyword
+# kind per docs/digimon-rules/keyword-semantics.md: Mandatory (16-12). The
+# earlier prompts are the BT25-082-effect2 prefix's documented shapes, and
+# Asuna's T7 gate is the EX7-073-effect0 two-row shape.
+card: EX7-051
+clause: EX7-051#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security -- stack[9] =
+    # ToyAgumon EX7-008 is the card Vermilimon's T6 attack flips (a Digimon
+    # with no [Security] effect, so the check is a silent battle it loses);
+    # stack[10..] = draws: T3 turn, T3 digivolve, T5 turn, T5 BlackGatomon
+    # digivolve, T7 turn.
+    stack: [EX7-051, BT25-082, BT25-092, BT24-088, BT24-088,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-092]
+    rest: tm-kapurimon-egg
+  p1:
+    # Vermilimon in the opening hand; P1's security is never checked.
+    stack: [BT4-014, ST1-03, ST1-04, ST1-04, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Kapurimon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Vermilimon (cost 5: 3 -> -2, turn over).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 2): Sparrowmon onto Kapurimon (alt-circle, cost 0). No breeding
+  # prompt: a Lv.2 in an occupied breeding area.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (no [Three Musketeers] Option in hand or trash), declined.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate, then the shared hand pick (Asuna
+  # BT25-092 for free).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory 1: still P0's turn; pass (P1 gets 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): Vermilimon attacks security (ToyAgumon flipped, loses).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): empty breeding area -> breeding prompt; pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase], declined -- two rows for one decision
+  # (BT25_092.cs: optional: false + one cancellable SelectHandEffect; ours: an
+  # outer `Replacement` gate before the hand pick).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: BlackGatomon (6000) attacks the suspended Vermilimon (8000),
+  # loses, and <Retaliation> (inherited from Sparrowmon) deletes Vermilimon.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }   # target: the OPPONENT's slot 0 (attack targets use the bare field.N grammar)
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine parks a 2-candidate TriggerOrder at the deletion --
+  # `[EX7-051 <Retaliation>, EX7-051]` (measured at lowering, 2026-09-18). DCGO
+  # has exactly ONE trigger here (RetaliationSelfEffect under
+  # OnDestroyedAnyone, mandatory), so it opens no MultipleSkills prompt and this
+  # row emits nothing on the wire. Named by KEYWORD so our engine resolves
+  # <Retaliation> first. Same shape, and same downstream engine finding, as
+  # ../BT25/BT25-078-inherited0.yaml -- see NOTES-EX7-051.md.
+  - actor: 0
+    do: { select: { cards: [EX7-051], trigger: Retaliation, sim_only: true } }
+  # Attacking costs nothing: memory 3, P0's pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. P0's side is asserted in full.
+  #
+  # THE CLAUSE'S OWN WITNESS -- `p1.field: []` and `p1.trash: [BT4-014]`,
+  # Vermilimon deleted by <Retaliation> -- is DELIBERATELY NOT ASSERTED HERE.
+  # Sim-only shows our engine LEAVES Vermilimon on P1's field (8000 DP,
+  # suspended): the two-candidate TriggerOrder above parks, the attack context
+  # (`pending_attack`) is gone by the time <Retaliation> resolves, and
+  # `battle_opponent_of` finds no opponent (docs/RUST_ENGINE_GAPS.md
+  # G-ONDELETION-PARK-CLEARS-BATTLE-STATE; NOTES-EX7-051.md). Asserting the
+  # rules-correct state would only fail the sim-only gate for a known reason.
+  # The oracle run measures it: DCGO deleting Vermilimon where we do not reads
+  # as `diverged`; on `confirmed` the backfill writes P1's state here.
+  - at: 23
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT25-082, EX7-005, EX7-008, EX7-051]
+      p0.field:
+        - { card_id: BT25-092, dp: -1, suspended: false, sources: [] }
+      p1.security: 5

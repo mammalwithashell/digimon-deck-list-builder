@@ -1,0 +1,117 @@
+# Exam scenario: Sparrowmon (EX7-051), clause EX7-051#effect#0 --
+# "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0"
+#
+# The printed alt-circle, measured as LEGALITY: Sparrowmon is PURPLE and its
+# standard circle is "Purple Lv.2 / cost 0", so digivolving it onto a BLACK
+# Lv.2 is legal on either engine only through the clause under exam.
+#
+# WHY KAPURIMON (EX7-005) IS THE EGG, AND WHY THIS FILE NEEDS ITS OWN BOOK.
+# The printed alt-circle "Lv.2 w/[Three Musketeers] in text: Cost 0" costs
+# exactly what the standard circle costs, so a base that satisfies BOTH is
+# indistinguishable (no cost prompt on either engine, same memory). Only two
+# Lv.2 cards in the whole pool print "[Three Musketeers]" -- Kapurimon EX7-005
+# and Pagumon BT25-005 -- and both are BLACK, which is the point: a PURPLE Sparrowmon
+# can reach a black Lv.2 ONLY through the clause under exam. DCGO's
+# AddSelfDigivolutionRequirementStaticEffect for this circle passes no
+# `cardColor`, so its GetEvoCost applies no colour check (the
+# `ignoreDigivolutionRequirement: false` argument only means the circle does
+# not need a "may ignore requirements" grant); our alt_path likewise carries
+# no `color_is`. Kapurimon's own text ([Your Turn][Once Per Turn] gain 1
+# memory when an effect places a [Three Musketeers] Option under it) never
+# fires on this line -- nothing is placed under it -- and it has no [On
+# Deletion], unlike the shared book's Pagumon ST6-01. Kapurimon is implemented
+# on both sides (code/digimon-engine/cards/ex7/EX7-005.yaml, landed 61fc7c7d9;
+# DCGO EX7/Black/EX7_005.cs), and neither fires its trigger on a digivolution:
+# DCGO's OnAddDigivolutionCards needs a placing cardEffect, and our
+# `on_add_digivolution_cards` deliberately does not fire from normal
+# digivolution. Book: qa/dcgo-exams/EX7/tm_ex7_051_pool.json.
+#
+#   T1 (P0): hatch Kapurimon.        T2 (P1): pass.
+#   T3 (P0): THE CLAUSE -- Sparrowmon onto Kapurimon in the breeding area for
+#            0 (draw 1).
+#   T4 (P1): pass.
+#   T5 (P0, 3): promote the stack; DCGO-only decline of Sparrowmon's vacuous
+#            [Start of Your Main Phase] gate; pass.
+#
+# PROMPT SHAPE: the digivolve itself asks nothing (one open circle, cost 0).
+# Sparrowmon's [Start of Your Main Phase] (EX7_051.cs) is SetUpActivateClass
+# (..., -1, TRUE, ...) with a CanActivateCondition of merely "hand or trash
+# non-empty and a Digimon on the battle area", so DCGO asks an OptionalSkill
+# at T5 even though no [Three Musketeers] Option exists to pay with; our
+# engine gates the trigger on a payable Option (`condition: count_gte`) and
+# parks nothing -- the documented vacuous-gate class (docs/DCGO_EXAM.md,
+# Known gaps): a DCGO-only decline row. Same shape as the BT25-082-effect2
+# prefix.
+clause: EX7-051#effect#0
+card: EX7-051
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws: T3 turn draw, T3 digivolve draw,
+    # T5 turn draw. No [Three Musketeers]-TRAIT Option is ever in hand, so
+    # Sparrowmon's own [Start of Your Main Phase] stays vacuous.
+    stack: [EX7-051, BT25-082, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-058, EX7-008,
+            BT25-092, BT25-092, BT25-083]
+    rest: tm-kapurimon-egg
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Kapurimon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- breeding-digivolve EX7-051 onto the BLACK
+  # Kapurimon for 0 (draw 1). No breeding-action step this turn: the breeding
+  # area holds a Lv.2 (cannot be moved) and is occupied (cannot hatch), so
+  # neither engine asks (the BT21-071-effect0 / BT21-029 shape).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote, so the digivolved stack is visible on the battle area
+  # (the projection dumps the battle area, not the breeding area).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause: P0 still holds memory 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-082, BT25-083, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: EX7-051, dp: 1000, suspended: false, sources: [EX7-005] }
+      p1.field: []

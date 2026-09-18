@@ -1,7 +1,7 @@
-# Exam scenario: Bind Red Trigger (P-180), clause P-180#effect#0 --
-# "When effects trash this card from digivolution cards, delete 1 of your
-#  opponent's 7000 DP or lower Digimon. While you have a [Three Musketeers]
-#  trait Digimon, you can ignore this card's color requirements."
+# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#effect#0 --
+# "When effects trash this card from digivolution cards, gain 1 memory. While
+#  you have a [Three Musketeers] trait Digimon, you may ignore this card's
+#  color requirements."
 #
 # THE LINE -- a trasher whose effect asks NOTHING after the trash.
 #   T1 (P0): hatch Pagumon.
@@ -10,22 +10,22 @@
 #   T4 (P1, 3): pass.
 #   T5 (P0, 3): promote; DCGO-only decline of Sparrowmon's vacuous [Start of
 #            Your Main Phase]; BlackGatomon BT25-082 for 2 (cost prompt
-#            answered 2; the digivolve draws P-180); its [When Digivolving]
+#            answered 2; the digivolve draws EX7-071); its [When Digivolving]
 #            free-plays Asuna Shiroki BT25-092; pass at memory 1.
 #   T6 (P1, 3): pass.
 #   T7 (P0, 3): decline Asuna; play LadyDevimon BT25-083 (3 -> -4). Her [On
 #            Play] "By placing 1 [Three Musketeers] trait card from your hand
 #            or trash as any of your Digimon's bottom digivolution cards,
-#            <Draw 1>" seats P-180 under LADYDEVIMON HERSELF (not under
+#            <Draw 1>" seats EX7-071 under LADYDEVIMON HERSELF (not under
 #            BlackGatomon: see "why under LadyDevimon" below).
 #   T8 (P1, 4): pass.
 #   T9 (P0, 3): decline Asuna; BlackGatomon digivolves into BeelStarmon
 #            BT25-085 for 4 through BlackGatomon's [All Turns] grant
 #            (3 -> -1). BeelStarmon's [When Digivolving] "By trashing 1 Option
 #            card from any of your Digimon's digivolution cards or link cards,
-#            this Digimon unsuspends" trashes P-180 from LadyDevimon's
-#            digivolution cards. THE CLAUSE fires. Agumon (2000 DP) is
-#            deleted. Memory -1: the turn passes to P1 (T10).
+#            this Digimon unsuspends" trashes EX7-071 from LadyDevimon's
+#            digivolution cards. THE CLAUSE fires. +1 memory: -1 -> 0, so
+#            the turn does NOT pass -- the witness. P0 then passes.
 #
 # WHY THIS TRASHER (it supersedes the LadyDevimon-[When Attacking] line this
 # file held before 2026-09-18). Our engine resolves a "when effects trash this
@@ -53,14 +53,14 @@
 # Option under LadyDevimon and none in hand, that effect is inactive on both
 # sides: exactly ONE [When Digivolving] trigger, no MultipleSkills /
 # TriggerOrder. The clause's ignore-colour sentence is not needed by this
-# line (the Option is never USED); P-180-effect1.yaml exercises it.
+# line (the Option is never USED); EX7-071-effect1.yaml exercises it.
 #
 # PROMPT SHAPE, re-derived from the C# (2026-09-18):
 #   * LadyDevimon [On Play] (BT25_083.cs "OP/WD Shared", optional: false, gated
-#     on a [Three Musketeers] TRAIT card in hand or trash -- P-180 and the
+#     on a [Three Musketeers] TRAIT card in hand or trash -- EX7-071 and the
 #     dual BeelStarmon BT25-085 both qualify): generic_int zone menu
 #     ("Hand" = 1; DCGO-only, our union pick folds the zone), SelectHandEffect
-#     (canNoSelect: true) -> P-180 by identity, SelectPermanentEffect over own
+#     (canNoSelect: true) -> EX7-071 by identity, SelectPermanentEffect over own
 #     battle-area Digimon (BlackGatomon, LadyDevimon) -> LadyDevimon; draw 1.
 #   * BeelStarmon [When Digivolving] (BT25_085.cs "Shared WD / WA / Counter",
 #     optional: false, isSkippable: true -> NO OptionalSkill; our YAML authors
@@ -73,33 +73,30 @@
 #     selection_resolve.rs cannot name a digivolution-card candidate by
 #     `cards:`. ITrashDigivolutionCards(cardEffect) -> the clause.
 #     IUnsuspendPermanents on an unsuspended Digimon: no prompt, no change.
-#   * THE CLAUSE (P_180.cs "When Trashed from digivolutions cards"):
-#     SetUpActivateClass(..., -1, FALSE, ...) -- mandatory, no OptionalSkill
-#     (SetIsOptionEffect(true) only tags it as an Option card's effect);
-#     CanActivate = the card is in the trash and an opponent Digimon with
-#     DP <= 7000 exists; ONE SelectPermanentEffect(Destroy, canNoSelect:
-#     false). SHARED with our OppField pick.
+#   * THE CLAUSE (EX7_071.cs, OnDigivolutionCardDiscarded region):
+#     SetUpActivateClass(..., -1, FALSE, ...) -- mandatory and prompt-free
+#     (AddMemory 1). Nothing on the wire on either side.
 #
 # Under the harness every SelectPermanentEffect.Activate() takes the AI branch
 # (`_selectPlayer.isYou && !HarnessAuto.DrivesLocalSeat` is false), which
 # calls SetTargetFrames -> InputDriver.TryAnswerStep: a single-candidate pick
 # still consumes one wire row.
-card: P-180
-clause: P-180#effect#0
+card: EX7-071
+clause: EX7-071#effect#0
 seed: 424242
 decks:
   p0:
     # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
     # never attacks); stack[10..] = draws: T3 turn, T3 Sparrowmon digivolve,
-    # T5 turn, T5 BlackGatomon digivolve = P-180 (so it reaches the hand AFTER
+    # T5 turn, T5 BlackGatomon digivolve = EX7-071 (so it reaches the hand AFTER
     # Sparrowmon's T5 [Start of Your Main Phase] window), T7 turn, LadyDevimon's
     # <Draw 1>, T9 turn, T9 BeelStarmon digivolve. ONE copy each of LadyDevimon
     # and BeelStarmon ever reaches the hand (`play:` / `using:` stay
-    # unambiguous), and no Option other than P-180 does, so BeelStarmon's
+    # unambiguous), and no Option other than EX7-071 does, so BeelStarmon's
     # use-an-Option [When Digivolving] stays inactive on both sides.
     stack: [EX7-051, BT25-082, BT25-092, BT25-085, BT25-083,
             BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
-            BT21-071, BT21-074, BT25-078, P-180, BT24-088,
+            BT21-071, BT21-074, BT25-078, EX7-071, BT24-088,
             EX7-008, BT21-071, BT21-074]
     rest: three-musketeers
   p1:
@@ -144,7 +141,7 @@ steps:
   # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
   # (EX7_051.cs: isOptional TRUE, CanActivate = hand-or-trash non-empty and a
   # Digimon on the battle area). No [Three Musketeers] Option is in hand yet
-  # -- P-180 is the card the BlackGatomon digivolve draws, AFTER this window --
+  # -- EX7-071 is the card the BlackGatomon digivolve draws, AFTER this window --
   # so our engine (gated on a payable Option) parks nothing.
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
@@ -183,7 +180,7 @@ steps:
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
-  # LadyDevimon (cost 7: 3 -> -4). Her [On Play] seats P-180.
+  # LadyDevimon (cost 7: 3 -> -4). Her [On Play] seats EX7-071.
   - actor: 0
     do: { play: { card: BT25-083, from: hand } }
     expect: { prompt: main_phase }
@@ -193,7 +190,7 @@ steps:
     expect: { prompt: generic_int }
   # SHARED: the [Three Musketeers] trait card to place.
   - actor: 0
-    do: { select: { cards: [P-180] } }
+    do: { select: { cards: [EX7-071] } }
     expect: { prompt: SelectHandEffect }
   # SHARED: the Digimon that receives it -- LadyDevimon (P0's field.2;
   # BlackGatomon is field.0, Asuna field.1). <Draw 1>, then the turn is over.
@@ -233,29 +230,25 @@ steps:
   - actor: 0
     do: { select: { yes: true, sim_only: true } }
   - actor: 0
-    do: { select: { cards: [P-180], dcgo_only: true } }
+    do: { select: { cards: [EX7-071], dcgo_only: true } }
     expect: { prompt: SelectCardEffect }
-  # THE CLAUSE: delete 1 of the opponent's 7000 DP or lower Digimon -- Agumon.
+  # THE CLAUSE resolved with no prompt: memory -1 -> 0, still P0's turn. One
+  # step past the clause is therefore P0's own pass.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
-  # One step past the clause: memory -1, so the seat is P1 (T10; Koromon still
-  # sits in the breeding area -> no breeding prompt).
-  - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 33
+  - at: 32
     that:
-      turn: 10
-      p0.memory: -1
+      turn: 9
+      p0.memory: 0
       p0.security: 5
-      p0.trash: [P-180]
-      p0.hand: [BT21-071, BT21-071, BT21-074, BT21-074, BT24-088, BT25-078, EX7-008]
+      p0.trash: [EX7-071]
       p0.field:
         - { card_id: BT25-083, dp: 7000, suspended: false, sources: [] }
         - { card_id: BT25-085, dp: 12000, suspended: false, sources: [BT25-082, EX7-051, ST6-01] }
         - { card_id: BT25-092, dp: -1, suspended: false, sources: [] }
-      p1.field: []
-      p1.trash: [ST1-03]
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+      p1.trash: []
       p1.security: 5

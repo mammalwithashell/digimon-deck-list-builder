@@ -1,0 +1,168 @@
+# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#effect#1 --
+# "[Main] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their
+#  level 5 Digimon. Then, place this card as the bottom digivolution card of 1 of
+#  your [Three Musketeers] trait Digimon."
+#
+# THE LINE. P1 (quiet-opponent) builds exactly one Digimon of each level over three
+# turns -- Biyomon ST1-02 (Lv.3, cost 2), Kokatorimon BT1-014 (Lv.4, cost 3),
+# Vermilimon BT4-014 (Lv.5, cost 5) -- all vanilla. On turn 7 P0 uses Hurricane
+# Screw Shot from hand (cost 6, memory 2 -> -4) and all three are deleted.
+#
+# COLOUR REQUIREMENT. The Option is Purple, so P0 needs a Purple Digimon or Tamer
+# in play. It is Asuna Shiroki (BT24-088, a Purple Tamer) played on turn 1 -- a
+# BATTLE-AREA source on purpose: a hatched Digi-Egg in the breeding area would be
+# prompt-free, but our engine's `option_color_match_available` only counts a
+# breeding permanent whose top card `is_digimon`, and a Digi-Egg card is
+# `CardKind::Egg`, so Hurricane Screw Shot never reached the mask that way (see
+# NOTES-EX7-071.md). Asuna costs the line four extra prompts, all of them the same
+# shape on both sides: her [On Play] on turn 1 (an OptionalSkill+pick fold, PAID:
+# Satellamon BT21-074 trashed, 2 drawn -- paid rather than declined because our
+# engine draws 2 even on a declined cost, see ../BT24/BT24-088-effect0.yaml's header, and a declined
+# branch would put a hand divergence on THIS line), and her [Start of Your Turn]
+# on turns 3, 5 and 7, DECLINED (DCGO: SetUpActivateClass(..., TRUE) with
+# CanActivate = memory <= 4, always true here -> OptionalSkill; ours: a
+# single-candidate declinable TriggerOrder over a mandatory `activation_cost`
+# first step -> OptionalSkill).
+# The "ignore colour requirements while you have a [Three Musketeers] trait
+# Digimon" sentence belongs to EX7-071#effect#0 and is NOT what this line relies
+# on.
+#
+# PROMPT SHAPE, from EX7_071.cs (OptionSkill region): three INDEPENDENT
+# SelectPermanentEffect picks (level 3, level 4, level 5; each maxCount 1,
+# canNoSelect: false) accumulated into one list and destroyed together, THEN a
+# SelectPermanentEffect over own [Three Musketeers] trait Digimon, gated by
+# HasMatchConditionPermanent -- P0 has none, so DCGO silently skips the placement
+# and the Option goes to the trash. Each level pick has exactly ONE candidate, so
+# DCGO takes its forced-selection path (canSelectCount == maxCount ->
+# EndSelect_RPC), which still routes through the SetTargetFrames RPC the driver
+# hooks -- a wire row is consumed either way. Our YAML deletes each arm's target
+# IMMEDIATELY (select -> delete_permanent per arm), so after the level-3 delete the
+# level-4 Digimon is at OUR slot opp.field.0, and so on: the three rows below all
+# read `opp.field.0` on purpose. The wire carries top-card identities, not slots.
+# PREDICTED ORACLE FINDING (NOTES-EX7-071.md): that per-arm delete is also a STATE
+# difference at the 2nd and 3rd pick rows -- DCGO deletes all three together after
+# the third pick, so its trash is still empty where ours already holds Biyomon
+# (then Biyomon + Kokatorimon). Same prompt sequence, so the run will not abort;
+# the differ reports it. The end state, asserted below, is the same on both sides.
+card: EX7-071
+clause: EX7-071#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[10..11]: Asuna's T1 [On Play] draws; [12..14]: the T3, T5, T7 draws.
+    stack: [EX7-071, BT24-088, BT21-074, BT21-074, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083, BT25-083, BT25-083, BT25-092, BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, BT1-014, BT4-014, ST1-03, ST1-04,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-009,
+            ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): no hatch; play Asuna Shiroki (BT24-088), the Purple colour
+  # source. Memory 0 -> -3 ends the turn once her [On Play] has resolved: pay it
+  # (fold) by trashing Satellamon (BT21-074, [Three Musketeers] in its text).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT21-074] } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1): play Biyomon (ST1-02, Lv.3). Memory 3 -> 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): decline Asuna's [Start of Your Turn]; nothing else.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): play Kokatorimon (BT1-014, Lv.4). Memory 3 -> 0.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): decline Asuna's [Start of Your Turn]; nothing else.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): play Vermilimon (BT4-014, Lv.5). Memory 3 -> -2 ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 2 -- an overspend hands over exactly the overspend, no
+  # top-up to 3; oracle-confirmed on the Medusamon lines): decline Asuna's
+  # [Start of Your Turn], skip breeding, then THE CLAUSE -- use Hurricane Screw
+  # Shot (cost 6 -> memory -4).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-071, from: hand } }
+    expect: { prompt: main_phase }
+  # Level 3 pick: Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 4 pick: Kokatorimon (now at OUR slot 0, Biyomon already deleted).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 5 pick: Vermilimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Paying 6 from 2 handed the turn over; one step past the clause is P1's turn-8
+  # breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of P1's trailing breeding pass: P1's battle area is EMPTY and all
+  # three Digimon are in its trash; the Option is in P0's trash (no [Three
+  # Musketeers] trait Digimon to seat it under); Asuna still stands on P0's field;
+  # memory reads -4 from P0's side.
+  - at: 23
+    that:
+      turn: 8
+      p0.memory: -4
+      p0.trash: [BT21-074, EX7-071]
+      p0.field:
+        - card_id: BT24-088
+          dp: -1
+          suspended: false
+          sources: []
+      p1.field: []
+      p1.trash: [BT1-014, BT4-014, ST1-02]

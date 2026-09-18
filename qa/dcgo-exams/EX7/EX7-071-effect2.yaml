@@ -1,0 +1,128 @@
+# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#effect#2 --
+# "[Security] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their
+#  level 5 Digimon."
+#
+# SEATING. P0 is the Three Musketeers deck (the defender) with the card under exam
+# pinned at stack[9] -- the TOP of P0's security stack. P1 is the quiet-opponent
+# deck: it builds one vanilla Digimon of each level (Biyomon ST1-02 Lv.3, Kokatorimon
+# BT1-014 Lv.4, Vermilimon BT4-014 Lv.5) over turns 2/4/6 and attacks the player
+# with Biyomon on turn 8. The security check flips Hurricane Screw Shot; THE CLAUSE
+# deletes all three -- INCLUDING the attacker, which ends the attack.
+#
+# PROMPT SHAPE, from EX7_071.cs (Security region): SetIsSecurityEffect, the same
+# three independent SelectPermanentEffect picks as the [Main] (level 3 / 4 / 5,
+# maxCount 1, canNoSelect: false), destroyed together, and NO placement tail. The
+# picks belong to P0 (the security card's owner) during P1's turn. Each has exactly
+# one candidate: DCGO's forced-selection path still passes through the
+# SetTargetFrames RPC the driver hooks, so each consumes one wire row. Our YAML
+# deletes per arm, so every row reads OUR `opp.field.0` (see EX7-071-effect1.yaml).
+# PREDICTED ORACLE FINDING (NOTES-EX7-071.md): the per-arm delete is a STATE
+# difference at the 2nd and 3rd pick rows (DCGO deletes all three together after
+# the third pick); same prompt sequence, same end state.
+#
+# P0 stays idle throughout -- no hatch, so nothing on P0's side can ever trigger.
+card: EX7-071
+clause: EX7-071#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-074, BT21-074, BT25-085, BT25-085, BT25-082,
+            BT25-082, BT25-082, BT25-082, BT25-083, EX7-071,
+            BT25-083, BT25-083, BT25-083]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, BT1-014, BT4-014, ST1-03, ST1-04,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-009,
+            ST1-08, ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): play Biyomon (ST1-02, Lv.3). Memory 3 -> 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): play Kokatorimon (BT1-014, Lv.4). Memory 3 -> 0.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): play Vermilimon (BT4-014, Lv.5). Memory 3 -> -2 ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T7 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): Biyomon attacks the player -- THE CLAUSE flips Hurricane Screw Shot.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0 (the card's owner) picks. Level 3: Biyomon, the attacker itself.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 4: Kokatorimon (OUR slot 0 once Biyomon is gone).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 5: Vermilimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attacker was deleted, so the attack ends; P1 still holds memory 3 and is
+  # back in its turn-8 Main phase. One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of P1's trailing pass: P1's battle area is EMPTY, its trash holds
+  # all three Digimon, P0's security is down to 4 and the flipped Option sits in
+  # P0's trash.
+  - at: 21
+    that:
+      turn: 8
+      p0.security: 4
+      p0.trash: [EX7-071]
+      p1.field: []
+      p1.trash: [BT1-014, BT4-014, ST1-02]
