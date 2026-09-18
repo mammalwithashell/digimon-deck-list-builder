@@ -1,0 +1,126 @@
+# Exam scenario: Asuna Shiroki (P-212), clause P-212#effect#2 --
+# the [On Play] line "[On Play] <Draw 1> and trash 1 card in your hand. If
+# this effect trashed a card with the [Three Musketeers] or [TS] trait,
+# delete 1 of your opponent's level 3 Digimon." The extractor splits that one
+# printed sentence at the <Draw 1> keyword into #effect#1 (the "[On Play]"
+# timing, empty text) and #effect#2 (the keyword + rider); this file is the
+# "<Draw 1> and trash 1 card in your hand. If ... delete 1 of
+# your opponent's level 3 Digimon." (keyword + rider) half and the same line exercises the whole sentence.
+#
+# THE LINE. p1 fields Biyomon ST1-02 (a level 3) on T2. On T3 p0 plays Asuna
+# for 3: she draws 1, then p0 trashes the SECOND Asuna from hand -- a Tamer
+# with the [TS] trait -- so the rider fires and p0 deletes Biyomon. The
+# witness is the trio (second P-212 in p0's trash, Biyomon in p1's trash,
+# p1's field empty) with p0's hand back to five (one drawn, one trashed).
+#
+# PROMPT SHAPE (P_212.cs, region "On Play"): SetUpActivateClass(..., -1,
+# false, ...) -- mandatory, no OptionalSkill. `DrawAndDiscardCards` draws
+# first, then ONE SelectHandEffect (maxCount 1, canNoSelect: false; the hand
+# is shown to the opponent). `trashedTargetCard` = the picked card
+# HasThreeMusketeersTraits || HasTSTraits; then, with an opponent level-3
+# Digimon on the battle area, ONE SelectPermanentEffect(Destroy, maxCount 1,
+# canNoSelect: false). Ours: `draw`, a plain `select_hand`, and --
+# `trashed_hand_card_matching` true -- a plain `select_opponent_permanent`
+# over `level_eq: 3`. 1:1:1. <Draw 1> is Mandatory (keyword-semantics 16-7).
+#
+# Memory: T1 p0 -> p1 3; T2 Biyomon (2): 3 -> 1, pass -> p0 3; T3 Asuna (3):
+# 3 -> 0 -- the turn does NOT end at 0 (6-1-4-1), so the trailing step is
+# p0's own pass.
+#
+# Book: qa/dcgo-exams/P/tm_p_212_pool.json (--decks). p0's deck is Asuna P-212
+# x4 over the quiet ST-1 filler; p1 is the quiet ST-1 opponent.
+card: P-212
+clause: P-212#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Asuna, the second Asuna that gets trashed, inert filler
+      - P-212
+      - P-212
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): T3 turn draw, Asuna's [On Play] draw
+      - BT4-010
+      - BT4-010
+    rest: tm-asuna-p212
+  p1:
+    stack:
+      # hand (0-4): the Biyomon, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): THE CLAUSE -- play Asuna for 3 (3 -> 0). Two copies
+  # sit in hand (slots 0 and 1, the opening hand's first two cards), so the
+  # play is pinned to hand.0 -- an unpinned `play:` is ambiguous and refuses
+  # to lower.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-212, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # <Draw 1> asks nothing; the mandatory trash pick takes the second Asuna
+  # ([TS] trait).
+  - actor: 0
+    do: { select: { cards: [P-212] } }
+    expect: { prompt: SelectHandEffect }
+  # The rider: delete p1's level-3 Digimon (Biyomon, the only candidate).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: p0 still holds the turn on 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: [P-212]
+      p0.hand: [ST1-04, BT1-009, ST1-05, BT4-010, BT4-010]
+      p0.field:
+        - { card_id: P-212, dp: -1, suspended: false, sources: [] }
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5

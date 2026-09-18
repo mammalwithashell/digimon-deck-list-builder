@@ -1,0 +1,136 @@
+# Exam scenario: Wisdom Training (P-108), clause P-108#effect#0 --
+# "[Main] Reveal the top 2 cards of your deck. Add 1 purple card among them to
+#  the hand. Return the rest to the bottom of the deck. Then, place this card
+#  in the battle area."
+#
+# THE LINE. P-108 is a PURPLE Option with no ignore-colour clause, so p0 needs
+# a purple permanent first: the purple Pagumon ST6-01 is hatched on T1 and
+# breeding-digivolved into Elecmon ST6-05 (vanilla purple Lv.3, cost 0) on T3.
+# Both engines count a breeding-area DIGIMON for the colour requirement
+# (DCGO `CardSource.MatchColorRequirement` walks `GetFieldPermanents()`; ours
+# `option_color_match_available`). The egg alone would already satisfy DCGO
+# but NOT our engine -- a measured asymmetry recorded in NOTES-P-108.md; this
+# line stays on ground both engines share. P-108 is then played for 2
+# (3 -> 1).
+#
+# THE CLAUSE. P_108.cs OptionSkill is SetUpActivateClass(null, ..., -1, false,
+# ...): mandatory, no OptionalSkill. `SimplifiedRevealDeckTopCardsAndSelect(
+# revealCount: 2, one condition: HasCardColor(Purple), Mode.AddHand, maxCount
+# 1, remainingCardsPlace: DeckBottom)` -> ONE SelectCardEffect over the
+# revealed pair -- Youkomon ST6-07 (purple) and Dracomon ST1-04 (red), so
+# exactly one eligible card -- then the single leftover goes to the deck
+# bottom with NO ordering prompt (DCGO asks nothing at N=1; our engine parks
+# its one-choice `OrderedPermutation`, answered `sim_only` -- the documented
+# docs/DCGO_EXAM.md row). Then `PlaceDelayOptionCards`: P-108 stays on p0's
+# battle area instead of going to the trash. Ours: `reveal_top_deck` +
+# `select_reveal_buckets` (one bucket) + `order_remainder`, then the delay
+# placement. One bucket -> none of the multi-bucket add-timing quirk.
+#
+# THE WITNESS: Youkomon in p0's hand, P-108 on p0's battle area (dp -1, the
+# projection's non-Digimon marker), p0's trash empty, memory 1.
+#
+# Deck accounting for p0: T3 turn draw = stack[10], T3 breeding-digivolve
+# draw = stack[11]; the reveal sees stack[12], stack[13].
+#
+# Book: qa/dcgo-exams/P/tm_p_108_pool.json (--decks). p0 (`tm-wisdom`) is the
+# quiet ST-1 list with P-108 x4 + Elecmon ST6-05 x4 + Youkomon ST6-07 x4 in
+# for its Options / Phoenixmon, purple Pagumon ST6-01 eggs; p1 is the quiet
+# ST-1 opponent.
+card: P-108
+clause: P-108#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Option, Elecmon, inert red filler
+      - P-108
+      - ST6-05
+      - ST1-02
+      - ST1-04
+      - ST1-08
+      # security (5-9): stack[9] is the TOP
+      - ST1-02
+      - ST1-04
+      - ST1-08
+      - ST1-05
+      - BT1-009
+      # (10,11): T3 turn draw, T3 breeding-digivolve draw
+      - BT1-014
+      - BT1-014
+      # (12,13): the T3 reveal -- Youkomon (purple) and Dracomon (red)
+      - ST6-07
+      - ST1-04
+    rest: tm-wisdom
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card in this line
+      - ST1-03
+      - ST1-02
+      - ST1-04
+      - ST1-05
+      - ST1-08
+      # security (5-9): stack[9] is the TOP
+      - ST1-10
+      - ST1-13
+      - ST1-14
+      - ST1-02
+      - ST1-04
+      # (10+): the T2 / T4 turn draws
+      - ST1-05
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch the purple egg, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): breeding-digivolve -> Elecmon (cost 0): a purple
+  # Digimon now sits in the breeding area. Play P-108 (3 -> 1), take Youkomon.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST6-05 } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-108, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST6-07] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: our `OrderedPermutation { remaining: 1 }` prompt for the single
+  # bottomed card; DCGO asks nothing at N=1 (docs/DCGO_EXAM.md,
+  # "OrderedPermutation at N=1").
+  - actor: 0
+    do: { select: { cards: [ST1-04], sim_only: true } }
+  # One step past the clause: memory 1, p0 still holds the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field: []
+      p0.hand: [P-108, ST1-02, ST1-04, ST1-08, BT1-014, BT1-014]
+  # Pre-step state of the trailing pass: the reveal resolved, Youkomon is in
+  # hand, P-108 was PLACED (not trashed).
+  - at: 8
+    that:
+      turn: 3
+      phase: Main
+      p0.memory: 1
+      p0.trash: []
+      p0.hand: [ST1-02, ST1-04, ST1-08, BT1-014, BT1-014, ST6-07]
+      p0.field:
+        - { card_id: P-108, dp: -1, suspended: false, sources: [] }
+      p0.security: 5
+      p1.field: []

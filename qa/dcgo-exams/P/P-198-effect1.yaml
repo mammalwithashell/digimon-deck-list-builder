@@ -1,0 +1,155 @@
+# Exam scenario: DemiDevimon (P-198), clause P-198#effect#1 --
+# "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may
+#  digivolve into a Digimon card with the [Fallen Angel] or [TS] trait in the
+#  hand without paying the cost."
+#
+# THE LINE. DemiDevimon is on the battle area from T5; p0 opens T7 on 3 memory,
+# the trigger fires, and DemiDevimon digivolves for free into Devimon BT2-074
+# (a purple Lv.4 [Fallen Angel]; it satisfies the printed purple-Lv.3 circle,
+# which DCGO's `CanPlayCardTargetFrame(..., PayCost: false, ...)` and our
+# `can_digivolve_from_source` both require). The witness is a Lv.4 on the
+# board with DemiDevimon under it and p0's memory still 3.
+#
+# WHY p1 HARD-PLAYS PHOENIXMON ON T4. DemiDevimon is digivolved in the breeding
+# area on T3 and can only be moved out in a later breeding phase, so p0 has
+# one turn start (T5) with a Lv.3 DemiDevimon still in breeding. DCGO's
+# P_198.cs gates the trigger on `IsExistOnBattleAreaDigimon` (breeding-area
+# effects don't activate, 3-4-6), while our engine was observed (sim-only,
+# first draft of BT25-058-effect5.yaml) to park the digivolve pick from the
+# breeding area BEFORE the breeding step -- a prompt DCGO never asks. The line
+# makes the trigger's own condition false on that turn instead of papering
+# over it: p1 overshoots by 7 on T4 (Phoenixmon ST1-10, 3 -> -7), p0 opens T5
+# on 7 memory, and "4 or less" fails on both sides. The finding is recorded in
+# NOTES-P-198.md (re-verified sim-only 2026-09-16: without the overshoot,
+# lowering stops at T5's breeding step with "our engine asks a selection
+# here ... pending kind: Hand").
+#
+# PROMPT SHAPE at T7. DCGO: OptionalSkill (P_198.cs `SetUpActivateClass(...,
+# -1, true, ...)`) then the SelectHandEffect hand pick from
+# `DigivolveIntoHandOrTrashCard` (canNoSelect: true). Ours: the effect-level
+# `optional` folds into ONE declinable `select_hand` (the separate gate is only
+# installed when the body opens with a mandatory step), so the row carries the
+# `expect: OptionalSkill` FOLD MARKER and the emitter writes OptionalSkill(yes)
+# + the pick on the wire. Devimon BT2-074 is the only [Fallen Angel]/[TS] card
+# in hand; it has no [When Digivolving], so nothing follows.
+#
+# Book: qa/dcgo-exams/P/tm_p_198_pool.json (--decks). p0's deck is DemiDevimon
+# x4 + Devimon BT2-074 x4 over the quiet ST-1 filler with Pagumon BT25-005 eggs;
+# p1 is the quiet ST-1 opponent.
+card: P-198
+clause: P-198#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): DemiDevimon, Devimon, inert filler
+      - P-198
+      - BT2-074
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's turn draws, in order
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-demidevimon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T4 overshoot), inert filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch Pagumon BT25-005, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): digivolve DemiDevimon in the breeding area via the
+  # "[Digivolve] Lv.2 w/[TS] trait: Cost 0" path (Pagumon BT25-005 is black,
+  # so it is the only applicable path -- see P-198-effect0.yaml), then pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: P-198 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): hard-play Phoenixmon for 10 (3 -> -7). p0 opens T5 on 7,
+  # so DemiDevimon's "4 or less memory" trigger stays silent on both sides while
+  # it is still in the breeding area (see the header).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 7): move DemiDevimon to the battle area; the main phase
+  # opens on 7 memory -- no trigger. Pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): breeding area empty (a hatch is legal -- decline it).
+  # THE CLAUSE opens with the main phase.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE FOLD: our one declinable hand pick = DCGO's OptionalSkill(yes) + pick.
+  - actor: 0
+    do: { select: { cards: [BT2-074] } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause. The assert reads the PRE-step state of this
+  # pass (step index 14): still p0's turn 7, memory untouched at 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.field:
+        - card_id: BT2-074
+          dp: 4000
+          suspended: false
+          sources: [BT25-005, P-198]

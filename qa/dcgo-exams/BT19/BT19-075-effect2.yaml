@@ -1,0 +1,187 @@
+# Exam scenario: MoonMillenniummon (BT19-075), clause BT19-075#effect#2 --
+# "[All Turns] When this Digimon would leave the battle area, by deleting 1 of
+#  your [Composite] trait Digimon, it doesn't leave."
+#
+# THE LEAVE. MoonMillenniummon attacks p1's security on T5 and flips Bind Red
+# Trigger (P-180, p1's stack[9]), whose [Security] is "Delete 1 of your
+# opponent's Digimon with the highest DP" -- p1 picks MoonMillenniummon (15000,
+# the strict highest over Deltamon's 7000). That is the "would leave"; the
+# replacement pays Deltamon BT6-012 (p0's vanilla red Lv.4 [Composite],
+# hard-played on T1) and MoonMillenniummon stays.
+#
+# PROMPT SEQUENCE at the flip, in order:
+#   1. SelectPermanentEffect for p1 (P_180.cs security: maxCount 1, canNoSelect
+#      false; ours `select_opponent_permanent` over the highest-DP filter) --
+#      MoonMillenniummon, p0's slot 1.
+#   2. OptionalSkill for p0 -- BT19_075.cs registers the WhenRemoveField effect
+#      `..., -1, true, ...`; ours is `kind: replacement, optional: true` with a
+#      MANDATORY first step, which installs the separate Replacement gate.
+#   3. SelectPermanentEffect for p0 -- the Composite to delete (DCGO
+#      canNoSelect: true; ours a plain `select_own_permanent`). Deltamon, p0's
+#      slot 0.
+#   4. Deltamon's deletion is "other Digimon ... deleted" for the
+#      [All Turns][Once Per Turn] observer (#effect#3), which then trashes p1's
+#      new top security card (Dracomon ST1-04, stack[8]) -- mandatory, no
+#      prompt. That clause is measured on its own in BT19-075-effect3.yaml.
+# P-180 is an Option, so no security battle follows and the attack ends.
+#
+# THE WITNESS. MoonMillenniummon is still on p0's board (suspended from the
+# attack) and Deltamon is in p0's trash.
+#
+# PREDICTED DIVERGENCE ON THE FOLLOW-UP (sim-only observation, 2026-09-16;
+# see NOTES-BT19-075.md). Deltamon's deletion is a cost paid INSIDE the
+# leave-replacement, and it is "other Digimon ... deleted" for the
+# [All Turns][Once Per Turn] observer (#effect#3). DCGO deletes the cost
+# through `DeletePeremanentAndProcessAccordingToResult`, which raises
+# OnDestroyedAnyone like any deletion, so the observer is expected to trash
+# p1's NEW top security card (Dracomon ST1-04, stack[8]) and leave p1's
+# security at 3. Our engine did NOT fire the observer on this line: lowering
+# left p1's security at 4 and p1's trash without ST1-04 -- the same observer
+# fires correctly for a battle deletion in BT19-075-effect3.yaml, so the
+# suspect is the deletion path taken by a replacement-cost `delete_permanent`
+# (no `on_any_deletion` dispatch), not the observer itself. The `assert:`
+# block below therefore names only the fields BOTH engines are expected to
+# agree on; p1's security count is deliberately left to the oracle differ,
+# which compares it on every step and will report the divergence.
+#
+# MILLENNIUMMON'S OWN TEXT ALONG THE WAY. Its [On Play] "delete 1 of your
+# opponent's Digimon" is mandatory on both sides (BT18_019.cs shared effect
+# `optional: false`, one SelectPermanentEffect with canNoSelect: false; ours
+# `if: any_permanent` + a plain pick) and deletes the Phoenixmon p1 hard-played
+# to fund the line; the "if DNA digivolving" rider is off for a hard play. Its
+# [On Deletion] never fires (it is never deleted). It is a Lv.7 red/black
+# [Composite], so MoonMillenniummon's printed Purple Lv.6 circle cannot apply
+# and "[Digivolve] [Millenniummon]: Cost 2" is the only legal path -- one cost,
+# no cost-choice prompt.
+#
+# Memory: T1 p0 plays Deltamon (5): 0 -> -5 -> p1 5; T2 Phoenixmon (10): 5 ->
+# -5 -> p0 5; T3 Millenniummon (14): 5 -> -9 -> p1 9; T4 p1 plays Biyomon (2):
+# 9 -> 7, passes -> p0 3; T5 MoonMillenniummon (2): 3 -> 1, attack (free).
+#
+# Book: qa/dcgo-exams/BT19/tm_bt19_075_pool.json (--decks). p0's deck is
+# MoonMillenniummon x4 + Millenniummon BT18-019 x4 + Deltamon BT6-012 x4 over
+# the quiet ST-1 filler; p1 (`quiet-opponent-mm`) is the quiet ST-1 opponent
+# with 2x Bind Red Trigger (P-180) and 2x Tai Kamiya (ST1-12) in for the
+# Options.
+card: BT19-075
+clause: BT19-075#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Deltamon (the Composite), Millenniummon, MoonMillenniummon, filler
+      - BT6-012
+      - BT18-019
+      - BT19-075
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-moonmillenniummon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot), Biyomon, filler. stack[9] = P-180, stack[8] = the card the observer trashes
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - P-180
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - BT3-007
+      - BT1-014
+    rest: quiet-opponent-mm
+steps:
+  # T1 (p0, memory 0): hard-play Deltamon for 5 (0 -> -5). Vanilla; silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT6-012, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 5): hard-play Phoenixmon for 10 (5 -> -5). p0 opens T3 on 5.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 5): hard-play Millenniummon for 14 (5 -> -9). Its [On Play]
+  # deletes Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT18-019, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1, memory 9): play Biyomon for 2 (9 -> 7) -- keeping p1's hand on 5 so
+  # the [When Digivolving] hand trash stays silent -- then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve MoonMillenniummon onto Millenniummon (p0's
+  # slot 1) for 2 (3 -> 1); p1's hand is 5, nothing to trash. Then attack the
+  # player: the check flips P-180.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT19-075 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  # P-180's [Security]: p1 must delete p0's highest-DP Digimon.
+  - actor: 1
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: p0 takes the replacement ...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ... and pays Deltamon. MoonMillenniummon doesn't leave; the observer
+  # (#effect#3) then trashes p1's new top security card.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 16
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.trash: [BT6-012]
+      p1.trash: [ST1-10, P-180]
+      p0.field:
+        - card_id: BT19-075
+          dp: 15000
+          suspended: true
+          sources: [BT18-019]

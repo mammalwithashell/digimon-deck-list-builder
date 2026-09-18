@@ -1,0 +1,104 @@
+# Exam scenario: Gewalt Schwaermer (BT6-105), clause BT6-105#effect#2 --
+# "[Security] Add this card to its owner's hand."
+#
+# THE SECURITY-TRIGGER SKELETON: the card under exam sits at p0's stack[9] --
+# the TOP of the security stack (stack[5..9] is the pile, reversed; see
+# docs/DCGO_EXAM.md "What each stack position becomes") -- and p1's Biyomon
+# (ST1-02, played on T2) attacks the player on T4. The check flips Gewalt
+# Schwaermer; BT6_105.cs's SecuritySkill is SetUpActivateClass(null, ..., -1,
+# false, ...) -> mandatory, `CardEffectCommons.AddThisCardToHand`, no prompt;
+# ours `add_this_option_to_hand`. An Option flip is no battle, so Biyomon
+# survives, suspended.
+#
+# THE WITNESS: BT6-105 is in p0's HAND (the opening five, the T3 draw, and
+# it) with p0's security at 4 and p0's trash EMPTY -- a flipped Option that
+# did NOT resolve this clause would be in the trash instead.
+#
+# Book: qa/dcgo-exams/BT6/tm_bt6_105_pool.json (--decks).
+card: BT6-105
+clause: BT6-105#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): inert filler
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP -- the Option under exam
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      - BT6-105
+      # (10+): the T3 turn draw
+      - BT4-014
+    rest: tm-gewalt
+  p1:
+    stack:
+      # hand (0-4): the Biyomon, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): the T2 / T4 turn draws
+      - BT4-014
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Biyomon attacks the player. THE CLAUSE.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # One step past the clause: attacking spent no memory, p1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: []
+      p0.hand: [ST1-03, ST1-04, ST1-04, BT1-009, ST1-05, BT4-014, BT6-105]
+      p0.field: []
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+      p1.security: 5

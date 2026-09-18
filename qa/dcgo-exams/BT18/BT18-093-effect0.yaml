@@ -1,0 +1,117 @@
+# Exam scenario: Violet Inboots (BT18-093), clause BT18-093#effect#0 --
+# "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+#
+# HOW A TURN CAN START ON 2 OR LESS. A declared pass hands the opponent 3, but
+# an OVERSHOOT hands them exactly the overshoot (6-1-4-1): p0 plays the Tamer
+# on T3 for 4 (3 -> -1, so p1 opens T4 on 1), and p1 ends T4 by playing
+# Biyomon at 1 memory (1 -> -1), so p0 opens T5 on 1. Violet Inboots, on p0's
+# board since T3, sets it to 3. Mandatory on both sides (DCGO
+# `SetMemoryTo3TamerEffect`, `SetUpActivateClass(..., -1, false, ...)`, gated
+# on `MemoryForPlayer <= 2`; ours `set_memory: 3` behind `memory_lte: 2`) --
+# no prompt -- and the witness is p0.memory at p0's T5 breeding step. Same
+# shape as the sibling BT25-091-effect0.yaml line.
+#
+# THE [Start of Your Main Phase] (#effect#1, measured in BT18-093-effect1.yaml)
+# stays SILENT here: p0's hand holds no Option and no [Ghost] / [Three
+# Musketeers] card, so DCGO's `CanActivateCondition` is false (the
+# OptionalSkill is never offered) and our `count_gte` condition fails.
+#
+# Memory: T1 p0 passes -> p1 3; T2 p1 passes -> p0 3; T3 p0 plays Inboots
+# (4): 3 -> -1 -> p1 1; T4 p1 plays Biyomon (2): 1 -> -1 -> p0 1; T5 Inboots:
+# 3.
+#
+# Book: qa/dcgo-exams/BT18/tm_bt18_093_pool.json (--decks). p0's deck is Violet
+# Inboots BT18-093 x4 + Shadow Wing ST1-13 x4 (a red Option, the [Start of
+# Your Main Phase] fodder) over the quiet ST-1 filler; p1 is the quiet ST-1
+# opponent.
+card: BT18-093
+clause: BT18-093#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Tamer, inert filler (no Option / [Ghost] / [TM] card)
+      - BT18-093
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's T3 and T5 turn draws
+      - BT4-010
+      - BT4-010
+    rest: tm-inboots
+  p1:
+    stack:
+      # hand (0-4): the Biyomon, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Inboots for 4 (3 -> -1; the turn hands over on 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT18-093, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 1): play Biyomon for 2 (1 -> -1). p0 opens T5 on 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0): THE WITNESS -- the pre-step state of this breeding step is after
+  # [Start of Your Turn] resolved.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # One step past the clause (the main phase opens with no eligible fodder in
+  # hand, so nothing else fires).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: []
+      p0.field:
+        - { card_id: BT18-093, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

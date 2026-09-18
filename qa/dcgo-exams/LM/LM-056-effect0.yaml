@@ -1,0 +1,84 @@
+# Exam scenario: Image Training (LM-056), clause LM-056#effect#0 --
+# "While you don't have [Image Training] in the battle area, you can ignore
+#  this card's color requirements."
+#
+# THE WITNESS is the play itself being LEGAL. LM-056 is a purple/blue Option;
+# the only permanent P0 owns when it is played is the YELLOW Tsunomon
+# (BT24-003) hatched in the same turn's breeding phase, so the ordinary colour
+# requirement (DCGO `CardSource.MatchColorRequirement` -- EVERY printed colour
+# must be covered by an own permanent, breeding included; ours
+# `option_color_match_available`) is NOT met and the play can only be offered
+# through this clause. No [Image Training] is in the battle area yet. If either
+# engine refused the play, lowering (ours) or the DCGO job (theirs) aborts.
+#
+# The line then runs the card's [Main] (clause #effect#1, measured on its own in
+# LM-056-effect1.yaml from this same line): reveal top 2 -- Lekismon (BT25-024,
+# blue) and Patamon (BT25-031, yellow) -- add the blue one, bottom the other,
+# place LM-056 in the battle area.
+#
+# Deck accounting (stack = opening hand [0..4], security [5..9] with [9] on
+# top, then draws): P0 is the first player and does NOT draw on turn 1, so the
+# deck top at the reveal is stack[10], stack[11].
+#
+# MEMORY: turn 1 starts at 0 in both engines (see the last step's comment), so
+# playing LM-056 (cost 2) is legal (memory floor -10) but ends P0's turn.
+#
+# Book: qa/dcgo-exams/LM/tm_lm_056_pool.json (--decks).
+card: LM-056
+clause: LM-056#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [LM-056, BT25-031, ST1-02, ST1-04, ST1-08,
+            ST1-02, ST1-04, ST1-08, ST1-10, ST1-13,
+            BT25-024, BT25-031, ST1-14, ST1-10, ST1-13]
+    rest: tm-lm056-yellow-line
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, ST1-05, ST1-08,
+            ST1-10, ST1-13, ST1-14, ST1-02, ST1-04,
+            ST1-05, ST1-08, ST1-10, ST1-13, ST1-14]
+    rest: tm-lm056-quiet-red
+steps:
+  # T1 (P0): hatch the yellow Tsunomon -- a permanent, but not purple or blue.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: the play is offered although no purple/blue permanent exists.
+  - actor: 0
+    do: { play: { card: LM-056, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main]: reveal the top 2 (Lekismon, Patamon); add the 1 blue card.
+  # One eligible card, so a single SelectCardEffect; the 1 remaining card goes
+  # to the bottom with no ordering prompt (DCGO's `remainingCards.Count == 1`
+  # branch; ours orders a bound list itself).
+  - actor: 0
+    do: { select: { cards: [BT25-024] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY. Our engine parks an `OrderedPermutation { remaining: 1 }` prompt
+  # for the single card going to the deck bottom -- the documented
+  # "OrderedPermutation at N=1" row in docs/DCGO_EXAM.md: DCGO skips the prompt
+  # entirely at that cardinality (`remainingCards.Count == 1`), so this row
+  # answers our prompt and emits no wire row.
+  - actor: 0
+    do: { select: { cards: [BT25-031], sim_only: true } }
+  # One step past the clause. Turn 1 starts at memory 0 (the 3-memory reset
+  # only happens when a player PASSES with memory on their side -- DCGO
+  # `AutoProcessing.EndTurnProcess`, ours `end_turn`), so paying 2 for LM-056
+  # took memory to -2 and the turn has ALREADY handed over: this step is P1's
+  # breeding action, not a P0 pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of P1's T2 breeding step: LM-056 stands in P0's battle
+  # area (an Option projects dp -1) instead of the trash, Lekismon is in
+  # P0's hand, and P0's memory reads -2 (the turn handed over on the play).
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -2
+      p0.trash: []
+      p0.hand: [BT25-031, ST1-02, ST1-04, ST1-08, BT25-024]
+      p0.field:
+        - { card_id: LM-056, dp: -1, suspended: false, sources: [] }
+      p1.field: []

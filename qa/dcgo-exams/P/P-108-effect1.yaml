@@ -1,0 +1,170 @@
+# Exam scenario: Wisdom Training (P-108), clause P-108#effect#1 --
+# "[Main] <Delay> (By trashing this card after the placing turn, activate the
+#  effect.) - 1 of your Digimon may digivolve into a purple Digimon card in the
+#  hand with the digivolution cost reduced by 2."
+#
+# PREFIX is the P-108-effect0.yaml line: hatch the purple Pagumon ST6-01 on
+# T1, breeding-digivolve it into Elecmon ST6-05 (vanilla purple Lv.3, cost 0)
+# on T3 -- a purple DIGIMON, which is what our engine needs for P-108's colour
+# requirement (see NOTES-P-108.md: a bare Digi-Egg satisfies it in DCGO but
+# not in ours) -- then play P-108 (3 -> 1), take Youkomon ST6-07 from the
+# reveal, and P-108 lands in the battle area. <Delay> may not fire on the
+# placing turn (keyword-semantics 16-16; DCGO `CanDeclareOptionDelayEffect`),
+# and P_108.cs's `CanSelectPermanentCondition` only admits own BATTLE-AREA
+# Digimon that a purple hand Digimon can legally digivolve onto, so on T5
+# (memory 3) Elecmon is promoted and the placed P-108 is `main:`-activated.
+#
+# THE CLAUSE. P_108.cs OnDeclaration is SetUpActivateClass(null, ..., -1,
+# false, ...): no OptionalSkill. DCGO trashes the Option
+# (DeletePeremanentAndProcessAccordingToResult, no prompt), asks
+# SelectPermanentEffect (maxCount 1, canNoSelect: true; the single candidate
+# Elecmon is still asked) and then `DigivolveIntoHandOrTrashCard(isHand: true,
+# payCost: true, reduceCost 2)` -> ONE SelectHandEffect (canNoSelect:
+# isOptional = true). Ours: a declinable `select_own_permanent` then a
+# `select_hand`. 1:1:1 (the sister line is ../LM/LM-056-effect2.yaml).
+# Youkomon ST6-07 is the ONLY purple Digimon in p0's hand; its one circle is
+# Purple Lv.3 / 2, so the -2 makes it 0 -- a single cost, no cost-choice
+# prompt -- and p0's memory stays 3. Every Digimon in the stack is vanilla
+# (ST6-05 / ST6-07 have no DCGO script at all), so nothing triggers on the
+# digivolve; Pagumon ST6-01's inherited is [On Deletion] only.
+#
+# Deck accounting for p0: hand [0..4]; security [5..9]; T3 turn draw =
+# stack[10], T3 breeding-digivolve draw = stack[11]; the T3 reveal takes
+# stack[12] to hand and bottoms stack[13]; T5 turn draw = stack[14], the
+# <Delay> digivolve draw = stack[15] (every digivolution draws 1, 5-8-4).
+#
+# Book: qa/dcgo-exams/P/tm_p_108_pool.json (--decks). p0 (`tm-wisdom`) is the
+# quiet ST-1 list with P-108 x4 + Elecmon ST6-05 x4 + Youkomon ST6-07 x4 in
+# for its Options / Phoenixmon, purple Pagumon ST6-01 eggs; p1 is the quiet
+# ST-1 opponent.
+card: P-108
+clause: P-108#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Option, Elecmon, inert red filler
+      - P-108
+      - ST6-05
+      - ST1-02
+      - ST1-04
+      - ST1-08
+      # security (5-9): stack[9] is the TOP
+      - ST1-02
+      - ST1-04
+      - ST1-08
+      - ST1-05
+      - BT1-009
+      # (10,11): T3 turn draw, T3 breeding-digivolve draw
+      - BT1-014
+      - BT1-014
+      # (12,13): the T3 reveal -- Youkomon (purple) and Dracomon (red)
+      - ST6-07
+      - ST1-04
+      # (14,15): T5 turn draw, the <Delay> digivolve draw
+      - BT4-014
+      - BT4-014
+    rest: tm-wisdom
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card in this line
+      - ST1-03
+      - ST1-02
+      - ST1-04
+      - ST1-05
+      - ST1-08
+      # security (5-9): stack[9] is the TOP
+      - ST1-10
+      - ST1-13
+      - ST1-14
+      - ST1-02
+      - ST1-04
+      # (10+): the T2 / T4 turn draws
+      - ST1-05
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch the purple egg, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): breeding-digivolve -> Elecmon (cost 0): a purple
+  # Digimon now sits in the breeding area. Play P-108 (3 -> 1), take Youkomon.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST6-05 } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-108, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST6-07] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: our `OrderedPermutation { remaining: 1 }` prompt for the single
+  # bottomed card; DCGO asks nothing at N=1 (see P-108-effect0.yaml).
+  - actor: 0
+    do: { select: { cards: [ST1-04], sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): promote Elecmon (battle-area slot 1; P-108 holds 0).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: activate the placed <Delay> Option.
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  # Slot reference is OUR engine's: it parks the Digimon pick while P-108
+  # still holds slot 0, so Elecmon is `own.field.1` here (DCGO trashes the
+  # Option first -- but the wire carries the target's card IDENTITY, not a
+  # slot, so both engines resolve the same Elecmon).
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [ST6-07] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: []
+      p0.field:
+        - { card_id: P-108, dp: -1, suspended: false, sources: [] }
+        - { card_id: ST6-05, dp: 5000, suspended: false, sources: [ST6-01] }
+  # Pre-step state of the trailing pass: P-108 is in the trash (the <Delay>
+  # cost), Youkomon caps the Elecmon/Pagumon stack, and the -2 made the
+  # digivolution free (memory still 3).
+  - at: 15
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 3
+      p0.trash: [P-108]
+      p0.hand: [ST1-02, ST1-04, ST1-08, BT1-014, BT1-014, BT4-014, BT4-014]
+      p0.field:
+        - { card_id: ST6-07, dp: 6000, suspended: false, sources: [ST6-01, ST6-05] }
+      p1.field: []
+      p1.security: 5

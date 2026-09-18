@@ -1,0 +1,117 @@
+# Exam scenario: Image Training (LM-056), clause LM-056#effect#2 --
+# "[Main] <Delay> - 1 of your Digimon may digivolve into a purple or blue
+#  Digimon card in the hand with the digivolution cost reduced by 2."
+#
+# PREFIX is the LM-056-effect0/effect1 line (play LM-056 on turn 1, take
+# Lekismon (BT25-024) from the reveal, LM-056 lands in the battle area). The
+# line then idles until P0 has a BATTLE-AREA Digimon -- <Delay> may not fire on
+# the placing turn (general_rule.pdf 16-16; DCGO `CanDeclareOptionDelayEffect`
+# compares EnterFieldTurnCount), and DCGO's `CanSelectPermanentCondition` only
+# admits battle-area Digimon that a hand card can legally digivolve onto:
+#   T3 breeding-digivolve Tsunomon -> Patamon (BT25-031, yellow, TS, cost 0)
+#   T5 (memory 3) promote Patamon, then `main:` the placed LM-056.
+#
+# THE CLAUSE: DCGO trashes the Option (no prompt), asks SelectPermanentEffect
+# (canNoSelect: true) for the Digimon, then `DigivolveIntoHandOrTrashCard`
+# with isHand: true -> SelectHandEffect (canNoSelect: isOptional=true) for the
+# card. Lekismon digivolves from Patamon through "[Digivolve] Lv.3 w/[TS]
+# trait: Cost 2"; the -2 makes it 0, a single cost, so no cost prompt. Its own
+# [When Digivolving] <Draw 1> draws stack[14].
+#
+# Deck accounting for P0: hand [0..4]; security [5..9]; reveal on T1 takes
+# stack[10] to hand and bottoms stack[11]; draws: T3 turn = stack[12], T3
+# breeding-digivolve = stack[13], T5 turn = stack[14], the <Delay> digivolve =
+# stack[15], Lekismon's [When Digivolving] <Draw 1> = stack[16] (every
+# digivolution draws 1, 5-8-4).
+#
+# Book: qa/dcgo-exams/LM/tm_lm_056_pool.json (--decks).
+card: LM-056
+clause: LM-056#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [LM-056, BT25-031, ST1-02, ST1-04, ST1-08,
+            ST1-02, ST1-04, ST1-08, ST1-10, ST1-13,
+            BT25-024, BT25-031, ST1-14, ST1-10, ST1-13, ST1-14, ST1-13]
+    rest: tm-lm056-yellow-line
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, ST1-05, ST1-08,
+            ST1-10, ST1-13, ST1-14, ST1-02, ST1-04,
+            ST1-05, ST1-08, ST1-10, ST1-13, ST1-14]
+    rest: tm-lm056-quiet-red
+steps:
+  # T1 (P0): hatch, play LM-056 (ignore-colour clause), take Lekismon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: LM-056, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-024] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: our `OrderedPermutation { remaining: 1 }` prompt; DCGO asks
+  # nothing at N=1 (see LM-056-effect0.yaml).
+  - actor: 0
+    do: { select: { cards: [BT25-031], sim_only: true } }
+  # Paying 2 from turn 1's memory 0 hands the turn over on its own (see
+  # LM-056-effect0.yaml): no P0 pass here.
+  # T2 (P1, memory 2): hatch, pass (P1 passes with memory on its side, so P0
+  # starts T3 at 3).
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Patamon (cost 0).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-031 } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Agumon.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): promote Patamon (battle-area slot 1; LM-056 holds slot 0).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: activate the placed <Delay> Option.
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  # Slot reference is OUR engine's: it parks the Digimon pick while LM-056
+  # still holds slot 0, so Patamon is `own.field.1` here (DCGO trashes the
+  # Option first and would say slot 0 -- but the wire carries the target's
+  # card IDENTITY, not a slot, so both engines resolve the same Patamon).
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-024] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing P0 pass: LM-056 is in the trash (the
+  # <Delay> cost), Lekismon caps the Patamon/Tsunomon stack, the -2 made the
+  # digivolution free (memory still 3), and Lekismon's own [When Digivolving]
+  # <Draw 1> plus the digivolve draw grew the hand to eight.
+  - at: 14
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: [LM-056]
+      p0.hand: [ST1-02, ST1-04, ST1-08, ST1-14, ST1-10, ST1-13, ST1-14, ST1-13]
+      p0.field:
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [BT24-003, BT25-031] }
+      p1.field: []
+      p1.security: 5

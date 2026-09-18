@@ -1,0 +1,105 @@
+# Exam scenario: DemiDevimon (P-198), clause P-198#effect#0 --
+# the special digivolution condition "[Digivolve] Lv.2 w/[TS] trait: Cost 0".
+#
+# THE WITNESS. DemiDevimon's printed circle is Purple Lv.2 / cost 0, and the
+# alt condition is also cost 0 -- the two are told apart by the COLOUR of the
+# egg. Pagumon BT25-005 is a BLACK Lv.2 with the [TS] trait, so the printed
+# circle cannot apply and the digivolve is legal only through the clause under
+# exam. One applicable path, one cost: no cost-choice prompt on either side
+# (ours asks an `EffectChoice` only on >1 distinct cost; DCGO's
+# `SelectCountEffect` likewise). The digivolve happens in the breeding area on
+# T3 -- a main-phase action -- and the witness is DemiDevimon leaving p0's hand
+# while Pagumon's slot is occupied by a Lv.3 the next breeding phase can move.
+#
+# DRAW ACCOUNTING. Digivolving draws 1 (5-8-4): p0 draws stack[10] at T3's
+# draw step and stack[11] for the digivolve, so its hand at the assert is the
+# opening five minus DemiDevimon plus BOTH BT4-014s.
+#
+# Nothing else is live: Pagumon BT25-005's only text is an inherited
+# on-add-digivolution-card trigger, and DemiDevimon's own [Start of Your Main
+# Phase] trigger cannot fire on T3 (it was still Pagumon when the main phase
+# opened) -- that clause is measured in P-198-effect1.yaml.
+#
+# Book: qa/dcgo-exams/P/tm_p_198_pool.json (--decks). p0's deck is DemiDevimon
+# x4 + Devimon BT2-074 x4 over the quiet ST-1 filler with Pagumon BT25-005 eggs;
+# p1 is the quiet ST-1 opponent.
+card: P-198
+clause: P-198#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): DemiDevimon, Devimon, inert filler
+      - P-198
+      - BT2-074
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's turn draws, in order
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-demidevimon
+  p1:
+    stack:
+      # hand (0-4): inert here; p1 never plays a card in this line
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch Pagumon BT25-005, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): the breeding area holds a Lv.2 (no hatch, no move), so
+  # the turn opens on the main phase. THE CLAUSE: digivolve DemiDevimon onto the
+  # black [TS] Pagumon for 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: P-198 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.hand: [BT2-074, ST1-04, ST1-04, BT1-009, BT4-014, BT4-014]
+      p0.field: []

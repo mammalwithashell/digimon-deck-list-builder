@@ -1,0 +1,136 @@
+# Exam scenario: Shotmon (BT21-054), clause BT21-054#effect#2 --
+# "+2000 DP" (the Appmon link box: the DP the linked Shotmon grants its host).
+#
+# THE LINE. Two Shotmons: the first is hard-played on T3 (3 -> 0) and is the
+# HOST (Shotmon has the [Appmon] trait, which its own <Link> condition names);
+# the second declares its <Link> FROM THE HAND ("Plug this card from the hand
+# or battle area sideways into ...") for 1 (0 -> -1), onto Shotmon #1. THE
+# CLAUSE is observable on the host: Shotmon's printed 1000 DP reads 3000 while
+# the linked Shotmon sits beside it. p1 fields NO Digimon all line, so the
+# linked card's own [When Linking] (#inherited#0, measured on its own in
+# BT21-054-inherited0.yaml) has no target: DCGO's `CanActivateCondition`
+# (`HasMatchConditionPermanent` over opponent Digimon with play cost <= 3) is
+# false and the WhenLinked ActivateClass is dropped before any prompt; our
+# `select_opponent_permanent` has zero candidates and self-skips.
+#
+# PROMPT SHAPE of the link (first exam line to declare one -- see
+# NOTES-BT21-054.md). Our engine: the hand slot's HAND_EFFECT bit
+# (`Game::hand_effect_slot_is_link`, Shotmon has no [Hand] [Main]) is the
+# `link:` action; the host pick parks immediately as an `OwnField`
+# selection. DCGO (`InputDriver.BuildMainPhaseAction` -> ActivateCardAction
+# over the `CardEffectFactory.LinkEffect` ActivateClass): the declared effect
+# is executed through `AutoProcessing.ActivateEffectProcess(UseCardEffect,
+# null)` whose default `isCheckOptional: true` reaches
+# `Activate_Optional_Effect_Execute` -> `Activate_Optional`, and LinkEffect is
+# built `SetUpActivateClass(null, ActivateCoroutine, -1, true, ...)` --
+# isOptional TRUE -- so DCGO asks an OptionalSkill ("Will you use 'Link (Cost:
+# 1)'?") BEFORE its host pick. Our engine has no such confirmation (the
+# declaration IS the choice), hence the `dcgo_only` yes row. Then the host:
+# SelectPermanentEffect("Select 1 Digimon to link.", maxCount 1, canNoSelect:
+# false) on DCGO, our OwnField prompt -- ONE shared row, asked on both sides
+# even with a single candidate. `ILinkCard.LinkCard()` then pays the cost and
+# attaches the card (root Hand: nothing is absorbed, no [On Play] fires).
+#
+# Shotmon #1's own [On Play] is silent on both sides when it is played: no own
+# Digimon holds an [Appmon]/[Three Musketeers] digivolution card (DCGO
+# CanActivateCondition false -> no OptionalSkill; ours `condition:` false).
+#
+# Two Shotmons are in hand at T3 (slots 0 and 5), so the play is pinned to
+# hand.0; the link then names the only copy left.
+#
+# Memory: T1 p0 -> p1 3; T2 pass -> p0 3; T3 Shotmon #1 (3): 3 -> 0, link (1):
+# 0 -> -1 -> the turn hands over on 1.
+#
+# Book: qa/dcgo-exams/BT21/tm_bt21_054_pool.json (--decks). p0's deck is
+# Shotmon x4 over the quiet ST-1 filler with Swipemon BT21-005 eggs (unused
+# here); p1 is the quiet ST-1 opponent.
+card: BT21-054
+clause: BT21-054#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the host Shotmon, inert filler
+      - BT21-054
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): T3 turn draw = the linking Shotmon
+      - BT21-054
+    rest: tm-shotmon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card in this line
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass (no hatch: the egg's inherited trigger is not
+  # wanted anywhere near this line).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play the host Shotmon for 3 (3 -> 0); its [On Play] is
+  # silent (no eligible source anywhere).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-054, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the second Shotmon declares its <Link> from the hand.
+  - actor: 0
+    do: { link: { card: BT21-054, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: LinkEffect is isOptional -> "Will you use 'Link (Cost: 1)'?".
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # The host (Shotmon #1, p0's slot 0) -- asked on both sides.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: the link cost took memory to -1, so the seat is
+  # p1 (T4; empty breeding area -> breeding prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -1
+      p0.trash: []
+      p0.hand: [ST1-04, ST1-04, BT1-009, ST1-05]
+      p0.field:
+        - { card_id: BT21-054, dp: 3000, suspended: false, sources: [] }
+      p1.field: []
