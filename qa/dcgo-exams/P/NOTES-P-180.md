@@ -113,3 +113,32 @@ single-candidate source pick with `{ yes: true, sim_only: true }` (the
 resolver's single-accept-id path) and put DCGO's card row on the wire as
 `dcgo_only`. A two-candidate source pick is unanswerable — see
 `../EX7/NOTES-EX7-073.md` (`EX7-073#effect#2`).
+
+## `effect#0` triage (2026-09-18) — r1 abort was a slot-addressing artefact; r2 CONFIRMED
+
+**r1** (recording `20260918T074731Z_7ea4b67c…`), `--all-diffs` against the
+preserved sidecar: `TRUNCATED, no divergence found` over the 22 comparable
+rows; the job aborted at the T9 digivolve ("expected 'SelectPermanentEffect'
+but DCGO asked 'SelectCountEffect'"). The sidecar's `p0.field` at that row is
+`[BT25-083, BT25-082, BT25-092]`: DCGO seats Digimon centre-out
+(`CardSource.PreferredFrame`: frames 4, 3, 5, …) and `digivolve: from: field.N`
+reaches it as a COMPACT frame-order index (`InputDriver.FieldSlotToFrameId`),
+so `field.0` named LadyDevimon BT25-083 on DCGO. A Lv.5 has two open routes
+into BeelStarmon BT25-085 (circle 4, alt 3) → the cost `SelectCountEffect`. The
+clause was never reached. Class: scenario artefact — neither engine wrong, no
+card or engine change.
+
+**r2**: BeelStarmon (X Antibody) EX7-073 is played first as slot ballast (no
+`[On Play]`; in the `three-musketeers` book), LadyDevimon second, and
+Sparrowmon is promoted THIRD, so the digivolving stack is `field.2` / frame 5 on
+both sides for both digivolves. Oracle job `exam-P-180-effect0-r2`, recording
+`20260918T111304Z_c2360b77…`: diff **CLEAN** (24 of 31 ours / 27 DCGO rows).
+DCGO `effect_activation` BT25-085 "By trashing 1 Option …, unsuspend"
+`executed: true`, then P-180 "Delete 1 digimon with 7k DP or lower"
+`is_optional: false`, `executed: true`; Agumon ST1-03 deleted on both sides.
+Verdict **confirmed**. Citations for the clause body: printed text
+(`data/card_bundles/P-180.md`), `P_180.cs` "When Trashed from digivolutions
+cards" (mandatory, one `SelectPermanentEffect` Destroy over DP ≤ 7000).
+
+The ENGINE FINDING above (source-trash trigger resolves mid-effect,
+`general_rule.pdf` 15-8-3-2) is unaffected by this line and remains open.

@@ -3,22 +3,26 @@
 #  opponent's 7000 DP or lower Digimon. While you have a [Three Musketeers]
 #  trait Digimon, you can ignore this card's color requirements."
 #
-# THE LINE -- a trasher whose effect asks NOTHING after the trash.
+# THE LINE -- a trasher whose effect asks NOTHING after the trash, on a
+# SLOT-SAFE board (r2, 2026-09-18: see "WHY THREE DIGIMON" below).
 #   T1 (P0): hatch Pagumon.
 #   T2 (P1, 3): hatch; play Agumon ST1-03 (3 -> 0); pass.
-#   T3 (P0, 3): Sparrowmon EX7-051 onto Pagumon in the breeding area (0); pass.
-#   T4 (P1, 3): pass.
-#   T5 (P0, 3): promote; DCGO-only decline of Sparrowmon's vacuous [Start of
-#            Your Main Phase]; BlackGatomon BT25-082 for 2 (cost prompt
-#            answered 2; the digivolve draws P-180); its [When Digivolving]
+#   T3 (P0, 3): play BeelStarmon (X Antibody) EX7-073 (12: 3 -> -9). Pure slot
+#            ballast: no [On Play], nothing that fires on this line (its
+#            effects are [When Digivolving] / [When Attacking] only), and it
+#            is in the `three-musketeers` book.
+#   T4 (P1, 9): pass (a pass hands P0 the usual 3).
+#   T5 (P0, 3): Sparrowmon EX7-051 onto Pagumon in the breeding area (0);
+#            play LadyDevimon BT25-083 (3 -> -4). Her [On Play] "By placing 1
+#            [Three Musketeers] trait card from your hand or trash as any of
+#            your Digimon's bottom digivolution cards, <Draw 1>" seats P-180
+#            under LADYDEVIMON HERSELF (see "why under LadyDevimon" below).
+#   T6 (P1, 4): pass.
+#   T7 (P0, 3): promote Sparrowmon -- the THIRD Digimon to enter the battle
+#            area; decline its [Start of Your Main Phase]; BlackGatomon
+#            BT25-082 for 2 (cost prompt answered 2); its [When Digivolving]
 #            free-plays Asuna Shiroki BT25-092; pass at memory 1.
-#   T6 (P1, 3): pass.
-#   T7 (P0, 3): decline Asuna; play LadyDevimon BT25-083 (3 -> -4). Her [On
-#            Play] "By placing 1 [Three Musketeers] trait card from your hand
-#            or trash as any of your Digimon's bottom digivolution cards,
-#            <Draw 1>" seats P-180 under LADYDEVIMON HERSELF (not under
-#            BlackGatomon: see "why under LadyDevimon" below).
-#   T8 (P1, 4): pass.
+#   T8 (P1, 3): pass.
 #   T9 (P0, 3): decline Asuna; BlackGatomon digivolves into BeelStarmon
 #            BT25-085 for 4 through BlackGatomon's [All Turns] grant
 #            (3 -> -1). BeelStarmon's [When Digivolving] "By trashing 1 Option
@@ -26,6 +30,22 @@
 #            this Digimon unsuspends" trashes P-180 from LadyDevimon's
 #            digivolution cards. THE CLAUSE fires. Agumon (2000 DP) is
 #            deleted. Memory -1: the turn passes to P1 (T10).
+#
+# WHY THREE DIGIMON AND THE DIGIVOLVING ONE ENTERS THIRD (r2, 2026-09-18).
+# `digivolve: from: field.N` reaches DCGO as a COMPACT index over
+# Player.FieldPermanents in FRAME order (InputDriver.FieldSlotToFrameId), and
+# CardSource.PreferredFrame seats Digimon centre-out (frames 4, 3, 5, ...). r1
+# promoted Sparrowmon FIRST (frame 4) and played LadyDevimon second (frame 3):
+# ours [BlackGatomon, Asuna, LadyDevimon] but DCGO's [LadyDevimon,
+# BlackGatomon, Asuna], so T9's `from: field.0` named LADYDEVIMON on DCGO
+# (recording 20260918T074731Z_7ea4b67c...: p0.field frame order at the row; a
+# Lv.5 has two open routes into BeelStarmon, 4 and 3, hence the cost
+# SelectCountEffect that aborted the job). The clause was never reached. The
+# THIRD-entered Digimon sits at frame 5 = field.2 on BOTH sides (ours
+# [BeelStarmon (X), LadyDevimon, Sparrowmon, (Asuna)]; DCGO [LadyDevimon,
+# BeelStarmon (X), Sparrowmon, (Asuna in the Tamer row)]) -- the reusable rule from
+# ../BT25/NOTES-BT25-083.md. Permanent PICKS (`select: targets:`) go on the
+# wire by card identity, so `own.field.1` for LadyDevimon is slot-safe.
 #
 # WHY THIS TRASHER (it supersedes the LadyDevimon-[When Attacking] line this
 # file held before 2026-09-18). Our engine resolves a "when effects trash this
@@ -90,16 +110,15 @@ seed: 424242
 decks:
   p0:
     # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
-    # never attacks); stack[10..] = draws: T3 turn, T3 Sparrowmon digivolve,
-    # T5 turn, T5 BlackGatomon digivolve = P-180 (so it reaches the hand AFTER
-    # Sparrowmon's T5 [Start of Your Main Phase] window), T7 turn, LadyDevimon's
-    # <Draw 1>, T9 turn, T9 BeelStarmon digivolve. ONE copy each of LadyDevimon
-    # and BeelStarmon ever reaches the hand (`play:` / `using:` stay
-    # unambiguous), and no Option other than P-180 does, so BeelStarmon's
+    # never attacks); stack[10..] = draws: T3 turn = BlackGatomon, T5 turn =
+    # Asuna, T5 Sparrowmon digivolve, LadyDevimon's <Draw 1>, T7 turn, T7
+    # BlackGatomon digivolve, T9 turn, T9 BeelStarmon digivolve. ONE copy each
+    # of LadyDevimon and BeelStarmon ever reaches the hand (`play:` / `using:`
+    # stay unambiguous), and no Option other than P-180 does, so BeelStarmon's
     # use-an-Option [When Digivolving] stays inactive on both sides.
-    stack: [EX7-051, BT25-082, BT25-092, BT25-085, BT25-083,
+    stack: [EX7-073, BT25-083, P-180, EX7-051, BT25-085,
             BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
-            BT21-071, BT21-074, BT25-078, P-180, BT24-088,
+            BT25-082, BT25-092, BT21-071, BT21-074, BT25-078,
             EX7-008, BT21-071, BT21-074]
     rest: three-musketeers
   p1:
@@ -125,39 +144,57 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (P0, 3): breeding-digivolve Sparrowmon (Purple Lv.2 / 0). No breeding
-  # prompt: Pagumon is a Lv.2 in an occupied breeding area.
+  # T3 (P0, 3): no breeding prompt (Pagumon is a Lv.2 in an occupied breeding
+  # area). BeelStarmon (X Antibody), the slot ballast: the FIRST Digimon in
+  # (12: 3 -> -9, the turn is over).
   - actor: 0
-    do: { digivolve: { from: breeding, using: EX7-051 } }
+    do: { play: { card: EX7-073, from: hand } }
     expect: { prompt: main_phase }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T4 (P1, 3): Koromon sits in the breeding area -> no breeding prompt.
+  # T4 (P1, 9): Koromon sits in the breeding area -> no breeding prompt.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T5 (P0, 3): promote Sparrowmon.
+  # T5 (P0, 3): breeding-digivolve Sparrowmon (Purple Lv.2 / 0); it stays in
+  # the breeding area this turn.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  # LadyDevimon (cost 7: 3 -> -4), the SECOND Digimon in. Her [On Play] seats
+  # P-180.
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: the zone menu. 1 = "Hand" (the VALUE, not an index).
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the [Three Musketeers] trait card to place.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: the Digimon that receives it -- LadyDevimon (OUR field.1; BeelStarmon
+  # (X) is field.0). On the wire by identity. <Draw 1>, then the turn is over.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1, 4): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): promote Sparrowmon -- the THIRD Digimon in: field.2 / frame 5.
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
-  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
-  # (EX7_051.cs: isOptional TRUE, CanActivate = hand-or-trash non-empty and a
-  # Digimon on the battle area). No [Three Musketeers] Option is in hand yet
-  # -- P-180 is the card the BlackGatomon digivolve draws, AFTER this window --
-  # so our engine (gated on a payable Option) parks nothing.
-  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
-  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
-  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
-  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
-  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
-  # the wire row (OptionalSkill select_cancel) is unchanged.
+  # SHARED: Sparrowmon's [Start of Your Main Phase] OptionalSkill (EX7_051.cs:
+  # isOptional TRUE), declined. BeelStarmon BT25-085 in hand is a DUAL card --
+  # a [Three Musketeers] trait Option -- so the cost is payable on both sides.
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # BlackGatomon onto Sparrowmon: alt-circle 2 vs printed Purple Lv.3 / 3.
   - actor: 0
-    do: { digivolve: { from: field.0, using: BT25-082 } }
+    do: { digivolve: { from: field.2, using: BT25-082 } }
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { value: 2 } }
@@ -173,11 +210,11 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T6 (P1, 3): Koromon sits in the breeding area -> no breeding prompt.
+  # T8 (P1, 3): pass.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T7 (P0, 3): empty breeding area -> breeding prompt; pass it.
+  # T9 (P0, 3): empty breeding area -> breeding prompt; pass it.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -189,41 +226,11 @@ steps:
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
-  # LadyDevimon (cost 7: 3 -> -4). Her [On Play] seats P-180.
+  # BlackGatomon (Lv.4, field.2 on BOTH sides) -> BeelStarmon (Lv.6) for 4
+  # through the [All Turns] grant: the only open route (BeelStarmon's own
+  # circles want a Lv.5), so no cost prompt. Memory 3 -> -1.
   - actor: 0
-    do: { play: { card: BT25-083, from: hand } }
-    expect: { prompt: main_phase }
-  # DCGO-ONLY: the zone menu. 1 = "Hand" (the VALUE, not an index).
-  - actor: 0
-    do: { select: { value: 1, dcgo_only: true } }
-    expect: { prompt: generic_int }
-  # SHARED: the [Three Musketeers] trait card to place.
-  - actor: 0
-    do: { select: { cards: [P-180] } }
-    expect: { prompt: SelectHandEffect }
-  # SHARED: the Digimon that receives it -- LadyDevimon (P0's field.2;
-  # BlackGatomon is field.0, Asuna field.1). <Draw 1>, then the turn is over.
-  - actor: 0
-    do: { select: { targets: [own.field.2] } }
-    expect: { prompt: SelectPermanentEffect }
-  # T8 (P1, 4): pass.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T9 (P0, 3): breeding prompt; Asuna declined again.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
-    expect: { prompt: SelectHandEffect }
-  # BlackGatomon (Lv.4) -> BeelStarmon (Lv.6) for 4 through the [All Turns]
-  # grant: the only open route (BeelStarmon's own circles want a Lv.5), so no
-  # cost prompt. Memory 3 -> -1.
-  - actor: 0
-    do: { digivolve: { from: field.0, using: BT25-085 } }
+    do: { digivolve: { from: field.2, using: BT25-085 } }
     expect: { prompt: main_phase }
   # SIM-ONLY: our `optional: true` gate on BeelStarmon's trash-to-unsuspend
   # effect (DCGO: optional: false, the "may" rides the picks' canNoSelect).
@@ -231,7 +238,7 @@ steps:
     do: { select: { yes: true, sim_only: true } }
   # SHARED: which Digimon to trash an Option from -- LadyDevimon.
   - actor: 0
-    do: { select: { targets: [own.field.2] } }
+    do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # The Option to trash. Ours: a single-candidate EffectChoice, answered
   # through the `yes:` single-accept-id path, sim-only. DCGO: SelectCardEffect
@@ -251,17 +258,18 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 33
+  - at: 30
     that:
       turn: 10
       p0.memory: -1
       p0.security: 5
       p0.trash: [P-180]
-      p0.hand: [BT21-071, BT21-071, BT21-074, BT21-074, BT24-088, BT25-078, EX7-008]
+      p0.hand: [BT21-071, BT21-071, BT21-074, BT21-074, BT25-078, EX7-008]
       p0.field:
         - { card_id: BT25-083, dp: 7000, suspended: false, sources: [] }
         - { card_id: BT25-085, dp: 12000, suspended: false, sources: [BT25-082, EX7-051, ST6-01] }
         - { card_id: BT25-092, dp: -1, suspended: false, sources: [] }
+        - { card_id: EX7-073, dp: 12000, suspended: false, sources: [] }
       p1.field: []
       p1.trash: [ST1-03]
       p1.security: 5
