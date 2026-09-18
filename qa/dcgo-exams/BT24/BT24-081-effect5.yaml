@@ -1,0 +1,193 @@
+# Exam scenario: Titamon + SkullBaluchimon (BT24-081), clause
+# BT24-081#effect#5 -- "Assembly -6: [Titamon]x[SkullBaluchimon]"
+#
+# The Assembly play is the ONLY way this Lv.7 reaches the board as a PLAYED
+# Digimon (its printed play cost of 14 exceeds the +10 memory ceiling from
+# any position P1 can donate), so this line is the spine every other
+# BT24-081 clause file reuses: the two materials are put in P0's trash by
+# losing security battles, P1 donates memory, and the Assembly play lands at
+# 14 - 6 = 8 with both materials stacked under the new permanent.
+#
+# MATERIALS. Titamon is BT1-080 (green Lv.6, 12000, vanilla -- no .cs in
+# DCGO, no YAML on our side) and SkullBaluchimon is BT10-080 (purple Lv.5,
+# 7000; its only hand-side trigger is "when one of your effects trashes this
+# card in your hand", never exercised here, and its [When Digivolving] is
+# gated on digivolving from the trash -- a hard play from hand prompts
+# nothing on either engine). BT24-075 SkullBaluchimon was deliberately NOT
+# used: it is unimplemented on our side while its DCGO inherited effect
+# grants <Security A. +1> to a [Titan] host, which would diverge at the
+# first security check for reasons that are not this card's.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): pass.
+#   T3 (P0, 3): play Titamon BT1-080 (3 -> -7).
+#   T4 (P1, 7): pass (-> P0 at 3).
+#   T5 (P0, 3): Titamon attacks security; P1's top security card is
+#            Phoenixmon ST1-10 (12000 vs 12000, both deleted). Then play
+#            SkullBaluchimon BT10-080 (3 -> -4).
+#   T6 (P1, 4): play Phoenixmon ST1-10 from hand (4 -> -6; P0 at 6).
+#   T7 (P0, 6): SkullBaluchimon attacks security; top card Garudamon ST1-08
+#            (7000 vs 7000, both deleted). Pass at 6 (-> P1 at 3).
+#   T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon EX7-008 loses,
+#            no prompt; Phoenixmon is now suspended). Then the donation:
+#            Biyomon ST1-02 (3 -> 1), Phoenixmon #2 ST1-10 (1 -> -9; P0 at 9).
+#   T9 (P0, 9): THE CLAUSE. Play BT24-081 from hand: both engines walk the
+#            Assembly recipe element by element -- Titamon, then
+#            SkullBaluchimon -- and the play costs 8 (9 -> 1). The materials
+#            stack under it. Its [On Play] (effect#3, mandatory activation,
+#            declinable cost) trashes ToyAgumon from hand and deletes P1's
+#            lowest-level Digimon (Biyomon). P0 passes at 1; <Execute>
+#            (effect#2) opens the end-of-turn gate, declined. One step past
+#            the clause is P1's turn-10 breeding decision.
+#
+# PROMPT SHAPE. Assembly: DCGO's SelectAssemblyClass (no recorder hook of
+# its own) loops the two AssemblyConditionElements and opens ONE
+# SelectCardEffect (root Trash, canNoSelect true, maxCount 1) per element;
+# our engine re-installs one CountCapped trash pick per element (element 0
+# declinable = "use Assembly?", element 1 exact). Two shared rows, answered
+# by identity. Memory: 14 - 6 = 8 on both sides (docs/DCGO_EXAM.md
+# `materials:` scope note -- the one-step `materials:` form is exact only
+# for ONE-element recipes, so this two-element recipe is authored as two
+# plain `cards:` rows). [On Play]: BT24_081.cs SetUpActivateClass(...,
+# -1, false, ...) -> NO OptionalSkill; SelectHandEffect (maxCount 1,
+# canNoSelect: true, Mode.Discard) -> our `optional: true` clause whose
+# first body step is the declinable `select_hand` cost surfaces ONE prompt
+# that is gate and pick -> one shared row. The deletion is
+# DestroyPermanentsClass over every IsMinLevel Digimon, no pick. <Execute>:
+# DCGO OptionalSkill at end of turn, our EndOfTurnAction park -- the
+# documented end-of-turn fold (`pass:` with `expect: OptionalSkill`).
+card: BT24-081
+clause: BT24-081#effect#5
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (stack[9] = top,
+    # the card Phoenixmon's T8 attack flips: ToyAgumon EX7-008, no security
+    # effect); stack[10..13] = the T3/T5/T7/T9 draws.
+    stack: [BT1-080, BT10-080, BT24-081, EX7-008, EX7-051,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-008,
+            BT21-071, BT21-071, BT21-071, BT21-071]
+    rest: tm-titan
+  p1:
+    # stack[9] = Phoenixmon ST1-10 = TOP of security (Titamon's T5 attack),
+    # stack[8] = Garudamon ST1-08 (SkullBaluchimon's T7 attack);
+    # stack[10..13] = the T2/T4/T6/T8 draws.
+    stack: [ST1-10, ST1-10, ST1-02, ST1-14, ST1-03,
+            ST1-04, ST1-04, ST1-03, ST1-08, ST1-10,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Titamon BT1-080 (vanilla), 3 -> -7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT1-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Titamon into Phoenixmon (tie: both deleted), then
+  # SkullBaluchimon BT10-080, 3 -> -4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT10-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 4): Phoenixmon from hand, 4 -> -6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T7 (P0, 6): SkullBaluchimon into Garudamon (tie: both deleted); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon loses), then the
+  # memory donation: Biyomon (3 -> 1), Phoenixmon #2 (1 -> -9).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T9 (P0, 9): THE CLAUSE -- the Assembly play.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-081, from: hand } }
+    expect: { prompt: main_phase }
+  # Assembly element 1: [Titamon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect }
+  # Assembly element 2: [SkullBaluchimon] from trash. 9 -> 1.
+  - actor: 0
+    do: { select: { cards: [BT10-080] } }
+    expect: { prompt: SelectCardEffect }
+  # [On Play] (effect#3): the declinable hand cost -- trash ToyAgumon; every
+  # lowest-level opponent Digimon (Biyomon, Lv.3) is deleted.
+  - actor: 0
+    do: { select: { cards: [EX7-008] } }
+    expect: { prompt: SelectHandEffect }
+  # Pass at 1. <Execute> (effect#2) opens the end-of-turn gate: decline.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause: P1's turn-10 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 27
+    that:
+      turn: 10
+      p0.memory: -3
+      p0.trash: [EX7-008, EX7-008]
+      p0.field:
+        - { card_id: BT24-081, dp: 14000, suspended: false, sources: [BT1-080, BT10-080] }
+      # P1's unsuspend phase has already run by its breeding decision.
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      p1.security: 3
+      p1.trash: [ST1-10, ST1-08, ST1-02]

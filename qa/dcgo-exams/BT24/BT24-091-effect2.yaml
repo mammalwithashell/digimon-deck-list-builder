@@ -1,0 +1,170 @@
+# Exam scenario: Tidal Stream (BT24-091), clause BT24-091#effect#2 -- "[Main]
+# Return all of your opponent's lowest level Digimon to the hand. If this
+# effect returned, 1 of your [TS] trait Digimon unsuspends. Then, you may link
+# this card to 1 of your Digimon on the field without paying the cost."
+#
+# Used FROM HAND, all three sentences live and each one visible:
+#  - "all ... lowest level": P1 fields Agumon (Lv.3) and Birdramon (Lv.4);
+#    only Agumon returns.
+#  - "1 of your [TS] trait Digimon unsuspends": Cyclonemon has just ATTACKED,
+#    so it is suspended and the unsuspend changes the board.
+#  - "you may link this card ... without paying the cost": accepted; the
+#    Option leaves P0's hand for Cyclonemon's link slot, not the trash, and
+#    memory moves by the use cost (5) alone.
+# (The crashed draft measured this body only through [Security]; that is now
+# BT24-091-effect1.yaml's job.)
+#
+# BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
+# used by BOTH seats (Tidal Stream x4, Lekismon BT25-024 x4, Cyclonemon
+# BT24-011 x4, red ST-1 vanillas, blue [TS] fillers; eggs Tsunomon ST2-01).
+#
+# THE FROM-HAND SURFACE. Tidal Stream is a dual-mode Plug-In Option (a [Main]
+# use at 5 AND a <Link> plug-in at 3). With a legal link host on the board our
+# `Game::play_option_core` parks a mode-select first -- an `EffectChoice`
+# "Choose how to play this Plug-In Option" [0: "Play as a [Main] Option" | 1:
+# "Plug in via Link Requirements (Cost 3)"]. DCGO has no such prompt: the Play
+# bit is `PlayCardAction` = the [Main] use, and its hand link is a SEPARATE
+# declaration (`ActivateCardAction` over the LinkEffect). So the mode-select
+# is answered `choice: "[Main]"`, `sim_only` (zero wire rows) -- the form
+# d5f23792f added; the crashed draft predates it and had declared the whole
+# from-hand surface unreachable.
+#
+#   T1..T4 as BT24-091-effect0.yaml.
+#   T5 (P0, 2): Cyclonemon attacks the player. Its printed <Raid> window opens
+#            (Birdramon 5000 is P1's highest-DP unsuspended Digimon) and is
+#            DECLINED -- the documented <Raid> fold (`expect: OptionalSkill`
+#            on a `decline:` emits OptionalSkill(no)). Security: Biyomon
+#            ST1-02 (3000) loses to 5000. Then THE CLAUSE: Tidal Stream (5:
+#            2 -> -3) -> Agumon to P1's hand -> unsuspend Cyclonemon -> link
+#            to Cyclonemon. Memory -3: the turn passes.
+#
+# PROMPT SHAPE (BT24_091.cs region "Main": SetUpActivateClass(null, ..., -1,
+# FALSE, ...) -> no OptionalSkill).
+#  - Bounce: prompt-free (BouncePeremanentAndProcessAccordingToResult over
+#    EVERY IsMinLevel opposing Digimon). Ours: `for_each` over `lowest_level`.
+#  - "If this effect returned, 1 of your [TS] trait Digimon unsuspends":
+#    SelectPermanentEffect (Mode.UnTap, maxCount 1, canNoSelect FALSE) over own
+#    battle-area [TS] Digimon -- NOT filtered on being suspended, asked (and
+#    the scripted row consumed) even with one candidate. Ours: a mandatory
+#    `select_own_permanent`.
+#  - "Then, you may link this card": SelectPermanentEffect (Mode.Custom,
+#    maxCount 1, canNoSelect TRUE) over own Digimon the card
+#    `CanLinkToTargetPermanent(permanent, false, true)` -- the printed [TS]
+#    Link condition still gates a free effect link (CardSource.cs ~3346) --
+#    then `AddLinkCard`. Ours: `link_to_own_digimon { optional, free, filter:
+#    {digimon, TS} }`. A plain SelectPermanentEffect inside the coroutine: no
+#    OptionalSkill in front of it (that gate belongs to the DECLARED <Link>,
+#    Link.cs, not to an effect link).
+#
+# PREDICTED DIVERGENCE, NOT THIS CLAUSE'S: once linked, DCGO's host reads 7000
+# (Link DP +2000, effect#3) and ours 5000 -- `BT24-091.yaml` does not author
+# the printed Link box (OPEN finding F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-
+# AUTHORED, docs/RUST_ENGINE_GAPS.md; NOTES-BT24-091.md). The tail assert
+# therefore does not pin the host's DP; everything else is pinned.
+card: BT24-091
+clause: BT24-091#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never checked); [10..] draws.
+    stack: [BT24-011, BT24-091, ST1-04, ST1-04, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, ST1-02,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+  p1:
+    # stack[9] = Biyomon ST1-02 = TOP of security (3000, no security effect).
+    stack: [ST1-03, ST1-05, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, ST1-02,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+steps:
+  # T1 (P0, memory 0): nothing -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Agumon ST1-03 (Lv.3 vanilla, 3 -> 0); pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Cyclonemon BT24-011 -- RED, [TS] (5: 3 -> -2) -> P1 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 2): Birdramon ST1-05 (Lv.4 vanilla, 4: 2 -> -2) -> P0 2.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 2): Cyclonemon attacks the player (it becomes SUSPENDED).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Cyclonemon's <Raid>: declined (fold -> OptionalSkill "no").
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: use Tidal Stream from hand (2 -> -3).
+  - actor: 0
+    do: { play: { card: BT24-091, from: hand } }
+    expect: { prompt: main_phase }
+  # Our mode-select (sim-only; DCGO's Play bit IS the [Main] use).
+  - actor: 0
+    do: { select: { choice: "[Main]", sim_only: true } }
+  # Agumon returned -> unsuspend Cyclonemon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT24-011] }
+  # "you may link this card ... without paying the cost" -> Cyclonemon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT24-011] }
+  # Memory -3 -> P1's turn-6 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the use: Cyclonemon is suspended from its attack, both P1 Digimon stand.
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 2
+      p1.security: 4
+      p0.field:
+        - { card_id: BT24-011, dp: 5000, suspended: true, sources: [] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
+  # At the link pick: only Agumon went back; Cyclonemon is unsuspended.
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: -3
+      p0.field:
+        - { card_id: BT24-011, dp: 5000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
+  # After: the Option is LINKED (not in the trash, not in hand) and the link
+  # cost nothing (memory still -3). Host DP deliberately unpinned (see header).
+  - at: 16
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p1.trash: [ST1-02]

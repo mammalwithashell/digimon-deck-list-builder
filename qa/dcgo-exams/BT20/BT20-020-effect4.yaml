@@ -1,0 +1,139 @@
+# Exam scenario: Imperialdramon: Fighter Mode (BT20-020), clause
+# BT20-020#effect#4 -- "[All Turns] [Once Per Turn] When your opponent's
+# security stack is removed from, delete 1 of their Digimon with as much or
+# less DP as this Digimon."
+#
+# THE REMOVAL is Fighter Mode's own [When Digivolving] security trash
+# (#effect#3): with Dragon Mode in the digivolution cards it trashes p1's top
+# security card, which is a removal from p1's security stack, and the observer
+# fires with Biyomon (ST1-02, 3000 DP <= 13000) on p1's board.
+#
+# PROMPT SHAPE. BT20_020.cs: OnLoseSecurity, `SetUpActivateClass(..., 1,
+# false, ...)` -- mandatory, no OptionalSkill -- then ONE SelectPermanentEffect
+# (Mode.Destroy, canNoSelect: false) over opponent Digimon with DP <= this
+# Digimon's. Ours: `if: any_permanent` then a plain `select_opponent_permanent`
+# with `dp_lte: source_dp`. 1:1.
+#
+# p1 plays Biyomon on T4, AFTER Dragon Mode's hard play on T3 -- so Dragon
+# Mode's [On Play] "delete 1 opponent Digimon with 11000 DP or less" found no
+# target and stayed silent, and the only deletion in the line is the clause's.
+#
+# Memory: T1 p0 -> p1 3; T2 p1 -> p0 3; T3 Dragon Mode (7): 3 -> -5 -> p1 5;
+# T4 p1 plays Biyomon (2): 5 -> 3, passes -> p0 3; T5 Fighter Mode (2): 3 -> 1.
+#
+# Book: qa/dcgo-exams/BT20/tm_bt20_020_pool.json (--decks). p0's deck is
+# Fighter Mode x4 + Dragon Mode BT20-076 x4 over the quiet ST-1 filler; p1 is
+# the quiet ST-1 opponent.
+card: BT20-020
+clause: BT20-020#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Dragon Mode (hard-played), Fighter Mode, inert filler
+      - BT20-076
+      - BT20-020
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-imperialdramon
+  p1:
+    stack:
+      # hand (0-4): the Biyomon that gets deleted, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Imperialdramon: Dragon Mode (BT20-076) for 7
+  # (3 -> -5). Its [On Play] "delete 1 of your opponent's Digimon with 11000 DP
+  # or less" has no target on p1's empty board (BT20_076.cs guards the pick with
+  # HasMatchConditionPermanent; ours with `if: any_permanent`), and the "if DNA
+  # digivolving" rider is off for a hard play. Silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT20-076, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): play Biyomon for 2 (5 -> 3), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Fighter Mode onto Dragon Mode for 2 (3 -> 1)
+  # via "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2". The printed Red /
+  # Purple Lv.5 circles do not apply to a Lv.6 source, so this is the only
+  # legal path -- one cost, no cost-choice prompt. [When Digivolving] then
+  # installs the can't-play-by-effect gate on p1 and, because Dragon Mode is in
+  # the digivolution cards, trashes p1's top security card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT20-020 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the security trash fires the observer; delete Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.security: 4
+      p1.field: []
+      p1.trash: [ST1-02, ST1-02]
+      p0.field:
+        - card_id: BT20-020
+          dp: 13000
+          suspended: false
+          sources: [BT20-076]

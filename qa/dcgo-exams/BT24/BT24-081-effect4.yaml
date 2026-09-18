@@ -1,0 +1,192 @@
+# Exam scenario: Titamon + SkullBaluchimon (BT24-081), clause
+# BT24-081#effect#4 -- "[On Deletion] You may play 1 [Titamon] or 1 level 5
+#  or lower Digimon card with the [Titan] trait from your trash without
+#  paying the cost."
+#
+# Same spine as BT24-081-effect5.yaml (read its header for the material and
+# donation turns). Two changes make the played Titamon + SkullBaluchimon
+# DIE on the turn it lands: P1's T8 donation opens with Starlight Explosion
+# ST1-14 ("All of your Security Digimon get +7000 DP until the end of your
+# opponent's next turn") instead of Biyomon, and P1's security card under
+# Titamon + SkullBaluchimon's <Rush> attack is Phoenixmon ST1-10 -- 19000
+# against 14000, so only the attacker is deleted (the checked security card
+# is trashed after the battle as usual). The [On Play] cost is DECLINED on
+# this line (with no Biyomon on the board, "all lowest level" would mean both
+# Phoenixmons).
+#
+# When the permanent is deleted its Assembly materials go to the trash with
+# it, so at [On Deletion] time P0's trash holds Titamon BT1-080 ("1
+# [Titamon]" by exact name) -- the revive target. BT10-080 is not a
+# candidate (no [Titan] trait). BT1-080 is vanilla: playing it prompts
+# nothing.
+#
+#   T1..T7 as effect5.
+#   T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon loses). Then
+#            Starlight Explosion (3 -> 1), Phoenixmon #2 (1 -> -9; P0 at 9).
+#   T9 (P0, 9): Assembly play (9 -> 1); [On Play] hand cost declined.
+#            <Rush>: attack security -> [When Attacking] cost declined ->
+#            security Phoenixmon (12000 + 7000) deletes the attacker.
+#            THE CLAUSE: [On Deletion] -- play Titamon BT1-080 from trash.
+#            Pass at 1 (no <Execute> gate: the carrier is gone). One step
+#            past the clause is P1's turn-10 breeding decision.
+#
+# PROMPT SHAPE (BT24_081.cs, region "On Deletion"): SetUpActivateClass(...,
+# -1, false, ...) -> NO OptionalSkill; CanActivateCondition requires an
+# eligible own trash card; the body is ONE SelectCardEffect (root Trash,
+# canNoSelect: () => true, maxCount 1) then PlayPermanentCards(payCost:
+# false). Our YAML is `optional: true` over a MANDATORY `select_trash`, so
+# the lowering installs the outer accept/decline gate (Replacement) BEFORE
+# the pick: two sim prompts against DCGO's one row. The gate is answered
+# `sim_only` (zero wire rows) and the pick is the shared SelectCardEffect
+# row. The declined [On Play] / [When Attacking] costs are 1:1 (our single
+# declinable hand pick, DCGO's SelectHandEffect cancel).
+card: BT24-081
+clause: BT24-081#effect#4
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (stack[9] = top,
+    # the card Phoenixmon's T8 attack flips: ToyAgumon EX7-008, no security
+    # effect); stack[10..13] = the T3/T5/T7/T9 draws.
+    stack: [BT1-080, BT10-080, BT24-081, EX7-008, EX7-051,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-008,
+            BT21-071, BT21-071, BT21-071, BT21-071]
+    rest: tm-titan
+  p1:
+    # stack[9] = Phoenixmon ST1-10 = TOP of security (Titamon's T5 attack),
+    # stack[8] = Garudamon ST1-08 (SkullBaluchimon's T7 attack), stack[7] =
+    # Phoenixmon ST1-10 (the +7000 security Digimon that deletes the T9
+    # <Rush> attacker);
+    # stack[10..13] = the T2/T4/T6/T8 draws.
+    stack: [ST1-10, ST1-10, ST1-02, ST1-14, ST1-03,
+            ST1-04, ST1-04, ST1-10, ST1-08, ST1-10,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Titamon BT1-080 (vanilla), 3 -> -7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT1-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Titamon into Phoenixmon (tie: both deleted), then
+  # SkullBaluchimon BT10-080, 3 -> -4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT10-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 4): Phoenixmon from hand, 4 -> -6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T7 (P0, 6): SkullBaluchimon into Garudamon (tie: both deleted); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon loses), then the
+  # memory donation: Starlight Explosion (3 -> 1), Phoenixmon #2 (1 -> -9).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-14, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T9 (P0, 9): the Assembly play (effect#5), 9 -> 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-081, from: hand } }
+    expect: { prompt: main_phase }
+  # Assembly element 1: [Titamon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect }
+  # Assembly element 2: [SkullBaluchimon] from trash. 9 -> 1.
+  - actor: 0
+    do: { select: { cards: [BT10-080] } }
+    expect: { prompt: SelectCardEffect }
+  # [On Play] (effect#3): decline the hand cost (1:1 on both sides).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # <Rush> (effect#0): attack security on the play turn. [When Attacking]
+  # (effect#3 again): decline. The security Phoenixmon at 19000 deletes the
+  # 14000 attacker.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: [On Deletion]. Our outer accept gate (sim-only, no wire
+  # row), then the shared trash pick: Titamon BT1-080, played for free.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect, count: 1, candidates: [BT1-080] }
+  # Memory 1: still P0's turn; pass out. No <Execute> gate (carrier gone).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # One step past the clause: P1's turn-10 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 30
+    that:
+      turn: 10
+      p0.memory: -3
+      p0.trash: [EX7-008, BT10-080, BT24-081]
+      p0.field:
+        - { card_id: BT1-080, dp: 12000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      # The checked security Phoenixmon is trashed after the battle it won.
+      p1.security: 2
+      p1.trash: [ST1-10, ST1-08, ST1-14, ST1-10]

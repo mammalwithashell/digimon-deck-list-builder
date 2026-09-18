@@ -1,0 +1,123 @@
+# Exam scenario: Tidal Stream (BT24-091), clause BT24-091#effect#5 -- the
+# Link Effect "[When Attacking] [Once Per Turn] Return 1 of your opponent's
+# lowest level Digimon to the hand."
+#
+# THE LINE extends BT24-091-effect1.yaml's, with the link ACCEPTED: Tidal
+# Stream is plugged into P1's Lekismon BT25-024 through its own [Security] on
+# T3 (a DECLARED from-hand <Link> of a Plug-In Option is unreachable for the
+# exam -- NOTES-BT24-091.md). Still on T3, P0 replays the bounced Agumon (3
+# from memory 1 -> -2) so P1 has a target; T4 (P1, 2): Lekismon attacks the
+# player and THE CLAUSE fires -- BT24_091.cs region "Link ESS":
+# SetUpActivateClass(CanActivateCondition, ..., 1, FALSE, ...) +
+# SetIsLinkedEffect(true), gated on HasMatchConditionOpponentsPermanent (a
+# min-level opposing Digimon), then ONE SelectPermanentEffect (Mode.Bounce,
+# maxCount 1, canNoSelect FALSE) -> Agumon (single candidate, still asked and
+# the scripted row consumed). MANDATORY: no OptionalSkill. Lekismon carries no
+# attack trigger of its own (BT25_024.cs: [On Play]/[When Digivolving] draw +
+# a red-play digivolve trigger; inherited <Jamming> is not live on a top
+# card), so nothing else stacks on the declaration -> no MultipleSkills. The
+# check then flips P0's stack[9] (Biyomon ST1-02, 3000: trashed).
+#
+# PREDICTED DIVERGENCE (ours, card YAML). `code/digimon-engine/cards/bt24/
+# BT24-091.yaml` authors NEITHER half of the printed Link box: no `scope:
+# linked` DP aura (effect#3, the OPEN F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-
+# AUTHORED finding) and NO linked [When Attacking] clause at all -- that second
+# omission is new and is recorded in NOTES-BT24-091.md. So on our side the
+# linked Lekismon attacks with no trigger: the bounce row below answers no
+# live prompt (kept for the DCGO wire) and Agumon stays on P0's board. The
+# security-flip link itself WORKS on our side since 35958972b (the crashed
+# draft predicted the line would part at the link pick; that is obsolete).
+# The asserts pin only what both engines share; the oracle run measures the
+# bounce, and the line goes clean once the clause is authored (the
+# BT25-093.yaml "Link ESS" idiom: `scope: inherited, when: when_attacking,
+# once_per_turn: true`, mandatory `select_opponent_permanent` over the
+# `lowest_level` aggregate, `return_to_hand`).
+#
+# BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
+# used by BOTH seats.
+card: BT24-091
+clause: BT24-091#effect#5
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-04, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, ST1-02,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+  p1:
+    stack: [BT25-024, ST1-04, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, BT24-091,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+steps:
+  # T1 (P0, memory 0): decline breeding; Agumon (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Lekismon (4 -> -1), <Draw 1> silent.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT25-024, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 1): decline breeding; Agumon attacks the player -- the
+  # security check flips Tidal Stream: THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P1: Agumon was returned -> 1 of P1's [TS] Digimon unsuspends (Lekismon).
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # P1: "you may link this card to 1 of your Digimon" -> Lekismon.
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attacker is gone; P0 replays Agumon (3 from 1 -> -2) -> P1 2.
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 2): decline breeding; the linked Lekismon attacks the
+  # player -- THE CLAUSE: return P0's lowest-level Digimon (Agumon) to hand.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [ST1-03] }
+  # One step past the clause (P1 keeps the turn on 2).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): the trailing breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the link pick (step 7): shared state.
+  - at: 7
+    that:
+      turn: 3
+      p0.field: []
+      p0.hand: [ST1-03, ST1-04, ST1-04, ST1-08, ST1-08, ST1-08]
+      p1.security: 4
+      p1.field:
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
+  # After the link (step 8): the Option is plugged in, not trashed. Host DP
+  # unpinned (effect#3's predicted divergence).
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p1.trash: []
+      p1.security: 4

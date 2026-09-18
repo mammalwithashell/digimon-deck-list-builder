@@ -1,0 +1,124 @@
+# Exam scenario: Cyclonemon (BT24-011), clause BT24-011#inherited#0 -- the inherited
+# <Raid>.
+# 
+# DECK NOTE. Both seats use the ToyAgumon books' decks (`tm-toy-black` /
+# `tm-quiet-red`, see BT25-064-effect0.yaml for the shell). Cyclonemon is red;
+# it lives in the black shell only as the card under exam.
+# 
+# THE LINE puts Cyclonemon UNDER a red Lv.5 vanilla so only the INHERITED Raid is
+# live: hatch Tsunomon (T1), breeding-digivolve ToyAgumon (T3, free), promote and
+# digivolve Cyclonemon through its special route (T5, 2 -> 1), digivolve
+# Vermilimon BT4-014 on top (T7, Red Lv.4 / cost 3 -> 0), attack on T9.
+# P1 hard-plays Birdramon ST1-05 (5000, vanilla) on T2 as the switch target;
+# Vermilimon (8000) wins that battle. Vermilimon prints nothing, so the attack
+# declaration stacks exactly ONE trigger -- the inherited <Raid> -- on both sides
+# (the Tsunomon egg's inherited trigger is a hand-trash event that never occurs).
+# 
+# The fold: `expect: {prompt: OptionalSkill}` on the pick row (see the printed-Raid
+# file for the why).
+# 
+# WITNESS: Birdramon is deleted in battle by an attack declared on the player;
+# p1.security stays 5.
+card: BT24-011
+clause: BT24-011#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-064, BT24-011, BT4-014, BT2-052, BT3-059, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065]
+    rest: tm-toy-black
+  p1:
+    stack: [ST1-05, ST1-03, ST1-04, BT1-009, BT3-007, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): hatch; pass -> P1 3.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Birdramon ST1-05 (4 -> -1) -> P0 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 1): breeding-digivolve ToyAgumon (free); pass -> P1 3.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-064 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote; Cyclonemon (2 -> 1); pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): Vermilimon on top (3 -> 0); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT4-014 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0): attack the player -- THE CLAUSE opens the inherited <Raid> window.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Take the switch onto Birdramon (fold: OptionalSkill(yes) + the pick).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T10 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 21
+    that:
+      turn: 9
+      p1.field: []
+      p1.trash: [ST1-05]
+      p1.security: 5
+      p0.field:
+        - card_id: BT4-014
+          dp: 8000
+          suspended: true
+          sources: [BT24-007, BT24-011, BT25-064]

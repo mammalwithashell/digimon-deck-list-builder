@@ -1,0 +1,190 @@
+# Exam scenario: Imperialdramon: Fighter Mode (BT20-020), clause
+# BT20-020#effect#2 -- <Piercing>.
+#
+# "When this Digimon attacks and deletes an opponent's Digimon and survives
+#  the battle, it performs any security checks it normally would" (16-6,
+#  Mandatory -- the check itself is not a choice, so no prompt on either
+#  side: DCGO PierceSelfEffect at OnDetermineDoSecurityCheck).
+#
+# ISOLATED FROM <Raid> (re-authored on the resumed audit, 2026-09-18). The
+# crashed draft reached the Digimon battle THROUGH the <Raid> switch, making
+# this file a byte-for-byte twin of BT20-020-effect1.yaml: one <Raid> finding
+# would have taken both clauses down. Here Fighter Mode attacks a SUSPENDED
+# Digimon directly, and p1 has no unsuspended Digimon, so <Raid> has no window
+# at all (Raid.cs CanActivateRaid needs an unsuspended highest-DP Digimon) and
+# <Piercing> is the only keyword in play.
+#
+#   T1..T5 as BT20-020-effect0.yaml (Dragon Mode T3, Fighter Mode T5; the
+#            [When Digivolving] trash takes p1's security 5 -> 4).
+#   T6 (p1, 3): Biyomon ST1-02 (2: 3 -> 1); pass -> p0 3.
+#   T7 (p0, 3): nothing -> p1 3. (Attacking now would open <Raid> on the
+#            unsuspended Biyomon.)
+#   T8 (p1, 3): Biyomon attacks p0's security. p0's top card is Agumon ST1-03
+#            (2000, no security effect): Biyomon 3000 wins and SURVIVES,
+#            suspended. No blocker / counter on p0's side (its hand holds only
+#            vanillas). Pass -> p0 3.
+#   T9 (p0, 3): THE CLAUSE. Fighter Mode attacks the suspended Biyomon (p1's
+#            ONLY Digimon -> `field.0` is slot-safe on DCGO's centre-out
+#            frames). 13000 vs 3000: Biyomon is deleted, the attacker
+#            survives, and <Piercing> checks security: p1's top card now is
+#            Dracomon ST1-04 (stack[8], 4000) -> loses. The [All Turns]
+#            observer (#effect#4) fires on that removal with no Digimon left
+#            on p1's board: nothing asked.
+#
+# WITNESS: an attack declared on a DIGIMON takes p1.security 4 -> 3.
+#
+# Book: qa/dcgo-exams/BT20/tm_bt20_020_pool.json (--decks).
+card: BT20-020
+clause: BT20-020#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Dragon Mode (hard-played), Fighter Mode, inert filler
+      - BT20-076
+      - BT20-020
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-03
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-imperialdramon
+  p1:
+    stack:
+      # hand (0-4): the Biyomon that gets Raided, inert filler. stack[9] is trashed on T5, stack[8] flipped by <Piercing>
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Imperialdramon: Dragon Mode (BT20-076) for 7
+  # (3 -> -5). Its [On Play] "delete 1 of your opponent's Digimon with 11000 DP
+  # or less" has no target on p1's empty board (BT20_076.cs guards the pick with
+  # HasMatchConditionPermanent; ours with `if: any_permanent`), and the "if DNA
+  # digivolving" rider is off for a hard play. Silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT20-076, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Fighter Mode onto Dragon Mode for 2 (3 -> 1)
+  # via "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2". The printed Red /
+  # Purple Lv.5 circles do not apply to a Lv.6 source, so this is the only
+  # legal path -- one cost, no cost-choice prompt. [When Digivolving] then
+  # installs the can't-play-by-effect gate on p1 and, because Dragon Mode is in
+  # the digivolution cards, trashes p1's top security card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT20-020 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): Biyomon attacks p0's security (Agumon 2000 loses);
+  # Biyomon survives SUSPENDED. Pass -> p0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): THE CLAUSE -- attack the suspended Biyomon directly. No
+  # <Raid> window (no unsuspended opposing Digimon).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # At the declaration: Biyomon is suspended, p1's security is 4.
+  - at: 20
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.security: 4
+      p1.security: 4
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+  - at: 21
+    that:
+      turn: 9
+      p0.memory: 3
+      p1.security: 3
+      p1.field: []
+      p1.trash: [ST1-02, ST1-02, ST1-04]
+      p0.field:
+        - card_id: BT20-020
+          dp: 13000
+          suspended: true
+          sources: [BT20-076]

@@ -1,0 +1,119 @@
+# Exam scenario: Neptunemon (BT24-030), clause BT24-030#effect#3 -- "[All Turns]
+# [Once Per Turn] When this Digimon suspends, it may unsuspend."
+# 
+# DECK NOTE. `tm-neptune` is a black vanilla shell (Hagurumon/Commandramon/Numemon/
+# Tankmon/WaruMonzaemon/Megadramon BT2-060/HiAndromon/Gotsumon/Bearmon -- no printed
+# text) carrying 4x Neptunemon BT24-030, 4x Aegiochusmon BT24-014 (red/yellow Lv.5 [TS]),
+# 4x Thundermon BT8-061 (black Lv.4 vanilla) and 4x ToyAgumon BT25-064; eggs 4x
+# Pagumon BT25-005 (black [TS] Lv.2 whose inherited trigger needs a [Three
+# Musketeers] card placed under it -- never here). `tm-quiet-red` is the quiet ST1
+# shell plus 4x Tai Kamiya ST1-12 and 4x Gaia Force ST1-16.
+# 
+# THE LADDER. P1 fields TWO vanillas so the reduction condition ("if your opponent
+# has 2 or more Digimon") holds: Phoenixmon ST1-10 on T2 (10 from 3 -> -7, handing
+# P0 7 -- unused, P0 just passes) and Fugamon BT4-010 on T4 (3 from 3 -> 0, then
+# pass -> P0 3). On T5 P0 hard-plays Neptunemon from memory 3: the mask admits the
+# play against the PRINTED 12 (3 - 12 = -9 >= -10) and the reduction is applied at
+# pay time.
+# 
+# THE TAIL. Neptunemon (played T5) attacks the player on T7 and suspends at
+# declaration; the trigger fires there. OPTIONAL on both sides: BT24_030.cs
+# SetUpActivateClass(..., 1, TRUE, ...) -> OptionalSkill; ours `optional: true` ->
+# an accept/decline window. 1:1, answered yes. The attack then continues against
+# P1's security (P1's field is empty after the T5 bounce; stack[9] is Biyomon 3000,
+# a plain lost battle against 12000).
+# 
+# PREDICTED DIVERGENCE (ours). Our attack declaration suspends the attacker by
+# writing `is_suspended = true` directly (`combat/mod.rs::
+# suspend_and_count_attack`) instead of going through `Game::suspend`, the
+# only site that enqueues `EffectTiming::OnSuspend` (`game/suspend.rs`). So
+# the trigger never fires on an attack-suspension in our engine: the
+# OptionalSkill row below answers no live prompt (kept for the DCGO wire) and
+# Neptunemon stays suspended on our side, while DCGO's OnTappedAnyone observer
+# fires and unsuspends it. See NOTES-BT24-030.md. The asserts therefore pin
+# only the attack's other consequences; the oracle run measures the unsuspend.
+#
+# WITNESS (DCGO): at P1's T8 breeding decision Neptunemon reads suspended:
+# false although it attacked on T7 and P0's unsuspend phase has not come
+# round; p1.security 4.
+card: BT24-030
+clause: BT24-030#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-030, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066]
+    rest: tm-neptune
+  p1:
+    stack: [ST1-10, BT4-010, ST1-03, ST1-04, BT1-009, BT1-014, BT3-007, BT1-009, BT4-014, ST1-02, BT3-007, ST1-04, ST1-03, BT1-014, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): decline breeding; pass -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Phoenixmon (10 -> -7) -> P0 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 7): nothing -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): decline breeding; Fugamon BT4-010 (3 -> 0); pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-010, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): decline breeding; THE CLAUSE -- play Neptunemon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-030, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 4): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): attack the player -- Neptunemon suspends and THE CLAUSE triggers.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Take the unsuspend.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 17
+    that:
+      turn: 8
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p1.field: []

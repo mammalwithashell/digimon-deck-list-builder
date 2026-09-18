@@ -1,0 +1,148 @@
+# Exam scenario: Dinobeemon (BT16-077), clause BT16-077#effect#3 --
+# "[When Digivolving] If DNA digivolving, you may play 1 level 5 or lower
+#  Digimon card with the [Free] trait from your trash without paying the cost.
+#  Then, 1 of your Digimon may gain <Rush> for the turn and attack a player."
+#
+# WHAT THIS LINE CAN AND CANNOT REACH. The first sentence needs a DNA
+# digivolution, which neither side of the exam can express (no DNA verb in
+# `exam::lower`; DCGO `InputDriver.BuildMainPhaseAction` aborts on the DNA
+# range) -- see NOTES-BT16-077.md. The SECOND sentence does NOT need it: the
+# official Bandai Q&A on this card (data/card_bundles/BT16-077.md) reads "Even
+# if this Digimon didn't DNA digivolve, this card's [When Digivolving] effect
+# can give 1 of your Digimon <Rush> and that Digimon can attack", and
+# BT16_077.cs gates only the trash-play on `IsJogress(hashtable)` while the
+# Rush/attack part is unconditional. So an ORDINARY digivolution measures the
+# clause's second sentence.
+#
+# PREDICTED FINDING (our side). BT16-077.yaml gates the WHOLE clause on
+# `condition: { dna_origin: true }`, so our engine never opens the window on
+# an ordinary digivolution, while DCGO asks OptionalSkill (isOptional: true),
+# then SelectPermanentEffect (canNoSelect: true) for the Digimon to gain Rush,
+# then SelectAttackEffect with `SetCanNotSelectNotAttack` (the attack is not
+# declinable once a Digimon was chosen; `select_value: -1` = the player). Our
+# three rows below therefore answer no live prompt sim-side (the harness keeps
+# them for the wire) and the states part right after the digivolve: DCGO's
+# Dinobeemon is suspended and P1's security is 4, ours is unsuspended at 5.
+# That is the divergence this scenario exists to put in front of the oracle.
+#
+# THE PREFIX is BT16-077-effect1.yaml's (vanilla purple line, ordinary
+# "purple Lv.4: cost 4" circle). T7 memory 3 - 4 = -1: P1's turn follows the
+# attack. P1's top security card is Agumon (ST1-03, 2000 DP): 8000 wins, the
+# card is trashed, Dinobeemon survives. P1 keeps its own Agumon in the breeding
+# area all line, so no opposing Digimon is on the battle area and Dinobeemon's
+# printed <Raid> has no window on the effect attack (one trigger fewer to
+# script; <Raid> is measured in BT16-077-effect1.yaml).
+#
+# BREEDING PROMPTS (fixed on the resumed audit, 2026-09-18). A Lv.2 in an
+# occupied breeding area can neither hatch nor move, so NEITHER engine asks a
+# breeding decision that turn -- the turn opens on main_phase (the confirmed
+# P-180-effect1.yaml convention). The crashed draft expected `breeding_action`
+# on the two breeding digivolves (T3, T4); DCGO asserts `expect:` strictly and
+# would have aborted the line at step 4.
+#
+# Deck accounting: P0 (no T1 draw) draws T3 = stack[10], T5 = [11], T7 = [12].
+# P1 draws T2 = [10], T4 = [11], T6 = [12], T8 = [13].
+card: BT16-077
+clause: BT16-077#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [ST6-05, ST6-07, BT16-077, ST6-02, ST6-09,
+            ST6-02, ST6-03, ST6-09, ST1-03, ST1-05,
+            ST1-02, ST1-04, ST6-03, ST1-05, ST1-02]
+    rest: tm-purple-line
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, ST1-05, ST1-08,
+            ST1-02, ST1-04, ST1-05, ST1-08, ST1-03,
+            ST1-13, ST1-14, ST1-10, ST1-13, ST1-14]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Elecmon (cost 0).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST6-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Agumon.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, digivolve Youkomon (cost 2 -> memory 1).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST6-07 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): Agumon STAYS in breeding (declined move). An unsuspended Agumon
+  # on the battle area would open Dinobeemon's own <Raid> window on the effect
+  # attack (Raid.cs CanActivateRaid) -- a second OptionalSkill the crashed
+  # draft had no row for.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): digivolve Dinobeemon (cost 4 -> memory -1). THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT16-077 } }
+    expect: { prompt: main_phase }
+  # DCGO: [When Digivolving] OptionalSkill gate -> accept.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # DCGO: "Select 1 Digimon that will gain Rush and attack a player" --
+  # Dinobeemon itself (canNoSelect: true, but we take it).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO: SelectAttackEffect, players only (defenderCondition: _ => false),
+  # not declinable. -1 is "attack the player".
+  - actor: 0
+    do: { select: { value: -1 } }
+    expect: { prompt: SelectAttackEffect }
+  # Memory -1: P1's turn. T8 (P1, memory 1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Shared state at the digivolve (step 14): Youkomon over the vanilla line.
+  - at: 14
+    that:
+      turn: 7
+      p0.memory: 3
+      p1.security: 5
+      p0.field:
+        - { card_id: ST6-07, dp: 6000, suspended: false, sources: [ST6-01, ST6-05] }
+      p1.field: []
+  # Nothing after the digivolve is pinned: see PREDICTED FINDING (DCGO: suspended
+  # Dinobeemon, p1.security 4; ours: unsuspended, 5).
+

@@ -1,0 +1,113 @@
+# Exam scenario: Tidal Stream (BT24-091), clause BT24-091#effect#1 --
+# "[Security] Activate this card's [Main] effects."
+#
+# BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
+# used by BOTH seats (Tidal Stream x4, Lekismon BT25-024 x4, Cyclonemon
+# BT24-011 x4, red ST-1 vanillas, blue [TS] fillers; eggs Tsunomon ST2-01).
+#
+# THE LINE. P1 pins Tidal Stream at stack[9] = the TOP of its security stack.
+# T1 (P0, memory 0): hard-play Agumon ST1-03 (3 -> -3) -> P1 3. T2 (P1, 3):
+# hard-play Lekismon BT25-024 (blue Lv.4 [TS], 4 -> -1); its [On Play] is a
+# bare <Draw 1> (BT25_024.cs DrawClass, mandatory, no prompt) and its
+# red-play trigger is [Your Turn] + "your Digimon" (nothing red of P1's is
+# played). -> P0 1. T3 (P0, 1): Agumon attacks the player: the check flips
+# Tidal Stream and THE CLAUSE fires for P1 -- Agumon (P0's only, hence lowest
+# level, Digimon) returns to P0's hand, P1 picks Lekismon to unsuspend, and
+# the "you may link" pick is DECLINED so this file stays clear of the Link DP
+# box (effect#3, measured in BT24-091-effect3.yaml): the Option is trashed
+# like any resolved security Option. The attacker is gone, so the attack ends
+# there; P0 passes out.
+#
+# PROMPT SHAPE (BT24_091.cs). `AddActivateMainOptionSecurityEffect` runs the
+# very same "Main" ActivateClass (SetUpActivateClass(null, ..., -1, FALSE) --
+# no OptionalSkill), for the DEFENDER, on the attacker's turn:
+#  - Bounce: prompt-free (BouncePeremanentAndProcessAccordingToResult over
+#    every IsMinLevel opposing Digimon).
+#  - Unsuspend: SelectPermanentEffect (Mode.UnTap, maxCount 1, canNoSelect
+#    FALSE) over own battle-area [TS] Digimon -- not filtered on being
+#    suspended, asked even with one candidate.
+#  - Link: SelectPermanentEffect (Mode.Custom, maxCount 1, canNoSelect TRUE)
+#    over own Digimon the card `CanLinkToTargetPermanent(permanent, false,
+#    true)` -- the printed [TS] Link condition gates the free link -- then
+#    `AddLinkCard`. No OptionalSkill in front (that gate belongs to a DECLARED
+#    <Link>, Link.cs).
+# Both rows are P1's (actor 1). Ours: `scope: inherited, when: on_security`
+# with the same three steps; the security-flipped link works since 35958972b
+# (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON, RESOLVED) -- the crashed
+# draft's "our engine silently skips the link" prediction is obsolete.
+#
+# WITNESS: P0's field is empty and Agumon is back in P0's hand on P0's own
+# turn, P1's security is 4, Tidal Stream is in P1's trash.
+card: BT24-091
+clause: BT24-091#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-04, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, ST1-02,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+  p1:
+    stack: [BT25-024, ST1-04, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, BT24-091,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+steps:
+  # T1 (P0, memory 0): decline breeding; Agumon (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Lekismon (4 -> -1), <Draw 1> silent.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT25-024, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 1): decline breeding; Agumon attacks the player -- the
+  # security check flips Tidal Stream: THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P1: Agumon was returned -> 1 of P1's [TS] Digimon unsuspends (Lekismon).
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT25-024] }
+  # P1: "you may link this card to 1 of your Digimon" -> declined.
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attacker is gone; P0 passes out (memory 1 -> P1 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): the trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the link pick: Agumon is bounced, Lekismon reads its printed 5000.
+  - at: 7
+    that:
+      turn: 3
+      p0.field: []
+      p0.hand: [ST1-03, ST1-04, ST1-04, ST1-08, ST1-08, ST1-08]
+      p0.trash: []
+      p1.security: 4
+      p1.field:
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.field: []
+      p1.security: 4
+      p1.trash: [BT24-091]
+      p1.field:
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }

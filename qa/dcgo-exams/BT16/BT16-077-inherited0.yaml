@@ -1,0 +1,159 @@
+# Exam scenario: Dinobeemon (BT16-077), clause BT16-077#inherited#0 -- the
+# INHERITED <Partition (purple Lv.4 & red Lv.4)>.
+#
+# The line is BT16-077-effect2.yaml's (read its header for how the stack comes
+# to hold both specified cards without a DNA verb, and for the prompt shape)
+# with ONE more digivolution: on T7 a vanilla Phoenixmon ST1-10 (red Lv.6,
+# "Red Lv.5 / 2" -- Dinobeemon is purple/red) goes on top of Dinobeemon BEFORE
+# Scopemon is played. Dinobeemon is then a digivolution card, its printed
+# <Partition> is dead and only `PartitionSelfEffect(isInheritedEffect: true)`
+# can answer the removal. Phoenixmon prints nothing, so nothing else stacks.
+#
+#   T1..T6 as effect2.
+#   T7 (P0, 3): Phoenixmon onto Dinobeemon (2: 3 -> 1) while P0 has ONE
+#            Digimon (slot-safe). Scopemon (4: 1 -> -3); [On Play] tucks
+#            Effecmon BT22-009 under the PHOENIXMON stack (+1 -> -2) -> P1 2.
+#            The stack reads [Effecmon, Youkomon, Dinobeemon] under Phoenixmon.
+#   T8 (P1, 2): Gaia Force (8: 2 -> -6) on Phoenixmon. THE CLAUSE, for P0.
+#
+# PROMPT SHAPE: as effect2 -- ONE OptionalSkill, then no SelectCardEffect (one
+# purple Lv.4, one red Lv.4: Dinobeemon itself is a Lv.5 and matches neither
+# condition). Ours: the `Replacement` accept, then the generic
+# `CountCappedMultiSelect { min: 1, max: 2 }` source pick, answered `sim_only`.
+# NOTE the pick is over ALL THREE digivolution cards on our side (per-slot
+# enforcement is engine-deferred), so our engine would let the player take
+# DINOBEEMON -- a Lv.5 no slot admits. Recorded in NOTES-BT16-077.md; this
+# line picks the two legal cards.
+#
+# WITNESS: Phoenixmon AND Dinobeemon in P0's trash; Youkomon and Effecmon on
+# P0's board, free, on P1's turn 8.
+card: BT16-077
+clause: BT16-077#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never checked); [10..] draws.
+    stack: [ST6-07, BT16-077, BT21-071, BT22-009, ST1-10,
+            ST6-02, ST6-03, ST6-09, ST1-03, ST1-05,
+            ST1-02, ST1-04, ST6-03, ST1-05, ST1-02]
+    rest: tm-partition
+  p1:
+    stack: [ST1-12, ST1-16, ST1-04, ST1-05, ST1-08,
+            ST1-02, ST1-04, ST1-05, ST1-08, ST1-03,
+            ST1-03, ST1-04, ST1-10, ST1-02, ST1-03]
+    rest: tm-quiet-gaia
+steps:
+  # T1 (P0, memory 0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Tai Kamiya (3 -> 1); pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Youkomon, the purple Lv.4 (3 -> -2) -> P1 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST6-07, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 2): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Dinobeemon onto Youkomon (3 -> -1). ONE Digimon: slot-safe.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT16-077 } }
+    expect: { prompt: main_phase }
+  # DCGO's [When Digivolving] OptionalSkill: decline (wire-only on our side).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T6 (P1, 1): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): Phoenixmon on top (3 -> 1) -- ONE Digimon, slot-safe -- then
+  # Scopemon (1 -> -3); its [On Play] tucks the red Lv.4 (+1 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST1-10 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT22-009] } }
+    expect: { prompt: SelectHandEffect }
+  # Host: the Phoenixmon stack (identity pick -- Scopemon is offered too).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory -2 -> P1's turn.
+  # T8 (P1, 2): Gaia Force (2 -> -6) on Phoenixmon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: P0 accepts the INHERITED <Partition>.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Our generic source pick (sim-only; DCGO auto-takes the lone card per slot).
+  - actor: 0
+    do: { select: { cards: [ST6-07, BT22-009], sim_only: true } }
+  # Memory -6 -> P0's turn-9 breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the tuck (step 20, P1's breeding decision): the stack holds both
+  # specified cards UNDER Phoenixmon, Dinobeemon among them.
+  - at: 20
+    that:
+      turn: 8
+      p0.memory: -2
+      p0.trash: []
+      p0.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [BT16-077, BT22-009, ST6-07] }
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  # After the inherited <Partition> (step 25).
+  - at: 25
+    that:
+      turn: 9
+      p0.memory: 6
+      p0.trash: [BT16-077, ST1-10]
+      p1.trash: [ST1-16]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT22-009, dp: 4000, suspended: false, sources: [] }
+        - { card_id: ST6-07, dp: 6000, suspended: false, sources: [] }

@@ -1,0 +1,129 @@
+# Exam scenario: Imperialdramon: Fighter Mode (BT20-020), clause
+# BT20-020#effect#0 -- the special digivolution condition
+# "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2".
+#
+# THE WITNESS. Fighter Mode digivolves onto a hard-played Imperialdramon:
+# Dragon Mode (BT20-076, a Lv.6 whose exact printed name is what BT20_020.cs's
+# `EqualsCardName("Imperialdramon: Dragon Mode")` and our `name_contains`
+# both match). Fighter Mode's printed circles are Red Lv.5 / Purple Lv.5 at
+# cost 5; a Lv.6 source satisfies neither, so the digivolve is legal only via
+# the clause under exam, and the memory delta (3 -> 1) pins its cost at 2.
+# One applicable path: no cost-choice prompt on either side.
+#
+# [When Digivolving] (#effect#3) necessarily fires on the way -- it is the same
+# digivolve -- and trashes p1's top security (Dragon Mode is a digivolution
+# card). This file pins only the digivolve and its cost; the security trash is
+# that clause's own witness in BT20-020-effect3.yaml. The [All Turns] observer
+# (#effect#4) triggers on that trash but has no target on p1's empty board,
+# so neither engine asks anything.
+#
+# Memory: T1 p0 -> p1 3; T2 p1 -> p0 3; T3 Dragon Mode (7): 3 -> -5 -> p1 5;
+# T4 p1 -> p0 3; T5 Fighter Mode (2): 3 -> 1, p0 keeps the turn and passes.
+#
+# Book: qa/dcgo-exams/BT20/tm_bt20_020_pool.json (--decks). p0's deck is
+# Fighter Mode x4 + Dragon Mode BT20-076 x4 over the quiet ST-1 filler; p1 is
+# the quiet ST-1 opponent.
+card: BT20-020
+clause: BT20-020#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Dragon Mode (hard-played), Fighter Mode, inert filler
+      - BT20-076
+      - BT20-020
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-imperialdramon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card here
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Imperialdramon: Dragon Mode (BT20-076) for 7
+  # (3 -> -5). Its [On Play] "delete 1 of your opponent's Digimon with 11000 DP
+  # or less" has no target on p1's empty board (BT20_076.cs guards the pick with
+  # HasMatchConditionPermanent; ours with `if: any_permanent`), and the "if DNA
+  # digivolving" rider is off for a hard play. Silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT20-076, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Fighter Mode onto Dragon Mode for 2 (3 -> 1)
+  # via "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2". The printed Red /
+  # Purple Lv.5 circles do not apply to a Lv.6 source, so this is the only
+  # legal path -- one cost, no cost-choice prompt. [When Digivolving] then
+  # installs the can't-play-by-effect gate on p1 and, because Dragon Mode is in
+  # the digivolution cards, trashes p1's top security card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT20-020 } }
+    expect: { prompt: main_phase }
+  # One step past the clause; p0 keeps the turn on 1 and passes out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.security: 4
+      p0.field:
+        - card_id: BT20-020
+          dp: 13000
+          suspended: false
+          sources: [BT20-076]

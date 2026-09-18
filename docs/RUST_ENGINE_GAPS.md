@@ -3079,3 +3079,115 @@ ordering freedom is logged here, not fixed. **Also:** `play_from_hand_free` sile
 accepts an Option/Dual hand card and plays it to the battle area as a permanent —
 it should refuse non-permanent kinds (or route to the Option-use pipeline). A pool
 sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted.
+
+## G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND — OPEN (found 2026-09-18, Three Musketeers exam stage, BT24-030#effect#3)
+
+Declaring an attack suspends the attacker by writing `perm.is_suspended = true`
+directly (`Game::commit_attack_declaration` → `suspend_and_count_attack`,
+`code/digimon-engine/src/combat/mod.rs` ~3792). The only site that enqueues
+`EffectTiming::OnSuspend` is `Game::suspend` / `suspend_with_cause`
+(`game/suspend.rs` ~96), so **a Digimon that suspends by attacking never
+triggers "when this Digimon suspends" / "when your Digimon suspend"**. DCGO
+suspends the attacker through `SuspendPermanentsClass(…).Tap()`
+(`AttackProcess.cs:166`), which stacks `EffectTiming.OnTappedAnyone`
+(`CardController.cs` ~5952); the rules carve nothing out — declaring an attack
+IS suspending the attacker. Pool-wide: every `when: on_suspend` clause that
+should see an attack declaration. Surfaced on Neptunemon (BT24-030) "[All
+Turns] [Once Per Turn] When this Digimon suspends, it may unsuspend" — the
+card's attack-unsuspend-attack-again loop never opens. Measured at lowering:
+`qa/dcgo-exams/BT24/BT24-030-effect3.yaml` step 15, "select answered no live
+prompt". Expected fix: route the attack suspension through `suspend_with_cause(
+attacker, /*effect_initiated*/ false)` inside the declaration's deferred-drain
+scope (the Alliance path in the same file already does this for the ally), with
+a failing-then-passing test that attacks with an `on_suspend` carrier. Blockers
+(`AttackProcess.cs:557` suspends the defender the same way) deserve the same
+check. `qa/dcgo-exams/BT24/NOTES-BT24-030.md`.
+
+## G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT — OPEN (found 2026-09-18, same stage, BT20-020#effect#3)
+
+`CannotPlayTamerByEffect` / `CannotPlayDigimonByEffect` are enforced only on the
+from-hand and from-trash `PlaySource::ByEffect` paths
+(`game_actions/mod.rs` ~440, `game_actions/play.rs` ~140). A security-flipped
+"[Security] Play this card without paying the cost" resolves through
+`CompiledStep::PlayFromSecurity` → `ctx.play_pending_security()`
+(`dsl_cards/step/play_digivolve.rs` ~805), which marks the parked
+`pending_security` card as played without consulting either modifier — so
+Imperialdramon: Fighter Mode (BT20-020)'s "[When Digivolving] Your opponent
+can't play Digimon or Tamers by effects until the end of their turn" does not
+stop a checked Tai Kamiya (ST1-12) from being played. Measured sim-side:
+`qa/dcgo-exams/BT20/BT20-020-effect3.yaml`, `p1.field` = [ST1-12] after the
+check. DCGO: `CanNotPutFieldClass` makes `CanPlayAsNewPermanent` false, so
+`PlaySelfTamerSecurityEffect`'s `CanActivateCondition` fails
+(`CardEffectFactory.cs` 165-169) and the card is trashed. Every "can't play by
+effects" gate (BT20-020, BT23-014, …) against every security-play card is
+affected; the live-security helpers `play_from_security*`
+(`effect_context/action/play.rs` ~584-690) should be checked for the same hole.
+`qa/dcgo-exams/BT20/NOTES-BT20-020.md`.
+
+## G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED — OPEN (measured 2026-09-18, same stage, BT16-077#effect#2 / #inherited#0)
+
+`lower_partition.rs` accepts per-slot `sources:` specs and defers enforcing
+them ("`_sources` are deferred to a future phase"). Measured, that is a
+rules-visible gap: after the `<Partition>` accept our engine parks ONE generic
+`CountCappedMultiSelect { min: 1, max: 2 }` "select 2 cards to play" over ALL
+the digivolution cards. Negative probes on Dinobeemon (BT16-077) `<Partition
+(purple Lv.4 & red Lv.4)>`: (a) with Dinobeemon itself in the stack under a
+Lv.6, answering `[BT16-077, ST6-07]` PLAYS the Lv.5 Dinobeemon — a card no slot
+admits — and trashes the red Lv.4; (b) answering one card alone plays ONE card.
+The printed keyword is "play 1 EACH of the specified cards" (general_rule 16-28: optional, all-or-nothing across the specified set;
+DCGO `CardEffectFactory/KeyWordEffects/Partition.cs` builds one filtered list
+per `PartitionCondition` and `PartitionClass.Partition` prompts per slot ONLY
+when a slot has more than one candidate). Fix: per-slot candidate lists, one
+pick per slot, parked only at >1 candidate (which also removes the sim-only row
+the exam lines carry today). The committed lines pick the two legal cards and
+are expected clean; the finding is the over-wide pick.
+`qa/dcgo-exams/BT16/NOTES-BT16-077.md`.
+
+## F-CARD-BT16-077-WD-WHOLE-CLAUSE-DNA-GATED / F-CARD-BT24-091-LINK-EFFECT-MISSING — OPEN (2026-09-18, same stage)
+
+- **Dinobeemon (BT16-077)** — `BT16-077.yaml` puts `condition: { dna_origin:
+  true }` on the WHOLE [When Digivolving]. The print scopes "If DNA
+  digivolving" to the trash play only; the official Q&A
+  (`data/card_bundles/BT16-077.md`: "Even if this Digimon didn't DNA digivolve
+  … can give 1 of your Digimon <Rush> and that Digimon can attack") and
+  `BT16_077.cs` (`IsJogress` guards the trash play alone) agree. Move the gate
+  onto the two trash-play steps. Exam line:
+  `qa/dcgo-exams/BT16/BT16-077-effect3.yaml` (predicted `diverged`). The YAML's
+  `alt_paths` also omit the printed `Red Lv.4 / 4` circle.
+- **Tidal Stream (BT24-091)** — beyond the Link DP already listed under
+  `F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED`, the YAML has NO linked
+  "[When Attacking] [Once Per Turn] Return 1 of your opponent's lowest level
+  Digimon to the hand" clause at all (DCGO `BT24_091.cs` region "Link ESS":
+  mandatory, `SetIsLinkedEffect(true)`, one `SelectPermanentEffect`
+  `Mode.Bounce` over `IsMinLevel`). The other OPEN cards on that finding's list
+  (BT25-101, BT24-095, ST22-08) should be checked for a missing Link EFFECT as
+  well as the Link DP. Exam lines: `qa/dcgo-exams/BT24/BT24-091-effect3.yaml`,
+  `-effect5.yaml` (predicted `diverged`).
+- **Neptunemon (BT24-030)** — YAML header `color: [blue, purple]` and a single
+  `Blue Lv.5 / 4` circle; the official DB prints Blue/Black with `Blue Lv.5 / 4`
+  and `Black Lv.5 / 4`.
+
+## G-TOOLING-EXAM-NO-DNA-VERB / G-TOOLING-EXAM-OPTION-HAND-LINK — OPEN (2026-09-18, same stage)
+
+Two clause families the exam format cannot declare, each recorded `unreachable`
+with this reason:
+
+- **DNA digivolution.** `scenario::STEP_VERBS` has no DNA verb,
+  `lower::matches_intent` no `DnaDigivolve` arm, and DCGO's
+  `InputDriver.BuildMainPhaseAction` (~277) aborts on the DNA range. Blocks
+  every `[DNA Digivolve]` condition clause and every "if DNA digivolving"
+  rider (BT16-077#effect#0 and the first sentence of #effect#3; BT20-076's
+  rider). `<Partition>` itself is NOT blocked — see NOTES-BT16-077.md for the
+  tuck route.
+- **A declared hand `<Link>` of a Plug-In OPTION.** `link: { from: hand }`
+  lowers to the `HAND_EFFECT` bit, which our mask emits for Appmon Link
+  DIGIMON only; for a Plug-In Option the hand link is branch 1 of the
+  mode-select `EffectChoice` behind the ordinary PLAY bit, while DCGO's is a
+  separate `ActivateCardAction`. One wire row cannot mean both, and there is no
+  `dcgo_only` form for a main-phase action. Blocks the "Cost N" half of every
+  Plug-In Option's Link Condition clause (BT24-091#effect#4; BT25-093 /
+  BT25-100 / BT25-101 / BT24-095 / ST22-08 by the same shape). Either give
+  Plug-In Options a `HAND_EFFECT` link bit (mirroring
+  `Game::hand_effect_slot_is_link`) or teach `link:` to lower to PLAY + the
+  link branch on our side while emitting DCGO's `ActivateCardAction`.
+  `qa/dcgo-exams/BT24/NOTES-BT24-091.md`.

@@ -1,0 +1,163 @@
+# Exam scenario: Titamon + SkullBaluchimon (BT24-081), clause
+# BT24-081#effect#3 -- "[On Play] [When Digivolving] [When Attacking] By
+#  trashing 1 card in your hand, delete all of your opponent's Digimon with
+#  the lowest level." (the [On Play] arm).
+#
+# Same spine as BT24-081-effect5.yaml through T7. The T8 donation is changed
+# so "ALL ... with the lowest level" has something to prove: P1 fields TWO
+# Lv.3 Digimon beside a Lv.6, and both Lv.3s must go while the Lv.6 stays.
+#
+#   T8 (P1, 3): Phoenixmon attacks P0's security (as the spine). Biyomon
+#            ST1-02 (3 -> 1), Monodramon BT1-009 (1 -> -1) -> P0 at 1.
+#   T9 (P0, 1): Assembly play at 8: 1 -> -7 (legal: the gauge floor is -10).
+#            THE CLAUSE: [On Play] -- trash ToyAgumon EX7-008 from hand;
+#            Biyomon AND Monodramon (both Lv.3, the lowest) are deleted with
+#            no pick; Phoenixmon (Lv.6) stays. Memory is on P1's side, so the
+#            turn ends: <Execute> (effect#2) opens its end-of-turn gate
+#            (<Rush> carrier, unsuspended) -- declined.
+#
+# PROMPT SHAPE (BT24_081.cs "Shared OP WD WA"): SetUpActivateClass(..., -1,
+# FALSE, ...) -> no OptionalSkill; SharedCanActivateCondition = a card in
+# hand; ONE SelectHandEffect (maxCount 1, canNoSelect: true, Mode.Discard),
+# then DestroyPermanentsClass over EVERY IsMinLevel opponent Digimon -- no
+# target prompt. Ours: `optional: true` whose first step is the declinable
+# `select_hand` cost (one prompt = gate + pick), then a `for_each` over the
+# `lowest_level` aggregate. 1:1. Monodramon and Biyomon are vanillas (no [On
+# Deletion]). The <Execute> decline is the documented end-of-turn fold
+# (`pass:` with `expect: OptionalSkill`).
+card: BT24-081
+clause: BT24-081#effect#3
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (stack[9] = top,
+    # the card Phoenixmon's T8 attack flips: ToyAgumon EX7-008, no security
+    # effect); stack[10..13] = the T3/T5/T7/T9 draws.
+    stack: [BT1-080, BT10-080, BT24-081, EX7-008, EX7-051,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-008,
+            BT21-071, BT21-071, BT21-071, BT21-071]
+    rest: tm-titan
+  p1:
+    # stack[9] = Phoenixmon ST1-10 = TOP of security (Titamon's T5 attack),
+    # stack[8] = Garudamon ST1-08 (SkullBaluchimon's T7 attack);
+    # stack[10..13] = the T2/T4/T6/T8 draws.
+    stack: [ST1-10, ST1-10, ST1-02, ST1-14, ST1-03,
+            ST1-04, ST1-04, ST1-03, ST1-08, ST1-10,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Titamon BT1-080 (vanilla), 3 -> -7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT1-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Titamon into Phoenixmon (tie: both deleted), then
+  # SkullBaluchimon BT10-080, 3 -> -4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT10-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 4): Phoenixmon from hand, 4 -> -6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T7 (P0, 6): SkullBaluchimon into Garudamon (tie: both deleted); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon loses), then the
+  # two Lv.3s: Biyomon (3 -> 1), Monodramon (1 -> -1) -> P0 at 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand.3 } }
+    expect: { prompt: main_phase }
+  # T9 (P0, 1): the Assembly play (effect#5, measured in BT24-081-effect5.yaml).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-081, from: hand } }
+    expect: { prompt: main_phase }
+  # Assembly element 1: [Titamon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect }
+  # Assembly element 2: [SkullBaluchimon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT10-080] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE: [On Play] -- trash ToyAgumon; BOTH Lv.3 Digimon are deleted.
+  - actor: 0
+    do: { select: { cards: [EX7-008] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory -7: the turn ends. <Execute> (effect#2) end-of-turn gate: decline.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause: P1's turn-10 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 24
+    that:
+      turn: 9
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: true, sources: [] }
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: BT1-009, dp: 3000, suspended: false, sources: [] }
+  - at: 25
+    that:
+      turn: 9
+      p0.memory: -7
+      p0.trash: [EX7-008, EX7-008]
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: true, sources: [] }
+      p1.trash: [ST1-10, ST1-08, ST1-02, BT1-009]
+      p0.field:
+        - { card_id: BT24-081, dp: 14000, suspended: false, sources: [BT1-080, BT10-080] }
