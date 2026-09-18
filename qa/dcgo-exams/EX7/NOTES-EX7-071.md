@@ -137,3 +137,19 @@ DCGO `effect_activation` EX7-071 "Memory +1" `is_optional: false`,
 
 EX7-071 now: 3 clauses — 1 confirmed, 2 diverged (`effect#1` / `effect#2`,
 sequential-vs-simultaneous deletion + attacker slot artefact), 0 unmeasured.
+
+## `effect#1` triage (2026-09-18) — OUR BUG, fixed, re-measured CONFIRMED
+
+Classified **our bug** (card YAML + missing DSL vocabulary). Citations: printed
+text is one sentence with no "Then" (one deletion event); `general_rule.pdf`
+15-4-3-2 (triggers arising before a single effect resolves are simultaneous);
+`EX7_071.cs:170-252` (one `DestroyPermanentsClass(selectedPermanents).Destroy()`
+after the third pick). Fix: new DSL step `delete_permanents: { targets: [...] }`
+(G-DSL-DELETE-PERMANENTS-BATCH, one `Game::delete_permanents_batch`), applied to
+BOTH the `[Main]` and `[Security]` clauses of `EX7-071.yaml`. Tests
+`ex7_071_{main,security}_triple_delete_is_simultaneous_after_third_pick` failed
+before and pass after. `EX7-071-effect1.yaml` pick rows now read
+`opp.field.0/1/2`; re-diffed against the PRESERVED sidecar
+`20260918T074213Z_414c3998…`: **CLEAN** (24 of 24 ours / 25 DCGO rows) ->
+`effect#1` **confirmed**. `effect#2` is triaged separately (its lead is the
+attacker slot artefact; the simultaneous-deletion half is fixed by this change).

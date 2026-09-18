@@ -637,3 +637,101 @@ fn ex7_071_security_no_matching_digimon_self_skips() {
         "OPP-6 (level 6) never matches any of the three level-filtered arms"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6 — the triple delete is ONE simultaneous deletion
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Printed: "Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of
+// their level 5 Digimon." — one sentence, no "Then": a single deletion event.
+// DCGO `EX7_071.cs:170-252` (and 312-394 for [Security]) accumulates the three
+// picks into `selectedPermanents` and runs ONE `DestroyPermanentsClass(...)
+// .Destroy()` after the third pick. `general_rule.pdf` 15-4-3-2: effects
+// triggered before a single effect resolves trigger simultaneously — which
+// requires the three deletions to be one event. Oracle-measured divergence:
+// exam clause EX7-071#effect#1, step 21 (our engine had already trashed the
+// Lv.3 pick at the Lv.4 pick row; DCGO had all three still fielded).
+
+/// Resolve exactly ONE pending selection by taking its first legal action.
+fn resolve_one_prompt(runner: &mut DebugRunner) {
+    let v = runner
+        .pending_selection_view()
+        .expect("a pending level pick");
+    let act = v
+        .valid_action_ids
+        .first()
+        .copied()
+        .expect("a resolvable action");
+    runner
+        .execute_action(v.selecting_player, act)
+        .expect("level pick resolves");
+}
+
+/// [Main]: nothing leaves the field until all three level picks are made.
+#[test]
+fn ex7_071_main_triple_delete_is_simultaneous_after_third_pick() {
+    let mut runner = main_builder().start();
+    runner.place_on_field(0, "PLAIN-OWN", Some(0));
+    // Two candidates per level so every arm is a real prompt.
+    for id in ["OPP-3", "OPP-3", "OPP-4", "OPP-4", "OPP-5", "OPP-5"] {
+        runner.place_on_field(1, id, Some(0));
+    }
+
+    runner.game.play_option_from_hand(0, 0);
+
+    // Level 3 pick made -> level 4 prompt pending; nothing deleted yet.
+    resolve_one_prompt(&mut runner);
+    assert!(runner.pending_selection_view().is_some(), "level 4 pick pending");
+    assert_eq!(
+        runner.battle_area_size(1),
+        6,
+        "the level 3 pick must NOT be deleted before the level 4 pick is made"
+    );
+    // Level 4 pick made -> level 5 prompt pending; still nothing deleted.
+    resolve_one_prompt(&mut runner);
+    assert!(runner.pending_selection_view().is_some(), "level 5 pick pending");
+    assert_eq!(
+        runner.battle_area_size(1),
+        6,
+        "no pick may be deleted before the level 5 pick is made"
+    );
+    // Level 5 pick made -> all three leave together.
+    resolve_one_prompt(&mut runner);
+    drain_prompts(&mut runner);
+    assert_eq!(runner.battle_area_size(1), 3, "exactly one Digimon per level deleted");
+    let mut left: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    left.sort();
+    assert_eq!(left, vec!["OPP-3", "OPP-4", "OPP-5"]);
+}
+
+/// [Security]: same — the batch deletion happens only after the third pick.
+#[test]
+fn ex7_071_security_triple_delete_is_simultaneous_after_third_pick() {
+    let mut runner = security_builder().security(1, &[CARD_ID]).start();
+    let attacker = runner.place_on_field(0, "OPP-3", Some(0));
+    for id in ["OPP-3", "OPP-4", "OPP-4", "OPP-5", "OPP-5"] {
+        runner.place_on_field(0, id, Some(0));
+    }
+
+    let _ = runner.attack_player(attacker, 1, false);
+
+    resolve_one_prompt(&mut runner);
+    assert_eq!(
+        runner.battle_area_size(0),
+        6,
+        "the level 3 pick must NOT be deleted before the level 4 pick is made"
+    );
+    resolve_one_prompt(&mut runner);
+    assert_eq!(
+        runner.battle_area_size(0),
+        6,
+        "no pick may be deleted before the level 5 pick is made"
+    );
+    resolve_one_prompt(&mut runner);
+    runner.auto_resolve().ok();
+    assert_eq!(runner.battle_area_size(0), 3, "exactly one Digimon per level deleted");
+}

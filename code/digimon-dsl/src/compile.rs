@@ -2798,6 +2798,9 @@ fn compile_step(
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
         },
+        S::DeletePermanents(a) => CompiledStep::DeletePermanents {
+            targets: a.targets.iter().map(compile_binding_ref).collect(),
+        },
         S::DeleteAllPermanents(a) => CompiledStep::DeleteAllPermanents {
             over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors),
         },

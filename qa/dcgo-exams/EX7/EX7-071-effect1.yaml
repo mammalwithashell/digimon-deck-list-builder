@@ -35,15 +35,14 @@
 # and the Option goes to the trash. Each level pick has exactly ONE candidate, so
 # DCGO takes its forced-selection path (canSelectCount == maxCount ->
 # EndSelect_RPC), which still routes through the SetTargetFrames RPC the driver
-# hooks -- a wire row is consumed either way. Our YAML deletes each arm's target
-# IMMEDIATELY (select -> delete_permanent per arm), so after the level-3 delete the
-# level-4 Digimon is at OUR slot opp.field.0, and so on: the three rows below all
-# read `opp.field.0` on purpose. The wire carries top-card identities, not slots.
-# PREDICTED ORACLE FINDING (NOTES-EX7-071.md): that per-arm delete is also a STATE
-# difference at the 2nd and 3rd pick rows -- DCGO deletes all three together after
-# the third pick, so its trash is still empty where ours already holds Biyomon
-# (then Biyomon + Kokatorimon). Same prompt sequence, so the run will not abort;
-# the differ reports it. The end state, asserted below, is the same on both sides.
+# hooks -- a wire row is consumed either way. Our EX7-071.yaml mirrors that shape:
+# three `select_opponent_permanent` picks, then ONE `delete_permanents` batch, so
+# all three Digimon are still fielded at every pick row (slots 0, 1, 2).
+# HISTORY: the first oracle pass (2026-09-18) measured DIVERGED at the Lv.4 pick
+# row -- the card YAML then deleted after EACH pick, so ours already had Biyomon in
+# P1's trash where DCGO's was empty. Triaged OUR BUG (printed text is one
+# sentence = one simultaneous deletion, general_rule 15-4-3-2; EX7_071.cs:250-252)
+# and fixed with the `delete_permanents` DSL step (G-DSL-DELETE-PERMANENTS-BATCH).
 card: EX7-071
 clause: EX7-071#effect#1
 seed: 424242
@@ -136,13 +135,13 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # Level 4 pick: Kokatorimon (now at OUR slot 0, Biyomon already deleted).
+  # Level 4 pick: Kokatorimon (slot 1 -- nothing is deleted until the third pick).
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
+    do: { select: { targets: [opp.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  # Level 5 pick: Vermilimon.
+  # Level 5 pick: Vermilimon (slot 2); then all three are deleted together.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
+    do: { select: { targets: [opp.field.2] } }
     expect: { prompt: SelectPermanentEffect }
   # Paying 6 from 2 handed the turn over; one step past the clause is P1's turn-8
   # breeding decision.

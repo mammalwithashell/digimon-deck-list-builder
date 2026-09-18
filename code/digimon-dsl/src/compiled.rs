@@ -1534,6 +1534,11 @@ pub enum CompiledStep {
     DeleteBoundPermanents {
         binding: String,
     },
+    /// Batched simultaneous deletion of several separately-bound single
+    /// permanents (EX7-071). G-DSL-DELETE-PERMANENTS-BATCH.
+    DeletePermanents {
+        targets: Vec<CompiledBindingRef>,
+    },
     /// Batched "delete all permanents matching `over`" (BT6-105).
     /// G-DSL-DELETE-ALL-PERMANENTS.
     DeleteAllPermanents {

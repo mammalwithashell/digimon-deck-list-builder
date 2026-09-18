@@ -143,6 +143,16 @@ pub enum StepSpec {
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
     DeleteForCostReduction(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
+    /// `delete_permanents: { targets: [<binding>, ...] }` — delete several
+    /// SEPARATELY-bound single permanents SIMULTANEOUSLY through the batched
+    /// deletion flow (`Game::delete_permanents_batch`, rule 25). For the
+    /// printed "Delete 1 X, 1 Y, and 1 Z" shape, where each pick is its own
+    /// selection but the deletion is one event (DCGO: picks accumulated into
+    /// one list, then a single `DestroyPermanentsClass(list).Destroy()`).
+    /// Unset bindings (an arm that self-skipped) are ignored; duplicates are
+    /// deleted once; effect-immune permanents are skipped. Driver EX7-071
+    /// Hurricane Screw Shot. G-DSL-DELETE-PERMANENTS-BATCH.
+    DeletePermanents(DeletePermanentsArgs),
     /// `delete_all_permanents: { over: <predicate> }` — delete EVERY
     /// battle-area permanent matching `over` SIMULTANEOUSLY through the
     /// engine's batched deletion flow (`Game::delete_permanents_batch`, rule
@@ -551,6 +561,7 @@ impl Serialize for StepSpec {
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
+            StepSpec::DeletePermanents(v) => kv!(s, "delete_permanents", v),
             StepSpec::DeleteAllPermanents(v) => kv!(s, "delete_all_permanents", v),
             StepSpec::DeleteOnePerOpponentColor(v) => {
                 kv!(s, "delete_one_per_opponent_color", v)
@@ -831,6 +842,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
+            "delete_permanents" => StepSpec::DeletePermanents(map.next_value()?),
             "delete_all_permanents" => StepSpec::DeleteAllPermanents(map.next_value()?),
             "delete_one_per_opponent_color" => {
                 StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
@@ -1073,6 +1085,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "delete_permanent",
                         "delete_for_cost_reduction",
                         "delete_bound_permanents",
+                        "delete_permanents",
                         "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
                         "return_to_hand",
@@ -1215,6 +1228,15 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `delete_permanents` (G-DSL-DELETE-PERMANENTS-BATCH): each entry
+/// of `targets` is a single-permanent binding; all that resolve are deleted in
+/// one batch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeletePermanentsArgs {
+    pub targets: Vec<BindingRef>,
 }
 
 /// Args for `delete_all_permanents` (G-DSL-DELETE-ALL-PERMANENTS): `over` is
