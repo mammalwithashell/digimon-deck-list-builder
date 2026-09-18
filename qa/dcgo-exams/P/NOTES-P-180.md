@@ -142,3 +142,28 @@ cards" (mandatory, one `SelectPermanentEffect` Destroy over DP ≤ 7000).
 
 The ENGINE FINDING above (source-trash trigger resolves mid-effect,
 `general_rule.pdf` 15-8-3-2) is unaffected by this line and remains open.
+
+## `effect#2` triage (2026-09-18) — r1 divergence was a slot-addressing artefact; r2 CONFIRMED
+
+**r1** (recording `20260918T075040Z_9d639715…`), `--all-diffs` against the
+preserved sidecar: lead step 9 `p1.field[0].suspended ours=true dcgo=false`,
+`p1.field[1].suspended ours=false dcgo=true`; one downstream row (step 10,
+the surviving Biyomon suspended only on our side). Nothing else — both engines
+flipped P-180, asked P0 one mandatory pick and deleted ST1-04 (on DCGO the
+highest-DP Digimon happened to be the attacker itself). Cause: `attack:
+attacker: field.0` on a TWO-Digimon board; DCGO seats Digimon centre-out, so
+`field.0` named Dracomon there. Class: **scenario artefact / DCGO frame-order
+quirk**, not a clause finding. Evidence chain: printed text "[Security] Delete
+1 of your opponent's Digimon with the highest DP." (bundle `P-180.md`);
+`P/Red/P_180.cs` region "Security" — mandatory
+`SelectPermanentEffect(Destroy, canNoSelect: false)` over `IsMaxDP`; our YAML
+agrees.
+
+**r2**: re-authored like `../EX7/EX7-070-effect2.yaml` — Agumon ST1-03 is the
+third-entered Digimon (`field.2` on both sides) and attacks on T6. Oracle job
+`exam-P-180-effect2-r2` (recording `20260918T110853Z_1702d817…`): diff CLEAN
+(16/16); DCGO `effect_activation` P-180 "Delete 1 Digimon with the highest DP"
+`is_optional: false`, `executed: true`. Verdict **confirmed**. No card or
+engine change.
+
+P-180 now: 3 clauses — 3 confirmed, 0 diverged, 0 unmeasured.
