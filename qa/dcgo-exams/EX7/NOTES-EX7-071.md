@@ -109,3 +109,31 @@ not this card's. Whether an In-Training card in the breeding area should
 satisfy a colour requirement is a rules question for that helper's owner
 (`general_rule.pdf` 3-4-5 is what the doc block cites); it is noted here only
 because it shaped the line.
+
+## `effect#0` triage (2026-09-18) — r1 abort was a slot-addressing artefact; r2 CONFIRMED
+
+**r1** (recording `20260918T074045Z_9e7ecab2…`) aborted at step 25: expected
+`SelectPermanentEffect`, DCGO asked `SelectCountEffect`, no state divergence in
+the 21 rows compared. Cause: `digivolve: from: field.0` is a compact index over
+DCGO's FRAME order (`InputDriver.FieldSlotToFrameId`; Digimon seat centre-out,
+Tamers in the far row), so it named LadyDevimon BT25-083 on DCGO (two open
+BeelStarmon costs -> cost `SelectCountEffect`) while ours named BlackGatomon
+(entry order). The clause was never reached. Classification: **scenario
+artefact (DCGO harness addressing quirk)** — not a card or engine finding.
+Evidence order: printed text (bundle/image) = mandatory "gain 1 memory", no
+"may"; `EX7_071.cs:19` `SetUpActivateClass(..., -1, false, ...)` + `AddMemory(1)`;
+our YAML `scope: inherited` / `on_digivolution_card_trashed` / `gain_memory: 1`
+agrees. No card/engine change.
+
+**Re-author (r2)** — same board recipe as `EX7-070-effect0.yaml` r2: Asuna
+played FROM HAND on T3 (first permanent), BlackGatomon digivolved in the
+breeding area and promoted T7 -> ours `[Asuna, BlackGatomon, LadyDevimon]`,
+BlackGatomon is `field.1` on both sides.
+
+**r2** — oracle job `exam-EX7-071-effect0-r2`, recording
+`20260918T095110Z_57c03ad4…`: diff **CLEAN** (22 of 32 ours / 27 DCGO rows).
+DCGO `effect_activation` EX7-071 "Memory +1" `is_optional: false`,
+`executed: true`; memory -1 -> 0, turn 9 stays with P0. Verdict **confirmed**.
+
+EX7-071 now: 3 clauses — 1 confirmed, 2 diverged (`effect#1` / `effect#2`,
+sequential-vs-simultaneous deletion + attacker slot artefact), 0 unmeasured.

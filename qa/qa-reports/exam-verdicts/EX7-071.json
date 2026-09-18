@@ -1,16 +1,15 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T07:57:19.677080100+00:00",
+  "last_updated": "2026-09-18T09:51:54.028410300+00:00",
   "clauses": {
     "EX7-071#effect#0": {
       "clause_id": "EX7-071#effect#0",
       "card_id": "EX7-071",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "d968ef7219f172531e8370557aa7fbe502aed883aa8ae7435ee39a155be7fdce",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-071-effect0.yaml",
-      "reason": "Oracle job aborted: prompt mismatch: step 25 expected prompt 'SelectPermanentEffect' but DCGO asked 'SelectCountEffect' (differ: TRUNCATED, no state divergence in the 21 rows compared). Scenario slot-addressing artefact, not a clause finding: `field.N` on attack/digivolve lowers to OUR battle-area index, but DCGO seats the same permanents in a different frame order, so the action lands on a different Digimon in DCGO. Re-author with an unambiguous actor and re-run. `digivolve: from: field.0` hit LadyDevimon BT25-083 in DCGO (two open costs -> cost SelectCountEffect). The clause was never reached.",
-      "recorded_at": "2026-09-18T07:57:19.677080100+00:00"
+      "recorded_at": "2026-09-18T09:51:54.028410300+00:00"
     },
     "EX7-071#effect#1": {
       "clause_id": "EX7-071#effect#1",
