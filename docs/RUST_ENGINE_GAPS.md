@@ -2273,7 +2273,18 @@ That is correct as far as it goes — the grantor must not host the recipient's 
 * `tests/replacements/granted_keywords.rs` — `mass_granted_fortitude_fires_on_a_non_source_recipient` (trigger half on a non-source), `mass_granted_fortitude_fires_on_its_own_grantor` (the grantor matches its own filter — the case a naive "aura source == target" de-dup would drop), `mass_granted_evade_prompts_on_a_non_source_recipient` (replacement half).
 
 
-## A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+## ~~A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads~~ — RESOLVED 2026-09-18  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+
+**RESOLVED 2026-09-18 in `a46c74066`** (ENGINE FIX — flagged for human review; found triaging exam clause `BT25-078#inherited#0`, which also closed `EX7-051#inherited#0`). The fix is the shape predicted below: the battle opponent's top-card identity is captured when the `[On Deletion]` entries are ENQUEUED (`Game::enqueue_batch_on_deletion` → `TriggerContext::battle_opponent_card`, while `pending_attack` is live), and `battle_opponent_of` resolves that identity to its CURRENT slot (`Game::resolving_battle_opponent_of`); a captured opponent that has left the battle area yields `None`, never a fall-through to whatever attack is live. Citation: general_rule.pdf 16-12-1/-3/-4 — mandatory, and a triggered instance activates "as long as the battled opponent's Digimon is in the battle area".
+
+Two sibling defects surfaced and were fixed in the same commit, both in `Game::build_effects_for_card` and both invisible to the embedded DSL pack (empty text fields) — only live `cards.json` games and the exam saw them:
+* **Duplicate inherited keyword body.** A printed inherited keyword (`inherited_text`) AND the card's `scope: inherited` `kind: grant_keyword` clause each synthesized the keyword's trigger, so ONE `<Retaliation>` queued twice and opened a phantom 2-candidate TriggerOrder prompt (DCGO: one `RetaliationSelfEffect`, `BT25_078.cs:113-115`). That phantom park is what turned this gap from order-dependent into always-on for every DSL card with a printed inherited `<Retaliation>`.
+* **`under_top`-dependent slot layout.** Printed inherited keyword bodies were synthesized only while the card was under the top; an `[On Deletion]` entry is queued by `effect_slot` in the stack and resolved from the trash (rule 25), where the slot no longer existed. Inherited bodies are now always synthesized (flagged `inherited`); face synthesis reads `face_keywords()` rather than `CardData::keywords`, which had put inherited-text keywords on the card's own face.
+
+Provers: `tests/cards_behavioral/bt25/bt25_078.rs` (4 new), plus both reproducers below, un-ignored and green.
+
+*Original entry:*
+
 
 **Found 2026-08-24** while closing `G-ENGINE-AURA-GRANT-NO-TRIGGER` — independent of it, and it predates that fix.
 

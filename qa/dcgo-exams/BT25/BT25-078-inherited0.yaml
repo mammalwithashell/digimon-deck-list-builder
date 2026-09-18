@@ -39,8 +39,7 @@
 # NO SHARED PROMPTS ANYWHERE. Both seats' cards are vanilla except Gazimon (a
 # source, so only its inherited keyword applies) and BT25-005 (a source whose
 # inherited effect only triggers on [Three Musketeers] trait cards being placed in
-# the stack). The one `sim_only` row at the deletion answers a trigger-order prompt
-# only OUR engine opens -- see the step comment.
+# the stack).
 card: BT25-078
 clause: BT25-078#inherited#0
 seed: 424242
@@ -121,17 +120,11 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine parks a 2-candidate TriggerOrder at the deletion --
-  # `[BT25-078 <Retaliation>, BT25-078]`. The second, keyword-less branch is
-  # Gazimon's [When Moving] body, queued by the engine's board-wide `on_move`
-  # observer scan when the stack leaves the battle area and no-op'ing at
-  # resolution (its `event_permanent_is_source` timing condition fails). DCGO
-  # has exactly ONE trigger here (RetaliationSelfEffect under OnDestroyedAnyone;
-  # WhenMovingClass's CanTriggerOnMove never fires on a deletion), so it opens no
-  # MultipleSkills prompt and this row emits nothing on the wire. Named by
-  # KEYWORD so our engine resolves <Retaliation> first. See NOTES-BT25-078.md.
-  - actor: 0
-    do: { select: { cards: [BT25-078], trigger: Retaliation, sim_only: true } }
+  # NO trigger-order prompt in EITHER engine: <Retaliation> is the only trigger at
+  # this deletion (DCGO: one RetaliationSelfEffect under OnDestroyedAnyone). Our
+  # engine used to park a phantom 2-candidate TriggerOrder here -- the keyword's
+  # body was synthesized twice (printed inherited text AND the DSL grant clause)
+  # -- fixed 2026-09-18, see NOTES-BT25-078.md.
   # One step past the clause.
   - actor: 0
     do: { pass: {} }
@@ -141,19 +134,10 @@ assert:
   # area is empty and the trash holds the whole deleted stack (Pagumon, Gazimon,
   # Youkomon) plus the two security cards P1's attacks trashed.
   #
-  # THE CLAUSE'S OWN WITNESS -- `p1.field: []` and `p1.trash: [BT4-014]`, Vermilimon
-  # deleted by <Retaliation> and nothing else in this line able to touch it -- is
-  # DELIBERATELY NOT ASSERTED HERE. Sim-only shows our engine leaves Vermilimon on
-  # P1's field (8000 DP, suspended) in BOTH the attacker-loses line below and a
-  # defender-loses variant: the two-candidate TriggerOrder above parks, the attack
-  # context (`pending_attack`) is gone by the time <Retaliation> resolves, and its
-  # `battle_opponent_of` finds no opponent. That is a sim-side engine finding
-  # (NOTES-BT25-078.md), and asserting the rules-correct state would only make
-  # this file fail the sim-only gate for a known reason. The oracle run measures
-  # it: DCGO deleting Vermilimon where we do not reads as `diverged`, which is the
-  # finding this line exists to surface; on `confirmed` the backfill writes P1's
-  # state here.
-  - at: 18
+  # THE CLAUSE'S OWN WITNESS: `p1.field: []` and `p1.trash: [BT4-014]` --
+  # Vermilimon deleted by <Retaliation> (16-12), nothing else in this line able
+  # to touch it.
+  - at: 17
     that:
       turn: 7
       p0.memory: 3
@@ -161,3 +145,5 @@ assert:
       p0.hand: [BT21-074, BT21-074, BT25-083, BT25-083, BT25-083, BT25-085, BT25-092, BT25-092]
       p0.field: []
       p0.trash: [BT25-005, BT25-078, BT25-082, BT25-083, ST6-07]
+      p1.field: []
+      p1.trash: [BT4-014]

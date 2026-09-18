@@ -94,3 +94,14 @@ merely "hand or trash non-empty and an own non-token Digimon"), while the
 `condition:` on our clause gates the trigger on a payable Option and parks
 nothing — the documented vacuous-gate class (`docs/DCGO_EXAM.md`, Known gaps),
 answered with a `dcgo_only` decline.
+
+## RESOLVED 2026-09-18 — `inherited#0` re-diffed CLEAN, verdict `confirmed`
+
+Engine fix `a46c74066` (landed from the `BT25-078#inherited#0` triage; see
+`../BT25/NOTES-BT25-078.md` and `G-ONDELETION-PARK-CLEARS-BATTLE-STATE`, now
+RESOLVED). The "spurious second EX7-051 trigger" was a duplicate
+`<Retaliation>` body (printed inherited text + the DSL `grant_keyword` clause),
+and the battle opponent is now captured at trigger time. The scenario dropped
+its `sim_only` TriggerOrder row and asserts `p1.field: []` /
+`p1.trash: [BT4-014]`; re-run against the preserved sidecar
+(`20260918T073523Z_3b9aebe0…state.jsonl`): CLEAN. EX7-051 is 3/3 confirmed.

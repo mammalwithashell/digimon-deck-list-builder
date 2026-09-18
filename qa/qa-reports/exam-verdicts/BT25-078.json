@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T07:55:25.048301800+00:00",
+  "last_updated": "2026-09-18T09:01:40.164470400+00:00",
   "clauses": {
     "BT25-078#effect#0": {
       "clause_id": "BT25-078#effect#0",
@@ -32,12 +32,11 @@
     "BT25-078#inherited#0": {
       "clause_id": "BT25-078#inherited#0",
       "card_id": "BT25-078",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "9b7e9dbf46f6b4128beff354f00384ab0ef5ac56b10196ad133bfd7ac1670efa",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-078-inherited0.yaml",
-      "reason": "DIVERGED at step 18 (compared 18 of 19 ours / 18 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-09-18T07:55:25.048301800+00:00"
+      "recorded_at": "2026-09-18T09:01:40.164470400+00:00"
     }
   }
 }

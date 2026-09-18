@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T07:59:27.824845+00:00",
+  "last_updated": "2026-09-18T09:08:10.560337800+00:00",
   "clauses": {
     "EX7-051#effect#0": {
       "clause_id": "EX7-051#effect#0",
@@ -23,12 +23,11 @@
     "EX7-051#inherited#0": {
       "clause_id": "EX7-051#inherited#0",
       "card_id": "EX7-051",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "9b7e9dbf46f6b4128beff354f00384ab0ef5ac56b10196ad133bfd7ac1670efa",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-051-inherited0.yaml",
-      "reason": "DIVERGED at step 23: DCGO's inherited <Retaliation> deletes Vermilimon BT4-014 (p1.trash=[BT4-014], p1.field=[]); ours leaves it on the field (8000 DP, suspended). Our bug: G-ONDELETION-PARK-CLEARS-BATTLE-STATE -- a spurious second EX7-051 trigger parks a TriggerOrder, the park clears pending_attack, and the mandatory keyword (16-12) no-ops.",
-      "recorded_at": "2026-09-18T07:55:17.134756300+00:00"
+      "recorded_at": "2026-09-18T09:08:10.560337800+00:00"
     }
   }
 }

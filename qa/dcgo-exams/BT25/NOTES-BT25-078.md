@@ -10,7 +10,7 @@ All four clauses have a scenario; none is `unreachable`.
 | `BT25-078#effect#0` | `[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[TS] trait: Cost 0` | `BT25-078-effect0.yaml` | `BT25/tm_bt25_078_pool.json` (`three-musketeers-gazimon`: Black [TS] egg BT25-005, Youkomon ST6-07 x2 for EX7-070 x2) | lowers, asserts pass |
 | `BT25-078#effect#1` | `[When Moving]` (the shared body through the OTHER timing; "place as bottom digivolution card" branch) | `BT25-078-effect1.yaml` | `EX7/three_musketeers_pool.json` | lowers, asserts pass (repaired 2026-09-18) |
 | `BT25-078#effect#2` | `[On Play] Reveal the top 3 … add 1 … to the hand, or you may place 1 … Return the rest to the bottom of the deck.` ("add to hand" branch) | `BT25-078-effect2.yaml` | `EX7/three_musketeers_pool.json` | lowers, asserts pass (repaired 2026-09-18) |
-| `BT25-078#inherited#0` | `<Retaliation>` | `BT25-078-inherited0.yaml` | `BT25/tm_bt25_078_pool.json` | lowers; **the clause's own witness is deliberately unasserted — sim-side engine finding below** |
+| `BT25-078#inherited#0` | `<Retaliation>` | `BT25-078-inherited0.yaml` | `BT25/tm_bt25_078_pool.json` | lowers, asserts pass incl. the clause's witness (`p1.field: []`, `p1.trash: [BT4-014]`); **oracle CONFIRMED 2026-09-18 after the engine fix below** |
 
 Note the two books: `effect#1`/`effect#2` need the shared pool (Purple egg
 ST6-01), `effect#0`/`inherited#0` the per-card one. Lowering all four with one
@@ -53,7 +53,33 @@ broken scenario.
   (Sparrowmon) it takes the silent `SetBool(true)` path, which is not the hooked
   RPC and consumes no row.
 
-## Sim-side engine finding on `inherited#0` — `<Retaliation>` does not delete when a second trigger is stacked beside it
+## TRIAGE 2026-09-18 — `inherited#0` was OUR BUG; ENGINE FIX `a46c74066`; re-diffed CLEAN, verdict `confirmed`
+
+Order of evidence: printed text (card face / `data/card_bundles/BT25-078.md`:
+inherited `<Retaliation>`), general_rule.pdf **16-12-1/-3/-4** (mandatory; the
+triggered instance activates "as long as the battled opponent's Digimon is in
+the battle area"), DCGO `BT25_078.cs:113-115` (one
+`RetaliationSelfEffect(isInheritedEffect: true)` under `OnDestroyedAnyone`).
+All three agree with DCGO's recording; ours was wrong.
+
+**The diagnosis in the section below is superseded on defect 1.** The second,
+keyword-less TriggerOrder branch was NOT the `[When Moving]` body — `on_move` is
+only ever enqueued by `move_from_breeding`. It was a DUPLICATE `<Retaliation>`:
+the engine synthesized the keyword's trigger once from cards.json
+`inherited_text` and once from the YAML's `scope: inherited` `grant_keyword`
+clause. Both queued while the card was under the top; resolved from the trash,
+the effect list was one entry shorter (`under_top` gating), so the second
+branch's slot fell off the end — hence "BT25-078" with no keyword and a no-op.
+Defect 2 (battle opponent read at resolution time) was exactly as described and
+is `G-ONDELETION-PARK-CLEARS-BATTLE-STATE` in `docs/RUST_ENGINE_GAPS.md`, now
+RESOLVED. A third defect surfaced on the way: `CardData::keywords` (parsed from
+all three text fields) put the inherited `<Retaliation>` on Gazimon's own FACE.
+
+The scenario dropped its `sim_only` TriggerOrder row (no prompt opens in either
+engine now) and asserts P1's state. Same fix closed `EX7-051#inherited#0`.
+Tests: `tests/cards_behavioral/bt25/bt25_078.rs` §5.
+
+## (superseded) Sim-side engine finding on `inherited#0` — `<Retaliation>` does not delete when a second trigger is stacked beside it
 
 Re-measured 2026-09-18 on the current harness binary (probe: the committed line
 plus `p1.field: []`): our engine leaves Vermilimon BT4-014 on P1's field, 8000

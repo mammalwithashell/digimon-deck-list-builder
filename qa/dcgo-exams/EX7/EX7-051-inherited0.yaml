@@ -146,15 +146,12 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: field.0 } }   # target: the OPPONENT's slot 0 (attack targets use the bare field.N grammar)
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine parks a 2-candidate TriggerOrder at the deletion --
-  # `[EX7-051 <Retaliation>, EX7-051]` (measured at lowering, 2026-09-18). DCGO
-  # has exactly ONE trigger here (RetaliationSelfEffect under
-  # OnDestroyedAnyone, mandatory), so it opens no MultipleSkills prompt and this
-  # row emits nothing on the wire. Named by KEYWORD so our engine resolves
-  # <Retaliation> first. Same shape, and same downstream engine finding, as
-  # ../BT25/BT25-078-inherited0.yaml -- see NOTES-EX7-051.md.
-  - actor: 0
-    do: { select: { cards: [EX7-051], trigger: Retaliation, sim_only: true } }
+  # NO trigger-order prompt in EITHER engine: <Retaliation> is the only trigger
+  # at this deletion. Our engine used to park a phantom 2-candidate TriggerOrder
+  # here (the keyword body was synthesized twice: printed inherited text AND the
+  # DSL grant clause) and then lost the battle opponent behind the park
+  # (G-ONDELETION-PARK-CLEARS-BATTLE-STATE) -- both fixed 2026-09-18 with
+  # BT25-078#inherited#0; see ../BT25/NOTES-BT25-078.md.
   # Attacking costs nothing: memory 3, P0's pass.
   - actor: 0
     do: { pass: {} }
@@ -162,17 +159,9 @@ steps:
 assert:
   # Pre-step state of the trailing pass. P0's side is asserted in full.
   #
-  # THE CLAUSE'S OWN WITNESS -- `p1.field: []` and `p1.trash: [BT4-014]`,
-  # Vermilimon deleted by <Retaliation> -- is DELIBERATELY NOT ASSERTED HERE.
-  # Sim-only shows our engine LEAVES Vermilimon on P1's field (8000 DP,
-  # suspended): the two-candidate TriggerOrder above parks, the attack context
-  # (`pending_attack`) is gone by the time <Retaliation> resolves, and
-  # `battle_opponent_of` finds no opponent (docs/RUST_ENGINE_GAPS.md
-  # G-ONDELETION-PARK-CLEARS-BATTLE-STATE; NOTES-EX7-051.md). Asserting the
-  # rules-correct state would only fail the sim-only gate for a known reason.
-  # The oracle run measures it: DCGO deleting Vermilimon where we do not reads
-  # as `diverged`; on `confirmed` the backfill writes P1's state here.
-  - at: 23
+  # THE CLAUSE'S OWN WITNESS: `p1.field: []` and `p1.trash: [BT4-014]` --
+  # Vermilimon deleted by <Retaliation> (16-12).
+  - at: 22
     that:
       turn: 7
       p0.memory: 3
@@ -181,3 +170,5 @@ assert:
       p0.field:
         - { card_id: BT25-092, dp: -1, suspended: false, sources: [] }
       p1.security: 5
+      p1.field: []
+      p1.trash: [BT4-014]
