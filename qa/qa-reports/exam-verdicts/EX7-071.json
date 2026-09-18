@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:57:19.677080100+00:00",
+  "clauses": {
+    "EX7-071#effect#0": {
+      "clause_id": "EX7-071#effect#0",
+      "card_id": "EX7-071",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "d968ef7219f172531e8370557aa7fbe502aed883aa8ae7435ee39a155be7fdce",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-071-effect0.yaml",
+      "reason": "Oracle job aborted: prompt mismatch: step 25 expected prompt 'SelectPermanentEffect' but DCGO asked 'SelectCountEffect' (differ: TRUNCATED, no state divergence in the 21 rows compared). Scenario slot-addressing artefact, not a clause finding: `field.N` on attack/digivolve lowers to OUR battle-area index, but DCGO seats the same permanents in a different frame order, so the action lands on a different Digimon in DCGO. Re-author with an unambiguous actor and re-run. `digivolve: from: field.0` hit LadyDevimon BT25-083 in DCGO (two open costs -> cost SelectCountEffect). The clause was never reached.",
+      "recorded_at": "2026-09-18T07:57:19.677080100+00:00"
+    },
+    "EX7-071#effect#1": {
+      "clause_id": "EX7-071#effect#1",
+      "card_id": "EX7-071",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "fc1a02068151a06b4b264953d21a08c1fe9fd3e74698b89b005202966af55d37",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-071-effect1.yaml",
+      "reason": "DIVERGED at step 21 (Lv.4 pick row): ours p1.trash=[ST1-02] (already deleted), dcgo p1.trash=[] with all three still on the field. DCGO collects the three level picks and deletes them together in one DestroyPermanentsClass; our EX7-071.yaml deletes after each pick. Card-YAML finding (printed text is one simultaneous deletion); end state agrees.",
+      "recorded_at": "2026-09-18T07:55:19.569285400+00:00"
+    },
+    "EX7-071#effect#2": {
+      "clause_id": "EX7-071#effect#2",
+      "card_id": "EX7-071",
+      "verdict": "diverged",
+      "label": "Security Effect",
+      "text_sha256": "bb1f9379b6bc131ccff48068a6eca14b4ce973a47c803c071fc2c007380bfe67",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-071-effect2.yaml",
+      "reason": "DIVERGED at step 18: two stacked defects. (1) LEAD is the attacker slot-addressing artefact (ours ST1-02 attacked, DCGO BT1-014 attacked). (2) Downstream steps 19-20 are the real finding, same as effect#1: ours deletes after each pick, DCGO deletes all three together after the last pick.",
+      "recorded_at": "2026-09-18T07:55:20.384793700+00:00"
+    }
+  }
+}

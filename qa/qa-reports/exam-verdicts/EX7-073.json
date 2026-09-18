@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:59:27.824845+00:00",
+  "clauses": {
+    "EX7-073#effect#0": {
+      "clause_id": "EX7-073#effect#0",
+      "card_id": "EX7-073",
+      "verdict": "diverged",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "2e1c4783e59be226bd96910a2e66eae161160766c8510bb0a18447b9112bcb28",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-073-effect0.yaml",
+      "reason": "Oracle job aborted: prompt mismatch: step 18 expected count 2 but DCGO asked for count 1 (differ: TRUNCATED, no state divergence in the 16 rows compared). The clause's own observable agreed before the abort: DCGO's action_detail shows EX7-073 onto BeelStarmon BT25-085 paid cost 1 (memory 3 -> 2). The mismatch is in the [When Digivolving] trigger set: ours orders two EX7-073 triggers, DCGO's prompt carried one.",
+      "recorded_at": "2026-09-18T07:57:20.595122700+00:00"
+    },
+    "EX7-073#effect#1": {
+      "clause_id": "EX7-073#effect#1",
+      "card_id": "EX7-073",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "24f7fe4ff5aa2712782bbb552dad1626c5d450b3f810cffa3472356fa15d37c2",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-073-effect1.yaml",
+      "reason": "Oracle job aborted: prompt mismatch: step 16 expected actor 1 but DCGO asked actor 0. Differ (trace truncated) DIVERGED at step 18: ours p0.field still lists the used Option P-180 as a battle-area permanent beside EX7-073; DCGO's field does not.",
+      "recorded_at": "2026-09-18T07:57:21.593967200+00:00"
+    },
+    "EX7-073#effect#2": {
+      "clause_id": "EX7-073#effect#2",
+      "card_id": "EX7-073",
+      "verdict": "unreachable",
+      "label": "Effect",
+      "text_sha256": "5d6725898412b79a1bad66a2440219430af785d70545343bb74bce2b0a2f0893",
+      "reason": "cost prompt is a SourceMulti selection the exam resolver cannot answer by identity (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK): selection_resolve.rs has no identity arm for SelectionKind::SourceMulti, and the payment is exactly two sources so the single-accept-id `yes:` path does not apply. Full line drafted in qa/dcgo-exams/EX7/NOTES-EX7-073.md.",
+      "recorded_at": "2026-09-18T07:59:27.824845+00:00"
+    }
+  }
+}

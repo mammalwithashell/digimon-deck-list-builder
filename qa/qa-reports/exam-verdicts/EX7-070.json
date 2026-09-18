@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:57:18.783428900+00:00",
+  "clauses": {
+    "EX7-070#effect#0": {
+      "clause_id": "EX7-070#effect#0",
+      "card_id": "EX7-070",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "ce1b5d8d9f2cec01e12b31ee9d12916ea7924a70176f7196aa3b1f00ca94578e",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-070-effect0.yaml",
+      "reason": "Oracle job aborted: prompt mismatch: step 26 expected prompt 'SelectPermanentEffect' but DCGO asked 'SelectCountEffect' (differ: TRUNCATED, no state divergence in the 22 rows compared). Scenario slot-addressing artefact, not a clause finding: `field.N` on attack/digivolve lowers to OUR battle-area index, but DCGO seats the same permanents in a different frame order, so the action lands on a different Digimon in DCGO. Re-author with an unambiguous actor and re-run. Here `digivolve: from: field.0` is BlackGatomon in ours but LadyDevimon BT25-083 (frame 0) in DCGO, a Lv.5 with two open BeelStarmon costs (4 / 3) -> DCGO's cost SelectCountEffect. The clause was never reached.",
+      "recorded_at": "2026-09-18T07:57:18.783428900+00:00"
+    },
+    "EX7-070#effect#1": {
+      "clause_id": "EX7-070#effect#1",
+      "card_id": "EX7-070",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c20a6f7d3924981659d9e6bad4140f1ed82b9ba77935b7501ca5c27d7f077925",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-070-effect1.yaml",
+      "recorded_at": "2026-09-18T07:55:18.050037+00:00"
+    },
+    "EX7-070#effect#2": {
+      "clause_id": "EX7-070#effect#2",
+      "card_id": "EX7-070",
+      "verdict": "diverged",
+      "label": "Security Effect",
+      "text_sha256": "33b79510aa0982cc356f35af71011000515c70e4e330449aef25854c0cc8738f",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-070-effect2.yaml",
+      "reason": "DIVERGED at step 9: p1.field suspended flags swapped (ours ST1-04 attacked, DCGO ST1-02 attacked). Scenario slot-addressing artefact, not a clause finding: `field.N` on attack/digivolve lowers to OUR battle-area index, but DCGO seats the same permanents in a different frame order, so the action lands on a different Digimon in DCGO. Re-author with an unambiguous actor and re-run. The clause body itself agreed: both engines resolved the [Security] effect and deleted ST1-02.",
+      "recorded_at": "2026-09-18T07:57:17.833602700+00:00"
+    }
+  }
+}
