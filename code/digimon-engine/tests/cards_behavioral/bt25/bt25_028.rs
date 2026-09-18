@@ -71,13 +71,55 @@ fn bt25_028_metadata() {
 fn bt25_028_has_cost_reduction() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    // "When THIS card would be played" — a self play-cost reducer (DCGO
+    // `MandatorySelfPlayCostReduction`). `when_playing_this` is what lets the
+    // engine collect it from the hand card being played; without it the
+    // reduction never applied (DCGO exam BT25-028-effect1, 2026-09-18).
     assert!(
         card.effects.iter().any(|c| matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
+            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
+                when_playing_this: true,
+                amount: Some(5),
+                ..
+            })
         )),
-        "cost-reduction clause present"
+        "self play-cost reduction clause present"
     );
+}
+
+/// Hard-playing Dianamon with an opponent Lv.6+ Digimon on the board pays
+/// 12 - 5 = 7. Mandatory, no prompt (DCGO `MandatorySelfPlayCostReduction`).
+#[test]
+fn bt25_028_hard_play_pays_7_when_opponent_has_level_6() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(1, "OPP-L6", Some(0));
+    runner.game.enter_main_phase();
+    let mem_before = runner.memory();
+    let played = runner.play(0, 0);
+    assert!(played.is_some(), "the play resolves with no reducer prompt");
+    // The [On Play] body then asks its mandatory delete pick (OPP-L6 is
+    // unsuspended) — resolve it so the memory read is post-play.
+    let _ = runner.auto_resolve();
+    assert_eq!(mem_before - runner.memory(), 7, "12 reduced by 5");
+}
+
+/// Without a Lv.6+ opponent Digimon the full 12 is paid.
+#[test]
+fn bt25_028_hard_play_pays_12_without_level_6_opponent() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(1, "OPP-NOSRC", Some(0));
+    runner.game.enter_main_phase();
+    let mem_before = runner.memory();
+    assert_eq!(mem_before, 10);
+    let played = runner.play(0, 0);
+    assert!(played.is_some());
+    let _ = runner.auto_resolve();
+    // 10 - 12 = -2 crosses zero: the turn passes and the gauge is then read
+    // from P1's side (+2). Un-flip it before subtracting.
+    assert_eq!(runner.game.turn_player(), 1, "paying 12 from 10 ends the turn");
+    let p0_memory = -runner.memory();
+    assert_eq!(mem_before - p0_memory, 12, "no reduction: full 12");
 }
 
 #[test]

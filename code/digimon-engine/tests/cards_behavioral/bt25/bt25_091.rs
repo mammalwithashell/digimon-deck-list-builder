@@ -15,12 +15,17 @@
 //! - B1 start-of-turn tamer (memory swing — set to 3)
 //! - A4 trash → hand recursion (optional) with else-draw branch
 //! - Tamer [Security] play-self
-//! - [Your Turn] OnUseOption clause is BLOCKED (dsl) — G-DSL-ON-USE-OPTION-TIMING
+//! - [Your Turn] `on_use_option` observer gated on WHO used WHAT
+//!   (`TriggerSource::OptionUsed`, G-ENGINE-ON-USE-OPTION-EVENT-CARD): optional
+//!   suspend cost, mandatory opponent-Digimon pick, CannotAttack until the
+//!   opponent's turn ends (DCGO BT25_091.cs:99-174, WhenUseOption.cs:11-16)
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind};
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::enums::{CardColor, CardKind, ModifierType};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 const YAML: &str = include_str!("../../../cards/bt25/BT25-091.yaml");
 
@@ -170,6 +175,264 @@ fn bt25_091_on_play_draws_when_no_return() {
         runner.deck_size(0),
         deck_before - 1,
         "Draw 1 fires when nothing was returned"
+    );
+}
+
+// ── Section 4: [Your Turn] When you use [TS] trait Option cards ──────────
+
+/// Inline observer used ONLY to isolate the "you" half of the gate: no
+/// [Your Turn] window, so the owner check is the only thing between P0's
+/// Option use and P1's observer.
+const OWNER_GATE_OBSERVER: &str = "
+card: OBS-YOU
+name: \"Owner Gate Observer\"
+kind: tamer
+color: [purple]
+cost: 2
+effects:
+  - when: on_use_option
+    active_when: { all_turns: true }
+    summary: \"When YOU use an Option card, gain 1 memory\"
+    condition:
+      event_target_owner: you
+    process:
+      - gain_memory: 1
+";
+
+fn monica_handle(runner: &DebugRunner) -> PermanentHandle {
+    let idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "BT25-091")
+        .expect("Monica on P0's field");
+    runner.perm_handle(0, idx)
+}
+
+fn is_suspended(runner: &DebugRunner, h: PermanentHandle) -> bool {
+    runner.game.players[h.player as usize].battle_area[h.index as usize].is_suspended
+}
+
+fn locked_count(runner: &DebugRunner, handles: &[PermanentHandle]) -> usize {
+    handles
+        .iter()
+        .filter(|h| runner.game.modifiers.has(**h, ModifierType::CannotAttack))
+        .count()
+}
+
+fn accept(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("Monica's optional suspend-cost prompt must park");
+    assert_eq!(view.selecting_player, 0);
+    assert!(
+        view.is_optional,
+        "'by suspending this Tamer' is a 15-7-1 optional cost"
+    );
+    let a = *view
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("accept action");
+    runner.execute_action(0, a).expect("accept");
+}
+
+#[test]
+fn bt25_091_structure_on_use_option_clause() {
+    let runner = monica_runner().start();
+    let compiled = runner.compiled_card("BT25-091").unwrap();
+    let t = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnUseOption] => Some(t),
+            _ => None,
+        })
+        .expect("on_use_option clause present");
+    assert!(t.optional, "DCGO SetUpActivateClass(.., -1, true, ..)");
+    assert!(!t.once_per_turn, "no [Once Per Turn] printed");
+}
+
+#[test]
+fn bt25_091_own_ts_option_use_suspends_and_locks_one_opponent_digimon() {
+    let mut runner = monica_runner()
+        .add_card(make_ts_option("TS-OPT"))
+        .add_card(make_filler("OPP-A"))
+        .add_card(make_filler("OPP-B"))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .hand(0, &["TS-OPT"])
+        .memory(8)
+        .start();
+    runner.place_on_field(0, "BT25-091", Some(0));
+    let a = runner.place_on_field(1, "OPP-A", Some(0));
+    let b = runner.place_on_field(1, "OPP-B", Some(0));
+    runner.game.enter_main_phase();
+    let monica = monica_handle(&runner);
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    accept(&mut runner);
+    assert!(is_suspended(&runner, monica), "Monica suspends as the cost");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("opponent-Digimon pick parks");
+    assert_eq!(view.selecting_player, 0);
+    assert_eq!(view.kind, SelectionKind::OppField);
+    assert!(
+        !view.is_optional,
+        "DCGO canNoSelect:false — the pick is mandatory"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both opponent Digimon are candidates"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pick one");
+    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        locked_count(&runner, &[a, b]),
+        1,
+        "exactly 1 opponent Digimon can't attack"
+    );
+
+    // "until their turn ends": still locked through the opponent's turn,
+    // gone once it ends.
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.turn_player(), 1);
+    assert_eq!(
+        locked_count(&runner, &[a, b]),
+        1,
+        "lock persists during the opponent's turn"
+    );
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        locked_count(&runner, &[a, b]),
+        0,
+        "lock expires at the end of the opponent's turn"
+    );
+}
+
+#[test]
+fn bt25_091_declining_leaves_monica_unsuspended() {
+    let mut runner = monica_runner()
+        .add_card(make_ts_option("TS-OPT"))
+        .add_card(make_filler("OPP-A"))
+        .hand(0, &["TS-OPT"])
+        .memory(8)
+        .start();
+    runner.place_on_field(0, "BT25-091", Some(0));
+    let a = runner.place_on_field(1, "OPP-A", Some(0));
+    runner.game.enter_main_phase();
+    let monica = monica_handle(&runner);
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    runner.execute_action(0, PASS).expect("decline");
+    let _ = runner.auto_resolve();
+    assert!(!is_suspended(&runner, monica));
+    assert_eq!(locked_count(&runner, &[a]), 0);
+}
+
+#[test]
+fn bt25_091_non_ts_option_does_not_trigger() {
+    let mut plain = make_ts_option("PLAIN-OPT");
+    plain.traits.clear();
+    let mut runner = monica_runner()
+        .add_card(plain)
+        .add_card(make_filler("OPP-A"))
+        .hand(0, &["PLAIN-OPT"])
+        .memory(8)
+        .start();
+    runner.place_on_field(0, "BT25-091", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.game.enter_main_phase();
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        runner.pending_selection().is_none(),
+        "only [TS] trait Option cards trigger Monica (DCGO OptionTrigger: HasTSTraits)"
+    );
+}
+
+#[test]
+fn bt25_091_suspended_monica_is_not_offered() {
+    let mut runner = monica_runner()
+        .add_card(make_ts_option("TS-OPT"))
+        .add_card(make_filler("OPP-A"))
+        .hand(0, &["TS-OPT"])
+        .memory(8)
+        .start();
+    let idx = runner.place_on_field(0, "BT25-091", Some(0)).index as usize;
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.game.players[0].battle_area[idx].is_suspended = true;
+    runner.game.enter_main_phase();
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        runner.pending_selection().is_none(),
+        "DCGO CanActivateSuspendCostEffect: a suspended Monica cannot pay"
+    );
+}
+
+#[test]
+fn bt25_091_offered_even_when_opponent_has_no_digimon() {
+    // DCGO's CanActivateCondition checks only the suspend cost; the pick is
+    // skipped by `HasMatchConditionPermanent` AFTER Monica suspends.
+    let mut runner = monica_runner()
+        .add_card(make_ts_option("TS-OPT"))
+        .hand(0, &["TS-OPT"])
+        .memory(8)
+        .start();
+    runner.place_on_field(0, "BT25-091", Some(0));
+    runner.game.enter_main_phase();
+    let monica = monica_handle(&runner);
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    accept(&mut runner);
+    assert!(is_suspended(&runner, monica));
+    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no target → no pick");
+}
+
+/// The "you" half of the gate, isolated from [Your Turn]: P1's observer must
+/// NOT see P0's Option use as its own (DCGO `cardSource.Owner == card.Owner`,
+/// WhenUseOption.cs:13), while P0's observer does.
+#[test]
+fn on_use_option_event_target_owner_reads_the_user_not_the_observer() {
+    let mut runner = monica_runner()
+        .from_dsl_yaml(OWNER_GATE_OBSERVER)
+        .expect("observer YAML loads")
+        .add_card(make_ts_option("TS-OPT"))
+        .hand(0, &["TS-OPT"])
+        .memory(8)
+        .start();
+    runner.place_on_field(1, "OBS-YOU", Some(0));
+    // P0's own copy: also the purple permanent meeting the colour requirement.
+    runner.place_on_field(0, "OBS-YOU", Some(0));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let _ = runner.game.play_option_from_hand(0, 0);
+    let _ = runner.auto_resolve();
+    // Cost 3 paid, P0's observer +1, P1's observer silent (it would be -1).
+    assert_eq!(
+        runner.memory(),
+        before - 3 + 1,
+        "only the USER's observer fires on `event_target_owner: you`"
     );
 }
 

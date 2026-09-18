@@ -52,7 +52,9 @@ effects:
       - link_to_own_digimon:
           optional: true
           free: true
-          filter: { kind: digimon }
+          # Host must meet the printed Link condition ([TS] trait): DCGO
+          # `card.CanLinkToTargetPermanent(permanent, false, true)` (BT25_100.cs:85).
+          filter: { kind: digimon, trait_has: TS }
 
   # [Security] Activate this card's [Main] effects.
   - scope: inherited
@@ -70,7 +72,27 @@ effects:
       - link_to_own_digimon:
           optional: true
           free: true
-          filter: { kind: digimon }
+          # Host must meet the printed Link condition ([TS] trait): DCGO
+          # `card.CanLinkToTargetPermanent(permanent, false, true)` (BT25_100.cs:85).
+          filter: { kind: digimon, trait_has: TS }
+
+  # Link DP box: DP+2000 to the host while this card is linked (card image +
+  # official Bandai DB bundle "### Link DP  DP+2000"; DCGO applies it through
+  # the generic `CardEffectFactory.LinkEffect(card)`). Was missing entirely --
+  # surfaced by the security-flip link tests (2026-09-18).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
+
+  # Link ESS: <Collision> (card image + bundle "### Link Effect  <Collision>
+  # <Piercing>"; DCGO BT25_100.cs:49-52 `CollisionSelfStaticEffect(false, card,
+  # null, true)` -- isLinkedEffect). Was missing.
+  - kind: grant_keyword
+    scope: linked
+    keyword: Collision
+    summary: "[Link] <Collision>"
 
   # Inherited (link ESS): <Piercing>
   - kind: grant_keyword

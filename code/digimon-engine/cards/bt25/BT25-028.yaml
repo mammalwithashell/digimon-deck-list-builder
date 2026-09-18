@@ -53,7 +53,16 @@ alt_paths:
     ignore_requirements: true
 
 effects:
+  # "When this card would be played, if your opponent has a level 6 or higher
+  # Digimon, reduce the cost by 5." — DCGO `MandatorySelfPlayCostReduction(5,
+  # card, Condition)`: a SELF play-cost reducer hosted on the card being
+  # played. `when_playing_this: true` is what makes the engine collect the
+  # reducer from the hand card itself (`before_pay_cost_source_infos`);
+  # without it the clause only ever scanned from the battle area and the
+  # reduction never applied to Dianamon's own play (measured by the DCGO exam
+  # line qa/dcgo-exams/BT25/BT25-028-effect1.yaml, 2026-09-18: 12 paid, not 7).
   - kind: cost_reduction
+    when_playing_this: true
     amount: 5
     condition:
       any_permanent:

@@ -63,7 +63,9 @@ effects:
       - link_to_own_digimon:
           optional: true
           free: true
-          filter: { kind: digimon }
+          # Host must meet the printed Link condition ([TS] trait): DCGO
+          # `card.CanLinkToTargetPermanent(permanent, false, true)` (BT25_093.cs:62).
+          filter: { kind: digimon, trait_has: TS }
 
   # [Security] Activate this card's [Main] effects.
   - scope: inherited
@@ -93,14 +95,23 @@ effects:
       - link_to_own_digimon:
           optional: true
           free: true
-          filter: { kind: digimon }
+          # Host must meet the printed Link condition ([TS] trait): DCGO
+          # `card.CanLinkToTargetPermanent(permanent, false, true)` (BT25_093.cs:62).
+          filter: { kind: digimon, trait_has: TS }
 
   # Inherited (link ESS): [When Attacking] [Once Per Turn] Delete 1 of your
   # opponent's Digimon with as much DP as this Digimon or less.
+  #
+  # MANDATORY: the printed text has no "you may" (official Bandai DB bundle,
+  # data/card_bundles/BT25-093.md) and DCGO registers the linked ESS with
+  # `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, 1, false, ...)`
+  # + a `canNoSelect: false` SelectPermanentEffect (BT25_093.cs "Link ESS").
+  # An earlier `optional: true` here over-exposed a decline no rule grants
+  # (rule 17 — only real choices reach the action space); measured by the
+  # DCGO exam line qa/dcgo-exams/BT25/BT25-093-effect5.yaml (2026-09-18).
   - scope: inherited
     when: when_attacking
     once_per_turn: true
-    optional: true
     active_when: { your_turn: true }
     summary: "[Inherited][When Attacking][OPT] Delete 1 opponent Digimon with DP <= this Digimon"
     process:
@@ -112,6 +123,16 @@ effects:
               - dp_lte: { source_dp: {} }
           prompt: "Delete 1 opponent Digimon with DP as much as this Digimon or less"
       - delete_permanent: { target: wa_target }
+
+  # Link DP box: DP+2000 to the host while this card is linked (card image +
+  # official Bandai DB bundle "### Link DP  DP+2000"; DCGO applies it through
+  # the generic `CardEffectFactory.LinkEffect(card)`). Was missing entirely --
+  # surfaced by the security-flip link tests (2026-09-18).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
 
   # [Link] [TS] trait: Cost 3
   - kind: link_requirement

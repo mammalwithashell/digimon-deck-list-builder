@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-17",
+  "last_updated": "2026-09-18",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6159,19 +6159,19 @@
     },
     "BT25-091": {
       "card_name": "Monica Simmons",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-09-18",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "orphan-staples-6 (BT25 TS staples)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-091.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_091.rs",
-      "test_count": 5,
+      "test_count": 12,
       "patterns": [
         "B1",
         "A4"
       ],
-      "notes": "Clauses 1 (start-of-turn set-memory-to-3), 2 (On Play return-TS-option-or-draw), 4 (Security play-self) implemented + tested. Clause 3 [Your Turn] OnUseOption suspend-to-lock BLOCKED-dsl (G-DSL-ON-USE-OPTION-TIMING)."
+      "notes": "All 4 clauses implemented + tested. Clause 3 [Your Turn] 'When you use [TS] trait Option cards' = when: on_use_option + event_target_owner: you + event_card_trait_has: TS (TriggerSource::OptionUsed, G-ENGINE-ON-USE-OPTION-EVENT-CARD RESOLVED 35958972b); optional suspend-self cost, mandatory opponent-Digimon pick, CannotAttack until end of opponent's turn; offer NOT gated on a target existing (DCGO BT25_091.cs:119-123,142)."
     },
     "BT25-092": {
       "card_name": "Asuna Shiroki",
@@ -6193,37 +6193,37 @@
     },
     "BT25-093": {
       "card_name": "Ignition Flare",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-09-18",
       "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "orphan-staples-6 (BT25 TS staples)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_093.rs",
-      "test_count": 4,
+      "test_count": 5,
       "patterns": [
         "D3",
         "C1",
         "F"
       ],
-      "notes": "[Main] delete-all-lowest-DP + fallback trash-opponent-Option + optional link + [Security] all implemented and tested. Inherited link-ESS [When Attacking] delete authored faithfully but not host-applied (G-LINK-INHERITED-ESS)."
+      "notes": "[Main] delete-all-lowest-DP + fallback trash-opponent-Option + optional link + [Security] implemented and tested, incl. the security-flip link tail (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON RESOLVED 35958972b). 2026-09-18 fidelity fixes: linked [When Attacking] ESS is MANDATORY (BT25_093.cs:167,206), printed Link DP +2000 authored (was missing), link host must meet the [TS] Link condition (BT25_093.cs:62)."
     },
     "BT25-100": {
       "card_name": "Iron Slash",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-09-18",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "orphan-staples-6 (BT25 TS staples)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-100.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_100.rs",
-      "test_count": 5,
+      "test_count": 10,
       "patterns": [
         "D3",
         "C1",
         "H3"
       ],
-      "notes": "[Main] De-Digivolve 2 + optional link + [Security] implemented and tested. Inherited <Piercing> link-ESS authored but not host-applied \u2014 1 test #[ignore] G-LINK-INHERITED-ESS."
+      "notes": "[Main] De-Digivolve 2 + optional link + [Security] (incl. the security-flip link tail, G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON RESOLVED 35958972b) implemented and tested. 2026-09-18 fidelity fixes from the card image/official bundle: Link DP +2000 and linked <Collision> authored (both were missing; DCGO BT25_100.cs:45-61), link host must meet the [TS] Link condition (BT25_100.cs:85). Linked <Piercing> host-applied and tested (no ignored tests)."
     },
     "BT25-101": {
       "card_name": "Divine Arms Version \u03a9",
@@ -7194,7 +7194,7 @@
     },
     "BT25-028": {
       "card_name": "Dianamon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-09-18",
       "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
@@ -7206,7 +7206,8 @@
         "F7",
         "G2"
       ],
-      "notes": "Cost-reduce, mass CannotSuspend opp <=1-source + mandatory delete unsuspended, OPT DNA-into-hand GraceNovamon, inherited WA CannotSuspend. Player-cannot-suspend modelled as for_each snapshot (G-DSL-PLAYER-CANNOT-SUSPEND-FILTER). 7 tests."
+      "notes": "Cost-reduce, mass CannotSuspend opp <=1-source + mandatory delete unsuspended, OPT DNA-into-hand GraceNovamon, inherited WA CannotSuspend. Player-cannot-suspend modelled as for_each snapshot (G-DSL-PLAYER-CANNOT-SUSPEND-FILTER). 7 tests. 2026-09-18: self play-cost reducer now `when_playing_this: true` (DCGO MandatorySelfPlayCostReduction) -- before, the -5 never applied to Dianamon's own play (DCGO exam BT25-028-effect1); 2 hard-play tests added.",
+      "test_count": 9
     },
     "BT25-059": {
       "card_name": "Ceresmon",

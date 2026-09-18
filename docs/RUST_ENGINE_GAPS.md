@@ -2880,3 +2880,66 @@ and which is NOT recognised as one of the fused Delay flows would still run the
 rest of its clause. Fixing that needs the cost-vs-effect distinction described
 above (an `<Evade>` on "Delete 1 of your opponent's Digimon. Then draw 1." must
 not eat the draw), and no test currently demonstrates a card hitting it.
+
+## G-ENGINE-ON-USE-OPTION-EVENT-CARD — RESOLVED 2026-09-18 (35958972b)
+
+**Driver:** Monica Simmons (BT25-091) clause 3 — "[Your Turn] When you use [TS]
+trait Option cards, by suspending this Tamer, …". The board-wide `OnUseOption`
+observers fired from `TriggerSource::PlayerBattleArea`, whose context names
+neither the user nor the used card, so "YOU" and "[TS] trait" were ungateable.
+
+**Fix:** `Game::on_use_option_armed: Option<(PlayerId, CardHandle)>`; observers
+fire through `TriggerSource::OptionUsed { player, card }` (one scan of both
+battle areas) with `event_card` / `event_source_card` / `source_player` set and
+`target_permanent` deliberately UNSET — every `event_*` predicate falls back to
+`target_permanent`, so seeding it with the observer made
+`event_target_owner: you` vacuously true (caught by
+`bt25_091::on_use_option_event_target_owner_reads_the_user_not_the_observer`,
+which fails with the observer seeded). `card_data_for_handle` /
+`card_source_for_handle` now resolve the in-flight `pending_option` /
+`pending_security` card. Citation: DCGO `CanTriggerWhenOwnerUseOption` →
+`cardSource.Owner == card.Owner` (WhenUseOption.cs:11-16), BT25_091.cs:99-174.
+Authoring idiom: `when: on_use_option` + `condition: { event_target_owner: you,
+event_card_trait_has: <Trait> }`.
+
+## G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON — RESOLVED 2026-09-18 (35958972b)
+
+**Drivers:** Iron Slash (BT25-100), Ignition Flare (BT25-093) — "[Security]
+Activate this card's [Main] effects" where [Main] ends "you may link this card
+to 1 of your Digimon". `link_to_own_digimon` silently returned when there was no
+`pending_option`, so a security-flipped copy was never offered the link and was
+always trashed.
+
+**Fix:** `try_run_link_step_from_security` (dsl_cards/step/mod.rs): when the
+resolving `pending_security` card is the step's source and a legal host exists,
+mark it `played` (the "belongs to an area now" bit `DisposeFinalize` honours) and
+hand it to the ordinary `LinkSelectHost` path via `install_link_host_selection`
+(data VM — clone-safe). Decline / vanished host trashes it once; no host → no
+prompt, ordinary security dispose. Citation: DCGO `Permanent.AddLinkCard` →
+`RemoveFromAllArea` (BT25_100.cs:147); general_rule §13-1-7-4. Tests:
+`bt25_100_security_flip_*` (3), `bt25_093_security_flip_links_then_host_…`.
+
+## F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED — OPEN (2 of 6 fixed 2026-09-18)
+
+Found while finishing the gap above: Plug-In **Option** cards were authored
+without their printed Link box. Nothing data-drives Link DP (`queries.rs` sums
+only authored `scope: linked|inherited` `dp_modifier` clauses), so a missing
+clause is a silently missing +DP. Scan = every YAML with `kind: link_requirement`
+and no `dp_modifier`, against `data/card_bundles/<ID>.md` "### Link DP":
+
+| Card | Printed Link DP | State |
+|---|---|---|
+| Iron Slash (BT25-100) | +2000, plus linked `<Collision>` also missing | FIXED 2026-09-18 |
+| Ignition Flare (BT25-093) | +2000 | FIXED 2026-09-18 |
+| BT25-101 | +4000 | OPEN |
+| BT24-091 | +2000 | OPEN |
+| BT24-095 | +2000 | OPEN |
+| ST22-08 | +2000 | OPEN |
+
+The same two cards also let an effect-link pick ANY own Digimon; DCGO filters
+hosts through `card.CanLinkToTargetPermanent(permanent, false, true)`
+(CardSource.cs:3346-3358 — the printed Link condition still applies to a free
+effect link). Fixed on BT25-093 / BT25-100 (`filter: { kind: digimon, trait_has:
+TS }`); the four OPEN cards above need the same check when their Link box is
+authored. A `dsl-lint` rule ("link_requirement without a Link DP clause while
+the bundle prints one") would close the family.

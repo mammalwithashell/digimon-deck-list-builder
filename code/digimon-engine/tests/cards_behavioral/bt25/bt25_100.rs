@@ -229,6 +229,206 @@ fn bt25_100_no_link_prompt_when_no_own_digimon() {
     );
 }
 
+/// The effect link still honours the printed Link condition ("[TS] trait"):
+/// DCGO filters hosts through `card.CanLinkToTargetPermanent(permanent, false,
+/// true)` (BT25_100.cs:85 → CardSource.cs:3346-3358 `linkCondition
+/// .digimonCondition`). A non-[TS] Digimon is never offered.
+#[test]
+fn bt25_100_link_host_must_meet_the_ts_link_condition() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_tamer("TS-TAMER"))
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "TS-TAMER", Some(0));
+    let plain = runner.place_on_field(0, "OPP-LV4", Some(0));
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    let opp = runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
+    let tview = runner.pending_selection_view().expect("de-digi prompt");
+    runner
+        .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
+        .expect("choose opponent Digimon");
+    let lview = runner.pending_selection_view().expect("link prompt");
+    assert!(lview
+        .valid_action_ids
+        .contains(&encode_attack(0, host.index as u16)));
+    assert!(
+        !lview
+            .valid_action_ids
+            .contains(&encode_attack(0, plain.index as u16)),
+        "a non-[TS] Digimon fails the Link condition"
+    );
+}
+
+/// Printed Link box: DP+2000, <Collision>, <Piercing> (card image / official
+/// bundle; DCGO BT25_100.cs:45-61).
+#[test]
+fn bt25_100_linked_host_gains_dp_2000_collision_and_piercing() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    let opp = runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+    let host_handle = PermanentHandle { player: 0, index: host.index };
+    let before = runner.effective_dp(host_handle).expect("dp");
+
+    assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
+    let tview = runner.pending_selection_view().expect("de-digi prompt");
+    runner
+        .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
+        .expect("choose opponent Digimon");
+    let lview = runner.pending_selection_view().expect("link prompt");
+    runner
+        .execute_action(lview.selecting_player, encode_attack(0, host.index as u16))
+        .expect("link");
+    runner.game.tick_declarative_effects();
+
+    assert_eq!(runner.effective_dp(host_handle), Some(before + 2000));
+    assert!(runner.game.has_keyword(host_handle, Keyword::Collision));
+    assert!(runner.game.has_keyword(host_handle, Keyword::Piercing));
+}
+
+// ── Section 4: [Security] Activate this card's [Main] — the link tail ─────
+//
+// G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON. A security-flipped Iron Slash
+// runs the same [Main] body, and its "you may link this card" tail must lift
+// the card OUT of the security resolution onto the chosen host (DCGO
+// `Permanent.AddLinkCard` → `RemoveFromAllArea`; §13-1-7-4 trashes a checked
+// card only "unless it belongs to an area"). Before the fix the link step
+// silently returned (no `pending_option`), Iron Slash was trashed, and the
+// host never gained the Link DP / <Piercing>.
+
+#[test]
+fn bt25_100_security_flip_links_to_defenders_digimon() {
+    // P1 defends with Iron Slash on top of security and a TS Digimon host;
+    // P0 attacks with a Lv5 stack for De-Digivolve 2 to bite.
+    let mut runner = iron_runner()
+        .add_card(make_ts_digimon("HOST", 3))
+        .security(1, &["OPP-LV3", "BT25-100"])
+        .memory(5)
+        .start();
+    let host = runner.place_on_field(1, "HOST", Some(1));
+    let attacker = runner.place_field_stack(0, &["OPP-LV3", "OPP-LV4", "OPP-LV5"], false, 0);
+    runner.game.enter_main_phase();
+
+    let host_dp_before = runner
+        .effective_dp(PermanentHandle { player: 1, index: host.index })
+        .expect("host dp");
+    let trash1_before = runner.trash_size(1);
+    let _ = runner.attack_player(attacker, 1, false);
+
+    // [Main] step 1 (defender picks the attacker to De-Digivolve 2).
+    let tview = runner
+        .pending_selection_view()
+        .expect("security [Main]: de-digi target prompt");
+    assert_eq!(tview.selecting_player, 1);
+    assert_eq!(tview.kind, SelectionKind::OppField);
+    runner
+        .execute_action(1, encode_attack(0, attacker.index as u16))
+        .expect("defender picks the attacking stack");
+
+    // [Main] step 2: the link tail — an OPTIONAL own-Digimon pick, asked even
+    // though the card came from security.
+    let lview = runner
+        .pending_selection_view()
+        .expect("security [Main]: link-host prompt must be asked");
+    assert_eq!(lview.selecting_player, 1);
+    assert_eq!(lview.kind, SelectionKind::OwnField);
+    assert!(lview.is_optional, "printed 'you may link'");
+    runner
+        .execute_action(1, encode_attack(0, host.index as u16))
+        .expect("link Iron Slash to the defender's host");
+    assert!(runner.pending_selection().is_none());
+
+    // The card is plugged into the host, NOT trashed — and only once.
+    let host_perm = &runner.game.player(1).battle_area[host.index as usize];
+    assert_eq!(host_perm.linked_cards.len(), 1);
+    assert_eq!(host_perm.linked_cards[0].card_id(&runner.game.card_data), "BT25-100");
+    assert_eq!(
+        runner.trash_size(1),
+        trash1_before,
+        "a linked security card must not also be trashed at dispose"
+    );
+    assert_eq!(runner.security_count(1), 1, "one security card was checked");
+    // Link DP (+2000) and the linked <Piercing> reach the host.
+    let host_handle = PermanentHandle { player: 1, index: host.index };
+    assert_eq!(
+        runner.effective_dp(host_handle).expect("host dp"),
+        host_dp_before + 2000
+    );
+    assert!(runner.game.has_keyword(host_handle, Keyword::Piercing));
+    // De-Digivolve 2 bit on the attacker: Lv5 + Lv4 trashed, Lv3 remains.
+    let top_id = runner.game.player(0).battle_area[attacker.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top_id, "OPP-LV3");
+}
+
+#[test]
+fn bt25_100_security_flip_declined_link_trashes_the_card_once() {
+    let mut runner = iron_runner()
+        .add_card(make_ts_digimon("HOST", 3))
+        .security(1, &["OPP-LV3", "BT25-100"])
+        .memory(5)
+        .start();
+    runner.place_on_field(1, "HOST", Some(1));
+    let attacker = runner.place_field_stack(0, &["OPP-LV3", "OPP-LV4", "OPP-LV5"], false, 0);
+    runner.game.enter_main_phase();
+
+    let trash1_before = runner.trash_size(1);
+    let _ = runner.attack_player(attacker, 1, false);
+    runner
+        .execute_action(1, encode_attack(0, attacker.index as u16))
+        .expect("defender picks the attacking stack");
+    let lview = runner.pending_selection_view().expect("link-host prompt");
+    assert!(lview.is_optional);
+    runner.execute_action(1, PASS).expect("decline the link");
+    assert!(runner.pending_selection().is_none());
+
+    let host_perm = &runner.game.player(1).battle_area[0];
+    assert!(host_perm.linked_cards.is_empty());
+    assert_eq!(
+        runner.trash_size(1),
+        trash1_before + 1,
+        "declined: the checked Option is trashed exactly once"
+    );
+    assert!(runner
+        .game
+        .player(1)
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT25-100"));
+}
+
+#[test]
+fn bt25_100_security_flip_without_host_trashes_the_card() {
+    // No TS Digimon on the defender's side: no link prompt, card is trashed
+    // by the ordinary security dispose (DCGO `HasMatchConditionPermanent`
+    // guard skips the prompt the same way).
+    let mut runner = iron_runner()
+        .security(1, &["OPP-LV3", "BT25-100"])
+        .memory(5)
+        .start();
+    let attacker = runner.place_field_stack(0, &["OPP-LV3", "OPP-LV4", "OPP-LV5"], false, 0);
+    runner.game.enter_main_phase();
+
+    let trash1_before = runner.trash_size(1);
+    let _ = runner.attack_player(attacker, 1, false);
+    runner
+        .execute_action(1, encode_attack(0, attacker.index as u16))
+        .expect("defender picks the attacking stack");
+    assert!(runner.pending_selection().is_none(), "no host → no link prompt");
+    assert_eq!(runner.trash_size(1), trash1_before + 1);
+}
+
 // ── fixtures ─────────────────────────────────────────────────────────────
 
 fn iron_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
