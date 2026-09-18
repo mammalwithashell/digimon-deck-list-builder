@@ -109,5 +109,31 @@ DCGO `effect_activation` EX7-070 "De-Digivolve 1" `is_optional: false`,
 `executed: true`; final state Kokatorimon in P1's trash, Agumon remains,
 EX7-070 in P0's trash, turn 10 at memory −1. Verdict **confirmed**.
 
-EX7-070 now: 3 clauses — 2 confirmed, 1 diverged (`effect#2`, attacker
-slot-addressing artefact, needs the same kind of re-author), 0 unmeasured.
+## `effect#2` triage (2026-09-18) — r1 divergence was a slot-addressing artefact; r2 CONFIRMED
+
+**r1** (recording `20260918T073957Z_8be88fd7…`), `--all-diffs` against the
+preserved sidecar: lead step 9 `p1.field[0].suspended ours=false dcgo=true`,
+`p1.field[1].suspended ours=true dcgo=false`; one downstream row (step 10,
+the surviving Dracomon suspended only on our side). Nothing else — both
+engines flipped EX7-070, asked P0 one mandatory pick and deleted ST1-02.
+Cause: `attack: attacker: field.1` on a TWO-Digimon board. DCGO seats Digimon
+centre-out (frames 4, 3, 5, …), so its compact order was [Dracomon, Biyomon]
+against our entry order [Biyomon, Dracomon]; `field.1` sent Biyomon into
+security on DCGO. Classification: **scenario artefact** (neither engine
+wrong). Printed text "[Security] Delete 1 of your opponent's Digimon with the
+lowest play cost." (no "may"); `EX7_070.cs:198-240` — security effect,
+`SelectPermanentEffect(Destroy, canNoSelect: false)`. No card/engine change.
+
+**Re-author (r2).** P1 plays a THIRD Digimon (Agumon ST1-03, T4) and attacks
+with it on T6: the third-entered Digimon is frame 5 = `field.2` on both sides
+(rule from `../BT25/NOTES-BT25-083.md`). P1's stack holds exactly one ST1-03
+in hand through T4 (a duplicate makes `play: ST1-03` ambiguous at lowering).
+
+**r2** — oracle job `exam-EX7-070-effect2-r2`, recording
+`20260918T095140Z_9450765b…`: diff **CLEAN** (16 of 16 ours / 16 DCGO rows).
+DCGO `effect_activation` EX7-070 "[Security] Delete 1 of your opponent's
+Digimon with the lowest play cost." `is_optional: false`, `executed: true`.
+Verdict **confirmed**.
+
+EX7-070 now: 3 clauses — 3 confirmed, 0 diverged, 0 unreachable,
+0 unavailable, 0 unmeasured.

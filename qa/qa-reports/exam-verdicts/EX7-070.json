@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T09:39:27.360388300+00:00",
+  "last_updated": "2026-09-18T09:52:26.355313200+00:00",
   "clauses": {
     "EX7-070#effect#0": {
       "clause_id": "EX7-070#effect#0",
@@ -23,12 +23,11 @@
     "EX7-070#effect#2": {
       "clause_id": "EX7-070#effect#2",
       "card_id": "EX7-070",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Security Effect",
       "text_sha256": "33b79510aa0982cc356f35af71011000515c70e4e330449aef25854c0cc8738f",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-070-effect2.yaml",
-      "reason": "DIVERGED at step 9: p1.field suspended flags swapped (ours ST1-04 attacked, DCGO ST1-02 attacked). Scenario slot-addressing artefact, not a clause finding: `field.N` on attack/digivolve lowers to OUR battle-area index, but DCGO seats the same permanents in a different frame order, so the action lands on a different Digimon in DCGO. Re-author with an unambiguous actor and re-run. The clause body itself agreed: both engines resolved the [Security] effect and deleted ST1-02.",
-      "recorded_at": "2026-09-18T07:57:17.833602700+00:00"
+      "recorded_at": "2026-09-18T09:52:26.355313200+00:00"
     }
   }
 }
