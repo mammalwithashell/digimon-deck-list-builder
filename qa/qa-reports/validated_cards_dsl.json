@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-15",
+  "last_updated": "2026-09-17",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -5816,16 +5816,21 @@
     },
     "BT25-005": {
       "card_name": "Pagumon",
-      "validated_date": "2026-09-13",
-      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-tops)",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-09-17",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / stage on-add-digivolution-cards drivers)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "three-musketeers",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "Re-confirmed BLOCKED 2026-09-13 by the three-musketeers-1 campaign (slice ex7-tops): the sole clause needs the `OnAddDigivolutionCards` trigger timing (DSL `Timing` enum still has no source-ADDED sibling of on_digivolution_card_trashed; no engine dispatch site). Shared with EX7-005 Kapurimon / EX11-074. See docs/RUST_ENGINE_GAPS.md `OnAddDigivolutionCards`."
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_005.rs",
+      "test_count": 18,
+      "patterns": [
+        "G4",
+        "E2",
+        "on_add_digivolution_cards",
+        "effect_initiated_digivolve cost reduce"
+      ],
+      "notes": "Inherited [Your Turn][OPT] 'when [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2' = `when: on_add_digivolution_cards` + `event_host_permanent_is_source` + `event_added_card_any { trait_has: Three Musketeers }` (DCGO BT25_005.cs cardEffectCondition null -> any effect incl. the opponent's), `optional: true` + `outer_prompt: true` (DCGO isOptional yes/no; declining refunds the OPT per rule 15-14-1-5, accepting then declining the hand pick consumes it), `count_gte` hand guard (no dead prompt when nothing legal is in hand), body select_hand(optional; kind digimon + can_digivolve_from_source + in_text_contains 'Three Musketeers' | trait_has TS) -> effect_initiated_digivolve { target: source, cost: { reduce: 2 } } (reduction clamps at 0). Substrate widening: `can_digivolve_from_source` now enumerates routes via Game::all_digivolve_routes_for_card (printed circles + DSL alt-path special circles, App Fusion excluded) instead of the printed-evo_costs-only Game::can_digivolve, so the hand filter offers exactly what the commit accepts (DCGO CanPlayCardTargetFrame); P-196/197/198 (prior consumers) still green. Unblocked by G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS (d74328811)."
     },
     "BT25-007": {
       "card_name": "Gatchmon",
@@ -10709,16 +10714,20 @@
     },
     "EX7-005": {
       "card_name": "Kapurimon",
-      "validated_date": "2026-09-12",
-      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice ex7-line)",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-09-17",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / stage on-add-digivolution-cards drivers)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "three-musketeers",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "BLOCKED (engine): inherited '[Your Turn][OPT] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory' needs the OnAddDigivolutionCards trigger timing (DCGO EffectTiming.OnAddDigivolutionCards / CanTriggerOnAddDigivolutionCard) which the engine still lacks - same open gap as BT25-005 Pagumon in docs/RUST_ENGINE_GAPS.md (card list updated). No YAML authored (a stub or a mis-bound timing would be a silent approximation)."
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_005.rs",
+      "test_count": 13,
+      "patterns": [
+        "G4",
+        "E1",
+        "on_add_digivolution_cards"
+      ],
+      "notes": "Inherited [Your Turn][OPT] 'when effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory' = `when: on_add_digivolution_cards` + `event_host_permanent_is_source` + `event_added_card_any { kind: option, trait_has: Three Musketeers }` (DCGO EX7_005.cs: cardEffectCondition EffectSourceCard != null -> NOT owner-gated, the opponent's effect qualifies; mandatory). Tests: host/kind/trait/sibling/face-up/your-turn gates split positive+negative, 15-5-2 batch fires once, OPT lockout + reset. Unblocked by G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS (d74328811)."
     },
     "EX7-008": {
       "card_name": "ToyAgumon",
@@ -10946,19 +10955,21 @@
     },
     "BT7-056": {
       "card_name": "Dorumon",
-      "validated_date": "2026-09-13",
-      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / slice splash-digimon)",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-09-17",
+      "report": "batch-implement-cards-rust-dsl (three-musketeers-1 / stage on-add-digivolution-cards drivers)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "three-musketeers",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-056.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_056.rs",
+      "test_count": 16,
       "patterns": [
         "A2",
-        "OnAddDigivolutionCards"
+        "G4",
+        "E1",
+        "on_add_digivolution_cards"
       ],
-      "notes": "BLOCKED (engine): the inherited [Your Turn][OPT] 'when one of your effects places a digivolution card under this Digimon, gain 1 memory' needs the `OnAddDigivolutionCards` trigger timing (DCGO BT7_056.cs OnAddDigivolutionCards + CanTriggerOnAddDigivolutionCard; see docs/RUST_ENGINE_GAPS.md). The [On Play] reveal-3 / add 1 [X Antibody] + 1 [Kota Domoto] / bottom-the-rest body is expressible (BT18-007 shape) but the card is not authored without its inherited clause (no stubs). Shared with BT25-005 / EX7-005 / EX11-074 / BT7-005 / RB1-001 / BT8-005 / BT9-066."
+      "notes": "[On Play] reveal 3 / add 1 [X Antibody]-trait card + 1 [Kota Domoto] / bottom the rest = reveal_top_deck + select_reveal_buckets (min 1/max 1 per bucket, no_duplicate_cards; Q&A: a lone match is still added) + add_to_hand_from_reveal x2 + place_remainder_on_deck bottom (EX7-008 shape). Inherited [Your Turn][OPT] 'when one of YOUR effects places a digivolution card under this Digimon, gain 1 memory' = `when: on_add_digivolution_cards` + `event_host_permanent_is_source` + `event_caused_by_own_effect` (DCGO BT7_056.cs cardEffectCondition Owner == card.Owner; cardCondition null -> any card kind). Tests cover rule 15-5-3's own worked example (Dorumon itself tucked by your effect fires), the opponent-effect negative, 15-5-2 batch, OPT lockout + reset. Unblocked by G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS (d74328811)."
     },
     "BT8-071": {
       "card_name": "Psychemon",

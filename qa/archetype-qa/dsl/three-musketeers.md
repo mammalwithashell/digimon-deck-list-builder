@@ -258,3 +258,78 @@ open failures are pre-existing EX12 entries untouched by this slice); the
 - **"Delete all … with the lowest level"**: `for_each { over: { of: opponent, zone: [battle_area], kind: digimon, level_matches_aggregate: { selector: lowest_level, of: opponent } } }` + `delete_permanent` (BT23-058 / BT25-093 sibling) — no selection, ties all go.
 - **Opponent-trash → opponent-deck-bottom cost**: `select_count_capped_multi { of: opponent, zone: trash, min: N, max: N, optional_zero: false }` + `return_trash_list_to_deck_bottom { of: opponent }` routes to the OPPONENT's deck; keep `optional_zero: false` and let the clause's `outer_prompt` carry the decline, otherwise a 0-pick would run the "unsuspend" tail for free (BT17-070).
 - Test fixture gotcha: `attack_player` resolves the security check after a mid-attack [When Attacking] cost, so the checked security card lands in the defender's trash — assert opponent-trash costs by the deck delta, not the trash count. `end_turn` into a player with an empty deck ends the game (deck-out) — give both players decks in expiry tests.
+
+---
+
+# Stage `on-add-digivolution-cards drivers` (campaign three-musketeers-1) — 2026-09-17
+
+Slice: EX7-005, BT7-056, BT25-005 — the three cards every earlier slice
+left BLOCKED (engine) on the `OnAddDigivolutionCards` trigger timing, which
+the previous stage landed (`d74328811`: DSL `when: on_add_digivolution_cards`
++ per-host batch window + `event_host_permanent_is_source` /
+`event_caused_by_own_effect` / `event_added_card_any`). Sources: card images
+EX7-005 / BT7-056 / BT25-005 (`.webp`), official Bandai DB bundles, DCGO
+`EX7_005.cs` / `BT7_056.cs` / `BT25_005.cs`, `general_rule.pdf` 15-5-2 /
+15-5-3 / 15-14-1-5.
+
+## Summary
+- IMPLEMENTED: 3
+- PARTIAL: 0
+- BLOCKED (engine): 0
+- BLOCKED (dsl): 0
+- SKIPPED (prior verdict): 0
+
+## Per-Card Verdicts
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| EX7-005 | Kapurimon | IMPLEMENT | IMPLEMENTED | self-audit | 13/13 | Inherited [Your Turn][OPT] when effects place a [Three Musketeers] Option under this Digimon → +1 memory: `on_add_digivolution_cards` + host-is-source + `event_added_card_any { kind: option, trait_has }`. NOT owner-gated (DCGO `EffectSourceCard != null` — the opponent's effect on your turn triggers) |
+| BT7-056 | Dorumon | IMPLEMENT | IMPLEMENTED | self-audit | 16/16 | [On Play] reveal 3 → 1 [X Antibody]-trait card + 1 [Kota Domoto] to hand, rest to bottom (EX7-008 two-bucket shape; Q&A lone-match still added); inherited [Your Turn][OPT] when one of YOUR effects places a digivolution card under this Digimon → +1 memory (`event_caused_by_own_effect`, any card kind). Rule 15-5-3's own example (Dorumon itself tucked by your effect) is tested |
+| BT25-005 | Pagumon | IMPLEMENT | IMPLEMENTED | self-audit | 18/18 | Inherited [Your Turn][OPT] when [Three Musketeers]-trait cards are placed under this Digimon → may digivolve into a [Three Musketeers]-text / [TS]-trait Digimon from hand, cost −2: `optional` + `outer_prompt` (DCGO yes/no; decline refunds the OPT per 15-14-1-5), `count_gte` hand guard, `select_hand` (optional, `can_digivolve_from_source`) → `effect_initiated_digivolve { cost: { reduce: 2 } }` (clamps at 0). Any effect's placement qualifies (DCGO `cardEffectCondition: null`) |
+
+Test command (all green, 2026-09-17):
+`RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex7_005 bt7_056 bt25_005 p_196 p_197 p_198`
+(70 tests, incl. the three prior `can_digivolve_from_source` consumers). Full
+`cards_behavioral`: 8138 passed / 0 failed / 38 ignored.
+
+## Engine-Gap Blocked Cards
+- none — `G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS` is closed; its three driver
+  cards now ship.
+
+## DSL-Vocab-Gap Blocked Cards
+- none.
+
+## Substrate widened by this stage (rule 28)
+- **`can_digivolve_from_source` now enumerates the real route set.** The
+  card-subject predicate (`code/digimon-engine/src/dsl_cards/predicate.rs`
+  `can_card_digivolve_from_source`) used to call `Game::can_digivolve`, which
+  scans only the printed `evo_costs` circles — so a hand card whose only
+  applicable circle is a DSL `alt_paths: kind: digivolve` special circle
+  (e.g. a [TS] Lv.4 with "Lv.3 w/[TS] trait: Cost 3" over a non-black [TS]
+  host) was silently withheld from the prompt even though the commit
+  (`effect_initiated_digivolve_from_source`) would accept it. It now routes
+  through `Game::all_digivolve_routes_for_card` (printed circles + alt-path
+  circles + the `CanOnlyDigivolveInto` gate; App Fusion excluded, as the
+  commit path excludes it), so the hand prompt offers exactly the cards the
+  commit accepts — DCGO `DigivolveIntoHandOrTrashCard`'s
+  `CanPlayCardTargetFrame` filter. Covered by
+  `bt25_005_alt_path_only_ts_card_is_offered_and_digivolves`; prior
+  consumers P-196 / P-197 / P-198 unchanged and green.
+
+## New Patterns / findings
+- **DCGO optional OPT trigger with a "may" body**: `optional: true` +
+  `outer_prompt: true` reproduces DCGO's `SetUpActivateClass(..., 1, TRUE,
+  ...)` two-prompt shape and gets rule 15-14-1-5 right for free — declining
+  the outer yes/no leaves the [Once Per Turn] use available for a later
+  trigger in the same turn, accepting then declining the inner pick consumes
+  it (both directions tested on BT25-005). The P-196 idiom (no outer prompt,
+  optional first step) consumes the OPT on decline, which is wrong for a
+  DCGO-optional ActivateClass — prefer this shape when DCGO passes
+  `isOptional: true`.
+- **No-legal-target guard for a forced outer prompt**: `outer_prompt: true`
+  deliberately takes no candidate guard, so a "may digivolve" body with an
+  empty hand filter would show a yes/no whose "yes" only burns the OPT. Add
+  the same hand filter as a `count_gte { n: 1 }` trigger condition
+  (BT17-070 / BT19-101 idiom) — the effect then does not trigger at all when
+  nothing is legal (DCGO's `HasMatchConditionOwnersHand`).
+- **Memory-gain tests must start below the +10 cap** — `memory(10)` makes a
+  `gain_memory: 1` invisible (BT7-056 tripped on this once).

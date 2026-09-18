@@ -3,6 +3,7 @@ mod bt25_001;
 mod bt25_002;
 mod bt25_003;
 mod bt25_004;
+mod bt25_005;
 mod bt25_006;
 mod bt25_007;
 mod bt25_008;

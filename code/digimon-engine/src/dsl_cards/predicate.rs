@@ -2918,17 +2918,33 @@ fn alt_path_kind_matches(kind: &digimon_dsl::compiled::CompiledAltPathKind, name
     kind.as_key() == normalized
 }
 
+/// `can_digivolve_from_source: true` — the candidate card has at least one
+/// normal-digivolve route onto the SOURCE permanent. Routes are enumerated by
+/// the SAME machinery the effect-initiated digivolve commit path uses
+/// (`Game::all_digivolve_routes_for_card`, App Fusion excluded — it is an
+/// alt-PLAY mechanic the `effect_initiated_digivolve` step also skips): the
+/// printed evo-cost circles, DSL `alt_paths: kind: digivolve` special circles
+/// (e.g. BT25-005 Pagumon's "[TS] trait" targets whose only applicable circle
+/// is "Lv.3 w/[TS] trait"), and the `CanOnlyDigivolveInto` restriction gate.
+/// Mirrors DCGO `DigivolveIntoHandOrTrashCard`'s `CanSelectCardCondition`
+/// (`cardSource.CanPlayCardTargetFrame(...)`) so the hand prompt offers
+/// exactly the cards the commit would accept — a pick the commit would reject
+/// is never surfaced. (Previously routed through `Game::can_digivolve`, which
+/// scans printed `evo_costs` only and so hid alt-path-only candidates.)
 fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
     let Some(source_handle) = rctx.source_permanent else {
         return false;
     };
-    let Some(source_permanent) = permanent_for_handle(rctx, source_handle) else {
+    if permanent_for_handle(rctx, source_handle).is_none() {
         return false;
-    };
+    }
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
-    rctx.game.can_digivolve(candidate, source_permanent)
+    rctx.game
+        .all_digivolve_routes_for_card(candidate, source_handle)
+        .iter()
+        .any(|route| !route.app_fusion)
 }
 
 /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
