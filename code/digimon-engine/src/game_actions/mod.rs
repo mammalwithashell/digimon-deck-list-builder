@@ -233,7 +233,13 @@ pub(crate) struct LinkOptionHostSelectionState {
 #[derive(Debug, Clone)]
 pub(crate) struct DigimonLinkHostSelectionState {
     pub(crate) owner: PlayerId,
-    pub(crate) source: PermanentHandle,
+    /// The linking card's origin (standing permanent or hand) — see
+    /// `game::DigimonLinkOrigin`.
+    pub(crate) origin: crate::game::DigimonLinkOrigin,
+    /// The linking card itself. For a standing origin this is the top card at
+    /// the source slot when the ability was activated; for a hand origin it is
+    /// the hand card, addressed by handle because the hand can shift.
+    pub(crate) card: crate::card_source::CardHandle,
     pub(crate) cost: u16,
     pub(crate) candidates: Vec<PermanentHandle>,
 }

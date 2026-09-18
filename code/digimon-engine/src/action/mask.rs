@@ -351,6 +351,18 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             for h in 0..hand_limit {
                 if main_effect_select::hand_main_match(game, player_id, h).is_some() {
                     mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
+                    continue;
+                }
+                // DigiLink Shape-B, hand origin: an Appmon Link Digimon in hand
+                // may declare its `<Link>` ("Plug this card from the hand ...")
+                // onto one of the controller's standing Digimon. Shares the
+                // slot's single `HAND_EFFECT` bit with a `[Hand] [Main]`
+                // effect, first-match-wins in the decoder's order ([Main] then
+                // link) — the same one-declarable-per-hand-slot limit DCGO's
+                // recorder has (`ActionEncoder.EncodeActivateCard`, skill 0).
+                // Host selection follows via the pending-selection mask.
+                if game.hand_digimon_link_available(player_id, h) {
+                    mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
                 }
             }
 

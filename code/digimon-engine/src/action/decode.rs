@@ -133,10 +133,13 @@ impl Game {
             return;
         }
 
-        // [30..60) — Hand [Main] effects
+        // [30..60) — Hand [Main] effects, or a from-hand DigiLink declaration
+        // when the slot carries no `[Hand] [Main]` (mask order: [Main] wins).
         if (HAND_EFFECT_START..HAND_EFFECT_END).contains(&action_id) {
             let hand_idx = (action_id - HAND_EFFECT_START) as usize;
-            let _ = self.activate_hand_main(tp, hand_idx);
+            if !self.activate_hand_main(tp, hand_idx) {
+                let _ = self.activate_hand_link(tp, hand_idx);
+            }
             return;
         }
 

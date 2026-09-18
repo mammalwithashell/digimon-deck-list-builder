@@ -188,6 +188,26 @@ impl DebugRunner {
         }
     }
 
+    /// Materialise a fresh copy of `card_id` at the END of `player`'s hand
+    /// (the same way `place_on_field` materialises one on the field) and
+    /// return its hand index. For tests that need a specific card in hand
+    /// AFTER the game is built — e.g. a wrapped live game whose opening hand
+    /// was already drawn — where the builder's `.hand(..)` no longer applies.
+    pub fn add_to_hand(&mut self, player: PlayerId, card_id: &str) -> usize {
+        let data_idx = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap_or_else(|| panic!("add_to_hand: unknown card_id {}", card_id));
+        let next_idx = self.game.next_card_index();
+        let mut card = CardSource::new(data_idx, player, next_idx);
+        card.card_index = next_idx;
+        let hand = &mut self.game.players[player as usize].hand;
+        hand.push(card);
+        hand.len() - 1
+    }
+
     pub fn place_stack(&mut self, player: PlayerId, card_ids: &[&str]) -> PermanentHandle {
         assert!(
             !card_ids.is_empty(),

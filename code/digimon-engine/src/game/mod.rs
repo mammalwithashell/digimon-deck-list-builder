@@ -219,14 +219,31 @@ pub(crate) struct PendingWouldLinkResume {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
+/// Where a player-declared DigiLink Shape-B Digimon-link comes from — the two
+/// origins the printed keyword names ("Plug this card from the hand or battle
+/// area sideways into the specified Digimon"). Mirrors the `root` DCGO's
+/// `ILinkCard.LinkCard` derives from the linking card's zone: `None` (a whole
+/// standing permanent, absorbed via `IPlacePermanentToLinkCards`) or `Hand`
+/// (a single card attached via `Permanent.AddLinkCard`). The trash /
+/// under-stack / re-link roots stay effect-driven (`link_chosen_card_into_host`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DigimonLinkOrigin {
+    /// An un-linked standing Digimon in the battle area — the whole permanent
+    /// is absorbed (under-sources trashed, top card becomes the linked card).
+    Standing(PermanentHandle),
+    /// A Digimon card in `player`'s hand — it is lifted out of the hand and
+    /// attached as-is; nothing is absorbed and no `[On Play]` fires.
+    Hand(PlayerId),
+}
+
 /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
 /// `WhenWouldLink` replacement parked an interactive selection. Carries the
-/// linking standing Digimon, the chosen host, the link cost, and the linking
+/// linking card's origin, the chosen host, the link cost, and the linking
 /// card's handle (the `WhenWouldLink` replacement subject) so the resume can
-/// re-validate the source before committing the absorb.
+/// re-validate the source before committing the attach.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingDigimonLink {
-    pub(crate) source: PermanentHandle,
+    pub(crate) origin: DigimonLinkOrigin,
     pub(crate) host: PermanentHandle,
     pub(crate) cost: u16,
     pub(crate) card: crate::card_source::CardHandle,

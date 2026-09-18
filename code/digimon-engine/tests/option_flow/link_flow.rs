@@ -1318,6 +1318,140 @@ effects:
     );
 }
 
+fn hand_link_bit(hand_index: usize) -> usize {
+    (digimon_engine::action::space::HAND_EFFECT_START + hand_index as u16) as usize
+}
+
+/// From-hand Digimon link (G-ENGINE-DIGIMON-LINK-FROM-HAND, closed 2026-09-17)
+/// — the other half of the printed keyword, "Plug this card from the HAND or
+/// battle area sideways into the specified Digimon". DCGO `LinkEffect` is
+/// declarable while `IsExistOnHand(card)`, and `ILinkCard.LinkCard` derives
+/// root `Hand` → `WhenWouldLink` → pay cost → `Permanent.AddLinkCard`.
+///
+/// Our surface: the hand slot's `HAND_EFFECT` bit (no `[Hand] [Main]` on the
+/// card, so the bit is the link), host selection through the same
+/// `OwnField` prompt the field origin installs, then the card is lifted out
+/// of the hand and attached — no absorb, no `[On Play]` — with `OnLink`
+/// firing so the linked card's `[When Linking]` and its linked ESS resolve.
+#[test]
+fn dsl_digimon_link_from_hand_attaches_pays_cost_and_fires_when_linked() {
+    use digimon_engine::enums::Keyword;
+    use digimon_engine::selection::SelectionKind;
+
+    let yaml = r#"
+card: GATCH-DSL
+name: Gatchmon
+kind: digimon
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { kind: digimon }
+  - scope: linked
+    when: when_linked
+    process:
+      - draw: { of: you, count: 1 }
+  - scope: linked
+    kind: grant_keyword
+    keyword: Raid
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH-DSL", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 5])
+        .hand(0, &["FILLER", "GATCH-DSL"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    // The hand card's self link-condition is readable from hand, with HOST as
+    // a legal host; the plain FILLER at slot 0 is not a link source.
+    let (cost, hosts) = r
+        .game
+        .hand_digimon_link_condition_targets(0, 1)
+        .expect("GATCH-DSL in hand carries a self link-condition");
+    assert_eq!(cost, 1);
+    assert!(hosts.contains(&host));
+    assert!(r.game.hand_digimon_link_condition_targets(0, 0).is_none());
+
+    // The mask offers the link on GATCH-DSL's hand slot and NOT on FILLER's.
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(1)], 1.0, "hand link offered for GATCH-DSL");
+    assert_eq!(mask[hand_link_bit(0)], 0.0, "no hand link for a plain Digimon");
+
+    // Declare → host prompt (never auto-picked, rule 17) → pick HOST.
+    let mem_before = r.memory();
+    let hand_before = r.hand_size(0);
+    r.game.decode_action(hand_link_bit(1) as u16, 0);
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("declaring a hand link installs the host-selection prompt");
+    assert_eq!(pending.kind, SelectionKind::OwnField);
+    assert!(pending.source_permanent.is_none(), "a hand card has no source permanent");
+    let action = pending.valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Attached from hand (the hand lost GATCH-DSL and gained the WhenLinked
+    // draw: net 0), nothing was absorbed from the field, cost paid, and the
+    // linked Raid ESS reaches the host.
+    assert_eq!(r.battle_area_size(0), 1, "HOST alone stands; nothing was played");
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "GATCH-DSL attached as a linked card");
+    assert_eq!(linked[0].card_id(&r.game.card_data), "GATCH-DSL");
+    assert!(
+        !r.game
+            .player(0)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "GATCH-DSL"),
+        "the linked card left the hand"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        hand_before,
+        "hand: -1 (GATCH-DSL linked) +1 (when_linked drew once)"
+    );
+    assert_eq!(r.memory(), mem_before - 1, "link cost 1 paid");
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(host, Keyword::Raid),
+        "scope: linked grant_keyword Raid reaches the host from a hand-origin link"
+    );
+}
+
+/// The hand link is gated exactly like the field one: no legal host (an empty
+/// battle area) or an unaffordable cost withholds the bit, and the decoder
+/// refuses the id rather than parking a prompt over nothing.
+#[test]
+fn digimon_link_from_hand_is_withheld_without_a_host_or_the_memory() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["GATCH"])
+        .memory(0)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkCondition));
+    advance_to_main(&mut r);
+
+    // No host on the field → no bit, and the decoder is a no-op.
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(0)], 0.0, "no host → no hand link");
+    r.game.decode_action(hand_link_bit(0) as u16, 0);
+    assert!(r.game.pending_selection.is_none(), "nothing parked without a host");
+    assert_eq!(r.hand_size(0), 1, "GATCH still in hand");
+
+    // With a host the bit appears (cost 1 against memory 0 is affordable down
+    // to the -10 floor, as for the field origin).
+    r.place_on_field(0, "HOST", Some(0));
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(0)], 1.0, "a host makes the hand link legal");
+}
+
 /// Facet #6/#11 (DSL host-side) — a host Digimon authored in YAML with
 /// `when: when_card_linked_to_this` fires its body once when a card gets
 /// linked to it. Confirms the DSL timing lowers to `OnLink` + the host
