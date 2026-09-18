@@ -1,0 +1,131 @@
+# Exam scenario: Gundramon (EX7-048), clause EX7-048#effect#1 -- <Blocker>.
+#
+# "This Digimon can block in the blocker timing" (16-4, Persistent --
+# docs/digimon-rules/keyword-semantics.md). Measured by blocking: P1's
+# Biyomon (ST1-02, 3000 DP) attacks P0's security on T6, the blocker window
+# opens for P0, Gundramon takes it, and the battle (12000 vs 3000) deletes
+# Biyomon while P0's security stays at 5.
+#
+# THE LINE reuses EX7-048-effect0.yaml's entry (Megadramon T3, Gundramon over
+# it for 4 on T5, the no-candidate [When Digivolving] reveal with all six to
+# the deck bottom). P1 plays Biyomon on T2 so it can attack on T6, the first
+# P1 turn after Gundramon is down. Gundramon never attacked, so it is
+# unsuspended and can block.
+#
+# PROMPT SHAPE. Both engines ask the DEFENDER one permanent pick: DCGO's
+# AttackProcess.cs "select blocker" is a SelectPermanentEffect over
+# HasBlocker Digimon with `canNoSelect: !HasCollision` (declinable here);
+# ours parks its "Declare a blocker" OwnField pick with a decline. Answered
+# by P0 -- actor 0 -- while it is P1's turn (the P-170-effect3.yaml /
+# BT25-058-effect2.yaml idiom). P0 holds no [Counter] card, so the counter
+# timing is silent on DCGO (ours opens none on a player-target attack anyway
+# -- NOTES-EX7-059.md). Blocking is not attacking: Megadramon's inherited
+# <Piercing> is inert. Gundramon's [All Turns] protection is not in play:
+# nothing of P0's leaves the battle area and no Option is under Gundramon.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4).      T4 (P1, 4): pass.
+#   T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1, draw 1); the
+#               reveal (no candidate); all six to the deck bottom.
+#   T6 (P1, 1): Biyomon attacks security. THE CLAUSE: P0 blocks. Attacking
+#               spent no memory: the trailing step is P1's pass.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_048_pool.json (--decks).
+card: EX7-048
+clause: EX7-048#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), stack[10..12]
+    # draws (T3, T5, digivolution), stack[13..18] THE REVEALED SIX -- all
+    # Digimon, no Option. No Option ever reaches P0's hand or trash.
+    stack: [EX7-011, EX7-048, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02,
+            BT25-083, BT25-083, BT25-082, BT25-082, EX7-051, EX7-008]
+    rest: tm-gundramon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-048
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future attacker.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-048 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving]: no candidate among the six -> no "use" pick. The
+  # remainder goes to the BOTTOM. Ours by label (sim-only); DCGO's
+  # generic_bool false (wire-only).
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, BT25-082, EX7-051, EX7-008], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, BT25-082, EX7-051, EX7-008], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T6 (P1, 1): Biyomon attacks P0's security -- the blocker window opens.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: P0 blocks with Gundramon. Battle 12000 vs 3000: Biyomon is
+  # deleted and P0's security is untouched.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause; attacking spent no memory, P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 18
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.security: 5
+      p0.field:
+        - { card_id: EX7-048, dp: 12000, suspended: true, sources: [EX7-011] }
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5

@@ -1,0 +1,110 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#3 -- <Blocker>.
+#
+# "This Digimon can block in the blocker timing" (16-4, Persistent). Measured
+# by blocking: P1's Biyomon (ST1-02, 3000 DP) attacks P0's security on T6, the
+# blocker window opens for P0, AvengeKidmon takes it, and the battle
+# (13000 vs 3000) deletes Biyomon while P0's security stays at 5.
+#
+# THE LINE reuses P-170-effect0.yaml's entry (Megadramon T3, AvengeKidmon for
+# 4 on T5). P1 plays Biyomon on T2, so it sheds summoning sickness over T4
+# and attacks on T6, the first P1 turn after AvengeKidmon is down.
+# AvengeKidmon never attacked, so it is unsuspended and can block.
+#
+# PROMPT SHAPE. Both engines ask the DEFENDER one permanent pick: DCGO's
+# `AttackProcess.cs` "select blocker" is a `SelectPermanentEffect` over
+# `HasBlocker` Digimon with `canNoSelect: !HasCollision` (declinable here);
+# our engine parks its "Declare a blocker" OwnField pick with a decline.
+# Answered by P0 -- actor 0 -- while it is P1's turn (BT25-058-effect2
+# idiom). Blocking is not attacking, so Megadramon's inherited <Piercing>
+# is inert, and AvengeKidmon wins the battle, so neither <Retaliation> nor
+# [On Deletion] can fire.
+#
+#   T1 (P0): pass.          T2 (P1, 3): Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): Megadramon (7 -> -4).       T4 (P1, 4): pass.
+#   T5 (P0, 3): AvengeKidmon for 4 (3 -> -1).
+#   T6 (P1, 1): Biyomon attacks security; THE CLAUSE -- P0 blocks. (P1 opens
+#               at 1: an overspend hands over exactly the overspend.)
+#               Attacking spent no memory: the trailing step is P1's pass.
+card: P-170
+clause: P-170#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-011, P-170, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            BT25-083, BT25-083, BT25-082]
+    rest: tm-avengekidmon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): the attacker.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T6 (P1, 1): Biyomon attacks P0's security -- THE CLAUSE opens the
+  # blocker window for P0.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0 blocks with AvengeKidmon. Battle 13000 vs 3000: Biyomon is deleted.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause; attacking spent no memory, P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 15
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.security: 5
+      p0.field:
+        - { card_id: P-170, dp: 13000, suspended: true, sources: [EX7-011] }
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5

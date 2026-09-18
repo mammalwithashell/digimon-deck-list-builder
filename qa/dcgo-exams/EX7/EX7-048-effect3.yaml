@@ -1,0 +1,185 @@
+# Exam scenario: Gundramon (EX7-048), clause EX7-048#effect#3 --
+# "[All Turns] When any of your [Three Musketeers] trait Digimon would leave
+#  the battle area other than by your effects, by trashing 1 Option card from
+#  this Digimon's digivolution cards, they don't leave."
+#
+# THE LINE is EX7-048-effect2.yaml plus one opponent turn. Gundramon's [When
+# Digivolving] uses Bind Red Trigger (P-180) from the reveal, and P-180's
+# [Main] seats itself UNDER Gundramon -- the Option THE CLAUSE will pay with.
+# On T6 P1 uses Gaia Force (ST1-16, "[Main] Delete 1 of your opponent's
+# Digimon.") on Gundramon: an OPPONENT's effect, so "other than by your
+# effects" holds. P0 accepts, trashes P-180, and Gundramon (which prints the
+# [Three Musketeers] trait and has no "other" qualifier, so it protects
+# itself) does not leave. Witnesses: Gundramon still on P0's field at T7,
+# P-180 in P0's trash, Gaia Force spent (P1's trash, memory 1 -> -7).
+#
+# P1 FIELDS A TAMER, NOT A DIGIMON, on purpose. Gaia Force is red and P1
+# needs a red permanent: Tai Kamiya (ST1-12, static "[Your Turn] All of your
+# Digimon get +1000 DP", no prompts). A Digimon there would be a target for
+# P-180's OWN "When effects trash this card from digivolution cards, delete 1
+# of your opponent's 7000 DP or lower Digimon", which fires off THE CLAUSE's
+# cost and would pull a second card's trigger (and the open mid-effect
+# trigger-timing finding, ../P/NOTES-P-180.md) into this measurement. With no
+# opponent Digimon, P_180.cs's CanUseCondition (HasMatchConditionPermanent)
+# is false and our trigger has no target: nothing is asked or changed. The
+# opponent book `tm-red-opponent-048` carries ST1-12 x2 for this line.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): play Tai Kamiya (2: 3 -> 1), pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4).      T4 (P1, 4): pass.
+#   T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1, draw 1); use P-180
+#               from the reveal (P1 security 5 -> 4; tuck under Gundramon);
+#               the other five to the deck bottom.
+#   T6 (P1, 1): Gaia Force (8: 1 -> -7) on Gundramon. THE CLAUSE: P0 accepts;
+#               keeps Gundramon; trashes P-180.
+#   T7 (P0, 7): breeding decision -- the trailing step.
+#
+# PROMPT SHAPE (EX7_048.cs "All Turns", EffectTiming.WhenRemoveField):
+# SetUpActivateClass(..., -1, TRUE, ...); CanUse = on the battle area &&
+# CanTriggerWhenPermanentRemoveField(own [Three Musketeers] Digimon) &&
+# !IsByEffect(owner's effect); CanActivate = an Option among THIS
+# permanent's DigivolutionCards.
+#   1. OptionalSkill -- SHARED with our `kind: replacement` `optional: true`
+#      gate (Replacement -> OptionalSkill, 1:1). One immediate-type effect:
+#      no MultipleSkills.
+#   2. SelectPermanentEffect(maxCount 1, canNoSelect: true) over own [Three
+#      Musketeers] Digimon with `willBeRemoveField` -- "Select 1 Digimon to
+#      prevent the deletion of". DCGO-only: our replacement is evaluated per
+#      leaving subject, so there is no "which one" prompt. Consumed under the
+#      harness even with one candidate.
+#   3. SelectCardEffect(Root.Custom over DigivolutionCards, IsOption,
+#      maxCount 1, canNoSelect: () => true) -- DCGO-only by identity. Ours is
+#      a single-candidate EffectChoice ("Choose 1 Option to trash ...")
+#      answered through the single-accept-id `yes:` path, sim-only (the
+#      resolver cannot name a digivolution card by `cards:`).
+#   4. willBeRemoveField = false; ITrashDigivolutionCards. No prompt.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_048_pool.json (--decks).
+card: EX7-048
+clause: EX7-048#effect#3
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), stack[10..12]
+    # draws (T3, T5, digivolution), stack[13..18] THE REVEALED SIX -- exactly
+    # ONE [Three Musketeers] trait Option (P-180) beside five Digimon. No
+    # Option ever reaches P0's hand, so Megadramon's [On Play] stays silent.
+    stack: [EX7-011, EX7-048, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02,
+            BT25-083, P-180, BT25-083, BT25-082, EX7-051, EX7-008]
+    rest: tm-gundramon
+  p1:
+    # Tai Kamiya (ST1-12, a RED Tamer) and Gaia Force (ST1-16) in the opening
+    # hand. stack[9] = Biyomon: the security card P-180's [Main] trashes.
+    stack: [ST1-12, ST1-16, ST1-03, ST1-04, BT1-009,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent-048
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Tai Kamiya (2: 3 -> 1) -- the red permanent Gaia Force needs.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-048 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving] (the EX7-048-effect2.yaml rows): use P-180 from the
+  # reveal -- this is what seats an Option under Gundramon.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectCardEffect }
+  # P-180 is USED at once (before the remainder is placed): its [Main]
+  # trashes P1's top security with no prompt, then asks the tuck target --
+  # Gundramon, P0's only [Three Musketeers] trait Digimon. SHARED.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # "Return the rest": the other five to the BOTTOM. Ours by label
+  # (sim-only); DCGO's generic_bool false (wire-only).
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, EX7-051, EX7-008], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, EX7-051, EX7-008], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T6 (P1, 1): Gaia Force (8: 1 -> -7) targets Gundramon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE. 1: the optional gate, answered by P0 on P1's turn -- SHARED
+  # (ours: kind Replacement, 1:1 with OptionalSkill).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # 2: DCGO asks WHICH leaving [Three Musketeers] Digimon to keep (Gundramon,
+  # by its top-card id) -- wire-only; our replacement is per-subject.
+  - actor: 0
+    do: { select: { cards: [EX7-048], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # 3: the Option to trash. Ours: a single-candidate EffectChoice answered
+  # through the `yes:` single-accept-id path, sim-only. DCGO: SelectCardEffect
+  # over Gundramon's digivolution cards, by identity, wire-only.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T7 (P0, 7): one step past the clause -- Gundramon is still there.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 23
+    that:
+      turn: 7
+      p0.memory: 7
+      p0.security: 5
+      p0.field:
+        - { card_id: EX7-048, dp: 12000, suspended: false, sources: [EX7-011] }
+      p0.trash: [P-180]
+      p1.field:
+        - { card_id: ST1-12, dp: -1, suspended: false, sources: [] }
+      p1.trash: [ST1-02, ST1-16]
+      p1.security: 4

@@ -1,0 +1,102 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.5 w/[Three Musketeers] in text:
+# Cost 4".
+#
+# THE LINE. P0 hard-plays Megadramon (EX7-011, RED Lv.5, "[Three Musketeers]"
+# in its printed effect text) on T3 and digivolves it into AvengeKidmon on
+# T5. AvengeKidmon prints TWO routes off a Red Lv.5 -- the standard Red
+# Lv.5 / 5 circle and the special "w/[Three Musketeers] in text" / 4 line --
+# so BOTH engines ask which cost is paid (DCGO: `SelectCountEffect`, the
+# digivolution-cost route, CardController.cs; ours: an `EffectChoice` over the
+# two distinct costs). Answering 4 is the clause: the witness is memory 3 -> -1
+# (not -2) and AvengeKidmon standing over Megadramon.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Megadramon (7 -> -4). Its [On Play] is gated on a [Three
+#               Musketeers] trait Option in hand or trash (EX7_011.cs
+#               CanActivateCondition) -- there is none, so neither engine
+#               opens a prompt.
+#   T4 (P1, 4): pass.
+#   T5 (P0, 3): THE CLAUSE -- digivolve Megadramon into AvengeKidmon, choose
+#               cost 4. Memory -1 hands the turn over.
+#   T6 (P1, 1): breeding decision -- the trailing step. (An overspend hands
+#               over exactly the overspend: P1 opens at 1, no top-up to 3.)
+#
+# PROMPT SHAPE (P_170.cs, region "Alternate Digivolution Requirement"):
+# AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText("Three
+# Musketeers") && Level == 5, digivolutionCost: 4,
+# ignoreDigivolutionRequirement: false). AvengeKidmon has no [When
+# Digivolving] effect, so the cost prompt is the only prompt on the line.
+#
+# Book: qa/dcgo-exams/P/tm_p_170_pool.json (--decks). The shared
+# three-musketeers book has no AvengeKidmon / Megadramon, and the opponent
+# deck adds ST1-10 / ST1-13 / ST1-16 for the sibling lines.
+card: P-170
+clause: P-170#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped here),
+    # stack[10..] draws: T3, T5, then the card the digivolution draws.
+    stack: [EX7-011, P-170, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            BT25-083, BT25-083, BT25-082]
+    rest: tm-avengekidmon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7 -> -4). No prompt: no TM Option in hand/trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE -- AvengeKidmon over Megadramon for 4 (not 5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T6 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.field:
+        - { card_id: P-170, dp: 13000, suspended: false, sources: [EX7-011] }
+      p0.hand: [BT25-082, BT25-082, BT25-083, BT25-083, EX7-008, ST1-02]
+      p0.trash: []
+      p1.field: []

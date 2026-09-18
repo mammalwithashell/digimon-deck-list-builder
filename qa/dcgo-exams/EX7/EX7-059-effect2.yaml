@@ -1,0 +1,149 @@
+# Exam scenario: BeelStarmon ACE (EX7-059), clause EX7-059#effect#2 --
+# "[On Play] [When Digivolving] Return 1 Option card from your trash to the
+#  hand. Then, you may use 1 [Three Musketeers] trait Option card from your
+#  hand without paying the cost."
+#
+# This file exercises the [When Digivolving] arm (EX7_059.cs registers two
+# identical bodies) and BOTH halves: the return and the free use.
+#
+# THE LINE. An Option has to be in P0's trash first. Bind Red Trigger (P-180,
+# a [Three Musketeers] trait Option) is the TOP card of P0's security
+# (stack[9]); P1's Biyomon attacks security on T4, P-180's [Security]
+# "Delete 1 of your opponent's Digimon with the highest DP" deletes Biyomon
+# (the confirmed P-180-effect2.yaml shape, one mandatory pick) and the used
+# Option goes to P0's trash. On T5 P0 digivolves Megadramon into the ACE:
+#   1. the MANDATORY return brings P-180 back to hand;
+#   2. the optional free use plays it: P-180's [Main] "Trash your opponent's
+#      top security card. Then, place this card as the bottom digivolution
+#      card of 1 of your [Three Musketeers] trait Digimon" -- P1's security
+#      4 -> ... see the arithmetic below -- and P-180 ends UNDER the ACE.
+# P-180 is RED and P0 fields nothing red but Megadramon's stack top is the
+# purple ACE: the use is legal through P-180's own "While you have a [Three
+# Musketeers] trait Digimon, you can ignore this card's color requirements"
+# (the ACE prints the trait) -- the confirmed P-180-effect1.yaml reading.
+#
+# THE ACE IS THE T5 DRAW (stack[11]), not an opening-hand card: held in hand
+# during P1's T4 attack it would be a <Blast Digivolve> candidate on DCGO
+# (player-target attacks open the counter timing there; ours does not --
+# NOTES-EX7-059.md) and drag a different clause's prompt into this line.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4). No prompt: P0 holds no [Three
+#               Musketeers] trait Option in hand or trash YET.
+#   T4 (P1, 4): Biyomon attacks security: P-180 flips; P0 deletes Biyomon;
+#               P-180 -> P0's trash. P0 security 5 -> 4. Pass.
+#   T5 (P0, 3): draw the ACE; digivolve (3 -> 0, draw 1). THE CLAUSE: return
+#               P-180; use P-180 free (P1 security 5 -> 4); tuck it under the
+#               ACE. Memory 0: the trailing step is P0's pass.
+#
+# PROMPT SHAPE (EX7_059.cs "When Digivolving"): SetUpActivateClass(..., -1,
+# FALSE, ...) -- mandatory, NO OptionalSkill.
+#   1. SelectCardEffect(Mode.AddHand, Root.Trash, maxCount 1, canNoSelect:
+#      () => false) over IsOption -- P-180 is the lone candidate; SHARED with
+#      our mandatory `select_trash` (Trash -> SelectCardEffect, 1:1).
+#   2. SelectHandEffect(maxCount 1, canNoSelect: true) over IsOption && TM
+#      trait && HasUseCost && !CanNotPlayThisOption -- SHARED with our
+#      declinable `use_option_from_hand` pick (Hand -> SelectHandEffect).
+#   3. PlayOptionCards(payCost: false, root: Hand) -> P_180.cs "Main"
+#      (mandatory): IDestroySecurity asks nothing; the tuck is ONE
+#      SelectPermanentEffect(maxCount 1, canNoSelect: false) over own
+#      Digimon with the trait -- the ACE, consumed under the harness even
+#      with one candidate. SHARED with our OwnField pick.
+# Megadramon's [When Digivolving] is NOT in play: the ACE is the top card.
+# Nothing observes the tuck (OnAddDigivolutionCards observers: BT25-005,
+# EX7-005, BT7-056). The ACE's [When Attacking] is never triggered.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_059_pool.json (--decks).
+card: EX7-059
+clause: EX7-059#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[9] = P-180, the TOP security card. Draws: T3 (ToyAgumon), T5 (the
+    # ACE), then the digivolution draw. P-180 is the only Option P0 ever
+    # holds, and the only one in its trash.
+    stack: [EX7-011, ST1-02, EX7-008, BT25-082, EX7-010,
+            BT25-078, BT25-078, EX7-008, EX7-051, P-180,
+            EX7-008, EX7-059, ST1-02]
+    rest: tm-beelstarmon-ace
+  p1:
+    # stack[9] = Biyomon: the security card P-180's [Main] trashes.
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent-059
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4): Biyomon attacks security; P-180 flips.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P-180's [Security]: P0 deletes P1's highest-DP Digimon -- Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): the ACE over Megadramon for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-059 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, half 1 (mandatory): return P-180 from the trash.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, half 2 ("you may"): use P-180 from hand for free.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # P-180's [Main]: security trashed with no prompt; the tuck target.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause (memory 0: still P0's turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 16
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - { card_id: EX7-059, dp: 11000, suspended: false, sources: [EX7-011, P-180] }
+      p0.hand: [BT25-082, EX7-008, EX7-008, EX7-010, ST1-02, ST1-02]
+      p1.field: []
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-02]

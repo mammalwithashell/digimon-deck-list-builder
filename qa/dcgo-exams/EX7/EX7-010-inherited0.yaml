@@ -1,0 +1,109 @@
+# Exam scenario: Deputymon (EX7-010), clause EX7-010#inherited#0 --
+# "[Your Turn] This Digimon gets +2000 DP." (inherited).
+#
+# THE LINE. Deputymon must be a DIGIVOLUTION CARD: P0 hard-plays it on T3 and
+# digivolves it into Megadramon (EX7-011, 7000 DP) on T5. The projection
+# carries EFFECTIVE DP per row, so the clause is read directly: Megadramon is
+# 9000 on P0's turn (the row of P0's T5 pass) and 7000 on P1's turn (the row
+# of P1's T6 breeding decision) -- both halves of "[Your Turn]".
+#
+# NO COST PROMPT. Megadramon's two routes -- Red Lv.4 / 3 and "Lv.4 w/[Three
+# Musketeers] in text: Cost 3" -- are BOTH open on Deputymon (red Lv.4 whose
+# text names [Three Musketeers]) but cost the same 3: CardController.cs asks
+# its cost SelectCountEffect only when CostList holds 2+ DISTINCT costs, and
+# our EffectChoice likewise needs >1 distinct cost.
+#
+# NO EFFECT PROMPTS. Deputymon has no [On Play]. Megadramon's [When
+# Digivolving] is gated on a [Three Musketeers] trait Option in hand or trash
+# (EX7_011.cs CanActivateCondition; ours `condition: count_gte`) -- P0 never
+# holds one. Deputymon's [When Digivolving]/[When Attacking] and its [Your
+# Turn] trait grant are face-up effects and are dead once it is a
+# digivolution card.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Deputymon (6: 3 -> -3).     T4 (P1, 3): pass.
+#   T5 (P0, 3): Megadramon over Deputymon for 3 (3 -> 0, draw 1). Memory 0:
+#               still P0's turn -- P0's pass row reads 9000 DP.
+#   T6 (P1, 3): breeding decision -- the trailing row reads 7000 DP.
+#
+# PROMPT SHAPE (EX7_010.cs, region "Inherit"): ChangeSelfDPStaticEffect(
+# changeValue: 2000, isInheritedEffect: true, condition: IsOwnerTurn &&
+# IsExistOnBattleAreaDigimon) -- static, no prompt. Ours: an inherited
+# `kind: aura`, `active_when: your_turn`, `dp_modifier: 2000`.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_010_pool.json (--decks).
+card: EX7-010
+clause: EX7-010#inherited#0
+seed: 424242
+decks:
+  p0:
+    # Draws: T3, T5, then the digivolution draw. No Option ever reaches
+    # P0's hand or trash.
+    stack: [EX7-010, EX7-011, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, BT25-083, BT25-083,
+            BT25-082, ST1-02, ST1-02]
+    rest: tm-deputymon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-010
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Deputymon (6: 3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Megadramon over Deputymon for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-011 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, your-turn half: this row reads Megadramon at 9000.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): the not-your-turn half: this row reads Megadramon at 7000.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.field:
+        - { card_id: EX7-011, dp: 9000, suspended: false, sources: [EX7-010] }
+  - at: 11
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: EX7-011, dp: 7000, suspended: false, sources: [EX7-010] }
+      p0.hand: [BT25-082, BT25-082, EX7-008, ST1-02, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []

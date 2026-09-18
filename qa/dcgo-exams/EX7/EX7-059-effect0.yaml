@@ -1,0 +1,100 @@
+# Exam scenario: BeelStarmon ACE (EX7-059), clause EX7-059#effect#0 -- the
+# special digivolution condition "[Digivolve] Lv.5 w/[Three Musketeers] in
+# text: Cost 3".
+#
+# WHY MEGADRAMON. The ACE's printed circle is Purple Lv.5 / 3 -- the SAME
+# cost as the special line -- so a purple Lv.5 base (LadyDevimon BT25-083)
+# cannot separate the two. Megadramon (EX7-011) is a RED Lv.5 whose printed
+# effect text names [Three Musketeers]: the purple circle fails on colour and
+# the ONLY legal route is the clause under exam. One open route: no cost
+# prompt on either engine. The witness is DCGO accepting the digivolve at all
+# (an illegal action aborts the job as a finding) plus the projected state:
+# the ACE over Megadramon, memory 3 -> 0.
+#
+# NO EFFECT PROMPTS. Megadramon's [On Play] is gated on a [Three Musketeers]
+# trait Option in hand or trash (EX7_011.cs CanActivateCondition) -- P0 never
+# holds one. The ACE's [When Digivolving] is MANDATORY (EX7_059.cs:
+# SetUpActivateClass(..., -1, false, ...)) and always activates, but each
+# half is wrapped in its own candidate check: no Option in the trash -> no
+# SelectCardEffect; no [Three Musketeers] trait Option in hand -> no
+# SelectHandEffect. Ours: `select_trash` self-skips on 0 candidates and
+# `use_option_from_hand` parks nothing without a candidate. P1 never
+# attacks, so the ACE's [Hand] [Counter] <Blast Digivolve> never opens.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4).      T4 (P1, 4): pass.
+#   T5 (P0, 3): THE CLAUSE -- the ACE over Megadramon for 3 (3 -> 0, draw 1).
+#               Memory 0: still P0's turn, so the trailing step is P0's pass.
+#
+# PROMPT SHAPE (EX7_059.cs, region "Digivolution Condition"):
+# AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText("Three
+# Musketeers"), digivolutionCost: 3, ignoreDigivolutionRequirement: false,
+# level: 5) -- no cardColor, so no colour check.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_059_pool.json (--decks).
+card: EX7-059
+clause: EX7-059#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), draws: T3, T5,
+    # then the digivolution draw. No Option ever reaches P0's hand or trash.
+    stack: [EX7-011, EX7-059, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02]
+    rest: tm-beelstarmon-ace
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-059
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4). No prompt: no TM Option in hand/trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE -- the PURPLE ACE over the RED Megadramon for 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-059 } }
+    expect: { prompt: main_phase }
+  # One step past the clause (memory 0: still P0's turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.field:
+        - { card_id: EX7-059, dp: 11000, suspended: false, sources: [EX7-011] }
+      p0.hand: [BT25-082, EX7-008, EX7-010, EX7-010, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []

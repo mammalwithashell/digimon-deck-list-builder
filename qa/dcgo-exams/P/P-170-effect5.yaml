@@ -1,0 +1,136 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#5 --
+# "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a
+#  play cost of 12 or less from your hand or trash without paying the cost.
+#  (Rule) Trait: Has [Three Musketeers]."
+#
+# THE LINE deletes AvengeKidmon by an OPPONENT'S EFFECT, not in battle: P1
+# uses Gaia Force (ST1-16, "[Main] Delete 1 of your opponent's Digimon",
+# cost 8) on T6. That keeps <Retaliation> (a battle-deletion trigger) out of
+# the deletion, so [On Deletion] is the ONLY effect that stacks and neither
+# engine opens a trigger-order prompt. The candidate is BeelStarmon (X
+# Antibody) (EX7-073: [Three Musketeers] trait, play cost 12, no [On Play]
+# of its own -- both of its effects are [When Digivolving]/[When Attacking]),
+# held in HAND ONLY -- the trash holds just the deleted stack (Megadramon is
+# not a trait carrier; AvengeKidmon costs 13) -- so DCGO's hand-or-trash
+# zone menu (`SetBoolSelection`, only when BOTH zones have a candidate) is
+# skipped via `SetBool(canSelectHand)` and no `generic_bool` row is asked.
+# The witness is BeelStarmon (X Antibody) on P0's battle area with memory
+# untouched by its cost of 12.
+#
+# WHY NOT BeelStarmon BT25-085 (the earlier revision of this line): it is a
+# DUAL card whose Digimon face prints play cost "D" -- it "can't play to
+# the field". DCGO's candidate filter requires `HasPlayCost`
+# (CEntity_Base.cs:340: `!cardKind.Contains(Option) && PlayCost >= 0`),
+# which is FALSE for a dual card, so DCGO never offers it. Our engine DID
+# offer it (cards.json ingests its cost as 6) and, once picked, parked the
+# OPTION face's [Main] "Delete 1 of your opponent's highest level Digimon"
+# -- an engine-side finding recorded in NOTES-P-170.md, not a question this
+# clause's line should have to answer.
+#
+# PROMPT SHAPE (P_170.cs, region "On Deletion"): SetUpActivateClass(..., -1,
+# isOptional: TRUE, ...) -> DCGO asks OptionalSkill, then (hand zone chosen
+# without a prompt) SelectHandEffect(canNoSelect: true) -> PlayPermanentCards
+# (payCost: false, activateETB: true). Our engine: the clause's `optional:
+# true` accept/decline gate (kind Replacement, 1:1 with OptionalSkill), then
+# ONE union hand+trash pick (kind UnionZone) answered by card identity; with
+# a single populated zone the two shapes line up row for row.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Biyomon (3 -> 1) -- a RED permanent, so P1 meets Gaia
+#               Force's colour requirement on T6. Pass.
+#   T3 (P0, 3): Megadramon (7 -> -4).       T4 (P1, 4): pass.
+#   T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+#   T6 (P1, 1): Gaia Force (8 -> -7) on AvengeKidmon. THE CLAUSE: P0 accepts
+#               and plays BeelStarmon (X Antibody) from hand for free.
+#   T7 (P0, 7): breeding decision -- the trailing step.
+card: P-170
+clause: P-170#effect#5
+seed: 424242
+decks:
+  p0:
+    # Draws: T3, T5, the digivolution draw, T7.
+    stack: [EX7-011, P-170, EX7-073, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            BT25-083, BT25-083, BT25-082, EX7-010]
+    rest: tm-avengekidmon
+  p1:
+    stack: [ST1-16, ST1-02, ST1-03, ST1-04, BT1-009,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the red body Gaia Force needs on T6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T6 (P1, 1): Gaia Force (8 -> -7) deletes AvengeKidmon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: P0's [On Deletion] -- accept, then BeelStarmon (X Antibody)
+  # from hand.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [EX7-073] } }
+    expect: { prompt: SelectHandEffect }
+  # T7 (P0, 7): one step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 17
+    that:
+      turn: 7
+      p0.memory: 7
+      p0.field:
+        - { card_id: EX7-073, dp: 12000, suspended: false, sources: [] }
+      p0.trash: [EX7-011, P-170]
+      p0.hand: [BT25-082, BT25-082, BT25-083, BT25-083, EX7-008, EX7-010]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [ST1-16]

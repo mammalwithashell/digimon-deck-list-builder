@@ -1,0 +1,103 @@
+# Exam scenario: Megadramon (EX7-011), clause EX7-011#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 Option card with the [Three
+#  Musketeers] trait from your hand or trash as this Digimon's bottom
+#  digivolution card, delete 1 of your opponent's Digimon with 6000 DP or
+#  less."
+#
+# This file exercises the [On Play] arm. P1 fields Biyomon (ST1-02, 3000 DP)
+# on T2; on T3 P0 hard-plays Megadramon with Bind Red Trigger (P-180, a
+# [Three Musketeers] trait Option) in HAND ONLY -- the trash is empty -- so
+# DCGO's hand-or-trash zone menu (`SetBoolSelection`, opened only when BOTH
+# zones hold a candidate) is skipped via `SetBool(canSelectHand)` and no
+# `generic_bool` row is asked. P-180 goes under Megadramon as its bottom
+# digivolution card and Biyomon is deleted: `sources: [P-180]` plus Biyomon
+# in P1's trash is the witness.
+#
+# PROMPT SHAPE (EX7_011.cs, region "On Play"): SetUpActivateClass(..., -1,
+# isOptional: TRUE, ...) -> OptionalSkill; (zone chosen silently) ->
+# SelectHandEffect(canNoSelect: true, maxCount 1) -> AddDigivolutionCardsBottom
+# -> `if (HasMatchConditionPermanent(opp Digimon, DP <= 6000))` ->
+# SelectPermanentEffect(Mode.Destroy, canNoSelect: FALSE). Our engine parks
+# NO separate accept/decline gate: EX7-011.yaml's `select_union_zone` is
+# itself `optional: true`, so its single hand+trash union pick (kind
+# UnionZone, answered by identity) is gate AND pick, and UnionZone is
+# outside the OptionalSkill+pick fold (adapter.rs kind_is_pick_shaped). So
+# DCGO's OptionalSkill rides the wire as a `dcgo_only` row (the BT21-071-
+# effect1 idiom), the hand pick is the shared row, then the mandatory
+# opponent-permanent pick is shared.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): THE CLAUSE -- play Megadramon (7 -> -4); accept; P-180 from
+#               hand; delete Biyomon. Memory -4 hands the turn over.
+#   T4 (P1, 4): breeding decision -- the trailing step.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_011_pool.json (--decks).
+card: EX7-011
+clause: EX7-011#effect#1
+seed: 424242
+decks:
+  p0:
+    # Draws: T3.
+    stack: [EX7-011, P-180, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010]
+    rest: tm-megadramon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-011
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the 6000-or-less target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # Accept the optional cost -- DCGO's OptionalSkill, wire-only (see the
+  # header: our union pick is itself the declinable gate).
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # The Option to place: P-180 (hand is the only populated zone).
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # The mandatory delete: Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1, 4): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -4
+      p0.field:
+        - { card_id: EX7-011, dp: 7000, suspended: false, sources: [P-180] }
+      p0.hand: [BT25-082, EX7-008, EX7-010, ST1-02]
+      p0.trash: []
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5
