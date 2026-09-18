@@ -1,0 +1,140 @@
+# Exam scenario: Satellamon (BT21-074), clause BT21-074#inherited#0 --
+# "<Link> [Appmon] trait: Cost 3 (Plug this card from the hand or battle area
+#  sideways into the specified Digimon in the battle area.) [When Linking]
+#  Delete 1 of your opponent's level 4 or lower Digimon."
+#
+# Satellamon is plugged from the HAND into Scopemon BT21-071 (traits Sup. /
+# Appmon / Tool / Monitoring -- the [Appmon] host the shared book already
+# holds). The mandatory [When Linking] then deletes 1 of P1's Lv.4-or-lower
+# Digimon. P1's board is built so the level gate is VISIBLE in the candidate
+# set: Biyomon ST1-02 (Lv.3), Garudamon ST1-08 (Lv.5 -- must NOT be offered),
+# Monodramon BT1-009 (Lv.3, vanilla). Two legal targets, one illegal; the
+# line deletes the SECOND legal one (opp.field.2) so the answer is a real
+# choice, not the only candidate.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): Biyomon (2) + Garudamon ST1-08 (6): 3 -> 1 -> -5. P0 gets 5.
+#   T3 (P0, 5): play Scopemon (5 -> 1). Hand = [TS] Tamers only (BT24-088 x4,
+#            BT25-092): no [Appmon]/[Three Musketeers] TRAIT card, so its [On
+#            Play] is vacuous -- ours parks nothing, DCGO asks its
+#            OptionalSkill anyway (`dcgo_only` decline; the
+#            BT21-071-effect0.yaml shape). Satellamon is deliberately NOT in
+#            hand yet (it has the [Appmon] trait and would make that prompt
+#            real). Pass.
+#   T4 (P1, 3): play BT1-009 (Lv.3, cost 2: 3 -> 1), pass -> P0 gets 3.
+#   T5 (P0, 3): draws Satellamon. THE CLAUSE: link it from hand, cost 3
+#            (3 -> 0; zero is still P0's turn), host = Scopemon. [When
+#            Linking]: delete BT1-009. Trailing pass.
+#
+# PROMPT SHAPE (Link.cs LinkEffect + BT21_074.cs region "When Linking"):
+#  - declaration: ONE main_phase row (HAND_EFFECT bit -> ActivateCardAction;
+#    Satellamon has no [Hand] [Main], the link is its only declarable).
+#  - SelectPermanentEffect "Select 1 Digimon to link.", maxCount 1,
+#    canNoSelect: false; single candidate (Scopemon), still asked on both.
+#  - ILinkCard.LinkCard(payCost: true): AddMemory(-3), AddLinkCard (root Hand;
+#    no [On Play] -- so Satellamon's mandatory tuck effect does NOT fire).
+#  - WhenLinked ActivateClass isOptional: FALSE -> no OptionalSkill; a lone
+#    trigger -> no MultipleSkills. SelectPermanentEffect(Mode.Destroy,
+#    maxCount 1, canNoSelect: false) over DeletionTargetCondition (opponent
+#    battle-area Digimon, HasLevel && Level <= 4). Ours: one mandatory
+#    select_opponent_permanent { kind: digimon, level_lte: 4 }.
+card: BT21-074
+clause: BT21-074#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never flipped); [10] T3 draw;
+    # [11] T5 draw = Satellamon.
+    stack: [BT21-071, BT24-088, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-074]
+    rest: three-musketeers
+  p1:
+    # [10] T2 draw, [11] T4 draw.
+    stack: [ST1-02, ST1-08, BT1-009, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, ST1-03]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): Scopemon, the [Appmon] host.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY vacuous OptionalSkill (no eligible trait card in hand/trash).
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): a second Lv.3, so the delete is a real choice.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  # The host: Scopemon (single candidate, still asked).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # [When Linking] Delete 1 of your opponent's level 4 or lower Digimon:
+  # Biyomon and BT1-009 are offered, Garudamon (Lv.5) is not.
+  - actor: 0
+    do: { select: { targets: [opp.field.2] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [ST1-02, BT1-009] }
+  # Memory 0: still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, BT21-074]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  - at: 16
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092]
+      p0.field:
+        - { card_id: BT21-071, dp: 8000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+      p1.trash: [BT1-009]

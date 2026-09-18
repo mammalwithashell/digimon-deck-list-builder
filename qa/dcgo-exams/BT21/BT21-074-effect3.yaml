@@ -1,0 +1,134 @@
+# Exam scenario: Satellamon (BT21-074), clause BT21-074#effect#3 --
+# "+4000 DP" (the link box: the DP the HOST gains while Satellamon is linked).
+#
+# DCGO carries this as card DATA, not script (CEntity_Base.LinkDP ->
+# Permanent.AddLinkCard `LinkedDP += addedLinkCard.LinkDP`; Permanent.DP adds
+# LinkedDP). Ours is a `scope: linked` aura, dp_modifier 4000.
+#
+# Satellamon is linked from hand into Scopemon BT21-071 (the [Appmon] host):
+# Scopemon reads 4000 before, 8000 after. BEHAVIOURAL witness: Scopemon then
+# attacks security and flips Garudamon ST1-08 (7000 DP, only a [When
+# Digivolving] effect, pinned at P1 stack[9] = security TOP). At 8000 it wins
+# and survives; at its printed 4000 it would be deleted.
+#
+# This line also keeps P1's board free of Lv.4-or-lower Digimon, so it takes
+# the NO-TARGET branch of [When Linking] (the with-target branch is
+# BT21-074-inherited0.yaml): BT21_074.cs CanActivateCondition requires
+# HasMatchConditionPermanent(DeletionTargetCondition), so DCGO never
+# activates the effect and asks nothing; our mandatory
+# select_opponent_permanent has zero candidates and parks nothing.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Garudamon ST1-08 (6): 3 -> -3. P0 gets 3. (Lv.5: not a
+#            [When Linking] target.)
+#   T3 (P0, 3): play Scopemon (3 -> -1). Hand = [TS] Tamers only, so its [On
+#            Play] is vacuous: DCGO-only OptionalSkill decline (the
+#            BT21-071-effect0.yaml shape). Turn passes by overshoot.
+#   T4 (P1, 1): pass -> P0 gets 3.
+#   T5 (P0, 3): draws Satellamon; link it from hand, cost 3 (3 -> 0, still
+#            P0's turn), host = Scopemon. No [When Linking] prompt. Scopemon
+#            (8000) attacks security: Garudamon (7000) loses. Pass.
+#
+# PROMPT SHAPE: link declaration = one main_phase row (HAND_EFFECT bit ->
+# ActivateCardAction, the LinkEffect is Satellamon's only hand declarable);
+# SelectPermanentEffect "Select 1 Digimon to link." (maxCount 1, canNoSelect:
+# false, single candidate, still asked); then NOTHING until the attack's
+# main_phase row. P1's only Digimon (Garudamon) has no <Blocker>; no [When
+# Attacking] / counter effects exist on either side.
+card: BT21-074
+clause: BT21-074#effect#3
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never flipped); [10] T3 draw;
+    # [11] T5 draw = Satellamon.
+    stack: [BT21-071, BT24-088, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-074]
+    rest: three-musketeers
+  p1:
+    # stack[9] = Garudamon ST1-08 = TOP of security (the flipped card);
+    # stack[0] is the copy P1 plays on T2.
+    stack: [ST1-08, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-08,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Garudamon only (3 -> -3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Scopemon, the [Appmon] host (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY vacuous OptionalSkill (no eligible trait card in hand/trash).
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T4 (P1, 1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): link Satellamon from hand into Scopemon (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # THE CLAUSE's witness: Scopemon at 8000 attacks security (Garudamon 7000).
+  # No [When Linking] prompt came first: P1 has no Lv.4-or-lower Digimon.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092]
+      p0.field:
+        - { card_id: BT21-071, dp: 8000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+      p1.security: 5
+  - at: 13
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.trash: []
+      p0.field:
+        - { card_id: BT21-071, dp: 8000, suspended: true, sources: [] }
+      p1.security: 4
+      p1.trash: [ST1-08]

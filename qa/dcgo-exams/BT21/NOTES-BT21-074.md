@@ -110,3 +110,37 @@ agrees (an overshoot to -1 leaves the opponent's turn starting at exactly 1).
 Lines here therefore only ever cross a turn boundary by a pass or by an
 overshoot of 3+; `effect#0` gives P0 five memory on T5 by having P1 overspend
 on T4 (Biyomon + Garudamon), the `BT21-071-effect1.yaml` convention.
+
+## Update 2026-09-18 — the two Link clauses are authored; nothing is `unreachable`
+
+**Current status: 5 clauses, 5 scenarios, 0 unreachable, 0 unavailable.** The
+table at the top of this file is history for `effect#3` / `inherited#0`. All
+five files lower sim-only against the current engine/harness (`effect0` with
+`tm_bt21_074_pool.json`, the rest with `../EX7/three_musketeers_pool.json`);
+`effect#0`-`effect#2` were re-lowered unchanged (none digivolves into BT25-085,
+and `effect2` already carries the `IDegeneration` count row).
+
+| Clause id | Scenario | Line |
+|---|---|---|
+| `BT21-074#inherited#0` | `BT21-074-inherited0.yaml` | `<Link>` from hand into Scopemon BT21-071 (cost 3: 3 -> 0), then the mandatory `[When Linking]` delete with the level gate visible: candidates `[ST1-02, BT1-009]`, Garudamon ST1-08 (Lv.5) on the board but not offered. |
+| `BT21-074#effect#3` | `BT21-074-effect3.yaml` | Host DP 4000 -> 8000, witnessed by a security battle against Garudamon ST1-08 (7000). Also the **no-target** branch of `[When Linking]`: P1 holds no Lv.4-or-lower Digimon, so DCGO's `CanActivateCondition` is false (nothing asked) and ours parks nothing. |
+
+- The host is **Scopemon BT21-071** (traits include `Appmon`), already in the
+  shared deck; Satellamon is **drawn on the link turn** so it is never in hand
+  while Scopemon's `[On Play]` resolves (it would make that prompt real). The
+  vacuous DCGO-only `OptionalSkill` decline is the `BT21-071-effect0.yaml`
+  shape.
+- Linking from hand is **not a play**: `ILinkCard` -> `Permanent.AddLinkCard`
+  (root `Hand`) fires no `[On Play]`, so Satellamon's mandatory tuck effect
+  does not activate and no `SelectHandEffect` follows the host pick.
+- Wire sequence: `main_phase` (HAND_EFFECT link bit) -> `SelectPermanentEffect`
+  (host, `maxCount 1`, `canNoSelect: false`, asked with one candidate) ->
+  `SelectPermanentEffect` (`Mode.Destroy`, `maxCount 1`, `canNoSelect: false`)
+  only when a target exists. No `OptionalSkill` (`WhenLinked` is
+  `isOptional: false`), no `MultipleSkills` (one trigger).
+- The from-**field** origin is not measured on this card (playing a cost-7
+  Lv.5 just to absorb it adds turns and no information); it is measured on
+  the sister card by `BT21-071-inherited1.yaml`, through the same
+  `LinkEffect` / `FIELD_EFFECT_SLOT_FOR_LINK` path.
+- The linked card is not in the state projection; the link is witnessed by
+  the hand, the host's DP and the `[When Linking]` outcome.

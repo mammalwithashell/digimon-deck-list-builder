@@ -64,3 +64,45 @@ DCGO does script the link half (`BT21_071.cs`: `CardEffectFactory.LinkEffect`,
 then `SelectHandEffect(mode: Discard, maxCount: min(2, hand), canNoSelect:
 false)`), so the card is **not** `unavailable`; the oracle exists, the wire
 cannot reach it.
+
+## Update 2026-09-18 — the three Link clauses are authored; nothing is `unreachable`
+
+**Current status: 5 clauses, 5 scenarios, 0 unreachable, 0 unavailable.** The
+table at the top of this file is history (it predates the `link:` verb). All
+five files lower sim-only against the current engine/harness
+(`effect0` with `tm_bt21_071_pool.json`, the rest with
+`../EX7/three_musketeers_pool.json`); `effect#0` / `effect#1` were re-lowered
+unchanged after the OnAddDigivolutionCards / OnUseOption engine work.
+
+| Clause id | Scenario | Line |
+|---|---|---|
+| `BT21-071#inherited#0` | `BT21-071-inherited0.yaml` | `<Link>` declared from the **hand**: Scopemon B into Scopemon A, cost 2 (3 -> 1). |
+| `BT21-071#inherited#1` | `BT21-071-inherited1.yaml` | `<Link>` declared from the **battle area** (`from: field.1`), then the mandatory `<Draw 2>` + trash 2 over the whole post-draw hand. |
+| `BT21-071#effect#2` | `BT21-071-effect2.yaml` | Host DP 4000 -> 7000, witnessed by a security battle against Birdramon ST1-05 (5000) that a 4000-DP Scopemon would lose. |
+
+Authoring decisions the oracle run should know about:
+
+- **The host is another Scopemon.** Scopemon's own traits are Sup. / Appmon /
+  Tool / Monitoring, so the shared `three-musketeers` deck already holds an
+  `[Appmon]` host and no per-card book was needed (the 2026-09-17 note's
+  "e.g. BT21-009 Gatchmon" turned out unnecessary).
+- **The linked Scopemon is DRAWN after the host is played**, never held with
+  it. A Scopemon (or Satellamon) in hand is an `[Appmon]`-trait card, which
+  would make the host's `[On Play]` tuck prompt real on both sides. With only
+  `[TS]` Tamers in hand the prompt is vacuous: DCGO still asks its
+  `OptionalSkill` (`CanActivateConditionShared` only needs a non-empty hand),
+  ours parks nothing -> a `dcgo_only` decline, the `effect0` shape.
+- **`[When Linking]` discard is 1 DCGO prompt vs 2 of ours.** DCGO:
+  `SelectHandEffect(Mode.Discard, maxCount: min(2, hand), canNoSelect: false,
+  canEndNotMax: false)`; ours: two sequential `select_hand` picks. One
+  two-card `cards:` answer feeds both (the `BT19-075-effect1.yaml`
+  convention) and is one wire row; `expect.count: 2` is DCGO's `maxCount`.
+- **No OptionalSkill anywhere in the link sequence.** `LinkEffect` is built
+  `isOptional: true` but is a *declared* (`OnDeclaration`) effect, and the
+  `WhenLinked` `ActivateClass` is `isOptional: false`; with one trigger there
+  is no `MultipleSkills` either. So the wire is: `main_phase` (the link bit)
+  -> `SelectPermanentEffect` (host; asked even with one candidate) ->
+  `SelectHandEffect`.
+- **Not projected:** the linked card itself. The state projection has no
+  link-card field, so "B is attached to A" is witnessed indirectly (B left the
+  hand / the field, A's DP carries the link box, the `[When Linking]` fired).
