@@ -153,3 +153,37 @@ before and pass after. `EX7-071-effect1.yaml` pick rows now read
 `20260918T074213Z_414c3998…`: **CLEAN** (24 of 24 ours / 25 DCGO rows) ->
 `effect#1` **confirmed**. `effect#2` is triaged separately (its lead is the
 attacker slot artefact; the simultaneous-deletion half is fixed by this change).
+
+## `effect#2` triage (2026-09-18) — OUR BUG (fixed by `baba1a0ea`) + slot artefact; r2 CONFIRMED
+
+**r1** (recording `20260918T074334Z_72bebad9…`), `--all-diffs` against the
+preserved sidecar — two stacked defects:
+
+1. LEAD step 18: `p1.field[0].suspended ours=false dcgo=true`,
+   `p1.field[2].suspended ours=true dcgo=false` — the attacker slot-addressing
+   artefact. `attack: attacker: field.0` named Biyomon on ours (entry order)
+   and Kokatorimon on DCGO (centre-out frame order). **Scenario artefact.**
+2. Steps 19-20: ours `p1.trash=[ST1-02]` / `[BT1-014, ST1-02]`, DCGO `[]` with
+   all three still fielded — sequential vs simultaneous deletion. **Our bug**
+   (card YAML): printed `[Security]` text is one sentence, one deletion event;
+   `general_rule.pdf` 15-4-3-2; `EX7_071.cs:312-394` (three picks accumulated
+   into `selectedPermanents`, one `DestroyPermanentsClass(...).Destroy()` at
+   392-394). Fixed for BOTH clauses by the `effect#1` triage commit
+   `baba1a0ea` (new DSL step `delete_permanents`, ENGINE/DSL FIX; test
+   `ex7_071_security_triple_delete_is_simultaneous_after_third_pick` fails
+   before / passes after). This triage made no further card or engine change.
+
+The preserved r1 sidecar can never diff clean (DCGO attacked with a different
+Digimon), so the line was **re-authored (r2)**: Vermilimon BT4-014 — the
+THIRD-entered Digimon, `field.2` on both sides — attacks; the three picks read
+`opp.field.0/1/2` (no slot shift, batch delete); `at: 19` / `at: 20` asserts
+pin `p1.trash: []` at the 2nd and 3rd pick rows.
+
+**r2** — oracle job `exam-EX7-071-effect2-r2`, recording
+`20260918T102852Z_4848662e…`: diff **CLEAN** (22 of 22 ours / 22 DCGO rows).
+DCGO `effect_activation` EX7-071 "[Security] Delete 1 of your opponent's level
+3 Digimon, level 4 Digimon, and level 5 Digimon." `is_optional: false`,
+`executed: true`. Verdict **confirmed**.
+
+EX7-071 now: 3 clauses — 3 confirmed, 0 diverged, 0 unreachable,
+0 unavailable, 0 unmeasured.

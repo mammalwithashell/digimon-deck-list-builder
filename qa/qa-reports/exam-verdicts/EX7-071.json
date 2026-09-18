@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T10:10:49.588530+00:00",
+  "last_updated": "2026-09-18T10:35:29.433484900+00:00",
   "clauses": {
     "EX7-071#effect#0": {
       "clause_id": "EX7-071#effect#0",
@@ -23,12 +23,11 @@
     "EX7-071#effect#2": {
       "clause_id": "EX7-071#effect#2",
       "card_id": "EX7-071",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Security Effect",
       "text_sha256": "bb1f9379b6bc131ccff48068a6eca14b4ce973a47c803c071fc2c007380bfe67",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-071-effect2.yaml",
-      "reason": "DIVERGED at step 18: two stacked defects. (1) LEAD is the attacker slot-addressing artefact (ours ST1-02 attacked, DCGO BT1-014 attacked). (2) Downstream steps 19-20 are the real finding, same as effect#1: ours deletes after each pick, DCGO deletes all three together after the last pick.",
-      "recorded_at": "2026-09-18T07:55:20.384793700+00:00"
+      "recorded_at": "2026-09-18T10:35:29.433484900+00:00"
     }
   }
 }
