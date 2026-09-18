@@ -16,9 +16,11 @@
 # WHAT THE DIGIVOLVE TRIGGERS. EX7_073.cs registers two [When Digivolving]
 # ActivateClasses (see EX7-073-effect0.yaml). Here the stack under EX7-073 is
 # Pagumon / Sparrowmon / BlackGatomon -- NO [Three Musketeers]-trait card --
-# so the trash-2 effect's CanActivateCondition is false and DCGO offers only
-# THE CLAUSE: one active trigger, no MultipleSkills row. Our engine queues both
-# clauses regardless and parks a TriggerOrder, so that row is SIM-ONLY.
+# so the trash-2 effect's CanActivateCondition is false AT THAT MOMENT and DCGO
+# offers only THE CLAUSE: one active trigger, no MultipleSkills row. Our engine
+# queues both clauses regardless and parks a TriggerOrder, so that row is
+# SIM-ONLY. (The trash-2 effect comes back once P-180 is a digivolution card --
+# see the DCGO-ONLY OptionalSkill row near the end.)
 #
 # THE CLAUSE's prompt: SelectHandEffect (canNoSelect: true) over Options that
 # have [Three Musketeers] in text, a use cost, and are not blocked from play.
@@ -154,6 +156,20 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: EX7-073's OTHER [When Digivolving] effect (trash 2 [Three
+  # Musketeers] sources). It was stacked by the digivolve (CanUseCondition is
+  # timing-only) and its CanActivateCondition -- `DigivolutionCards.Count(TM
+  # trait) >= 1`, EX7_073.cs:171-182 -- is evaluated when it comes up, i.e.
+  # AFTER P-180 (trait [Three Musketeers]) became a digivolution card. So DCGO
+  # asks its OptionalSkill (built `isOptional: true`, EX7_073.cs:138) although
+  # the two-card cost cannot be paid with one eligible source. Declined. Our
+  # engine resolves the unpayable pick with no prompt (same DCGO-only row as
+  # EX7-073-effect0.yaml). The FIRST oracle run (2026-09-18) aborted right here
+  # -- "step 16 expected actor 1 but DCGO asked actor 0" -- because this row
+  # was missing.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -161,7 +177,7 @@ assert:
   # Pre-step state of the trailing pass (P1's turn 6). P-180 is EX7-073's
   # bottom digivolution card and P1's security is one card shorter; P0's
   # memory shows P-180 cost nothing.
-  - at: 19
+  - at: 20
     that:
       turn: 6
       p0.memory: -3

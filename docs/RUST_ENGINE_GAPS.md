@@ -3043,3 +3043,39 @@ Record: `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.
   alt-path; the official DB, the card face and DCGO print Purple, circle
   `Purple Lv.2 / 0`. The extra Black route admits a Black Lv.2 with no
   [TS]/[Three Musketeers] text. `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.
+
+## G-OUTER-OPTIONAL-USE-OPTION-FIRST-STEP — RESOLVED 2026-09-18 (three-musketeers-1 / exam triage EX7-073#effect#1)
+
+`body_first_step_is_declinable` (`code/digimon-engine/src/dsl_cards/lower_triggered.rs`)
+did not recognise `use_option_from_hand` / `use_option_from_trash` with
+`optional: true` as a declinable first step. An `optional: true` clause led by one
+therefore got an UNGUARDED outer accept/decline prompt (`first_step_candidate_guard`
+has no arm for these steps either), which installed even with zero qualifying Options
+in hand — a vacuous prompt DCGO never asks (`EX7_073.cs:85`,
+`HandCards.Count(CanSelectCardCondition) >= 1`) — and double-prompted the "may" when a
+candidate existed. Both steps install a PASS-able pick (DCGO `SelectHandEffect
+canNoSelect: true`) and install nothing when no card qualifies, so the inner PASS is
+the decline path. Fixed by adding both to the declinable arm. Surfaced while moving
+EX7-073 Clause 1 off `select_hand` + `play_from_hand_free` (which PLAYED the Option to
+the battle area as a dp-less permanent — the exam's lead divergence) onto
+`use_option_from_hand`. Tests: `cards_behavioral/ex7/ex7_073.rs`
+(`*_free_use_sends_option_to_trash_not_battle_area`,
+`*_free_use_resolves_the_options_main_effect`; the pre-existing
+`*_wd_delete_targets_highest_level_opponent_only` is the regression witness for the
+vacuous outer prompt). Full `cards_behavioral` 8172 green.
+
+## F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE — OPEN (found 2026-09-18, exam triage EX7-073#effect#1)
+
+When an effect USES an Option (`use_option_from_hand`, free) while another of the
+controller's triggers is still queued (EX7-073's second [When Digivolving]), our
+engine queues the used Option's [Main] as a trigger BESIDE the still-queued one and
+parks a `TriggerOrder` ([EX7-073, P-180]). DCGO resolves the Option inline inside the
+using effect's own coroutine (`PlayOptionCards(payCost: false)`, `EX7_073.cs:112-130`)
+and asks nothing. Outcome-visible only when the ordering matters: for EX7-073, choosing
+the trash-2 clause BEFORE P-180's self-placement means it cannot count P-180 as a
+[Three Musketeers] source, whereas DCGO always sees it. The exam line answers the
+extra row `sim_only` and picks P-180 first, so the clause is CONFIRMED; the extra
+ordering freedom is logged here, not fixed. **Also:** `play_from_hand_free` silently
+accepts an Option/Dual hand card and plays it to the battle area as a permanent —
+it should refuse non-permanent kinds (or route to the Option-use pipeline). A pool
+sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted.

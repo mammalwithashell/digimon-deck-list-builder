@@ -50,10 +50,10 @@
 #   !cardSource.CanNotPlayThisOption. Selected card is played via
 #   PlayOptionCards(payCost: false).
 #   → `when: when_digivolving`, `optional: true` (outer "you may"),
-#     `select_hand` (kind: option, effect_text_contains: "Three Musketeers",
-#     `optional: true` on the STEP itself too — see note below), then
-#     `play_from_hand_free` — BT25-082 Clause 1 sibling idiom, adapted for
-#     `kind: option` instead of `kind: tamer`.
+#     `use_option_from_hand` (kind: option, effect_text_contains: "Three
+#     Musketeers", `optional: true` on the STEP itself too — see note below,
+#     cost waived) — the BT24-085 idiom. NOT `play_from_hand_free`: that PLAYS
+#     the card to the battle area as a permanent (exam EX7-073#effect#1).
 #
 #   NOTE on step-level `optional: true`: this card also queues Clause 2 (a
 #   second own-controller [When Digivolving] trigger) simultaneously, so the
@@ -62,19 +62,14 @@
 #   the chosen entry via `Game::run_queued_effect` DIRECTLY — bypassing the
 #   `bundle.len() == 1`-only `needs_outer_optional_prompt` gate that would
 #   otherwise install a separate accept/decline prompt before the body runs.
-#   Putting `optional: true` on `select_hand` itself (DCGO's `canNoSelect:
-#   true` lives on the atomic SelectHandEffect, not some outer wrapper) makes
-#   the "you may" decline self-contained and correct regardless of whether a
-#   TriggerOrder pick preceded it — the lowering's own outer-optional-prompt
-#   suppression ("when the first step IS an optional selection, the inner
-#   PASS already provides the decline path") means this does not introduce a
-#   double-prompt in the single-trigger case either. `cost: true` is also set
-#   on the step (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE) so a decline
-#   short-circuits the clause tail instead of running `play_from_hand_free`
-#   with an unset `option_pick` binding — the free-play IS the effect, not a
-#   cost paid to unlock a separate downstream effect, but the same abort
-#   mechanism is required to prevent the flat sibling `play_from_hand_free`
-#   step from firing on an empty pick.
+#   Putting `optional: true` on `use_option_from_hand` itself (DCGO's
+#   `canNoSelect: true` lives on the atomic SelectHandEffect, not some outer
+#   wrapper) makes the "you may" decline self-contained and correct
+#   regardless of whether a TriggerOrder pick preceded it — the lowering's own
+#   outer-optional-prompt suppression ("when the first step IS an optional
+#   selection, the inner PASS already provides the decline path") means this
+#   does not introduce a double-prompt in the single-trigger case either. The
+#   step has no tail, so a decline simply ends the clause.
 #
 # Clause 2 / Clause 3 (shared shape — [When Digivolving] / [When Attacking]):
 #   ActivateClass, CanActivateCondition requires
@@ -174,27 +169,34 @@ effects:
   # Printed: "[When Digivolving] You may use 1 Option card with [Three
   # Musketeers] in its text from your hand without paying the cost."
   #
-  # `optional: true` installs the outer accept/decline (DCGO SelectHandEffect
-  # canNoSelect: true). The inner `select_hand` picks an Option card whose
-  # printed text contains "Three Musketeers" (DCGO cardSource.HasText); once
-  # picked, `play_from_hand_free` plays it without paying its cost (DCGO
-  # PlayOptionCards(payCost: false)). BT25-082 Clause 1 sibling idiom
-  # (optional + select_hand + play_from_hand_free), adapted to `kind: option`.
+  # The clause USES the Option (DCGO EX7_073.cs ActivateCoroutine ->
+  # `PlayOptionCards(payCost: false)`): the full Option lifecycle runs
+  # (OnUseOption, [Main] body, subtype disposal -> trash / delay / its own
+  # self-placement) with the use cost waived. `use_option_from_hand` is the
+  # dedicated step (BT24-085 idiom) routing through
+  # `Game::use_option_from_hand_without_paying_cost`; its `optional: true`
+  # carries the printed "may" on the pick itself (DCGO SelectHandEffect
+  # canNoSelect: true), so a decline is self-contained whether or not a
+  # TriggerOrder pick preceded it.
+  #
+  # FAITHFULNESS FIX (2026-09-18, exam EX7-073#effect#1 triage): this clause
+  # was previously `select_hand` + `play_from_hand_free`, which PLAYS the card
+  # to the battle area -- an Option became a dp-less battle-area permanent
+  # beside BeelStarmon and never reached the trash (the DCGO oracle diff's
+  # lead divergence: `p0.field` listed P-180 as a permanent). An Option is
+  # USED, never played as a permanent.
   - when: when_digivolving
     optional: true
-    summary: "[When Digivolving] May play 1 Option card with [Three Musketeers] in its text from hand without paying the cost"
+    summary: "[When Digivolving] May use 1 Option card with [Three Musketeers] in its text from hand without paying the cost"
     process:
-      - select_hand:
+      - use_option_from_hand:
           of: you
-          bind_as: option_pick
           optional: true
-          cost: true
           filter:
             all_of:
               - kind: option
               - effect_text_contains: "Three Musketeers"
-          prompt: "Play 1 Option card with [Three Musketeers] in its text from your hand without paying the cost"
-      - play_from_hand_free: { of: you, hand_index: option_pick }
+          prompt: "Use 1 Option card with [Three Musketeers] in its text from your hand without paying the cost"
 
   # ─── Clause 2 — [When Digivolving] trash-2 TM sources → delete → security ───
   #

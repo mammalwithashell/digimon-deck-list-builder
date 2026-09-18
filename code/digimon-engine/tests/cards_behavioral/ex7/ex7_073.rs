@@ -463,6 +463,121 @@ fn ex7_073_wd_may_free_play_tm_text_option_from_hand() {
     assert!(!still_in_hand, "the free-played Option must leave the hand");
 }
 
+/// Resolve every remaining prompt, always preferring a non-PASS action (accept
+/// the "may", pick the lone candidate) so the free Option use actually runs.
+fn accept_all_prompts(runner: &mut DebugRunner) {
+    let mut guard = 0;
+    while let Some(v) = runner.pending_selection_view() {
+        guard += 1;
+        assert!(guard < 20, "prompt loop did not terminate");
+        let act = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|a| *a != PASS)
+            .or_else(|| v.valid_action_ids.first().copied())
+            .expect("a resolvable action");
+        runner
+            .execute_action(v.selecting_player, act)
+            .expect("resolve prompt");
+    }
+}
+
+/// FAITHFULNESS (exam EX7-073#effect#1, DCGO EX7_073.cs:81-130
+/// `PlayOptionCards(payCost: false)`): the clause USES the Option — it runs the
+/// Option lifecycle and the card ends in the TRASH. It must never be PLAYED to
+/// the battle area as a permanent (the old `play_from_hand_free` lowering left
+/// a dp-less Option permanent sitting beside BeelStarmon).
+#[test]
+fn ex7_073_wd_free_use_sends_option_to_trash_not_battle_area() {
+    let mut runner = wd_clause1_builder().start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    let memory_before_digivolve = runner.game.memory;
+
+    digivolve_ex7_073(&mut runner, base);
+    let memory_after_digivolve = runner.game.memory;
+    assert_ne!(memory_before_digivolve, memory_after_digivolve);
+    resolve_trigger_order_if_pending(&mut runner, true);
+    accept_all_prompts(&mut runner);
+
+    let p0 = &runner.game.players[0];
+    let field_ids: Vec<String> = p0
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        field_ids,
+        vec![CARD_ID.to_string()],
+        "a USED Option is never a battle-area permanent"
+    );
+    assert!(
+        zone_ids(&p0.trash, &runner.game.card_data).contains(&"TM-OPT".to_string()),
+        "the used Option resolves to the trash"
+    );
+    assert!(
+        !zone_ids(&p0.hand, &runner.game.card_data).contains(&"TM-OPT".to_string()),
+        "the used Option left the hand"
+    );
+    assert_eq!(
+        runner.game.memory, memory_after_digivolve,
+        "'without paying the cost' — memory is untouched by the Option use"
+    );
+}
+
+/// FAITHFULNESS (same citation): the used Option's [Main] effect RESOLVES.
+/// With the real Bind Red Trigger (P-180): the opponent's top security card is
+/// trashed and P-180 becomes BeelStarmon's bottom digivolution card — the
+/// exam scenario's witness.
+#[test]
+fn ex7_073_wd_free_use_resolves_the_options_main_effect() {
+    let mut runner = base_builder()
+        .dsl_card("P-180")
+        .expect("P-180 YAML loads from the embedded pack")
+        .add_card(purple_lv5("BASE"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &[CARD_ID, "P-180"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    // A DSL-registered card has EMPTY printed text under DebugRunner; restore
+    // P-180's so the clause's `[Three Musketeers] in its text` filter runs on
+    // the surface live games do (official Bandai DB text, abridged).
+    std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+        .iter_mut()
+        .find(|c| c.card_id == "P-180")
+        .expect("P-180 registered")
+        .effect_text = "While you have a [Three Musketeers] trait Digimon, you can ignore this card's color requirements. [Main] Trash your opponent's top security card. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.".to_string();
+    push_to_security_top(&mut runner, 1, "FILL");
+    push_to_security_top(&mut runner, 1, "FILL");
+    let opp_security_before = runner.game.players[1].security.len();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+
+    digivolve_ex7_073(&mut runner, base);
+    let memory_after_digivolve = runner.game.memory;
+    resolve_trigger_order_if_pending(&mut runner, true);
+    accept_all_prompts(&mut runner);
+
+    let p0 = &runner.game.players[0];
+    assert_eq!(p0.battle_area.len(), 1, "P-180 is not a battle-area permanent");
+    let stack = zone_ids(&p0.battle_area[0].card_sources, &runner.game.card_data);
+    assert_eq!(
+        stack.first().map(String::as_str),
+        Some("P-180"),
+        "P-180 placed itself as the BOTTOM digivolution card; stack={stack:?} trash={:?} hand={:?}",
+        zone_ids(&p0.trash, &runner.game.card_data),
+        zone_ids(&p0.hand, &runner.game.card_data),
+    );
+    assert_eq!(stack.last().map(String::as_str), Some(CARD_ID));
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        opp_security_before - 1,
+        "P-180's [Main] trashed the opponent's top security card"
+    );
+    assert_eq!(runner.game.memory, memory_after_digivolve, "cost 6 never paid");
+}
+
 /// NEGATIVE: no TM-text Option in hand (only a plain one) → Clause 1 is a
 /// silent no-op — no prompt installs.
 #[test]

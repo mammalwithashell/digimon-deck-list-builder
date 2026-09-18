@@ -453,6 +453,15 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         | CompiledStep::MayAttackNow { optional, .. }
         | CompiledStep::RedirectAttackTarget { optional, .. }
         | CompiledStep::RefireEffect { optional, .. }
+        // `use_option_from_hand` / `use_option_from_trash` with `optional: true`
+        // install a PASS-able hand/trash pick (DCGO SelectHandEffect
+        // `canNoSelect: true`) and install NOTHING when no Option qualifies, so
+        // the inner PASS is the decline path. Without this arm an
+        // `optional: true` clause led by one (EX7-073 Clause 1) got an
+        // unguarded outer accept/decline that prompted even with zero
+        // candidates. `G-OUTER-OPTIONAL-NOT-INSTALLED`
+        | CompiledStep::UseOptionFromHand { optional, .. }
+        | CompiledStep::UseOptionFromTrash { optional, .. }
         // `app_fuse` with `optional: true` installs PASS-able permanent/card
         // selections itself (effect-initiated App Fuse), so the inner PASS is
         // the decline path — no outer accept/decline prompt is needed.
