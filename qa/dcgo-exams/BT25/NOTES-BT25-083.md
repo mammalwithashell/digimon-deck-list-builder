@@ -110,3 +110,38 @@ in DCGO and a plain Digimon in ours** (`NOTES-BT25-085.md`): DCGO resolved
 target), and took `digivolve ... using: BT25-085` at cost 0 with the Option
 face's `[Main]` firing. Neither is a LadyDevimon finding; both lines need a
 non-dual Option host / Lv.6 (or the BT25-085 card-data fix) and a re-run.
+
+## Update 2026-09-18 (triage) — `effect#2` re-authored and re-measured: CONFIRMED
+
+Class of the original abort: **our bug, upstream card data** — BeelStarmon
+(BT25-085) is a DUAL card (official Bandai DB "DUAL Effect"; `BT25_085.cs`
+Option face) and `data/cards.json` typed it `card_kind: 0`; fixed in
+`20df249e6`. Nothing in LadyDevimon (BT25-083)'s YAML or the engine changed.
+After that fix `play: BT25-085` no longer lowers (correct), so the line was
+re-hosted on the non-dual **BeelStarmon (X Antibody) EX7-073** (12 cost, no
+[On Play]).
+
+Two oracle runs:
+
+- `exam-BT25-083-effect2-r2` (recording `20260918T091206Z_3d49d468…`) aborted at
+  step 19, `expected 'SelectPermanentEffect' but DCGO asked 'OptionalSkill'`.
+  **Attacker slot-addressing artefact, not a clause finding** (same family as
+  EX7-070#effect#2 / EX7-071#effect#2): `attack: field.N` reaches DCGO as a
+  COMPACT index into `Player.GetFieldPermanents()` (frame-id order,
+  `InputDriver.cs` ~343-363), and `CardSource.PreferredFrame()` seats P0's
+  Digimon centre-out (frame 4, 3, 5, …). With two Digimon DCGO's order is the
+  reverse of our play-order battle area, so BeelStarmon (X) attacked and its
+  optional [When Attacking] asked.
+- `exam-BT25-083-effect2-r3` (recording `20260918T091629Z_4f46c937…`): a second
+  EX7-073 is played as slot ballast so LadyDevimon is the THIRD Digimon —
+  index 2 on both sides. Diff **CLEAN** (26 rows). DCGO's trace:
+  SelectPermanentEffect → SelectCardEffect (trash P-180) → SelectCardEffect
+  (use P-180 from trash, memory 3 → 0 = 6 − 3) → P-180's tuck
+  SelectPermanentEffect → `effect_activation` P-180 then BT25-083.
+
+**Reusable authoring rule:** on a line with exactly two own Digimon, `attack:` /
+`digivolve:` `field.N` addresses the OTHER Digimon in DCGO. Attack with the
+only Digimon, or with the third-played one.
+
+BT25-083 now: 4 clauses — 3 confirmed, 1 diverged (`inherited#0`, still the
+BT25-085 dual-card abort; needs the same re-authoring), 0 unmeasured.
