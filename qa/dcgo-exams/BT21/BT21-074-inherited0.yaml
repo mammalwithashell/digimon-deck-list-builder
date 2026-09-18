@@ -104,6 +104,15 @@ steps:
   - actor: 0
     do: { link: { card: BT21-074, from: hand } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: LinkEffect is SetUpActivateClass(..., isOptional: true)
+  # (CardEffectFactory/KeyWordEffects/Link.cs), so DCGO confirms the declared
+  # <Link> with an OptionalSkill yes/no BEFORE the host pick. Our engine treats
+  # the declaration itself as the decision and parks nothing. Measured
+  # 2026-09-18: the first oracle run aborted here ("expected prompt
+  # 'SelectPermanentEffect' but DCGO asked 'OptionalSkill'").
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   # The host: Scopemon (single candidate, still asked).
   - actor: 0
     do: { select: { targets: [own.field.0] } }
@@ -125,7 +134,7 @@ assert:
       p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, BT21-074]
       p0.field:
         - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
-  - at: 16
+  - at: 17
     that:
       turn: 5
       phase: Main

@@ -144,3 +144,11 @@ and `effect2` already carries the `IDegeneration` count row).
   `LinkEffect` / `FIELD_EFFECT_SLOT_FOR_LINK` path.
 - The linked card is not in the state projection; the link is witnessed by
   the hand, the host's DP and the `[When Linking]` outcome.
+
+## Update 2026-09-18 (oracle) — 5/5 confirmed
+
+`effect#3` / `inherited#0` aborted on the first oracle run: DCGO confirms the
+declared `<Link>` with an `OptionalSkill` (`Link.cs`: `isOptional: true`) before
+the host pick, contrary to the "No `OptionalSkill`" bullet above. Both lines
+gained a `dcgo_only` accept row after `link:` and re-ran CLEAN. See the
+same-dated note in `NOTES-BT21-071.md`.

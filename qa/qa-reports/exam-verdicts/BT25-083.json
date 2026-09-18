@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T08:02:08.939231+00:00",
+  "clauses": {
+    "BT25-083#effect#0": {
+      "clause_id": "BT25-083#effect#0",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "665f775a510f64b0cd212c796e2a0670e538d56e770286b79069a5913cec9286",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:18.955811200+00:00"
+    },
+    "BT25-083#effect#1": {
+      "clause_id": "BT25-083#effect#1",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "feca9cdc9c219b484c493e11cc759e7f5896ba3f2e0b88ba5a715f73e4b80767",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect1.yaml",
+      "recorded_at": "2026-09-18T08:01:48.465768100+00:00"
+    },
+    "BT25-083#effect#2": {
+      "clause_id": "BT25-083#effect#2",
+      "card_id": "BT25-083",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "c35ee12375a2833ef91e56d528f3990098f5d6d2fa77625bb2142706b7409abf",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect2.yaml",
+      "reason": "oracle job aborted -- prompt mismatch: step 10 expected actor 0 but DCGO asked actor 1 (recording 20260918T072301Z_cab6f0747e08470ca4849409d7de5e50). NOT a finding about LadyDevimon (BT25-083): the line never reached the clause. Root cause read off the DCGO recording: the T3 row `play: { card: BT25-085, from: hand }` resolved in DCGO as an OPTION USE of the dual card BeelStarmon (BT25-085) -- effect_activation 'Delete 1 highest level enemy Digimon. Place 1 [Three Musketeers] card...' fired, the card went to p0.trash and board_p0 stayed empty -- whereas our engine played a Digimon (data/cards.json carries BT25-085 as card_kind 0 with no dual block; NOTES-BT25-085.md 'card-data gap', which predicted this abort). With no [Three Musketeers] Digimon on DCGO's board, P-180's [Main] tuck (P_180.cs HasMatchConditionOwnersPermanent gate) asked no SelectPermanentEffect and the turn passed. Classification: upstream card-data gap on BT25-085 + scenario authoring (needs a non-dual Option host, or the digivolve prefix), to be re-authored and re-run; clause behaviour itself is still unmeasured by the oracle.",
+      "recorded_at": "2026-09-18T08:02:08.939231+00:00"
+    },
+    "BT25-083#inherited#0": {
+      "clause_id": "BT25-083#inherited#0",
+      "card_id": "BT25-083",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "6b5dac5bc4bc278d90e2f042df9a8fd9100a053c4a7340d08723636d192b55d3",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-inherited0.yaml",
+      "reason": "oracle job aborted -- prompt mismatch: step 15 expected prompt 'SelectCountEffect' but DCGO asked 'SelectPermanentEffect' (recording 20260918T072334Z_00d54ffc7e7b41e0b980906f0a1f72ae). NOT a finding about LadyDevimon (BT25-083): the line never reached the [On Deletion] clause. Root cause read off the DCGO recording: the T7 row `digivolve: { from: field.1, using: BT25-085 }` (action 476) was taken by DCGO with action_detail cost_paid 0 / alt_path 'cost_modifier' and immediately activated the dual card's OPTION-face [Main] ('Delete 1 highest level enemy Digimon. Place 1 [Three Musketeers] card...'), then asked a SelectPermanentEffect; our engine treats BT25-085 as a plain Digimon (card_kind 0, no dual block -- NOTES-BT25-085.md) and parks the two-route digivolution-cost EffectChoice {3,4} instead. Same upstream BT25-085 dual-card gap as BT25-083#effect#2 / BT25-082#effect#2. To re-measure: re-author with a non-dual Lv.6 over LadyDevimon, or fix BT25-085's card data first; clause behaviour itself is still unmeasured by the oracle.",
+      "recorded_at": "2026-09-18T08:02:08.939231+00:00"
+    }
+  }
+}

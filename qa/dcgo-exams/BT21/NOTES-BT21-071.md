@@ -106,3 +106,16 @@ Authoring decisions the oracle run should know about:
 - **Not projected:** the linked card itself. The state projection has no
   link-card field, so "B is attached to A" is witnessed indirectly (B left the
   hand / the field, A's DP carries the link box, the `[When Linking]` fired).
+
+## Update 2026-09-18 (oracle) — 5/5 confirmed; the Link declaration DOES ask an OptionalSkill
+
+The first oracle run aborted all three Link lines ("expected prompt
+'SelectPermanentEffect' but DCGO asked 'OptionalSkill'"). The "No OptionalSkill
+anywhere in the link sequence" bullet above was wrong: `LinkEffect` is
+`SetUpActivateClass(null, ActivateCoroutine, -1, true, ...)`
+(`CardEffectFactory/KeyWordEffects/Link.cs`), and DCGO confirms a declared
+optional effect with a yes/no BEFORE its coroutine runs. Our engine treats the
+declaration as the decision. A prompt-existence difference, not a rules finding:
+each line gained one `select: { yes: true, dcgo_only: true }` row after the
+`link:` step (asserts re-indexed) and the re-run diffed CLEAN. Every future
+`link:` line needs the same row.

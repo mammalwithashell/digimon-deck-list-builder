@@ -100,3 +100,13 @@ gated, the two rows must be removed or the line stops lowering.
 - `effect#1` / `effect#2` / `inherited#0`: sequences as documented in each
   file's header (authored 2026-09-13, re-lowered 2026-09-16 unchanged apart
   from the cost row above).
+
+## Update 2026-09-18 (oracle) — 4 clauses: 2 confirmed, 2 diverged (aborts, upstream)
+
+`effect#0` / `effect#1` diffed CLEAN. `effect#2` and `inherited#0` aborted
+before reaching their clause, both on **BeelStarmon BT25-085 being a dual card
+in DCGO and a plain Digimon in ours** (`NOTES-BT25-085.md`): DCGO resolved
+`play: BT25-085` as an Option use (board stayed empty, so P-180 had no tuck
+target), and took `digivolve ... using: BT25-085` at cost 0 with the Option
+face's `[Main]` firing. Neither is a LadyDevimon finding; both lines need a
+non-dual Option host / Lv.6 (or the BT25-085 card-data fix) and a re-run.

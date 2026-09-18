@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T08:01:47.626705800+00:00",
+  "clauses": {
+    "BT21-074#effect#0": {
+      "clause_id": "BT21-074#effect#0",
+      "card_id": "BT21-074",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "9e05f81ee5728a0b169c62ad362fe2146234baaf3d7e97fd6d79480a9fdfedb4",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:16.550515200+00:00"
+    },
+    "BT21-074#effect#1": {
+      "clause_id": "BT21-074#effect#1",
+      "card_id": "BT21-074",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e1fddd50f09e5e7f999302ac25e4d6f58c1f54871d0ef7a75545e1f085719fee",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect1.yaml",
+      "recorded_at": "2026-09-18T08:01:47.110615600+00:00"
+    },
+    "BT21-074#effect#2": {
+      "clause_id": "BT21-074#effect#2",
+      "card_id": "BT21-074",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e76d35ee7244cf5a17563971aab695b13c8a1b1ebdda9ea28e06f905a7d552bf",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect2.yaml",
+      "recorded_at": "2026-09-18T08:01:47.626705800+00:00"
+    },
+    "BT21-074#effect#3": {
+      "clause_id": "BT21-074#effect#3",
+      "card_id": "BT21-074",
+      "verdict": "confirmed",
+      "label": "Special Rule",
+      "text_sha256": "e0f0b691153f01bedc394c2ed462ac6ddb7b474bd38e6fa20b76fa216857acfa",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect3.yaml",
+      "recorded_at": "2026-09-18T08:00:46.048009300+00:00"
+    },
+    "BT21-074#inherited#0": {
+      "clause_id": "BT21-074#inherited#0",
+      "card_id": "BT21-074",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "125f001008fc45e7367bd0b5eff98a3ba2587c7624933a1acbb92fa5101e4519",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-inherited0.yaml",
+      "recorded_at": "2026-09-18T08:00:46.508168800+00:00"
+    }
+  }
+}
