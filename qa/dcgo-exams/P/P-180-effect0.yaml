@@ -146,8 +146,14 @@ steps:
   # Digimon on the battle area). No [Three Musketeers] Option is in hand yet
   # -- P-180 is the card the BlackGatomon digivolve draws, AFTER this window --
   # so our engine (gated on a payable Option) parks nothing.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # BlackGatomon onto Sparrowmon: alt-circle 2 vs printed Purple Lv.3 / 3.
   - actor: 0

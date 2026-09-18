@@ -9661,6 +9661,7 @@
       }
     ]
   },
+  "_note_BT25-085": "BT25-085 BeelStarmon / Fly Bullet is a DUAL card (official Bandai DB: DUAL Effect <Use Req. ([Three Musketeers] in text)> [Main] ... + DUAL Rule <Arts Digivolve>; DCGO BT25_085.cs IsTraitedOption => cardSource.IsOption). The digimoncard.io API typed it as a plain Digimon (card_kind 0, Option [Main] misfiled as inherited text, no dual block), so a copy in hand was not a usable Option and the mask offered an illegal Digimon play. Found by exam BT25-082#effect#2. SAME GAP still open on BT25-043, BT25-057, BT25-104, ST23-09.",
   "BT25-085": {
     "evo_costs": [
       {
@@ -9673,7 +9674,54 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "card_kind": 4,
+    "inherited_effect_description_eng": "",
+    "dual": {
+      "digimon": {
+        "level": 6,
+        "dp": 12000,
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "traits": [
+          "Wizard",
+          "Three Musketeers",
+          "Iliad",
+          "TS"
+        ],
+        "evo_costs": [
+          {
+            "card_color": 6,
+            "level": 5,
+            "memory_cost": 4
+          },
+          {
+            "card_color": 5,
+            "level": 5,
+            "memory_cost": 4
+          }
+        ],
+        "effect_text": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      },
+      "option": {
+        "use_cost": 6,
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "effect_text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+        "security_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      }
+    }
   },
   "BT25-103": {
     "evo_costs": [

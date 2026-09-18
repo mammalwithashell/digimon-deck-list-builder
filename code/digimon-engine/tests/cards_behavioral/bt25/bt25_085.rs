@@ -730,3 +730,70 @@ fn bt25_085_arts_digivolve_stacks_onto_a_tm_lv5_base() {
         "Arts prevented the normal Option trash"
     );
 }
+
+/// Production `data/cards.json` must carry BT25-085 as a DUAL card.
+///
+/// The printed card (official Bandai DB, `data/card_bundles/BT25-085.md`) has a
+/// "DUAL Effect" (`<Use Req. ([Three Musketeers] in text)>` + `[Main]`) and a
+/// "DUAL Rule" (`<Arts Digivolve>`); DCGO models it as one
+/// (`BT25_085.cs` `IsTraitedOption` => `cardSource.IsOption`, line 60). The
+/// digimoncard.io ingest typed it `card_kind: 0` with no `dual` block, so in
+/// every production surface (exam harness, hosted API, desktop, RL) the card
+/// was a plain Digimon: a second copy in hand was NOT a usable
+/// [Three Musketeers] Option for BeelStarmon's own [When Digivolving]
+/// use-an-Option clause (exam BT25-082#effect#2 / #inherited#0 aborts), and the
+/// mask offered an illegal 6-cost Digimon play. DebugRunner builds `CardData`
+/// from the compiled YAML, so only a direct read of `data/cards.json`
+/// discriminates (BT24-014 idiom).
+#[test]
+fn bt25_085_data_cards_json_is_a_dual_card() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::enums::CardKind;
+    use std::path::PathBuf;
+
+    let cards_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("data")
+        .join("cards.json");
+    if !cards_json.exists() {
+        eprintln!(
+            "Skipping: data/cards.json not found at {}",
+            cards_json.display()
+        );
+        return;
+    }
+
+    let cards = CardData::load_from_file(&cards_json).expect("load data/cards.json");
+    let card = cards.get("BT25-085").expect("BT25-085 in data/cards.json");
+
+    assert_eq!(
+        card.card_kind,
+        CardKind::Dual,
+        "data/cards.json BT25-085 must be card_kind 4 (Dual) — patch via data/card_overrides.json"
+    );
+    let dual = card
+        .dual
+        .as_ref()
+        .expect("BT25-085 must carry a `dual` block in data/cards.json");
+    assert_eq!(dual.digimon.level, 6);
+    assert_eq!(dual.digimon.dp, 12000);
+    assert!(dual
+        .digimon
+        .traits
+        .iter()
+        .any(|t| t == "Three Musketeers"));
+    assert_eq!(dual.option.use_cost, 6);
+    assert!(
+        dual.option.effect_text.contains("[Three Musketeers] trait card"),
+        "option face must carry the printed [Main] text; got {:?}",
+        dual.option.effect_text
+    );
+    // The printed card has no inherited effect; the ingest misfiled the Option
+    // face's [Main] there.
+    assert!(
+        card.inherited_text.is_empty(),
+        "BT25-085 prints no inherited effect; got {:?}",
+        card.inherited_text
+    );
+}

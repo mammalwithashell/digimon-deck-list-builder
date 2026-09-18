@@ -104,8 +104,14 @@ steps:
     expect: { prompt: breeding_action }
   # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
   # (see the header). Declined; our engine has no prompt here.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
   - actor: 0

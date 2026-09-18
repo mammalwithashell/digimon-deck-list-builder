@@ -16,6 +16,14 @@ Book for every authored line: `qa/dcgo-exams/EX7/three_musketeers_pool.json`
 | `BT25-085#effect#5` | `[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card …` (Option face) | — | **unreachable** (card-data gap, below) |
 | `BT25-085#effect#6` | `<Arts Digivolve>` (DUAL rule) | — | **unreachable** (card-data gap, below) |
 
+> **UPDATE 2026-09-18 (BT25-082#effect#2 triage): the card-data gap below is FIXED for
+> BT25-085** — `data/cards.json` / `data/card_overrides.json` now carry `card_kind: 4` +
+> a `dual` block (guard: `bt25_085_data_cards_json_is_a_dual_card`). `effect#4/#5/#6`
+> are therefore AUTHORABLE now; their `unreachable` verdicts rest on a stale reason and
+> should be re-authored from the prompt shapes at the end of this section. The
+> `play: { card: BT25-085, from: hand }` collateral lines no longer lower (correct:
+> the card cannot be played). The section is kept as the record of what was measured.
+
 ## `effect#4` / `effect#5` / `effect#6` — unreachable: `data/cards.json` does not know BT25-085 is a DUAL card
 
 **Measured, not inferred.** `data/cards.json` carries BT25-085 as

@@ -26,23 +26,30 @@
 #
 # WHY BEELSTARMON (BT25-085) AND NOT BEELSTARMON X (EX7-073) AS THE GRANT
 # TARGET. Both carry the [Three Musketeers] trait and both are reachable only
-# through this grant from a Lv.4. BT25-085's two [When Digivolving] effects are
-# gated on an Option card existing in hand / under a Digimon (DCGO
-# `CanActivateUseOption` / `CanActivateUnsuspend`; our YAML `condition:`), and
-# no Option is anywhere on this line, so NEITHER engine prompts after the
-# digivolve -- the clause resolves to a clean, prompt-free board. EX7-073
-# always offers its own [When Digivolving] trigger, which is measured in the
-# EX7-073 files instead.
+# through this grant from a Lv.4. EX7-073's own [When Digivolving] trigger is
+# measured in the EX7-073 files instead.
+#
+# BT25-085 IS A DUAL CARD, AND THAT SHAPES TWO ROWS OF THIS LINE. The first
+# oracle run of this file ABORTED ("step 14 expected actor 1 but DCGO asked
+# actor 0"): the grant digivolve draws BeelStarmon #2 (stack[14]), a DUAL card
+# and therefore a [Three Musketeers] trait OPTION in hand (official Bandai DB
+# "DUAL Effect"; BT25_085.cs `IsTraitedOption` => `cardSource.IsOption`), so
+# BeelStarmon's [When Digivolving] use-an-Option clause is LIVE in DCGO. Our
+# engine asked nothing because data/cards.json carried BT25-085 as a plain
+# Digimon (card_kind 0, no `dual` block). Triage classed that OUR BUG (card
+# data), fixed it in data/cards.json + data/card_overrides.json (test
+# `bt25_085_data_cards_json_is_a_dual_card`), and re-authored the two rows the
+# fix makes live on our side: Sparrowmon's start-of-main cost gate (BeelStarmon
+# #1 in hand is a payable Option) and the use-an-Option pick after the grant.
+# Both are declined, so the clause still resolves to the grant's own board.
 #
 # PROMPT CONVENTIONS ON THIS PREFIX (each one is a DCGO C# fact, not a guess):
 #   * Sparrowmon's [Start of Your Main Phase] (EX7_051.cs) is
-#     `SetUpActivateClass(..., -1, true, ...)` with a CanActivateCondition of
-#     merely "hand or trash non-empty and a Digimon on the battle area" -- so
-#     DCGO asks an OptionalSkill at T5 main-phase start even though no
-#     [Three Musketeers] Option exists to pay with. Our engine gates the
-#     trigger on a payable Option (`condition: count_gte ...`) and parks
-#     nothing. That is the documented "vacuous optional-cost gate" class
-#     (docs/DCGO_EXAM.md, Known gaps): a DCGO-ONLY decline row.
+#     `SetUpActivateClass(..., -1, true, ...)` -- an OptionalSkill gate, then
+#     the pick. With BeelStarmon (a DUAL card => an Option) in hand the cost is
+#     payable on both sides; ours surfaces ONE declinable cost pick, so the row
+#     is authored as the OptionalSkill fold (`expect: OptionalSkill` over our
+#     live pick; `decline:` emits one OptionalSkill(no)).
 #   * BlackGatomon's own [On Play]/[When Digivolving] is
 #     `ActivateClassesForSharedEffects(..., optional: false, ...)` whose body is
 #     `PlayByEffect(root: Hand)` -> ONE cancellable SelectHandEffect. Our
@@ -64,7 +71,8 @@ decks:
     # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
     # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
     # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
-    # exactly one copy is in hand when `using: BT25-085` is lowered.
+    # exactly one copy is in hand when `using: BT25-085` is lowered, and the
+    # drawn copy is what makes BeelStarmon's use-an-Option clause live.
     stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
             BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
             BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
@@ -113,10 +121,14 @@ steps:
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
-  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
-  # (see the header). Declined; our engine has no prompt here.
+  # SHARED (fold): Sparrowmon's [Start of Your Main Phase]. BeelStarmon
+  # (BT25-085) in hand is a DUAL card -- a [Three Musketeers] trait Option -- so
+  # the cost is payable on BOTH sides (see the header). DCGO asks an
+  # OptionalSkill, ours the declinable cost pick itself; `expect: OptionalSkill`
+  # over our live pick is the fold marker, and `decline:` emits one
+  # OptionalSkill(no) row.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
   - actor: 0
@@ -139,6 +151,19 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
+  # BeelStarmon's own [When Digivolving] use-an-Option clause IS live: the
+  # grant digivolve drew BeelStarmon #2 (stack[14]), a DUAL card and therefore a
+  # [Three Musketeers] trait Option in hand (BT25_085.cs `IsTraitedOption` =>
+  # `cardSource.IsOption`). DCGO-ONLY: the zone menu (SetIntSelection), 1 =
+  # "Use from Hand"; our engine has no menu -- its one union pick IS the zone
+  # choice. SHARED: the hand pick, declined on both sides (canNoSelect: true /
+  # our `optional: true`), so the clause's board stays exactly the grant's.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
   # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
   - actor: 1
     do: { pass: {} }
@@ -147,7 +172,7 @@ assert:
   # Pre-step state of the trailing pass. BeelStarmon caps the stack
   # Pagumon -> Sparrowmon -> BlackGatomon; Asuna stands beside it; P0 paid
   # 2 + 4 from 3 memory.
-  - at: 15
+  - at: 17
     that:
       turn: 6
       p0.memory: -3

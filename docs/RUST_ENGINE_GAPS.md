@@ -2967,6 +2967,27 @@ which it did not for these) — or have the DSL bridge promote `kind: dual` YAML
 into `CardData`. A guard ("YAML `kind: dual` while `cards.json` says otherwise")
 would close the family.
 
+**PARTIALLY RESOLVED 2026-09-18 (BT25-082#effect#2 triage) — BT25-085 only.**
+`data/cards.json` + `data/card_overrides.json` now carry BT25-085 as
+`card_kind: 4` with a `dual` block (Option face: use cost 6, Purple/Black, the
+printed `<Use Req.>` + `[Main]` text; the Option `[Main]` the ingest had misfiled
+as inherited text is cleared). Citations: official Bandai DB "DUAL Effect" /
+"DUAL Rule" (`data/card_bundles/BT25-085.md`); DCGO `BT25_085.cs:60`
+(`IsTraitedOption` => `cardSource.IsOption`). Guard test:
+`cards_behavioral::bt25::bt25_085::bt25_085_data_cards_json_is_a_dual_card`
+(fails before, passes after). Oracle effect: the abort on
+`BT25-082-effect2.yaml` is gone and `BT25-082#effect#2` re-measured CONFIRMED;
+nine Three Musketeers lines whose Sparrowmon (EX7-051) start-of-main row was
+authored `dcgo_only` ("vacuous optional-cost gate") turned out to be this same
+gap — with BeelStarmon in hand the cost is payable on both sides — and are now a
+SHARED OptionalSkill fold (identical wire row). Follow-ups left open:
+`BT25-085#effect#4/#5/#6` are no longer `unreachable` for this reason and need
+authoring; `BT25-083-effect2.yaml` / `EX7-066-effect1.yaml` reach BeelStarmon
+with an (always-illegal) Digimon play that our engine now correctly refuses —
+re-author with a digivolve prefix; `BT25-082-inherited0.yaml`'s attack segment
+now has three live triggers (trigger order) and needs re-authoring.
+**STILL OPEN: BT25-043, BT25-057, BT25-104, ST23-09.**
+
 ## F-ENGINE-TRIGGER-GATE-IS-TRIGGER-TIME-NOT-ACTIVATION-TIME — OPEN (found 2026-09-18, same stage)
 
 BeelStarmon BT25-085's two [When Digivolving]/[When Attacking] clauses trigger

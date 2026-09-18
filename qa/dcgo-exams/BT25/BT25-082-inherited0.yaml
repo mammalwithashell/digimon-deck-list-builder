@@ -1,3 +1,12 @@
+# STATUS 2026-09-18 (BT25-082#effect#2 triage): the prefix rows were repaired
+# after the BT25-085 dual-card data fix (Sparrowmon's gate is SHARED; the
+# use-an-Option rows after the grant digivolve). The ATTACK segment still does
+# NOT lower: with BeelStarmon #2 (a DUAL card => an Option) in hand, the attack
+# now has several live [When Attacking] triggers on our side too (this inherited
+# clause + BeelStarmon's use-an-Option; after the tuck, its unsuspend clause), so
+# the first post-attack prompt is a TriggerOrder / MultipleSkills row, not the
+# lone OptionalSkill authored below. Needs re-authoring with `trigger:` rows (or
+# a stack with no second BT25-085) before it can be re-measured.
 # Exam scenario: BlackGatomon (BT25-082), clause BT25-082#inherited#0 --
 # "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card
 #  from your hand or trash as this Digimon's bottom digivolution card, <Draw 1>."
@@ -91,8 +100,14 @@ steps:
     expect: { prompt: breeding_action }
   # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
   # (see the header). Declined; our engine has no prompt here.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
   - actor: 0
@@ -115,6 +130,18 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
+  # BeelStarmon's own [When Digivolving] use-an-Option clause IS live: the
+  # grant digivolve drew BeelStarmon #2, a DUAL card and so a [Three Musketeers]
+  # trait Option in hand (BT25_085.cs `IsTraitedOption` => `cardSource.IsOption`).
+  # DCGO-ONLY: the zone menu, 1 = "Use from Hand". SHARED: the hand pick,
+  # declined on both sides. (This is the prompt the first oracle run aborted on
+  # -- data/cards.json then carried BT25-085 as a plain Digimon.)
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
   # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
   - actor: 1
     do: { pass: {} }
