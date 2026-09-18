@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T08:16:28.074713100+00:00",
+  "last_updated": "2026-09-18T09:22:08.770469400+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -32,13 +32,11 @@
     "BT25-082#inherited#0": {
       "clause_id": "BT25-082#inherited#0",
       "card_id": "BT25-082",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0.yaml",
-      "reason": "oracle job aborted -- prompt mismatch: step 14 expected actor 1 but DCGO asked actor 0. Root cause read off the DCGO recording: after the grant digivolve BlackGatomon -> BeelStarmon (BT25-085) resolved on BOTH sides at cost 4 (memory 1 -> -3), DCGO prompted actor 0 for BeelStarmon's [When Digivolving] use-an-Option effect, because the second BeelStarmon (BT25-085) in hand is a DUAL card (CardSource.IsOption is true, [Three Musketeers] trait -> CanActivateUseOption). Our engine asks nothing: data/cards.json carries BT25-085 as card_kind 0 with no dual block (NOTES-BT25-085.md), so it is not an Option on our side. The abort is on the shared prefix, BEFORE the inherited clause is reached, so the clause itself was not compared; recorded diverged because the line's prompt sequence differs between engines.",
-      "job_id": "exam-BT25-082-inherited0",
-      "recorded_at": "2026-09-18T07:57:02.957406+00:00"
+      "recorded_at": "2026-09-18T09:22:08.770469400+00:00"
     }
   }
 }

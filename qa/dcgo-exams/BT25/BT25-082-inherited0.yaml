@@ -1,12 +1,10 @@
-# STATUS 2026-09-18 (BT25-082#effect#2 triage): the prefix rows were repaired
-# after the BT25-085 dual-card data fix (Sparrowmon's gate is SHARED; the
-# use-an-Option rows after the grant digivolve). The ATTACK segment still does
-# NOT lower: with BeelStarmon #2 (a DUAL card => an Option) in hand, the attack
-# now has several live [When Attacking] triggers on our side too (this inherited
-# clause + BeelStarmon's use-an-Option; after the tuck, its unsuspend clause), so
-# the first post-attack prompt is a TriggerOrder / MultipleSkills row, not the
-# lone OptionalSkill authored below. Needs re-authoring with `trigger:` rows (or
-# a stack with no second BT25-085) before it can be re-measured.
+# STATUS 2026-09-18 (BT25-082#inherited#0 triage): re-authored. The first oracle
+# run aborted on the shared prefix (BT25-085 dual-card data gap, fixed in
+# 20df249e6). With that fix a second BeelStarmon in hand is an Option, which makes
+# BeelStarmon's own [When Attacking] clauses live and turns the first post-attack
+# prompt into a trigger-order row. This line isolates THE CLAUSE instead: stack[14]
+# is a Digimon (BT21-071), so no Option is in hand/under at the attack, and the
+# cost paid is BeelStarmon (X Antibody) EX7-073.
 # Exam scenario: BlackGatomon (BT25-082), clause BT25-082#inherited#0 --
 # "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card
 #  from your hand or trash as this Digimon's bottom digivolution card, <Draw 1>."
@@ -24,8 +22,8 @@
 #   DCGO's `SetBool(canSelectHand)` auto-picks the hand with no row and opens
 #   a SelectHandEffect (canNoSelect: false). Our engine's single union-zone
 #   pick spans the same hand-only candidate set. Two TM-trait cards are in
-#   hand (BeelStarmon #2 and BeelStarmon X EX7-073); the pick names
-#   BeelStarmon #2 by identity. Then <Draw 1> (Mandatory, 16-7).
+#   hand is scanned for them; the pick names BeelStarmon (X Antibody)
+#   EX7-073 by identity. Then <Draw 1> (Mandatory, 16-7).
 #
 # NOTHING ELSE TRIGGERS ON THE ATTACK: BeelStarmon's own two [When Attacking]
 # effects are gated on an Option card existing in hand / under a Digimon
@@ -48,11 +46,11 @@ decks:
     # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
     # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
     # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
-    # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
-    # exactly one copy is in hand when `using: BT25-085` is lowered.
+    # stack[14] -- drawn BY the grant digivolve -- is a plain Digimon, so no
+    # Option card (a second DUAL BeelStarmon) is ever in hand on this line.
     stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
             BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
-            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT21-071,
             BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
     rest: three-musketeers
   p1:
@@ -130,18 +128,10 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
-  # BeelStarmon's own [When Digivolving] use-an-Option clause IS live: the
-  # grant digivolve drew BeelStarmon #2, a DUAL card and so a [Three Musketeers]
-  # trait Option in hand (BT25_085.cs `IsTraitedOption` => `cardSource.IsOption`).
-  # DCGO-ONLY: the zone menu, 1 = "Use from Hand". SHARED: the hand pick,
-  # declined on both sides. (This is the prompt the first oracle run aborted on
-  # -- data/cards.json then carried BT25-085 as a plain Digimon.)
-  - actor: 0
-    do: { select: { value: 1, dcgo_only: true } }
-    expect: { prompt: generic_int }
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: SelectHandEffect }
+  # BeelStarmon's own [When Digivolving] use-an-Option clause is DORMANT on this
+  # line: stack[14] (the card the grant digivolve draws) is a vanilla-in-hand
+  # Digimon (BT21-071), NOT a second BeelStarmon, so no Option card is in hand or
+  # under the Digimon (BT25_085.cs CanActivateUseOption). No prompt either side.
   # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
   - actor: 1
     do: { pass: {} }
@@ -169,10 +159,10 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # The cost: BeelStarmon #2 from hand goes under the attacker as its bottom
+  # The cost: BeelStarmon (X Antibody) EX7-073 from hand goes under the attacker as its bottom
   # digivolution card. Then <Draw 1>.
   - actor: 0
-    do: { select: { cards: [BT25-085] } }
+    do: { select: { cards: [EX7-073] } }
     expect: { prompt: SelectHandEffect }
   # One step past the clause (the attack has resolved: one security check).
   - actor: 0
@@ -180,7 +170,7 @@ steps:
     expect: { prompt: main_phase }
 assert:
   # Pre-step state of the trailing pass. BeelStarmon is suspended from the
-  # attack and now carries FOUR digivolution cards -- BeelStarmon #2 placed
+  # attack and now carries FOUR digivolution cards -- EX7-073 placed
   # underneath is the cost paid. P1's security fell 5 -> 4 (one check) and
   # its trash holds the Biyomon that lost the security battle.
   - at: 22
@@ -192,7 +182,7 @@ assert:
         - card_id: BT25-085
           dp: 12000
           suspended: true
-          sources: [BT25-082, BT25-085, EX7-051, ST6-01]
+          sources: [BT25-082, EX7-051, EX7-073, ST6-01]
         - card_id: BT25-092
           dp: -1
           suspended: false
