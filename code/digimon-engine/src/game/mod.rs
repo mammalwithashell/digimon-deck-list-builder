@@ -172,6 +172,29 @@ pub(crate) struct PendingHandDiscard {
     pub(crate) trashed_players: Vec<PlayerId>,
 }
 
+/// One host's share of an open `OnAddDigivolutionCards` batch window
+/// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Accumulates every card an effect
+/// placed into that host's digivolution cards within a single effect body so
+/// the trigger fires ONCE per host per batch (rule 15-5-2; DCGO
+/// `AddDigivolutionCardsBottom(list, cardEffect)` fires once per list —
+/// `<Material Save N>` moves N cards in one call, and this engine's
+/// per-card `place_card_under_permanent_bottom` loop must coalesce to match).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PendingAddedSources {
+    /// The host's STABLE identity — its top card at note time. Re-resolved to
+    /// a positional handle at flush time (battle-area indices shift when a
+    /// sibling leaves play mid-body, e.g. the Tamer that `<Mind Link>` folds
+    /// under a Digimon); a host that has left play by then fires nothing
+    /// (DCGO `Permanent.TopCard != null` gate in `CanTriggerOnAddDigivolutionCard`).
+    pub(crate) host_card: crate::card_source::CardHandle,
+    /// The placing effect (controller + source card) — DCGO's non-null
+    /// hashtable `CardEffect`. A window already open for the same host under
+    /// a DIFFERENT controller is flushed first so two effects never merge.
+    pub(crate) cause: crate::trigger_context::EffectAttribution,
+    /// Added cards in placement order.
+    pub(crate) cards: Vec<crate::card_source::CardHandle>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PendingWouldPlayOrigin {
     Hand,
@@ -1012,6 +1035,24 @@ pub struct Game {
     /// the whole discard list before firing the trigger once.
     pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
 
+    /// Open coalescing windows for the `OnAddDigivolutionCards` batch trigger
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS), one per host permanent that an
+    /// effect placed sources under during the current effect body. Flushed
+    /// (fires the trigger once per host) at the outermost drain, alongside
+    /// `pending_hand_discard`. Empty outside a placement window. Plain data,
+    /// so it clones with the `Game` (rule 28 clone-safety).
+    pub(crate) pending_added_sources: Vec<PendingAddedSources>,
+
+    /// The placing effect's carrier for an in-flight effect-driven
+    /// security→digivolution-source placement (`place_as_source_observed`'s
+    /// Security branch hands the card to `fire_effect_security_removal`,
+    /// whose completion in `complete_effect_security_removal` is where the
+    /// card actually enters the stack and the `OnAddDigivolutionCards` batch
+    /// is noted). Set just before the removal is fired, consumed (taken) when
+    /// the `BottomSource` / `TopSource` destination is seated. `None`
+    /// otherwise. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) pending_security_source_cause_card: Option<crate::card_source::CardHandle>,
+
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
     until_condition_total_evaluations: u64,
@@ -1827,6 +1868,139 @@ impl Game {
                 },
             );
         }
+    }
+
+    /// Record that an EFFECT (`cause`) just placed `cards` into `host`'s
+    /// digivolution cards, opening or extending that host's
+    /// `OnAddDigivolutionCards` batch window
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Call this from EVERY
+    /// effect-driven source-placement facade AFTER the `card_sources`
+    /// mutation — and from NO rule-driven one: normal / DNA digivolution,
+    /// DigiXros + Assembly material consumption and App Fusion place sources
+    /// with a `null` `cardEffect` in DCGO (`CardController.cs:1736`,
+    /// `SelectDigiXrosClass.cs:910`, `SelectAssemblyClass.cs:302`,
+    /// `SelectAppFusionEffect.cs:234`) and `CanTriggerOnAddDigivolutionCard`
+    /// requires a non-null one, so they never trigger it.
+    ///
+    /// The trigger is NOT fired here; it fires once per host when the window
+    /// is flushed (`flush_pending_added_sources`) after the placing effect
+    /// body completes — DCGO `AddDigivolutionCards*` stacks the skill once
+    /// per added LIST (Permanent.cs:1133 / 1237), and rule 15-5-2 makes one
+    /// condition met several times at once a single triggering. Tokens
+    /// never enter a stack (DCGO skips `IsToken` cards and token hosts), so a
+    /// caller that placed nothing simply passes an empty `cards`.
+    ///
+    /// `host` may be a battle-area or breeding handle; it is re-resolved by
+    /// top-card identity at flush time.
+    pub(crate) fn note_effect_added_sources(
+        &mut self,
+        host: crate::permanent::PermanentHandle,
+        cards: Vec<crate::card_source::CardHandle>,
+        cause: crate::trigger_context::EffectAttribution,
+    ) {
+        if cards.is_empty() {
+            return;
+        }
+        let Some(host_card) = self.stable_top_card_of(host) else {
+            return;
+        };
+        if let Some(window) = self
+            .pending_added_sources
+            .iter_mut()
+            .find(|w| w.host_card == host_card)
+        {
+            if window.cause.controller == cause.controller {
+                window.cards.extend(cards);
+                return;
+            }
+            // A different controller's effect is now placing under the same
+            // host: fire the earlier batch on its own.
+            let earlier = window.clone();
+            self.pending_added_sources
+                .retain(|w| w.host_card != host_card);
+            self.fire_added_sources_batch(earlier);
+        }
+        self.pending_added_sources.push(PendingAddedSources {
+            host_card,
+            cause,
+            cards,
+        });
+    }
+
+    /// Fire the `OnAddDigivolutionCards` batch trigger once per host for every
+    /// open placement window, then close them all. No-op when nothing is
+    /// pending. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) fn flush_pending_added_sources(&mut self) {
+        let windows = std::mem::take(&mut self.pending_added_sources);
+        for window in windows {
+            self.fire_added_sources_batch(window);
+        }
+    }
+
+    fn fire_added_sources_batch(&mut self, window: PendingAddedSources) {
+        // Re-resolve the host by its stable top card; a host that has left
+        // play since the placement fires nothing (DCGO `TopCard != null`).
+        let Some(host) = self.permanent_handle_by_top_card(window.host_card) else {
+            return;
+        };
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAddDigivolutionCards,
+            crate::selection::TriggerSource::SourcesAddedToStack {
+                host,
+                host_card: window.host_card,
+                cards: window.cards,
+                cause: window.cause,
+            },
+        );
+    }
+
+    /// The top card of a battle-area or breeding permanent, or `None` when
+    /// the slot is empty / missing.
+    pub(crate) fn stable_top_card_of(
+        &self,
+        handle: crate::permanent::PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        let player = self.players.get(handle.player as usize)?;
+        let perm = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+            player.breeding_area.as_ref()?
+        } else {
+            player.battle_area.get(handle.index as usize)?
+        };
+        perm.card_sources.last().map(|card| card.handle())
+    }
+
+    /// Locate the battle-area or breeding permanent whose TOP card is
+    /// `top_card` (stable-identity → positional handle). `None` when no such
+    /// permanent is in play.
+    pub(crate) fn permanent_handle_by_top_card(
+        &self,
+        top_card: crate::card_source::CardHandle,
+    ) -> Option<crate::permanent::PermanentHandle> {
+        for (pid, player) in self.players.iter().enumerate() {
+            if let Some(index) = player
+                .battle_area
+                .iter()
+                .position(|perm| perm.card_sources.last().map(|c| c.handle()) == Some(top_card))
+            {
+                return Some(crate::permanent::PermanentHandle {
+                    player: pid as PlayerId,
+                    index: index as u8,
+                });
+            }
+            if player
+                .breeding_area
+                .as_ref()
+                .and_then(|perm| perm.card_sources.last())
+                .map(|c| c.handle())
+                == Some(top_card)
+            {
+                return Some(crate::permanent::PermanentHandle {
+                    player: pid as PlayerId,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                });
+            }
+        }
+        None
     }
 
     /// Trash an entire permanent stack (top card + digi_sources + linked

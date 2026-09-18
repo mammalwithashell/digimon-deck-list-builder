@@ -279,6 +279,8 @@ impl Game {
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
             pending_hand_discard: None,
+            pending_added_sources: Vec::new(),
+            pending_security_source_cause_card: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,

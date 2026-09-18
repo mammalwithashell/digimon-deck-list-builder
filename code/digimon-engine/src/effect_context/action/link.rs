@@ -189,9 +189,10 @@ impl<'a> EffectContext<'a> {
                 let Some(card) = cards.get(idx).copied() else {
                     return;
                 };
+                let cause = cb_ctx.placing_effect_attribution();
                 if cb_ctx
                     .game
-                    .place_specific_link_card_as_bottom_source(host, card)
+                    .place_specific_link_card_as_bottom_source(host, card, cause)
                 {
                     cb_ctx.cancel_leave();
                 }

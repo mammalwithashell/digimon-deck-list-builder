@@ -262,8 +262,9 @@ impl<'a> EffectContext<'a> {
         {
             return false;
         }
+        let cause = self.placing_effect_attribution();
         self.game
-            .move_field_option_under_permanent(option_handle, target, face_down)
+            .move_field_option_under_permanent(option_handle, target, face_down, cause)
     }
 
     /// Place THIS effect's source Option as the bottom digivolution card of
@@ -315,9 +316,13 @@ impl<'a> EffectContext<'a> {
         // permanent and fires no trash observers.
         if let Some(source_perm) = self.source_permanent {
             if self.game.option_field_state(source_perm).is_some() {
-                return self
-                    .game
-                    .move_field_option_under_permanent(source_perm, target, face_down);
+                let cause = self.placing_effect_attribution();
+                return self.game.move_field_option_under_permanent(
+                    source_perm,
+                    target,
+                    face_down,
+                    cause,
+                );
             }
             // A non-Option field source (a Digimon/Tamer running this as an
             // effect) cannot place "this card" under a permanent.
@@ -359,8 +364,9 @@ impl<'a> EffectContext<'a> {
             source_card
         };
 
+        let cause = self.placing_effect_attribution();
         self.game
-            .seat_card_source_under_permanent(source_card, target, face_down)
+            .seat_card_source_under_permanent(source_card, target, face_down, cause)
     }
 
     /// Decline the pay cost for a queued triggered effect that parked during

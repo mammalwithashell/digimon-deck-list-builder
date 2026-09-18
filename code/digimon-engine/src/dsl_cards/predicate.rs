@@ -1804,17 +1804,43 @@ fn eval_event_fields(
         }
     }
     if let Some(want) = pred.event_caused_by_own_effect {
-        // on_discard_hand: true when the causing effect belongs to the observer
-        // (ST16-14 Matt Ishida "one of YOUR effects"). Compare
-        // `discard_cause_controller` to the observer's controller.
+        // on_discard_hand (ST16-14 Matt Ishida "one of YOUR effects") and
+        // on_add_digivolution_cards (BT7-056 Dorumon "when one of your effects
+        // places a digivolution card under this Digimon"): true when the
+        // causing effect belongs to the observer. Reads the discard batch's
+        // `discard_cause_controller`, else the explicit `event_cause_effect`
+        // captured by the source-placement facade. Mirrors DCGO
+        // `cardEffect.EffectSourceCard.Owner == card.Owner`.
         let is_own = rctx
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.discard_cause_controller)
+            .and_then(|trigger| {
+                trigger
+                    .discard_cause_controller
+                    .or_else(|| trigger.event_cause_effect.map(|cause| cause.controller))
+            })
             .map(|controller| controller == rctx.player())
             .unwrap_or(false);
         if is_own != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.event_added_card_any {
+        // on_add_digivolution_cards: ANY card of the just-placed batch matches
+        // the inner card predicate (DCGO `CanTriggerOnAddDigivolutionCard`'s
+        // `CardSources.Count(cardCondition) >= 1`). Outside that timing the
+        // batch is empty and the gate fails. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+        let added: Vec<CardHandle> = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.added_source_cards().to_vec())
+            .unwrap_or_default();
+        let any_match = added.iter().any(|card| {
+            eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(*card), None)
+        });
+        if !any_match {
             return false;
         }
     }

@@ -271,6 +271,30 @@ impl Game {
         source: PermanentHandle,
         target: PermanentHandle,
     ) -> bool {
+        self.place_permanent_as_bottom_sources_inner(source, target, None)
+    }
+
+    /// `place_permanent_as_bottom_sources` for an EFFECT-driven placement:
+    /// after the source permanent's whole stack rides under `target`, the
+    /// host's `OnAddDigivolutionCards` batch is noted with `cause` as the
+    /// placing effect (DCGO `IPlacePermanentToDigivolutionCards(..., cardEffect)`
+    /// → `AddDigivolutionCardsBottom(..., _cardEffect)`).
+    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub fn place_permanent_as_bottom_sources_by_effect(
+        &mut self,
+        source: PermanentHandle,
+        target: PermanentHandle,
+        cause: crate::trigger_context::EffectAttribution,
+    ) -> bool {
+        self.place_permanent_as_bottom_sources_inner(source, target, Some(cause))
+    }
+
+    fn place_permanent_as_bottom_sources_inner(
+        &mut self,
+        source: PermanentHandle,
+        target: PermanentHandle,
+        cause: Option<crate::trigger_context::EffectAttribution>,
+    ) -> bool {
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             return false;
         }
@@ -310,6 +334,8 @@ impl Game {
             .battle_area
             .remove(source.index as usize);
         let cards = removed.card_sources;
+        let card_handles: Vec<crate::card_source::CardHandle> =
+            cards.iter().map(|c| c.handle()).collect();
 
         if adjusted_target.index == crate::action::space::BREEDING_TARGET as u8 {
             let Some(breeding) = self
@@ -320,6 +346,9 @@ impl Game {
                 return false;
             };
             breeding.card_sources.splice(0..0, cards);
+            if let Some(cause) = cause {
+                self.note_effect_added_sources(adjusted_target, card_handles, cause);
+            }
             return true;
         }
 
@@ -331,6 +360,9 @@ impl Game {
             return false;
         };
         target_perm.card_sources.splice(0..0, cards);
+        if let Some(cause) = cause {
+            self.note_effect_added_sources(adjusted_target, card_handles, cause);
+        }
         true
     }
 

@@ -2034,7 +2034,29 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, false)
+        self.place_as_source_observed(source, target, observer_player, face_down, false, None)
+    }
+
+    /// `place_as_bottom_source_observed` with the placing effect's source card
+    /// attached, so the `OnAddDigivolutionCards` batch it opens carries the
+    /// full `EffectAttribution` (controller + source card). The controller is
+    /// `observer_player` on both entry points. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) fn place_as_bottom_source_by_effect(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        effect_source_card: CardHandle,
+    ) -> bool {
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            false,
+            Some(effect_source_card),
+        )
     }
 
     /// Top-position sibling of `place_as_bottom_source_observed`: the card is
@@ -2050,7 +2072,26 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, true)
+        self.place_as_source_observed(source, target, observer_player, face_down, true, None)
+    }
+
+    /// Top-position sibling of `place_as_bottom_source_by_effect`.
+    pub(crate) fn place_as_top_source_by_effect(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        effect_source_card: CardHandle,
+    ) -> bool {
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            true,
+            Some(effect_source_card),
+        )
     }
 
     /// Shared body for `place_as_bottom_source_observed` /
@@ -2061,6 +2102,17 @@ impl Game {
     /// Both fire the identical lifecycle: security sources materialize and
     /// route through `fire_effect_security_removal`, and Material-source
     /// extraction soft-removes an emptied carrier.
+    ///
+    /// Every successful placement here is EFFECT-driven (this body is reached
+    /// only from `EffectContext` placement verbs and the public
+    /// `Game::place_as_*_source` effect API — never from normal / DNA
+    /// digivolution, DigiXros / Assembly materials or App Fusion), so it
+    /// opens the host's `OnAddDigivolutionCards` batch window with
+    /// `observer_player` as the placing effect's controller
+    /// (`note_effect_added_sources`; G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS).
+    /// `effect_source_card` is the placing effect's carrier when the caller
+    /// knows it. The Security branch notes nothing here — the card is only
+    /// placed inside `complete_effect_security_removal`, which notes it.
     fn place_as_source_observed(
         &mut self,
         source: crate::enums::CardSourceRef,
@@ -2068,6 +2120,7 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
         top: bool,
+        effect_source_card: Option<CardHandle>,
     ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -2100,6 +2153,9 @@ impl Game {
             } else {
                 crate::selection::SecurityRemovalDestination::BottomSource(target)
             };
+            // The placing effect's carrier, read back by
+            // `complete_effect_security_removal` when it seats the card.
+            self.pending_security_source_cause_card = effect_source_card;
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
@@ -2122,6 +2178,7 @@ impl Game {
             };
             let mut card = taken.card;
             card.face_down = face_down;
+            let placed = card.handle();
             if top {
                 breeding.push_as_top_source(card);
             } else {
@@ -2135,6 +2192,15 @@ impl Game {
             if let crate::enums::CardSourceRef::Material(carrier, _) = source {
                 let _ = self.soft_remove_if_emptied(carrier);
             }
+            self.note_effect_added_sources(
+                target,
+                vec![placed],
+                crate::trigger_context::EffectAttribution {
+                    controller: observer_player,
+                    source_card: effect_source_card,
+                    source_permanent: None,
+                },
+            );
             return true;
         }
 
@@ -2145,11 +2211,24 @@ impl Game {
         }
         let mut card = taken.card;
         card.face_down = face_down;
+        let placed = card.handle();
         if top {
             target_player.battle_area[target.index as usize].push_as_top_source(card);
         } else {
             target_player.battle_area[target.index as usize].push_under(card);
         }
+        // Note the batch BEFORE the carrier soft-remove below: the note keys
+        // the host by its stable top card, but `target` is only guaranteed
+        // positionally valid until that soft-remove shifts indices.
+        self.note_effect_added_sources(
+            target,
+            vec![placed],
+            crate::trigger_context::EffectAttribution {
+                controller: observer_player,
+                source_card: effect_source_card,
+                source_permanent: None,
+            },
+        );
         // Soft-remove the carrier slot if Material extraction emptied it.
         // Sibling of the digivolve-from-material fix landed in PR #533. The
         // soft-remove runs AFTER push_under so the target index is still

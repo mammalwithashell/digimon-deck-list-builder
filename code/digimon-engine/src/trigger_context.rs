@@ -189,6 +189,32 @@ pub struct TriggerContext {
     /// card in your hand" (ST16-14 Matt Ishida) vs the opponent's effect.
     /// Mirrors DCGO `CanTriggerOnTrashHand`'s `cardEffect.EffectSourceCard.Owner`.
     pub discard_cause_controller: Option<PlayerId>,
+    /// The EFFECT that caused this event, for event timings that only exist
+    /// because an effect did something (today: `OnAddDigivolutionCards`).
+    /// Distinct from `source_effect`, which is auto-filled from whatever
+    /// effect happens to be executing when the trigger is enqueued: this one
+    /// is captured explicitly at the mutation site by the placing facade and
+    /// survives the deferred batch flush. Mirrors the `CardEffect` DCGO puts
+    /// in the `OnAddDigivolutionCards` hashtable (Permanent.cs:1124 / 1228),
+    /// read by `CanTriggerOnAddDigivolutionCard`'s `cardEffectCondition`
+    /// (BT7-056 "one of YOUR effects": `EffectSourceCard.Owner == card.Owner`).
+    /// `event_caused_by_own_effect` reads it. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub event_cause_effect: Option<EffectAttribution>,
+}
+
+impl TriggerContext {
+    /// The cards an effect just placed into the event host's digivolution
+    /// cards (`OnAddDigivolutionCards` only). Empty on every other timing.
+    pub fn added_source_cards(&self) -> &[CardHandle] {
+        if self.event_cause_effect.is_none() {
+            return &[];
+        }
+        self.moved_card_sets
+            .iter()
+            .find(|set| set.from.is_none() && set.to == Some(Zone::BattleArea))
+            .map(|set| set.cards.as_slice())
+            .unwrap_or(&[])
+    }
 }
 
 impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {

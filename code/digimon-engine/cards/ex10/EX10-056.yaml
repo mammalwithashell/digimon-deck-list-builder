@@ -41,7 +41,7 @@
 # | Std digivolve Lv.5 Purple/5 + DigiXros -2 alt paths      | IMPLEMENTED    |
 # | [OP][WD] tuck an opponent Digimon permanent              | OMITTED (G-DSL-PLACE-PERMANENT-AS-SOURCE) |
 # | [All Turns][OPT] digivolve-half observer → trash security| IMPLEMENTED    |
-# | [All Turns][OPT] placed-under-half observer              | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER) |
+# | [All Turns][OPT] placed-under-half observer              | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER RESOLVED 2026-09-17: `on_add_digivolution_cards` now exists — authorable, not yet authored) |
 # Verdict: PARTIAL (two clauses on missing vocabulary; Q29-irrelevant).
 
 card: EX10-056
@@ -79,7 +79,7 @@ effects:
     condition:
       all_of:
         - event_target_owner: opponent
-    summary: "[All Turns][Once Per Turn] When any of your opponent's Digimon or Tamers digivolve (placed-under half pending G-DSL-ON-CARD-PLACED-UNDER-TRIGGER), by trashing any 2 of this Digimon's digivolution cards, trash your opponent's top security card"
+    summary: "[All Turns][Once Per Turn] When any of your opponent's Digimon or Tamers digivolve (placed-under half still OMITTED here; G-DSL-ON-CARD-PLACED-UNDER-TRIGGER RESOLVED 2026-09-17 via `when: on_add_digivolution_cards` — authorable), by trashing any 2 of this Digimon's digivolution cards, trash your opponent's top security card"
     process:
       # Cost: ANY 2 of this Digimon's digivolution cards — a player-choice
       # pick scoped to self (the EX10-036 idiom with `target: self`).

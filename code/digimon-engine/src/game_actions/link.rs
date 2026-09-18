@@ -615,10 +615,16 @@ impl Game {
     /// cards as its bottom digivolution card, it doesn't leave"). The host
     /// itself stays — only the single chosen link card relocates.
     /// DCGO ref: `EX11_027.cs` Link-Effect region (`AddDigivolutionCardsBottom`).
+    ///
+    /// `cause` is the placing effect (the replacement-cost body): DCGO
+    /// `AddDigivolutionCardsBottom(..., cardEffect)` on a linked card unlinks
+    /// it and fires `OnAddDigivolutionCards` for the host, so the host's batch
+    /// window is noted here. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub fn place_specific_link_card_as_bottom_source(
         &mut self,
         host: PermanentHandle,
         card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EffectAttribution,
     ) -> bool {
         let Some(perm) = self
             .player_mut(host.player)
@@ -633,6 +639,7 @@ impl Game {
         let moved = perm.linked_cards.remove(pos);
         // Place it as the carrier's bottom digivolution source (under the stack).
         perm.push_under(moved);
+        self.note_effect_added_sources(host, vec![card], cause);
         true
     }
 }

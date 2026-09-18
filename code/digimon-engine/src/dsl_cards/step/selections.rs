@@ -1861,9 +1861,11 @@ fn run_link_card_leave_selection_step(
         crate::resume::LinkCardLeaveMode::TrashAndCancel => {
             ctx.game.trash_specific_link_card(state.host, card)
         }
-        crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => ctx
-            .game
-            .place_specific_link_card_as_bottom_source(state.host, card),
+        crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => {
+            let cause = ctx.placing_effect_attribution();
+            ctx.game
+                .place_specific_link_card_as_bottom_source(state.host, card, cause)
+        }
         crate::resume::LinkCardLeaveMode::TrashDigivolutionOptionAndCancel => {
             ctx.game.trash_specific_source_card(state.host, card)
         }

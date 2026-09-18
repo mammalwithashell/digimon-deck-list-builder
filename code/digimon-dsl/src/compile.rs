@@ -288,6 +288,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnAddDigivolutionCards => CompiledTiming::OnAddDigivolutionCards,
         S::OnSourceReturnedToDeckBottom => CompiledTiming::OnDigivolutionCardReturnedToDeckBottom,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
@@ -1235,6 +1236,14 @@ fn compile_predicate(
         event_winner_trait_has: p.event_winner_trait_has.clone(),
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
+        event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_added_card_any"),
+                card_id,
+                errors,
+            ))
+        }),
         played_by_effect: p.played_by_effect,
         event_target_color_any_of: p
             .event_target_color_any_of

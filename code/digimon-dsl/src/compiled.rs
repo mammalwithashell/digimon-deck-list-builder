@@ -629,8 +629,12 @@ pub struct CompiledPredicate {
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
-    /// `on_discard_hand`: true when the causing effect is the observer's own.
+    /// `on_discard_hand` / `on_add_digivolution_cards`: true when the causing
+    /// effect is the observer's own.
     pub event_caused_by_own_effect: Option<bool>,
+    /// `on_add_digivolution_cards`: ANY card of the just-placed batch matches
+    /// this card predicate (DCGO `cardCondition`). G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub event_added_card_any: Option<Box<CompiledPredicate>>,
     /// True when this permanent was played by an effect (OnPlay firing).
     /// G-ENGINE-ON-DISCARD-HAND.
     pub played_by_effect: Option<bool>,
@@ -1217,6 +1221,12 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// An EFFECT placed cards into a permanent's digivolution cards
+    /// (`when: on_add_digivolution_cards`); lowers to
+    /// `EffectTiming::OnAddDigivolutionCards`. Scope-gate via `active_when:`
+    /// (`event_host_permanent_is_source`, `event_caused_by_own_effect`,
+    /// `event_added_card_any`). G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    OnAddDigivolutionCards,
     /// A digivolution source RETURNED to the bottom of a player's deck (not
     /// trashed). Galacticmon / Vemmon-LIBERATOR observer (BT21-058, BT18-065).
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.

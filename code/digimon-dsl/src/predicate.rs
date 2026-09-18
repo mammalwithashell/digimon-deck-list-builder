@@ -619,6 +619,19 @@ pub struct PredicateSpec {
     /// observer's controller. G-ENGINE-ON-DISCARD-HAND.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_caused_by_own_effect: Option<bool>,
+    /// For `on_add_digivolution_cards` observers: the batch of cards an effect
+    /// just placed into the host's digivolution cards must contain AT LEAST
+    /// ONE card matching the inner card predicate (`trait_has`, `kind`,
+    /// `name_contains`, `in_text_contains`, …). Mirrors DCGO
+    /// `CanTriggerOnAddDigivolutionCard`'s `cardCondition`
+    /// (`CardSources.Count(cardCondition) >= 1`). Fails outside that timing
+    /// (no added-card batch on the trigger context). Example — EX7-005
+    /// Kapurimon "when effects place Option cards with the [Three Musketeers]
+    /// trait in this Digimon's digivolution cards":
+    /// `event_added_card_any: { kind: option, trait_has: Three Musketeers }`.
+    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_added_card_any: Option<Box<PredicateSpec>>,
     /// True when the permanent carrying this effect was played by an effect
     /// (`PlaySource::ByEffect`) — read at the OnPlay firing. Models BT25-080's
     /// "if played by an effect, …" main-clause tail. G-ENGINE-ON-DISCARD-HAND.

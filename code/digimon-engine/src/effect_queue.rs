@@ -691,6 +691,41 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SourcesAddedToStack { .. } => {
+                // Board-wide fan-out over every battle-area AND breeding
+                // permanent of both players (an effect can place sources under
+                // a breeding-area Digimon — `place_as_source_observed` has a
+                // breeding branch — and the host's own stack now holds the
+                // added cards, so their inherited observers are scanned here
+                // per rule 15-5-3). The host / added batch / placing effect
+                // ride in the per-handle `TriggerContext`; scope gates live in
+                // each observer's `active_when:`. Mirrors `OptionPlaced`.
+                // G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                    let breeding_handle = PermanentHandle {
+                        player,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
+                    self.enqueue_from_breeding_permanent(
+                        timing,
+                        breeding_handle,
+                        Some(trigger_context),
+                    );
+                }
+            }
         }
         // Fan event dispatches out to placed event-gated Delay Options.
         // `EnteredField` covers `OnEnterFieldAnyone` / `OnAllyPlayed` plays:
@@ -1025,6 +1060,25 @@ impl Game {
                     }
                     discard_guard += 1;
                     if discard_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
+            // Flush the OnAddDigivolutionCards batch windows the same way
+            // (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS): the placing effect body
+            // has finished, so each host's added-card batch is complete. Fire
+            // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
+            // rule 15-5-2), then drain the observers. Loop-guarded because an
+            // observer can itself place sources (a nested batch).
+            if self.pending_selection.is_none() {
+                let mut added_guard: u16 = 0;
+                while !self.pending_added_sources.is_empty() && self.pending_selection.is_none() {
+                    self.flush_pending_added_sources();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    added_guard += 1;
+                    if added_guard > MAX_CHAIN_DEPTH {
                         break;
                     }
                 }
@@ -1738,6 +1792,43 @@ impl Game {
                 affected_player: Some(player),
                 source_player: Some(cause_controller),
                 effect_initiated: true,
+                ..TriggerContext::default()
+            },
+            TriggerSource::SourcesAddedToStack {
+                host,
+                host_card,
+                ref cards,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The host whose digivolution cards grew ("under THIS
+                // Digimon" -> `event_host_permanent_is_source`) and the placing
+                // effect ("one of YOUR effects" -> `event_caused_by_own_effect`).
+                // The added batch rides in `moved_card_sets` (read back via
+                // `TriggerContext::added_source_cards`); the single-card
+                // `event_card` is deliberately left unset — the event is a
+                // batch, and a one-card alias would silently mis-gate the
+                // multi-card case (`event_added_card_any` is the gate).
+                event_host_permanent: Some(host),
+                event_host_card: Some(host_card),
+                event_permanent: Some(host),
+                affected_player: Some(host.player),
+                source_player: Some(cause.controller),
+                cause: Some(if cause.controller == host.player {
+                    crate::trigger_context::EventCause::OwnEffect
+                } else {
+                    crate::trigger_context::EventCause::OpponentEffect
+                }),
+                source_effect: Some(cause),
+                event_cause_effect: Some(cause),
+                effect_initiated: true,
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
+                    from: None,
+                    to: Some(crate::enums::Zone::BattleArea),
+                }],
                 ..TriggerContext::default()
             },
         };
@@ -3538,11 +3629,19 @@ impl Game {
                         }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
+                        // Effect-driven placement (only `place_as_source_observed`
+                        // routes a security card here): note the host's
+                        // `OnAddDigivolutionCards` batch once the card is seated.
+                        // G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+                        let placed = security.card.handle();
+                        let cause_card = self.pending_security_source_cause_card.take();
+                        let mut seated = false;
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
                                 breeding.push_under(security.card);
+                                seated = true;
                             } else {
                                 let owner = security.card.owner;
                                 self.player_mut(owner).trash.push(security.card);
@@ -3553,9 +3652,21 @@ impl Game {
                             .get_mut(target.index as usize)
                         {
                             perm.push_under(security.card);
+                            seated = true;
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);
+                        }
+                        if seated {
+                            self.note_effect_added_sources(
+                                target,
+                                vec![placed],
+                                crate::trigger_context::EffectAttribution {
+                                    controller: pending.source_player,
+                                    source_card: cause_card,
+                                    source_permanent: None,
+                                },
+                            );
                         }
                     }
                     // Top-position sibling of BottomSource: insert directly
@@ -3563,11 +3674,15 @@ impl Game {
                     // (`push_as_top_source`). Same fallbacks (missing target
                     // → owner's trash). G-DSL-PLACE-AS-TOP-SOURCE.
                     SecurityRemovalDestination::TopSource(target) => {
+                        let placed = security.card.handle();
+                        let cause_card = self.pending_security_source_cause_card.take();
+                        let mut seated = false;
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
                                 breeding.push_as_top_source(security.card);
+                                seated = true;
                             } else {
                                 let owner = security.card.owner;
                                 self.player_mut(owner).trash.push(security.card);
@@ -3578,9 +3693,21 @@ impl Game {
                             .get_mut(target.index as usize)
                         {
                             perm.push_as_top_source(security.card);
+                            seated = true;
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);
+                        }
+                        if seated {
+                            self.note_effect_added_sources(
+                                target,
+                                vec![placed],
+                                crate::trigger_context::EffectAttribution {
+                                    controller: pending.source_player,
+                                    source_card: cause_card,
+                                    source_permanent: None,
+                                },
+                            );
                         }
                     }
                     SecurityRemovalDestination::Digivolve {

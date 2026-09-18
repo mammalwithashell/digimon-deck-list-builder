@@ -19,7 +19,10 @@
 #   → DrawClass(1) + AddMemory(1). The DSL has NO "when a card is placed
 #   under this permanent" trigger timing (the only related timing is
 #   `on_digivolution_card_trashed`, the REMOVAL direction). Logged as
-#   G-DSL-ON-CARD-PLACED-UNDER-TRIGGER in qa/dsl-vocab-gaps.md. NOT stubbed.
+#   G-DSL-ON-CARD-PLACED-UNDER-TRIGGER (RESOLVED 2026-09-17 — `when:
+#   on_add_digivolution_cards` + `event_host_permanent_is_source` +
+#   `event_added_card_any: { color_has: [purple] }` now exist; clause still
+#   OMITTED here, authorable by a card stage). NOT stubbed.
 #   (Q29-irrelevant: the quiz line REMOVES cards from under this Tamer.)
 #
 # Clause 2 (would-play interrupt, [Your Turn][OPT]): DCGO
@@ -42,7 +45,7 @@
 # ─── Implementation status ───────────────────────────────────────────────────
 # | Card-text element                                       | Status          |
 # |----------------------------------------------------------|----------------|
-# | [All Turns][OPT] purple card placed under → Draw+memory  | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER) |
+# | [All Turns][OPT] purple card placed under → Draw+memory  | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER RESOLVED 2026-09-17 — authorable, not yet authored) |
 # | [Your Turn][OPT] would-play preattach + cost −2/card     | IMPLEMENTED    |
 # | [Security] play this card free                           | IMPLEMENTED    |
 # Verdict: PARTIAL (clause 1 blocked on a missing trigger timing).

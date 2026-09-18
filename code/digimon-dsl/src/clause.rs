@@ -163,6 +163,27 @@ pub enum Timing {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// Source-ADDED observer: an EFFECT placed one or more cards into a
+    /// permanent's digivolution cards — "[Your Turn] [Once Per Turn] When
+    /// your effect places a digivolution card under this Digimon, gain 1
+    /// memory" (BT7-056 Dorumon; EX7-005 Kapurimon; BT25-005 Pagumon;
+    /// `when: on_add_digivolution_cards`). Lowers to
+    /// `EffectTiming::OnAddDigivolutionCards`. Fires ONCE per host per
+    /// placing-effect batch (rule 15-5-2; DCGO `AddDigivolutionCardsBottom` /
+    /// `AddDigivolutionCardsTop` fire once per added list) and ONLY for
+    /// effect-driven placement — normal / DNA digivolution, DigiXros and
+    /// Assembly material consumption, and App Fusion never fire it (DCGO
+    /// passes a `null` `cardEffect` on those paths and
+    /// `CanTriggerOnAddDigivolutionCard` requires a non-null one). Placing a
+    /// card whose own inherited effect carries this timing DOES trigger it
+    /// (rule 15-5-3). Board-wide fan-out with NO forced host filter — gate
+    /// scope in `active_when:` with `event_host_permanent_is_source: true`
+    /// ("under THIS Digimon"), `event_caused_by_own_effect: true` ("one of
+    /// YOUR effects"), and `event_added_card_any: { <card predicate> }` (the
+    /// batch's card gate, DCGO `cardCondition` — ANY added card must match).
+    /// The single-card `event_card_*` leaves are NOT populated on this timing
+    /// because the event is a batch; use `event_added_card_any`.
+    OnAddDigivolutionCards,
     /// `[All Turns]`-style observer: a digivolution source was RETURNED to the
     /// bottom of a player's deck (not trashed) — "when any [Vemmon] return to
     /// the bottom of the deck from this Digimon's digivolution cards" (BT21-058,

@@ -475,7 +475,11 @@ pub struct PendingPayCostEffect {
 
 /// Describes where a trigger is firing from. Consumed by
 /// `Game::enqueue_triggered` to decide which zones/permanents to scan.
-#[derive(Debug, Clone, Copy)]
+///
+/// `Clone` but deliberately NOT `Copy`: `SourcesAddedToStack` carries the
+/// added-card batch as a `Vec` (an effect can place several cards under one
+/// host in one go, and the trigger fires once for the whole list).
+#[derive(Debug, Clone)]
 pub enum TriggerSource {
     /// A single permanent fires the trigger (OnPlay, OnAttack, OnDeletion).
     /// Only that permanent's own effects at the given timing are collected.
@@ -706,6 +710,22 @@ pub enum TriggerSource {
     HandDiscarded {
         player: PlayerId,
         cause_controller: PlayerId,
+    },
+    /// `OnAddDigivolutionCards` observer fan-out fired after an EFFECT placed
+    /// one or more cards into `host`'s digivolution cards
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Scans EVERY battle-area and
+    /// breeding permanent of both players — the host itself (whose stack now
+    /// includes the added cards, so a placed card's own inherited observer
+    /// fires per rule 15-5-3), its siblings, and the opponent's board — with
+    /// the scope gate living in each observer's `active_when:`. `cards` is the
+    /// whole added batch (fires ONCE per host per batch — rule 15-5-2 / DCGO
+    /// `AddDigivolutionCards*` once per list); `cause` is the placing effect
+    /// (DCGO's non-null hashtable `CardEffect`). Mirrors `HandDiscarded`.
+    SourcesAddedToStack {
+        host: PermanentHandle,
+        host_card: CardHandle,
+        cards: Vec<CardHandle>,
+        cause: crate::trigger_context::EffectAttribution,
     },
 }
 

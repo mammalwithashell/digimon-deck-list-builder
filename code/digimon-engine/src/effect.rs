@@ -610,6 +610,15 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
     }
 
+    /// Fires once per host after an EFFECT places cards into that permanent's
+    /// digivolution cards (BT7-056 Dorumon, EX7-005 Kapurimon, BT25-005
+    /// Pagumon). Read the host via `event_host_permanent()`, the added batch
+    /// via `added_source_cards()`, and the placing effect via
+    /// `event_cause_effect()`. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub fn on_add_digivolution_cards(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAddDigivolutionCards)
+    }
+
     /// Fires when a card is RETURNED from a permanent's digivolution stack to
     /// the bottom of a player's deck (not trashed). Galacticmon /
     /// Vemmon-LIBERATOR observer (BT21-058, BT18-065).

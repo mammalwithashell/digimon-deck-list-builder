@@ -3766,13 +3766,6 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 
 ## Q29 EX10 Bagra cluster — new gaps (2026-06-11, judge-quiz Q29 authoring)
 
-### BT10-093 / EX10-056 — "when a card is placed under this permanent" trigger  [G-DSL-ON-CARD-PLACED-UNDER-TRIGGER]
-
-- **Card text:** BT10-093 Yuu Amano "[All Turns][Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> and gain 1 memory." / EX10-056 Bagramon's [All Turns] observer also fires when "effects place cards under" opponent Digimon/Tamers (that half omitted; the digivolve half is authored).
-- **DCGO:** `BT10_093.cs` `CanTriggerOnAddDigivolutionCard(permanent == self, card has Purple)`.
-- **Gap:** the DSL has `on_digivolution_card_trashed` (the REMOVAL direction) but no ADDITION-direction timing ("card placed under this/any permanent"). Fix shape: fire a `DigivolutionCardAdded` event from `push_under`/`place_as_bottom_source`/DigiXros commit sites, expose `when: on_card_placed_under` + host/event-card filters.
-- **Consumers:** BT10-093 (clause 1, OMITTED), EX10-056 (observer's placed-under half, OMITTED).
-
 ### EX10-031 — would-leave triggered observer with stack access  [G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER]
 
 - **Card text:** "[All Turns][Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost."
@@ -7836,13 +7829,6 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 - **Fix shape (if ever needed):** share the result log via the `EffectContext`/game rather than per-continuation `Bindings` clones, or merge the continuation's result log into the parked outer-tail bindings at drain time.
 
 ## Q29 EX10 Bagra cluster — new gaps (2026-06-11, judge-quiz Q29 authoring)
-
-### BT10-093 / EX10-056 — "when a card is placed under this permanent" trigger  [G-DSL-ON-CARD-PLACED-UNDER-TRIGGER]
-
-- **Card text:** BT10-093 Yuu Amano "[All Turns][Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> and gain 1 memory." / EX10-056 Bagramon's [All Turns] observer also fires when "effects place cards under" opponent Digimon/Tamers (that half omitted; the digivolve half is authored).
-- **DCGO:** `BT10_093.cs` `CanTriggerOnAddDigivolutionCard(permanent == self, card has Purple)`.
-- **Gap:** the DSL has `on_digivolution_card_trashed` (the REMOVAL direction) but no ADDITION-direction timing ("card placed under this/any permanent"). Fix shape: fire a `DigivolutionCardAdded` event from `push_under`/`place_as_bottom_source`/DigiXros commit sites, expose `when: on_card_placed_under` + host/event-card filters.
-- **Consumers:** BT10-093 (clause 1, OMITTED), EX10-056 (observer's placed-under half, OMITTED).
 
 ### EX10-031 — would-leave triggered observer with stack access  [G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER]
 
