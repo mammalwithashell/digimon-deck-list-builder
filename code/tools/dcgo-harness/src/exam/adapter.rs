@@ -1383,6 +1383,15 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
         }
         // Refused above with a dedicated message.
         SelectPayload::Materials(_) => unreachable!("materials + dcgo_only refused above"),
+        // The parser refuses `choice:` on anything but a `sim_only` row.
+        SelectPayload::Choice(_) => {
+            return Err(
+                "select `choice:` is sim-only by construction (it names OUR EffectChoice \
+                 branch label); a DCGO-only row answers its generic_int/generic_bool with \
+                 `value: N` or `decline: true`"
+                    .to_string(),
+            );
+        }
         SelectPayload::Targets(_) => {
             return Err(
                 "select `targets:` cannot be used with `dcgo_only: true`: slot references                  (own.field.N / opp.field.N) are resolved against OUR live game, which by                  definition has no prompt on a DCGO-only row. Use `cards: [ID]` (plus                  `ordinal:` when the stacked candidates share an id), or `value: N`."
@@ -1594,6 +1603,66 @@ fn build_selection_row(
         SelectPayload::Value(v) => {
             row.count = Some(*v);
             wire.value = Some(*v);
+        }
+        SelectPayload::Choice(label) => {
+            // Resolve the label against OUR live EffectChoice entries and hand
+            // `resolve_next` the branch INDEX (`int_value` maps straight through
+            // `effect_choices` by position). Nothing reaches the wire: the
+            // parser only admits this form on a `sim_only` row.
+            let Some(pending) = game.pending_selection.as_ref() else {
+                return Err(format!(
+                    "step {i}: `choice: {label:?}` names an EffectChoice branch, but our \
+                     engine parks no prompt here"
+                ));
+            };
+            let Some(entries) = pending.effect_choices.as_ref() else {
+                return Err(format!(
+                    "step {i}: `choice: {label:?}` names an EffectChoice branch, but our \
+                     engine's live prompt is {:?} ('{}'), which has no branch labels",
+                    pending.kind, pending.prompt
+                ));
+            };
+            let needle = label.to_lowercase();
+            let hits: Vec<usize> = entries
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| e.label.to_lowercase().contains(&needle))
+                .map(|(idx, _)| idx)
+                .collect();
+            let labels: Vec<String> = entries
+                .iter()
+                .enumerate()
+                .map(|(idx, e)| format!("{idx}: {:?}", e.label))
+                .collect();
+            match hits.as_slice() {
+                [idx] => {
+                    println!(
+                        "  note: step {i} `choice: {label:?}` is branch {idx} of [{}] on our \
+                         {:?} prompt '{}' (sim-only; DCGO's zone/branch menu is its own row)",
+                        labels.join(" | "),
+                        pending.kind,
+                        pending.prompt
+                    );
+                    row.int_value = Some(*idx as i64);
+                }
+                [] => {
+                    return Err(format!(
+                        "step {i}: `choice: {label:?}` matches none of our {:?} prompt's \
+                         branches [{}]",
+                        pending.kind,
+                        labels.join(" | ")
+                    ))
+                }
+                many => {
+                    return Err(format!(
+                        "step {i}: `choice: {label:?}` is ambiguous -- it matches {} of our \
+                         {:?} prompt's branches [{}]; name a longer substring",
+                        many.len(),
+                        pending.kind,
+                        labels.join(" | ")
+                    ))
+                }
+            }
         }
         SelectPayload::Yes => {
             row.bool_value = Some(true);

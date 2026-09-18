@@ -585,10 +585,11 @@ against this list before an eighth mechanism is invented.
 | `SimOnlySelect` | `Material` (multi-pick declarations) | The 2nd..Nth pick of a `materials:` declaration: contributes a comparable state row on our side and ZERO wire rows, keeping the traces aligned across the cardinality gap. |
 | `DcgoOnlySelect` | `TriggerOrder` ↔ `MultipleSkills`, from the other side | A prompt DCGO asks that we never park — DCGO batches a same-timing trigger into `MultipleSkills` where we model it as a combat-state window. Emitted to the wire, consumed by nothing sim-side. |
 | `materials:` | `Material` (`[Assembly]` / `[DigiXros]`) | One authored step answering N successive sim prompts against a single DCGO row. The mirror of `optional_gate_fold`. Exact only for a ONE-ELEMENT recipe — see the scope note on `SelectPayload::Materials`. |
+| `choice:` | `EffectChoice` ↔ `generic_int` / `generic_bool` | Names a branch of OUR either/or `EffectChoice` prompt by a case-insensitive substring of its LABEL (exactly one branch must match), for labels that carry no number `value:` could match ("Top of deck" / "Bottom of deck"). **Sim-only by construction**: the parser refuses it without `sim_only: true`, and DCGO's side — a card-defined value, usually asked at a different point in the sequence — is its own `dcgo_only` `value:` / `decline:` row. |
 
-Three of the seven — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` —
+Three of the eight — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` —
 exist purely because the engines disagree about whether a decision EXISTS, not
-about what it is. Those are the rows worth re-reading before adding an eighth.
+about what it is. Those are the rows worth re-reading before adding a ninth.
 
 ### Rows where one side looks rules-wrong
 

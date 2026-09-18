@@ -196,6 +196,28 @@ pub enum SelectPayload {
     /// Count / generic-int prompts: the VALUE chosen (a cost, a quantity),
     /// never a branch index.
     Value(i32),
+    /// An either/or `EffectChoice` branch named by a substring of OUR engine's
+    /// branch LABEL (case-insensitive; exactly one branch must match).
+    ///
+    /// Added 2026-09-18 for the two-branch prompts whose labels carry no
+    /// number -- Gazimon BT25-078's "Add a [Three Musketeers] card to hand" /
+    /// "Place a [Three Musketeers] trait card as bottom digivolution card",
+    /// Gigadramon EX7-044's "Top of deck" / "Bottom of deck". `value:` cannot
+    /// answer those: it is a VALUE matched against the label's digits
+    /// (`selection_resolve::label_mentions_value`), and a raw index would be
+    /// the position-vs-value trap `value:` was cleaned up to avoid.
+    ///
+    /// SIM-ONLY BY CONSTRUCTION. DCGO has no `EffectChoice` class
+    /// (docs/DCGO_EXAM.md "The table": "genuinely multi-class") -- the same
+    /// decision is a `generic_int` / `generic_bool` whose payload is the
+    /// CARD-DEFINED value (`SetIntSelection(value: 1|2|3)`), not a branch
+    /// index, and it is asked at a different point in the sequence more often
+    /// than not (Gazimon: DCGO picks the card first and asks the branch
+    /// after). So a `choice:` row must carry `sim_only: true` and DCGO's side
+    /// is authored as its own `dcgo_only` `value:` / `decline:` row. Refusing
+    /// the shared form keeps the two value spaces from ever meeting on one
+    /// row.
+    Choice(String),
     /// Affirm an optional (yes/no) prompt.
     Yes,
     /// Cancel / decline an optional prompt.
@@ -353,6 +375,10 @@ struct SelectArgs {
     targets: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     value: Option<i32>,
+    /// A substring of OUR engine's `EffectChoice` branch label -- see
+    /// [`SelectPayload::Choice`]. Legal only with `sim_only: true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    choice: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     yes: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -372,9 +398,16 @@ struct SelectArgs {
     materials: Option<Vec<String>>,
 }
 
-/// The five select forms, for the exactly-one error message.
+/// The select forms, for the exactly-one error message.
 const SELECT_FORMS: &str =
-    "cards: [..] / materials: [..] / targets: [..] / value: N / yes: true / decline: true";
+    "cards: [..] / materials: [..] / targets: [..] / value: N / choice: \"label\" / yes: true / decline: true";
+
+/// Rendered when `choice:` is written on a row that is not `sim_only: true`.
+const CHOICE_SIM_ONLY_RULE: &str = "select `choice:` names a branch of OUR engine's \
+`EffectChoice` prompt by its label, and DCGO has no such prompt class: its analogue is a \
+`generic_int` / `generic_bool` row whose payload is the CARD-DEFINED value, asked at its own \
+point in the sequence. So a `choice:` row must be `sim_only: true`, and DCGO's side is authored \
+as a separate `dcgo_only: true` row with `value: N` (or `decline: true`)";
 
 /// Rendered in the error an author gets for `ordinal:` without `cards:`.
 const ORDINAL_RULE: &str = "select `ordinal:` is only legal alongside `cards:`: it is the 0-based \
@@ -442,6 +475,7 @@ impl SelectArgs {
             self.materials.is_some(),
             self.targets.is_some(),
             self.value.is_some(),
+            self.choice.is_some(),
             self.yes.is_some(),
             self.decline.is_some(),
         ]
@@ -564,6 +598,18 @@ impl SelectArgs {
         if let Some(value) = self.value {
             return Ok(SelectPayload::Value(value));
         }
+        if let Some(choice) = self.choice {
+            if choice.trim().is_empty() {
+                return Err(
+                    "select `choice:` must name a non-empty substring of the branch label"
+                        .to_string(),
+                );
+            }
+            if self.sim_only != Some(true) {
+                return Err(CHOICE_SIM_ONLY_RULE.to_string());
+            }
+            return Ok(SelectPayload::Choice(choice));
+        }
         if let Some(yes) = self.yes {
             if !yes {
                 return Err(
@@ -600,6 +646,13 @@ impl SelectArgs {
             SelectPayload::Materials(m) => a.materials = Some(m.clone()),
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
             SelectPayload::Value(v) => a.value = Some(*v),
+            SelectPayload::Choice(label) => {
+                a.choice = Some(label.clone());
+                // A choice row is sim-only by construction (see the payload
+                // doc); the marker is re-applied by `StepAction::serialize`
+                // as well, but set it here so a bare payload round-trips.
+                a.sim_only = Some(true);
+            }
             SelectPayload::Yes => a.yes = Some(true),
             SelectPayload::Decline => a.decline = Some(true),
         }
@@ -1202,6 +1255,64 @@ assert:
             StepAction::Select(p) => Ok(p.clone()),
             other => Err(format!("expected a select step, got {other:?}")),
         }
+    }
+
+    // ── select: `choice:` (EffectChoice branch by label; sim-only) ───────
+
+    /// Like `select_payload_of`, but returns the whole step action so the
+    /// sim-only routing is visible.
+    fn select_action_of(args: &str) -> Result<StepAction, String> {
+        let text = GOOD.replace(
+            "do: { select: { targets: [opp.field.0] } }",
+            &format!("do: {{ select: {args} }}"),
+        );
+        Ok(Scenario::from_yaml(&text)?.steps[2].act.clone())
+    }
+
+    #[test]
+    fn select_choice_parses_on_a_sim_only_row() {
+        let act = select_action_of("{ choice: \"Bottom of deck\", sim_only: true }").unwrap();
+        assert_eq!(
+            act,
+            StepAction::SelectSimOnly(SelectPayload::Choice("Bottom of deck".to_string()))
+        );
+    }
+
+    #[test]
+    fn select_choice_without_sim_only_is_rejected_loudly() {
+        // DCGO has no EffectChoice class: a shared `choice:` row would put our
+        // branch label and DCGO's card-defined value on one line.
+        let err = select_action_of("{ choice: \"Bottom of deck\" }").unwrap_err();
+        assert!(err.contains("sim_only: true"), "got: {err}");
+        assert!(err.contains("dcgo_only"), "must name DCGO's side: {err}");
+    }
+
+    #[test]
+    fn select_choice_on_a_dcgo_only_row_is_rejected() {
+        let err = select_action_of("{ choice: \"x\", dcgo_only: true }").unwrap_err();
+        assert!(err.contains("sim_only: true"), "got: {err}");
+    }
+
+    #[test]
+    fn an_empty_select_choice_is_rejected() {
+        let err = select_action_of("{ choice: \" \", sim_only: true }").unwrap_err();
+        assert!(err.contains("non-empty"), "got: {err}");
+    }
+
+    #[test]
+    fn select_choice_alongside_value_is_rejected() {
+        let err = select_action_of("{ choice: \"x\", value: 1, sim_only: true }").unwrap_err();
+        assert!(err.contains("choice:"), "must list the forms: {err}");
+    }
+
+    #[test]
+    fn select_choice_round_trips_through_yaml() {
+        let act = StepAction::SelectSimOnly(SelectPayload::Choice("Top of deck".to_string()));
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(yaml.contains("choice"), "the key must survive: {yaml}");
+        assert!(yaml.contains("sim_only"), "the marker must survive: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act);
     }
 
     #[test]
