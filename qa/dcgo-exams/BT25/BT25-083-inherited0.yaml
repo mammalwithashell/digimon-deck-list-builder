@@ -7,8 +7,23 @@
 # (purple Lv.5 / cost 4) on top of it, and deletes BeelStarmon in a security
 # battle against P1's Phoenixmon ST1-10 (12000 vs 12000 -- a tie deletes the
 # attacker). The revive target is Scopemon BT21-071 ("[Three Musketeers]" is
-# printed in its digivolve-condition text; Lv.4), put in the trash earlier in
-# the same turn by losing a security battle to Birdramon ST1-05 (4000 < 5000).
+# printed in its digivolve-condition text; Lv.4), put in the trash by losing a
+# security battle to Birdramon ST1-05 (4000 < 5000) BEFORE LadyDevimon lands.
+#
+# WHY SCOPEMON DIES BEFORE LADYDEVIMON IS PLAYED (re-authored 2026-09-18, run
+# r1 abort "step 15 expected prompt 'SelectCountEffect' but DCGO asked
+# 'SelectPermanentEffect'"). DCGO seats Digimon centre-out
+# (CardSource.PreferredFrame: frames 4, 3, 5, 2, ...) and the harness addresses
+# the battle area by COMPACT frame order (InputDriver.FieldSlotToFrameId), so
+# on a TWO-Digimon board the second Digimon played is compact slot 0 on DCGO
+# and slot 1 on ours. r1's `digivolve: { from: field.1 }` therefore named
+# SCOPEMON on DCGO; a Lv.6 cannot digivolve onto a Lv.4, the PlayCardAction of
+# the dual card resolved as an OPTION USE (Scopemon has [Three Musketeers] in
+# its text, so the Use Req. was met) and the Option face's [Main] asked its
+# SelectPermanentEffect. A slot-addressing artefact of the line, not a finding
+# about either card. With Scopemon already in the trash LadyDevimon is the
+# ONLY Digimon on P0's board for the digivolve and the attack: field.0 on both
+# engines.
 #
 #   T1 (P0): pass.  T2 (P1): pass.
 #   T3 (P0, 3): play Scopemon (3 -> -1). Its [On Play] has nothing to place
@@ -16,7 +31,10 @@
 #            LadyDevimon's traits are Fallen Angel/Titan/TS; Asuna is TS), but
 #            DCGO still asks its vacuous OptionalSkill: a DCGO-only decline.
 #   T4 (P1): pass.
-#   T5 (P0, 3): play LadyDevimon (3 -> -4); [On Play] inert (no trait card).
+#   T5 (P0, 3): Scopemon attacks security -> Birdramon 5000 deletes it (attacks
+#            cost nothing). Then play LadyDevimon (3 -> -4); [On Play] inert:
+#            Scopemon in the trash is an [Appmon] card, not a [Three
+#            Musketeers] TRAIT card (BT25_083.cs AdditionalActivateCondition).
 #   T6 (P1): pass.
 #   T7 (P0, 3): digivolve LadyDevimon into BeelStarmon (3 -> -1; the
 #            digivolution draws 1 -- stack[13]). BeelStarmon's
@@ -25,8 +43,7 @@
 #            sources; none exists, so neither activates (BT25_085.cs
 #            CanActivateUseOption / CanActivateUnsuspend).
 #   T8 (P1): pass.
-#   T9 (P0, 3): Scopemon attacks security -> Birdramon 5000 deletes it.
-#            BeelStarmon (now field.0) attacks security -> Phoenixmon 12000
+#   T9 (P0, 3): BeelStarmon attacks security -> Phoenixmon 12000
 #            ties -> both deleted. THE CLAUSE: LadyDevimon's inherited [On
 #            Deletion] offers the revive; take it, choose Scopemon. Scopemon's
 #            [On Play] then DOES have a candidate (BeelStarmon, a [Three
@@ -92,10 +109,14 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T5 (P0, 3): LadyDevimon.
+  # T5 (P0, 3): Scopemon into Birdramon (deleted, to trash), THEN LadyDevimon
+  # -- alone on P0's board, so field.0 on both engines from here on.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
   - actor: 0
     do: { play: { card: BT25-083, from: hand } }
     expect: { prompt: main_phase }
@@ -111,7 +132,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { digivolve: { from: field.1, using: BT25-085 } }
+    do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
   # BeelStarmon opens TWO routes from LadyDevimon -- the printed Purple Lv.5 /
   # cost 4 circle and "[Digivolve] Lv.5 w/[Three Musketeers] in text or
@@ -135,14 +156,10 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T9 (P0, 3): Scopemon into Birdramon (deleted, to trash).
+  # T9 (P0, 3): BeelStarmon (field.0) into Phoenixmon: tie.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
-  - actor: 0
-    do: { attack: { attacker: field.0, target: security } }
-    expect: { prompt: main_phase }
-  # BeelStarmon (field.0 after Scopemon's deletion) into Phoenixmon: tie.
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }

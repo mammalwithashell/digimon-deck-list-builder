@@ -145,3 +145,27 @@ only Digimon, or with the third-played one.
 
 BT25-083 now: 4 clauses — 3 confirmed, 1 diverged (`inherited#0`, still the
 BT25-085 dual-card abort; needs the same re-authoring), 0 unmeasured.
+
+## `inherited#0` triage (2026-09-18) — the r1 abort was a SLOT-ADDRESSING artefact, not the dual-card gap
+
+r1 (recording `20260918T072334Z_00d54ffc…`) aborted "step 15 expected prompt
+'SelectCountEffect' but DCGO asked 'SelectPermanentEffect'" and was first read as
+the BT25-085 dual-card data gap. The recording says otherwise: `board_p0` at the
+digivolve row is `["BT25-083", "BT21-071"]`. DCGO seats Digimon centre-out
+(`CardSource.PreferredFrame`: frames 4, 3, 5, …) and the harness addresses the
+battle area by COMPACT frame order (`InputDriver.FieldSlotToFrameId`), so on a
+two-Digimon board the second Digimon played is slot 0 on DCGO and slot 1 on
+ours. `digivolve: { from: field.1 }` named **Scopemon** on DCGO; a Lv.6 cannot
+digivolve onto a Lv.4, so DCGO resolved the dual card's `PlayCardAction` as an
+Option use (Scopemon satisfies the Use Req.) and ran Fly Bullet's `[Main]`. The
+data fix (20df249e6) alone would NOT have cleared this line.
+
+Class: scenario artefact (neither engine wrong; no card/engine change). Line
+re-authored so Scopemon attacks into Birdramon and dies on T5 BEFORE LadyDevimon
+is played — LadyDevimon/BeelStarmon is then the only P0 Digimon (`field.0` on
+both engines). Oracle job `exam-BT25-083-inherited0-r2`, recording
+`20260918T092510Z_577a717f…`: diff CLEAN (24 of 25 rows), DCGO
+`effect_activation` BT25-083 "Play 1 level 4 or lower [Three Musketeers]
+Digimon" `executed: true`, Scopemon revived at no cost. Verdict **confirmed**
+(BT25-083 is now 4/4). Rule of thumb for this campaign: never address a slot on
+a TWO-Digimon board — one Digimon, or make the addressed one the third.
