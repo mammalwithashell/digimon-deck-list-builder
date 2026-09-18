@@ -1,0 +1,159 @@
+# Exam scenario: Monica Simmons (BT25-091), clause BT25-091#effect#2 --
+# "[Your Turn] When you use [TS] trait Option cards, by suspending this Tamer,
+#  1 of your opponent's Digimon can't attack until their turn ends."
+#
+# THE TRIGGER. With Monica on the battle area, P0 uses Iron Slash BT25-100 (a
+# black [TS] trait Option, cost 3) from hand on its own turn.
+#
+# WHY P0 HAS NO DIGIMON. Iron Slash is a dual-mode Plug-In: with a legal link
+# host on P0's board both engines would ask the [Main]'s "you may link"
+# pick. P0 fields ONLY the Tamer, so that pick does not exist (DCGO:
+# HasMatchConditionPermanent(CanSelectOwnerPermamentCondition) is false;
+# ours: no OwnField prompt) and P0 never addresses a field slot. Our engine
+# STILL parks its [Main]/[Link] mode-select -- see the sim_only row. Monica
+# herself is black, so the Option is colour-legal without leaning on its
+# <Use Req.> (that clause is measured in BT25-100-effect0.yaml).
+#
+# PROMPT ORDER (the thing a sim-green line gets wrong). DCGO's option-use
+# path (CardController.cs ~2000) only STACKS OnUseOption triggers
+# (`StackSkillInfos(hashtable, EffectTiming.OnUseOption)`) and then runs the
+# Option's own OptionSkill effects at once, so the sequence is:
+#   1. Iron Slash [Main]: SelectPermanentEffect (Mode.Degenerate, canNoSelect
+#      false) -- the <De-Digivolve 2> target. Biyomon ST1-02 is a bare Lv.3:
+#      IDegeneration's SelectCountEffect has MaxCount 0 and is skipped, so NO
+#      count row (contrast the `dcgo_only` row in BT25-100-effect3.yaml).
+#      No link pick (no own Digimon).
+#   2. Monica's trigger: BT25_091.cs region "Your Turn" is
+#      SetUpActivateClass(CanActivate, ..., -1, TRUE, ...) -> OptionalSkill
+#      yes/no. CanActivate = on the battle area AND
+#      CanActivateSuspendCostEffect (the Tamer is unsuspended).
+#   3. The body suspends Monica, then ONE SelectPermanentEffect
+#      (canNoSelect: false) over the opponent's Digimon -> GainCanNotAttack
+#      until the opponent's turn ends.
+# Ours: `on_use_option` (engine c7581932c / 35958972b), optional, suspend-self
+# cost, one mandatory select_opponent_permanent.
+#
+# WITNESS. Monica reads `suspended: true` with Iron Slash in P0's trash. The
+# can't-attack lock itself is a modifier the state projection does not carry;
+# it is visible only as the absence of an attack bit for Biyomon on P1's T4
+# (not asserted: a scripted illegal attack cannot lower) -- NOTES-BT25-091.md.
+#
+# Memory ledger:
+#   T1 P0 plays Monica (4): 0 -> -4 ([On Play]: trash empty -> <Draw 1>) -> P1 4
+#   T2 P1 plays Biyomon (2): 4 -> 2, passes                              -> P0 3
+#   T3 P0 uses Iron Slash (3): 3 -> 0; THE CLAUSE; passes                -> P1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_091_pool.json (--decks).
+card: BT25-091
+clause: BT25-091#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Monica, Iron Slash, inert filler
+      - BT25-091
+      - BT25-100
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): never flipped
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      - ST1-10
+      # (10+): Monica's [On Play] <Draw 1>, P0's T3 turn draw
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-monica
+  p1:
+    stack:
+      # hand (0-4): Biyomon (both picks take it), inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): P1's T2 / T4 turn draws
+      - BT4-014
+      - ST1-08
+      - ST1-10
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; play Monica for 4 (0 -> -4). Her
+  # [On Play] finds no [TS] Option in the trash: <Draw 1>, no prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-091, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): play Biyomon for 2 (4 -> 2), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3 -- above Monica's "2 or less", so #effect#0 is silent):
+  # use Iron Slash for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-100, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our [Main]/[Link] mode-select. MEASURED 2026-09-18: our engine
+  # parks it here although P0 has NO Digimon -- no legal link host at all
+  # (printed: "into the specified DIGIMON"; BT25_100.cs: `IsDigimon &&
+  # HasTSTraits`). DCGO asks nothing: its Play bit IS the [Main] use. The
+  # vacuous "Plug in" branch is an engine finding, not part of this clause --
+  # NOTES-BT25-091.md (F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST).
+  - actor: 0
+    do: { select: { choice: "[Main]", sim_only: true } }
+  # Iron Slash [Main] FIRST: the <De-Digivolve 2> target (nothing to trash).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: "by suspending this Tamer" -- accept.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ... 1 of your opponent's Digimon can't attack: Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory 0: P0 still holds the turn; pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 4
+      p0.trash: [BT25-100]
+      p0.field:
+        # a Tamer projects dp -1 (no DP)
+        - card_id: BT25-091
+          dp: -1
+          suspended: true
+          sources: []
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []

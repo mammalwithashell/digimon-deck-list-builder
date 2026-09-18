@@ -1,0 +1,152 @@
+# Exam scenario: Ignition Flare (BT25-093), clause BT25-093#effect#2 --
+# "[Main] Delete all of your opponent's Digimon with the lowest DP. If this effect
+#  didn't delete, trash 1 of your opponent's Option cards in the battle area. Then,
+#  you may link this card to 1 of your Digimon on the field without paying the cost."
+# 
+# THE ROUTE. Ignition Flare is a dual-mode Plug-In ([Main] + [Link] cost 3); its
+# from-hand play parks a two-branch EffectChoice our scenario vocabulary cannot
+# answer (see NOTES-BT25-093.md, same probe as Iron Slash), so the [Main] body
+# is reached through "[Security] Activate this card's [Main] effects": the card
+# is pinned at the DEFENDER's stack[9] and P0 attacks into it on T9.
+# 
+# THE LINE reuses BT25-100's: P0 grows a four-card red vanilla stack (Koromon ->
+# Agumon -> Birdramon -> Vermilimon) and P1 plays one quiet [TS] Digimon,
+# Kamemon BT24-019 (1000 DP, passive text only), on T2.
+# 
+# PROMPT SHAPE (BT25_093.cs via ActivateMainOptionSecurityEffect):
+#   "Delete all of your opponent's Digimon with the lowest DP" -- Vermilimon is P0's
+#   ONLY Digimon, so it is the lowest and is deleted with NO prompt
+#   (DeletePeremanentAndProcessAccordingToResult over the computed list).
+#   The deletion succeeded, so the "If this effect didn't delete, trash 1 Option"
+#   branch is skipped (not measured by this line -- it needs an opponent with no
+#   Digimon and a battle-area Option).
+#   Then ONE SelectPermanentEffect (canNoSelect: true): P1 may link the card to 1
+#   of its Digimon -- Kamemon. Ours: link_to_own_digimon optional -> OwnField. 1:1.
+# No OptionalSkill: SetUpActivateClass(..., -1, false, ...) on both wrappers.
+#
+# LINK ROW -- formerly a predicted divergence (our `link_to_own_digimon`
+# returned without linking when `Game::pending_option` was None, which a
+# security-flipped Option never sets). RESOLVED in engine 35958972b
+# (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON): the flipped card is lifted
+# onto the ordinary LinkSelectHost path, so the row is live on both sides and
+# Kamemon reads 3000 (the BT25-093-effect5.yaml wording; sim-only lowers
+# clean). NOT YET RUN AGAINST THE ORACLE.
+# 
+# This file measures the DELETE branch and the link tail. The "didn't delete"
+# branch is a different board (opponent with no Digimon but a battle-area Option)
+# and is not exercised here.
+# 
+# WITNESS: p0.trash holds the entire deleted stack; Kamemon reads 3000 DP.
+card: BT25-093
+clause: BT25-093#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-05, BT4-014, ST1-02, ST1-04, BT1-009, BT3-007, ST1-04, ST1-02, ST1-03, BT1-014, BT4-010, BT1-009, BT3-007, BT4-010, BT1-014, ST1-08]
+    rest: tm-red-attacker
+  p1:
+    stack: [BT24-019, BT1-028, BT3-020, BT4-022, BT2-024, BT1-038, BT2-027, BT5-023, BT4-024, BT25-093, BT1-027, BT1-028, BT3-020, BT4-022, BT2-024, BT5-023, BT2-027]
+    rest: tm-blue-defender
+steps:
+  # T1 (P0, memory 0): hatch Koromon ST1-01, pass -> P1 3.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; play Kamemon BT24-019 (cost 3 -> 0) -- the
+  # quiet [TS] Digimon the security-activated [Main] can link the Option to.
+  # Kamemon prints only a passive cost reducer and inherited <Jamming>: no prompt.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT24-019, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): breeding-digivolve Agumon ST1-03 (free); pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, digivolve Birdramon ST1-05 (2 -> 1); pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): digivolve Vermilimon BT4-014 (3 -> 0); pass. The stack is now
+  # [BT4-014, ST1-05, ST1-03, ST1-01] -- four cards, so <De-Digivolve 2> has room to bite.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT4-014 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 3): attack the player into Ignition Flare BT25-093 -- THE CLAUSE.
+  # Kamemon has no <Blocker>: no block window. The flip deletes the whole
+  # Vermilimon stack (lowest DP = only Digimon) without a prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # [Main] tail: P1 may link Ignition Flare to Kamemon (its only Digimon).
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attacker is gone, so the attack ends. P0 (memory 3, attacking is free)
+  # plays Biyomon ST1-02 (2 -> 1) -- a 3000 DP body for the link ESS to delete on
+  # P1's next turn -- and passes.
+  - actor: 0
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 23
+    that:
+      turn: 9
+      p0.memory: 1
+      p0.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p0.trash: [BT4-014, ST1-05, ST1-03, ST1-01]
+      p1.security: 4

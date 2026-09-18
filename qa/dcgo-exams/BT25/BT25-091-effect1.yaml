@@ -1,0 +1,164 @@
+# Exam scenario: Monica Simmons (BT25-091), clause BT25-091#effect#1 --
+# "[On Play] You may return 1 [TS] trait Option card from your trash to the
+#  hand. If this effect didn't return, <Draw 1>."
+#
+# THE RETURN BRANCH is exercised here; the draw branch (empty trash) is
+# exercised by the T3/T4 Monica plays in BT25-091-effect0.yaml and
+# BT25-091-effect3.yaml, where both engines skip the pick and draw with no
+# prompt.
+#
+# HOW A [TS] OPTION REACHES THE TRASH. Every [TS] Option in the pool is a
+# dual-mode Plug-In (Iron Slash BT25-100, Ignition Flare BT25-093, Tidal
+# Stream BT24-091): played from hand, our engine parks a two-branch
+# EffectChoice ("Play as a [Main] Option" / "Plug in via Link Requirements
+# (Cost 2)") that the scenario vocabulary cannot answer for the [Main] branch
+# (see NOTES-BT25-100.md, "the from-hand EffectChoice"). So Iron Slash is
+# pinned at p0's stack[9] -- the TOP of the security stack -- and p1's Biyomon
+# attacks into it on T4: "[Security] Activate this card's [Main] effects"
+# fires, p0 (the defender) <De-Digivolve 2>s the attacking Biyomon (a bare
+# Lv.3: nothing is trashed, but the pick is asked -- BT25_100.cs guards it
+# only on the existence of an opponent Digimon), the "you may link this card
+# to 1 of your Digimon" tail is skipped on BOTH sides because p0 controls no
+# Digimon (DCGO: HasMatchConditionPermanent false; ours: no candidate), and
+# the unlinked Option goes to p0's trash. That is the trash Monica finds.
+#
+# PROMPT SHAPE at T5 (BT25_091.cs, region "On Play"): the effect is
+# registered `..., -1, false, ...` -- no OptionalSkill -- and asks ONE
+# SelectCardEffect over the trash with `canNoSelect: () => true` (the printed
+# "you may"). Ours: one declinable `select_trash` (`optional: true` on the
+# pick, none on the effect). 1:1, no fold.
+#
+# WITNESS at T6: Iron Slash is back in p0's hand and p0's trash is empty.
+#
+# PREDICTED DIVERGENCE (engine-side; NOTES-BT25-091.md): the printed "If this
+# effect didn't return, <Draw 1>" must NOT draw here, and DCGO draws only on
+# `!returned`. Measured at lowering, OUR engine draws anyway -- p0's hand is
+# 8 cards (5 opening minus Monica, plus the T3 and T5 turn draws, plus Iron
+# Slash, PLUS stack[12] BT3-007) where 7 is correct. The hand is therefore
+# deliberately NOT asserted below (asserting either value would launder one
+# engine's answer); the oracle diff is expected to lead on `p0.hand` at the
+# first row after the return.
+#
+# Memory: T1 p0 -> p1 3; T2 p1 plays Biyomon (2): 3 -> 1, passes -> p0 3;
+# T3 p0 passes -> p1 3; T4 p1 attacks (free), passes -> p0 3; T5 Monica (4):
+# 3 -> -1 -> p1 1.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_091_pool.json (--decks).
+card: BT25-091
+clause: BT25-091#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Monica, inert filler
+      - BT25-091
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP -- Iron Slash, flipped on T4
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      - BT25-100
+      # (10+): p0's T3 and T5 turn draws
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-monica
+  p1:
+    stack:
+      # hand (0-4): the Biyomon that attacks into Iron Slash, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Biyomon attacks p0's security and flips Iron Slash.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # [Security] -> [Main]: p0 (the DEFENDER) picks the attacker to
+  # <De-Digivolve 2> -- Biyomon, its only candidate (`opp` is relative to
+  # the ACTOR, p0). The link tail has no candidate and is skipped.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking spent no memory; p1 passes out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): play Monica for 4 (3 -> -1). THE CLAUSE: return Iron
+  # Slash from the trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-091, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-100] } }
+    expect: { prompt: SelectCardEffect }
+  # T6 (p1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 14
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-091
+          dp: -1
+          suspended: false
+          sources: []
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: []

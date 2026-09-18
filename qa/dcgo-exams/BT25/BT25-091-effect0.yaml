@@ -1,0 +1,114 @@
+# Exam scenario: Monica Simmons (BT25-091), clause BT25-091#effect#0 --
+# "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+#
+# HOW A TURN CAN START ON 2 OR LESS. A declared pass hands the opponent 3, but
+# an OVERSHOOT hands them exactly the overshoot (6-1-4-1): p1 ends T4 by
+# playing Biyomon at 1 memory (1 -> -1), so p0 opens T5 on 1. Monica, on p0's
+# board since T3, sets it to 3. Mandatory on both sides (DCGO
+# `SetMemoryTo3TamerEffect`, `..., -1, false, ...`; ours `set_memory`) -- no
+# prompt -- and the witness is p0.memory at p0's T5 breeding step.
+#
+# Monica's own [On Play] on T3 finds no [TS] Option in p0's trash, so DCGO's
+# coroutine skips the SelectCardEffect (`HasMatchConditionOwnersCardInTrash`
+# false) and draws 1; ours short-circuits the empty `select_trash` and draws.
+# No prompt. That clause is measured in BT25-091-effect1.yaml.
+#
+# Memory: T1 p0 passes -> p1 3; T2 p1 passes -> p0 3; T3 p0 plays Monica (4):
+# 3 -> -1 -> p1 1; T4 p1 plays Biyomon (2): 1 -> -1 -> p0 1; T5 Monica: 3.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_091_pool.json (--decks). p0's deck is Monica
+# Simmons x4 + Iron Slash BT25-100 x4 over the quiet ST-1 filler; p1 is the
+# quiet ST-1 opponent.
+card: BT25-091
+clause: BT25-091#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Monica, inert filler
+      - BT25-091
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's T3 turn draw, Monica's [On Play] draw, T5 turn draw
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-monica
+  p1:
+    stack:
+      # hand (0-4): the Biyomon whose play overshoots by 1, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Monica for 4 (3 -> -1, the turn hands over on 1).
+  # [On Play]: nothing to return, draw 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-091, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 1): play Biyomon for 2 (1 -> -1). p0 opens T5 on 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0): THE WITNESS -- the pre-step state of this breeding step is after
+  # [Start of Your Turn] resolved.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.field:
+        - card_id: BT25-091
+          dp: -1
+          suspended: false
+          sources: []

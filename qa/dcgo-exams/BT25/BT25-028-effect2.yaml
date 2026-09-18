@@ -1,0 +1,161 @@
+# Exam scenario: Dianamon (BT25-028), clause BT25-028#effect#2 --
+# "[On Play] [When Digivolving] None of your opponent's Digimon with 1 or
+#  fewer digivolution cards can suspend until their turn ends. Then, delete 1
+#  of your opponent's unsuspended Digimon."
+#
+# This file exercises the [When Digivolving] arm with a REAL delete choice:
+# p1 fields two bare Digimon (Biyomon ST1-02 and Agumon ST1-03, both
+# unsuspended, both 0 digivolution cards), and the pick takes Agumon.
+# The [On Play] arm is exercised, with a single candidate, by
+# BT25-028-effect1.yaml.
+#
+# PROMPT SHAPE (BT25_028.cs, region "Shared OP / WD", `optional: false`): the
+# lock is a player-level CanNotSuspendClass installed with NO prompt; the
+# delete is ONE SelectPermanentEffect (Mode.Destroy, canNoSelect: false) over
+# unsuspended opponent Digimon. Ours: `for_each` CannotSuspend, then one
+# mandatory `select_opponent_permanent`. 1:1. The lock is NOT observable in
+# the projection (no modifier field); what the line measures is the prompt
+# sequence and the delete.
+#
+# TRIGGER ORDER. Dianamon's [All Turns] body (#effect#3) fires on Dianamon's
+# own digivolve as well; DCGO opens MultipleSkills over two same-id
+# candidates, answered by ordinal 0 = this body (predicted from registration
+# order; see NOTES-BT25-028.md). After the delete the [All Turns] body runs
+# alone and is silent: Biyomon has no digivolution cards to trash, and p0 has
+# a single Digimon (the DNA helper needs two).
+#
+# THE LINE is BT25-028-effect0.yaml (Dianamon over a hard-played
+# Aegiochusmon via the [TS] Lv.5 path) with p1 playing two bodies on T2.
+#
+# Memory ledger:
+#   T1 p0 passes                                   -> p1 3
+#   T2 p1 plays Biyomon (2), Agumon (3): 3 -> -2   -> p0 2
+#   T3 p0 plays Aegiochusmon (8): 2 -> -6          -> p1 6
+#   T4 p1 passes                                   -> p0 3
+#   T5 p0 digivolves Dianamon (3): 3 -> 0, passes  -> p1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_028_pool.json (--decks).
+card: BT25-028
+clause: BT25-028#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 to hard-play, the Dianamon, inert filler
+      - BT24-014
+      - BT25-028
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - ST1-02
+      # (10+): p0 T3 / T5 turn draws
+      - BT4-010
+      - BT3-007
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): the two bare bodies, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1 T2 / T4 / T6 turn draws
+      - BT1-009
+      - ST1-08
+      - ST1-10
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): Biyomon (3 -> 1), then Agumon, cost 3 (1 -> -2).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 2): hard-play Aegiochusmon for 8 (2 -> -6).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 6): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Dianamon for 3 (3 -> 0) -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-028 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: DCGO stacks Dianamon's two same-card triggers and asks
+  # MultipleSkills; on a DIGIVOLVE our engine bundles nothing and parks the
+  # [When Digivolving] delete pick directly (observed at lowering -- see
+  # NOTES-BT25-028.md). ordinal 0 is answered against DCGO's own list; whichever
+  # body it names, the other runs right after, and the [All Turns] body is
+  # silent here, so the wire and the end state are the same either way.
+  - actor: 0
+    do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 2, candidates: [BT25-028, BT25-028] }
+  # The mandatory delete, a real choice: Agumon (p1 slot 1), not Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # SIM-ONLY: our engine then parks a yes/no gate for the [All Turns] body
+  # (`optional: true` in BT25-028.yaml) although there is nothing it could
+  # trash and no [GraceNovamon] in hand; DCGO runs that body with no prompt.
+  # Declined here -- zero wire rows.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Memory 0: p0 still holds the turn; pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 15
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - card_id: BT25-028
+          dp: 12000
+          suspended: false
+          sources: [BT24-014]
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: [ST1-03]

@@ -1,0 +1,140 @@
+# Exam scenario: Iron Slash (BT25-100), clause BT25-100#effect#0 --
+# "<Use Req. ([TS] trait)> (Specified cards let you ignore color requirements.)"
+#
+# ISOLATION. Iron Slash is BLACK. P0 runs `tm-blue-defender`: Kamemon BT24-019
+# (BLUE Lv.3, traits Cyborg/Iliad/TS/Aquatic), blue fillers, a blue egg it
+# never hatches -- there is no black card anywhere on P0's side. The from-hand
+# use is therefore legal ONLY through the clause (DCGO:
+# CardEffectFactory.UseRequirements(card, HasTSTraits); ours: the card spec's
+# `use_requirement`). A permission, so the line itself is the evidence: the
+# play lowers only if our mask offers it, and DCGO's InputDriver refuses a
+# PlayCardAction the card cannot make (the BT24-091-effect0.yaml idiom).
+#
+# THE FROM-HAND SURFACE. Iron Slash is a dual-mode Plug-In Option (a [Main]
+# use at 3 AND a <Link> plug-in at 2). With a legal link host on the board
+# (Kamemon, [TS]) our `Game::play_option_core` parks a mode-select first -- an
+# EffectChoice "Play as a [Main] Option" / "Plug in via Link Requirements
+# (Cost 2)". DCGO has no such prompt: the Play bit is PlayCardAction = the
+# [Main] use, and its hand link is a SEPARATE declaration. So the mode-select
+# is answered `choice: "[Main]"`, `sim_only` (zero wire rows). The six older
+# files of this card predate that select form (harness d5f23792f) and reach
+# the [Main] body through [Security] instead.
+#
+# PROMPT SHAPE (BT25_100.cs region "Main": SetUpActivateClass(null, ..., -1,
+# FALSE, ...) -> no OptionalSkill).
+#   1. SelectPermanentEffect (Mode.Degenerate, canNoSelect: false) -- the
+#      <De-Digivolve 2> target. Biyomon ST1-02 is a bare Lv.3, so
+#      IDegeneration's SelectCountEffect has MaxCount 0 and Activate() skips
+#      it (`if (_maxCount >= 1)`): NO count row here. (Against a real stack
+#      DCGO asks {1, 2} -- see the `dcgo_only` row in BT25-100-effect3.yaml.)
+#   2. SelectPermanentEffect (canNoSelect: TRUE) -- "you may link this card to
+#      1 of your Digimon". DECLINED, so the Option goes to the trash and the
+#      line stays clear of the Link boxes (#effect#4..#7).
+#
+# Memory ledger:
+#   T1 P0 plays Kamemon (3): 0 -> -3                 -> P1 3
+#   T2 P1 plays Biyomon (2): 3 -> 1, passes          -> P0 3
+#   T3 P0 uses Iron Slash (3): 3 -> 0, passes        -> P1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_100_pool.json (--decks).
+card: BT25-100
+clause: BT25-100#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Kamemon, Iron Slash, inert blue filler
+      - BT24-019
+      - BT25-100
+      - BT1-028
+      - BT1-028
+      - BT2-024
+      # security (5-9): never flipped
+      - BT4-024
+      - BT4-024
+      - BT1-038
+      - BT1-038
+      - BT2-027
+      # (10+): P0's T3 turn draw
+      - BT3-020
+      - BT3-020
+    rest: tm-blue-defender
+  p1:
+    stack:
+      # hand (0-4): Biyomon (the <De-Digivolve> target), inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - BT4-010
+      - BT4-010
+      - BT1-014
+      # (10+): P1's T2 / T4 turn draws
+      - BT1-009
+      - ST1-08
+    rest: tm-red-attacker
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Kamemon for 3 (0 -> -3).
+  # Kamemon prints only a passive cost reducer and inherited <Jamming>.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-019, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE -- a black Option used off a blue [TS]
+  # Digimon (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-100, from: hand } }
+    expect: { prompt: main_phase }
+  # Our mode-select (sim-only; DCGO's Play bit IS the [Main] use).
+  - actor: 0
+    do: { select: { choice: "[Main]", sim_only: true } }
+  # <De-Digivolve 2> target: Biyomon, P1's only Digimon (nothing to trash).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # "you may link this card": declined -- Iron Slash goes to the trash.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory 0: P0 still holds the turn; pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 4
+      p0.trash: [BT25-100]
+      p0.field:
+        - card_id: BT24-019
+          dp: 1000
+          suspended: false
+          sources: []
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []

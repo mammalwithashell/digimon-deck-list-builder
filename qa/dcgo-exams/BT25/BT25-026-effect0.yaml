@@ -1,0 +1,155 @@
+# Exam scenario: Crescemon (BT25-026), clause BT25-026#effect#0 --
+# the special digivolution condition "[Digivolve] Lv.4 w/[TS] trait: Cost 3".
+#
+# WHAT THIS LINE CAN AND CANNOT SEPARATE. Crescemon's printed circle is Blue
+# Lv.4 / cost 3, and the [TS] path is Lv.4 / cost 3 as well. The card pool has
+# NO non-blue Lv.4 with the [TS] trait (data/cards.json, checked while
+# authoring), so every legal [TS] base also satisfies the printed circle and
+# the two paths are cost-identical: both engines see ONE distinct cost and
+# open no cost-choice prompt. The line therefore measures that the digivolve
+# onto a [TS] Lv.4 is legal at exactly 3 (3 -> 0) with both paths in play;
+# it cannot attribute the cost to the alt path alone. Stated in
+# NOTES-BT25-026.md.
+#
+# THE BASE is Lekismon BT25-024 (Blue Lv.4, [TS]), HARD-PLAYED on T3 (cost 4)
+# rather than digivolved so no breeding line is needed. Its [On Play] is
+# <Draw 1> (no prompt); its "[Your Turn] When your Digimon are played or
+# digivolve, if any of them are red ..." fires on its own play but is gated
+# on a RED permanent (DCGO CanActivateCondition -> HasValidColor; ours
+# `event_card_color_has: [red]`), so nothing is asked.
+#
+# CRESCEMON'S OWN [When Digivolving] then fires (#effect#1, measured on its
+# own in BT25-026-effect1.yaml): p1 fielded Biyomon ST1-02 on T2 so DCGO's
+# UNGUARDED first SelectPermanentEffect (BT25_026.cs sets it up without a
+# HasMatchCondition check) has a candidate. Two rows: trash the bottom 3
+# digivolution cards of Biyomon (a bare Lv.3 -- nothing to trash, pick still
+# asked), then the lock on 1 opponent Digimon with no digivolution cards --
+# Biyomon again.
+#
+# Memory ledger:
+#   T1 p0 passes                          -> p1 3
+#   T2 p1 plays Biyomon (2): 3 -> 1, pass -> p0 3
+#   T3 p0 plays Lekismon (4): 3 -> -1     -> p1 1
+#   T4 p1 passes                          -> p0 3
+#   T5 p0 digivolves Crescemon (3): 3 -> 0, passes -> p1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_026_pool.json (--decks).
+card: BT25-026
+clause: BT25-026#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Lekismon, Crescemon, inert filler
+      - BT25-024
+      - BT25-026
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - ST1-02
+      # (10+): T3 turn draw, Lekismon [On Play] draw, T5 turn draw
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): the Biyomon both picks take, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1 T2 / T4 / T6 turn draws
+      - BT1-009
+      - ST1-08
+      - ST1-10
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Lekismon for 4 (3 -> -1). <Draw 1>, no prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-024, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): THE CLAUSE -- Crescemon onto the [TS] Lv.4 for 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-026 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving]: the trash-bottom-3 target, then the lock target.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory 0: p0 still holds the turn; pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      p0.memory: 0
+      p0.field:
+        - card_id: BT25-026
+          dp: 7000
+          suspended: false
+          sources: [BT25-024]
+  - at: 14
+    that:
+      turn: 6
+      p0.field:
+        - card_id: BT25-026
+          dp: 7000
+          suspended: false
+          sources: [BT25-024]
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: []
