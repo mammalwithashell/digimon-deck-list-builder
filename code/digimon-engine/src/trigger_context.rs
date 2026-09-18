@@ -179,6 +179,19 @@ pub struct TriggerContext {
     /// `CardEffectCommons.CanTriggerWhenWinBattle` reading the battle
     /// hashtable's `WinnerPermanents` while `WasTie == false`.
     pub battle_winner: Option<PermanentHandle>,
+    /// TOP CARD of the Digimon the deleted carrier was battling, captured when
+    /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
+    /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still
+    /// live). general_rule.pdf 16-12: <Retaliation> "delete[s] the Digimon it
+    /// battled" -- who that is, is a fact of the TRIGGER. Reading it from the
+    /// live `pending_attack` at RESOLUTION time is wrong whenever resolution is
+    /// deferred: a second [On Deletion] trigger on the same stack opens a
+    /// TriggerOrder prompt (15-4), the battle unwinds while the prompt is
+    /// parked, and the keyword then found no opponent and deleted nothing.
+    /// A card identity rather than a `PermanentHandle` because handles are
+    /// battle-area POSITIONS and shift when the loser's slot is compacted.
+    /// `None` for every non-battle deletion and for direct player attacks.
+    pub battle_opponent_card: Option<CardHandle>,
     /// The player whose HAND lost one or more cards to trash during an
     /// effect-caused discard batch — the "your hand is trashed from" subject.
     /// Set on the `OnDiscardHand` firing (G-ENGINE-ON-DISCARD-HAND). Mirrors

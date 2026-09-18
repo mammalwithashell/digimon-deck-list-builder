@@ -187,11 +187,10 @@ fn retaliation_handles_mutual_destruction() {
 /// independent of the aura-granted trigger dispatch added for
 /// `G-ENGINE-AURA-GRANT-NO-TRIGGER` — it isolates the battle-state lifetime.
 ///
-/// `#[ignore]`d until the gap is fixed; see `docs/RUST_ENGINE_GAPS.md`.
+/// FIXED 2026-09-18 (BT25-078#inherited#0 triage): the battle opponent is captured
+/// at trigger time in `TriggerContext::battle_opponent_card`. Was `#[ignore]`d
+/// as the gap's reproducer; see `docs/RUST_ENGINE_GAPS.md`.
 #[test]
-#[ignore = "engine gap: G-ONDELETION-PARK-CLEARS-BATTLE-STATE — a parked sibling [On Deletion] \
-clause unwinds the deletion batch and clears `pending_attack`, so <Retaliation> finds no battle \
-opponent on resume; see docs/RUST_ENGINE_GAPS.md"]
 fn retaliation_survives_a_parked_sibling_on_deletion_clause() {
     use digimon_engine::action::space::PASS;
 

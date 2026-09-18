@@ -3155,19 +3155,64 @@ impl Game {
         // linear scans for the same card — the per-step hot path: ~793
         // effects_for_card calls/step, 94% of step time).
         let cd_opt = self.card_data_by_id(card_id);
-        let native_keywords = cd_opt.map(|cd| cd.keywords.clone()).unwrap_or_default();
+        // FACE keywords only. `CardData::keywords` is parsed from ALL THREE
+        // printed text fields (`CardData::load`), so reading it here put a
+        // card's INHERITED keyword on its face: Gazimon (BT25-078) as the top
+        // card carried a live <Retaliation> it does not print (DCGO registers
+        // it `isInheritedEffect: true` only). `face_keywords` is the same
+        // split `has_keyword` already uses; for a DSL-pack card with empty
+        // text it returns `keywords` unchanged.
+        let native_keywords = cd_opt.map(face_keywords).unwrap_or_default();
         let mut auto_effects: Vec<crate::effect::Effect> = cd_opt
             .map(|cd| {
-                let mut effects: Vec<crate::effect::Effect> = cd
-                    .keywords
+                let mut effects: Vec<crate::effect::Effect> = native_keywords
                     .iter()
                     .flat_map(|kw| {
                         crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
                     })
                     .collect();
 
-                if under_top {
+                // NOT gated on `under_top`. Every consumer already filters on
+                // `Effect::inherited` (registry `scope: inherited` clauses and
+                // grant-synthesized bodies are in the list unconditionally), so
+                // the gate bought nothing -- and it made the list's SLOT LAYOUT
+                // depend on where the card is. An [On Deletion] entry is queued
+                // by `effect_slot` while the card is under the top and resolved
+                // after the stack is in the trash (rule 25), where `under_top`
+                // is false: the printed inherited keyword's slot fell off the
+                // end of the shorter list and the trigger silently resolved to
+                // nothing. A printed inherited <Retaliation> on a card with no
+                // grant clause never deleted anything in a live game.
+                let _ = under_top;
+                {
                     for kw in inherited_keywords(cd) {
+                        // De-dup against an unconditional `scope: inherited`
+                        // `kind: grant_keyword` clause for the SAME keyword.
+                        // The real game loads `inherited_text` from
+                        // `cards.json`, so a DSL card whose inherited keyword
+                        // is authored as a grant clause (BT25-078 Gazimon's
+                        // inherited <Retaliation>) had the keyword's trigger
+                        // body synthesized TWICE -- once here, once by the
+                        // grant loop below. Both queued at the deletion, the
+                        // pair opened a phantom TriggerOrder prompt, and the
+                        // park outlived the battle the keyword needed. DCGO
+                        // registers exactly one `RetaliationSelfEffect`
+                        // (BT25_078.cs); 16-12-4 treats instances per
+                        // printed keyword, and this card prints one. The
+                        // embedded DSL pack leaves the text fields empty, which
+                        // is why only live games / the exam ever saw this.
+                        let covered_by_inherited_grant =
+                            registry_effects.as_ref().is_some_and(|es| {
+                                es.iter().any(|e| {
+                                    e.declarative
+                                        && e.inherited
+                                        && e.condition.is_none()
+                                        && e.granted_keyword == Some(kw)
+                                })
+                            });
+                        if covered_by_inherited_grant {
+                            continue;
+                        }
                         effects.extend(
                             crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
                                 .into_iter()

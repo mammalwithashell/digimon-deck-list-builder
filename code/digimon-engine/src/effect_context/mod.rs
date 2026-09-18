@@ -772,18 +772,10 @@ impl<'a> EffectReadContext<'a> {
     /// Direct player attacks (`AttackTarget::Player`) return `None` because
     /// there is no opposing Digimon.
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        let pa = self.game.pending_attack.as_ref()?;
-        let defender = match pa.effective_target {
-            crate::AttackTarget::Digimon(h) => Some(h),
-            crate::AttackTarget::Player(_) => None,
-        }?;
-        if self_handle == pa.attacker {
-            Some(defender)
-        } else if self_handle == defender {
-            Some(pa.attacker)
-        } else {
-            None
-        }
+        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // prompt), live `pending_attack` otherwise. See
+        // `Game::resolving_battle_opponent_of`.
+        self.game.resolving_battle_opponent_of(self_handle)
     }
 }
 
@@ -1526,18 +1518,10 @@ impl<'a> EffectContext<'a> {
 
     /// See [`EffectReadContext::battle_opponent_of`].
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        let pa = self.game.pending_attack.as_ref()?;
-        let defender = match pa.effective_target {
-            crate::AttackTarget::Digimon(h) => Some(h),
-            crate::AttackTarget::Player(_) => None,
-        }?;
-        if self_handle == pa.attacker {
-            Some(defender)
-        } else if self_handle == defender {
-            Some(pa.attacker)
-        } else {
-            None
-        }
+        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // prompt), live `pending_attack` otherwise. See
+        // `Game::resolving_battle_opponent_of`.
+        self.game.resolving_battle_opponent_of(self_handle)
     }
 
     // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────

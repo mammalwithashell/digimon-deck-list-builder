@@ -142,9 +142,9 @@ fn ex12_065_mass_granted_retaliation_deletes_battle_winner_on_recipient() {
 /// that hits printed and granted `<Retaliation>` identically (it depends only
 /// on the sibling clause parking, and on which order the controller picks in
 /// the trigger-order prompt) — see `G-ONDELETION-PARK-CLEARS-BATTLE-STATE` in
-/// `docs/RUST_ENGINE_GAPS.md`. Kept as the reproducer.
+/// `docs/RUST_ENGINE_GAPS.md`. RESOLVED 2026-09-18 (trigger-time
+/// `TriggerContext::battle_opponent_card`); un-ignored, now a regression test.
 #[test]
-#[ignore = "engine gap: G-ONDELETION-PARK-CLEARS-BATTLE-STATE — a parked sibling [On Deletion] clause unwinds the deletion batch and clears `pending_attack`, so <Retaliation> (printed OR granted) finds no battle opponent on resume; see docs/RUST_ENGINE_GAPS.md"]
 fn ex12_065_mass_granted_retaliation_also_fires_on_the_grantor_itself() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)

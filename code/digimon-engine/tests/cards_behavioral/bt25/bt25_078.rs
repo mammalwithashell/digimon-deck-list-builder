@@ -403,3 +403,208 @@ fn bt25_078_effect_is_optional_decline_does_nothing() {
         "declining adds nothing to hand"
     );
 }
+
+// ── Section 5: Inherited <Retaliation> (behavioral) ────────────────────────
+//
+// Exam clause BT25-078#inherited#0. Gazimon is a digivolution SOURCE under a
+// vanilla host; the host attacks a bigger Digimon, loses, and is deleted in
+// battle. general_rule.pdf 16-12: <Retaliation> deletes the Digimon it battled.
+// DCGO (BT25_078.cs RetaliationSelfEffect, OnDestroyedAnyone) has exactly ONE
+// trigger at this deletion and opens no ordering prompt: a deletion is not a
+// move, so the [When Moving] clause must NOT be a candidate beside it.
+
+fn vanilla(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(dp);
+    c.play_cost = 4;
+    c
+}
+
+#[test]
+fn bt25_078_inherited_retaliation_deletes_battled_digimon_without_trigger_order() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-078")
+        .expect("BT25-078 YAML parses and compiles")
+        .add_card(vanilla("HOST", 6000))
+        .add_card(vanilla("BIG", 8000))
+        .add_card(vanilla("FILLER", 1000))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+
+    // Production CardData (cards.json) carries the PRINTED inherited text, so
+    // the engine's printed-keyword synthesis sees <Retaliation> too. A
+    // DSL-registered test card has empty text; restore it so this test runs
+    // on the same surface the exam / live games do.
+    {
+        // Verbatim cards.json `inherited_effect_description_eng` (fullwidth
+        // angle brackets -- the printed-keyword parser keys on them).
+        let inherited = "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)";
+        let cd = std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+            .iter_mut()
+            .find(|c| c.card_id == "BT25-078")
+            .expect("BT25-078 registered");
+        cd.inherited_text = inherited.to_string();
+        // `CardData::load` parses `keywords` from ALL three text fields.
+        cd.keywords = digimon_engine::card_data::parse_printed_keywords("", inherited, "");
+        assert!(
+            cd.keywords
+                .contains(&digimon_engine::enums::Keyword::Retaliation),
+            "fixture mirrors cards.json: <Retaliation> parsed from inherited text"
+        );
+    }
+
+    let host = runner.place_stack(0, &["BT25-078", "HOST"]);
+    let big = runner.place_on_field(1, "BIG", Some(0));
+    runner.game.players[1].battle_area[big.index as usize].is_suspended = true;
+
+    // HOST (6000) attacks BIG (8000): only HOST is deleted in battle.
+    runner.attack_digimon(host, big, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "a battle deletion is not a move: [When Moving] must not queue beside \
+         <Retaliation>, so no TriggerOrder prompt may open (got {:?})",
+        runner.pending_kind()
+    );
+    assert!(
+        runner.game.players[0].battle_area.is_empty(),
+        "HOST stack is deleted in battle"
+    );
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "inherited <Retaliation> (16-12) must delete the Digimon it battled"
+    );
+    assert!(runner.game.players[1]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BIG"));
+}
+
+/// Mirror `CardData::load`: cards.json carries the printed inherited text and
+/// parses `keywords` out of it. The embedded DSL pack leaves both empty.
+fn restore_printed_inherited_text(runner: &mut DebugRunner) {
+    let inherited = "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)";
+    let cd = std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+        .iter_mut()
+        .find(|c| c.card_id == "BT25-078")
+        .expect("BT25-078 registered");
+    cd.inherited_text = inherited.to_string();
+    cd.keywords = digimon_engine::card_data::parse_printed_keywords("", inherited, "");
+}
+
+/// general_rule.pdf 16-12 + 15-4 (trigger ordering): when a SECOND [On
+/// Deletion] trigger legitimately shares the deletion (ST6-01 Pagumon's
+/// inherited "[On Deletion] Trash the top 2 cards of your deck"), the turn
+/// player orders the two. <Retaliation> already TRIGGERED on the battle
+/// deletion; resolving it after the ordering prompt must still delete the
+/// Digimon it battled -- the battle opponent is a fact of the trigger, not of
+/// whatever attack state happens to be live when the prompt is answered.
+#[test]
+fn bt25_078_inherited_retaliation_survives_a_trigger_order_prompt() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-078")
+        .expect("BT25-078 YAML parses and compiles")
+        .dsl_card("ST6-01")
+        .expect("ST6-01 YAML parses and compiles")
+        .add_card(vanilla("HOST", 6000))
+        .add_card(vanilla("BIG", 8000))
+        .add_card(vanilla("FILLER", 1000))
+        .deck(0, &["FILLER"; 8])
+        .deck(1, &["FILLER"; 8])
+        .memory(5)
+        .start();
+    restore_printed_inherited_text(&mut runner);
+
+    let host = runner.place_stack(0, &["ST6-01", "BT25-078", "HOST"]);
+    let big = runner.place_on_field(1, "BIG", Some(0));
+    runner.game.players[1].battle_area[big.index as usize].is_suspended = true;
+    let deck_before = runner.deck_size(0);
+
+    runner.attack_digimon(host, big, false);
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "two real [On Deletion] triggers: the turn player orders them"
+    );
+    assert_eq!(runner.pending_action_count(), 2, "exactly two branches");
+    // Resolve every parked prompt; both triggers are mandatory.
+    let mut guard = 0;
+    while runner.pending_selection().is_some() {
+        runner.auto_resolve().expect("prompt resolves");
+        guard += 1;
+        assert!(guard < 8, "prompt loop");
+    }
+
+    assert_eq!(runner.deck_size(0), deck_before - 2, "ST6-01 trashed 2");
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "<Retaliation> resolved after the ordering prompt must still delete \
+         the Digimon it battled (16-12)"
+    );
+}
+
+/// <Retaliation> is Gazimon's INHERITED effect only (BT25_078.cs:
+/// `RetaliationSelfEffect(isInheritedEffect: true)`). Gazimon itself, as the
+/// top card, has no <Retaliation>.
+#[test]
+fn bt25_078_top_card_gazimon_has_no_retaliation() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-078")
+        .expect("BT25-078 YAML parses and compiles")
+        .add_card(vanilla("BIG", 8000))
+        .add_card(vanilla("FILLER", 1000))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+    restore_printed_inherited_text(&mut runner);
+
+    let gazi = runner.place_on_field(0, "BT25-078", Some(0));
+    let big = runner.place_on_field(1, "BIG", Some(0));
+    runner.game.players[1].battle_area[big.index as usize].is_suspended = true;
+
+    runner.attack_digimon(gazi, big, false);
+    let _ = runner.auto_resolve();
+
+    assert!(runner.game.players[0].battle_area.is_empty(), "Gazimon lost");
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        1,
+        "the inherited <Retaliation> does not apply while Gazimon is the top card"
+    );
+}
+
+/// Engine regression riding on this card's triage: a PRINTED inherited trigger
+/// keyword with NO DSL grant clause (a card known only through cards.json
+/// text). Its [On Deletion] entry is queued by `effect_slot` while the card is
+/// under the top and resolved once the stack is in the trash; the effect list
+/// must have the same slot layout at both reads or the trigger resolves to
+/// nothing.
+#[test]
+fn printed_only_inherited_retaliation_resolves_after_the_stack_is_trashed() {
+    let inherited = "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)";
+    let mut src = vanilla("SRC", 1000);
+    src.level = Some(3);
+    src.inherited_text = inherited.to_string();
+    src.keywords = digimon_engine::card_data::parse_printed_keywords("", inherited, "");
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(vanilla("HOST", 6000))
+        .add_card(vanilla("BIG", 8000))
+        .add_card(vanilla("FILLER", 1000))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+    let host = runner.place_stack(0, &["SRC", "HOST"]);
+    let big = runner.place_on_field(1, "BIG", Some(0));
+    runner.game.players[1].battle_area[big.index as usize].is_suspended = true;
+    runner.attack_digimon(host, big, false);
+    assert!(runner.pending_selection().is_none(), "{:?}", runner.pending_kind());
+    assert!(runner.game.players[1].battle_area.is_empty(), "BIG deleted");
+}
