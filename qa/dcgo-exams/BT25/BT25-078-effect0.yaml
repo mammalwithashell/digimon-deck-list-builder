@@ -1,0 +1,84 @@
+# Exam scenario: Gazimon (BT25-078), clause BT25-078#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[TS]
+# trait: Cost 0".
+#
+# WHY A DIFFERENT BOOK. Gazimon's printed circle is Purple Lv.2 / 0, and the shared
+# pool's egg (ST6-01 Pagumon) is Purple -- from it the standard circle and the
+# special condition are indistinguishable. This line uses tm_bt25_078_pool.json,
+# whose egg deck is BT25-005 Pagumon: BLACK, Lv.2, [TS] trait. A Black Lv.2 fails
+# the Purple circle, so the ONLY legal way for it to digivolve into Gazimon is the
+# clause under exam (the "w/[TS] trait" branch). DCGO models it as
+# AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits ||
+# HasText("Three Musketeers"), cost 0, level: 2) in BT25_078.cs.
+#
+# THE LINE. T1 P0 hatches BT25-005. T3 P0 breeding-digivolves it into Gazimon. The
+# witness is two-fold: DCGO accepting the digivolve at all (an illegal action aborts
+# the job as a finding), and the projected state one step later -- Gazimon has left
+# the hand and memory is still 3, i.e. the digivolution cost 0. The breeding area
+# is not projected, so the line ends here rather than moving Gazimon out: a move
+# would fire [When Moving] and drag a different clause's prompt surface into a
+# digivolution-condition measurement (that arm is BT25-078-effect1.yaml).
+#
+# NO PROMPTS. Digivolving in the breeding area triggers nothing on this card
+# ([When Moving]/[On Play] are not [When Digivolving]), and BT25-005's inherited
+# effect is a [Your Turn] trigger on [Three Musketeers] trait cards being placed as
+# digivolution cards, which never happens here.
+#
+# NOTE on our own card data: code/digimon-engine/cards/bt25/BT25-078.yaml authors
+# Gazimon as `color: [black]` with a `Lv.2 Black / 0` alt-path, while the official
+# Bandai DB (data/card_bundles/BT25-078.md), the card face and DCGO (BT25/Purple/)
+# all print it PURPLE. In THIS line that mislabel is not separable from the clause
+# (our engine admits the Black egg through either path) -- it is recorded in
+# NOTES-BT25-078.md, not measured here.
+card: BT25-078
+clause: BT25-078#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[10] is the turn-3 draw; stack[11] is the card the digivolution
+    # itself draws (a Digimon that digivolves draws 1). Both are named so the
+    # oracle and sim-only deal the same hand.
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083, BT25-083]
+    rest: three-musketeers-gazimon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch Pagumon (BT25-005) -- Black, Lv.2, [TS].
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): THE CLAUSE -- breeding-digivolve the Black [TS] Lv.2 into Gazimon
+  # (BT25-078) for 0. No breeding_action row: a Lv.2 cannot move and nothing can
+  # hatch, so neither engine opens a breeding decision.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-078 } }
+    expect: { prompt: main_phase }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: Gazimon has left the hand (the T3 draw
+  # and the digivolution draw, both LadyDevimon, joined it) and memory is
+  # untouched at 3 -- the digivolution cost 0.
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT21-074, BT21-074, BT25-083, BT25-083, BT25-085, BT25-085]
+      p0.trash: []
+      p0.field: []

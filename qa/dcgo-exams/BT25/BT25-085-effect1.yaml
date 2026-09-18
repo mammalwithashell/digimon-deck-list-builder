@@ -1,0 +1,117 @@
+# Exam scenario: BeelStarmon (BT25-085), clause BT25-085#effect#1 -- <Blocker>
+# "(This Digimon can block in the blocker timing)" -- 16-4, Persistent; the
+# block itself is the defender's optional choice.
+#
+# Measured by blocking: P1's Biyomon (ST1-02, 3000 DP) attacks P0's security on
+# T6, the blocker window opens for P0, BeelStarmon takes it, and the battle
+# (12000 vs 3000) deletes Biyomon while P0's security stays at 5.
+#
+# PROMPT SHAPE (the BT25-058-effect2.yaml convention). Both engines ask the
+# DEFENDER one permanent pick: DCGO's AttackProcess "select blocker" is a
+# SelectPermanentEffect over HasBlocker Digimon with canNoSelect: !HasCollision
+# (declinable here -- Biyomon has no <Collision>); our engine parks its "Declare
+# a blocker" OwnField pick with a decline. Answered by actor 0 on P1's turn.
+# BeelStarmon's [Counter] clause (BT25-085#effect#3) also TRIGGERS at the counter
+# timing of this attack, but CanActivateUnsuspend is false (no Option under any
+# own Digimon), so neither side asks anything for it.
+#
+# THE PREFIX (shared by BT25-085-effect0..3). BeelStarmon "can't play to the
+# field", so the Digimon face is reached by digivolving. LadyDevimon BT25-083
+# (Purple Lv.5, [TS]) is PLAYED for 7 on T3 and BeelStarmon digivolves onto it:
+#   * LadyDevimon's [On Play] tuck is dormant on both sides: BT25_083.cs gates
+#     it on a [Three Musketeers] TRAIT card in hand or trash
+#     (AdditionalActivateCondition), and P0 holds only [TS] Tamers at T3 -- which
+#     is why BeelStarmon (a [Three Musketeers] trait card) is stacked as a LATER
+#     draw, never into the opening hand (the BT25-083-inherited0.yaml prefix).
+#   * From LadyDevimon BOTH of BeelStarmon's routes are open at DIFFERENT costs
+#     -- the printed Purple Lv.5 / 4 circle and the clause-0 alt route, cost 3 --
+#     so both engines ask which cost to pay: DCGO through PlayCardClass's
+#     "Which digivolution cost do you pay?" SelectCountEffect over the distinct
+#     CostList {4, 3} (CardController.cs; BT25_085.cs registers the alt route
+#     with ignoreDigivolutionRequirement: TRUE, level: 5), ours through the
+#     rule-17 distinct-cost EffectChoice. Answered by VALUE (EX12-015 idiom).
+#
+#   T1 (P0): pass.
+#   T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): play LadyDevimon (3 -> -4). [On Play] dormant.
+#   T4 (P1, 4): pass (BeelStarmon is not out yet).
+#   T5 (P0, 3): digivolve BeelStarmon for 3 (3 -> 0); pass.
+#   T6 (P1, 3): Biyomon attacks security -> THE CLAUSE: BeelStarmon blocks.
+#
+# assert (at 16, the trailing P1 pass): P0 security still 5, BeelStarmon
+# suspended by the block, Biyomon in P1's trash.
+card: BT25-085
+clause: BT25-085#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-083, BT24-088, BT24-088, BT24-088, BT25-092,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-085, BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 16
+    that:
+      turn: 6
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-085, dp: 12000, suspended: true, sources: [BT25-083] }
+      p1.field: []
+      p1.trash: [ST1-02]

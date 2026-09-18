@@ -1,0 +1,165 @@
+# Exam scenario: Asuna Shiroki (BT25-092), clause BT25-092#effect#1 --
+# "[Main] By suspending this Tamer and trashing 1 Option card from your hand or
+#  your Digimon's digivolution cards, 1 of your Digimon may digivolve into a
+#  Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand
+#  or trash with the cost reduced by 1."
+#
+# Unblocked 2026-09-17 (G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST
+# resolved; see NOTES-BT25-092.md). This line takes the FULL clause on its
+# simplest branch: Option from HAND, result card from HAND.
+#
+# WHY A PER-CARD BOOK (tm_bt25_092_pool.json, deck `tm-asuna-demidevimon` = the
+# shared three-musketeers 50 with EX7-070 x2 swapped for DemiDevimon ST6-02 x2).
+# The host must be a Digimon that adds NO prompt of its own:
+#   * Sparrowmon EX7-051 carries a [Start of Your Main Phase] that DCGO parks
+#     vacuously (BT25-082-effect2.yaml header). With Asuna ALSO on the field that
+#     is TWO start-of-main triggers -> a DCGO MultipleSkills ordering prompt that
+#     has nothing to do with this clause.
+#   * Gazimon BT25-078 / ToyAgumon EX7-008 open a reveal on play.
+# DemiDevimon ST6-02 is a VANILLA Purple Lv.3 (cost 2, 4000 DP).
+#
+# WHY BLACKGATOMON (BT25-082) IS THE RESULT. It has the [TS] trait. On a vanilla
+# Purple Lv.3 only its printed Purple Lv.3 / 3 circle is open (the alt circle
+# needs [Three Musketeers] text or [TS] on the HOST), so there is ONE route and
+# no digivolution-cost prompt on either side; the clause's "-1" is then read
+# straight off memory: 3 -> 1 (3 - (3 - 1)), not 3 -> 0. Its [When Digivolving]
+# free-Tamer play is dormant in DCGO -- `AdditionalActivateCondition` needs a
+# [Three Musketeers]-text Tamer in HAND, and the only Asuna on this line is
+# already on the field. (Scopemon BT21-071 was the other candidate; its [When
+# Digivolving] tuck would fire off the P-180 this clause has just trashed.)
+#
+#   T1 (P0, memory 0): play DemiDevimon (cost 2) -> -2.
+#   T2 (P1, memory 2): pass -> P0 opens at 3.
+#   T3 (P0, 3): play Asuna Shiroki BT25-092 (cost 4) -> -1. She has no [On Play].
+#   T4 (P1, memory 1): pass -> P0 opens at 3.
+#   T5 (P0, 3): Asuna's [Start of Your Main Phase] (clause #effect#0, a
+#            different clause) is DECLINED; then THE CLAUSE: suspend Asuna,
+#            trash Bind Red Trigger P-180 from hand, pick DemiDevimon, digivolve
+#            it into BlackGatomon from hand for 3 - 1 = 2. Memory 3 -> 1.
+#
+# PROMPT SHAPE, re-derived from BT25_092.cs `#region Main`:
+#   SetUpActivateClass(null, ActivateCoroutine, -1, FALSE, ...) -> no
+#   OptionalSkill. Body:
+#   1. SuspendPeremanentAndProcessAccordingToResult(this Tamer) -- no prompt.
+#   2. Option zone: `validHandCard && validDigivolutionCard` is FALSE (no Digimon
+#      holds an Option), so DCGO takes the silent `SetBool(validHandCard)` path
+#      (UserSelectionManager.SetBool is not the hooked RPC -- no wire row), then
+#      SelectHandEffect(IsOption, maxCount 1, canNoSelect: FALSE, Mode.Discard).
+#      P-180 is the only Option in hand; the harness still consumes a row for a
+#      single candidate. Ours: ONE mandatory `select_union_zone{hand,material}`
+#      -> SHARED row, `cards: [P-180]`.
+#   3. `HasMatchConditionOwnersPermanent(CanDigivolveDigimon)` is true ->
+#      SelectPermanentEffect(canNoSelect: TRUE, maxCount 1) over DemiDevimon.
+#      Ours: `select_own_permanent { optional: true }` gated by
+#      `has_digivolve_candidate` -> SHARED row.
+#   4. Result zone: ValidCardInHand only (trash holds just P-180, an Option) ->
+#      silent SetBool(true); DigivolveIntoHandOrTrashCard(isHand: true,
+#      isOptional default TRUE) -> SelectHandEffect(canNoSelect: true) over
+#      BlackGatomon (LadyDevimon is a Lv.5 and fails CanPlayCardTargetFrame on a
+#      Lv.3). Ours: ONE optional `select_union_zone{hand,trash}` gated by
+#      `can_digivolve_onto` -> SHARED row, `cards: [BT25-082]`.
+#   5. The digivolve pays 2, draws 1 (LadyDevimon), and BlackGatomon's [When
+#      Digivolving] activates on NEITHER side: DCGO's AdditionalActivateCondition
+#      fails, and our engine (whose BT25-082.yaml gates the clause only on
+#      "<= 1 Tamer") finds no Tamer candidate for its hand pick and parks
+#      nothing -- measured at lowering (a `sim_only` row there is refused with
+#      "OUR engine has NO live prompt here").
+card: BT25-092
+clause: BT25-092#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] opening hand; [5..9] security (never flipped); [10] the T3
+    # draw; [11] the T5 draw; [12] the card the clause's digivolution draws.
+    stack: [ST6-02, BT25-092, P-180, BT25-082, BT25-083,
+            BT21-074, BT21-074, BT25-085, BT25-085, BT25-085,
+            BT25-083, BT25-083, BT25-083]
+    rest: tm-asuna-demidevimon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014,
+            ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): no hatch; play DemiDevimon (ST6-02). Memory 0 -> -2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST6-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play Asuna Shiroki (BT25-092, cost 4). Memory 3 -> -1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase] -- clause #effect#0, declined here. TWO
+  # rows for one decision (the BT25-082-inherited0.yaml convention): BT25_092.cs
+  # builds it `optional: false, isSkippable: true` and asks ONE cancellable
+  # SelectHandEffect, while our engine installs an outer accept/decline gate
+  # (kind `Replacement`) before its hand pick.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: activate Asuna's [Main] (she is P0's battle-area slot 1).
+  - actor: 0
+    do: { main: { on: field.1 } }
+    expect: { prompt: main_phase }
+  # Cost: trash 1 Option -- Bind Red Trigger (P-180) from hand.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # "1 of your Digimon may digivolve": DemiDevimon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The result card: BlackGatomon (BT25-082, [TS]) from hand, cost 3 - 1 = 2.
+  - actor: 0
+    do: { select: { cards: [BT25-082] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause: memory 1, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. Memory 1 is the witness for "cost
+  # reduced by 1" (3 - 2). Asuna is suspended (the first cost), P-180 is in the
+  # trash (the second cost), BlackGatomon sits on DemiDevimon, and the hand is
+  # the opening LadyDevimon plus the T3, T5 and digivolution draws.
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.hand: [BT25-083, BT25-083, BT25-083, BT25-083]
+      p0.trash: [P-180]
+      p0.field:
+        - card_id: BT25-082
+          dp: 6000
+          suspended: false
+          sources: [ST6-02]
+        - card_id: BT25-092
+          dp: -1
+          suspended: true
+          sources: []

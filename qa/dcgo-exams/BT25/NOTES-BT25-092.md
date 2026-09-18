@@ -5,8 +5,42 @@ Denominator: **3 clauses** (`PYTHONPATH=code python -m tools.clause_coverage.ext
 | Clause | Scenario | Status |
 |---|---|---|
 | `BT25-092#effect#0` | `BT25-092-effect0.yaml` | authored, lowers sim-only |
-| `BT25-092#effect#1` | — | **was unreachable; now authorable** (see below) |
+| `BT25-092#effect#1` | `BT25-092-effect1.yaml` (book `tm_bt25_092_pool.json`, deck `tm-asuna-demidevimon`) | authored 2026-09-18, lowers sim-only, asserts pass (see "`effect#1` — authored" below) |
 | `BT25-092#effect#2` | `BT25-092-effect2.yaml` | authored, lowers sim-only |
+
+## `effect#1` — authored (2026-09-18)
+
+Branch taken: Option from HAND (Bind Red Trigger P-180), result card from HAND
+(BlackGatomon BT25-082 onto a vanilla Purple Lv.3). Memory 3 → 1 is the witness
+for "cost reduced by 1" (printed Purple Lv.3 / 3, one route, no cost prompt).
+
+- **Why a per-card book.** The host must add no prompt of its own. Sparrowmon
+  EX7-051 has a [Start of Your Main Phase] DCGO parks vacuously; with Asuna on
+  the field too that is TWO start-of-main triggers → a DCGO `MultipleSkills`
+  ordering prompt unrelated to this clause. Gazimon / ToyAgumon open a reveal
+  on play. `tm_bt25_092_pool.json` swaps EX7-070 x2 for the vanilla DemiDevimon
+  ST6-02 x2.
+- **Prompt sequence** (`BT25_092.cs` `#region Main`, `SetUpActivateClass(null,
+  …, -1, FALSE)` → no OptionalSkill): suspend (no prompt) → the Option-zone
+  `generic_bool` is NOT asked (only the hand holds an Option → silent
+  `SetBool`) → `SelectHandEffect(Mode.Discard, canNoSelect: FALSE)` →
+  `SelectPermanentEffect(canNoSelect: true)` → the result-zone `generic_bool` is
+  NOT asked (only the hand holds a candidate) → `SelectHandEffect(canNoSelect:
+  true)` inside `DigivolveIntoHandOrTrashCard`. Our three prompts
+  (`UnionZone{hand,material}`, `OwnField`, `UnionZone{hand,trash}`) line up 1:1,
+  all SHARED. The two `UnionZone` rows' `expect:` is not asserted sim-side (no
+  unambiguous mapping) — DCGO asserts `SelectHandEffect` strictly.
+- **The start-of-main row pair** before the clause declines `#effect#0` (ours:
+  outer `Replacement` gate, `sim_only`; DCGO: one cancellable `SelectHandEffect`,
+  `dcgo_only`) — the `BT25-082-inherited0.yaml` convention.
+- **Not covered by this line** (second lines, not second clauses): the Option
+  taken from a Digimon's digivolution cards (adds DCGO's first `generic_bool`
+  when both zones hold one, and `SelectTrashDigivolutionCards`' permanent +
+  card rows), and the result card taken from the TRASH.
+- BlackGatomon's [When Digivolving] is dormant on both sides (no [Three
+  Musketeers]-text Tamer in hand): DCGO by `AdditionalActivateCondition`, ours
+  because the hand pick has no candidate — measured: a `sim_only` row there is
+  refused with "OUR engine has NO live prompt here".
 
 ## `BT25-092#effect#1` — unreachable (SUPERSEDED 2026-09-17)
 

@@ -1,0 +1,151 @@
+# Exam scenario: Gazimon (BT25-078), clause BT25-078#effect#1 -- the [When Moving]
+# arm. The extractor splits the printed "[When Moving] [On Play] Reveal the top 3
+# cards ..." into a bare `[When Moving]` timing clause (this one) and the [On Play]
+# clause carrying the body text (BT25-078#effect#2). DCGO registers ONE shared
+# ActivateClass under both timings (ActivateClassesForSharedEffects(whenMoving: true,
+# onPlay: true)), so this line measures the same body reached through the OTHER
+# timing: the Digimon moving from the breeding area to the battle area.
+#
+# THE LINE. T1 P0 hatches Pagumon (ST6-01). T3 P0 breeding-digivolves it into
+# Gazimon (Purple Lv.2 / cost 0 -- the printed circle; memory stays 3). T5 P0 takes
+# `move` as its breeding action and [When Moving] fires. Draws: T3 = stack[10], the
+# digivolution's own draw = stack[11], T5 = stack[12]; so the three revealed cards
+# are stack[13..15].
+#
+# THE BRANCH TAKEN is the one the [On Play] line does NOT take: the reveal holds ONE
+# card with the [Three Musketeers] TRAIT -- Hurricane Screw Shot (EX7-071) -- beside
+# two cards printing neither text nor trait, and the line places it as Gazimon's
+# bottom digivolution card ("you may place 1 [Three Musketeers] trait card ...").
+#
+# PROMPT SHAPE, from BT25_078.cs:
+#   * optional: false in DCGO -> no OptionalSkill gate; our YAML's `optional: true`
+#     gate is `sim_only`.
+#   * Our engine asks the BRANCH first (`select_effect_choice`, 1 = place as bottom
+#     digivolution card) and the reveal pick second -> the branch row is `sim_only`;
+#     the pick is SHARED (SelectCardEffect, canNoSelect: true).
+#   * Because the picked card HAS the trait, DCGO then asks a generic_bool
+#     ("Add to hand" = true / "Place on digivolution cards" = false) through
+#     UserSelectionManager.SetBoolSelection. Our engine already decided the branch,
+#     so that row is `dcgo_only`, answered `decline: true` -- the emitter carries it
+#     as select_bool: false, which is the "place" value; the SetBoolForPlayer hook
+#     reads only select_bool.
+#   * The deck-bottom ORDERING SelectCardEffect for the 2 remaining cards
+#     (RevealLibrary.cs `remainingCards.Count == 1` ELSE branch) comes BEFORE that
+#     generic_bool on DCGO's side -- it is asked inside the reveal helper, and the
+#     bool only after the helper returns. Our engine parks the same ordering as
+#     OrderedPermutation { remaining: 2 }, after the tuck.
+#
+# REPAIRED 2026-09-18 (resumed campaign): the crashed author's draft never stacked
+# Gazimon into the hand, miscounted the draws (a digivolution draws 1), answered
+# our EffectChoice with an unresolvable `value: 1` (now `choice:`), had no row for
+# our OrderedPermutation park, and put DCGO's generic_bool BEFORE its ordering
+# prompt (the C# order is pick -> ordering -> bool).
+#
+# WHY T3 HAS NO breeding_action ROW. With a Lv.2 in the breeding area nothing can be
+# moved and nothing hatched, so neither engine opens a breeding decision; the
+# breeding-area digivolve is a MAIN-phase action (oracle-confirmed on the Medusamon
+# lines, qa/dcgo-exams/BT21/BT21-029-effect2.yaml).
+card: BT25-078
+clause: BT25-078#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] opening hand; [5..9] security; [10] the T3 draw; [11] the
+    # card the T3 digivolution draws; [12] the T5 draw; [13..15] the reveal.
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083, BT25-083, BT25-083,
+            EX7-071, BT25-058, BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch Pagumon (ST6-01).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve Pagumon into Gazimon (BT25-078), cost 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-078 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): move Gazimon to the battle area -- THE CLAUSE.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # SIM-ONLY: our outer accept/decline gate (DCGO: optional: false, no gate).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # SIM-ONLY: our branch choice -- "Place a [Three Musketeers] trait card as bottom
+  # digivolution card", named by LABEL (an EffectChoice branch carries no number
+  # `value:` could match).
+  - actor: 0
+    do: { select: { choice: "bottom digivolution card", sim_only: true } }
+  # SHARED: the reveal pick. Hurricane Screw Shot (EX7-071) is the only revealed
+  # card with [Three Musketeers] in its text (and it carries the trait).
+  - actor: 0
+    do: { select: { cards: [EX7-071] } }
+    expect: { prompt: SelectCardEffect }
+  # The deck-bottom ORDERING of the two leftovers. DCGO asks it INSIDE
+  # SimplifiedRevealDeckTopCardsAndSelect (RevealLibrary.cs:
+  # ReturnRevealedCardsToLibraryBottom, Count >= 2 -> one multi-pick
+  # SelectCardEffect, canNoSelect: false), i.e. BEFORE BT25_078.cs asks its
+  # add-or-place question and before the picked card moves anywhere. Our engine
+  # parks OrderedPermutation { remaining: 2 } AFTER choose_from_reveal has already
+  # tucked Hurricane Screw Shot under Gazimon. Same decision, different
+  # mid-resolution snapshot -> authored sim_only + dcgo_only rather than shared
+  # (a shared row would report a p0.field sources divergence that is pure
+  # sequencing).
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # DCGO-ONLY: the post-helper branch question DCGO asks because the picked card
+  # has the trait (UserSelectionManager.SetBoolSelection -> generic_bool).
+  # select_bool: false = "Place on digivolution cards".
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # One step past the clause: P0's turn-5 Main phase, memory 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. Gazimon is on the battle area with TWO
+  # digivolution cards: the Pagumon it hatched from and the Hurricane Screw Shot the
+  # clause placed underneath. The hand is the opening five minus Gazimon plus the
+  # T3 draw, the digivolution draw and the T5 draw
+  # -- Hurricane Screw Shot did NOT go to hand.
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT21-074, BT21-074, BT25-083, BT25-083, BT25-083, BT25-085, BT25-085]
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-078
+          dp: 1000
+          suspended: false
+          sources: [EX7-071, ST6-01]

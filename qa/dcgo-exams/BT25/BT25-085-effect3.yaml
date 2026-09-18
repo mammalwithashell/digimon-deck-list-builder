@@ -1,0 +1,199 @@
+# Exam scenario: BeelStarmon (BT25-085), clause BT25-085#effect#3 --
+# "[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1
+#  Option card from any of your Digimon's digivolution cards or link cards, this
+#  Digimon unsuspends."
+#
+# The [When Attacking] arm. The line is BT25-085-effect2.yaml through T7 (P-180
+# used from hand on the digivolve and tucked under BeelStarmon), then on T9
+# BeelStarmon attacks the player: the cost trashes P-180 from its digivolution
+# cards and BeelStarmon UNSUSPENDS mid-attack -- the witness is
+# `suspended: false` on an attacker that has just checked a security card.
+#
+# THE PREFIX (shared by BT25-085-effect0..3). BeelStarmon "can't play to the
+# field", so the Digimon face is reached by digivolving. LadyDevimon BT25-083
+# (Purple Lv.5, [TS]) is PLAYED for 7 on T3 and BeelStarmon digivolves onto it:
+#   * LadyDevimon's [On Play] tuck is dormant on both sides: BT25_083.cs gates
+#     it on a [Three Musketeers] TRAIT card in hand or trash
+#     (AdditionalActivateCondition), and P0 holds only [TS] Tamers at T3 -- which
+#     is why BeelStarmon (a [Three Musketeers] trait card) is stacked as a LATER
+#     draw, never into the opening hand (the BT25-083-inherited0.yaml prefix).
+#   * From LadyDevimon BOTH of BeelStarmon's routes are open at DIFFERENT costs
+#     -- the printed Purple Lv.5 / 4 circle and the clause-0 alt route, cost 3 --
+#     so both engines ask which cost to pay: DCGO through PlayCardClass's
+#     "Which digivolution cost do you pay?" SelectCountEffect over the distinct
+#     CostList {4, 3} (CardController.cs; BT25_085.cs registers the alt route
+#     with ignoreDigivolutionRequirement: TRUE, level: 5), ours through the
+#     rule-17 distinct-cost EffectChoice. Answered by VALUE (EX12-015 idiom).
+#
+#   T1..T7: see BT25-085-effect2.yaml (incl. the DCGO-only #effect#3 row at the
+#            digivolve, declined -> RemoveUse; the OPT is per turn anyway).
+#   T8 (P1): pass.
+#   T9 (P0, 3): draw Satellamon (stacked: an UNSTACKED T9 draw is Der Blitz
+#            EX7-070 in sim-only's file-order deck -- a [Three Musketeers] Option
+#            that changes #effect#2's candidate set -- and anything at all in
+#            DCGO's shuffled one). BeelStarmon attacks security. THE CLAUSE.
+#
+# PROMPT SHAPE, re-derived from BT25_085.cs:
+#   * TWO [When Attacking] effects of the SAME card are activatable at once --
+#     #effect#2 (P-180 under this Digimon is a [Three Musketeers] Option) and
+#     #effect#3 (an Option under an own Digimon) -- so DCGO opens MultipleSkills
+#     and our engine its TriggerOrder, both over [BT25-085, BT25-085]. Neither
+#     branch carries a keyword, so the pick is by `ordinal:`. DCGO's candidate
+#     order is the CardEffects() registration order (use-Option first, unsuspend
+#     second); ours was read off the lowering note ("ordinal 1 is branch 1") and
+#     verified by the prompt that follows ("Choose 1 of your Digimon to trash an
+#     Option from"). ordinal 1 = #effect#3 on both. If the oracle disagrees it
+#     aborts on the next row's prompt class -- read the order off that message.
+#   * #effect#3 is `optional: false` in DCGO -> no OptionalSkill; our YAML's
+#     `optional: true` gate is NOT parked separately here (the TriggerOrder pick
+#     is the accept), so there is no sim-only gate row.
+#   * SelectPermanentEffect(PermanentWithTrashableCard, canNoSelect: true) --
+#     BeelStarmon alone, SHARED with our OwnField "which Digimon" pick.
+#   * SelectCardEffect(IsOption, Mode.Discard, canNoSelect: true) over that
+#     Digimon's DigivolutionOrLinkCards -> P-180. Ours is a single-id
+#     EffectChoice ("Choose 1 Option to trash (activation cost)") that `cards:`
+#     cannot name (selection_resolve.rs resolves card identities against
+#     hand/trash only -- NOTES-P-180.md), so it is answered `yes:, sim_only` and
+#     DCGO's card row rides the wire alone (`dcgo_only`), the
+#     BT25-083-effect2.yaml convention.
+#   * P-180's own "when effects trash this card from digivolution cards, delete
+#     1 of your opponent's 7000 DP or lower Digimon" has NO target: P1's board is
+#     empty by construction, DCGO's CanActivateCondition fails, ours parks
+#     nothing. (With a P1 Digimon present the two engines order that trigger
+#     differently -- NOTES-P-180.md -- which is not this clause's business.)
+#   * #effect#2 is still on the stack afterwards but no longer activatable (no
+#     Option in hand, none under BeelStarmon): no prompt on either side.
+#   * The security check (P1's stack[8], the vanilla Dracomon ST1-04, 4000 DP)
+#     resolves with no prompt.
+card: BT25-085
+clause: BT25-085#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-083, BT24-088, BT24-088, BT24-088, BT25-092,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, P-180, BT25-085, BT25-092, BT21-074]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # The digivolution-cost prompt (see the header): pay the alt route's 3.
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # #effect#2, [When Digivolving]. DCGO-ONLY: the zone menu, 1 = "Use from Hand".
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the Option to use for free -- Bind Red Trigger (P-180).
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # P-180's [Main]: P1's top security is trashed with no prompt, then the tuck
+  # target -- BeelStarmon, the only [Three Musketeers] trait Digimon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY, and a FINDING (see the header): #effect#3 triggered on the same
+  # digivolve and becomes activatable now that an Option sits under BeelStarmon.
+  # Declined (cancel -> RemoveUse). Our engine never queued it.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. Two same-card [When Attacking] triggers: resolve #effect#3
+  # (the second) first.
+  - actor: 0
+    do: { select: { cards: [BT25-085], ordinal: 1 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-085, BT25-085] }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The Option to trash: P-180. Ours is a single-id EffectChoice `cards:` cannot
+  # name (sim_only accept); DCGO's SelectCardEffect row rides the wire alone.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # BeelStarmon unsuspends; the attack checks Dracomon (4000) with no prompt.
+  # One step past the clause: memory 3, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. THE WITNESS is `suspended: false` on a
+  # BeelStarmon that has just attacked, with P-180 gone from its digivolution
+  # cards into the trash. P1's security is 5 - 1 (P-180's [Main] at T7) - 1 (this
+  # attack's check) = 3; both trashed security cards are Dracomon (ST1-04).
+  # Attacks cost nothing: memory is still 3 and the turn is still P0's.
+  - at: 28
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.hand: [BT21-074, BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.trash: [P-180]
+      p0.field:
+        - { card_id: BT25-085, dp: 12000, suspended: false, sources: [BT25-083] }
+      p1.field: []
+      p1.security: 3
+      p1.trash: [ST1-04, ST1-04]

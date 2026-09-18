@@ -2943,3 +2943,71 @@ effect link). Fixed on BT25-093 / BT25-100 (`filter: { kind: digimon, trait_has:
 TS }`); the four OPEN cards above need the same check when their Link box is
 authored. A `dsl-lint` rule ("link_requirement without a Link DP clause while
 the bundle prints one") would close the family.
+
+## F-DATA-DUAL-CARD-KIND-MISSING-IN-CARDS-JSON — OPEN (found 2026-09-18, Three Musketeers exam stage)
+
+`data/cards.json` types five DUAL cards as plain Digimon — **BT25-085
+BeelStarmon / Fly Bullet, BT25-043, BT25-057, BT25-104, ST23-09** are
+`card_kind: 0` with no `dual` block (only EX12-018/-033/-052 are `4`). The
+engine takes `CardKind` from that file (`card_data.rs::parse_card_kind`) and
+`dsl_bridge::enrich_card_data_with_dsl_alt_paths` does not carry the YAML's
+`kind: dual` / `dual:` block across, so every surface that loads `cards.json`
+(exam harness, hosted API, desktop, RL) sees a Digimon. `cards_behavioral` is
+green because `DebugRunner` builds `CardData` from the compiled YAML.
+
+Measured through the exam harness (`play: { card: BT25-085, from: hand }`, a
+[Three Musketeers]-text Digimon on own field, a Digimon on the opponent's):
+the card is offered as a 6-cost **Digimon play** (it prints "Can't play to the
+field."), lands on the battle area at 12000 DP, the Option face's `[Main]`
+delete fires as part of that play, and `<Arts Digivolve>` never runs. Record:
+`qa/dcgo-exams/BT25/NOTES-BT25-085.md` (its three Option-face clauses are
+`unreachable` on this reason). Fix is data: `card_kind: 4` + a `dual` block per
+card (`code/tools/ingest_cards.py` emits one when the API types a card `Dual`,
+which it did not for these) — or have the DSL bridge promote `kind: dual` YAML
+into `CardData`. A guard ("YAML `kind: dual` while `cards.json` says otherwise")
+would close the family.
+
+## F-ENGINE-TRIGGER-GATE-IS-TRIGGER-TIME-NOT-ACTIVATION-TIME — OPEN (found 2026-09-18, same stage)
+
+BeelStarmon BT25-085's two [When Digivolving]/[When Attacking] clauses trigger
+together. When only the first is payable at the trigger (an Option in hand, none
+under a Digimon) and resolving it MAKES the second payable (the used Option
+tucks itself under BeelStarmon), DCGO then offers the second: its
+`additionalActivateCondition` lives in `CanActivateCondition`, the effect is
+stacked on `CanTrigger` alone, and `MultipleSkills.ActivateMultipleSkills_OnePlayer`
+re-tests `CanActivate` for every still-stacked effect on each loop pass. Our
+engine never offers it — the clause-level `condition:` that mirrors the DCGO
+gate is not re-tested after the first effect resolves (measured at exam
+lowering: nothing is parked after the tuck). `general_rule.pdf` 15-8-3 (a
+trigger-type effect waits as pending activation; a "By ..." cost is attempted at
+activation) supports DCGO, and on [When Attacking] this is the archetype's core
+line (use an Option free, then trash it to unsuspend). Wanted primitive: an
+ACTIVATION-time gate (queue the trigger; test the condition when it comes up to
+resolve; park nothing if it fails) — it would also be the right home for the
+LadyDevimon BT25-083 gates `NOTES-BT25-083.md` asks for. Record:
+`qa/dcgo-exams/BT25/NOTES-BT25-085.md`, `BT25-085-effect2.yaml` (the
+`dcgo_only` row).
+
+## F-ENGINE-RETALIATION-LOST-BEHIND-TRIGGER-ORDER + ON-MOVE-FIRES-ON-DELETION — OPEN (re-measured 2026-09-18)
+
+`qa/dcgo-exams/BT25/BT25-078-inherited0.yaml`: a stack with Gazimon BT25-078 as a
+digivolution card loses a battle. Our engine parks a 2-candidate `TriggerOrder`
+`[BT25-078 <Retaliation>, BT25-078]` — the second is Gazimon's [When Moving]
+body, enqueued by the board-wide `on_move` observer scan when the stack leaves
+the battle area by DELETION (it no-ops later on `event_permanent_is_source`) —
+and the inherited `<Retaliation>` (16-12, Mandatory) then deletes nothing: the
+attack context is gone when it resolves and `battle_opponent_of` finds no
+opponent. DCGO has one trigger, no prompt, and deletes the battled Digimon.
+Record: `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.
+
+## F-CARD-BT24-088-DRAW-NOT-GATED-ON-COST / F-CARD-BT25-078-YAML-COLOUR — OPEN (2026-09-18)
+
+- **BT24-088 Asuna Shiroki** `[On Play] By trashing 1 card ... <Draw 2>`: the
+  YAML's `select_hand { optional: true }` → `trash_from_hand_by_index` → `draw 2`
+  draws 2 even when the pick is declined (measured); `BT24_088.cs` draws only
+  `if (discarded)`. Needs a `binding_present` guard or a mandatory inner pick
+  behind the clause-level gate. `qa/dcgo-exams/BT24/NOTES-BT24-088.md`.
+- **BT25-078 Gazimon** is authored `color: [black]` with a `Lv.2 Black / 0`
+  alt-path; the official DB, the card face and DCGO print Purple, circle
+  `Purple Lv.2 / 0`. The extra Black route admits a Black Lv.2 with no
+  [TS]/[Three Musketeers] text. `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.

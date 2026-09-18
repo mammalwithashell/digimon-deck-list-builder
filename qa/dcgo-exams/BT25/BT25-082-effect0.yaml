@@ -1,0 +1,128 @@
+# Exam scenario: BlackGatomon (BT25-082), clause BT25-082#effect#0 --
+# "[Digivolve] Lv.3 w/[Three Musketeers] in text or w/[TS] trait: Cost 2".
+#
+# The printed alt-circle. Measured as the COST ACTUALLY PAID: BlackGatomon
+# digivolves onto Sparrowmon (EX7-051, a Lv.3 whose printed text carries
+# "[Three Musketeers]") and memory falls 3 -> 1, not 3 -> 0 as the standard
+# Purple Lv.3 / cost 3 circle would take.
+#
+# Because BOTH circles are open on Sparrowmon (Purple Lv.3 satisfies the
+# printed one; "[Three Musketeers] in text" satisfies the alt one) and their
+# costs differ, both engines ask which cost to pay -- DCGO through the
+# digivolution-cost SelectCountEffect route (each requirement is registered
+# with its own `digivolutionCost` by AddSelfDigivolutionRequirementStaticEffect),
+# our engine through the rule-17 distinct-cost EffectChoice. The answer is the
+# VALUE, 2 (the EX12-015 idiom). Answering 3 would exercise the printed circle
+# instead and measure nothing about this clause.
+#
+# THE LINE is the shared Three Musketeers prefix; see BT25-082-effect2.yaml's
+# header for the turn-by-turn accounting and the three prompt conventions
+# (Sparrowmon's vacuous DCGO-only gate, the SIM-ONLY outer gate on
+# BlackGatomon's [When Digivolving], the cost row). It ends one step after
+# the [When Digivolving] tamer play that the digivolve triggers.
+card: BT25-082
+clause: BT25-082#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
+    # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
+    # exactly one copy is in hand when `using: BT25-085` is lowered.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (see the header). Declined; our engine has no prompt here.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: with Asuna on the field, BlackGatomon (Lv.4) digivolves into
+  # BeelStarmon (Lv.6) for 4, ignoring digivolution requirements. Memory
+  # 1 -> -3, which hands the turn over.
+  # One step past the clause: P0 still holds memory 1, so this pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass, still inside P0's turn 5 Main phase.
+  # Memory 1 is the witness: 3 - 2 (alt-circle), not 3 - 3. BlackGatomon sits
+  # on Sparrowmon and Pagumon; Asuna Shiroki arrived for free through the
+  # [When Digivolving] measured in BT25-082-effect1.yaml.
+  - at: 14
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 1
+      p0.field:
+        - card_id: BT25-082
+          dp: 6000
+          suspended: false
+          sources: [EX7-051, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p1.security: 5
