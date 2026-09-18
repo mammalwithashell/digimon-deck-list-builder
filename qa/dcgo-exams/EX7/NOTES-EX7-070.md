@@ -58,7 +58,8 @@ printed text ("When effects trash this card from digivolution cards,
 present on 2026-09-18 (the gate is live at lowering; the scenario answers it
 `{ yes: true, sim_only: true }`). Fix: drop `optional: true`; once fixed, that
 row must be removed or the line stops lowering. P-180's sibling clause is
-authored mandatory and parks no gate. NOT applied from this stage.
+authored mandatory and parks no gate. **FIXED 2026-09-18** (see the triage
+section below).
 
 ## `effect#1` — what changed since `c9c3ccf49`
 
@@ -68,3 +69,45 @@ because `play: BT25-085` now lowers as the dual card's Option face. P1 fields
 Agumon (cost 3) and Monodramon (cost 2) so "lowest play cost" is a real
 selection. Both `SelectPermanentEffect` picks (`canNoSelect: false`) consume a
 wire row under the harness's AI branch even with one candidate.
+
+## `effect#0` triage (2026-09-18) — r1 abort was a slot-addressing artefact; card-YAML `optional: true` fixed; r2 CONFIRMED
+
+**r1** (recording `20260918T073651Z_ed05eacf…`) aborted "step 26 expected
+'SelectPermanentEffect' but DCGO asked 'SelectCountEffect'", 22 rows compared,
+no state divergence. `--all-diffs` against the preserved sidecar shows nothing
+more: the clause was never reached. Cause: `digivolve: from: field.0` is a
+COMPACT index over `Player.FieldPermanents` in frame order on DCGO
+(`InputDriver.FieldSlotToFrameId`), and `CardSource.PreferredFrame` seats
+Digimon centre-out (4, 3, 5, …; Tamers in the far row). DCGO's order was
+[LadyDevimon, BlackGatomon, Asuna]; ours (entry order) [BlackGatomon, Asuna,
+LadyDevimon]. `field.0` named LadyDevimon on DCGO — a Lv.5 with two open
+BeelStarmon costs — hence the cost `SelectCountEffect`. Scenario artefact;
+neither engine wrong.
+
+**Re-author (r2).** Asuna is played FROM HAND on T3 (first permanent in the
+battle area) and BlackGatomon is grown in the BREEDING area (`from: breeding`,
+slot-free) and promoted on T7: ours [Asuna, BlackGatomon, LadyDevimon], DCGO
+[LadyDevimon, BlackGatomon, Asuna] — BlackGatomon is `field.1` on both sides.
+Reusable rule (extends `../BT25/NOTES-BT25-083.md`): with exactly two own
+Digimon, put ONE Tamer into the battle area before either Digimon and address
+the FIRST-entered Digimon as `field.1`.
+
+**Card-YAML fix (our bug, landed with the re-author).** `EX7-070.yaml` clause 1
+carried `optional: true`. Citations: `EX7_070.cs:18`
+`SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, false, …)` —
+isOptional = false (`SetIsOptionEffect(true)` on :20 only tags an Option
+card's effect); printed text has no "may"; `<De-Digivolve>` is Mandatory
+(general_rule 16-11). Tests `ex7_070_clause1_is_inherited_mandatory_source_trash`,
+`ex7_070_source_trash_offers_dedigivolve_and_resolves`,
+`ex7_070_source_trash_cannot_be_declined` failed before (parked
+`Replacement`), pass after; `cargo test --test cards_behavioral -- ex7_070`
+20/20. The scenario's sim-only gate row was dropped.
+
+**r2** — oracle job `exam-EX7-070-effect0-r2`, recording
+`20260918T093542Z_a6c8ca88…`: diff **CLEAN** (22 of 33 ours / 28 DCGO rows).
+DCGO `effect_activation` EX7-070 "De-Digivolve 1" `is_optional: false`,
+`executed: true`; final state Kokatorimon in P1's trash, Agumon remains,
+EX7-070 in P0's trash, turn 10 at memory −1. Verdict **confirmed**.
+
+EX7-070 now: 3 clauses — 2 confirmed, 1 diverged (`effect#2`, attacker
+slot-addressing artefact, needs the same kind of re-author), 0 unmeasured.
