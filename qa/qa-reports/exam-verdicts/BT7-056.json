@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:55:15.717311100+00:00",
+  "clauses": {
+    "BT7-056#effect#0": {
+      "clause_id": "BT7-056#effect#0",
+      "card_id": "BT7-056",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "0d8a3e1916676a32a741e8fa1719fe2094590f6594d7a2eb459fe0dcab6a42be",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-effect0.yaml",
+      "reason": "DIVERGED at step 7 (compared 9 of 10 ours / 9 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-09-18T07:55:15.717311100+00:00"
+    },
+    "BT7-056#inherited#0": {
+      "clause_id": "BT7-056#inherited#0",
+      "card_id": "BT7-056",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "5e0c6da4c1c1d427893beaeff19ff57cd59412380cfdcfce396508d270259572",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-inherited0.yaml",
+      "recorded_at": "2026-09-18T07:55:06.259785300+00:00"
+    }
+  }
+}

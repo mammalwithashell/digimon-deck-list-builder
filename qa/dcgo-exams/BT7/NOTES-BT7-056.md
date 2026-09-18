@@ -105,3 +105,18 @@ lowered with no compensation row (same observation as
 - `inherited#0`'s rule 15-5-3 self-placement case (Dorumon itself placed
   by your effect) — Dorumon has no `[Three Musketeers]` trait, so none of
   this pool's placers can move it from hand.
+
+## Oracle verdicts (2026-09-18, job three-musketeers-1)
+
+- `inherited#0` — **confirmed** (CLEAN, 19 of 20 steps compared).
+- `effect#0` — **diverged** at step 7, single diff under `--all-diffs`:
+  `p0.hand` before the SECOND bucket's `SelectCardEffect` — DCGO already holds
+  EX7-073, ours does not. `RevealLibrary.cs` runs `AddHandCards` inside the
+  per-condition loop (each bucket's pick is added to hand before the next
+  bucket is asked); our reveal-bucket step parks all bucket picks and moves
+  the cards after the last one. End state converges (no later diff: both
+  hands hold EX7-073 + BT7-090, BT24-081 to the bottom). Finding family:
+  mid-effect staging order of multi-bucket reveal (`RevealBucketStep`), not a
+  BT7-056 card-spec error — any "when a card is added to your hand" observer
+  or hand-count-dependent second bucket would see it. Not fixed here (exam
+  stage does not edit the engine).

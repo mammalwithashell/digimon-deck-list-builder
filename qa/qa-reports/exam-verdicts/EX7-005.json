@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:55:05.275555200+00:00",
+  "clauses": {
+    "EX7-005#inherited#0": {
+      "clause_id": "EX7-005#inherited#0",
+      "card_id": "EX7-005",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "9aa71b87ba747764804373d2bf191e895bc82346a3f5b77f0d91ac867d68ba50",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-005-inherited0.yaml",
+      "recorded_at": "2026-09-18T07:55:05.275555200+00:00"
+    }
+  }
+}

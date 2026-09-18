@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:55:04.679564700+00:00",
+  "clauses": {
+    "BT25-005#inherited#0": {
+      "clause_id": "BT25-005#inherited#0",
+      "card_id": "BT25-005",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "9e3f7a5d3a57633a1156e155716849569d0e3079681d7fd325347e91c3b929c5",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-005-inherited0.yaml",
+      "recorded_at": "2026-09-18T07:55:04.679564700+00:00"
+    }
+  }
+}
