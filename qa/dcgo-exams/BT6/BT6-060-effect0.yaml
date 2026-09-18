@@ -1,0 +1,83 @@
+# Exam scenario: Deputymon (BT6-060), clause BT6-060#effect#0 --
+# "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with
+#  [Three Musketeers] in its type and/or 1 Option card with a memory cost of 7
+#  among them to your hand. Trash the remaining cards."
+#
+# DECK NOTE. `tm-deputy-black` (qa/dcgo-exams/BT6/tm_bt6_060_pool.json) is
+# the black vanilla shell of tm_bt25_064_pool.json (Hagurumon / Commandramon /
+# Numemon / Tankmon / WaruMonzaemon / HiAndromon / Gotsumon / Jazamon /
+# Jazardmon -- no printed text) carrying 4x Deputymon BT6-060, 4x AvengeKidmon
+# P-170 (a [Three Musketeers]-trait Digimon), 4x Gewalt Schwaermer BT6-105 (a
+# cost-7 Option) and 4x ToyAgumon BT25-064; eggs 4x Tsunomon BT24-007. P1 is
+# the shared quiet ST-1 opponent and does nothing but hold security.
+#
+# THE LINE is one action: P0 hard-plays Deputymon on T1 (memory 0 -> -5; the
+# effect resolves before the turn hands over). The first player takes no T1
+# draw, so the revealed four are stack[10..13] exactly, engineered so BOTH
+# picks are real two-candidate choices:
+#   [10] P-170   -- [Three Musketeers] Digimon   -> Digimon bucket
+#   [11] BT6-105 -- cost-7 Option                -> Option bucket
+#   [12] P-170   -- [Three Musketeers] Digimon   -> Digimon bucket
+#   [13] BT6-105 -- cost-7 Option                -> Option bucket
+# (DCGO's SelectCardEffect has no forced-single-candidate shortcut, but two
+# candidates per bucket keeps the pick a decision on both sides regardless.)
+#
+# PROMPT SHAPE (BT6_060.cs: SetUpActivateClass(..., -1, false, ...) -- the
+# trigger itself asks nothing; SimplifiedRevealDeckTopCardsAndSelect with two
+# conditions in order, canNoSelect: false, mutualConditions default false):
+# ONE SelectCardEffect per condition -- "Select 1 Digimon card with [Three
+# Musketeers] in its traits." then "Select 1 Option card with a memory cost of
+# 7." -- then RemainingCardsPlace.Trash with no prompt. Ours (BT6-060.yaml):
+# select_reveal_buckets, two min:1/max:1 buckets in the same order -> one
+# RevealBucket park per pick, same class; then per_selected trash_from_reveal,
+# no prompt. No leading generic_bool gate (canNoAction is false).
+#
+# WITNESS: one P-170 and one BT6-105 are in P0's hand, the other copy of each
+# is in P0's trash, and Deputymon stands alone on P0's field at 4000.
+card: BT6-060
+clause: BT6-060#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT6-060, BT2-052, BT3-059, BT2-056, BT3-067,
+            BT5-066, BT2-064, BT4-065, ST5-02, BT2-052,
+            P-170, BT6-105, P-170, BT6-105, BT3-059, BT2-056]
+    rest: tm-deputy-black
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Deputymon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT6-060, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, pick 1: the [Three Musketeers] Digimon bucket (two P-170).
+  - actor: 0
+    do: { select: { cards: [P-170] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, pick 2: the cost-7 Option bucket (two BT6-105).
+  - actor: 0
+    do: { select: { cards: [BT6-105] } }
+    expect: { prompt: SelectCardEffect }
+  # The remaining two are trashed with no prompt on either side. Memory -5
+  # ended P0's turn after resolution: P1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -5
+      p0.hand: [BT2-052, BT3-059, BT2-056, BT3-067, P-170, BT6-105]
+      p0.trash: [P-170, BT6-105]
+      p0.field:
+        - card_id: BT6-060
+          dp: 4000
+          suspended: false
+          sources: []

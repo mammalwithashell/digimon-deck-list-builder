@@ -1,0 +1,128 @@
+# Exam scenario: Purple Scramble (LM-032), clause LM-032#effect#2 --
+# "[Security] You may play 1 purple Digimon card with 2000 DP or less from
+#  your trash without paying the cost. Then, add this card to the hand."
+#
+# P0's security stack (stack[5..9], [9] on top): Gabumon (ST6-03, purple,
+# 2000 DP) on top, LM-032 second. P0 does nothing all game. P1 (ST1) hatches
+# Koromon, breeding-digivolves Agumon, and on T6 promotes it, digivolves
+# Birdramon (ST1-05, 5000 DP, vanilla) and attacks: Gabumon is checked and
+# trashed (a 2000-DP Agumon would have died to it, hence Birdramon). On T8 P1
+# attacks again and LM-032 is checked.
+#
+# THE CLAUSE resolves for P0 (the defender) on P1's turn: LM_032.cs
+# (SecuritySkill region) runs `PlayByEffect` over P0's trash -- a
+# SelectCardEffect for actor 0 whose only candidate is that Gabumon -- then
+# `AddThisCardToHand`. Witness: Gabumon on P0's battle area, LM-032 in P0's
+# hand rather than the trash, security 5 -> 3.
+#
+# Deck accounting for P0 (no T1 draw): draws T3 = stack[10], T5 = stack[11],
+# T7 = stack[12]. P1: T2 = [10], T4 = [11], T6 = [12], T8 = [13].
+card: LM-032
+clause: LM-032#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST6-02, ST6-09, ST1-02, ST1-04, ST6-05,
+            ST1-05, ST1-03, BT25-024, LM-032, ST6-03,
+            ST6-07, ST6-02, ST6-09, ST1-02, ST1-05]
+    rest: tm-purple-line
+  p1:
+    stack: [ST1-03, ST1-05, ST1-02, ST1-04, ST1-08,
+            ST1-10, ST1-13, ST1-14, ST1-02, ST1-04,
+            ST1-02, ST1-08, ST1-10, ST1-13, ST1-14]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Agumon (Koromon is a Lv.2 in an occupied
+  # breeding area: no breeding action, the turn opens on the main phase).
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): promote, digivolve Birdramon (cost 2), attack: Gabumon
+  # is checked and trashed.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): attack again -- LM-032 is checked. THE CLAUSE.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Answered by the DEFENDER (P0): play Gabumon from the trash for free.
+  - actor: 0
+    do: { select: { cards: [ST6-03] } }
+    expect: { prompt: SelectCardEffect }
+  # One step past the clause (P1 still holds the turn at memory 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass: Gabumon is back on P0's battle area
+  # (played from the trash for free), Purple Scramble went to P0's HAND rather
+  # than the trash, and P0's security fell 5 -> 3 across the two attacks.
+  - at: 19
+    that:
+      turn: 8
+      p0.security: 3
+      p0.trash: []
+      p0.hand: [ST6-02, ST6-09, ST1-02, ST1-04, ST6-05, ST6-07, ST6-02, ST6-09, LM-032]
+      p0.field:
+        - card_id: ST6-03
+          dp: 2000
+          suspended: false
+          sources: []
+      # Birdramon reads 6000 on P1's own turn: Agumon ST1-03 underneath it
+      # carries the inherited "[Your Turn] This Digimon gets +1000 DP".
+      p1.field:
+        - card_id: ST1-05
+          dp: 6000
+          suspended: true
+          sources: [ST1-01, ST1-03]

@@ -1,0 +1,102 @@
+# Exam scenario: Mimi Tachikawa (BT3-096), clause BT3-096#effect#0 --
+# "[All Turns] When a player uses an Option card, you may suspend this Tamer
+#  to gain 1 memory."
+#
+# DECK NOTE. `tm-mimi-purple` (qa/dcgo-exams/BT3/tm_bt3_096_pool.json) is the
+# ST-6 purple vanilla shell (DemiDevimon / Elecmon / Youkomon / Kyukimon;
+# Gabumon ST6-03's only text is an inherited [When Attacking]) plus the red
+# ST-1 vanillas, carrying 4x Mimi BT3-096, 4x Purple Scramble LM-032, 4x
+# Loweemon BT7-071, 4x KaiserLeomon BT7-073 and 4x Psychemon BT8-071; eggs 4x
+# Pagumon ST6-01, never hatched here. P1 is the shared quiet ST-1 opponent
+# and does nothing.
+#
+# THE LINE. T1: P0 hard-plays Mimi (0 -> -2). T3 (memory 3): P0 uses Purple
+# Scramble LM-032 (purple; Mimi alone satisfies the colour requirement) for
+# 2 (3 -> 1). LM-032's [Main] has NO candidate -- P0 controls no purple
+# Digimon -- so it resolves silently on both sides (DCGO: the
+# HasMatchConditionPermanent guard in LM_032.cs skips the pick; ours: the
+# optional select_own_permanent finds nothing) and LM-032 is placed in the
+# battle area as a <Delay> Option. P0's HAND HOLDS NO PURPLE DIGIMON on
+# purpose: with one in hand our engine walks on into LM-032's select_hand
+# after the empty permanent pick and parks a Hand prompt DCGO never asks
+# (observed at lowering; recorded in ../LM/NOTES-LM-032.md). Keeping the hand
+# red makes the only prompt after the use Mimi's own gate.
+# THE CLAUSE then triggers on the Option use: P0 accepts, Mimi suspends, P0
+# gains 1 memory (1 -> 2).
+#
+# PROMPT SHAPE (BT3_096.cs, EffectTiming.OnUseOption): SetUpActivateClass(
+# ..., -1, TRUE, ...) -- one OptionalSkill yes/no, then SuspendPermanents +
+# AddMemory(1) with no further pick. Ours (BT3-096.yaml): `optional: true`
+# + `activation_cost: { suspend_self: true }` -> the pre-cost accept/decline
+# park (the same 1:1 shape BT8-094-effect0.yaml uses for Digimon Emperor).
+# ORDER: DCGO stacks the OnUseOption trigger and runs the Option's body
+# first (UseOptionClass.UseOption -> StackSkillInfos, then OptionSkill); our
+# engine arms OnUseOption and drains it after the body (the official Q&A on
+# this card: "It can be activated after activating the used Option card's
+# [Main] effect"). LM-032's body is silent here, so the order is not
+# separately observable on this line.
+#
+# WITNESS at the trailing main-phase pass: P0 on memory 2 (2 paid for the
+# Option, 1 gained back), Mimi suspended, LM-032 standing in P0's battle
+# area, nothing in P0's trash.
+card: BT3-096
+clause: BT3-096#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT3-096, LM-032, ST1-02, ST1-04, ST1-02,
+            ST6-03, ST6-05, ST6-07, ST6-09, ST6-02,
+            ST1-04, ST1-02, ST1-04]
+    rest: tm-mimi-purple
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, BT1-009, BT3-007,
+            ST1-05, BT1-014, BT4-010, ST1-04, ST1-02,
+            BT4-014, ST1-08, ST1-10, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; Mimi (0 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-096, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): use Purple Scramble (3 -> 1); its [Main] has no
+  # candidate and it is placed. THE CLAUSE triggers on the use.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: LM-032, from: hand } }
+    expect: { prompt: main_phase }
+  # Accept: suspend Mimi, gain 1 memory (1 -> 2).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause; P0 still holds the turn on 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.trash: []
+      p0.hand: [ST1-02, ST1-04, ST1-02, ST1-04]
+      p0.field:
+        - card_id: BT3-096
+          dp: -1
+          suspended: true
+          sources: []
+        - card_id: LM-032
+          dp: -1
+          suspended: false
+          sources: []

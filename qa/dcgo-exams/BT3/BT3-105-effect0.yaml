@@ -1,0 +1,150 @@
+# Exam scenario: Breath of the Gods (BT3-105), clause BT3-105#effect#0 --
+# "[Main] 1 of your Digimon gains <Reboot> (Unsuspend this Digimon during your
+#  opponent's unsuspend phase) and "This Digimon can't have its DP reduced or
+#  be returned to its owner's hand or deck" until the end of your opponent's
+#  next turn."
+#
+# DECK NOTE. `tm-breath-black` (qa/dcgo-exams/BT3/tm_bt3_105_pool.json) is a
+# black vanilla shell (Gotsumon BT4-065 / Jazamon ST5-02 / Jazardmon ST5-07 /
+# Hagurumon / Commandramon / Numemon / Tankmon / WaruMonzaemon / HiAndromon /
+# Commandramon ST5-05 / MetalTyrannomon ST5-10 -- no printed text; Thundermon
+# BT8-061's only text is "also treated as [Mamemon]") carrying 4x BT3-105;
+# eggs 4x Tsunomon BT24-007, never hatched. P1 is the shared quiet ST-1
+# opponent and does nothing but hold security.
+#
+# THE LINE. P0 hard-plays Jazamon ST5-02 (black Lv.3, 4000) on T1, then a
+# second Jazamon AND Gotsumon BT4-065 (black Lv.3, 6000) on T3 -- THREE
+# bodies, so the Option's target pick is a real decision on both sides.
+# (Under the harness even a lone mandatory candidate would consume the row --
+# SelectPermanentEffect's forced-pick short-circuit lives in its human-UI
+# branch only, and both seats take the AI branch.) On T5 P0 uses BT3-105
+# (black: every body satisfies the colour requirement), gives Gotsumon the
+# grant, and attacks the player with Gotsumon (on the field since T3): 6000
+# beats P1's top security card Biyomon ST1-02 (3000) with no prompt, and
+# Gotsumon is left suspended.
+#
+# SLOT HYGIENE (the campaign's centre-out rule, ../BT25/NOTES-BT25-083.md).
+# `attack: field.N` reaches DCGO as a COMPACT index into GetFieldPermanents()
+# (frame-id order) and DCGO seats Digimon centre-out (frames 4, 3, 5, ...), so
+# on a TWO-Digimon board our play-order slots are DCGO's reversed. The audited
+# draft fielded Gotsumon + Jazamon and attacked with `field.0` -- DCGO would
+# have attacked with the UN-granted Jazamon and left it suspended at T6.
+# Re-authored: Gotsumon is the THIRD Digimon played (index 2 on both sides:
+# ours [J, J, G], DCGO frames [3, 4, 5] = [J, J, G]); the two Jazamon are
+# identical and never addressed. The grant target is picked by identity.
+#
+# THE MEASUREMENT is <Reboot>: MANDATORY (docs/digimon-rules/keyword-semantics
+# .md, 16-10), no prompt on either side. At P1's T6 breeding decision --
+# after P1's unsuspend phase and BEFORE P0's own unsuspend phase could touch
+# it -- Gotsumon reads suspended: false. The Jazamon never attacked and are the
+# control: they read unsuspended for the ordinary reason. The DP-immunity and
+# no-bounce halves of the same clause are not separately witnessed on this
+# line (the quiet opponent has no effect that would test them); the clause is
+# reached and the keyword half measured.
+#
+# PROMPT SHAPE (BT3_105.cs, OptionSkill region): SetUpActivateClass(null,
+# ..., -1, false, ...) -- no OptionalSkill; ONE SelectPermanentEffect(Custom,
+# maxCount 1, canNoSelect: false) over own battle-area Digimon, then
+# GainReboot / GainImmuneFromDPMinus / GainCanNotReturnToHand /
+# GainCanNotReturnToDeck, all UntilOpponentTurnEnd, no further prompt. Ours
+# (BT3-105.yaml): `optional: false`, one select_own_permanent (kind: digimon)
+# -> SelectPermanentEffect, then grant_keyword + three add_modifiers. 1:1.
+#
+# Memory: T1 Jazamon (0 -> -3) -> P1 3; T2 P1 passes -> P0 3; T3 Jazamon
+# (3 -> 0), Gotsumon (0 -> -4) -> P1 4; T4 pass -> P0 3; T5 BT3-105 (3 -> 1),
+# attack, pass -> P1 3.
+card: BT3-105
+clause: BT3-105#effect#0
+seed: 424242
+decks:
+  p0:
+    # The second Jazamon is P0's T3 DRAW (stack[10]; the first player takes no
+    # T1 draw) -- two copies in one hand would make `play: ST5-02` ambiguous.
+    stack: [ST5-02, BT4-065, BT3-105, BT2-052, BT3-059,
+            BT2-056, BT3-067, BT5-066, BT2-064, ST5-05,
+            ST5-02, BT3-059, BT2-056, BT3-067]
+    rest: tm-breath-black
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Jazamon (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST5-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the second Jazamon (3 -> 0), then Gotsumon -- the THIRD
+  # Digimon (0 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST5-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT4-065, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 4): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): THE CLAUSE -- use Breath of the Gods (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-105, from: hand } }
+    expect: { prompt: main_phase }
+  # The target: Gotsumon, by identity (own.field.2 here). Either Jazamon was
+  # the other legal answer.
+  - actor: 0
+    do: { select: { targets: [own.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Gotsumon (field.2 on both engines) attacks the player and suspends;
+  # Biyomon (3000) loses the security battle with no prompt.
+  - actor: 0
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): THE WITNESS -- <Reboot> has unsuspended Gotsumon in P1's
+  # unsuspend phase by the time this breeding decision (step 14) is asked.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 14
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - card_id: ST5-02
+          dp: 4000
+          suspended: false
+          sources: []
+        - card_id: ST5-02
+          dp: 4000
+          suspended: false
+          sources: []
+        - card_id: BT4-065
+          dp: 6000
+          suspended: false
+          sources: []
+      p0.trash: [BT3-105]
+      p1.security: 4
+      p1.trash: [ST1-02]

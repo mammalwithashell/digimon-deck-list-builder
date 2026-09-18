@@ -1,0 +1,194 @@
+# Exam scenario: ShineGreymon: Ruin Mode (EX4-074), clause EX4-074#effect#2 --
+# "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and
+#  <Recovery +1 (Deck)>. Then, if you have a Tamer, hatch in your breeding area."
+# 
+# DECK NOTE. `tm-ruin-red` is the quiet ST1 red shell carrying 4x EX4-074, 4x
+# ShineGreymon ST7-10 (the QUIET printing: <Security A. +1> and <Piercing> only,
+# no triggered text), 4x Vermilimon BT4-014, 4x Birdramon ST1-05, 4x Agumon
+# ST1-03 and 4x Tai Kamiya ST1-12; eggs 4x Koromon ST1-01. `tm-quiet-red` is the
+# same shell with Tai / Gaia Force; here P1 only plays two vanilla bodies.
+# 
+# THE LINE (one line serves all three clauses; each file asserts its own).
+#   T1 P0 hatch Koromon; pass                                   -> P1 3
+#   T2 P1 Phoenixmon ST1-10 (12000 vanilla, 10 from 3 -> -7)     -> P0 7
+#   T3 P0 breeding-digivolve Agumon ST1-03 (free); pass          -> P1 3
+#   T4 P1 Vermilimon BT4-014 (8000 vanilla, 5 from 3 -> -2)      -> P0 2
+#   T5 P0 promote; Birdramon ST1-05 (2 -> 0); Tai Kamiya (2 -> -2) -> P1 2
+#      (Tai is played AFTER the promote so the Digimon stays at field.0)
+#   T6 P1 nothing                                                -> P0 3
+#   T7 P0 Vermilimon BT4-014 (Red Lv.4 / 3 -> 0); pass          -> P1 3
+#   T8 P1 nothing                                                -> P0 3
+#   T9 P0 ShineGreymon ST7-10 (Red Lv.5 / 4 -> -1)               -> P1 1
+#   T10 P1 nothing                                               -> P0 3
+#   T11 P0 ShineGreymon: Ruin Mode (4 -> -1) -- THE DIGIVOLVE     -> P1 1
+#   T12 P1 nothing                                               -> P0 3
+#   T13 P0 Ruin Mode attacks the player; [End of Attack] resolves; pass
+#   T14 P1 trailing breeding decision
+# 
+# WHY THE DIGIVOLVE IS SINGLE-ROUTE. Ruin Mode's printed circles are Purple Lv.6 /
+# cost 5 and Yellow Lv.6 / cost 5 (official DB). ST7-10 is RED, so neither applies
+# and the T11 digivolve is legal ONLY through "[Digivolve] [ShineGreymon]: Cost 4"
+# (EX4_074.cs: CardNames.Contains("ShineGreymon"), digivolutionCost: 4). One route
+# => no SelectCountEffect / EffectChoice cost prompt on either side.
+# 
+# Every card under Ruin Mode is silent: Koromon's inherited "+1000 DP while 4+
+# sources" and Tai's "[Your Turn] all your Digimon +1000" are passives (they show
+# up only in P0's-turn DP readings, which no assertion below pins), ST7-10's
+# keywords are face-up only, and the rest are vanilla.
+# 
+# T13: Ruin Mode attacks the player. P1 has no <Blocker>, so no block window;
+# stack[9] Biyomon ST1-02 (3000) loses the security battle with no further prompt.
+# [End of Attack] then resolves in EX4_074.cs order: (1) DestroyPermanentsClass on
+# Ruin Mode itself -- no prompt; (2) ONE SelectPermanentEffect, canNoSelect: false,
+# over P1's Digimon -- Vermilimon at P1's slot 1 is picked (Phoenixmon at slot 0 was
+# the other legal answer); (3) IRecovery(1) -- no prompt; (4) Tai Kamiya is in play
+# and P0 CanHatch (breeding empty since T5, eggs left), so HatchDigiEggClass hatches
+# -- no prompt. Our EX4-074.yaml marks the opposing pick `optional: true`; the
+# printed clause is mandatory and DCGO's pick is canNoSelect: false, so that flag
+# over-exposes a decline (noted in NOTES-EX4-074.md). The line PICKS, so the wire
+# row is the same SelectPermanentEffect on both sides.
+# 
+# WITNESS at P1's T14 breeding decision: the whole six-card Ruin Mode stack is in
+# P0's trash and only Tai remains on P0's field; Vermilimon is in P1's trash beside
+# the flipped Biyomon; p0.security 6 (5 + Recovery); p1.security 4. (The breeding
+# area is not projected -- the hatch is witnessed indirectly by the egg count only
+# on the DCGO side.)
+card: EX4-074
+clause: EX4-074#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-12, ST1-05, BT4-014, ST7-10, BT1-009, BT3-007, ST1-13, ST1-02, BT1-014, EX4-074, ST1-02, BT1-014, BT4-010, BT1-009, BT3-007, ST1-13, ST1-13]
+    rest: tm-ruin-red
+  p1:
+    stack: [ST1-10, BT4-014, ST1-02, ST1-03, ST1-04, BT1-009, BT3-007, BT1-014, ST1-04, ST1-02, BT4-010, BT1-009, BT3-007, ST1-03, BT1-014, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): hatch Koromon; pass -> P1 3.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Phoenixmon (10 -> -7) -> P0 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 7): breeding-digivolve Agumon (free); pass -> P1 3.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): decline breeding; Vermilimon (5 -> -2) -> P0 2.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 2): promote; Birdramon (2 -> 0); Tai Kamiya (2 -> -2) -> P1 2.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 2): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): Vermilimon (3 -> 0); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT4-014 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0): ShineGreymon ST7-10 (4 -> -1) -> P1 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST7-10 } }
+    expect: { prompt: main_phase }
+  # T10 (P1, memory 1): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (P0): digivolve into ShineGreymon: Ruin Mode through [ShineGreymon]: Cost 4
+  # (3 -> -1). [When Digivolving] fires: both of P1's Digimon get -5000 DP until the
+  # end of P1's next turn (T12). -> P1 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX4-074 } }
+    expect: { prompt: main_phase }
+  # T12 (P1, memory 1): breeding decision (the debuff is live here), then nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T13 (P0, memory 3): attack the player -- THE CLAUSE resolves at end of attack.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Delete 1 of P1's Digimon: Vermilimon (P1's slot 1).
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T14 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 30
+    that:
+      turn: 14
+      p0.field:
+        - card_id: ST1-12
+          dp: -1
+          suspended: false
+          sources: []
+      p0.trash: [EX4-074, ST7-10, BT4-014, ST1-05, ST1-03, ST1-01]
+      p0.security: 6
+      p1.field:
+        - card_id: ST1-10
+          dp: 7000
+          suspended: false
+          sources: []
+      p1.trash: [ST1-02, BT4-014]
+      p1.security: 4

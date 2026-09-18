@@ -1,0 +1,109 @@
+# Exam scenario: Psychemon (BT8-071), clause BT8-071#effect#0 --
+# "[All Turns] Players can't reduce paid play costs."
+#
+# DECK NOTE. `tm-psyche-purple` (qa/dcgo-exams/BT8/tm_bt8_071_pool.json) is
+# the ST-6 purple vanilla shell plus red ST-1 vanillas, carrying 4x Psychemon
+# BT8-071 (and, unused here, Mimi / Loweemon / KaiserLeomon / Purple
+# Scramble); eggs 4x Pagumon ST6-01, never hatched. `tm-stingmon-blue` is the
+# quiet ST-1 red shell carrying 4x Stingmon ST9-09, 4x Gomamon ST2-02 (blue
+# Lv.3 vanilla) and 4x Bearmon ST2-04; eggs 4x Koromon ST1-01, never hatched.
+#
+# THE INSTRUMENT is a play-cost reducer the gate must switch off. Stingmon
+# ST9-09 prints "When you would play this card from your hand, if you have a
+# blue Digimon in play, reduce its play cost by 1" -- a static, prompt-free
+# reduction (ST9_09.cs: ChangeCostClass, Cost -= 1; ours: `kind:
+# cost_reduction, reduction_timing: before_pay_cost, optional: false`).
+# With Gomamon (blue) in play Stingmon would cost 3; with Psychemon on the
+# field it must cost its printed 4. The clause names BOTH players, so the
+# gate is Psychemon's controller (P0) and the reducer is the OPPONENT's (P1).
+#
+#   T1 (P0): hard-play Psychemon (0 -> -3).                        -> P1 3
+#   T2 (P1, 3): Gomamon ST2-02 (3 -> 1); pass.                     -> P0 3
+#   T3 (P0): nothing.                                              -> P1 3
+#   T4 (P1, 3): THE CLAUSE -- play Stingmon. Unreduced, 4 is paid
+#            (3 -> -1) and the turn hands over; reduced to 3 it
+#            would have left P1 on 0, still holding the turn.       -> P0 1
+#   T5 (P0): trailing breeding decision.
+#
+# The witness is therefore both the gauge (P0 on 1 = P1 paid 4, not 3) AND
+# the turn structure: step 9 is P0's T5 breeding decision only because the
+# full cost was paid.
+#
+# PROMPT SHAPE. BT8_071.cs: EffectTiming.None CannotReduceCostClass
+# (PlayerCondition: every player; TargetPermanentsCondition: no target
+# permanents, i.e. PLAY costs, not digivolution; CardCondition: HasPlayCost).
+# A static gate: nothing is asked on either side, and Stingmon's reduction is
+# a static pre-pay adjustment with no prompt of its own. Gomamon and Stingmon
+# are silent on play (Stingmon's inherited is a [When Attacking] that needs
+# it to be a source). Ours (BT8-071.yaml): `kind: flood_gate, modifier:
+# CannotReducePlayCost, target_player: any`.
+card: BT8-071
+clause: BT8-071#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT8-071, ST6-02, ST1-02, ST1-04, ST6-03,
+            ST6-05, ST6-07, ST6-09, ST6-02, ST6-03,
+            ST1-02, ST1-04]
+    rest: tm-psyche-purple
+  p1:
+    stack: [ST2-02, ST9-09, ST1-03, ST1-04, BT1-009,
+            BT3-007, ST1-05, BT1-014, ST1-04, ST1-02,
+            ST2-04, ST1-03, BT1-014]
+    rest: tm-stingmon-blue
+steps:
+  # T1 (P0, memory 0): decline breeding; Psychemon (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT8-071, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): Gomamon (3 -> 1); pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST2-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE -- Stingmon at its full cost of 4 (3 -> -1).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST9-09, from: hand } }
+    expect: { prompt: main_phase }
+  # Memory -1 on P1's side ended the turn: P0's T5 breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.hand: [ST1-03, ST1-04, BT1-009, ST2-04, ST1-03]
+      p1.field:
+        - card_id: ST2-02
+          dp: 3000
+          suspended: false
+          sources: []
+        - card_id: ST9-09
+          dp: 4000
+          suspended: false
+          sources: []
+      p0.field:
+        - card_id: BT8-071
+          dp: 3000
+          suspended: false
+          sources: []

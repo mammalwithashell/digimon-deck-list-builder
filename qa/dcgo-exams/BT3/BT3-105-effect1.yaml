@@ -1,0 +1,173 @@
+# Exam scenario: Breath of the Gods (BT3-105), clause BT3-105#effect#1 --
+# "[Security] Your opponent's Digimon can't attack players for the turn."
+#
+# DECK NOTE. `tm-breath-black` (qa/dcgo-exams/BT3/tm_bt3_105_pool.json): see
+# BT3-105-effect0.yaml. P1 is the shared quiet ST-1 opponent.
+#
+# THE SECURITY-TRIGGER SKELETON: BT3-105 sits at P0's stack[9] -- the TOP of
+# the security stack (stack[5..9] is the pile, reversed) -- and P1 attacks
+# the player with Biyomon ST1-02 on T8. The check flips BT3-105; it is an
+# Option, so no battle follows and the [Security] resolves for P0: every
+# Digimon P1 controls can't attack players for the turn.
+#
+# THE OBSERVABLE PROBLEM, STATED PLAINLY. The clause's consequence is a
+# standing restriction, which neither engine projects as state, and the exam
+# cannot script an ILLEGAL action to prove the restriction bites (an
+# `attack: { target: security }` by P1's second Digimon would fail to lower
+# here and be refused by DCGO's InputDriver there -- neither is a
+# measurement). What this line CAN measure:
+#   * both engines run the flip identically (activation + state agree), and
+#   * the restriction is scoped to PLAYERS: P1's other Digimon, Vermilimon
+#     BT4-014 (8000), still attacks P0's SUSPENDED Gotsumon BT4-065 (6000),
+#     which is legal under the clause and deletes Gotsumon. If either engine
+#     wrongly blocked Digimon attacks too, that step would fail to lower /
+#     be refused, which IS a finding.
+# The negative half ("can't attack players") stays unmeasured by this line;
+# see NOTES-BT3-105.md.
+#
+# STAGING. P0 hard-plays Gotsumon on T1 and attacks the player with it on T7
+# (Biyomon at P1's stack[9] loses 3000 vs 6000, no prompt) so it is SUSPENDED
+# when P1's T8 comes. P1 plays Vermilimon on T2, a SECOND Vermilimon on T4 and
+# Biyomon on T6, so all three are off summoning sickness by T8. Biyomon
+# attacks first (flipping BT3-105), then a Vermilimon attacks Gotsumon.
+#
+# SLOT HYGIENE (the campaign's centre-out rule, ../BT25/NOTES-BT25-083.md).
+# `attack: field.N` reaches DCGO as a COMPACT index into GetFieldPermanents()
+# (frame-id order) and DCGO seats Digimon centre-out (frames 4, 3, 5, ...), so
+# on a TWO-Digimon board our play-order slots are DCGO's reversed. The audited
+# draft fielded Vermilimon + Biyomon and addressed both -- DCGO would have
+# flipped BT3-105 with Vermilimon and thrown Biyomon at Gotsumon. Re-authored:
+# Biyomon is the THIRD Digimon played (index 2 on both sides: ours [V, V, B],
+# DCGO frames [3, 4, 5] = [V, V, B]) and the first two are IDENTICAL
+# Vermilimon, so `field.0` names "a Vermilimon" on both engines and the
+# projected multiset cannot tell them apart.
+#
+# PROMPT SHAPE (BT3_105.cs, SecuritySkill region): SetUpActivateClass(null,
+# ..., -1, false, ...), SetIsSecurityEffect(true) -> GainCanNotAttackPlayer
+# Effect(attackerCondition: opponent battle-area Digimon, defenderCondition:
+# Defender == null, UntilEachTurnEnd). No prompt. Ours (BT3-105.yaml): a
+# continuous CannotAttackPlayer mass modifier over the opponent's Digimon,
+# expiry end_of_turn. No prompt. No blocker on either side.
+#
+# Memory: T1 Gotsumon (0 -> -4) -> P1 4; T2 Vermilimon (4 -> -1) -> P0 1;
+# T3 P0 passes -> P1 3; T4 Vermilimon (3 -> -2) -> P0 2; T5 P0 passes -> P1 3;
+# T6 Biyomon (3 -> 1), pass -> P0 3; T7 attack, pass -> P1 3; T8 two attacks,
+# pass -> P0 3.
+card: BT3-105
+clause: BT3-105#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT4-065, ST5-02, BT2-052, BT3-059, BT2-056,
+            BT3-067, BT5-066, BT2-064, ST5-05, BT3-105,
+            BT2-052, BT3-059, BT2-056, BT3-067]
+    rest: tm-breath-black
+  p1:
+    # The second Vermilimon is P1's T4 DRAW (stack[11]); two copies in one
+    # hand would make `play: BT4-014` ambiguous at T2.
+    stack: [BT4-014, ST1-03, ST1-02, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, BT4-014, BT1-014, BT4-010]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Gotsumon (0 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT4-065, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): Vermilimon (4 -> -1).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 1): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the second Vermilimon (3 -> -2).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 2): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): Biyomon, the THIRD Digimon (3 -> 1); pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): Gotsumon attacks the player (Biyomon 3000 loses the
+  # security battle) and stays suspended; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, memory 3): THE CLAUSE -- Biyomon (field.2, the third Digimon on
+  # both engines) attacks the player and flips BT3-105; the [Security]
+  # resolves with no prompt.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  # Still legal under the clause: a Vermilimon (field.0 -- either copy, they
+  # are identical) attacks P0's suspended Gotsumon, 8000 vs 6000, and deletes
+  # it.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0): trailing breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 20
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT4-065, BT3-105]
+      p0.field: []
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p1.field:
+        - card_id: BT4-014
+          dp: 8000
+          suspended: true
+          sources: []
+        - card_id: BT4-014
+          dp: 8000
+          suspended: false
+          sources: []
+        - card_id: ST1-02
+          dp: 3000
+          suspended: true
+          sources: []

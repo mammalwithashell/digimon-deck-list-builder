@@ -1,0 +1,84 @@
+# Exam scenario: Mimi Tachikawa (BT3-096), clause BT3-096#effect#1 --
+# "[Security] Play this card without paying its memory cost."
+#
+# DECK NOTE. `tm-mimi-purple` (qa/dcgo-exams/BT3/tm_bt3_096_pool.json): see
+# BT3-096-effect0.yaml. P1 is the shared quiet ST-1 opponent.
+#
+# THE SECURITY-TRIGGER SKELETON (the BT8-094-effect2.yaml shape): Mimi sits
+# at P0's stack[9] -- the TOP of the security stack (stack[5..9] is the pile,
+# reversed) -- and P1's Biyomon ST1-02 (played on T2, off summoning sickness
+# by T4) attacks the player on T4. The check flips Mimi and the [Security]
+# plays her (DCGO `PlaySelfTamerSecurityEffect`, mandatory; ours
+# `play_from_security`). A Tamer has no DP, so no battle follows and Biyomon
+# survives. Mimi's own [All Turns] trigger needs an Option use, which never
+# happens here, so nothing else opens.
+#
+# P0's battle area is empty until the flip, so no blocker window precedes the
+# check; P0's hand is filler that never plays.
+card: BT3-096
+clause: BT3-096#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST6-02, ST1-02, ST1-04, ST6-03, ST6-05,
+            ST6-07, ST6-09, ST6-02, ST6-03, BT3-096,
+            ST1-02, ST1-04, ST6-05]
+    rest: tm-mimi-purple
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, BT1-014, BT4-010, ST1-04, ST1-02,
+            BT4-014, ST1-08, ST1-10, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): THE CLAUSE. Biyomon attacks the player; the check
+  # flips P0's stack[9].
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p0.security: 4
+      p0.trash: []
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: true
+          sources: []
+      p0.field:
+        - card_id: BT3-096
+          dp: -1
+          suspended: false
+          sources: []
