@@ -3191,3 +3191,42 @@ with this reason:
   `Game::hand_effect_slot_is_link`) or teach `link:` to lower to PLAY + the
   link branch on our side while emitting DCGO's `ActivateCardAction`.
   `qa/dcgo-exams/BT24/NOTES-BT24-091.md`.
+
+
+## F-ENGINE-FREE-OPTION-USE-IS-AFFORDABILITY-GATED — OPEN (found 2026-09-18, Three Musketeers exam stage, EX7-013#effect#1)
+
+An effect-driven "use 1 … Option card **without paying the cost**" is refused when the
+controller's memory could not have PAID the Option's printed cost, and the refusal
+silently drops the rest of the using effect.
+
+- **Measured** (exam sim-only, real game start): hard-play MagnaKidmon EX7-013 at
+  memory 3 (12: 3 → -9); its mandatory `[On Play]` offers Bind Red Trigger P-180
+  (use cost 6) and the pick is accepted. Result: P-180 stays in hand, P1's security
+  stays 5, **and the mandatory "Then, draw … until you have 6" does not run** (hand
+  stays 5). Declining the same pick on the same board draws to 6 correctly. The same
+  clause through the `[When Digivolving]` arm at memory -1 works (-1 − 6 = -7).
+- **Root cause (read, not yet test-pinned):** `Game::option_legal_play_modes`
+  (`src/game_actions/mod.rs`) filters every mode by
+  `(self.memory - use_cost) >= memory_min` and takes no `OptionCostPolicy`; at -9 a
+  6-cost Option has no legal mode, so `play_option_core` (`src/game_actions/options.rs`,
+  step 3) returns `OptionPlayResult::Invalid` even under `OptionCostPolicy::Free`
+  (step 4 would have charged 0). `run_use_option_from_hand_step`
+  (`src/dsl_cards/step/selections.rs`) then returns early on `Invalid` — "no tail, no
+  outer_conts" — which is what swallows the draw. The pick prompt's candidate filter
+  does not consult legality either, so the prompt OFFERS a card the use will refuse.
+- **Why it is wrong:** a use "without paying the cost" pays nothing, so there is no
+  memory test to fail; DCGO's `CardEffectCommons.PlayOptionCards(payCost: false)` has
+  none (`EX7_013.cs`). `Reduce(n)` / `Fixed(n)` policies have the same shape of bug
+  against the REDUCED cost (the filter uses the printed cost).
+- **Blast radius (not swept):** any effect-driven Option use that routes through
+  `play_option_core` while memory is deep-negative -- typically the `[On Play]` of an
+  expensive Digimon that was just hard-played. Only EX7-013 was measured. Per-card
+  `DebugRunner` tests miss it because they stage memory near 0.
+- **Fix sketch:** thread the cost policy into `option_legal_play_modes` (Free → skip
+  the affordability filter; Reduce/Fixed → test the effective cost), and make an
+  `Invalid` use fall through to the tail instead of aborting it (the printed text is
+  "you may use …. **Then,** draw" — the draw does not depend on the use). Regression
+  test: EX7-013 `[On Play]` at memory -9 with a 6-cost trait Option in hand.
+- **Exam impact:** `qa/dcgo-exams/EX7/EX7-013-effect1.yaml` / `-effect2.yaml` reach the
+  clause through the `[When Digivolving]` arm instead; see
+  `qa/dcgo-exams/EX7/NOTES-EX7-013.md`.

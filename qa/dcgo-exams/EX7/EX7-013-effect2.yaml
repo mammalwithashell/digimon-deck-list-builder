@@ -1,0 +1,179 @@
+# Exam scenario: MagnaKidmon (EX7-013), clause EX7-013#effect#2 --
+# "[End of Your Turn] [Once Per Turn] By trashing 1 Option card from this
+#  Digimon's digivolution cards, 1 of your [Three Musketeers] trait Digimon
+#  gains <Security A. +1> for the turn, and attacks."
+#
+# THE LINE (shared by EX7-013-effect1.yaml and EX7-013-effect2.yaml; they part
+# at the [End of Your Turn] gate).
+#   T1 (P0) / T2 (P1): pass everything.
+#   T3 (P0, 3): play Vermilimon BT4-014 (red Lv.5, 8000 DP, VANILLA, cost 5:
+#            3 -> -2). A red base keeps LadyDevimon BT25-083 out of the line:
+#            her [On Play] is gated on a [Three Musketeers]-TRAIT card in hand
+#            or trash (BT25_083.cs), and this line must hold MagnaKidmon AND
+#            P-180 in hand. Vermilimon prints no [Three Musketeers], so only
+#            the printed Red Lv.5 / 4 circle is open -> no cost prompt.
+#   T4 (P1, 2): pass everything (a pass hands P0 3).
+#   T5 (P0, 3): digivolve MagnaKidmon (4: 3 -> -1, digivolution draw).
+#            [When Digivolving] (EX7_013.cs: SetUpActivateClass(..., -1,
+#            FALSE, ...) -- mandatory, NO OptionalSkill; the "may" rides the
+#            SelectHandEffect's canNoSelect: true): pick Bind Red Trigger
+#            P-180 (the only [Three Musketeers]-trait Option in hand) ->
+#            PlayOptionCards(payCost: false). P-180's [Main] (P_180.cs,
+#            mandatory): IDestroySecurity trashes P1's top security card
+#            (stack[9] = ST1-02, no prompt), then ONE SelectPermanentEffect
+#            (canNoSelect: false) for the tuck -- MagnaKidmon is the only
+#            [Three Musketeers]-trait Digimon. Under the harness that row is
+#            consumed even with one candidate (SetTargetFrames ->
+#            TryAnswerStep); our engine parks the same OwnField pick. SHARED.
+#            "Then, draw until 6": hand is 5 after the use -> draws exactly 1.
+#            Memory -1 -> the turn ends -> [End of Your Turn] [Once Per Turn]
+#            (SetUpActivateClass(..., 1, TRUE, ...) -- OPT + OptionalSkill;
+#            CanActivate: an Option among THIS Digimon's digivolution cards --
+#            P-180, just tucked). MagnaKidmon may attack: it digivolved this
+#            turn onto a base played on T3.
+#
+# ENGINE FINDING met while authoring (logged, not fixed -- see
+# NOTES-EX7-013.md): the [On Play] arm at memory 3 (12 cost: 3 -> -9) cannot
+# be used for this line. `Game::option_legal_play_modes` filters modes by
+# `memory - use_cost >= -10` even for an OptionCostPolicy::Free use, so a
+# "without paying the cost" use of a 6-cost Option at memory -9 comes back
+# `Invalid`, and `run_use_option_from_hand_step` then drops the whole tail
+# (no "draw until 6" either). The [When Digivolving] arm at -1 is clear of it.
+#
+# THE CLAUSE (EX7_013.cs region "End of Your Turn"), prompt by prompt:
+#   1. OptionalSkill (isOptional TRUE) -- accepted. SHARED with our outer
+#      `optional: true` gate (Replacement -> OptionalSkill).
+#   2. SelectCardEffect (Root.Custom over THIS permanent's DigivolutionCards,
+#      IsOption, canNoSelect: () => false, maxCount 1) -- P-180. Ours is a
+#      one-candidate UnionZone{material} pick that `cards:` cannot address
+#      (selection_resolve has no digivolution-card identity), so it is
+#      answered through the single-accept-id `yes:` path SIM-ONLY and the
+#      DCGO row is its own DCGO-ONLY `cards: [P-180]` (the P-180-effect0.yaml
+#      shape).
+#   3. ITrashDigivolutionCards(activateClass) -> P-180's "when effects trash
+#      this card from digivolution cards" trigger: CanActivate needs an
+#      opponent Digimon with DP <= 7000 and P1's board is EMPTY, so it does
+#      not activate on either engine. That is deliberate: our engine resolves
+#      that trigger mid-effect and DCGO stacks it behind the trashing effect
+#      (NOTES-P-180.md), so a live trigger would reorder the prompts below.
+#   4. SelectPermanentEffect (canNoSelect: false): the Digimon that gains
+#      <Security A. +1> -- MagnaKidmon. SHARED. (DCGO's filter is ANY own
+#      battle-area Digimon; the printed text and our YAML say "[Three
+#      Musketeers] trait Digimon". Not separable on a one-Digimon board, and a
+#      two-Digimon board is not slot-safe -- recorded in NOTES-EX7-013.md.)
+#   5. SelectAttackEffect with SetCanNotSelectNotAttack: the player is the
+#      only target (no opposing Digimon). On the wire "attack the player" is
+#      `select_value: -1` (SelectAttackEffect.cs harness hook: a bool answer
+#      aborts); our `Target` prompt cannot map a bare -1 (no candidate set),
+#      so OUR row is the single-accept-id `yes:` SIM-ONLY and DCGO's is the
+#      DCGO-ONLY `value: -1`.
+#   6. The attack checks TWO security cards (<Security A. +1>): Biyomon ST1-02
+#      twice, 3000 DP vanilla -- both lose to 12000 and are trashed. Security
+#      4 -> 2. No blocker, no counter, nothing asked.
+card: EX7-013
+clause: EX7-013#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] opening hand; [5..9] security (never flipped); [10] T3 draw,
+    # [11] T5 draw, [12] the digivolution draw, [13] the clause's draw-to-6.
+    stack: [BT4-014, EX7-013, P-180, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092, BT25-092, BT24-088]
+    rest: tm-magnakidmon-red
+  p1:
+    # stack[9] = the security card P-180's [Main] trashes; stack[8], stack[7]
+    # = the two cards the <Security A. +1> attack checks (vanilla Biyomon,
+    # 3000 DP). [10], [11], [12] = the T2 / T4 / T6 draws.
+    stack: [ST1-03, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, ST1-02, ST1-02, ST1-02,
+            ST1-04, ST1-04, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Vermilimon, the vanilla red Lv.5 base (3 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 2)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): MagnaKidmon onto Vermilimon (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-013 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving], SHARED: the Option to use for free (declinable on
+  # both sides: canNoSelect: true / `optional: true`).
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # P-180's [Main] tuck target, SHARED (one candidate, asked on both sides).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE. 1: the OptionalSkill, accepted.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # 2: the Option to trash. Ours: single-accept-id, sim-only. DCGO: by identity.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # 4: the Digimon that gains <Security A. +1> and attacks. SHARED.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # 5: the attack target -- the player. Two rows for one decision (above).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { value: -1, dcgo_only: true } }
+    expect: { prompt: SelectAttackEffect }
+  # T6 (P1, memory 1): the trailing step, after both security checks.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: -1
+      p0.field:
+        - { card_id: EX7-013, dp: 12000, suspended: false, sources: [BT4-014, P-180] }
+      p1.security: 4
+  - at: 18
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.trash: [P-180]
+      p0.hand: [BT24-088, BT24-088, BT25-092, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: EX7-013, dp: 12000, suspended: true, sources: [BT4-014] }
+      p1.security: 2
+      p1.trash: [ST1-02, ST1-02, ST1-02]
+      p1.field: []

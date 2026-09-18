@@ -1,0 +1,161 @@
+# Exam scenario: Gigadramon (EX7-044), clause EX7-044#inherited#0 --
+# "<Collision> (During this Digimon's attack, give all of your opponent's
+#  Digimon <Blocker>, and the opponent blocks if able.)"
+#
+# An inherited effect: Gigadramon must be a DIGIVOLUTION CARD. The line plays
+# it, digivolves the VANILLA black Lv.6 HiAndromon BT2-064 on top (printed
+# Black Lv.5 / cost 2; no special condition -> one route, no cost prompt) and
+# attacks the player while P1 holds one unsuspended VANILLA Biyomon ST1-02
+# (3000 DP, no <Blocker> of its own).
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, 3): play Biyomon (2: 3 -> 1), pass.
+#   T3 (P0, 3): play Gigadramon (7: 3 -> -4); its mandatory [On Play] reveal
+#            finds nothing (below).
+#   T4 (P1, 4): pass everything.
+#   T5 (P0, 3): HiAndromon onto Gigadramon (2: 3 -> 1, draw 1); attack the
+#            player. THE CLAUSE: <Collision> gives Biyomon <Blocker> and FORCES
+#            the block -- DCGO AttackProcess.cs `canNoSelect:
+#            !AttackingPermanent.HasCollision`: ONE SelectPermanentEffect asked
+#            of the DEFENDER, not declinable, consumed with one candidate; our
+#            block window is mandatory under Collision (the same row
+#            BT25-100-effect7.yaml uses). 12000 vs 3000: Biyomon is deleted.
+#            P0 passes at memory 1.
+#   T6 (P1): the trailing step.
+#
+# WITNESS: p1.security stays 5 on an attack declared at the PLAYER, and
+# Biyomon -- a Digimon with no <Blocker> -- is in P1's trash. Without the
+# inherited <Collision> there is no legal blocker and the attack reaches
+# security (5 -> 4).
+#
+# THE REVEAL IS KEPT EMPTY-HANDED. Gigadramon's [On Play] / [When
+# Digivolving] is mandatory (EX7_044.cs: SetUpActivateClass(..., -1, FALSE,
+# ...) -- no OptionalSkill) and cannot be avoided, so the four revealed cards
+# (stack[11..14]) hold NO [Three Musketeers]-trait Option: Scopemon BT21-071
+# x2, Satellamon BT21-074, LadyDevimon BT25-083. Then
+#   * RevealDeckTopCardsAndSelect computes maxCount = min(1, 0 candidates) = 0
+#     and opens NO SelectCardEffect; our `select_reveal` parks nothing either;
+#   * nothing is placed, so the "if this effect placed" delete is skipped on
+#     both sides (cardWasPlaced false / our `if` on the placement binding);
+#   * RemainingCardsPlace.DeckTopOrBottom still asks: a generic_bool ("Deck
+#     Top" = true / "Deck Bottom" = false, RevealLibrary.cs
+#     ReturnRevealedCardsToLibraryTopOrBottom) and then, with 4 >= 2 cards,
+#     ONE multi-pick ordering SelectCardEffect (canNoSelect: false). Ours is an
+#     EffectChoice named by LABEL plus one OrderedPermutation pick per
+#     position. Neither side can be written in the other's cardinality, so
+#     the rows are split sim_only / dcgo_only exactly as in
+#     EX7-044-effect1.yaml (docs/DCGO_EXAM.md "The table": EffectChoice,
+#     OrderedPermutation). The remainder goes to the BOTTOM, so later draws
+#     continue down the stack (stack[15], stack[16]).
+#
+# <Collision> (keyword-semantics 16-30): Mandatory; CollisionSelfStaticEffect(
+# isInheritedEffect: true) is a static effect -- nothing is asked of P0.
+card: EX7-044
+clause: EX7-044#inherited#0
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (never flipped); [10] T3 draw; [11..14] the
+    # revealed four (sent to the bottom); [15] T5 draw; [16] digivolution draw.
+    stack: [EX7-044, BT2-064, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-071, BT21-071, BT21-074, BT25-083,
+            BT25-092, BT25-092]
+    rest: tm-gigadramon-line
+  p1:
+    # [10], [11], [12] = the T2 / T4 / T6 draws.
+    stack: [ST1-02, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-04, ST1-04, ST1-02, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon, the Digimon <Collision> will force to block.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Gigadramon (3 -> -4). Its [On Play] reveal finds no candidate.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-044, from: hand } }
+    expect: { prompt: main_phase }
+  # Remainder to the BOTTOM. Ours: EffectChoice by label, sim-only. DCGO:
+  # generic_bool, select_bool false = "Deck Bottom".
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-074], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071, BT21-071, BT21-074, BT25-083], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): HiAndromon over Gigadramon (3 -> 1), then attack the player.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT2-064 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: P1's forced block with the Biyomon <Collision> made a blocker.
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The block window: the attack is declared, Biyomon still stands.
+  - at: 19
+    that:
+      turn: 5
+      p1.security: 5
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 21
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: BT2-064, dp: 12000, suspended: true, sources: [EX7-044] }
+      p1.security: 5
+      p1.trash: [ST1-02]
+      p1.field: []

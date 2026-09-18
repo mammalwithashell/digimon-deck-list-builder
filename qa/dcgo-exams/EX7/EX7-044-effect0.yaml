@@ -1,0 +1,134 @@
+# Exam scenario: Gigadramon (EX7-044), clause EX7-044#effect#0 --
+# "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+#
+# The printed black circle is ALSO "Lv.4 / cost 3", so a black base cannot
+# tell the two apart. The base must be a NON-black Lv.4 that prints "[Three
+# Musketeers]" somewhere in its text: Deputymon EX7-010 (RED Lv.4; "[Your
+# Turn] This Digimon gains the [Three Musketeers] trait"). Only the clause
+# under exam makes Gigadramon's digivolution onto it legal -- on DCGO through
+# `TopCard.IsLevel4 && TopCard.HasText("Three Musketeers")` (HasText scans
+# name + all printed text + traits, CardSource.cs), on ours through
+# `in_text_contains`. One open route -> no cost prompt on either side. Same
+# construction as BT21-074-effect0.yaml (Satellamon onto Deputymon).
+#
+#   T1 (P0) / T2 (P1): pass everything.
+#   T3 (P0, 3): play Deputymon (6: 3 -> -3). It has no [On Play]; its
+#            [When Digivolving] / [When Attacking] never fires on this line.
+#   T4 (P1, 3): pass everything.
+#   T5 (P0, 3): THE CLAUSE -- digivolve Gigadramon onto Deputymon for 3
+#            (3 -> 0, draw 1). Its mandatory [When Digivolving] reveal finds
+#            nothing (below). Memory 0: P0 passes.
+#   T6 (P1): the trailing step. The assert sits on P1's turn so Deputymon's
+#            inherited "[Your Turn] +2000 DP" is off and Gigadramon reads its
+#            printed 7000.
+#
+# THE REVEAL IS KEPT EMPTY-HANDED. Gigadramon's [On Play] / [When
+# Digivolving] is mandatory (EX7_044.cs: SetUpActivateClass(..., -1, FALSE,
+# ...) -- no OptionalSkill) and cannot be avoided, so the four revealed cards
+# (stack[11..14]) hold NO [Three Musketeers]-trait Option: Scopemon BT21-071
+# x2, Satellamon BT21-074, LadyDevimon BT25-083. Then
+#   * RevealDeckTopCardsAndSelect computes maxCount = min(1, 0 candidates) = 0
+#     and opens NO SelectCardEffect; our `select_reveal` parks nothing either;
+#   * nothing is placed, so the "if this effect placed" delete is skipped on
+#     both sides (cardWasPlaced false / our `if` on the placement binding);
+#   * RemainingCardsPlace.DeckTopOrBottom still asks: a generic_bool ("Deck
+#     Top" = true / "Deck Bottom" = false, RevealLibrary.cs
+#     ReturnRevealedCardsToLibraryTopOrBottom) and then, with 4 >= 2 cards,
+#     ONE multi-pick ordering SelectCardEffect (canNoSelect: false). Ours is an
+#     EffectChoice named by LABEL plus one OrderedPermutation pick per
+#     position. Neither side can be written in the other's cardinality, so
+#     the rows are split sim_only / dcgo_only exactly as in
+#     EX7-044-effect1.yaml (docs/DCGO_EXAM.md "The table": EffectChoice,
+#     OrderedPermutation). The remainder goes to the BOTTOM, so later draws
+#     continue down the stack (stack[15], stack[16]).
+card: EX7-044
+clause: EX7-044#effect#0
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (never flipped); [10] T3 draw; [11] T5
+    # draw; [12] the digivolution draw (drawn BEFORE [When Digivolving]
+    # resolves); [13..16] the revealed four (sent to the bottom).
+    stack: [EX7-010, EX7-044, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092, BT21-071, BT21-071,
+            BT21-074, BT25-083]
+    rest: tm-gigadramon-line
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, ST1-02, ST1-02, ST1-02,
+            ST1-04, ST1-04, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Deputymon, the red Lv.4 with the trait name in its text.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-044 } }
+    expect: { prompt: main_phase }
+  # Remainder to the BOTTOM. Ours: EffectChoice by label, sim-only. DCGO:
+  # generic_bool, select_bool false = "Deck Bottom".
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-074], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071, BT21-071, BT21-074, BT25-083], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # Memory 0: still P0's turn. Pass (P1 gets 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 18
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: EX7-044, dp: 7000, suspended: false, sources: [EX7-010] }
+      p1.field: []
