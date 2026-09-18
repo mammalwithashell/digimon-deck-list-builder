@@ -120,3 +120,16 @@ lowered with no compensation row (same observation as
   BT7-056 card-spec error — any "when a card is added to your hand" observer
   or hand-count-dependent second bucket would see it. Not fixed here (exam
   stage does not edit the engine).
+  **TRIAGED 2026-09-18: DCGO QUIRK, no fix.** The printed text is ONE "Add"
+  with two targets -- `general_rule.pdf` 15-15-10-1 ("a single effect allows
+  you to select multiple targets with different conditions") plus 15-1-2
+  (processed in printed order: both targets are selected, then the single add
+  is performed). DCGO's per-condition `SelectCardEffect(Mode.AddHand)` `foreach`
+  (`RevealLibrary.cs:291-336`; its own comment says the conditions are "chosen
+  at once (per card game rules)") moves each pick when its prompt closes -- an
+  implementation artefact. Outcome-neutral: nothing can trigger or resolve
+  mid-effect and neither bucket reads the hand. `--all-diffs` re-run against the
+  preserved sidecar: the step-7 `p0.hand` field is the ONLY diff. Same family
+  as `EX7-008#effect#1`; see `docs/DCGO_EXAM.md` "RevealBucket add timing". The
+  verdict stays `diverged` (triaged); the engine is NOT changed to add per
+  bucket.

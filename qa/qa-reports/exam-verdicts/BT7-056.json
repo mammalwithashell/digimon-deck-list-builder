@@ -9,7 +9,7 @@
       "label": "Effect",
       "text_sha256": "0d8a3e1916676a32a741e8fa1719fe2094590f6594d7a2eb459fe0dcab6a42be",
       "scenario_path": "qa/dcgo-exams/BT7/BT7-056-effect0.yaml",
-      "reason": "DIVERGED at step 7 (compared 9 of 10 ours / 9 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "reason": "DIVERGED at step 7 (2nd reveal pick row): p0.hand ours lacks EX7-073, dcgo already holds it -- DCGO adds the first bucket's pick to hand before asking the second bucket; ours adds both after the last pick. End state agrees (no downstream rows). TRIAGED 2026-09-18 (three-musketeers-1): DCGO QUIRK, no fix -- the printed text is ONE 'Add' with two targets (general_rule.pdf 15-15-10-1: a single effect selecting multiple targets with different conditions; 15-1-2: processed in printed order, and the one 'Add' follows both selections); DCGO's per-condition SelectCardEffect(Mode.AddHand) foreach (RevealLibrary.cs:291-336 RevealDeckTopCardsAndSelect, whose own comment says the conditions are 'chosen at once (per card game rules)') moves each pick as its prompt closes -- an implementation artifact, outcome-neutral (nothing triggers or resolves mid-effect; neither bucket reads the hand). --all-diffs re-run vs the preserved sidecar 20260918T072927Z_6ee479c0: this one p0.hand field at step 7 is the ONLY diff. Same family as EX7-008#effect#1; see docs/DCGO_EXAM.md 'Rows where one side looks rules-wrong' (RevealBucket add timing).",
       "recorded_at": "2026-09-18T07:55:15.717311100+00:00"
     },
     "BT7-056#inherited#0": {
