@@ -155,6 +155,72 @@ fn bt25_091_on_play_returns_ts_option_from_trash() {
     let _ = hand_before;
 }
 
+/// "If this effect didn't return, <Draw 1>": a successful trash → hand return
+/// must NOT draw. DCGO BT25_091.cs:52-93 draws only on `!returned`. The deck is
+/// non-empty here so a spurious draw is observable (the test above runs with an
+/// empty deck, where the draw is a silent no-op). DCGO exam
+/// BT25-091#effect#1 led on exactly this: our p0.hand carried an extra card.
+#[test]
+fn bt25_091_on_play_return_does_not_draw() {
+    let mut runner = monica_runner()
+        .hand(0, &["BT25-091"])
+        .add_card(make_ts_option("TS-OPT"))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"; 5])
+        .memory(8)
+        .start();
+    runner.inject_trash(0, "TS-OPT");
+
+    let field_index = runner.play(0, 0).expect("Monica plays from hand");
+    let deck_before = runner.deck_size(0);
+    let hand_before = runner.hand_size(0);
+    // play_from_hand fires [On Play] itself (no extra fire_on_play here —
+    // that would queue a second instance of the clause).
+    let _ = field_index;
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    let view = runner.pending_selection_view().unwrap();
+    let pick = *view
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("a real trash pick");
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("return the TS Option");
+    runner.auto_resolve();
+
+    assert_eq!(runner.hand_size(0), hand_before + 1, "only the returned Option joins the hand");
+    assert_eq!(runner.deck_size(0), deck_before, "a successful return must not <Draw 1>");
+}
+
+/// Declining the optional return (a legal target exists) takes the draw
+/// branch — official Q&A on BT25-091 ("Yes ... if you choose to not return").
+#[test]
+fn bt25_091_on_play_declined_return_draws() {
+    let mut runner = monica_runner()
+        .hand(0, &["BT25-091"])
+        .add_card(make_ts_option("TS-OPT"))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"; 5])
+        .memory(8)
+        .start();
+    runner.inject_trash(0, "TS-OPT");
+
+    let field_index = runner.play(0, 0).expect("Monica plays from hand");
+    let deck_before = runner.deck_size(0);
+    let _ = field_index;
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    let view = runner.pending_selection_view().unwrap();
+    assert!(runner.pending_is_optional(), "the return is declinable");
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline the return");
+    runner.auto_resolve();
+
+    assert_eq!(runner.trash_size(0), 1, "TS Option stays in trash");
+    assert_eq!(runner.deck_size(0), deck_before - 1, "declining draws 1");
+}
+
 #[test]
 fn bt25_091_on_play_draws_when_no_return() {
     // No TS Option in trash → cannot return → fallback Draw 1.

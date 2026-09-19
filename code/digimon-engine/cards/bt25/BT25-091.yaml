@@ -28,8 +28,14 @@ effects:
               - trait_has: TS
           prompt: "Return 1 [TS] trait Option card from your trash to your hand"
       - add_to_hand_from_trash: { of: you, card: pick }
+      # "If this effect didn't return" reads the trash -> hand move, which
+      # `add_to_hand_from_trash` records in the result log's `added_to_hand`
+      # (NOT `returned_cards`, which tracks field/deck returns). Gating on
+      # `effect_returned_any_card` was always-false here, so the draw fired
+      # even after a successful return (DCGO exam BT25-091#effect#1). DCGO
+      # BT25_091.cs:52-93 draws only on `!returned`, set iff a card was picked.
       - if:
-          condition: { effect_returned_any_card: false }
+          condition: { effect_added_any_card_to_hand: false }
           then:
             - draw: { of: you, count: 1 }
 

@@ -30,14 +30,14 @@
 #
 # WITNESS at T6: Iron Slash is back in p0's hand and p0's trash is empty.
 #
-# PREDICTED DIVERGENCE (engine-side; NOTES-BT25-091.md): the printed "If this
-# effect didn't return, <Draw 1>" must NOT draw here, and DCGO draws only on
-# `!returned`. Measured at lowering, OUR engine draws anyway -- p0's hand is
-# 8 cards (5 opening minus Monica, plus the T3 and T5 turn draws, plus Iron
-# Slash, PLUS stack[12] BT3-007) where 7 is correct. The hand is therefore
-# deliberately NOT asserted below (asserting either value would launder one
-# engine's answer); the oracle diff is expected to lead on `p0.hand` at the
-# first row after the return.
+# DIVERGENCE FOUND AND FIXED (2026-09-19): the printed "If this effect
+# didn't return, <Draw 1>" must NOT draw here, and DCGO draws only on
+# `!returned` (BT25_091.cs:52-93). Our YAML gated the draw on
+# `effect_returned_any_card`, which `add_to_hand_from_trash` never records
+# (it logs `added_to_hand`), so we drew stack[12] BT3-007 anyway: the oracle
+# diff led on `p0.hand` at step 14 (ours 8 cards, DCGO 7). The gate is now
+# `effect_added_any_card_to_hand: false`; the oracle diff against sidecar
+# 20260918T130047Z_8f408f4b is CLEAN, so the DCGO-observed hand is asserted.
 #
 # Memory: T1 p0 -> p1 3; T2 p1 plays Biyomon (2): 3 -> 1, passes -> p0 3;
 # T3 p0 passes -> p1 3; T4 p1 attacks (free), passes -> p0 3; T5 Monica (4):
@@ -150,6 +150,7 @@ assert:
       turn: 6
       p0.memory: -1
       p0.security: 4
+      p0.hand: [BT1-009, BT25-100, BT4-010, BT4-010, ST1-04, ST1-04, ST1-05]
       p0.trash: []
       p0.field:
         - card_id: BT25-091
