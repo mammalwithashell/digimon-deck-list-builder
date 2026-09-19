@@ -57,7 +57,7 @@ steps:
   # T4 (P1): breeding-digivolve -> Agumon.
   - actor: 1
     do: { digivolve: { from: breeding, using: ST1-03 } }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }

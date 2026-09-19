@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:17:23.859433800+00:00",
+  "clauses": {
+    "P-108#effect#2": {
+      "clause_id": "P-108#effect#2",
+      "card_id": "P-108",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "6931865ac48e8e08cdc6db2cf42272e7e1c5a18de272c3544f34aaf5b3c94f55",
+      "scenario_path": "qa/dcgo-exams/P/P-108-effect2.yaml",
+      "recorded_at": "2026-09-19T15:17:23.859433800+00:00"
+    }
+  }
+}

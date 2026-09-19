@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:17:23.361706100+00:00",
+  "clauses": {
+    "LM-056#effect#0": {
+      "clause_id": "LM-056#effect#0",
+      "card_id": "LM-056",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "19d0b6645c9ce387a646f7124d8668519b6fcadce2ed2ddb3a40271760ebd581",
+      "scenario_path": "qa/dcgo-exams/LM/LM-056-effect0.yaml",
+      "recorded_at": "2026-09-19T15:17:23.361706100+00:00"
+    },
+    "LM-056#effect#1": {
+      "clause_id": "LM-056#effect#1",
+      "card_id": "LM-056",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "ba6248eb0985de1842805fe441cc8bcd82f7b28edd02438371bb50dc9a2fdb25",
+      "scenario_path": "qa/dcgo-exams/LM/LM-056-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:29.446171100+00:00"
+    }
+  }
+}

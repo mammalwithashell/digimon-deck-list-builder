@@ -47,3 +47,14 @@ Related measured asymmetry (not exercised here): our engine does not count a
 bare Digi-Egg for an Option's colour requirement while DCGO does — see
 `../P/NOTES-P-108.md`. `effect#0` is unaffected: its egg is the WRONG colour on
 both sides, which is the point of the line.
+
+## Oracle pass (2026-09-19, drain of 2026-09-18) -- breeding-label fix
+
+The failed jobs aborted with `expected prompt 'breeding_action' but DCGO asked
+'main_phase'` on a breeding-area digivolve. That is a scenario label defect, not
+an engine divergence: with a Lv.2 in the breeding area (no hatch, no move) BOTH
+engines open the turn on the main phase (the campaign convention, e.g.
+BT21-054-effect0.yaml, oracle-CLEAN; the sim side does not assert phase-prompt
+labels, which is why sim-only was green). The `expect.prompt` on those
+`digivolve: { from: breeding }` steps is now `main_phase`; sim-only re-lowered
+green. Those clauses stay `unmeasured` until re-drained.

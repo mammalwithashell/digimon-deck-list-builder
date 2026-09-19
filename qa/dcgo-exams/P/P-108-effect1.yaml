@@ -102,7 +102,7 @@ steps:
   # Digimon now sits in the breeding area. Play P-108 (3 -> 1), take Youkomon.
   - actor: 0
     do: { digivolve: { from: breeding, using: ST6-05 } }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
   - actor: 0
     do: { play: { card: P-108, from: hand } }
     expect: { prompt: main_phase }

@@ -62,3 +62,14 @@ ST1-02, red) and hand 3 (Dracomon ST1-04) as LEGAL over the PURPLE Pagumon:
 `code/digimon-engine/cards/st1/ST1-02.yaml` authors its circle as
 `from: { level_eq: 2 }` with no `color_is: red`. The printed circle is red.
 Not exercised by any line here; recorded for the starter-deck owners.
+
+## Oracle pass (2026-09-19, drain of 2026-09-18) -- breeding-label fix
+
+The failed jobs aborted with `expected prompt 'breeding_action' but DCGO asked
+'main_phase'` on a breeding-area digivolve. That is a scenario label defect, not
+an engine divergence: with a Lv.2 in the breeding area (no hatch, no move) BOTH
+engines open the turn on the main phase (the campaign convention, e.g.
+BT21-054-effect0.yaml, oracle-CLEAN; the sim side does not assert phase-prompt
+labels, which is why sim-only was green). The `expect.prompt` on those
+`digivolve: { from: breeding }` steps is now `main_phase`; sim-only re-lowered
+green. Those clauses stay `unmeasured` until re-drained.

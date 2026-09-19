@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:27.847957700+00:00",
+  "clauses": {
+    "BT19-075#effect#0": {
+      "clause_id": "BT19-075#effect#0",
+      "card_id": "BT19-075",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "8fd62e9c8a272b03a27386bc849621592c27869a95ab83bd75d1d5501f7e6b19",
+      "scenario_path": "qa/dcgo-exams/BT19/BT19-075-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:26.190615500+00:00"
+    },
+    "BT19-075#effect#1": {
+      "clause_id": "BT19-075#effect#1",
+      "card_id": "BT19-075",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "7d31b743e03b5b3a96f130b2fa29e4c4bffba5545e8898e8c209ff176f2bf7b0",
+      "scenario_path": "qa/dcgo-exams/BT19/BT19-075-effect1.yaml",
+      "recorded_at": "2026-09-18T13:58:37.131107400+00:00"
+    },
+    "BT19-075#effect#3": {
+      "clause_id": "BT19-075#effect#3",
+      "card_id": "BT19-075",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "d0688ed1fef2af92c32cccc41e5bc44e2a100578a4ee1bfc56ffacffc74d57af",
+      "scenario_path": "qa/dcgo-exams/BT19/BT19-075-effect3.yaml",
+      "recorded_at": "2026-09-19T15:13:27.847957700+00:00"
+    }
+  }
+}

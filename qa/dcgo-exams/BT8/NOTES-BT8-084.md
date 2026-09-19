@@ -99,3 +99,13 @@ gaps showing up as data, which is what the verdict class is for; the `assert:`
 blocks name only fields both engines agree on so sim-only stays green. When the
 gaps close, replace the `dcgo_only` row with a shared `targets:` pick and
 re-run.
+
+## Oracle pass (2026-09-19, drain of 2026-09-18)
+
+Both lines completed on DCGO and diverged on the LAST row exactly as predicted:
+`effect1`: `p1.field[1].dp` (Phoenixmon) ours 12000 / DCGO 7000 (the DP-minus
+sentence, `G-DSL-SOURCE-STACK-UNION-COLOR-COUNT`); `effect2`: `p0.field[0].dp`
+(Kimeramon) ours 8000 / DCGO 12000 (`G-DSL-OWN-STACK-COLOR-COUNT-GTE` +
+`G-ENGINE-ADDITIVE-COLOR-TREATMENT`). Both rows share one step, so each file
+reports both fields. Known, logged gaps -- no new finding. `effect#0` stored as
+`unreachable` (no DNA verb). **3 clauses: 0 confirmed, 2 diverged, 1 unreachable.**

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:18:00.383926+00:00",
+  "clauses": {
+    "BT8-084#effect#0": {
+      "clause_id": "BT8-084#effect#0",
+      "card_id": "BT8-084",
+      "verdict": "unreachable",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "79b360b215c5f33d66fb63fbc7a9315c8d46faf73ee8c48d604399cc4f07aadf",
+      "reason": "[DNA Digivolve] has no verb on either wire (G-TOOLING-EXAM-NO-DNA-VERB, NOTES-BT8-084.md): scenario.rs STEP_VERBS has no DNA verb and lower::matches_intent no DnaDigivolve arm, and DCGO's harness InputDriver.BuildMainPhaseAction refuses the DNA action range. The oracle exists (BT8_084.cs AddJogressConditionClass); the wire cannot reach it.",
+      "recorded_at": "2026-09-19T15:18:00.383926+00:00"
+    },
+    "BT8-084#effect#1": {
+      "clause_id": "BT8-084#effect#1",
+      "card_id": "BT8-084",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "8f1770c5581f1c4f8a0c3cbe33205fc8fa04784bccc0e40aa09a5eb3f43d0a4b",
+      "scenario_path": "qa/dcgo-exams/BT8/BT8-084-effect1.yaml",
+      "reason": "DIVERGED at step 16 (compared 16 of 17 ours / 17 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-19T15:13:58.348989900+00:00"
+    },
+    "BT8-084#effect#2": {
+      "clause_id": "BT8-084#effect#2",
+      "card_id": "BT8-084",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "cd521fb2cd4d66811cee8eb57e92bf2bc5b73f55b15c446ea62c4020b0b87b68",
+      "scenario_path": "qa/dcgo-exams/BT8/BT8-084-effect2.yaml",
+      "reason": "DIVERGED at step 16 (compared 16 of 17 ours / 17 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-19T15:13:58.950379100+00:00"
+    }
+  }
+}

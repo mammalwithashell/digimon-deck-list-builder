@@ -67,14 +67,14 @@ steps:
   # T3 (P0): breeding-digivolve -> Patamon (cost 0).
   - actor: 0
     do: { digivolve: { from: breeding, using: BT25-031 } }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
   # T4 (P1): breeding-digivolve -> Agumon.
   - actor: 1
     do: { digivolve: { from: breeding, using: ST1-03 } }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }

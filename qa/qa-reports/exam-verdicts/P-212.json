@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:54.092054100+00:00",
+  "clauses": {
+    "P-212#effect#0": {
+      "clause_id": "P-212#effect#0",
+      "card_id": "P-212",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "8cf58a16558e2b92a53bc7c2df6a145c77afce130f0830a9c8bbebec963c0456",
+      "scenario_path": "qa/dcgo-exams/P/P-212-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:52.334618+00:00"
+    },
+    "P-212#effect#1": {
+      "clause_id": "P-212#effect#1",
+      "card_id": "P-212",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/P/P-212-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:52.930139700+00:00"
+    },
+    "P-212#effect#2": {
+      "clause_id": "P-212#effect#2",
+      "card_id": "P-212",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "5d3a6c8095c6a9fe58b613a14522f17118c2ffaf267be4a9e810080a28bbd667",
+      "scenario_path": "qa/dcgo-exams/P/P-212-effect2.yaml",
+      "recorded_at": "2026-09-19T15:13:53.557772400+00:00"
+    },
+    "P-212#effect#3": {
+      "clause_id": "P-212#effect#3",
+      "card_id": "P-212",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/P/P-212-effect3.yaml",
+      "recorded_at": "2026-09-19T15:13:54.092054100+00:00"
+    }
+  }
+}

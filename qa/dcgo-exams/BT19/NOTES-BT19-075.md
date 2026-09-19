@@ -65,3 +65,23 @@ Deltamon is an "other Digimon" and it was deleted. The `assert:` block
 deliberately names only fields both engines should agree on; the oracle differ
 compares `p1.security` on every row and will report it. **Not fixed here** —
 recorded for triage after the oracle pass.
+
+## Oracle pass (2026-09-19, drain of 2026-09-18) -- effect2 is NOT slot-safe
+
+`effect0`, `effect1`, `effect3` diffed CLEAN -> `confirmed`. `effect2`'s job
+failed (`SelectPermanentEffect: wanted card 'BT6-012' ... offered [BT18-019]`)
+and stays **`unmeasured`** -- a scenario defect, not an engine finding. The
+line has TWO p0 Digimon when it addresses `field.1` (T5 digivolve + attack).
+DCGO seats Digimon centre-out (Deltamon frame 4, Millenniummon frame 3 ->
+compact order [Millenniummon, Deltamon]); ours is play order [Deltamon,
+Millenniummon]. So DCGO's action 401 put MoonMillenniummon on **Deltamon**
+(the sidecar diff leads at step 12: `p0.field[1].sources` DCGO `[BT6-012]`),
+and the replacement then only offered Millenniummon. Selections travel by card
+identity; main-phase `field.N` actions do not. Re-author so Millenniummon is
+addressed at an index both engines agree on (e.g. a third-played Digimon sits at
+index 2 on both), then re-drain. Side observation for the DCGO harness: the
+recording shows that digivolve RESOLVED (`action_detail` cost_paid 0,
+`alt_path: cost_modifier`) -- a Lv.6 onto a Lv.4 non-[Millenniummon] for 0 --
+which looks like InputDriver applying the [Millenniummon] alt path to the wrong
+frame; worth checking before trusting any slot-mismatched line.
+**4 clauses: 3 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**
