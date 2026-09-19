@@ -1351,19 +1351,23 @@ impl Game {
                     self.install_outer_optional_trigger_selection(qe);
                     return;
                 }
-                // An Option's `[Main]` body runs as ONE effect: triggers it
-                // causes (e.g. `[On Deletion]`) stay queued until it has
-                // resolved (15-8-3-2) and the Option has been disposed
-                // (9-1-5 — see `complete_option_body_if_done`). Manual
-                // decrement (no flush): this loop continues the drain itself.
-                let is_option_main = qe.timing == EffectTiming::OptionMain;
-                if is_option_main {
-                    self.enter_deferred_drain();
-                }
+                // Every queued effect's body runs as ONE effect: triggers it
+                // causes (e.g. `[On Deletion]` of a Digimon the body deletes)
+                // stay queued until it has resolved — "trigger-type effects
+                // can't activate during the processing for a rule or effect"
+                // (general_rule.pdf 15-8-3-2). For an Option's `[Main]` the
+                // Option is also disposed first (9-1-5 — see
+                // `complete_option_body_if_done`). Originally scoped to
+                // OptionMain (P-170); generalized for EX4-074's [End of
+                // Attack], whose self-deletion [On Deletion] resolved before
+                // the body's own target pick (DCGO stacks it and drains after
+                // the body returns). Manual decrement (no flush): this loop
+                // continues the drain itself. A body that parks leaves the
+                // scope here; its resume runs in `resolve_generic_selection`'s
+                // own deferred scope, so no counter leaks across the park.
+                self.enter_deferred_drain();
                 self.run_queued_effect(qe);
-                if is_option_main {
-                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
-                }
+                self.draining_deferred = self.draining_deferred.saturating_sub(1);
                 self.rules_check_between_queued_effects();
                 continue;
             }
