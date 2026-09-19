@@ -1417,14 +1417,27 @@ impl Game {
         &mut self,
         sources: &[crate::card_source::CardSource],
     ) {
-        let penalty: i16 = sources
+        // <Overflow> is OWNER-relative: "lose X memory" (4-1-4) is applied to
+        // the card's owner (4-17-1; DCGO `AceOverflowClass.Overflow()` ->
+        // `cardSource.Owner.AddMemory(-OverflowMemory)`, CardController.cs
+        // ~6151). The raw `self.memory` seesaw is turn-player relative, so
+        // adding the signed value directly made a non-turn-player owner GAIN
+        // memory. Simultaneous instances resolve turn player's first (4-17-5).
+        let turn_player = self.turn_player();
+        let mut penalties: Vec<(PlayerId, i16)> = sources
             .iter()
             .filter(|source| !source.is_token)
-            .filter_map(|source| self.card_data.get(source.data_index)?.ace_overflow)
-            .map(|value| value as i16)
-            .sum();
-        if penalty != 0 {
-            self.memory += penalty;
+            .filter_map(|source| {
+                let value = self.card_data.get(source.data_index)?.ace_overflow?;
+                Some((source.owner, value as i16))
+            })
+            .filter(|(_, value)| *value != 0)
+            .collect();
+        penalties.sort_by_key(|(owner, _)| if *owner == turn_player { 0 } else { 1 });
+        for (owner, value) in penalties {
+            // `ace_overflow` is stored signed (e.g. -4): a gain of -4 for the
+            // owner is "lose 4 memory".
+            self.gain_memory_for_player(owner, value);
         }
     }
 

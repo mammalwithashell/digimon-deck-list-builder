@@ -37,7 +37,7 @@
 # Gaia Force's pick is ONE SelectPermanentEffect (the P-170-effect5.yaml
 # shape), consumed under the harness even with a single candidate.
 #
-# PREDICTED DIVERGENCE -- an ENGINE FINDING measured while authoring
+# RESOLVED DIVERGENCE (2026-09-19, ENGINE FIX) -- an ENGINE FINDING measured while authoring
 # (NOTES-EX7-059.md). Our engine reads `p0.memory: 9` on the trailing row,
 # not 1: `Game::apply_ace_overflow_for_sources` (game/mod.rs) does
 # `self.memory += penalty` on the raw seesaw, which is TURN-PLAYER relative
@@ -125,12 +125,14 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # p0.memory is deliberately NOT asserted: the rules-correct value is 1 and
-  # our engine currently reads 9 (PREDICTED DIVERGENCE in the header). The
-  # oracle backfill supplies it once the engine agrees.
+  # p0.memory: 1 -- the clause's witness. Our engine read 9 until the
+  # owner-relative <Overflow> fix (G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE,
+  # docs/RUST_ENGINE_GAPS.md); oracle re-diff against the preserved sidecar
+  # 20260918T133846Z_0b5e93f1... is CLEAN.
   - at: 15
     that:
       turn: 7
+      p0.memory: 1
       p0.field: []
       p0.trash: [EX7-011, EX7-059]
       p1.field:

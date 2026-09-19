@@ -12,7 +12,7 @@ exists — the card is **not** `unavailable`. No verdict is stored yet
 | `EX7-059#effect#1` | `[Hand] [Counter] <Blast Digivolve>` | `EX7-059-effect1.yaml` | lowers, asserts pass — oracle diverged as predicted (finding 2); engine FIXED, re-diff CLEAN → **confirmed** |
 | `EX7-059#effect#2` | `[On Play] [When Digivolving] Return 1 Option card from your trash to the hand. Then, you may use 1 [Three Musketeers] trait Option card from your hand without paying the cost.` | `EX7-059-effect2.yaml` ([When Digivolving] arm, both halves) | lowers, asserts pass |
 | `EX7-059#effect#3` | `[When Attacking] [Once Per Turn] By trashing 1 Option card from this Digimon's digivolution cards, you may use 1 [Three Musketeers] trait Option card …` | `EX7-059-effect3.yaml` | lowers, asserts pass |
-| `EX7-059#effect#4` | `<Overflow (-4)>` | `EX7-059-effect4.yaml` | lowers, asserts pass — **oracle divergence predicted** (finding 3) |
+| `EX7-059#effect#4` | `<Overflow (-4)>` | `EX7-059-effect4.yaml` | lowers, asserts pass — oracle diverged as predicted (finding 3); engine FIXED, re-diff CLEAN → **confirmed** |
 
 Book: `qa/dcgo-exams/EX7/tm_ex7_059_pool.json` (decks `tm-beelstarmon-ace`,
 `tm-red-opponent-059`). Every line keeps P0 on a ONE-Digimon board (the
@@ -116,6 +116,16 @@ usually leave). Fix shape: `lose_memory_for_player(owner, 4)` per leaving ACE
 (`game/memory.rs` already has the owner-relative helper). **Predicted oracle
 verdict for `effect#4`: `diverged`**, lead `p0.memory` on the trailing row;
 `p0.memory` is left out of that file's `assert:` block.
+
+**RESOLVED (2026-09-19, ENGINE FIX).** `apply_ace_overflow_for_sources` now
+applies each leaving ACE's value through `gain_memory_for_player(owner, -4)`
+(owner-relative, clamped, `MemoryChange` event), turn player's instances first
+(general_rule.pdf 4-17-1 / 4-1-4 / 4-17-5; DCGO `CardController.cs:6151`).
+Test: `cards_behavioral::ex7::ex7_059::ex7_059_overflow_is_owner_relative_on_opponents_turn`
+(failed before: -1 vs 7; passes after). Re-diff against the preserved sidecar
+`20260918T133846Z_0b5e93f1….state.jsonl` is CLEAN; `effect#4` now asserts
+`p0.memory: 1` and is **confirmed** (EX7-059: 5/5 confirmed). Gap:
+`G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE` (`docs/RUST_ENGINE_GAPS.md`).
 
 ## Harness translation notes
 

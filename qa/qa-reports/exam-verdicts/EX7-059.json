@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T17:36:01.658105400+00:00",
+  "last_updated": "2026-09-19T18:49:55.007075600+00:00",
   "clauses": {
     "EX7-059#effect#0": {
       "clause_id": "EX7-059#effect#0",
@@ -41,12 +41,11 @@
     "EX7-059#effect#4": {
       "clause_id": "EX7-059#effect#4",
       "card_id": "EX7-059",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Special Rule",
       "text_sha256": "74e67dc40dd16d05246779e4692dc875669de17e43a4a8e7d9f52130a26163b5",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-059-effect4.yaml",
-      "reason": "DIVERGED at step 15 (compared 16 of 16 ours / 16 dcgo steps)",
-      "recorded_at": "2026-09-18T13:58:23.757755+00:00"
+      "recorded_at": "2026-09-19T18:49:55.007075600+00:00"
     }
   }
 }

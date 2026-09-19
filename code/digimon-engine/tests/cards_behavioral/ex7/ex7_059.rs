@@ -499,3 +499,26 @@ fn ex7_059_overflow_minus_4_fires_on_leave_field() {
     runner.game.drain_effect_queue();
     assert_eq!(runner.game.memory, mem_before - 4, "＜Overflow (-4)＞");
 }
+
+/// <Overflow> is owner-relative (general_rule.pdf 4-17-1 + 4-1-4: "lose X
+/// memory" moves the marker toward the LOSING player's opponent; DCGO
+/// `AceOverflowClass.Overflow()` -> `cardSource.Owner.AddMemory(-OverflowMemory)`,
+/// CardController.cs:6151). When the ACE's owner is the NON-turn player, the
+/// owner loses 4 -- i.e. the turn player's side of the gauge GAINS 4.
+#[test]
+fn ex7_059_overflow_is_owner_relative_on_opponents_turn() {
+    let mut runner = base().memory(3).start();
+    let turn_player = runner.game.turn_player();
+    let owner = 1 - turn_player;
+    let beel = runner.place_on_field(owner, CARD_ID, Some(0));
+    let mem_before = runner.game.memory;
+    runner
+        .game
+        .delete_permanent_with_cause(beel, ReplacementCause::OpponentEffect);
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.game.memory,
+        mem_before + 4,
+        "the NON-turn-player owner loses 4 memory (marker moves toward the turn player)"
+    );
+}
