@@ -3328,6 +3328,20 @@ touch the drain loop, the selection-resume tail and the OnUseOption observer ste
 can belong to either player) without the orderable entry, and would still hard-code the
 turn player's own ordering (rule 17).
 
+## G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE — RESOLVED 2026-09-19 (701fad56a) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#4)
+
+**RESOLVED (701fad56a, ENGINE FIX):** `Game::apply_ace_overflow_for_sources`
+(`game/mod.rs`) did `self.memory += penalty` on the turn-player-relative
+seesaw, so an ACE leaving the field on its OPPONENT's turn made its owner GAIN
+the overflow amount (exam: `p0.memory` 9 vs DCGO 1). general_rule.pdf 4-17-1 +
+4-1-4 ("lose X memory" is relative to the losing player) and DCGO
+`AceOverflowClass.Overflow()` (`cardSource.Owner.AddMemory(-OverflowMemory)`,
+`CardController.cs:6151`) make it owner-relative. Now each leaving ACE goes
+through `gain_memory_for_player(owner, value)` (clamped, emits `MemoryChange`),
+turn player's instances first (4-17-5). Affects every ACE in the pool. Test
+`ex7_059_overflow_is_owner_relative_on_opponents_turn`; oracle re-diff of
+`EX7-059-effect4.yaml` CLEAN, verdict confirmed.
+
 ## G-ENGINE-BLAST-DIGIVOLVE-NO-DRAW — RESOLVED 2026-09-19 (edbb740c0) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#1)
 
 **RESOLVED (edbb740c0, ENGINE FIX):** `combat/mod.rs::execute_blast_digivolve`
