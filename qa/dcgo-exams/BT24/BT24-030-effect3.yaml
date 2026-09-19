@@ -23,15 +23,13 @@
 # P1's security (P1's field is empty after the T5 bounce; stack[9] is Biyomon 3000,
 # a plain lost battle against 12000).
 # 
-# PREDICTED DIVERGENCE (ours). Our attack declaration suspends the attacker by
-# writing `is_suspended = true` directly (`combat/mod.rs::
-# suspend_and_count_attack`) instead of going through `Game::suspend`, the
-# only site that enqueues `EffectTiming::OnSuspend` (`game/suspend.rs`). So
-# the trigger never fires on an attack-suspension in our engine: the
-# OptionalSkill row below answers no live prompt (kept for the DCGO wire) and
-# Neptunemon stays suspended on our side, while DCGO's OnTappedAnyone observer
-# fires and unsuspends it. See NOTES-BT24-030.md. The asserts therefore pin
-# only the attack's other consequences; the oracle run measures the unsuspend.
+# FORMERLY DIVERGED (ours, fixed 2026-09-19). Our attack declaration used to
+# write `is_suspended = true` directly, so OnSuspend never fired on an attack
+# (G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND). Now `commit_attack_declaration`
+# flips state through `Game::suspend_state_only` and enqueues OnSuspend in
+# the [When Attacking] batch (general_rule.pdf 11-2-1 / 11-1-4; DCGO
+# AttackProcess.cs:166). The OptionalSkill row answers a live prompt on both
+# sides; oracle re-diff against the preserved sidecar is CLEAN 18/18.
 #
 # WITNESS (DCGO): at P1's T8 breeding decision Neptunemon reads suspended:
 # false although it attacked on T7 and P0's unsuspend phase has not come

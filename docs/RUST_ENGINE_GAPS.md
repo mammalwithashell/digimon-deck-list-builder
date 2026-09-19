@@ -3089,7 +3089,25 @@ accepts an Option/Dual hand card and plays it to the battle area as a permanent 
 it should refuse non-permanent kinds (or route to the Option-use pipeline). A pool
 sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted.
 
-## G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND — OPEN (found 2026-09-18, Three Musketeers exam stage, BT24-030#effect#3)
+## G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND — RESOLVED 2026-09-19 (found 2026-09-18, Three Musketeers exam stage, BT24-030#effect#3)
+
+**RESOLVED (ENGINE FIX, commit: see `git log --grep G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND`).**
+`suspend_with_cause` is split into `suspend_state_only` (gate + flip + aura
+re-tick, returns the event card) and `enqueue_on_suspend`; the attack
+declaration (`suspend_and_count_attack`) now flips state through the former and
+`fire_on_attack` enqueues `OnSuspend` in the SAME batch as `[When Attacking]`
+(both trigger on the declaration — general_rule.pdf 11-2-1 / 11-1-4), so the
+turn player orders them together. Test:
+`bt24_030_attack_declaration_suspension_triggers_may_unsuspend` (fails before,
+passes after); full `cards_behavioral` 8177/0. Exam BT24-030#effect#3 re-diff
+CLEAN 18/18 → confirmed. Blockers already went through `Game::suspend`.
+**Residual (not fixed, pre-existing class):** `fire_on_attack` drains its
+batches in sequence and returns on the first park, so if an OnAttack /
+`[When Attacking]` / OnSuspend prompt parks, the later OnAllyAttack /
+OnOpponentAttack fan-outs are never enqueued (`advance_pending_attack` resumes
+at RaidOpen). Also, an OnAttack-batch park would drop the attack's OnSuspend
+event (only 1 YAML uses `on_attack`).
+
 
 Declaring an attack suspends the attacker by writing `perm.is_suspended = true`
 directly (`Game::commit_attack_declaration` → `suspend_and_count_attack`,

@@ -32,12 +32,11 @@
     "BT24-030#effect#3": {
       "clause_id": "BT24-030#effect#3",
       "card_id": "BT24-030",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "941171516a67e3e49d463277699f0c95aaf80b2c337cad1e13629dfdeaebe09d",
       "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect3.yaml",
-      "reason": "DIVERGED at step 15 (compared 18 of 18 ours / 18 dcgo steps)",
-      "recorded_at": "2026-09-19T15:16:18.511294+00:00"
+      "recorded_at": "2026-09-19T16:30:37.701060+00:00"
     },
     "BT24-030#effect#4": {
       "clause_id": "BT24-030#effect#4",

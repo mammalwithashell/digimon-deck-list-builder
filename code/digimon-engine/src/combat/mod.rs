@@ -3789,8 +3789,24 @@ impl Game {
 
     // ─── Private helpers ──────────────────────────────────────────────
 
-    fn suspend_and_count_attack(&mut self, handle: PermanentHandle) {
+    /// Suspend the attacker at declaration and count the attack. Returns the
+    /// `OnSuspend` event card when the attacker actually transitioned to
+    /// suspended; the caller enqueues the event in the declaration's trigger
+    /// batch (general_rule.pdf 11-2-1: the attack declaration suspends the
+    /// Digimon; DCGO `AttackProcess.cs:166` taps it via
+    /// `SuspendPermanentsClass.Tap()`, which fires `OnTappedAnyone`) --
+    /// G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND. The state flip goes through
+    /// the canonical `suspend_state_only` so suspension-keyed auras re-tick
+    /// as for any other suspension.
+    fn suspend_and_count_attack(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        let event_card = self.suspend_state_only(handle);
         let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
+        // Backstop: attack legality already rejects a `CannotSuspend`
+        // attacker (11-2-5); keep the declaration's suspended state even if
+        // the chokepoint no-op'd.
         perm.is_suspended = true;
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
         if let Some(count) = self
@@ -3799,6 +3815,7 @@ impl Game {
         {
             *count = count.saturating_add(1);
         }
+        event_card
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {
@@ -3929,13 +3946,16 @@ impl Game {
 
         // Suspend + record attack — skipped for Overclock, which attacks
         // without suspending.
-        if !is_overclock {
-            self.suspend_and_count_attack(attacker);
-        }
+        let suspend_event = if !is_overclock {
+            self.suspend_and_count_attack(attacker)
+        } else {
+            None
+        };
+        self.reevaluate_until_condition_modifiers_if_dirty();
 
         // Fire OnAttack (may install a PendingSelection via a triggered
         // effect; the drainer returns and callers check below).
-        self.fire_on_attack(attacker);
+        self.fire_on_attack(attacker, suspend_event);
 
         if self.pending_selection.is_some() {
             return Some(AttackResult::InProgress);
@@ -3958,7 +3978,17 @@ impl Game {
     /// Thin wrapper over the effect-queue drainer. Single-trigger cases
     /// fire in one step; multi-trigger cases park on a `TriggerOrder`
     /// selection for the attacker's controller to order.
-    fn fire_on_attack(&mut self, handle: PermanentHandle) {
+    ///
+    /// `suspend_event` is the attacker's declaration-suspension `OnSuspend`
+    /// event card (None for Overclock / an already-suspended attacker). It is
+    /// enqueued in the SAME batch as `[When Attacking]` -- both trigger on the
+    /// attack declaration (11-2-1 / 11-1-4), so the turn player orders them
+    /// together -- rather than drained ahead of the attack triggers.
+    fn fire_on_attack(
+        &mut self,
+        handle: PermanentHandle,
+        suspend_event: Option<crate::card_source::CardHandle>,
+    ) {
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnAttack,
             crate::selection::TriggerSource::Permanent(handle),
@@ -3978,6 +4008,9 @@ impl Game {
         // battle-area-wide `PlayerBattleArea`) prevents a non-attacking stack's
         // inherited `[When Attacking]` from firing on a different Digimon's
         // attack. Fires before the Alliance window opens.
+        if let Some(card) = suspend_event {
+            self.enqueue_on_suspend(handle, card, false);
+        }
         self.enqueue_triggered(
             crate::enums::EffectTiming::WhenAttacking,
             crate::selection::TriggerSource::Permanent(handle),

@@ -190,6 +190,44 @@ fn bt24_030_self_suspend_may_unsuspend_once_per_turn() {
     );
 }
 
+/// Declaring an attack IS suspending the attacker (general_rule.pdf 11-2-1:
+/// "The turn player can suspend their Digimon in the battle area and make an
+/// attack declaration"; 11-1-4 names the triggered effects that resolve at
+/// declaration). DCGO suspends the attacker through `SuspendPermanentsClass
+/// (...).Tap()` (`AttackProcess.cs:166`), which fires `OnTappedAnyone` — the
+/// timing BT24_030.cs keys its unsuspend on. So Neptunemon's "[All Turns][Once
+/// Per Turn] When this Digimon suspends, it may unsuspend" must open on its own
+/// attack, and the attack still proceeds to the security check
+/// (G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND; exam BT24-030#effect#3).
+#[test]
+fn bt24_030_attack_declaration_suspension_triggers_may_unsuspend() {
+    let mut runner = neptunemon_runner()
+        .security(1, &["OPP-A", "OPP-B"])
+        .deck(0, &["OPP-A"; 4])
+        .deck(1, &["OPP-A"; 4])
+        .start();
+    let neptunemon = runner.place_on_field(0, "BT24-030", Some(0));
+
+    runner.attack_player(neptunemon, 1, false);
+    assert!(
+        runner.game.pending_selection.is_some() && runner.pending_is_optional(),
+        "attack-declaration suspension must open Neptunemon's optional unsuspend"
+    );
+    runner
+        .auto_resolve()
+        .expect("accept the unsuspend and finish the attack");
+
+    assert!(
+        !runner.game.players[0].battle_area[neptunemon.index as usize].is_suspended,
+        "Neptunemon should be unsuspended after accepting its on-suspend trigger"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "the attack continues to its security check after the unsuspend"
+    );
+}
+
 #[test]
 fn bt24_030_protects_matching_digimon_from_opponent_effects_by_suspending() {
     let mut runner = neptunemon_runner().start();

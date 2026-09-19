@@ -105,3 +105,17 @@ report); the fix gate needs a failing-then-passing test that attacks with an
 - `effect#4`: `WhenRemoveField`, `SetUpActivateClass(…, -1, TRUE, …)` gated on
   `CanActivateSuspendCostEffect` → `OptionalSkill`; then the suspend, which
   stacks `effect#3` (above).
+
+## RESOLVED 2026-09-19 — `effect#3` attack-suspension OnSuspend (ENGINE FIX)
+
+Triage class: **our bug** (general_rule.pdf 11-2-1 "suspend their Digimon ...
+and make an attack declaration"; 11-1-4; DCGO `AttackProcess.cs:166`
+`SuspendPermanentsClass.Tap()` → `OnTappedAnyone`, the timing `BT24_030.cs:127`
+keys the unsuspend on). Fixed in `combat/mod.rs` + `game/suspend.rs` (see
+`G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND`, RESOLVED). Oracle re-diff against the
+preserved sidecar `20260918T123758Z_b45375dd` is CLEAN 18/18 → **confirmed**.
+
+**Separate finding (not fixed, printed-data):** `cards/bt24/BT24-030.yaml`
+authors `color: [blue, purple]` and only a Blue Lv.5 digivolve circle; the
+official bundle (`data/card_bundles/BT24-030.md`) prints **Blue/Black** with
+Blue Lv.5 AND Black Lv.5 cost-4 circles. Needs its own fix + guard test.
