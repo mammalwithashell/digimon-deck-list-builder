@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:05.982079600+00:00",
+  "clauses": {
+    "EX7-040#effect#0": {
+      "clause_id": "EX7-040#effect#0",
+      "card_id": "EX7-040",
+      "verdict": "unreachable",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "a10e78a1cfd57f8ed800bbb13075565f46ab02393f81209eb4435e8b666306d3",
+      "reason": "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0 -- no separating line exists (NOTES-EX7-040.md): the only Lv.2 cards printing \"[Three Musketeers]\" (Kapurimon EX7-005, Pagumon BT25-005) are both Black, so the printed Black Lv.2 cost-0 circle opens at the same cost and the line would confirm with the clause deleted. Independently, EX7_040.cs tests ContainsTraits (a trait) where the card prints \"in text\", and no Lv.2 carries the trait, so DCGO never opens this route (DCGO quirk; printed data outranks it). Reachable if a non-black Lv.2 printing [Three Musketeers] is released.",
+      "recorded_at": "2026-09-19T15:14:57.194613+00:00"
+    },
+    "EX7-040#effect#1": {
+      "clause_id": "EX7-040#effect#1",
+      "card_id": "EX7-040",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "45065851db3ff77ea409e349d126a2fad90da03363eee321131340bd2b67f719",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-040-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:03.690017200+00:00"
+    },
+    "EX7-040#inherited#0": {
+      "clause_id": "EX7-040#inherited#0",
+      "card_id": "EX7-040",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "cd9dea1cebe1afa18ff06e6e70eb6c9242d593ddbff132535f10985f6b827106",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-040-inherited0.yaml",
+      "recorded_at": "2026-09-19T15:15:05.982079600+00:00"
+    }
+  }
+}

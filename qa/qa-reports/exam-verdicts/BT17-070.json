@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:12.164012500+00:00",
+  "clauses": {
+    "BT17-070#effect#0": {
+      "clause_id": "BT17-070#effect#0",
+      "card_id": "BT17-070",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "8fa776025d71a45eaaef2bb040199ac41b6f1e4c9915be4fd1b45f5b91b999dc",
+      "scenario_path": "qa/dcgo-exams/BT17/BT17-070-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:11.558997700+00:00"
+    },
+    "BT17-070#effect#1": {
+      "clause_id": "BT17-070#effect#1",
+      "card_id": "BT17-070",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "9eb0d4a7ace34eb8bc09606457d284a0617208bd8cdaa996810a413aef0fa3da",
+      "scenario_path": "qa/dcgo-exams/BT17/BT17-070-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:12.164012500+00:00"
+    },
+    "BT17-070#effect#2": {
+      "clause_id": "BT17-070#effect#2",
+      "card_id": "BT17-070",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c92fcfb2651bdbd0a4696bdaba4944eabc11d1795cbafad9c543e388fb76498b",
+      "scenario_path": "qa/dcgo-exams/BT17/BT17-070-effect2.yaml",
+      "recorded_at": "2026-09-18T13:59:15.554181600+00:00"
+    }
+  }
+}
