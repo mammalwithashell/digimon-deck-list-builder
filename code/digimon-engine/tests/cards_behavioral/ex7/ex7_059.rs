@@ -454,6 +454,40 @@ fn ex7_059_blast_digivolve_offered_in_counter_window() {
     );
 }
 
+/// <Blast Digivolve> is a digivolution (16-25-4: "an effect that digivolves
+/// the chosen Digimon"), and the digivolution procedure draws 1 card
+/// (general_rule.pdf 8-1-3-3). DCGO's `PlayCardClass` draws for ANY
+/// digivolution (`if (isEvolution) ... new DrawClass(card.Owner, 1, null)`,
+/// CardController.cs ~1762). Exam EX7-059#effect#1 measured the missing draw.
+#[test]
+fn ex7_059_blast_digivolve_draws_one_card() {
+    let mut runner = base().hand(1, &[CARD_ID]).start();
+    let attacker = runner.place_on_field(0, "OPP-DIGI", Some(0));
+    let defender = runner.place_on_field(1, "PURPLE-LV5", Some(0));
+
+    runner.attack_digimon(attacker, defender, false);
+    assert_eq!(runner.current_phase(), GamePhase::CounterTiming);
+    let hand_before = runner.hand_size(1);
+    let deck_before = runner.deck_size(1);
+
+    runner
+        .game
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("Blast Digivolve resolves");
+
+    let top = runner.game.player(1).battle_area[0]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, CARD_ID, "EX7-059 digivolved onto the Lv.5");
+    assert_eq!(
+        runner.hand_size(1),
+        hand_before, // -1 (the ACE left hand) +1 (the 8-1-3-3 draw)
+        "Blast Digivolve draws 1 card as part of the digivolution"
+    );
+    assert_eq!(runner.deck_size(1), deck_before - 1, "one card drawn from deck");
+}
+
 #[test]
 fn ex7_059_overflow_minus_4_fires_on_leave_field() {
     let mut runner = base().memory(3).start();

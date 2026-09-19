@@ -1825,6 +1825,16 @@ impl Game {
         let turn = self.turn_count;
         self.player_mut(defender).battle_area[f_idx].digivolve(card, turn);
 
+        // §8-1-3-3: the digivolution procedure "places the Digimon ... on top
+        // of the chosen card, draws 1 card"; <Blast Digivolve> "is an effect
+        // that digivolves the chosen Digimon" (16-25-4), so it draws like any
+        // other digivolution (DCGO `PlayCardClass`: `if (isEvolution) ...
+        // DrawClass(card.Owner, 1)`, CardController.cs ~1762). Lands after the
+        // stack mutation and BEFORE the WhenDigivolving fan-out, mirroring
+        // `effect_initiated_digivolve`. Empty deck: 8-1-2-10, modelled by
+        // `draw()`. Exam EX7-059#effect#1.
+        self.player_mut(defender).draw();
+
         let handle = PermanentHandle {
             player: defender,
             index: f_idx as u8,

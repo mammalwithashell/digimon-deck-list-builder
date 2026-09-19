@@ -9,7 +9,7 @@ exists — the card is **not** `unavailable`. No verdict is stored yet
 | Clause | Text | Scenario | Sim-only (2026-09-18) |
 |---|---|---|---|
 | `EX7-059#effect#0` | `[Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 3` | `EX7-059-effect0.yaml` | lowers, asserts pass |
-| `EX7-059#effect#1` | `[Hand] [Counter] <Blast Digivolve>` | `EX7-059-effect1.yaml` | lowers, asserts pass — **oracle divergence predicted** (finding 2) |
+| `EX7-059#effect#1` | `[Hand] [Counter] <Blast Digivolve>` | `EX7-059-effect1.yaml` | lowers, asserts pass — oracle diverged as predicted (finding 2); engine FIXED, re-diff CLEAN → **confirmed** |
 | `EX7-059#effect#2` | `[On Play] [When Digivolving] Return 1 Option card from your trash to the hand. Then, you may use 1 [Three Musketeers] trait Option card from your hand without paying the cost.` | `EX7-059-effect2.yaml` ([When Digivolving] arm, both halves) | lowers, asserts pass |
 | `EX7-059#effect#3` | `[When Attacking] [Once Per Turn] By trashing 1 Option card from this Digimon's digivolution cards, you may use 1 [Three Musketeers] trait Option card …` | `EX7-059-effect3.yaml` | lowers, asserts pass |
 | `EX7-059#effect#4` | `<Overflow (-4)>` | `EX7-059-effect4.yaml` | lowers, asserts pass — **oracle divergence predicted** (finding 3) |
@@ -83,8 +83,22 @@ chosen Digimon"; DCGO's `PlayCardClass` draws for ANY digivolution (`if
 (isEvolution) … new DrawClass(card.Owner, 1, null).Draw()`,
 `CardController.cs` ~1759-1762). Class: **our bug** (engine). **Predicted
 oracle verdict for `effect#1`: `diverged`**, lead `p0.hand` on the trailing
-row. `p0.hand` is deliberately left out of that file's `assert:` block so the
-suspect value is not baked in.
+row. (Oracle run 2026-09-18 diverged exactly there: step 17 `p0.hand`, DCGO
+holding the extra ST1-02.)
+
+**RESOLVED (2026-09-19, ENGINE FIX).** `execute_blast_digivolve` now calls
+`draw()` after the stack mutation and before the `WhenDigivolving` fan-out,
+mirroring `effect_initiated_digivolve`. Test:
+`cards_behavioral::ex7::ex7_059::ex7_059_blast_digivolve_draws_one_card`
+(failed before, passes after). Re-diff against the preserved sidecar
+`20260918T133748Z_6990b2ac….state.jsonl` is CLEAN; `effect#1` now asserts
+`p0.hand` (6 cards). Gap: `G-ENGINE-BLAST-DIGIVOLVE-NO-DRAW`
+(`docs/RUST_ENGINE_GAPS.md`).
+
+Follow-up finding (NOT fixed, not measured by this exam): the same blast path
+also does not enqueue the global `OnDigivolve` observer that
+`effect_initiated_digivolve` fires, so a "when a Digimon digivolves" watcher
+would miss a Blast Digivolve. Needs its own citation + test before a fix.
 
 ### 3. `<Overflow>` is applied turn-player-relative, not owner-relative
 
