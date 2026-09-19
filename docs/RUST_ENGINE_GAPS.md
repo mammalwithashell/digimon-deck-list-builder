@@ -3130,7 +3130,17 @@ a failing-then-passing test that attacks with an `on_suspend` carrier. Blockers
 (`AttackProcess.cs:557` suspends the defender the same way) deserve the same
 check. `qa/dcgo-exams/BT24/NOTES-BT24-030.md`.
 
-## G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT — OPEN (found 2026-09-18, same stage, BT20-020#effect#3)
+## G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT — RESOLVED 2026-09-19 (52579f0a8) (found 2026-09-18, same stage, BT20-020#effect#3)
+
+**RESOLVED (52579f0a8, ENGINE FIX):** `EffectContext::play_pending_security`
+(`effect_context/selections.rs`) now gates a Tamer on `CannotPlayTamerByEffect`
+exactly as it already gated a Digimon on `CannotPlayDigimonByEffect`; the
+blocked card falls through combat.rs's "didn't stick" path to the trash. Test
+`bt20_020_gate_blocks_security_played_tamer`; oracle re-diff of
+`BT20-020-effect3.yaml` CLEAN, verdict confirmed. The live-security helpers
+`play_from_security*` route through the hand `ByEffect` pipeline and were
+already gated.
+
 
 `CannotPlayTamerByEffect` / `CannotPlayDigimonByEffect` are enforced only on the
 from-hand and from-trash `PlaySource::ByEffect` paths

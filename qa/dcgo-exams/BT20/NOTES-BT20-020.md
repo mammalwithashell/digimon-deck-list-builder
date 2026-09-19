@@ -47,6 +47,10 @@ book is this card's own; no other scenario uses it).
 
 ## ENGINE FINDING — a security-flipped "play this card" ignores the can't-play-by-effect gate (`effect#3`)
 
+**RESOLVED 2026-09-19 (52579f0a8, engine fix):** `play_pending_security` now
+honours `CannotPlayTamerByEffect`; oracle re-diff CLEAN, `effect#3` confirmed
+(5/5 clauses confirmed).
+
 Logged as `G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT` in
 `docs/RUST_ENGINE_GAPS.md`. Measured sim-side while authoring: with
 `CannotPlayTamerByEffect` installed on P1 until the end of P1's turn, the
