@@ -1,16 +1,15 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:16:27.522348100+00:00",
+  "last_updated": "2026-09-19T16:39:12.938996200+00:00",
   "clauses": {
     "BT16-077#effect#1": {
       "clause_id": "BT16-077#effect#1",
       "card_id": "BT16-077",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect1.yaml",
-      "reason": "DIVERGED at step 15 (compared 22 of 22 ours / 23 dcgo steps (1 DCGO intermediate row(s) not comparable))",
-      "recorded_at": "2026-09-19T15:16:24.691251800+00:00"
+      "recorded_at": "2026-09-19T16:39:12.938996200+00:00"
     },
     "BT16-077#effect#2": {
       "clause_id": "BT16-077#effect#2",

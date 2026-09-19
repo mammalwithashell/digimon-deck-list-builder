@@ -25,6 +25,8 @@
 # - Per-slot Partition source specs are accepted by the DSL but slot
 #   enforcement is engine-deferred (see lower_partition.rs); the keyword's
 #   generic source picks govern.
+# - The DNA gate covers only the trash play (official Q&A + DCGO :182);
+#   the Rush/attack half fires on any digivolve.
 # Verdict: IMPLEMENTED.
 
 card: BT16-077
@@ -71,23 +73,30 @@ effects:
       - { level_eq: 4, color_is: red }
     exclude_cause: [own_effect, battle]
 
-  # ─── [When Digivolving] (DNA only) trash play + Rush window ────────────────
+  # ─── [When Digivolving] DNA-gated trash play, then UNGATED Rush window ─────
+  # "If DNA digivolving" gates ONLY the trash play. The official Q&A: "Even if
+  # this Digimon didn't DNA digivolve, this card's [When Digivolving] effect
+  # can give 1 of your Digimon <Rush> and that Digimon can attack"; DCGO
+  # BT16_077.cs:182 wraps only the trash pick in `IsJogress`, the Rush pick
+  # (:231) is unconditional. (Exam BT16-077#effect#1 / #effect#3, step 15.)
   - when: when_digivolving
     optional: true
-    condition: { dna_origin: true }
     summary: "[When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain Rush for the turn and attack the player"
     process:
-      - select_trash:
-          of: you
-          bind_as: free_play
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - level_lte: 5
-              - attribute_is: Free
-          prompt: "Play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost"
-      - play_from_trash_free: { of: you, hand_index: free_play }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_trash:
+                of: you
+                bind_as: free_play
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - attribute_is: Free
+                prompt: "Play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: free_play }
       - select_own_permanent:
           bind_as: rusher
           optional: true

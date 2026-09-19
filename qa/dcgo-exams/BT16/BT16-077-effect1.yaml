@@ -16,10 +16,11 @@
 # T7 (memory 3): digivolving into Dinobeemon costs 4 -> memory -1, the turn
 # hands over on its own. DCGO's [When Digivolving] (`SetUpActivateClass(...,
 # -1, true, ...)` -- isOptional TRUE) asks an OptionalSkill yes/no first; the
-# line DECLINES it so nothing else fires. OUR engine never opens that window
-# because BT16-077.yaml gates the whole clause on `dna_origin: true` -- that
-# mismatch is BT16-077#effect#3's business (see BT16-077-effect3.yaml); here
-# the decline row answers no live prompt on our side and is kept for the wire.
+# line DECLINES it so nothing else fires. Our engine opens the same optional
+# window since the 2026-09-19 triage: the DNA gate covers only the trash play
+# (official Q&A + BT16_077.cs:182), so the Rush half fires on an ordinary
+# digivolve too. Before that fix the whole clause was gated on `dna_origin`
+# and the line diverged here at step 15.
 #
 # T9 (memory 3): P1 holds an unsuspended Agumon (ST1-03, 2000 DP) promoted on
 # T6. Dinobeemon attacks the player; THE CLAUSE offers the switch. general_rule
@@ -106,8 +107,8 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT16-077 } }
     expect: { prompt: main_phase }
-  # DCGO's [When Digivolving] OptionalSkill gate (isOptional: true): decline.
-  # Our engine parks nothing here (dna_origin gate); the row rides the wire.
+  # [When Digivolving] OptionalSkill gate (isOptional: true) in both engines:
+  # decline.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
