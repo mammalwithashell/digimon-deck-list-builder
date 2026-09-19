@@ -3396,3 +3396,29 @@ Surfacing it means adding the pending trash as an entry in the turn player's
 - Gap (first logged 2026-08-22 in qa/dsl-vocab-gaps.md): `ModifierType::AddColor` existed with no reader; `synth_identity` honored only the replace-style `ChangeBaseCardColor`.
 - Fix: `Permanent::synth_identity` reads `AddColor` additively after `ChangeBaseCardColor` — payload `None` = colors of the non-flipped sources, read live at synth time; `Colors { value }` = the listed colors. DSL: self-aura `modifier: AddColor`. Companion DSL leaves: `per: source_rules_color_count`; permanent-subject `self_color_count_gte` checks only synthesized colors.
 - Evidence: 11 new bt8_084 behavioral tests (failing before, passing after); full cards_behavioral green; BT8-084#effect#1 oracle re-diff vs the preserved sidecar CLEAN 17/17 → confirmed.
+
+## G-EXAM-REVEAL-BUCKET-ADD-TIMING — DCGO quirk (finding, 2026-09-19, not an engine gap)
+
+**Drivers:** exam `BT6-060#effect#0` (Deputymon, `qa/dcgo-exams/BT6/BT6-060-effect0.yaml`,
+preserved sidecar `20260918T131517Z_c0b8af78828f466a97394c011f63a37b.state.jsonl`) and the
+same shape on `BT25-064#effect#1`. `--all-diffs` re-run against the preserved sidecar shows
+exactly ONE diff: step 3 (the second bucket pick) `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067]
+dcgo=[...,P-170]`. Step 4 (after resolution: hand, trash, field, memory) matches.
+
+**What differs:** DCGO `CardEffectCommons/RevealLibrary.cs:291-328`
+(`RevealDeckTopCardsAndSelect`) runs one `SelectCardEffect` per condition with the
+condition's `Mode` (AddHand), so each pick is moved to hand as soon as it is chosen, before the
+next bucket is asked. Ours (`select_reveal_buckets` → `add_to_hand_from_reveal` ×2) chooses
+every bucket first, then adds the picks.
+
+**Rules:** general_rule.pdf 15-1-2 (a single effect is processed in the order shown in its text)
+and 15-1-6 (the processing to execute is chosen, then executed). "Add 1 Digimon card … and/or 1
+Option card … to your hand" is ONE process with a compound target choice, so choose-all-then-add
+is the literal reading; DCGO's per-pick add is an implementation artifact of its per-condition
+select loop. Revealed cards are in no area while revealed (15-15-3-2), so nothing reads the
+intermediate hand.
+
+**Why not fixed:** our order is the rules-faithful one and final state is identical. Observable
+only if a "when a card is added to your hand" trigger could fire between picks — and even then
+15-5-2 fires it once for a single add. Clause stays `diverged` in the verdict store (the exam
+compares every step); treat it as adjudicated, no further action.
