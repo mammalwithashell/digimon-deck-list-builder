@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:27.522348100+00:00",
+  "clauses": {
+    "BT16-077#effect#1": {
+      "clause_id": "BT16-077#effect#1",
+      "card_id": "BT16-077",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect1.yaml",
+      "reason": "DIVERGED at step 15 (compared 22 of 22 ours / 23 dcgo steps (1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-19T15:16:24.691251800+00:00"
+    },
+    "BT16-077#effect#2": {
+      "clause_id": "BT16-077#effect#2",
+      "card_id": "BT16-077",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect2.yaml",
+      "reason": "DIVERGED at step 11 (compared 24 of 26 ours / 25 dcgo steps (2 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-19T15:16:25.640030800+00:00"
+    },
+    "BT16-077#effect#3": {
+      "clause_id": "BT16-077#effect#3",
+      "card_id": "BT16-077",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "deb3af0f718c8d3ec134e3d209ebad3e1d5f93e714d51961886e0ece9e094c23",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect3.yaml",
+      "reason": "DIVERGED at step 15 (compared 20 of 20 ours / 20 dcgo steps)",
+      "recorded_at": "2026-09-19T15:16:26.567322200+00:00"
+    },
+    "BT16-077#inherited#0": {
+      "clause_id": "BT16-077#inherited#0",
+      "card_id": "BT16-077",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "8a35b99a666692846590b6a265113e2987f41ad4503eb7480fbe51002cec447e",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-inherited0.yaml",
+      "reason": "DIVERGED at step 11 (compared 24 of 26 ours / 25 dcgo steps (2 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-19T15:16:27.522348100+00:00"
+    }
+  }
+}

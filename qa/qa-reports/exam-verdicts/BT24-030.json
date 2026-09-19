@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:19.582622900+00:00",
+  "clauses": {
+    "BT24-030#effect#0": {
+      "clause_id": "BT24-030#effect#0",
+      "card_id": "BT24-030",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "c8975715dfc9185562b44a3442a4a24551be3c28ecc17062c0b6ba7426c1bff4",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:15.008609100+00:00"
+    },
+    "BT24-030#effect#1": {
+      "clause_id": "BT24-030#effect#1",
+      "card_id": "BT24-030",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "d3f2e9c7fa80a1d9cf90d1c35aa36eb1df1ff500307b4e811f78d1d1563c8f5a",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect1.yaml",
+      "recorded_at": "2026-09-19T15:16:16.109343100+00:00"
+    },
+    "BT24-030#effect#2": {
+      "clause_id": "BT24-030#effect#2",
+      "card_id": "BT24-030",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "ae4031e8cef5e8a366752628e10bf876de0a339b310821447683af4b39ef8572",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect2.yaml",
+      "recorded_at": "2026-09-19T15:16:17.196581400+00:00"
+    },
+    "BT24-030#effect#3": {
+      "clause_id": "BT24-030#effect#3",
+      "card_id": "BT24-030",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "941171516a67e3e49d463277699f0c95aaf80b2c337cad1e13629dfdeaebe09d",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect3.yaml",
+      "reason": "DIVERGED at step 15 (compared 18 of 18 ours / 18 dcgo steps)",
+      "recorded_at": "2026-09-19T15:16:18.511294+00:00"
+    },
+    "BT24-030#effect#4": {
+      "clause_id": "BT24-030#effect#4",
+      "card_id": "BT24-030",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "3ef2e595db97a18e9245f05a8d8149c89e0f050947a440a5ccd462863ef3b77e",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-030-effect4.yaml",
+      "reason": "DIVERGED at step 15 (compared 18 of 18 ours / 18 dcgo steps)",
+      "recorded_at": "2026-09-19T15:16:19.582622900+00:00"
+    }
+  }
+}
