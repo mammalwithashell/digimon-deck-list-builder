@@ -81,7 +81,8 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT16-077 } }
     expect: { prompt: main_phase }
-  # DCGO's [When Digivolving] OptionalSkill: decline (wire-only on our side).
+  # [When Digivolving] OptionalSkill in BOTH engines since f3a02b5f4 (the DNA
+  # gate covers only the trash play, BT16_077.cs:182): decline.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
