@@ -3344,3 +3344,32 @@ Follow-up (OPEN, unmeasured): the blast path still does not enqueue the global
 `OnDigivolve` observer that `effect_initiated_digivolve` fires, so a "when a
 Digimon digivolves" watcher misses a Blast Digivolve. Needs its own citation +
 test.
+
+## G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS — RESOLVED 2026-09-19 (5108e58ee) (found 2026-09-19, exam P-170#effect#5)
+
+**RESOLVED (5108e58ee, ENGINE FIX):** a used Option stayed out of the trash until
+every trigger its `[Main]` body caused had resolved (`play_option_core` drained
+the whole queue, then disposed). Exam `qa/dcgo-exams/P/P-170-effect5.yaml`: P1's
+Gaia Force (ST1-16) deletes P0's AvengeKidmon; while P0's `[On Deletion]` prompt
+was pending, DCGO had ST1-16 in P1's trash and we did not. Rules: general_rule.pdf
+9-1-5 (the Option is trashed at the timing its 1st `[Main]` has resolved, as
+pending processing) + 18-1-2 (pending processing at the same timing as other
+processing is ordered like simultaneous triggering) + 15-4-3-5 (turn player's
+first). DCGO: `CardController.cs` `UseOptionClass.UseOption` calls
+`AddTrashCard` straight after the `OptionSkill` process. Fix:
+`Game::option_body_pending` + `complete_option_body_if_done` (effect_queue.rs)
+dispose the Option (arts / trash / Delay / Link / Training) the moment the
+`OptionMain` body resolves, before the queued triggers; the `OnUseOption`
+observers are enqueued (not drained) so they resolve after disposal, as in DCGO.
+Test `p_170_opponent_option_is_trashed_before_on_deletion_resolves`; oracle
+re-diff CLEAN, verdict confirmed.
+
+## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — OPEN (found 2026-09-19, same triage)
+
+Residual of the entry above. Under 18-1-2 / 15-4-3-5 the used Option's trash is
+one of the TURN player's pending items, so when that player also has their OWN
+triggers pending from the Option's body, they may order the trash among them.
+We (like DCGO) always trash first and surface no choice. This matters only for
+a turn-player trigger that reads the trash (count, "Option card in trash", etc.).
+Surfacing it means adding the pending trash as an entry in the turn player's
+`TriggerOrder` bundle.
