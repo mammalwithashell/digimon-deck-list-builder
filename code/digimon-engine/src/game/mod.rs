@@ -694,6 +694,20 @@ pub struct Game {
     /// G-ENGINE-ON-USE-OPTION-EVENT-CARD.
     pub(crate) on_use_option_armed: Option<(PlayerId, crate::card_source::CardHandle)>,
 
+    /// Set by `play_option_core` just before the used Option's `[Main]`
+    /// (`OptionMain`) body is enqueued; cleared by
+    /// `complete_option_body_if_done` once the body has fully resolved and the
+    /// Option has been disposed. While set, triggered effects the body caused
+    /// (e.g. an opponent's `[On Deletion]`) are held back so the used Option is
+    /// trashed FIRST: rules 9-1-5 (the Option is trashed "at the timing when
+    /// its 1st [Main] effect has been resolved as pending processing") +
+    /// 18-1-2 (pending processing at the same time as triggered effects is
+    /// ordered like simultaneous triggering) + 15-4-3-5 (turn player's first).
+    /// DCGO: `UseOptionClass.UseOption` calls `AddTrashCard` right after the
+    /// `OptionSkill` process, before the stacked triggers resolve.
+    /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
+    pub(crate) option_body_pending: bool,
+
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
     /// (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`). BT13-103 Akihiro

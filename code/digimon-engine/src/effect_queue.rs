@@ -1143,6 +1143,16 @@ impl Game {
             if self.pending_selection.is_some() {
                 return;
             }
+            // 9-1-5 / 18-1-2: a used Option whose `[Main]` body has just
+            // finished is disposed before any trigger that body caused
+            // resolves. Skipped inside a deferred-drain scope (the body is
+            // still running there); the flush at scope exit re-enters here.
+            if self.option_body_pending && self.draining_deferred == 0 {
+                self.complete_option_body_if_done();
+                if self.pending_selection.is_some() {
+                    return;
+                }
+            }
             if self.effect_queue.is_empty() {
                 // Track H §3 Phase 4i superseded the prior inline-fire
                 // flush: granted-triggered-effect entries now ride the
@@ -1341,7 +1351,19 @@ impl Game {
                     self.install_outer_optional_trigger_selection(qe);
                     return;
                 }
+                // An Option's `[Main]` body runs as ONE effect: triggers it
+                // causes (e.g. `[On Deletion]`) stay queued until it has
+                // resolved (15-8-3-2) and the Option has been disposed
+                // (9-1-5 — see `complete_option_body_if_done`). Manual
+                // decrement (no flush): this loop continues the drain itself.
+                let is_option_main = qe.timing == EffectTiming::OptionMain;
+                if is_option_main {
+                    self.enter_deferred_drain();
+                }
                 self.run_queued_effect(qe);
+                if is_option_main {
+                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                }
                 self.rules_check_between_queued_effects();
                 continue;
             }
@@ -4601,6 +4623,72 @@ impl Game {
             TriggerSource::OptionUsed { player, card },
         );
         self.drain_effect_queue();
+    }
+
+    /// Dispose the used Option as soon as its `[Main]` (`OptionMain`) body
+    /// has fully resolved — BEFORE the triggered effects that body caused.
+    ///
+    /// Rules: 9-1-5 "A used Option card is trashed if it isn't in an area at
+    /// the timing when its 1st [Main] effect has been resolved as pending
+    /// processing"; 18-1-2 pending processing performed at the same time as
+    /// other processing is ordered like simultaneous triggering (15-4-3); and
+    /// 15-4-3-5 the turn player's pending items go first. The Option's owner
+    /// is the turn player on every Main-phase use, so its trash precedes the
+    /// non-turn player's `[On Deletion]` etc. DCGO
+    /// (`CardController.cs` `UseOptionClass.UseOption`): `AddTrashCard(card)`
+    /// runs straight after the `OptionSkill` `ActivateEffectProcess`, while
+    /// the triggers stacked during the body resolve only after `UseOption`
+    /// returns — including the `OnUseOption` observers it stacked before the
+    /// body, which is why those are ENQUEUED here (not drained) and so resolve
+    /// after the disposal too.
+    ///
+    /// Residual: when the turn player has their OWN triggered effects pending
+    /// alongside the trash, 18-1-2 lets them order the trash among those; DCGO
+    /// always trashes first and so do we (logged:
+    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER).
+    ///
+    /// No-op unless `option_body_pending` is set, a `MainEffectDrain`
+    /// `pending_option` is in flight, no `OptionMain` entry for it is still
+    /// queued, and no selection is parked. G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
+    pub(crate) fn complete_option_body_if_done(&mut self) {
+        if !self.option_body_pending || self.pending_selection.is_some() {
+            return;
+        }
+        let Some(pending) = self.pending_option.as_ref() else {
+            // The body CLAIMED the card (placed it under a Digimon, added it
+            // to hand, linked it). Nothing to dispose; the observers are
+            // still owed.
+            self.option_body_pending = false;
+            if let Some((player, card)) = self.on_use_option_armed.take() {
+                self.enqueue_triggered(
+                    EffectTiming::OnUseOption,
+                    TriggerSource::OptionUsed { player, card },
+                );
+            }
+            return;
+        };
+        if pending.resolution_phase != crate::selection::OptionResolutionPhase::MainEffectDrain {
+            return;
+        }
+        let card = pending.card.handle();
+        if self
+            .effect_queue
+            .iter()
+            .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
+        {
+            return;
+        }
+        self.option_body_pending = false;
+        if let Some((player, used)) = self.on_use_option_armed.take() {
+            self.enqueue_triggered(
+                EffectTiming::OnUseOption,
+                TriggerSource::OptionUsed { player, card: used },
+            );
+        }
+        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            return;
+        }
+        self.dispose_option();
     }
 
     /// Shared post-body tail of an Option use: offer <Arts Digivolve>, then

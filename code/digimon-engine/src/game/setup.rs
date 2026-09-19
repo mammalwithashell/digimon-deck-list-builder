@@ -242,6 +242,7 @@ impl Game {
             pending_interactive_option_use_reduction: 0,
             interactive_option_use_reducer_prompted: false,
             on_use_option_armed: None,
+            option_body_pending: false,
             pending_cost_reduction_amount_override: None,
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
@@ -387,6 +388,7 @@ impl Game {
         self.pending_interactive_option_use_reduction = 0;
         self.interactive_option_use_reducer_prompted = false;
         self.on_use_option_armed = None;
+        self.option_body_pending = false;
         self.pending_cost_reduction_amount_override = None;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;

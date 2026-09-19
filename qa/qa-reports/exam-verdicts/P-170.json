@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:15:06.736731400+00:00",
+  "last_updated": "2026-09-19T18:08:16.089174700+00:00",
   "clauses": {
     "P-170#effect#0": {
       "clause_id": "P-170#effect#0",
@@ -50,12 +50,11 @@
     "P-170#effect#5": {
       "clause_id": "P-170#effect#5",
       "card_id": "P-170",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "be57d6f64fd622e64022af9b364d4ed923f1ea670eada1f6db8f185541431836",
       "scenario_path": "qa/dcgo-exams/P/P-170-effect5.yaml",
-      "reason": "DIVERGED at step 15 (compared 18 of 18 ours / 18 dcgo steps)",
-      "recorded_at": "2026-09-18T13:58:57.118818900+00:00"
+      "recorded_at": "2026-09-19T18:08:16.089174700+00:00"
     }
   }
 }

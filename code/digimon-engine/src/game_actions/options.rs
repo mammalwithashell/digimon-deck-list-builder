@@ -599,6 +599,10 @@ impl Game {
         // body — e.g. a Link Option whose `.link(..).process(..)` does the
         // plug-in's work). This split is what keeps a dual-mode Plug-In's
         // Standard `[Main]` body from firing on a Link play, and vice versa.
+        // `option_body_pending` makes the drain dispose the Option the moment
+        // this body resolves, before the triggers it caused (9-1-5, 18-1-2;
+        // `complete_option_body_if_done`).
+        self.option_body_pending = true;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
 
@@ -609,24 +613,22 @@ impl Game {
             return OptionPlayResult::Pending;
         }
 
-        // 7b. Body fully resolved — fire the board-wide OnUseOption observers
-        // (see step 6). A parked observer prompt (BT3-096's optional
-        // suspend-cost gate) resumes into arts / disposal via
-        // `advance_pending_option`'s `OnUseOptionDrain` arm.
-        self.fire_on_use_option_observers();
+        // 7b/8. Body fully resolved. Normally the drain above already
+        // disposed the Option (its loop-top hook); this explicit call covers
+        // a body that never went through the queue (no `OptionMain` effect)
+        // and a use made inside a deferred-drain scope (an effect-driven use
+        // from a selection callback), where the hook is skipped. It enqueues
+        // the board-wide OnUseOption observers (see step 6), offers
+        // <Arts Digivolve>, then disposes per subtype (Standard → trash;
+        // Delay → park on field; Link → install host-selection). A parked
+        // prompt returns Pending and defers check_turn_end.
+        self.complete_option_body_if_done();
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }
-
-        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
-            return OptionPlayResult::Pending;
-        }
-
-        // 8. Dispose per subtype (Standard → trash; Delay → park on field;
-        // Link → install host-selection). `dispose_option` may install a
-        // PendingSelection (Link flow); if so, return Pending and defer
-        // check_turn_end until `attach_linked_card` finishes the attach.
-        self.dispose_option();
+        // Resolve the observers + the triggers the body caused, now that the
+        // Option has left the executing area.
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }

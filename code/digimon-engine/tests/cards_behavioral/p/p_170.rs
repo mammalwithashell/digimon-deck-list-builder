@@ -395,3 +395,66 @@ fn p_170_on_deletion_no_eligible_card_no_prompt() {
         "cost-13 TM Digimon and a non-TM Digimon are not eligible"
     );
 }
+
+// ─── Section 4 — Option-trash timing vs the [On Deletion] it causes ──────────
+//
+// Exam P-170#effect#5 (qa/dcgo-exams/P/P-170-effect5.yaml): the OPPONENT's
+// Gaia Force (ST1-16) deletes AvengeKidmon. The used Option is trashed at the
+// timing its [Main] has resolved, as pending processing (general_rule.pdf
+// 9-1-5), which is ordered with the simultaneously pending [On Deletion] like
+// simultaneous triggering (18-1-2) — turn player's first (15-4-3-5). So Gaia
+// Force is already in its user's trash while AvengeKidmon's [On Deletion]
+// prompt is pending. DCGO agrees: CardController.cs `UseOptionClass.UseOption`
+// calls `AddTrashCard(card)` straight after the OptionSkill process, before
+// the stacked triggers resolve. G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
+#[test]
+fn p_170_opponent_option_is_trashed_before_on_deletion_resolves() {
+    let mut runner = base()
+        .dsl_card("ST1-16")
+        .expect("ST1-16 compiles")
+        .add_card(digimon("RED-BODY", 3, 3, &["Beast"]))
+        .hand(0, &["ST1-16"])
+        .hand(1, &["TM-COST12"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "RED-BODY", Some(0));
+    runner.place_on_field(1, CARD_ID, Some(0));
+    assert_eq!(runner.turn_player(), 0);
+
+    runner.game.play_option_from_hand(0, 0);
+    // Gaia Force's [Main] target pick: AvengeKidmon.
+    let view = runner.pending_selection_view().expect("Gaia Force target pick");
+    assert_eq!(view.selecting_player, 0);
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("a target");
+    runner.execute_action(0, pick).expect("delete AvengeKidmon");
+
+    // AvengeKidmon's optional [On Deletion] gate is now pending for P1 ...
+    let view = runner.pending_selection_view().expect("[On Deletion] gate");
+    assert_eq!(view.selecting_player, 1, "P1's [On Deletion] prompt");
+    // ... and Gaia Force has ALREADY been trashed (9-1-5 / 18-1-2 / 15-4-3-5).
+    let p0_trash: Vec<String> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        p0_trash,
+        vec!["ST1-16".to_string()],
+        "the used Option is trashed before the [On Deletion] it caused resolves"
+    );
+
+    runner.accept_optional_trigger().expect("accept");
+    let pick = runner.pending_selection().unwrap().valid_action_ids[0];
+    runner.execute_action(1, pick).expect("play TM-COST12 from hand");
+    runner.auto_resolve().ok();
+    assert!(runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "TM-COST12"));
+    assert_eq!(runner.game.players[0].trash.len(), 1, "trashed exactly once");
+}
