@@ -3327,3 +3327,20 @@ drivers. Not landed this stage: a narrow "defer non-turn bundles until dispose" 
 touch the drain loop, the selection-resume tail and the OnUseOption observer step (observers
 can belong to either player) without the orderable entry, and would still hard-code the
 turn player's own ordering (rule 17).
+
+## G-ENGINE-BLAST-DIGIVOLVE-NO-DRAW — RESOLVED 2026-09-19 (edbb740c0) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#1)
+
+**RESOLVED (edbb740c0, ENGINE FIX):** `combat/mod.rs::execute_blast_digivolve`
+moved the Blast card onto the stack and fired `WhenDigivolving` but skipped
+the digivolution draw. general_rule.pdf 8-1-3-3 ("... draws 1 card") is part
+of the digivolution procedure and 16-25-4 says `<Blast Digivolve>` "is an
+effect that digivolves the chosen Digimon"; DCGO's `PlayCardClass` draws for
+any digivolution (`CardController.cs` ~1762). Now draws after the stack
+mutation, before the `WhenDigivolving` fan-out (same ordering as
+`effect_initiated_digivolve`). Test `ex7_059_blast_digivolve_draws_one_card`;
+oracle re-diff of `EX7-059-effect1.yaml` CLEAN, verdict confirmed.
+
+Follow-up (OPEN, unmeasured): the blast path still does not enqueue the global
+`OnDigivolve` observer that `effect_initiated_digivolve` fires, so a "when a
+Digimon digivolves" watcher misses a Blast Digivolve. Needs its own citation +
+test.
