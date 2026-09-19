@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:37.153376100+00:00",
+  "clauses": {
+    "BT8-071#effect#0": {
+      "clause_id": "BT8-071#effect#0",
+      "card_id": "BT8-071",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "8e30a7cf2a6651043d08094df19020320fc7cb40cabd50e13e58ad1d97ead429",
+      "scenario_path": "qa/dcgo-exams/BT8/BT8-071-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:37.153376100+00:00"
+    }
+  }
+}

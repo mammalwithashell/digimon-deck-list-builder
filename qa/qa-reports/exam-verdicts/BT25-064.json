@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:56.502501500+00:00",
+  "clauses": {
+    "BT25-064#effect#0": {
+      "clause_id": "BT25-064#effect#0",
+      "card_id": "BT25-064",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "39e459441c3cdb81288d588a179bd3ff2704b55b69a250a215d7d263e163bc29",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:14.847812600+00:00"
+    },
+    "BT25-064#effect#1": {
+      "clause_id": "BT25-064#effect#1",
+      "card_id": "BT25-064",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "f7489a8b7ba819c2cb88eeaa168e7606110fcce7e928d1989fdd0930db17a87a",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-effect1.yaml",
+      "reason": "DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-09-19T15:15:56.502501500+00:00"
+    },
+    "BT25-064#inherited#0": {
+      "clause_id": "BT25-064#inherited#0",
+      "card_id": "BT25-064",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "cd9dea1cebe1afa18ff06e6e70eb6c9242d593ddbff132535f10985f6b827106",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-inherited0.yaml",
+      "recorded_at": "2026-09-19T15:13:17.172499+00:00"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:06.610519600+00:00",
+  "clauses": {
+    "BT7-071#effect#0": {
+      "clause_id": "BT7-071#effect#0",
+      "card_id": "BT7-071",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "074df6dc28b779d349b34d50dadbb6dc4c1b48fb6a5fa376e65f0dd6a622a869",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-071-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:06.610519600+00:00"
+    }
+  }
+}

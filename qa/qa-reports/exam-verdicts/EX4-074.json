@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:58.691775600+00:00",
+  "clauses": {
+    "EX4-074#effect#0": {
+      "clause_id": "EX4-074#effect#0",
+      "card_id": "EX4-074",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "2f869f86c00a8fe7abc5df2585b046a028dc5794c23615c1744b38774c1878b0",
+      "scenario_path": "qa/dcgo-exams/EX4/EX4-074-effect0.yaml",
+      "recorded_at": "2026-09-19T15:15:57.921692700+00:00"
+    },
+    "EX4-074#effect#1": {
+      "clause_id": "EX4-074#effect#1",
+      "card_id": "EX4-074",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "3d71c39c899f8af74e8ecae8c4f0c62af521516aa98182fd3add062fe40e9746",
+      "scenario_path": "qa/dcgo-exams/EX4/EX4-074-effect1.yaml",
+      "reason": "DIVERGED at step 28 (compared 31 of 31 ours / 31 dcgo steps)",
+      "recorded_at": "2026-09-19T15:13:57.791104600+00:00"
+    },
+    "EX4-074#effect#2": {
+      "clause_id": "EX4-074#effect#2",
+      "card_id": "EX4-074",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "f66e526a7680a16cc48543d2578b0531572d71c691f8b880f656fbf23ce67b35",
+      "scenario_path": "qa/dcgo-exams/EX4/EX4-074-effect2.yaml",
+      "reason": "DIVERGED at step 28 (compared 31 of 31 ours / 31 dcgo steps)",
+      "recorded_at": "2026-09-19T15:15:58.691775600+00:00"
+    }
+  }
+}

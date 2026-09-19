@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:59.531518200+00:00",
+  "clauses": {
+    "LM-032#effect#0": {
+      "clause_id": "LM-032#effect#0",
+      "card_id": "LM-032",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "019ac8b81f25f7e0841b6f87e40ea6fc0a208d18cff4ca4d798a13423cf431ac",
+      "scenario_path": "qa/dcgo-exams/LM/LM-032-effect0.yaml",
+      "recorded_at": "2026-09-19T15:15:59.531518200+00:00"
+    },
+    "LM-032#effect#1": {
+      "clause_id": "LM-032#effect#1",
+      "card_id": "LM-032",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "41725acde38d8d7242936dba8c6846e5f2a665c31f3f15cf35d27449a5377d63",
+      "scenario_path": "qa/dcgo-exams/LM/LM-032-effect1.yaml",
+      "reason": "DIVERGED at step 24 (compared 27 of 27 ours / 27 dcgo steps)",
+      "recorded_at": "2026-09-19T15:13:59.765235800+00:00"
+    },
+    "LM-032#effect#2": {
+      "clause_id": "LM-032#effect#2",
+      "card_id": "LM-032",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "341a2a2438f54c13b3d62c565b26246d8c5c8b8191d6534252a44c8c66f5a2d4",
+      "scenario_path": "qa/dcgo-exams/LM/LM-032-effect2.yaml",
+      "recorded_at": "2026-09-19T15:13:28.798175800+00:00"
+    }
+  }
+}
