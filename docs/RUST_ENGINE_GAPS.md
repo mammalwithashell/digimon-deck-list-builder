@@ -3292,3 +3292,28 @@ processing (Option self-trash, and by extension other 18-1 pending processing) a
 entry beside simultaneous triggered effects, surfaced through `pending_selection` when the
 turn player has >1 entry. Observable only for an `on_use_option` observer that reads the trash
 or the used card's zone; Monica (BT25-091) and Mimi (BT3-096) are not affected in outcome.
+
+**Second driver — body-raised trigger of the NON-turn player (2026-09-19, exam
+`BT24-030#effect#4`, `qa/dcgo-exams/BT24/BT24-030-effect4.yaml`, preserved sidecar
+`20260918T123854Z_b6852992350c46659e14b00b3c32657a.state.jsonl`; `--all-diffs` re-run shows
+ONE diff only):** step 15 `p1.trash ours=[] dcgo=[ST1-16]`. P1 (turn player) uses Gaia Force
+ST1-16 on Neptunemon; P0 pays Neptunemon's would-leave replacement by suspending it, which
+triggers Neptunemon's own `[All Turns][OPT] When this Digimon suspends` (effect#3). Ours asks
+that OptionalSkill inside the body's `drain_effect_queue` (`game_actions/options.rs`
+`play_option_core` step 6 / `effect_queue.rs` resume tail → `advance_pending_option` only runs
+once the queue is empty), i.e. before `dispose_option`; DCGO (`CardController.cs`
+`UseOptionClass.UseOption`, `AddTrashCard` before the stacked skills resolve) trashes first.
+Outcome identical (protection holds, final boards match).
+
+**This sub-case is NOT order-ambiguous — our order is illegal here.** The trigger cannot
+activate during effect processing (15-8-3-2), so at the moment the [Main] finishes the pending
+set is {Option trash = pending processing of the Option's user (9-1-5, 18-1-2), P0's
+OnSuspend trigger}. 15-4-3-5: the turn player's items all go first. When the Option's user is
+the turn player, every body-raised trigger of the non-turn player must therefore resolve AFTER
+the trash; only the turn player's own body-raised triggers are orderable against it. The
+substrate fix above (pending processing as an orderable queue entry, owner-attributed, so the
+turn-player-first bundling puts the trash ahead of the non-turn player's bundles) closes both
+drivers. Not landed this stage: a narrow "defer non-turn bundles until dispose" hook would
+touch the drain loop, the selection-resume tail and the OnUseOption observer step (observers
+can belong to either player) without the orderable entry, and would still hard-code the
+turn player's own ordering (rule 17).
