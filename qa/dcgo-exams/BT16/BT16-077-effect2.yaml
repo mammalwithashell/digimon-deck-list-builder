@@ -28,9 +28,10 @@
 #   T5 (P0, 3): Dinobeemon onto Youkomon (4: 3 -> -1). DCGO asks the [When
 #            Digivolving] OptionalSkill on every digivolution (isOptional TRUE,
 #            CanActivate = on the battle area): DECLINED. Our engine opens
-#            nothing (the whole clause is `dna_origin`-gated -- the effect#3
-#            card finding), so the row answers no live prompt and rides the
-#            wire. -> P1 1.
+#            the same optional window since the 2026-09-19 triage (f3a02b5f4:
+#            the DNA gate covers only the trash play, BT16_077.cs:182); before
+#            that the whole clause was `dna_origin`-gated and this line
+#            diverged here at step 11. -> P1 1.
 #   T6 (P1, 1): pass -> P0 3.
 #   T7 (P0, 3): Scopemon (4: 3 -> -1). [On Play]: DCGO OptionalSkill (yes,
 #            `dcgo_only` -- ours folds gate and pick into the union pick, the
@@ -120,7 +121,7 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT16-077 } }
     expect: { prompt: main_phase }
-  # DCGO's [When Digivolving] OptionalSkill: decline (wire-only on our side).
+  # [When Digivolving] OptionalSkill in both engines: decline.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
