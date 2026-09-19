@@ -106,7 +106,13 @@ effects:
           target: rusher
           keyword: Rush
           expiry: end_of_turn
+      # "and attack a player" is an IMMEDIATE attack inside this effect's
+      # processing, not a deferred grant: DCGO BT16_077.cs:251-262 runs
+      # SelectAttackEffect inline (defenderCondition: _ => false -> player
+      # only) with SetCanNotSelectNotAttack (not declinable once a Digimon was
+      # picked; the printed "may" is the optional Rush pick above). The old
+      # `windowed: true` (an AD1-004 EOT-ordering device) deferred the attack
+      # AND dropped the player-only restriction (exam BT16-077#effect#3).
       - may_attack_now:
           attacker: rusher
           targets: player
-          windowed: true

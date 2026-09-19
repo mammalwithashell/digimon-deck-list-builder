@@ -109,3 +109,61 @@ fn bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play() {
         "non-DNA: the trash-play is skipped; the next pick is the Rush target"
     );
 }
+
+/// "Then, 1 of your Digimon may gain <Rush> for the turn and attack a player."
+/// The attack is part of the effect's own processing -- an IMMEDIATE attack on
+/// the opponent player, not a deferred end-of-turn "may attack" grant.
+///
+/// Citations: DCGO `BT16_077.cs:251-262` -- once a Digimon is chosen, the
+/// effect runs `SelectAttackEffect` inline with `defenderCondition: _ => false`
+/// (player only) and `SetCanNotSelectNotAttack()` (not declinable); the printed
+/// "may" is the Digimon pick (`canNoSelect: true`, :236). general_rule.pdf
+/// §11-2-7-1 (attack targets) / §11-2-8-1 (declaration suspends the attacker).
+/// Exam BT16-077#effect#3 step 17-18 (DCGO: suspended Dinobeemon, P1 security
+/// 5 -> 4 before P1's turn; ours had neither).
+#[test]
+fn bt16_077_rush_pick_attacks_the_player_immediately() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT16-077")
+        .expect("BT16-077 loads")
+        .add_card(digimon_engine::debug_runner::make_test_card("SEC-2K", "Sec"))
+        .security(1, &["SEC-2K", "SEC-2K", "SEC-2K"])
+        .memory(3)
+        .start();
+    let h = r.place_on_field(0, "BT16-077", Some(0));
+    let sec_before = r.security_count(1);
+
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(h));
+    r.game.drain_effect_queue();
+    r.accept_optional_trigger().expect("accept [When Digivolving]");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Rush pick");
+
+    // Pick Dinobeemon itself, then answer any (player-only) attack prompt.
+    for _ in 0..4 {
+        let Some(view) = r.pending_selection_view() else { break };
+        let id = *view
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != PASS)
+            .expect("a non-pass choice");
+        r.game
+            .resolve_selection(view.selecting_player, id)
+            .expect("selection resolves");
+        r.game.drain_effect_queue();
+    }
+
+    assert!(
+        r.game.player(0).battle_area[h.index as usize].is_suspended,
+        "the chosen Digimon attacked NOW (suspended by the declaration)"
+    );
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 1,
+        "the effect attack hit the opponent player (1 security check)"
+    );
+}

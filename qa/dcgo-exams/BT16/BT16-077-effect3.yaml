@@ -14,6 +14,11 @@
 # Rush/attack part is unconditional. So an ORDINARY digivolution measures the
 # clause's second sentence.
 #
+# RESOLVED 2026-09-19: both predicted findings below were our bugs -- the
+# whole-clause DNA gate (fixed f3a02b5f4) and a `windowed: true` on the
+# attack that deferred it to a later main-phase action and dropped the
+# player-only restriction (fixed with this row split; DCGO BT16_077.cs:267-275).
+#
 # PREDICTED FINDING (our side). BT16-077.yaml gates the WHOLE clause on
 # `condition: { dna_origin: true }`, so our engine never opens the window on
 # an ordinary digivolution, while DCGO asks OptionalSkill (isOptional: true),
@@ -122,9 +127,14 @@ steps:
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # DCGO: SelectAttackEffect, players only (defenderCondition: _ => false),
-  # not declinable. -1 is "attack the player".
+  # not declinable. -1 is "attack the player". Two rows for one decision
+  # (the EX7-013-effect2.yaml convention): ours surfaces a Target prompt whose
+  # only accept id is the player (answered `yes`, sim-side); DCGO's wire keeps
+  # the recorded `value: -1`.
   - actor: 0
-    do: { select: { value: -1 } }
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { value: -1, dcgo_only: true } }
     expect: { prompt: SelectAttackEffect }
   # Memory -1: P1's turn. T8 (P1, memory 1): one step past the clause.
   - actor: 1
