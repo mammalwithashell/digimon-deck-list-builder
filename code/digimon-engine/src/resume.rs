@@ -581,6 +581,14 @@ pub enum ResumeFrame {
         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
         outer_conts: Vec<OuterContinuation>,
     },
+    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-16-1
+    /// trash-this-card cost parked a selection first. Resolve that inner
+    /// selection as data, then run the body iff the carrier reached the trash.
+    DelayBodyAfterCost {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_delay::DelayBodyContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// Effect-initiated App Fuse host prompt. Accept installs the result-card
     /// prompt; PASS declines without running any composed tail, matching the
     /// legacy prompt's absent `on_decline`.

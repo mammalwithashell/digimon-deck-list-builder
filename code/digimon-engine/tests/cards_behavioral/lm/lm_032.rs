@@ -483,6 +483,63 @@ fn lm_032_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
     );
 }
 
+/// §16-16-1 / §15-7: `<Delay>` is "By trashing this card, activate the effect
+/// below" -- the trash is the processing condition, so it is paid BEFORE the
+/// body runs. DCGO LM_032.cs `ActivateCoroutine` trashes the card
+/// (`DeletePeremanentAndProcessAccordingToResult`) and only on success opens
+/// the trash-to-deck-top pick. Exam LM-032#effect#1 (step 24) caught ours
+/// leaving LM-032 in the battle area until after the body's picks.
+#[test]
+fn lm_032_delay_trashes_this_card_before_the_body_selection() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(make_purple_digimon("LM032-TRASH-PURPLE", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_032_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM032-TRASH-PURPLE");
+
+    advance_to_next_p0_turn(&mut runner);
+    accept_scheduled_delay(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must install the mandatory purple-Digimon trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "LM-032"),
+        "the <Delay> cost (trash LM-032) must be paid before the body's first pick"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM-032"),
+        "LM-032 must already be in the trash when the body's pick opens"
+    );
+}
+
 /// The Delay must NOT fire when the opponent controls no Digimon.
 #[test]
 fn lm_032_delay_does_not_fire_when_opponent_has_no_digimon() {

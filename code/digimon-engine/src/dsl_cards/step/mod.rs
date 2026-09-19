@@ -305,6 +305,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DelayPlayFromUnionAfterSelection { outer_conts, .. }) => {
                 outer_conts.push(cont)
             }
+            Some(ResumeFrame::DelayBodyAfterCost { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::AppFuseHostSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),

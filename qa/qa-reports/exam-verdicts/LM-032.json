@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:15:59.531518200+00:00",
+  "last_updated": "2026-09-19T20:49:59.446232800+00:00",
   "clauses": {
     "LM-032#effect#0": {
       "clause_id": "LM-032#effect#0",
@@ -14,12 +14,11 @@
     "LM-032#effect#1": {
       "clause_id": "LM-032#effect#1",
       "card_id": "LM-032",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "41725acde38d8d7242936dba8c6846e5f2a665c31f3f15cf35d27449a5377d63",
       "scenario_path": "qa/dcgo-exams/LM/LM-032-effect1.yaml",
-      "reason": "DIVERGED at step 24 (compared 27 of 27 ours / 27 dcgo steps)",
-      "recorded_at": "2026-09-19T15:13:59.765235800+00:00"
+      "recorded_at": "2026-09-19T20:49:59.446232800+00:00"
     },
     "LM-032#effect#2": {
       "clause_id": "LM-032#effect#2",

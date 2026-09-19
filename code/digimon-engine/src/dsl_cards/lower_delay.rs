@@ -30,7 +30,11 @@ use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
-use crate::enums::{DelayTrigger, EffectTiming};
+use crate::effect_context::{DelayCostStatus, EffectContext};
+use crate::enums::{DelayTrigger, EffectTiming, PlayerId};
+use crate::game::Game;
+use crate::permanent::OptionState;
+use crate::trigger_context::TriggerContext;
 
 /// Lower a `Delay` declarative clause.
 ///
@@ -99,9 +103,41 @@ pub fn lower_with_raw(
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);
     let runtime = StepRuntime::new(raw);
     let active_when = active_when.cloned();
+    // §16-16-1: "While a card with this effect is in the battle area, BY
+    // TRASHING THAT CARD, the effect specified in <Delay> will activate." The
+    // trash is the processing condition (§15-7), so it is paid FIRST and the
+    // body runs only if the card actually reached the trash. DCGO does the
+    // same in every Delay card's `ActivateCoroutine`
+    // (`DeletePeremanentAndProcessAccordingToResult(... successProcess ...)`
+    // then `if (deleted)` -- e.g. LM_032.cs:146-158). The turn scan / event /
+    // `[Main]` lifecycles used to run the body and trash the carrier AFTER it
+    // (exam LM-032#effect#1, G-ENGINE-DELAY-BODY-BEFORE-TRASH); their post-body
+    // delete now re-finds nothing and no-ops. A marker-only Delay (empty
+    // process -- ST23-15 / ST24-15) is not an activation and pays nothing here.
+    let pays_own_cost = !process_steps.is_empty();
     let mut builder = EffectBuilder::new(card, EffectTiming::DelayEffect)
         .delay(delay_trigger)
         .process(move |ctx| {
+            if pays_own_cost {
+                if let Some((source_player, source_card)) = delay_carrier(ctx) {
+                    match ctx.trash_delay_source_status() {
+                        DelayCostStatus::Paid => {}
+                        DelayCostStatus::Unpaid => return,
+                        DelayCostStatus::Pending => {
+                            let continuation = DelayBodyContinuation {
+                                source_player,
+                                source_card,
+                                player: ctx.player,
+                                steps: process_arc.clone(),
+                                runtime: runtime.clone(),
+                                trigger_context: ctx.game.current_trigger_context.clone(),
+                            };
+                            arm_pending_delay_body_continuation(ctx.game, continuation);
+                            return;
+                        }
+                    }
+                }
+            }
             let mut bindings = Bindings::new();
             let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
         });
@@ -162,4 +198,99 @@ pub fn lower_with_raw(
         builder = builder.inherited();
     }
     builder.build()
+}
+
+/// The resolving effect's source when it is a `<Delay>` Option carrier in the
+/// battle area whose top card is this effect's card: `(owner, card)`.
+fn delay_carrier(ctx: &EffectContext<'_>) -> Option<(PlayerId, CardHandle)> {
+    let source = ctx.source_permanent?;
+    let perm = ctx
+        .game
+        .player(source.player)
+        .battle_area
+        .get(source.index as usize)?;
+    if !matches!(perm.option_state, OptionState::Delayed { .. }) {
+        return None;
+    }
+    let top = ctx.permanent_top_card_handle(source)?;
+    (top == ctx.source_card).then_some((source.player, top))
+}
+
+/// A `<Delay>` body whose trash-this-card cost parked a selection (a
+/// replacement window around the trash). Plain data -- resumed through
+/// `ResumeFrame::DelayBodyAfterCost` (rule 28 clone-safety).
+#[derive(Clone, Debug)]
+pub(crate) struct DelayBodyContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+    player: PlayerId,
+    steps: Arc<[CompiledStep]>,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+}
+
+fn arm_pending_delay_body_continuation(game: &mut Game, continuation: DelayBodyContinuation) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_body_after_selection(game, continuation);
+        return;
+    };
+
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DelayBodyAfterCost {
+                inner: Box::new(inner),
+                continuation,
+                outer_conts: Vec::new(),
+            }],
+        });
+        game.pending_selection = Some(selection);
+        return;
+    }
+
+    let original_callback = selection.callback;
+    let callback_continuation = continuation.clone();
+    selection.callback = Box::new(move |game, action_id| {
+        original_callback(game, action_id);
+        continue_delay_body_after_selection(game, callback_continuation);
+    });
+
+    let original_decline = selection.on_decline.take();
+    selection.on_decline = Some(Box::new(move |game| {
+        if let Some(original_decline) = original_decline {
+            original_decline(game);
+        }
+        continue_delay_body_after_selection(game, continuation);
+    }));
+
+    game.pending_selection = Some(selection);
+}
+
+/// The `<Delay>` cost's parked selection resolved. Run the body only if the
+/// carrier actually reached the trash (§16-16-1: the body activates BY
+/// trashing the card; a replaced/prevented trash activates nothing).
+pub(crate) fn continue_delay_body_after_selection(
+    game: &mut Game,
+    continuation: DelayBodyContinuation,
+) {
+    if game.pending_selection.is_some() {
+        arm_pending_delay_body_continuation(game, continuation);
+        return;
+    }
+    let paid = {
+        let ctx = EffectContext::new(game, continuation.source_card, None, continuation.player);
+        ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card)
+    };
+    if !paid {
+        return;
+    }
+    crate::dsl_cards::step::drain_or_rewrap_pending_tail(
+        game,
+        continuation.source_card,
+        None,
+        continuation.player,
+        continuation.steps.to_vec(),
+        Bindings::new(),
+        continuation.runtime,
+        continuation.trigger_context,
+    );
 }
