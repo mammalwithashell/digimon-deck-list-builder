@@ -2152,12 +2152,14 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger
 - **Suggested fix:** route the scheduled scan through the same outer-optional prompt machinery (`install_outer_optional_trigger_selection`) the OnEvent path now uses; decline leaves the Delay parked and re-armable at the next matching boundary.
 - **Blast radius:** any scheduled-delay card where declining is strategically meaningful (e.g. keeping the option in the battle area as Decode/Partition fodder or to dodge a punish window).
 
-## G-ENGINE-DELAY-BODY-BEFORE-TRASH — [Main]-activated Delay runs its body before trashing the Option (OPEN 2026-07-10)
+## G-ENGINE-DELAY-BODY-BEFORE-TRASH — [Main]-activated Delay runs its body before trashing the Option (RESOLVED 2026-09-19, 70694334d)
 
 - **Found by:** buglist faithfulness campaign, BT25-098 audit.
 - **What's wrong:** `activate_delayed_option_main` resolves the Delay BODY first, then trashes the Option card (cause=Cost). DCGO trashes the Option FIRST and only runs the body on trash success (§16-16: "trash this card to activate the linked effect" — the trash is the cost). Divergence surfaces when the trash can be replaced/prevented (e.g. an effect protecting Options in the battle area) or when the body cares about the Option's zone.
 - **Scope:** shared machinery for all MainPhaseActivated Delay options (P-035/037/039/103–107/193/205/235/236, LM-033/035/037/047/049/054/056, BT13-110, BT21-097, BT25-098, ST12-15).
 - **Fix shape:** reorder in `activate_delayed_option_main`: pay the trash cost (through the replacement pipeline) first; abort the body if the Option did not actually leave.
+- **RESOLVED 2026-09-19 (`70694334d`, ENGINE FIX):** broader than the `[Main]` path — the turn-scheduled scan (`resolve_delayed_options_matching`) and the event-gated path had the same body-then-trash order; exam LM-032#effect#1 (step 24) caught it on the `[Start of Your Turn]` scan. Fixed once at the shared point: the lowered `DelayEffect` process (`dsl_cards/lower_delay.rs`) now pays the carrier trash via `trash_delay_source_status()` FIRST and aborts the body when unpaid (§16-16-1; DCGO LM_032.cs:146-158); a replacement selection parked around the trash resumes through the data-driven `ResumeFrame::DelayBodyAfterCost` (clone-safe). The three lifecycles' post-body delete now re-finds nothing and no-ops. Marker-only delays (empty process: ST23-15/ST24-15) are untouched. Test: `lm_032_delay_trashes_this_card_before_the_body_selection`; cards_behavioral 8198/0.
+- **Residual finding (not fixed, 2026-09-19):** when a turn-scheduled Delay's `active_when` is FALSE at its window (e.g. LM-032 with no opponent Digimon) the body is never enqueued, yet `resolve_delayed_options_matching` still deletes the carrier after the drain. DCGO's `CanUseCondition` false leaves the card in the battle area. Needs its own exam line before a fix.
 
 ## EX12 Shambala / Virus Busters keyword gaps (RESOLVED 2026-07-08)
 
