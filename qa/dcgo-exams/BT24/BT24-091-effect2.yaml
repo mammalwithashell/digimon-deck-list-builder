@@ -56,11 +56,11 @@
 #    OptionalSkill in front of it (that gate belongs to the DECLARED <Link>,
 #    Link.cs, not to an effect link).
 #
-# PREDICTED DIVERGENCE, NOT THIS CLAUSE'S: once linked, DCGO's host reads 7000
-# (Link DP +2000, effect#3) and ours 5000 -- `BT24-091.yaml` does not author
-# the printed Link box (OPEN finding F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-
-# AUTHORED, docs/RUST_ENGINE_GAPS.md; NOTES-BT24-091.md). The tail assert
-# therefore does not pin the host's DP; everything else is pinned.
+# LINK DP (was a predicted divergence, now pinned): once linked, the host reads
+# 7000 on BOTH sides (Cyclonemon 5000 + the printed Link DP +2000, effect#3).
+# Ours read 5000 until 2026-09-19, when `BT24-091.yaml` gained its printed Link
+# box (F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED, docs/RUST_ENGINE_GAPS.md;
+# guard test `bt24_091_main_link_gives_host_printed_link_dp_plus_2000`).
 card: BT24-091
 clause: BT24-091#effect#2
 seed: 424242
@@ -160,11 +160,13 @@ assert:
         - { card_id: BT24-011, dp: 5000, suspended: false, sources: [] }
       p1.field:
         - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
-  # After: the Option is LINKED (not in the trash, not in hand) and the link
-  # cost nothing (memory still -3). Host DP deliberately unpinned (see header).
+  # After: the Option is LINKED (not in the trash, not in hand), the link
+  # cost nothing (memory still -3), and the host carries Link DP +2000.
   - at: 16
     that:
       turn: 6
       p0.memory: -3
+      p0.field:
+        - { card_id: BT24-011, dp: 7000, suspended: false, sources: [] }
       p0.trash: []
       p1.trash: [ST1-02]

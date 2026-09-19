@@ -2930,7 +2930,7 @@ prompt, ordinary security dispose. Citation: DCGO `Permanent.AddLinkCard` →
 `RemoveFromAllArea` (BT25_100.cs:147); general_rule §13-1-7-4. Tests:
 `bt25_100_security_flip_*` (3), `bt25_093_security_flip_links_then_host_…`.
 
-## F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED — OPEN (2 of 6 fixed 2026-09-18)
+## F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED — OPEN (3 of 6 Link DP fixed 2026-09-19)
 
 Found while finishing the gap above: Plug-In **Option** cards were authored
 without their printed Link box. Nothing data-drives Link DP (`queries.rs` sums
@@ -2943,9 +2943,18 @@ and no `dp_modifier`, against `data/card_bundles/<ID>.md` "### Link DP":
 | Iron Slash (BT25-100) | +2000, plus linked `<Collision>` also missing | FIXED 2026-09-18 |
 | Ignition Flare (BT25-093) | +2000 | FIXED 2026-09-18 |
 | BT25-101 | +4000 | OPEN |
-| BT24-091 | +2000 | OPEN |
+| BT24-091 | +2000 (Link DP only; linked [When Attacking] bounce still missing) | FIXED 2026-09-19 |
 | BT24-095 | +2000 | OPEN |
 | ST22-08 | +2000 | OPEN |
+
+**BT24-091 Link DP RESOLVED 2026-09-19** (BT24-091#effect#2 triage): `scope: linked`
+`dp_modifier: 2000` aura added to `BT24-091.yaml` (citation: bundle "### Link DP
+DP+2000"; DCGO `BT24_091.cs` "Link" region -> `CardEffectFactory.LinkEffect`).
+Guard test `bt24_091_main_link_gives_host_printed_link_dp_plus_2000` (4000 != 6000
+before, green after). Exam `BT24-091-effect2.yaml` re-diffed CLEAN against the
+preserved sidecar and re-recorded CONFIRMED, host DP now pinned at 7000. The
+linked "[When Attacking] [Once Per Turn]" bounce (effect#5) is STILL unauthored.
+BT24-091's Main-tail host filter already carried `{digimon, TS}`.
 
 The same two cards also let an effect-link pick ANY own Digimon; DCGO filters
 hosts through `card.CanLinkToTargetPermanent(permanent, false, true)`

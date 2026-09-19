@@ -100,6 +100,17 @@ effects:
               - kind: digimon
               - trait_has: TS
 
+  # Link DP box: DP+2000 to the host while this card is linked (card image +
+  # official Bandai DB bundle data/card_bundles/BT24-091.md "### Link DP
+  # DP+2000"; DCGO BT24_091.cs "Link" region -> CardEffectFactory.LinkEffect).
+  # Was missing (F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED); surfaced by
+  # exam line qa/dcgo-exams/BT24/BT24-091-effect2.yaml (2026-09-19).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
+
   - kind: link_requirement
     scope: inherited
     cost: 3

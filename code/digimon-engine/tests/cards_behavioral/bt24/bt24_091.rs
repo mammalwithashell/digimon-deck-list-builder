@@ -174,6 +174,43 @@ fn bt24_091_main_accepting_link_attaches_the_option_to_a_ts_digimon() {
     assert_eq!(linked[0].card_id(&runner.game.card_data), "BT24-091");
 }
 
+/// Printed Link box "Link DP: DP+2000" (official Bandai DB bundle
+/// `data/card_bundles/BT24-091.md` "### Link DP"; DCGO `BT24_091.cs` "Link"
+/// region -> `CardEffectFactory.LinkEffect(card)`). An effect link from the
+/// [Main] tail must give the host +2000 DP. Exam line
+/// `qa/dcgo-exams/BT24/BT24-091-effect2.yaml` step 16: DCGO host 7000, ours 5000.
+#[test]
+fn bt24_091_main_link_gives_host_printed_link_dp_plus_2000() {
+    let mut runner = tidal_runner().hand(0, &["BT24-091"]).memory(20).start();
+    runner.place_on_field(0, "TS-TAMER", Some(0));
+    let host = runner.place_on_field(0, "TS-DIGIMON", Some(0));
+    runner.game.enter_main_phase();
+    let host_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: host.index };
+    let dp_before = runner.effective_dp(host_handle).expect("host dp");
+
+    assert_eq!(play_tidal_standard(&mut runner), OptionPlayResult::Pending);
+    let view = runner.pending_selection_view().expect("optional link prompt");
+    let link_action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&aid| aid != PASS)
+        .expect("host action");
+    runner
+        .execute_action(view.selecting_player, link_action)
+        .expect("link Tidal Stream to the TS Digimon");
+
+    assert_eq!(
+        runner.game.player(0).battle_area[host.index as usize].linked_cards.len(),
+        1
+    );
+    assert_eq!(
+        runner.effective_dp(host_handle).expect("host dp"),
+        dp_before + 2000,
+        "Link DP +2000 must reach the host"
+    );
+}
+
 fn tidal_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .from_dsl_yaml(YAML)
