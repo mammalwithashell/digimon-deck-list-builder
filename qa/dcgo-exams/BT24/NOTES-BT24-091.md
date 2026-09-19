@@ -102,6 +102,8 @@ Neither half of the Link box exists:
    (`Mode.Bounce`, `canNoSelect: false`) over `IsMinLevel` opposing Digimon.
    The fix is the `BT25-093.yaml` "Link ESS" idiom (mandatory — the text has no
    "you may").
+   **RESOLVED 2026-09-19**: authored with that idiom; `BT24-091-effect5.yaml`
+   re-diffed CLEAN 14/14 against the preserved sidecar, verdict CONFIRMED.
 
 Both are appended to the finding in `docs/RUST_ENGINE_GAPS.md`. Not fixed here
 (exam stage; the harness binary embeds the card pool and this stage does not

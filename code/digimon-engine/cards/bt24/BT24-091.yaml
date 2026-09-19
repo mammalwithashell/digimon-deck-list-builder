@@ -111,6 +111,31 @@ effects:
     dp_modifier: 2000
     summary: "[Link] +2000 DP to the linked Digimon"
 
+  # Link Effect (linked ESS): [When Attacking] [Once Per Turn] Return 1 of
+  # your opponent's lowest level Digimon to the hand. Official Bandai DB
+  # bundle data/card_bundles/BT24-091.md "### Link Effect"; DCGO BT24_091.cs
+  # region "Link ESS" (OnAllyAttack, SetUpActivateClass(.., 1, false, ..),
+  # SetIsLinkedEffect(true), SelectPermanentEffect canNoSelect:false over
+  # IsMinLevel). MANDATORY: no "you may". Was missing; surfaced by exam line
+  # qa/dcgo-exams/BT24/BT24-091-effect5.yaml (2026-09-19). Same idiom as the
+  # BT25-093 linked ESS.
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Link][When Attacking][OPT] Return 1 opponent lowest-level Digimon to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_bounce
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate:
+                  selector: lowest_level
+                  of: opponent
+          prompt: "Return 1 of your opponent's lowest level Digimon to the hand"
+      - return_to_hand: { target: wa_bounce }
+
   - kind: link_requirement
     scope: inherited
     cost: 3

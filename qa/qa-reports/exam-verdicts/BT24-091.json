@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T16:05:08.935153500+00:00",
+  "last_updated": "2026-09-19T16:13:55.604904300+00:00",
   "clauses": {
     "BT24-091#effect#0": {
       "clause_id": "BT24-091#effect#0",
@@ -41,12 +41,11 @@
     "BT24-091#effect#5": {
       "clause_id": "BT24-091#effect#5",
       "card_id": "BT24-091",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Link Effect",
       "text_sha256": "811e1935169d6385b0c942866ae60165755c5816a921778f9c7ea485ae8b29f3",
       "scenario_path": "qa/dcgo-exams/BT24/BT24-091-effect5.yaml",
-      "reason": "DIVERGED at step 8 (compared 14 of 14 ours / 14 dcgo steps)",
-      "recorded_at": "2026-09-19T15:16:14.040441400+00:00"
+      "recorded_at": "2026-09-19T16:13:55.604904300+00:00"
     }
   }
 }

@@ -2943,7 +2943,7 @@ and no `dp_modifier`, against `data/card_bundles/<ID>.md` "### Link DP":
 | Iron Slash (BT25-100) | +2000, plus linked `<Collision>` also missing | FIXED 2026-09-18 |
 | Ignition Flare (BT25-093) | +2000 | FIXED 2026-09-18 |
 | BT25-101 | +4000 | OPEN |
-| BT24-091 | +2000 (Link DP only; linked [When Attacking] bounce still missing) | FIXED 2026-09-19 |
+| BT24-091 | +2000 (+ linked [When Attacking] bounce, effect#5) | FIXED 2026-09-19 |
 | BT24-095 | +2000 | OPEN |
 | ST22-08 | +2000 | OPEN |
 
@@ -3172,6 +3172,15 @@ are expected clean; the finding is the over-wide pick.
   (BT25-101, BT24-095, ST22-08) should be checked for a missing Link EFFECT as
   well as the Link DP. Exam lines: `qa/dcgo-exams/BT24/BT24-091-effect3.yaml`,
   `-effect5.yaml` (predicted `diverged`).
+  **RESOLVED 2026-09-19** (BT24-091#effect#5 triage, commit "fix(BT24-091):
+  author linked [When Attacking][OPT] bounce"): linked ESS added to
+  `BT24-091.yaml` (BT25-093 idiom: `scope: inherited`, `when: when_attacking`,
+  `once_per_turn`, mandatory `select_opponent_permanent` over `lowest_level`,
+  `return_to_hand`). Citation: bundle "### Link Effect"; `BT24_091.cs` region
+  "Link ESS". Guard test
+  `bt24_091_linked_host_when_attacking_bounces_lowest_level_mandatory_once_per_turn`
+  (fails before, green after). Exam `BT24-091-effect5.yaml` re-diffed CLEAN 14/14
+  against the preserved sidecar `20260918T125059Z_d0b72e2c`; verdict CONFIRMED.
 - **Neptunemon (BT24-030)** — YAML header `color: [blue, purple]` and a single
   `Blue Lv.5 / 4` circle; the official DB prints Blue/Black with `Blue Lv.5 / 4`
   and `Black Lv.5 / 4`.

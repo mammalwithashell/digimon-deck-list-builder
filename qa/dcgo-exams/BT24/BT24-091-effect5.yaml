@@ -18,20 +18,14 @@
 # card), so nothing else stacks on the declaration -> no MultipleSkills. The
 # check then flips P0's stack[9] (Biyomon ST1-02, 3000: trashed).
 #
-# PREDICTED DIVERGENCE (ours, card YAML). `code/digimon-engine/cards/bt24/
-# BT24-091.yaml` authors NEITHER half of the printed Link box: no `scope:
-# linked` DP aura (effect#3, the OPEN F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-
-# AUTHORED finding) and NO linked [When Attacking] clause at all -- that second
-# omission is new and is recorded in NOTES-BT24-091.md. So on our side the
-# linked Lekismon attacks with no trigger: the bounce row below answers no
-# live prompt (kept for the DCGO wire) and Agumon stays on P0's board. The
-# security-flip link itself WORKS on our side since 35958972b (the crashed
-# draft predicted the line would part at the link pick; that is obsolete).
-# The asserts pin only what both engines share; the oracle run measures the
-# bounce, and the line goes clean once the clause is authored (the
-# BT25-093.yaml "Link ESS" idiom: `scope: inherited, when: when_attacking,
-# once_per_turn: true`, mandatory `select_opponent_permanent` over the
-# `lowest_level` aggregate, `return_to_hand`).
+# RESOLVED DIVERGENCE (ours, card YAML). The first oracle pass (sidecar
+# 20260918T125059Z_d0b72e2c) diverged at step 8 (Link DP, host 5000 vs 7000 --
+# fixed by 6d2ba79c2) and from step 11 (the linked [When Attacking] bounce was
+# never authored, so Agumon stayed on P0's board). The linked ESS is now
+# authored in BT24-091.yaml (the BT25-093 "Link ESS" idiom: `scope: inherited,
+# when: when_attacking, once_per_turn: true`, mandatory
+# `select_opponent_permanent` over the `lowest_level` aggregate,
+# `return_to_hand`); the re-diff against the preserved sidecar is CLEAN 14/14.
 #
 # BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
 # used by BOTH seats.
@@ -113,11 +107,18 @@ assert:
       p1.security: 4
       p1.field:
         - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
-  # After the link (step 8): the Option is plugged in, not trashed. Host DP
-  # unpinned (effect#3's predicted divergence).
+  # After the link (step 8): the Option is plugged in, not trashed.
   - at: 8
     that:
       turn: 3
       p0.memory: 1
       p1.trash: []
       p1.security: 4
+  # After THE CLAUSE (step 12): Agumon is back in P0's hand; the linked host
+  # carries Link DP +2000 (5000 -> 7000).
+  - at: 12
+    that:
+      turn: 4
+      p0.field: []
+      p1.field:
+        - { card_id: BT25-024, dp: 7000, suspended: true, sources: [] }
