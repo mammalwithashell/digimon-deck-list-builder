@@ -569,3 +569,55 @@ fn bt20_020_clause3_only_targets_digimon_with_lte_dp() {
     );
     let _ = (opp_eq, opp_hi);
 }
+
+// ─── Section 8 — Clause 2 gate vs a security-played Tamer ────────────────────
+
+/// Exam BT20-020#effect#3 (G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT):
+/// "Your opponent can't play Digimon or Tamers by effects until the end of
+/// their turn" must stop a security-checked Tai Kamiya (ST1-12) "[Security]
+/// Play this card without paying the cost" — a Tamer played by an effect.
+/// DCGO: `PlaySelfTamerSecurityEffect.CanActivateCondition` requires
+/// `CanPlayAsNewPermanent`, which `CanNotPutFieldClass` makes false
+/// (CardEffectFactory.cs:165-169), so the card goes to the trash.
+#[test]
+fn bt20_020_gate_blocks_security_played_tamer() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-020")
+        .unwrap()
+        .dsl_card("BT20-076")
+        .unwrap()
+        .dsl_card("ST1-12")
+        .unwrap()
+        // Two Tai: one is trashed by the Dragon-Mode rider, the other checked.
+        .security(1, &["ST1-12", "ST1-12"])
+        .start();
+    let ifm = runner.place_stack(0, &["BT20-076", "BT20-020"]);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ifm));
+    runner.game.drain_effect_queue();
+    assert!(runner
+        .game
+        .modifiers
+        .player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect));
+    assert_eq!(runner.security_count(1), 1, "Dragon Mode rider trashes 1 security");
+
+    runner.attack_player(ifm, 1, false);
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.security_count(1), 0);
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "the gated Tai must NOT be played; field={:?}",
+        runner.game.player(1).battle_area.len()
+    );
+    let trash_ids: Vec<String> = runner
+        .game
+        .player(1)
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(trash_ids, vec!["ST1-12", "ST1-12"], "both Tai end in the trash");
+}

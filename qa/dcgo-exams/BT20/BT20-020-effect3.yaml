@@ -24,8 +24,10 @@
 # game_actions/play.rs. Mandatory, no prompt on either side. The book's
 # `quiet-opponent` carries Tai x4 (in place of ST1-13) for this.
 #
-# PREDICTED DIVERGENCE (ours, ENGINE -- measured sim-side while authoring,
-# 2026-09-18): our engine PLAYS Tai anyway. The modifier is installed, but a
+# PREDICTED DIVERGENCE -- RESOLVED 2026-09-19 (engine fix in
+# effect_context/selections.rs play_pending_security; oracle re-diff CLEAN).
+# History: (ours, ENGINE -- measured sim-side while authoring,
+# 2026-09-18): our engine PLAYED Tai anyway. The modifier is installed, but a
 # security-flipped "[Security] Play this card" resolves through
 # `CompiledStep::PlayFromSecurity` -> `ctx.play_pending_security()`
 # (dsl_cards/step/play_digivolve.rs ~805), which marks the parked
@@ -34,7 +36,7 @@
 # only on the from-hand / from-trash ByEffect paths (game_actions/mod.rs ~440,
 # game_actions/play.rs ~140). Logged as G-ENGINE-PLAY-PENDING-SECURITY-
 # IGNORES-CANNOT-PLAY-BY-EFFECT (docs/RUST_ENGINE_GAPS.md, NOTES-BT20-020.md).
-# The oracle run is expected to report `p1.field` / `p1.trash` at step 11.
+# The oracle run reported `p1.field` / `p1.trash` at step 11 until the fix.
 #
 # Both security removals (the trash, then the check) trigger the [All Turns]
 # observer (#effect#4) on both sides; p1's board is empty, so it has no target
@@ -161,16 +163,16 @@ assert:
           dp: 13000
           suspended: false
           sources: [BT20-076]
-  # Sentence 1, the part BOTH engines share after the check: security 3 and a
-  # suspended attacker. WHERE TAI WENT is deliberately not pinned -- see
-  # PREDICTED DIVERGENCE in the header (DCGO: p1.trash [ST1-02, ST1-12], p1.field
-  # []; ours today: Tai is PLAYED). Backfill this block from the oracle once the
-  # engine gap is closed.
+  # Sentence 1: the gated Tai is trashed, not played. Backfilled from the
+  # oracle (CLEAN re-diff, 2026-09-19) after the engine gap closed --
+  # play_pending_security now consults CannotPlayTamerByEffect.
   - at: 11
     that:
       turn: 5
       p0.memory: 1
       p1.security: 3
+      p1.trash: [ST1-02, ST1-12]
+      p1.field: []
       p0.field:
         - card_id: BT20-020
           dp: 13000

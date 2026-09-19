@@ -1836,7 +1836,8 @@ impl<'a> EffectContext<'a> {
     /// defender has `CannotPlayDigimonByEffect` installed, the play is
     /// blocked — this method returns without raising `pending.played`.
     /// The security-resolution loop in `combat.rs` sees `played == false`
-    /// and trashes the card via its normal "didn't stick" path.
+    /// and trashes the card via its normal "didn't stick" path. A Tamer is
+    /// gated the same way by `CannotPlayTamerByEffect`.
     ///
     /// **Renamed in Phase 2f1 Task 3a** — formerly `play_from_security`.
     /// The 0-arg method was renamed to disambiguate from the new
@@ -1870,15 +1871,23 @@ impl<'a> EffectContext<'a> {
         // The security-resolution loop (combat.rs) will see `played == false`
         // and trash the card via the normal "didn't stick" path — no double
         // push needed here.
-        // Tamer security triggers are NOT gated — only Digimon.
-        let is_digimon = card.card_kind(&self.game.card_data) == CardKind::Digimon;
-        if is_digimon
-            && self
-                .game
-                .modifiers
-                .player_has(defender, ModifierType::CannotPlayDigimonByEffect)
-        {
-            return;
+        // Tamer security triggers ("[Security] Play this card", e.g. Tai
+        // Kamiya ST1-12) are effect plays too and are gated by
+        // CannotPlayTamerByEffect (BT20-020 / BT23-014 "can't play Digimon or
+        // Tamers by effects"). DCGO: `PlaySelfTamerSecurityEffect`'s
+        // CanActivateCondition requires `CanPlayAsNewPermanent`, which
+        // `CanNotPutFieldClass` makes false (CardEffectFactory.cs:165-169).
+        // G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT.
+        let kind = card.card_kind(&self.game.card_data);
+        let gate = match kind {
+            CardKind::Digimon => Some(ModifierType::CannotPlayDigimonByEffect),
+            CardKind::Tamer => Some(ModifierType::CannotPlayTamerByEffect),
+            _ => None,
+        };
+        if let Some(gate) = gate {
+            if self.game.modifiers.player_has(defender, gate) {
+                return;
+            }
         }
 
         let perm = crate::permanent::Permanent::new(card, turn);

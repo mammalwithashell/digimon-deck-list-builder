@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:16:32.905196500+00:00",
+  "last_updated": "2026-09-19T17:01:06.908176400+00:00",
   "clauses": {
     "BT20-020#effect#0": {
       "clause_id": "BT20-020#effect#0",
@@ -32,12 +32,11 @@
     "BT20-020#effect#3": {
       "clause_id": "BT20-020#effect#3",
       "card_id": "BT20-020",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "1c16ad322c9b2e7d0190c2cd9eb16650a1084c26f6086743a16a71d0a90b57b9",
       "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect3.yaml",
-      "reason": "DIVERGED at step 11 (compared 12 of 12 ours / 12 dcgo steps)",
-      "recorded_at": "2026-09-19T15:16:31.720201700+00:00"
+      "recorded_at": "2026-09-19T17:01:06.908176400+00:00"
     },
     "BT20-020#effect#4": {
       "clause_id": "BT20-020#effect#4",
