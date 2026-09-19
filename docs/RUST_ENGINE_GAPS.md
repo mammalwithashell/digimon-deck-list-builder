@@ -3230,3 +3230,29 @@ silently drops the rest of the using effect.
 - **Exam impact:** `qa/dcgo-exams/EX7/EX7-013-effect1.yaml` / `-effect2.yaml` reach the
   clause through the `[When Digivolving]` arm instead; see
   `qa/dcgo-exams/EX7/NOTES-EX7-013.md`.
+
+## G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER — OPEN (finding, 2026-09-19)
+
+**Driver:** exam `BT25-091#effect#2` (Monica Simmons, `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`),
+diverged at step 9/10: `p0.trash ours=[] dcgo=[BT25-100]` while Monica's
+"When you use [TS] trait Option cards" OptionalSkill and target pick are asked;
+the engines reconverge at step 11 and the clause's own outcome matches.
+
+**What differs:** ours runs body → `fire_on_use_option_observers` → Arts → `dispose_option`
+(trash) (`effect_queue.rs` `advance_pending_option` / `finish_option_after_body`), so the used
+Option is in no zone while the observers resolve. DCGO `CardController.cs:2000-2126` STACKS the
+`OnUseOption` skill infos, runs `OptionSkill`, runs `OptionResolutionClass` and `AddTrashCard`,
+and only then do the stacked observers resolve — the Option is already in the trash.
+
+**Rules:** neither fixed order is mandated. general_rule.pdf 9-1-5 makes the trash of a used
+Option *pending processing* at the timing its [Main] has resolved; the "when you use" trigger
+has been pending activation since the use (9-1-2); 18-1-2 → 15-4-3: processing at the same
+timing is ordered like simultaneous triggers, turn player first and choosing the order. Both
+engines hard-code one legal order and expose no ordering choice.
+
+**Why not fixed:** switching our order to DCGO's would only replace one hard-coded order with
+the other (still no choice surfaced — rule 17). The faithful fix is substrate: make pending
+processing (Option self-trash, and by extension other 18-1 pending processing) an orderable
+entry beside simultaneous triggered effects, surfaced through `pending_selection` when the
+turn player has >1 entry. Observable only for an `on_use_option` observer that reads the trash
+or the used card's zone; Monica (BT25-091) and Mimi (BT3-096) are not affected in outcome.

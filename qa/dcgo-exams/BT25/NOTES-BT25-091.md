@@ -57,3 +57,15 @@ The committed line takes the `[Main]` branch through a `sim_only` `choice:` row,
 so the finding does not contaminate the clause. Same behaviour is expected for
 every dual-mode Plug-In Option (BT25-093, BT24-091, …). Needs the card-fix gate
 (failing-then-passing test); not applied in this stage.
+
+## `effect#2` oracle divergence — triaged 2026-09-19 (rules-ambiguous, not fixed)
+`--all-diffs` against the preserved sidecar
+(`20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`): only steps 9-10 differ,
+`p0.trash ours=[] dcgo=[BT25-100]` — DCGO has trashed Iron Slash before Monica's stacked
+OnUseOption trigger resolves (`CardController.cs:2000-2126`); ours trashes after the
+observers (`finish_option_after_body`). Suspension, lock target and the post-clause board
+match. general_rule.pdf 9-1-5 + 18-1-2 + 15-4-3 put the Option's trash (pending processing)
+and the pending trigger at the same timing with the turn player choosing the order, so each
+engine hard-codes one legal order. Logged as G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER in
+`docs/RUST_ENGINE_GAPS.md`. Verdict stays `diverged`. F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST
+(above) is independent of this divergence (the sim-only row absorbs it).
