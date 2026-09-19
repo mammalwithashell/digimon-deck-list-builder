@@ -86,12 +86,14 @@ steps:
   - actor: 0
     do: { main: { on: field.0 } }
     expect: { prompt: main_phase }
-  # Slot reference is OUR engine's: it parks the Digimon pick while LM-056
-  # still holds slot 0, so Patamon is `own.field.1` here (DCGO trashes the
-  # Option first and would say slot 0 -- but the wire carries the target's
-  # card IDENTITY, not a slot, so both engines resolve the same Patamon).
+  # Slot reference: since engine fix 70694334d (<Delay> pays its trash-this-card
+  # cost BEFORE the body, general_rule 16-16-1) our engine ALSO trashes LM-056
+  # before parking the Digimon pick, so Patamon is `own.field.0` on both wires.
+  # (Authored as `own.field.1` on 2026-09-18, before that fix; the wire carries
+  # the target's card IDENTITY, not a slot, so both engines resolve the same
+  # Patamon either way -- only the symbolic lookup had to move.)
   - actor: 0
-    do: { select: { targets: [own.field.1] } }
+    do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   - actor: 0
     do: { select: { cards: [BT25-024] } }

@@ -150,3 +150,20 @@ measurement (if DCGO does not ask it, the job aborts on a prompt mismatch).
   trashes from digivolution cards. A link-card arm needs an Option *linked* to
   an own Digimon (a Plug-In Option via `link:`) and is a second line, not a
   second clause — not authored.
+
+## The three `unreachable` DUAL clauses: the cause was FIXED mid-campaign (2026-09-19)
+
+`BT25-085#effect#4` / `#effect#5` / `#effect#6` are recorded `unreachable` with
+the reason "card-data gap: `data/cards.json` carries BT25-085 as `card_kind 0`
+(Digimon) with no `dual` block, so the engine never sees the Option face". That
+cause **no longer holds**: commit `20df249e6` (taken during the
+`BT25-082#effect#2` triage, cited to `data/card_bundles/BT25-085.md` and
+`BT25_085.cs:60 IsTraitedOption => cardSource.IsOption`) rewrote the entry to
+`card_kind 4` **with** a `dual` block, and BT25-082/-083 lines then measured
+CLEAN through the Option face.
+
+So the three DUAL clauses are **authorable now** and were simply not re-authored
+before the campaign closed — the recorded reason is stale, not wrong at the time
+it was written. A next dispatch should author `play: { card: BT25-085, from:
+hand }` for the `<Use Req.>` / `[Main]` faces and the `<Arts Digivolve>` DUAL
+rule, and re-measure rather than trusting the stored class.
