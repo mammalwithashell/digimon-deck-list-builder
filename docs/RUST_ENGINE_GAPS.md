@@ -3387,3 +3387,10 @@ We (like DCGO) always trash first and surface no choice. This matters only for
 a turn-player trigger that reads the trash (count, "Option card in trash", etc.).
 Surfacing it means adding the pending trash as an entry in the turn player's
 `TriggerOrder` bundle.
+
+## G-ENGINE-ADDITIVE-COLOR-TREATMENT — "treated as also having the colors of its digivolution cards" (BT8-084) — RESOLVED 2026-09-19 (fb5517067)
+
+- Printed: BT8-084 Kimeramon "[Your Turn] This Digimon is treated as also having the colors of its digivolution cards." Official Q&A: additive (white + red + green sources = a 3-color card). DCGO `BT8_084.cs` ChangeCardColorClass appends every non-flipped digivolution card's colors to `TopCard.CardColors`.
+- Gap (first logged 2026-08-22 in qa/dsl-vocab-gaps.md): `ModifierType::AddColor` existed with no reader; `synth_identity` honored only the replace-style `ChangeBaseCardColor`.
+- Fix: `Permanent::synth_identity` reads `AddColor` additively after `ChangeBaseCardColor` — payload `None` = colors of the non-flipped sources, read live at synth time; `Colors { value }` = the listed colors. DSL: self-aura `modifier: AddColor`. Companion DSL leaves: `per: source_rules_color_count`; permanent-subject `self_color_count_gte` checks only synthesized colors.
+- Evidence: 11 new bt8_084 behavioral tests (failing before, passing after); full cards_behavioral green; BT8-084#effect#1 oracle re-diff vs the preserved sidecar CLEAN 17/17 → confirmed.
