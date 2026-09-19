@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:06.736731400+00:00",
+  "clauses": {
+    "P-170#effect#0": {
+      "clause_id": "P-170#effect#0",
+      "card_id": "P-170",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "599239e2769d888bd92a88e327e054c2c02577e802aa1e7dc77652bec34c04bc",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:06.620445700+00:00"
+    },
+    "P-170#effect#1": {
+      "clause_id": "P-170#effect#1",
+      "card_id": "P-170",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4ed8dc89f194cc462a2b8ce38f1fdcaadb28e6c755e2f571d2187a43dbf7d20a",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect1.yaml",
+      "recorded_at": "2026-09-18T13:58:16.142083400+00:00"
+    },
+    "P-170#effect#2": {
+      "clause_id": "P-170#effect#2",
+      "card_id": "P-170",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect2.yaml",
+      "recorded_at": "2026-09-18T13:58:17.064951200+00:00"
+    },
+    "P-170#effect#3": {
+      "clause_id": "P-170#effect#3",
+      "card_id": "P-170",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect3.yaml",
+      "recorded_at": "2026-09-18T13:58:17.908168200+00:00"
+    },
+    "P-170#effect#4": {
+      "clause_id": "P-170#effect#4",
+      "card_id": "P-170",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect4.yaml",
+      "recorded_at": "2026-09-19T15:15:06.736731400+00:00"
+    },
+    "P-170#effect#5": {
+      "clause_id": "P-170#effect#5",
+      "card_id": "P-170",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "be57d6f64fd622e64022af9b364d4ed923f1ea670eada1f6db8f185541431836",
+      "scenario_path": "qa/dcgo-exams/P/P-170-effect5.yaml",
+      "reason": "DIVERGED at step 15 (compared 18 of 18 ours / 18 dcgo steps)",
+      "recorded_at": "2026-09-18T13:58:57.118818900+00:00"
+    }
+  }
+}

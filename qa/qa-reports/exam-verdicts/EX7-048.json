@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:15:39.061435400+00:00",
+  "clauses": {
+    "EX7-048#effect#0": {
+      "clause_id": "EX7-048#effect#0",
+      "card_id": "EX7-048",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "599239e2769d888bd92a88e327e054c2c02577e802aa1e7dc77652bec34c04bc",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect0.yaml",
+      "recorded_at": "2026-09-19T15:15:32.178725900+00:00"
+    },
+    "EX7-048#effect#1": {
+      "clause_id": "EX7-048#effect#1",
+      "card_id": "EX7-048",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect1.yaml",
+      "recorded_at": "2026-09-19T15:15:35.938153600+00:00"
+    },
+    "EX7-048#effect#2": {
+      "clause_id": "EX7-048#effect#2",
+      "card_id": "EX7-048",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c0fa4273f466c937b5f65c4fb8cbf42791c78b1f913ca9137dbc592d417398c9",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect2.yaml",
+      "recorded_at": "2026-09-19T15:15:37.579024+00:00"
+    },
+    "EX7-048#effect#3": {
+      "clause_id": "EX7-048#effect#3",
+      "card_id": "EX7-048",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "a8bfb9d9d1312abfe577a7a74e0c53f0ddb9ee8a7c40097c812e28f2a51bd764",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect3.yaml",
+      "recorded_at": "2026-09-19T15:15:39.061435400+00:00"
+    }
+  }
+}
