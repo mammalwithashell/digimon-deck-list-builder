@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:22:53.032594300+00:00",
+  "clauses": {
+    "BT25-026#effect#0": {
+      "clause_id": "BT25-026#effect#0",
+      "card_id": "BT25-026",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "ad8bb66553c28391d5c3a82e3ad9345793b3b3f12965abce03b5d71a5c0171c3",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-026-effect0.yaml",
+      "recorded_at": "2026-09-19T15:22:51.907150100+00:00"
+    },
+    "BT25-026#effect#1": {
+      "clause_id": "BT25-026#effect#1",
+      "card_id": "BT25-026",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e6bade3e3b315e1a3d518705c53423f14d5e33a6ad4ba14a3b66a473a2a0445a",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-026-effect1.yaml",
+      "recorded_at": "2026-09-19T15:22:53.032594300+00:00"
+    }
+  }
+}

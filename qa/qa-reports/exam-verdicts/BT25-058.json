@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:46.564323800+00:00",
+  "clauses": {
+    "BT25-058#effect#0": {
+      "clause_id": "BT25-058#effect#0",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "1ee53a215d53bc5d3a5a862de8b15e399444669c0ed4f49877414c3941270bed",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:16.654774600+00:00"
+    },
+    "BT25-058#effect#1": {
+      "clause_id": "BT25-058#effect#1",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:17.729549100+00:00"
+    },
+    "BT25-058#effect#2": {
+      "clause_id": "BT25-058#effect#2",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect2.yaml",
+      "recorded_at": "2026-09-19T15:13:18.746250300+00:00"
+    },
+    "BT25-058#effect#4": {
+      "clause_id": "BT25-058#effect#4",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "515be15902c3c63abd76a891d1222d04364f376e42892cff1ee270eac9841cf1",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect4.yaml",
+      "recorded_at": "2026-09-19T15:13:19.734112800+00:00"
+    },
+    "BT25-058#effect#5": {
+      "clause_id": "BT25-058#effect#5",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "2e9d3920e8dcda30fc6b3c70c25207c2d5d29fd1d339d0bafeb3641c2cd35be4",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect5.yaml",
+      "recorded_at": "2026-09-19T15:13:46.564323800+00:00"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:22:54.872784900+00:00",
+  "clauses": {
+    "BT25-091#effect#0": {
+      "clause_id": "BT25-091#effect#0",
+      "card_id": "BT25-091",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "319624210e2fd10fc6781bcaf75494dee931c5e0c3a25e3b14dea109f1bd1ebc",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect0.yaml",
+      "recorded_at": "2026-09-18T13:58:43.828748500+00:00"
+    },
+    "BT25-091#effect#1": {
+      "clause_id": "BT25-091#effect#1",
+      "card_id": "BT25-091",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "9a89ef93e84fe298ecf0533a75887793cfa3fd1769cb149265770d28211b50da",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect1.yaml",
+      "reason": "DIVERGED at step 14 (compared 15 of 15 ours / 15 dcgo steps)",
+      "recorded_at": "2026-09-19T15:13:32.732135200+00:00"
+    },
+    "BT25-091#effect#2": {
+      "clause_id": "BT25-091#effect#2",
+      "card_id": "BT25-091",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "aa7368bb6027c4115616416f76cec8d9ee98aaed3354e32757ad8fa5be171a81",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect2.yaml",
+      "reason": "DIVERGED at step 9 (compared 12 of 13 ours / 12 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-09-19T15:22:54.872784900+00:00"
+    },
+    "BT25-091#effect#3": {
+      "clause_id": "BT25-091#effect#3",
+      "card_id": "BT25-091",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect3.yaml",
+      "recorded_at": "2026-09-18T13:58:46.732386400+00:00"
+    }
+  }
+}
