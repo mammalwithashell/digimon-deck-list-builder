@@ -10699,22 +10699,24 @@
     },
     "BT8-084": {
       "card_name": "Kimeramon",
-      "validated_date": "2026-08-22",
-      "report": "toho-braves-exam",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-09-19",
+      "report": "three-musketeers-1 triage BT8-084#effect#1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Toho Braves",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_084.rs",
-      "test_count": 12,
-      "tests_passing": 12,
+      "test_count": 23,
+      "tests_passing": 23,
       "patterns": [
         "DNA-ALT-PATH",
         "OPTIONAL-TRASH-TO-BOTTOM-SOURCE",
-        "GAP-TRIPWIRE"
+        "UP-TO-N-OPPONENT-DP-MINUS",
+        "ADDITIVE-SOURCE-COLOR-TREATMENT",
+        "SELF-COLOR-COUNT-DP-AURA"
       ],
-      "notes": "DNA path (0 from Lv.4+Lv.4) + [When Digivolving] optional place Lv.5- Digimon from trash as BOTTOM digivolution card authored. Remaining 3 clauses gap-blocked, NOT approximated: up-to-4 -1000xColors DP-minus (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), [Your Turn] treated-as-source-colors (G-ENGINE-ADDITIVE-COLOR-TREATMENT), 4-color +4000 DP (G-DSL-OWN-STACK-COLOR-COUNT-GTE). Tripwire tests pin the omissions. See qa/dsl-vocab-gaps.md entries dated 2026-08-22.",
-      "audit_note": "Authored 2026-08-22 (toho-braves-exam); three clauses on genuine residual gaps -- see YAML header for the DCGO crosscheck."
+      "notes": "All clauses authored. The three formerly gap-blocked legs landed 2026-09-19: up-to-4 -1000 x colors DP-minus via per: source_rules_color_count (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), [Your Turn] treated-as-source-colors via a `modifier: AddColor` self-aura read additively by Permanent::synth_identity (G-ENGINE-ADDITIVE-COLOR-TREATMENT, engine fix), 4-color +4000 DP via self_color_count_gte on the synthesized colors (G-DSL-OWN-STACK-COLOR-COUNT-GTE). BT8-084#effect#1 oracle re-diff CLEAN 17/17 -> confirmed.",
+      "audit_note": "Authored 2026-08-22 (toho-braves-exam); completed 2026-09-19 against DCGO BT8_084.cs + official Q&A (additive color treatment)."
     },
     "EX7-005": {
       "card_name": "Kapurimon",

@@ -42,63 +42,34 @@
 #     (`place_as_bottom_source`; contrast EX9-074's AddDigivolutionCardsTop /
 #     `place_as_top_source`).
 #
-#   Part 2 — up-to-4 DP-minus (GAP-BLOCKED, NOT AUTHORED):
+#   Part 2 — up-to-4 DP-minus (AUTHORED below):
 #     `minusDP = 1000 * card.PermanentOfThisCard().TopCard.CardColors.Count`
 #     computed AFTER the Part-1 placement. Because the [Your Turn]
 #     ChangeCardColorClass (below) is active during the controller's turn,
 #     `TopCard.CardColors` at this point is the UNION of the printed white
 #     and every non-flipped digivolution card's colors. Then
 #     SelectPermanentEffect over opponent battle-area Digimon,
-#     maxCount Min(4, matches), `canNoSelect: false` (must pick >= 1 when a
-#     candidate exists), `canEndNotMax: true` (may stop before 4 — the
-#     printed "up to 4"), each pick DP-changed by -minusDP with
-#     EffectDuration.UntilOpponentTurnEnd (-> `end_of_opponents_next_turn`).
-#     Skipped entirely when no opponent Digimon exists (DCGO's
-#     `HasMatchConditionPermanent` guard).
-#
-#     Everything here EXCEPT the amount is expressible today
-#     (`select_count_capped_multi { of: opponent, zone: battle_area, min: 1,
-#     max: 4, optional_zero: false }` + `per_selected` + `add_dp_modifier {
-#     expiry: end_of_opponents_next_turn }`). The AMOUNT is not:
-#     G-DSL-SOURCE-STACK-UNION-COLOR-COUNT — there is no source-anchored
-#     formula for "distinct colors across the carrier's top card + its
-#     non-flipped digivolution sources" (the union incl. top).
-#       - `source_color_count` (FormulaSpec + PerSelector) counts SOURCES
-#         ONLY: it misses the printed white whenever no source is white —
-#         undercounting the debuff by 1000 in the common case.
-#       - `digivolution_color_count` is the right union but anchors at the
-#         formula TARGET, which inside `add_dp_modifier` is the opponent
-#         Digimon receiving the debuff — the wrong permanent.
-#     Authoring the leg with either would be a silent approximation, so the
-#     leg is omitted and the gap is logged (qa/dsl-vocab-gaps.md). The
-#     behavioral test carries a tripwire pinning that no approximated
-#     substitute ships.
+#     maxCount Min(4, matches), `canNoSelect: false`, `canEndNotMax: true`,
+#     each pick DP-changed by -minusDP with EffectDuration.UntilOpponentTurnEnd.
+#     Skipped when no opponent Digimon exists (HasMatchConditionPermanent).
+#     Amount: `per: source_rules_color_count` — the carrier's synthesized
+#     rules colors (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT, RESOLVED).
 #
 # [Your Turn] treated-as-colors (EffectTiming.None, ChangeCardColorClass —
-# GAP-BLOCKED, NOT AUTHORED):
+# AUTHORED below as a self-aura `modifier: AddColor`):
 #   While on the battle area during the owner's turn with >= 1 digivolution
 #   card, the top card's CardColors gains every color of every non-flipped
-#   digivolution card (additive union). This is a CROSS-CARD-VISIBLE
-#   continuous identity change (any effect reading this permanent's colors
-#   sees the union). G-ENGINE-ADDITIVE-COLOR-TREATMENT — the engine's
-#   `Permanent::synth_identity` only honors the replace-style
-#   `ChangeBaseCardColor` modifier; `ModifierType::AddColor` exists in the
-#   enum but has no reader and no DSL install surface, and no aura payload
-#   can carry a dynamic "union of source colors" color list.
+#   digivolution card (additive union), visible to every color read of this
+#   permanent. `Permanent::synth_identity` reads `AddColor` additively after
+#   `ChangeBaseCardColor` (G-ENGINE-ADDITIVE-COLOR-TREATMENT, RESOLVED).
 #
 # [Your Turn] 4-color +4000 DP (EffectTiming.None,
-# ChangeSelfDPStaticEffect(4000) — GAP-BLOCKED, NOT AUTHORED):
+# ChangeSelfDPStaticEffect(4000) — AUTHORED below):
 #   Condition: IsExistOnBattleArea && IsOwnerTurn &&
-#   `TopCard.CardColors.Count >= 4` — i.e. the union-incl-top count under
-#   the treatment above. G-DSL-OWN-STACK-COLOR-COUNT-GTE — the existing
-#   no-subject carrier predicate `own_source_stack_color_count_gte` (EX9-074)
-#   counts source colors EXCLUDING the top card, so "white top + 3-color
-#   sources = 4 colors" (which must qualify) would be missed;
-#   `self_color_count_gte` reads only the synthesized top-card colors (a
-#   constant 1 here without the color treatment). Neither is the printed
-#   gate. Would be authorable as a self-aura
-#   `active_when: { your_turn: true, own_stack_color_count_gte: 4 }` +
-#   `dp_modifier: 4000` once the union-incl-top sibling leaf lands.
+#   `TopCard.CardColors.Count >= 4` — the synthesized colors after the
+#   treatment, i.e. `self_color_count_gte: 4` on the carrier
+#   (G-DSL-OWN-STACK-COLOR-COUNT-GTE, RESOLVED — collapses into the
+#   ordinary synth-color read once the treatment exists).
 #
 # ─── Implementation status ────────────────────────────────────────────────────
 #
@@ -106,10 +77,10 @@
 # |--------------------------------------------------------------------|--------|
 # | [DNA Digivolve] 0 from Lv.4 + Lv.4, stacked unsuspended            | IMPLEMENTED |
 # | [WD] you may place 1 Lv.5- Digimon from trash as BOTTOM digi card  | IMPLEMENTED (place_as_bottom_source) |
-# | [WD] up to 4 opp Digimon -1000 DP x this Digimon's colors,         | BLOCKED (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT) |
+# | [WD] up to 4 opp Digimon -1000 DP x this Digimon's colors,         | IMPLEMENTED (source_rules_color_count) |
 # |      until end of opponent's next turn                             |        |
-# | [Your Turn] treated as also having digivolution-card colors        | BLOCKED (G-ENGINE-ADDITIVE-COLOR-TREATMENT) |
-# | [Your Turn] while 4+ colors: +4000 DP                              | BLOCKED (G-DSL-OWN-STACK-COLOR-COUNT-GTE) |
+# | [Your Turn] treated as also having digivolution-card colors        | IMPLEMENTED (AddColor self-aura) |
+# | [Your Turn] while 4+ colors: +4000 DP                              | IMPLEMENTED (self_color_count_gte) |
 
 card: BT8-084
 name: Kimeramon
@@ -134,26 +105,31 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  # ─── [When Digivolving] optional bottom-source placement ──────────────────
+  # ─── [When Digivolving] bottom-source placement, then up-to-4 DP-minus ────
   #
   # Printed: "You may place 1 level 5 or lower Digimon card from your trash
-  # under this Digimon as its bottom digivolution card."
+  # under this Digimon as its bottom digivolution card. Then, up to 4 of
+  # your opponent's Digimon get -1000 DP for each of this Digimon's colors
+  # until the end of your opponent's next turn."
   #
-  # A genuine "you may" pick (DCGO canNoSelect: () => true) that is NOT a
-  # cost — `optional: true` with no `cost: true`, so declining skips only
-  # the placement; zero eligible trash cards short-circuits with no prompt
-  # (DCGO's HasMatchConditionOwnersCardInTrash guard around Part 1 only).
-  # Position: `place_as_bottom_source` = DCGO AddDigivolutionCardsBottom =
-  # the printed BOTTOM digivolution-card slot.
+  # Part 1 — a genuine "you may" pick (DCGO canNoSelect: () => true) that is
+  # NOT a cost — `optional: true` with no `cost: true`, so declining skips
+  # only the placement; zero eligible trash cards short-circuits with no
+  # prompt (DCGO's HasMatchConditionOwnersCardInTrash guard around Part 1
+  # only). Position: `place_as_bottom_source` = DCGO
+  # AddDigivolutionCardsBottom = the printed BOTTOM digivolution-card slot.
   #
-  # The printed "Then, up to 4 of your opponent's Digimon get -1000 DP for
-  # each of this Digimon's colors ..." tail is GAP-BLOCKED
-  # (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT — see the header) and deliberately
-  # NOT authored; when the union-incl-top color-count formula lands, append
-  # the select_count_capped_multi + per_selected + add_dp_modifier steps
-  # documented in the header to THIS clause (it is one DCGO coroutine).
+  # Part 2 — DCGO SelectPermanentEffect over opponent battle-area Digimon,
+  # maxCount Min(4, matches), canNoSelect: false (>= 1 pick when a candidate
+  # exists -> `min: 1`, `optional_zero: false`), canEndNotMax: true (the
+  # printed "up to 4" -> `max: 4`); skipped when the opponent has no Digimon
+  # (HasMatchConditionPermanent guard). Amount = 1000 x
+  # `TopCard.CardColors.Count`, read AFTER the placement with the [Your
+  # Turn] color treatment live -> `per: source_rules_color_count` (the
+  # carrier's synthesized rules colors, incl. the AddColor union below).
+  # Duration EffectDuration.UntilOpponentTurnEnd -> end_of_opponents_next_turn.
   - when: when_digivolving
-    summary: "[When Digivolving] You may place 1 level 5 or lower Digimon card from your trash under this Digimon as its bottom digivolution card (DP-minus tail gap-blocked)"
+    summary: "[When Digivolving] You may place 1 level 5 or lower Digimon card from your trash under this Digimon as its bottom digivolution card. Then, up to 4 of your opponent's Digimon get -1000 DP for each of this Digimon's colors until the end of your opponent's next turn."
     process:
       - select_trash:
           of: you
@@ -167,3 +143,52 @@ effects:
       - place_as_bottom_source:
           source: material
           target: source
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 1
+          max: 4
+          filter: { kind: digimon }
+          bind_as: dp_targets
+          optional_zero: false
+          prompt: "Choose up to 4 of your opponent's Digimon to get -1000 DP for each of this Digimon's colors"
+      - per_selected:
+          selection: dp_targets
+          bind_as: dp_target
+          body:
+            - add_dp_modifier:
+                target: { binding: dp_target }
+                value:
+                  formula:
+                    base: 0
+                    per: source_rules_color_count
+                    delta: -1000
+                expiry: end_of_opponents_next_turn
+
+  # ─── [Your Turn] treated as also having the digivolution cards' colors ────
+  #
+  # DCGO ChangeCardColorClass (IsExistOnBattleArea && IsOwnerTurn && >= 1
+  # digivolution card): appends every NON-FLIPPED digivolution card's colors
+  # to the top card's CardColors. `modifier: AddColor` with no payload is the
+  # engine's "gain the colors of its digivolution cards" treatment, read live
+  # by `Permanent::synth_identity` (with zero sources it gains nothing, which
+  # is DCGO's `DigivolutionCards.Count >= 1` guard). Official Q&A: white +
+  # red + green sources = a 3-color white/red/green card.
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    modifier: AddColor
+    summary: "[Your Turn] This Digimon is treated as also having the colors of its digivolution cards"
+
+  # ─── [Your Turn] While this Digimon has 4 or more colors: +4000 DP ───────
+  #
+  # DCGO ChangeSelfDPStaticEffect(4000), condition IsOwnerTurn &&
+  # `TopCard.CardColors.Count >= 4` — the colors AFTER the treatment above,
+  # which `self_color_count_gte` reads from the synthesized identity.
+  - kind: aura
+    target: {}
+    active_when:
+      your_turn: true
+      self_color_count_gte: 4
+    dp_modifier: 4000
+    summary: "[Your Turn] While this Digimon has 4 or more colors, it gets +4000 DP"

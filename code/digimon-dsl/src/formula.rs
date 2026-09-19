@@ -266,6 +266,18 @@ pub enum PerSelector {
     /// `source_link_card_count`. The per-host sibling of `own_link_card_count`.
     /// G-DSL-LINK-N-CARDS-PER-HOST (formula facet).
     SourceLinkCardCount,
+    /// Number of distinct colors the effect carrier (`ctx.source_permanent`)
+    /// HAS for rules purposes — its synthesized identity colors, i.e. the top
+    /// card's printed colors after every color modifier (replace-style
+    /// `ChangeBaseCardColor`, additive `AddColor` incl. "treated as also
+    /// having the colors of its digivolution cards"). YAML form:
+    /// `per: source_rules_color_count`. Drives BT8-084 Kimeramon's "-1000 DP
+    /// for each of this Digimon's colors" (DCGO `TopCard.CardColors.Count`,
+    /// read with its [Your Turn] ChangeCardColorClass live). Contrast
+    /// `source_color_count` (sources only, printed colors) and
+    /// `digivolution_color_count` (anchored at the formula TARGET).
+    /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT.
+    SourceRulesColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -359,6 +371,7 @@ impl Serialize for PerSelector {
                 outer.end()
             }
             Self::SourceLinkCardCount => serializer.serialize_str("source_link_card_count"),
+            Self::SourceRulesColorCount => serializer.serialize_str("source_rules_color_count"),
         }
     }
 }

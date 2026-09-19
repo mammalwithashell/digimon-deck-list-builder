@@ -159,14 +159,13 @@ steps:
   - actor: 0
     do: { select: { cards: [BT23-101] } }
     expect: { prompt: SelectCardEffect }
-  # DCGO-ONLY, second sentence: "up to 4 of your opponent's Digimon get -1000
-  # DP for each of this Digimon's colors" -- SelectPermanentEffect (maxCount 2,
+  # Second sentence: "up to 4 of your opponent's Digimon get -1000 DP for
+  # each of this Digimon's colors" -- SelectPermanentEffect (maxCount 2,
   # canNoSelect: false, canEndNotMax: true). ONE target, Phoenixmon: "up to".
-  # Our engine parks nothing: this leg is gap-blocked and deliberately NOT
-  # authored in BT8-084.yaml (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT) -- see the
-  # header and NOTES-BT8-084.md.
+  # Authored in both engines since 2026-09-19 (the gap-blocked legs landed with
+  # the BT8-084#effect#1 triage); same wire as before (ST1-10).
   - actor: 0
-    do: { select: { cards: [ST1-10], dcgo_only: true } }
+    do: { select: { targets: [opp.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # One step past the clause: memory 0, p0 still holds the turn.
   - actor: 0

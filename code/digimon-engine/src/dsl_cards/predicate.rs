@@ -3376,6 +3376,17 @@ fn eval_permanent_fields(
     // token field permanent; the line-`kind_matches_field` check remains the sole
     // kind authority for permanent subjects.
     let has_kind_constraint = pred.kind.is_some();
+    // `self_color_count_gte` on a permanent subject counts the SYNTHESIZED
+    // colors (checked below against `synth_identity.colors`, which folds in
+    // `ChangeBaseCardColor` / `AddColor`). The delegated card-field pass would
+    // re-check it against the PRINTED colors and wrongly reject a permanent
+    // whose color treatment raised its count (BT8-084 Kimeramon: printed white,
+    // "[Your Turn] treated as also having the colors of its digivolution
+    // cards", "while this Digimon has 4 or more colors" — DCGO reads
+    // `TopCard.CardColors.Count` after ChangeCardColorClass). Strip it from the
+    // delegated predicate; the synth check is the sole authority.
+    // G-DSL-OWN-STACK-COLOR-COUNT-GTE.
+    let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
         || trait_overlay_match
@@ -3386,6 +3397,7 @@ fn eval_permanent_fields(
         || name_in_overlay_match
         || color_is_overlay_match
         || color_only_overlay_match
+        || has_self_color_count_constraint
         || has_dp_constraint
     {
         let mut p = pred.clone();
@@ -3417,6 +3429,9 @@ fn eval_permanent_fields(
         }
         if color_only_overlay_match {
             p.color_only = None;
+        }
+        if has_self_color_count_constraint {
+            p.self_color_count_gte = None;
         }
         if has_dp_constraint {
             p.dp_eq = None;

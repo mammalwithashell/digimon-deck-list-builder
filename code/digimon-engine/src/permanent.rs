@@ -262,6 +262,34 @@ impl Permanent {
                 identity.colors = value.clone();
             }
         }
+        // Additive color treatment (G-ENGINE-ADDITIVE-COLOR-TREATMENT). Runs
+        // AFTER the replace-style `ChangeBaseCardColor` pass and append-dedups:
+        //   * `Colors { value }` — the listed colors are gained.
+        //   * `None` — "treated as also having the colors of its digivolution
+        //     cards": every NON-FLIPPED source beneath the top card contributes
+        //     its colors, read live at synth time so a source placed/trashed
+        //     mid-effect is reflected at once. DCGO `ChangeCardColorClass`
+        //     (BT8_084.cs: `if (cardSource1.IsFlipped) continue;`); official
+        //     BT8-084 Q&A: white + red + green sources = a 3-color card.
+        for entry in modifiers.get(handle, ModifierType::AddColor) {
+            let gained: Vec<CardColor> = match &entry.payload {
+                ModifierPayload::Colors { value, .. } => value.clone(),
+                ModifierPayload::None => self
+                    .card_sources
+                    .iter()
+                    .rev()
+                    .skip(1)
+                    .filter(|src| !src.face_down)
+                    .flat_map(|src| src.colors(data).iter().copied())
+                    .collect(),
+                _ => Vec::new(),
+            };
+            for color in gained {
+                if !identity.colors.contains(&color) {
+                    identity.colors.push(color);
+                }
+            }
+        }
         for entry in modifiers.get(handle, ModifierType::ChangeTraits) {
             if let ModifierPayload::Traits { add, replace } = &entry.payload {
                 if *replace {

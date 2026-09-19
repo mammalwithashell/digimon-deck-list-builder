@@ -109,3 +109,23 @@ sentence, `G-DSL-SOURCE-STACK-UNION-COLOR-COUNT`); `effect2`: `p0.field[0].dp`
 `G-ENGINE-ADDITIVE-COLOR-TREATMENT`). Both rows share one step, so each file
 reports both fields. Known, logged gaps -- no new finding. `effect#0` stored as
 `unreachable` (no DNA verb). **3 clauses: 0 confirmed, 2 diverged, 1 unreachable.**
+
+## 2026-09-19 — BT8-084#effect#1 triage: gaps closed, CONFIRMED
+
+The step-16 divergence (Phoenixmon ours 12000 / dcgo 7000; Kimeramon ours 8000
+/ dcgo 12000) was the three logged gap legs, i.e. **our bug** (unimplemented
+printed text), not a DCGO quirk: the printed card + official Q&A (additive
+color treatment) and `BT8_084.cs` (ChangeCardColorClass skipping flipped
+sources; `minusDP = 1000 * TopCard.CardColors.Count` after the placement;
+ChangeSelfDPStaticEffect(4000) on `CardColors.Count >= 4`) agree.
+
+- Engine: `Permanent::synth_identity` now reads `ModifierType::AddColor`
+  additively (payload `None` = non-flipped digivolution-card colors).
+- DSL: `per: source_rules_color_count` (carrier's synthesized colors); the
+  permanent-subject `self_color_count_gte` no longer re-checks printed colors.
+- Harness resolver: a battle-area "up to N" pick left open after the
+  payload's picks is closed with PASS (the parked `CountCappedPermanentsStep`
+  identifies it), so DCGO's one-row `canEndNotMax` stop lowers.
+- Both scenarios' DP pick is now a shared `targets: [opp.field.1]` step
+  (same DCGO wire, ST1-10). Oracle re-diff vs the preserved sidecar
+  `20260918T131946Z_6b61efab...state.jsonl`: CLEAN 17/17.

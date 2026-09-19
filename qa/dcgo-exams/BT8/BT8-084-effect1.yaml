@@ -40,19 +40,13 @@
 # is exercised by stopping short of the maximum, and Biyomon B (3000) is kept
 # out of a 0-DP rules deletion that would add nothing to the reading.
 #
-# PREDICTED DIVERGENCE (known, logged gaps -- NOT new findings). Our
-# BT8-084.yaml authors the placement only; three legs are gap-blocked and
-# deliberately not approximated (validated_cards_dsl.json: PARTIAL):
-#   * the DP-minus sentence -- G-DSL-SOURCE-STACK-UNION-COLOR-COUNT: ours
-#     parks no pick (the row below is `dcgo_only`) and Phoenixmon stays 12000;
-#   * "[Your Turn] treated as also having the colors of its digivolution
-#     cards" -- G-ENGINE-ADDITIVE-COLOR-TREATMENT;
-#   * "While this Digimon has 4 or more colors, it gets +4000 DP" --
-#     G-DSL-OWN-STACK-COLOR-COUNT-GTE: DCGO reads Kimeramon at 12000 after the
-#     placement (5 colours), ours 8000.
-# The oracle differ is expected to report p1.field (Phoenixmon 7000 vs 12000)
-# and p0.field (Kimeramon 12000 vs 8000) on the last row. The `assert:` block
-# names only the fields both engines agree on.
+# FORMERLY PREDICTED DIVERGENCE -- closed 2026-09-19. The DP-minus sentence
+# (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), the "[Your Turn] treated as also
+# having the colors of its digivolution cards" treatment
+# (G-ENGINE-ADDITIVE-COLOR-TREATMENT) and the 4-colour +4000 DP
+# (G-DSL-OWN-STACK-COLOR-COUNT-GTE) are now authored in BT8-084.yaml, so both
+# engines park the SelectPermanentEffect pick and read Kimeramon at 12000 /
+# Phoenixmon at 7000 after the clause.
 #
 # Book: qa/dcgo-exams/BT8/tm_bt8_084_pool.json (--decks). p0 (`tm-kimeramon`)
 # is the quiet ST-1 list with Kimeramon x4 + Flamedramon P-137 x4 + Hudiemon
@@ -154,14 +148,11 @@ steps:
   - actor: 0
     do: { select: { cards: [BT23-101] } }
     expect: { prompt: SelectCardEffect }
-  # DCGO-ONLY, second sentence: "up to 4 of your opponent's Digimon get -1000
-  # DP for each of this Digimon's colors" -- SelectPermanentEffect (maxCount 2,
+  # Second sentence: "up to 4 of your opponent's Digimon get -1000 DP for
+  # each of this Digimon's colors" -- SelectPermanentEffect (maxCount 2,
   # canNoSelect: false, canEndNotMax: true). ONE target, Phoenixmon: "up to".
-  # Our engine parks nothing: this leg is gap-blocked and deliberately NOT
-  # authored in BT8-084.yaml (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT) -- see the
-  # header and NOTES-BT8-084.md.
   - actor: 0
-    do: { select: { cards: [ST1-10], dcgo_only: true } }
+    do: { select: { targets: [opp.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # One step past the clause: memory 0, p0 still holds the turn.
   - actor: 0

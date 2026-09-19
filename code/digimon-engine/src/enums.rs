@@ -732,6 +732,12 @@ pub enum ModifierType {
 
     // Color
     ChangeColor,
+    /// Additive color grant, read by `Permanent::synth_identity` AFTER the
+    /// replace-style `ChangeBaseCardColor` pass (append-dedup). Payload
+    /// `Colors { value }` gains the listed colors; payload `None` gains the
+    /// colors of every non-flipped digivolution card beneath the top card
+    /// ("treated as also having the colors of its digivolution cards" —
+    /// BT8-084, DCGO `ChangeCardColorClass`). G-ENGINE-ADDITIVE-COLOR-TREATMENT.
     AddColor,
 
     // Level

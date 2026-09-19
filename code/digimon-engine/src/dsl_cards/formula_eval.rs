@@ -511,6 +511,13 @@ fn evaluate_per(
             .and_then(|handle| target_permanent(ctx, handle))
             .map(|perm| perm.linked_cards.len() as i32)
             .unwrap_or(0),
+        CompiledPerSelector::SourceRulesColorCount => ctx
+            .source_permanent
+            .and_then(|handle| {
+                target_permanent(ctx, handle)
+                    .map(|perm| rules_color_count(perm, ctx.game, handle))
+            })
+            .unwrap_or(0),
     }
 }
 
@@ -634,7 +641,26 @@ fn evaluate_per_read(
             .and_then(|handle| target_permanent_read(ctx, handle))
             .map(|perm| perm.linked_cards.len() as i32)
             .unwrap_or(0),
+        CompiledPerSelector::SourceRulesColorCount => ctx
+            .source_permanent
+            .and_then(|handle| {
+                target_permanent_read(ctx, handle)
+                    .map(|perm| rules_color_count(perm, ctx.game, handle))
+            })
+            .unwrap_or(0),
     }
+}
+
+/// Distinct colors a permanent HAS for rules purposes — its synthesized
+/// identity colors (printed top-card colors after `ChangeBaseCardColor` /
+/// `AddColor`). DCGO `permanent.TopCard.CardColors.Count`.
+/// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT (BT8-084).
+fn rules_color_count(perm: &Permanent, game: &crate::game::Game, handle: PermanentHandle) -> i32 {
+    let mut seen: u8 = 0;
+    for color in perm.colors_for_rules(&game.card_data, &game.modifiers, handle) {
+        seen |= 1u8 << (color as u8);
+    }
+    seen.count_ones() as i32
 }
 
 /// Count the effect carrier's own digivolution sources (the cards beneath its

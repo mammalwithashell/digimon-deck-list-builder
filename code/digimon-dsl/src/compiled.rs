@@ -943,6 +943,9 @@ pub enum CompiledPerSelector {
     /// Link cards on the effect carrier's OWN permanent (`ctx.source_permanent`).
     /// Per-host sibling of `OwnLinkCardCount`. G-DSL-LINK-N-CARDS-PER-HOST.
     SourceLinkCardCount,
+    /// Distinct rules colors (synth identity) of the effect carrier.
+    /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT (BT8-084).
+    SourceRulesColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

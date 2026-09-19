@@ -404,14 +404,36 @@ pub fn resolve_next(
     // Payload exhausted → decide whether an explicit stop is needed.
     if picks_done >= n_picks {
         let declined = payload.cancel.unwrap_or(false);
-        let multiselectish = matches!(
-            pending.kind,
-            SelectionKind::CountCappedMultiSelect { .. }
-                | SelectionKind::SourceMulti { .. }
-                | SelectionKind::RevealBucket { .. }
-                | SelectionKind::DpBudget { .. }
-                | SelectionKind::PlayCostBudget { .. }
-        );
+        // A count-capped multi-pick over the BATTLE AREA parks as a plain
+        // `OwnField` / `OppField` kind (the action space addresses field
+        // picks by slot), so the kind alone cannot tell an "up to N" pick
+        // that is still open after this payload's picks from a fresh single
+        // prompt. The parked resume frame can: a live count-capped frame
+        // (`CountCappedPermanentsStep` — the battle-area form — or
+        // `MultiPickStep` / `NonDslCountCappedStep`) after >= 1 applied pick
+        // is the SAME prompt
+        // awaiting its stop (DCGO `canEndNotMax: true` recorded as one row
+        // with fewer than max targets — BT8-084's "up to 4" picking 1).
+        let open_field_multi_pick = picks_done > 0
+            && game.pending_selection_resume.as_ref().is_some_and(|stack| {
+                stack.frames.iter().rev().any(|f| {
+                    matches!(
+                        f,
+                        crate::resume::ResumeFrame::MultiPickStep(_)
+                            | crate::resume::ResumeFrame::NonDslCountCappedStep(_)
+                            | crate::resume::ResumeFrame::CountCappedPermanentsStep(_)
+                    )
+                })
+            });
+        let multiselectish = open_field_multi_pick
+            || matches!(
+                pending.kind,
+                SelectionKind::CountCappedMultiSelect { .. }
+                    | SelectionKind::SourceMulti { .. }
+                    | SelectionKind::RevealBucket { .. }
+                    | SelectionKind::DpBudget { .. }
+                    | SelectionKind::PlayCostBudget { .. }
+            );
         let pass_legal = pending.is_optional;
         if picks_done > n_picks {
             // Trailing PASS already sent once; never loop.

@@ -538,6 +538,7 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
                 ModifierType::ChangeBaseCardColor,
                 ModifierPayload::Colors { .. }
             )
+            | (ModifierType::AddColor, ModifierPayload::Colors { .. })
             | (
                 ModifierType::ChangeCardNamesForDigiXros,
                 ModifierPayload::DigiXrosNames { .. }

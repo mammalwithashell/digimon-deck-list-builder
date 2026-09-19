@@ -454,6 +454,7 @@ fn compile_per_selector(
             of: compile_player_ref(*of),
         },
         S::SourceLinkCardCount => CompiledPerSelector::SourceLinkCardCount,
+        S::SourceRulesColorCount => CompiledPerSelector::SourceRulesColorCount,
     }
 }
 
