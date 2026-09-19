@@ -258,3 +258,56 @@ fn bt3_096_security_plays_itself_free() {
     );
     assert_eq!(runner.memory(), memory_before, "played without paying the cost");
 }
+
+// ─── Section 5: ORDER — Mimi resolves after the used Option is disposed ──────
+//
+// Exam BT3-096#effect#0 (qa/dcgo-exams/BT3/BT3-096-effect0.yaml) diverged at
+// Mimi's prompt: DCGO had already placed the <Delay> Option LM-032 in the
+// battle area, ours asked first. Official Q&A: "It can be activated after
+// activating the used Option card's [Main] effect."; general_rule.pdf 9-1-5 /
+// 18-1-2 dispose the used Option once its [Main] resolves, before the
+// triggers pending alongside it; DCGO CardController.cs
+// `UseOptionClass.UseOption` disposes straight after `OptionSkill`, then the
+// stacked OnUseOption skills resolve. CLEAN on HEAD after the option-disposal
+// ordering work (5108e58ee `complete_option_body_if_done`, c652676d1).
+
+#[test]
+fn bt3_096_prompt_sees_delay_option_already_placed() {
+    const DELAY_OPTION: &str = "LM-032";
+    let mut runner = base()
+        .dsl_card(DELAY_OPTION)
+        .expect("LM-032 must load from the embedded DSL pack")
+        .hand(0, &[DELAY_OPTION])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    // LM-032's [Main] has no purple Digimon to pick → silent; Mimi parks.
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert!(runner.pending_selection_view().is_some(), "Mimi's prompt is parked");
+    let placed = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == DELAY_OPTION);
+    assert!(
+        placed,
+        "the <Delay> Option must already stand in the battle area when Mimi asks"
+    );
+
+    accept_prompt(&mut runner);
+    assert_eq!(runner.memory(), 4, "5 - 2 use cost + 1 from Mimi");
+}
+
+#[test]
+fn bt3_096_prompt_sees_standard_option_already_trashed() {
+    let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert!(runner.pending_selection_view().is_some(), "Mimi's prompt is parked");
+    let trashed = runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == OPTION_ID);
+    assert!(trashed, "the used Option must already be in the trash when Mimi asks");
+}

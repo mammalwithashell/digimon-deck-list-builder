@@ -1,16 +1,15 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:13:31.632151300+00:00",
+  "last_updated": "2026-09-19T20:10:43.418610800+00:00",
   "clauses": {
     "BT3-096#effect#0": {
       "clause_id": "BT3-096#effect#0",
       "card_id": "BT3-096",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "6cdbdcb9335d3974ca4b20955d2a1da104dc15066fd3603789f944b6379f32a5",
       "scenario_path": "qa/dcgo-exams/BT3/BT3-096-effect0.yaml",
-      "reason": "DIVERGED at step 6 (compared 8 of 8 ours / 8 dcgo steps)",
-      "recorded_at": "2026-09-19T15:13:30.138873200+00:00"
+      "recorded_at": "2026-09-19T20:10:43.418610800+00:00"
     },
     "BT3-096#effect#1": {
       "clause_id": "BT3-096#effect#1",
