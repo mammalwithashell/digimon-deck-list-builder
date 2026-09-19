@@ -43,16 +43,14 @@
 # (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON, RESOLVED) -- the crashed
 # draft's "our engine silently skips the link" prediction is obsolete.
 #
-# PREDICTED DIVERGENCE (ours, card YAML). `code/digimon-engine/cards/bt24/
-# BT24-091.yaml` does not author the printed Link box at all -- no `scope:
-# linked` `dp_modifier: 2000` aura -- and nothing data-drives Link DP
-# (`queries.rs` sums only authored clauses). This is the OPEN finding
-# F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED (docs/RUST_ENGINE_GAPS.md,
-# which already lists BT24-091; fixed the same day on BT25-093 / BT25-100).
-# On our side Lekismon stays at 5000 once linked, DCGO's reads 7000 (generic
-# `CardEffectFactory.LinkEffect` / the card's link DP). The sim asserts
-# therefore pin everything EXCEPT the linked host's DP; the oracle run is what
-# measures the +2000, and the line goes clean as soon as the aura is authored.
+# LINK DP (was a predicted divergence, now pinned): once linked, Lekismon
+# reads 7000 on BOTH sides (5000 + the printed Link DP +2000). Ours read 5000
+# until `BT24-091.yaml` gained its printed Link box in 6d2ba79c2
+# (F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED, docs/RUST_ENGINE_GAPS.md;
+# rule 10-1-2-2 / 4-7 link cards; DCGO `CardEffectFactory.LinkEffect` +
+# `Permanent.cs:1278` `LinkedDP += addedLinkCard.LinkDP`; guard test
+# `bt24_091_main_link_gives_host_printed_link_dp_plus_2000`). Oracle re-diff
+# against the preserved sidecar 20260918T125014Z_267f7e1f: CLEAN, 11/11.
 card: BT24-091
 clause: BT24-091#effect#3
 seed: 424242
@@ -118,12 +116,15 @@ assert:
       p1.field:
         - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
         - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
-  # After the link: the Option is plugged in (neither trash nor hand). The
-  # host's DP is deliberately NOT pinned (see PREDICTED DIVERGENCE).
+  # After the link: the Option is plugged in (neither trash nor hand) and the
+  # host carries Link DP +2000 (5000 -> 7000).
   - at: 9
     that:
       turn: 3
       p0.field: []
       p1.security: 4
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: BT25-024, dp: 7000, suspended: false, sources: [] }
       p1.trash: []
       p1.hand: [ST1-04, ST1-08, ST1-08, ST1-08, ST1-10]
