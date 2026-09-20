@@ -1060,6 +1060,11 @@ pub(crate) fn run_resume(
             game.run_trigger_order_selection_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
+        ResumeFrame::OptionTrashOrder(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_option_trash_order_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
         ResumeFrame::OptionalReplacement(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
             crate::replacement::run_optional_replacement_step(game, state, is_pass);

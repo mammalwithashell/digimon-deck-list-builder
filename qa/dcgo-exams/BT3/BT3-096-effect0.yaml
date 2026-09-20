@@ -76,6 +76,13 @@ steps:
   - actor: 0
     do: { play: { card: LM-032, from: hand } }
     expect: { prompt: main_phase }
+  # SIM-ONLY: our 9-1-5 trash-ORDER pick. Purple Scramble's pending disposal
+  # (a <Delay> Option: placed on the field) and Mimi's own trigger are both
+  # P0's items at the same timing, so 18-1-2 -> 15-4-3-5-1 lets P0 order them;
+  # DCGO hard-codes the disposal and asks nothing, so this row is sim-only and
+  # takes DCGO's order. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
   # Accept: suspend Mimi, gain 1 memory (1 -> 2).
   - actor: 0
     do: { select: { yes: true } }
@@ -85,7 +92,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 7
+  - at: 8
     that:
       turn: 3
       p0.memory: 2

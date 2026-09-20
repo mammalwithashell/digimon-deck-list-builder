@@ -1710,6 +1710,30 @@ impl ReplayDriver {
     /// each resolved engine action. Advances the cursor once for the whole
     /// payload. Resolution failure records a
     /// [`DivergenceKind::SelectionResolution`] and pauses.
+    /// Answer our engine-only 9-1-5 trash-ordering prompt the way DCGO
+    /// behaves (trash first). See the call site in `step`.
+    fn auto_answer_option_trash_order(&mut self, game: &mut Game) {
+        for _ in 0..8 {
+            let is_ours = matches!(
+                game.pending_selection_resume
+                    .as_ref()
+                    .and_then(|s| s.frames.last()),
+                Some(crate::resume::ResumeFrame::OptionTrashOrder(_))
+            );
+            if !is_ours {
+                return;
+            }
+            let Some(sel) = game.pending_selection.as_ref() else {
+                return;
+            };
+            let actor = sel.selecting_player;
+            let Some(&action_id) = sel.valid_action_ids.first() else {
+                return;
+            };
+            game.decode_action(action_id, actor);
+        }
+    }
+
     fn apply_selection_step(
         &mut self,
         game: &mut Game,
@@ -1810,6 +1834,17 @@ impl ReplayDriver {
         if self.is_complete() || self.paused {
             return self.no_progress_result(game);
         }
+
+        // ENGINE-ONLY PROMPT. 9-1-5 + 18-1-2 -> 15-4-3-5-1 let the Option's
+        // user order the used card's pending trash against their own pending
+        // triggers, so our engine parks that pick
+        // (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER). DCGO makes no such
+        // decision -- `UseOptionClass.UseOption` trashes before the stacked
+        // skills resolve -- so no recording can carry an answer. Take the
+        // oracle's order (entry 0, "trash now") and continue, exactly as the
+        // exam's `sim_only` rows do; anything else would manufacture a
+        // divergence out of a prompt the corpus cannot contain.
+        self.auto_answer_option_trash_order(game);
 
         let cur = self.cursor as usize;
 

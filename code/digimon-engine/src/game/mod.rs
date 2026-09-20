@@ -708,6 +708,16 @@ pub struct Game {
     /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
     pub(crate) option_body_pending: bool,
 
+    /// The used Option's pending trash (9-1-5) is being ORDERED by its user
+    /// against their own simultaneously-pending triggered effects: set when
+    /// that player answered the `install_option_trash_order_selection` prompt
+    /// with "resolve my triggered effect first". Cleared as soon as one queued
+    /// entry actually resolves (`run_queued_effect`), so the choice is
+    /// re-offered before each remaining item — 15-4-3-5-1 repeats the pick
+    /// until the turn player has no pending items left.
+    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    pub(crate) option_trash_order_deferred: bool,
+
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
     /// (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`). BT13-103 Akihiro

@@ -520,6 +520,13 @@ pub enum ResumeFrame {
     /// Accept runs the chosen queued effect; optional PASS drops every
     /// remaining optional queued effect for that chooser.
     TriggerOrderSelection(TriggerOrderSelectionState),
+    /// Ordering pick between the used Option's PENDING TRASH (9-1-5) and the
+    /// using player's own simultaneously-pending triggered effects. 18-1-2
+    /// performs pending processing that coincides with other processing like
+    /// simultaneously triggering effects (15-4-3), and 15-4-3-5-1 has that
+    /// player choose one of their own items at a time — so the trash is not
+    /// automatically first. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    OptionTrashOrder(OptionTrashOrderState),
     /// Optional replacement-effect accept/decline prompt. Accept re-runs the
     /// parked replacement process and commits its outcome; PASS commits the
     /// original event with no replacement.
@@ -819,6 +826,17 @@ pub struct OuterOptionalTriggerState {
 pub struct TriggerOrderSelectionState {
     pub(crate) chooser: PlayerId,
     pub(crate) allow_decline_all: bool,
+    pub(crate) outer_conts: Vec<OuterContinuation>,
+}
+
+/// Data for `ResumeFrame::OptionTrashOrder`: the Option's user picks whether
+/// the card's pending trash or one of their own pending triggered effects
+/// resolves next.
+#[derive(Debug, Clone)]
+pub struct OptionTrashOrderState {
+    /// The player who used the Option — the one whose pending items are being
+    /// ordered (15-4-3-5-1 / -2 bucket owner).
+    pub(crate) owner: PlayerId,
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 

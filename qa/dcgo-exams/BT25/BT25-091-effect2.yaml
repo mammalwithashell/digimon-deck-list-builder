@@ -125,6 +125,13 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
+  # SIM-ONLY: our 9-1-5 trash-ORDER pick. With Iron Slash's pending trash AND
+  # Monica's own trigger due at the same timing, 18-1-2 -> 15-4-3-5-1 lets P0
+  # (both items are theirs) choose which resolves first; DCGO hard-codes the
+  # trash and asks nothing, so this row is sim-only and takes DCGO's order.
+  # G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
   # THE CLAUSE: "by suspending this Tamer" -- accept.
   - actor: 0
     do: { select: { yes: true } }
@@ -142,7 +149,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 12
+  - at: 13
     that:
       turn: 4
       p0.trash: [BT25-100]

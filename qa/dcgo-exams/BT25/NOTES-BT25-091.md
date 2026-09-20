@@ -68,9 +68,16 @@ zero Unity time) the line is **CLEAN**, 12 of 13 rows compared (1 sim-only), so
 Iron Slash is now in `p0.trash` while Monica's stacked trigger resolves, exactly as
 DCGO has it. Verdict `diverged → confirmed`;
 `G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` is RESOLVED in
-`docs/RUST_ENGINE_GAPS.md`. The ordering *choice* the rules give the turn player over
-their OWN pending triggers is still unsurfaced by both engines and lives on as
-`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (OPEN, unmeasured).
+`docs/RUST_ENGINE_GAPS.md`.
+
+The ordering *choice* the rules give the Option's user over their OWN pending
+triggers (9-1-5 + 18-1-2 + 15-4-3-5-1) was then taken up at close-out and is now
+SURFACED by our engine — `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` RESOLVED
+2026-09-20. This line is one of only 8 places in the whole behavioural suite that
+reach it (Iron Slash's pending trash + Monica's own trigger), so
+`BT25-091-effect2.yaml` gained a **`sim_only` `choice:` row** taking DCGO's order
+("Trash the used Option"); DCGO asks nothing there, and every compared row is
+unchanged.
 
 ### Original triage 2026-09-19 (superseded — kept for the record)
 `--all-diffs` against the preserved sidecar

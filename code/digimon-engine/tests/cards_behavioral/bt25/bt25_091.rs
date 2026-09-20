@@ -285,6 +285,28 @@ fn locked_count(runner: &DebugRunner, handles: &[PermanentHandle]) -> usize {
         .count()
 }
 
+/// 9-1-5 + 18-1-2 -> 15-4-3-5-1: with the used Option's pending trash AND
+/// Monica's own trigger due at the same timing, P0 orders them. These lines
+/// take DCGO's order (trash first); the alternative is pinned in
+/// `bt3_096.rs` (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER).
+fn order_trash_first(runner: &mut DebugRunner) {
+    let Some(view) = runner.pending_selection_view() else {
+        return;
+    };
+    if !view.prompt.contains("pending items") {
+        return;
+    }
+    let entry = view
+        .effect_choices
+        .as_ref()
+        .and_then(|c| c.iter().find(|e| e.label.contains("Trash")))
+        .expect("a trash-now entry");
+    let aid = entry.action_id;
+    runner
+        .execute_action(view.selecting_player, aid)
+        .expect("order the used Option's trash first");
+}
+
 fn accept(runner: &mut DebugRunner) {
     let view = runner
         .pending_selection_view()
@@ -340,6 +362,7 @@ fn bt25_091_own_ts_option_use_suspends_and_locks_one_opponent_digimon() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
+    order_trash_first(&mut runner);
     accept(&mut runner);
     assert!(is_suspended(&runner, monica), "Monica suspends as the cost");
 
@@ -404,6 +427,7 @@ fn bt25_091_declining_leaves_monica_unsuspended() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
+    order_trash_first(&mut runner);
     runner.execute_action(0, PASS).expect("decline");
     let _ = runner.auto_resolve();
     assert!(!is_suspended(&runner, monica));
@@ -468,6 +492,7 @@ fn bt25_091_offered_even_when_opponent_has_no_digimon() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
+    order_trash_first(&mut runner);
     accept(&mut runner);
     assert!(is_suspended(&runner, monica));
     let _ = runner.auto_resolve();

@@ -2946,6 +2946,10 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, qe: QueuedEffect) {
+        // A queued entry is resolving, so the Option user's "my trigger first"
+        // pick (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER) is spent: 15-4-3-5-1
+        // re-chooses before each remaining item.
+        self.option_trash_order_deferred = false;
         // Set the effect-source attribution for replacement-cause inference.
         // Saved on entry, restored on exit — supports nested drains (an
         // effect queues another effect that recursively drains before this
@@ -4646,10 +4650,12 @@ impl Game {
     /// body, which is why those are ENQUEUED here (not drained) and so resolve
     /// after the disposal too.
     ///
-    /// Residual: when the turn player has their OWN triggered effects pending
-    /// alongside the trash, 18-1-2 lets them order the trash among those; DCGO
-    /// always trashes first and so do we (logged:
-    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER).
+    /// When the Option's USER has their OWN triggered effects pending
+    /// alongside the trash, both are that player's simultaneous items, so
+    /// 18-1-2 -> 15-4-3-5-1 gives THEM the order:
+    /// `install_option_trash_order_selection` surfaces that pick instead of
+    /// trashing unconditionally (DCGO hard-codes trash-first, which stays one
+    /// of the two legal answers). G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
     ///
     /// No-op unless `option_body_pending` is set, a `MainEffectDrain`
     /// `pending_option` is in flight, no `OptionMain` entry for it is still
@@ -4675,6 +4681,7 @@ impl Game {
             return;
         }
         let card = pending.card.handle();
+        let owner = pending.owner;
         if self
             .effect_queue
             .iter()
@@ -4682,7 +4689,6 @@ impl Game {
         {
             return;
         }
-        self.option_body_pending = false;
         if let Some((player, used)) = self.on_use_option_armed.take() {
             self.enqueue_triggered(
                 EffectTiming::OnUseOption,
@@ -4690,9 +4696,174 @@ impl Game {
             );
         }
         if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            self.option_body_pending = false;
             return;
         }
+        // 18-1-2 -> 15-4-3-5-1: when the Option's USER also has their own
+        // triggered effects pending at this same timing, the trash is just one
+        // of that player's simultaneous items and THEY choose which resolves
+        // next. `option_body_pending` stays set across the prompt so the drain
+        // loop re-enters this function after each pick.
+        if self.option_trash_order_deferred {
+            if !self.option_orderable_trigger_indices(owner).is_empty() {
+                // The player asked for one of their triggers first; the drain
+                // resolves it (with its own optional / activation-cost gates
+                // intact) and `run_queued_effect` clears the deferral, so the
+                // choice is offered again before the next item.
+                return;
+            }
+            self.option_trash_order_deferred = false;
+        } else if self.install_option_trash_order_selection(owner) {
+            return;
+        }
+        self.option_body_pending = false;
         self.dispose_option();
+    }
+
+    /// Queue indices of the Option user's OWN pending triggered effects that
+    /// would fire right now -- the items 15-4-3-5-1 lets them order against
+    /// the used Option's pending trash. Empty unless that player is also the
+    /// next chooser, so the turn player's bucket still resolves ahead of a
+    /// non-turn player's Option trash (15-4-3-5-2).
+    fn option_orderable_trigger_indices(&mut self, owner: PlayerId) -> Vec<usize> {
+        if self.effect_queue.is_empty() || self.next_chooser() != Some(owner) {
+            return Vec::new();
+        }
+        let non_firing = self.non_firing_queued_effect_indices_for(owner);
+        self.effect_queue
+            .iter()
+            .enumerate()
+            .filter(|(i, qe)| qe.controller == owner && !non_firing.contains(i))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Install the 9-1-5 trash-vs-own-trigger ordering pick. Returns false (no
+    /// prompt; the caller trashes straight away) when the user has no pending
+    /// item of their own -- a lone pending processing is not a choice.
+    ///
+    /// The pick is a TWO-entry `TriggerOrder`: "trash the used Option now" or
+    /// "resolve one of my triggered effects first". Choosing a trigger only
+    /// DEFERS the trash by one item; the drain then runs that trigger through
+    /// the ordinary single-entry path, so its outer-optional prompt and
+    /// `activation_cost` decline gate (15-7-1) survive, and the pick is
+    /// re-offered before the next item. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    fn install_option_trash_order_selection(&mut self, owner: PlayerId) -> bool {
+        let pending_triggers = self.option_orderable_trigger_indices(owner);
+        let Some(&first_idx) = pending_triggers.first() else {
+            return false;
+        };
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        let source_card = pending.card.handle();
+        let option_id = pending.card.card_id(&self.card_data).to_string();
+        let (
+            trigger_card_id,
+            trigger_slot,
+            trigger_source_card,
+            trigger_source_kind,
+            trigger_timing,
+            trigger_optional,
+        ) = {
+            let qe = &self.effect_queue[first_idx];
+            (
+                qe.card_id.clone(),
+                qe.effect_slot,
+                qe.source_card,
+                qe.source_kind,
+                qe.timing,
+                qe.is_optional,
+            )
+        };
+        let trigger_label = if pending_triggers.len() == 1 {
+            format!("Resolve your triggered effect first ({trigger_card_id} slot {trigger_slot})")
+        } else {
+            format!(
+                "Resolve one of your {} triggered effects first",
+                pending_triggers.len()
+            )
+        };
+        let trash_action = HAND_EFFECT_START;
+        let trigger_action = HAND_EFFECT_START + 1;
+        let choices = vec![
+            EffectChoiceEntry {
+                label: format!("Trash the used Option ({option_id})"),
+                action_id: trash_action,
+                source_card: Some(source_card),
+                source_kind: Some(EffectSourceKind::Option),
+                timing: None,
+                is_optional: false,
+                keyword: None,
+                observation_metadata: Default::default(),
+            },
+            EffectChoiceEntry {
+                label: trigger_label,
+                action_id: trigger_action,
+                source_card: Some(trigger_source_card),
+                source_kind: Some(trigger_source_kind),
+                timing: Some(trigger_timing),
+                is_optional: trigger_optional,
+                keyword: None,
+                observation_metadata: Default::default(),
+            },
+        ];
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::TriggerOrder,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids: vec![trash_action, trigger_action],
+            is_optional: false,
+            prompt: "Choose which of your pending items resolves next: the used Option's trash, or one of your triggered effects".to_string(),
+            effect_choices: Some(choices),
+            source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                game.apply_option_trash_order_choice(action_id);
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OptionTrashOrder(
+                crate::resume::OptionTrashOrderState {
+                    owner,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+        true
+    }
+
+    fn apply_option_trash_order_choice(&mut self, action_id: u16) {
+        if action_id == HAND_EFFECT_START + 1 {
+            // A triggered effect goes first; the trash stays pending.
+            self.option_trash_order_deferred = true;
+            return;
+        }
+        self.option_trash_order_deferred = false;
+        self.option_body_pending = false;
+        self.dispose_option();
+    }
+
+    /// Resume step for `ResumeFrame::OptionTrashOrder`.
+    pub(crate) fn run_option_trash_order_step(
+        &mut self,
+        state: crate::resume::OptionTrashOrderState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        let _ = state;
+        if is_pass {
+            // The prompt is not optional; a PASS reaching here resolves as the
+            // rules-legal default both engines used before (trash first).
+            self.apply_option_trash_order_choice(HAND_EFFECT_START);
+            return;
+        }
+        self.apply_option_trash_order_choice(action_id);
     }
 
     /// Shared post-body tail of an Option use: offer <Arts Digivolve>, then

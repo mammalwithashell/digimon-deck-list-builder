@@ -238,10 +238,14 @@ Re-run against their PRESERVED sidecars (zero Unity time) they are **CLEAN** —
 12/12 and 18/18 steps compared — and both verdicts are now `confirmed`. The gap is
 RESOLVED in `docs/RUST_ENGINE_GAPS.md`; a regression test
 (`bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`)
-now pins the non-turn-player half, which had no coverage. The rules-ambiguous
-residual — the turn player may *order* the trash among their **own** pending
-triggers, and neither engine surfaces that choice — survives as
-`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (OPEN, unmeasured).
+now pins the non-turn-player half, which had no coverage. The residual — the Option's user may
+*order* the trash among their **own** pending triggers — was taken up at close-out
+and is no longer ambiguous: `general_rule.pdf` 9-1-5 + 18-1-2 + 15-4-3-2 +
+**15-4-3-5-1** grant that pick, so the engine now surfaces it
+(`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`, RESOLVED 2026-09-20). DCGO's
+trash-first remains one of the two legal answers and is what every scripted line
+picks; the BT25-091#effect#2 scenario carries a `sim_only` row for the
+engine-only prompt.
 
 ```
 RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.toml   --test cards_behavioral -- --test-threads=8
@@ -279,7 +283,6 @@ campaign gate deliberately does not hold the line for (core first).
 
 | Gap | Where |
 |---|---|
-| `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` | Residual of `5108e58ee`: the turn player may order the Option's trash among their own pending triggers; we always trash first (as DCGO does). OPEN, unmeasured — no card in the pool has been shown to observe it. (`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` closed 2026-09-20; its two drivers re-measured clean.) |
 | `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID` | `activate_field_main` skips `activation_cost_fn` and the mask does not gate on it (BT25-089 / EX11-071) |
 | `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` | BT16-077#effect#2 / #inherited#0 |
 | `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST` | `qa/dcgo-exams/BT25/NOTES-BT25-091.md` |
@@ -303,8 +306,10 @@ dcgo-harness --root <harness-root> exam --scenario qa/dcgo-exams/BT25/BT25-078-e
 
 1. **BT25-085's three DUAL clauses** — core, and their blocking cause is already fixed.
 2. **BT25-028 (Dianamon)** — 5 unmeasured clauses, 24/102 lists, 3 lines already lowering.
-3. ~~The Option-trash ordering gap~~ — **closed 2026-09-20**: both drivers re-measured
-   CLEAN against `5108e58ee`, verdicts `confirmed`, regression test added. What remains
-   is `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (the turn player's own ordering choice),
-   which is unmeasured and needs a card that reads the trash from a turn-player trigger
-   before it is worth the orderable-queue-entry substrate.
+3. ~~The Option-trash ordering gap~~ — **closed 2026-09-20**, both halves: the two
+   `G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` drivers re-measured CLEAN against
+   `5108e58ee` (verdicts `confirmed`, regression test added), and the residual
+   `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` was fixed in the engine — 15-4-3-5-1
+   gives the Option's user the order, so the pick is now a two-entry `TriggerOrder`
+   instead of a hard-coded trash-first (8 sites in the whole behavioural suite;
+   BT3-096 / BT25-091).

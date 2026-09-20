@@ -3320,8 +3320,8 @@ the turn player's OWN `OnUseOption` observer). Post-`5108e58ee` our order equals
 DCGO's (trash, then observers) and the clause re-measures clean. The residual —
 that 18-1-2/15-4-3-5 lets the turn player ORDER the trash among their own
 pending items, and neither engine surfaces that choice — is tracked separately
-in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (still OPEN, unmeasured: no
-card in the pool has been shown to observe it).
+in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (RESOLVED 2026-09-20 — the
+ordering pick is now surfaced; see that entry).
 
 **Regression test (this stage):**
 `bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
@@ -3382,17 +3382,77 @@ observers are enqueued (not drained) so they resolve after disposal, as in DCGO.
 Test `p_170_opponent_option_is_trashed_before_on_deletion_resolves`; oracle
 re-diff CLEAN, verdict confirmed.
 
-## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — OPEN, unmeasured (found 2026-09-19, same triage)
+## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — RESOLVED 2026-09-20 (ENGINE FIX, this stage) (found 2026-09-19)
 
-Residual of G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS, and the surviving
-half of G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER (whose two measured
-drivers both re-diffed CLEAN on 2026-09-20). Under 18-1-2 / 15-4-3-5 the used Option's trash is
-one of the TURN player's pending items, so when that player also has their OWN
-triggers pending from the Option's body, they may order the trash among them.
-We (like DCGO) always trash first and surface no choice. This matters only for
-a turn-player trigger that reads the trash (count, "Option card in trash", etc.).
-Surfacing it means adding the pending trash as an entry in the turn player's
-`TriggerOrder` bundle.
+**RESOLVED (ENGINE FIX).** Residual of G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS,
+and the surviving half of G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER (whose two
+measured drivers both re-diffed CLEAN on 2026-09-20). The choice IS real — the PDF
+was re-read this stage, clause by clause, and it grants it:
+
+- **9-1-5** (p.19): "A used Option card is trashed if it isn't in an area at the
+  timing when its 1st [Main] effect has been resolved **as pending processing**."
+- **18-1-1 / 18-1-2** (p.40): pending processing is processed at its predetermined
+  timing "similar to triggered effects", and "**if other processing will be
+  performed at the same time as pending processing, it is performed similar to
+  effects that trigger simultaneously**" → 15-4-3.
+- **15-4-3-2** (p.22): effects triggered before a single rule or effect is resolved
+  all trigger **simultaneously** — so the triggers the `[Main]` body raised are due
+  at exactly the timing 9-1-5 names for the trash.
+- **15-4-3-5-1** (p.23): "**1 effect is chosen to activate from among the turn
+  player's effects that triggered simultaneously. This step is repeated** until
+  there are no more pending activation effects for the turn player."
+
+Nothing in the manual privileges the pending trash inside that bucket, so hard-coding
+trash-first (DCGO `CardController.cs` `UseOptionClass.UseOption` → `AddTrashCard`
+before the stacked skills, which we copied) picks ONE legal order and denies the
+player a choice rule 17 requires in the action space. DCGO's order remains legal —
+it is now what the player picks, not what the engine assumes.
+
+**Fix.** `Game::install_option_trash_order_selection` (`effect_queue.rs`) parks a
+two-entry `SelectionKind::TriggerOrder` for the Option's user — "Trash the used
+Option (`<id>`)" vs "Resolve your triggered effect first" — at the 9-1-5 timing,
+whenever `option_orderable_trigger_indices` finds at least one of THEIR queued
+triggers that would fire now (and they are the next chooser, so a non-turn player's
+Option trash still resolves after the turn player's bucket — 15-4-3-5-2). A lone
+pending trash is not a choice and prompts nothing. Picking the trigger sets
+`Game::option_trash_order_deferred`, which defers the disposal by exactly ONE item:
+the drain then runs that trigger through the ordinary single-entry path, so its
+outer-optional prompt and `activation_cost` decline gate (15-7-1) survive — the
+`TriggerOrder` callback's documented gate-bypass would otherwise have FORCED
+BT3-096 Mimi's "you may suspend this Tamer" cost. `run_queued_effect` clears the
+flag, so the pick is re-offered before each remaining item (15-4-3-5-1 "repeated").
+Clone-safe: the park carries `ResumeFrame::OptionTrashOrder` (data), no bespoke
+closure park.
+
+**Observability (measured, this stage).** An instrumented full `cards_behavioral`
+run (8199 tests) hit the 9-1-5 timing with a pending own-trigger in only **8**
+places, from two real cards — BT3-096 Mimi Tachikawa (`[All Turns]` on-use-Option)
+and BT25-091 Monica Simmons (`[Your Turn]` on-use `[TS]` Option) — plus one
+synthetic observer. None of the 14 on-use-Option cards in `cards.json` reads the
+trash in its body, so no existing card distinguishes the two orders today; the pick
+is surfaced because the rules give it, not because a card has been shown to exploit
+it. Ordering matters as soon as one does (trash count, "Option card in your trash"):
+under 9-1-4/9-1-5 a deferred Option is in NO area, not in the trash.
+
+**Oracle adapters.** DCGO makes no decision here, so no recording or scripted
+line can answer the prompt. The exam takes it on a `sim_only` `choice:` row
+(`BT25-091-effect2.yaml`, `BT3-096-effect0.yaml` — the only two lines in the
+358-scenario corpus that reach it; both re-diffed CLEAN against their preserved
+sidecars, 12/14 and 8/9 rows compared, verdicts unchanged). The replay core
+(`ReplaySession::auto_answer_option_trash_order`, `runners/replay.rs`, shared by
+`dcgo-replay` and the engine MCP) answers it with entry 0 (trash first) before
+consuming each recorded row, so a DCGO corpus replay cannot manufacture a
+divergence out of a prompt the corpus cannot contain.
+
+**Tests.** `bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed`
+(trigger first — the Option is still in no area while the optional cost gate is
+answered), `bt3_096_option_user_may_trash_the_option_before_their_trigger` (DCGO's
+order), `bt3_096_no_order_prompt_when_the_user_has_no_pending_trigger` (a lone
+pending processing prompts nothing) — all three fail before the fix. The four
+pre-existing BT3-096 / three BT25-091 lines that pinned the old hard-coded order now
+make the trash-first pick explicitly. Exam scenario
+`qa/dcgo-exams/BT25/BT25-091-effect2.yaml` gained a `sim_only` `choice:` row for the
+engine-only prompt (DCGO asks nothing here).
 
 ## G-ENGINE-ADDITIVE-COLOR-TREATMENT — "treated as also having the colors of its digivolution cards" (BT8-084) — RESOLVED 2026-09-19 (fb5517067)
 
