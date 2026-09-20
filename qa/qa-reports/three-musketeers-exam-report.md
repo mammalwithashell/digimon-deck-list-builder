@@ -242,7 +242,7 @@ now pins the non-turn-player half, which had no coverage. The residual — the O
 *order* the trash among their **own** pending triggers — was taken up at close-out
 and is no longer ambiguous: `general_rule.pdf` 9-1-5 + 18-1-2 + 15-4-3-2 +
 **15-4-3-5-1** grant that pick, so the engine now surfaces it
-(`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`, RESOLVED 2026-09-20). DCGO's
+(`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`, RESOLVED 2026-09-20, `5aef07fa8`). DCGO's
 trash-first remains one of the two legal answers and is what every scripted line
 picks; the BT25-091#effect#2 scenario carries a `sim_only` row for the
 engine-only prompt.

@@ -73,7 +73,7 @@ DCGO has it. Verdict `diverged → confirmed`;
 The ordering *choice* the rules give the Option's user over their OWN pending
 triggers (9-1-5 + 18-1-2 + 15-4-3-5-1) was then taken up at close-out and is now
 SURFACED by our engine — `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` RESOLVED
-2026-09-20. This line is one of only 8 places in the whole behavioural suite that
+2026-09-20 (`5aef07fa8`). This line is one of only 8 places in the whole behavioural suite that
 reach it (Iron Slash's pending trash + Monica's own trigger), so
 `BT25-091-effect2.yaml` gained a **`sim_only` `choice:` row** taking DCGO's order
 ("Trash the used Option"); DCGO asks nothing there, and every compared row is

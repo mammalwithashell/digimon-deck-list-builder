@@ -3320,8 +3320,8 @@ the turn player's OWN `OnUseOption` observer). Post-`5108e58ee` our order equals
 DCGO's (trash, then observers) and the clause re-measures clean. The residual —
 that 18-1-2/15-4-3-5 lets the turn player ORDER the trash among their own
 pending items, and neither engine surfaces that choice — is tracked separately
-in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (RESOLVED 2026-09-20 — the
-ordering pick is now surfaced; see that entry).
+in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (RESOLVED 2026-09-20,
+`5aef07fa8` — the ordering pick is now surfaced; see that entry).
 
 **Regression test (this stage):**
 `bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
@@ -3382,7 +3382,7 @@ observers are enqueued (not drained) so they resolve after disposal, as in DCGO.
 Test `p_170_opponent_option_is_trashed_before_on_deletion_resolves`; oracle
 re-diff CLEAN, verdict confirmed.
 
-## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — RESOLVED 2026-09-20 (ENGINE FIX, this stage) (found 2026-09-19)
+## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — RESOLVED 2026-09-20 (5aef07fa8, ENGINE FIX) (found 2026-09-19)
 
 **RESOLVED (ENGINE FIX).** Residual of G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS,
 and the surviving half of G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER (whose two
