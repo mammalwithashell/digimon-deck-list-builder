@@ -283,7 +283,7 @@ campaign gate deliberately does not hold the line for (core first).
 
 | Gap | Where |
 |---|---|
-| `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID` | `activate_field_main` skips `activation_cost_fn` and the mask does not gate on it (BT25-089 / EX11-071) |
+| ~~`G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`~~ **RESOLVED 2026-09-20** (three-musketeers-2) | `activate_field_main` now pays `activation_cost_fn`, and `field_main_match` gates the `[Main]` bit on a new data-twin `ActivationCostKind::is_payable` probe. general_rule.pdf §15-7-1/2; DCGO `BT25_089.cs:36` → `CanSuspend.cs:17-25`. 4 tests (BT25-089 / EX11-071); entry in `qa/resolved-gaps.md`. |
 | `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` | BT16-077#effect#2 / #inherited#0 |
 | `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST` | `qa/dcgo-exams/BT25/NOTES-BT25-091.md` |
 | Condition-false scheduled-`<Delay>` carrier trash | `6c4be5885`, logged alongside `G-ENGINE-DELAY-BODY-BEFORE-TRASH` |

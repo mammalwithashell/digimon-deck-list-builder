@@ -14,7 +14,7 @@ use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
-use crate::effect::{Effect, EffectBuilder};
+use crate::effect::{ActivationCostKind, Effect, EffectBuilder};
 use crate::enums::EffectTiming;
 use crate::resource_flow::identifier_indicates_resource_flow;
 
@@ -350,12 +350,18 @@ pub fn lower_for_kind_with_clause_index(
         // builder so `effect_queue::run_queued_effect_inner` consults the
         // closure between the condition gate and the body process.
         if let Some(kind) = activation_cost_kind {
-            builder = builder.activation_cost(move |ctx| match kind {
-                CompiledActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
+            // `activation_cost_of_kind` sets the mutating closure AND the
+            // read-only `ActivationCostKind` probe together, so the action
+            // mask (`main_effect_select::field_main_match`) can suppress a
+            // `[Main]` whose cost is unpayable while the resolution path
+            // (`Game::activate_field_main`) actually pays it.
+            // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+            builder = builder.activation_cost_of_kind(match kind {
+                CompiledActivationCostKind::SuspendSelf => ActivationCostKind::SuspendSelf,
                 CompiledActivationCostKind::ReturnSelfToDeckBottom => {
-                    ctx.return_self_to_deck_bottom_as_cost()
+                    ActivationCostKind::ReturnSelfToDeckBottom
                 }
-                CompiledActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
+                CompiledActivationCostKind::TrashSelf => ActivationCostKind::TrashSelf,
             });
         }
 

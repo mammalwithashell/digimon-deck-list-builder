@@ -226,3 +226,80 @@ fn ex11_071_main_clause_uses_activation_cost_and_reduced_play_from_hand() {
         "play_from_hand uses cost_delta reduce 2"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID
+//
+// "[Main] **By returning this Tamer to the bottom of the deck**, you may play
+// 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your
+// hand with the play cost reduced by 2."
+//
+// "By X, Y" is an optional processing condition (general_rule.pdf §15-7-1);
+// §15-7-2 — if the condition's content isn't executed, the processing after it
+// can't be executed. The [Main] ACTION path (`Game::activate_field_main`) must
+// therefore return the Tamer to the deck bottom before the reduced-cost play
+// body runs. DCGO EX11_071.cs wraps the body in
+// `CardEffectCommons.DeckBouncePeremanentAndProcessAccordingToResult(...)`
+// with `successProcess` only (EX11/White/EX11_071.cs:108-116), i.e. no bounce
+// => no play.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Activating the [Main] through the ACTION path pays the printed
+/// "By returning this Tamer to the bottom of the deck" cost.
+#[test]
+fn ex11_071_main_action_path_returns_self_to_deck_bottom() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::enums::CardKind;
+
+    fn knight(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(5);
+        c.dp = Some(6000);
+        c.play_cost = 6;
+        c.traits = vec!["Royal Knight".to_string()];
+        c
+    }
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-071")
+        .expect("EX11-071 YAML loads")
+        .add_card(knight("RK-IN-HAND"))
+        .add_card({
+            let mut c = make_test_card("EX11-FILL", "Filler");
+            c.card_kind = CardKind::Digimon;
+            c
+        })
+        .hand(0, &["RK-IN-HAND"])
+        .deck(0, &["EX11-FILL"; 8])
+        .memory(10)
+        .start();
+
+    let cool_boy = r.place_on_field(0, "EX11-071", Some(0));
+    r.game.enter_main_phase();
+
+    let deck_before = r.game.player(0).deck.len();
+    let fired = r.game.activate_field_main(0, cool_boy.index as usize);
+    assert!(fired, "[Main] fires through the action path");
+
+    assert_eq!(
+        r.game.player(0).deck.len(),
+        deck_before + 1,
+        "the printed 'By returning this Tamer to the bottom of the deck' cost \
+         must be PAID on the [Main] action path (general_rule.pdf §15-7-2)"
+    );
+    assert_eq!(
+        r.game.player(0).deck[0].card_id(&r.game.card_data),
+        "EX11-071",
+        "the Tamer is on the BOTTOM of the deck (index 0)"
+    );
+    assert!(
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "EX11-071"),
+        "the Tamer left the battle area as the cost"
+    );
+}

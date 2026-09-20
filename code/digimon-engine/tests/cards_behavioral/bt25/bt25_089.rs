@@ -558,3 +558,118 @@ fn bt25_089_color_is_green_not_purple() {
         "BT25-089 is Green; YAML color field must be corrected from [purple] to [green]"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID
+//
+// The printed "[Main] **By suspending this Tamer**, you may link …" cost is an
+// OPTIONAL PROCESSING CONDITION (general_rule.pdf §15-7-1: "by X, Y"). §15-7-2:
+// "If the content of the optional processing conditions isn't executed, the
+// processing after the conditions can't be executed." So the [Main] action path
+// (`Game::activate_field_main`, the FIELD_EFFECT +2 sub-slot the RL decoder
+// hits) MUST pay the suspend cost before the link body runs, and must refuse
+// when it cannot be paid.
+//
+// DCGO parity: BT25_089.cs's `CanUseCondition` for the `EffectTiming.OnDeclaration`
+// ActivateClass is gated on `CardEffectCommons.CanActivateSuspendCostEffect(card)`
+// (DCGO/Assets/Scripts/Script/CardEffectCommons/CanUseEffects/CanSuspend.cs:17-25
+// -> `!permanent.IsSuspended && permanent.CanSuspend`), so the ability is not
+// even offered on a suspended carrier. The action mask must match, or the RL
+// policy is handed an action that can only ever be a no-op (the CannotAttack
+// mask precedent).
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn field_main_action(field_index: u16) -> u16 {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    FIELD_EFFECT_START + field_index * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN
+}
+
+/// Activating the [Main] through the ACTION path pays the printed
+/// "By suspending this Tamer" cost (§15-7-1/2).
+#[test]
+fn bt25_089_main_action_path_pays_the_suspend_cost() {
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let _host = r.place_on_field(0, "MY-HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert!(
+        !r.game.player(0).battle_area[kazuki.index as usize].is_suspended,
+        "precondition: Kazuki & Itsuki starts unsuspended"
+    );
+
+    let fired = r.game.activate_field_main(0, kazuki.index as usize);
+    assert!(fired, "[Main] fires through the action path");
+    assert!(
+        r.game.player(0).battle_area[kazuki.index as usize].is_suspended,
+        "the printed 'By suspending this Tamer' cost must be PAID on the \
+         [Main] action path (general_rule.pdf §15-7-2)"
+    );
+}
+
+/// The mask must not offer the [Main] bit when the suspend cost cannot be
+/// paid (DCGO `CanActivateSuspendCostEffect`).
+#[test]
+fn bt25_089_main_action_masked_off_when_already_suspended() {
+    use digimon_engine::action::build_action_mask;
+
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let _host = r.place_on_field(0, "MY-HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let action = field_main_action(kazuki.index as u16);
+    assert_eq!(
+        build_action_mask(&r.game, 0)[action as usize],
+        1.0,
+        "legal while unsuspended"
+    );
+
+    r.game.players[0].battle_area[kazuki.index as usize].is_suspended = true;
+    assert_eq!(
+        build_action_mask(&r.game, 0)[action as usize],
+        0.0,
+        "illegal once the suspend cost is unpayable — an action that can only \
+         no-op must not be offered to the policy"
+    );
+}
+
+/// Even if the bit is reached, the resolution path refuses a cost it cannot
+/// pay: no body, no selection installed.
+#[test]
+fn bt25_089_main_action_path_refuses_when_cost_unpayable() {
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let _host = r.place_on_field(0, "MY-HOST", Some(0));
+    r.game.players[0].battle_area[kazuki.index as usize].is_suspended = true;
+    advance_to_main(&mut r);
+
+    let fired = r.game.activate_field_main(0, kazuki.index as usize);
+    assert!(
+        !fired,
+        "the [Main] must not fire when 'By suspending this Tamer' cannot be paid"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no link selection may be installed when the cost went unpaid"
+    );
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        1,
+        "the Appmon card stays in hand"
+    );
+}

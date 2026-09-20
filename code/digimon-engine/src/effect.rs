@@ -63,6 +63,71 @@ pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'sta
 /// (no "decline" prompt). Distinct from `PayCostFn`, which is consumed
 /// during `BeforePayCost` cost calculation for plays/digivolves.
 pub type ActivationCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
+
+/// The *shape* of an effect's activation cost, carried as DATA alongside
+/// [`ActivationCostFn`].
+///
+/// The closure alone can only be run by MUTATING the game, so nothing could
+/// ask "could this cost be paid?" without paying it. That is exactly what the
+/// action mask needs to know: a printed `[Main]` "By suspending this Tamer,
+/// …" whose carrier is already suspended is an action that can only ever
+/// no-op, and offering it to the policy is an RL-correctness bug as well as a
+/// faithfulness one (DCGO gates the ability itself — `CanUseCondition` ->
+/// `CardEffectCommons.CanActivateSuspendCostEffect`, see
+/// `DCGO/Assets/Scripts/Script/CardEffectCommons/CanUseEffects/CanSuspend.cs`).
+///
+/// Keeping this as a plain `Copy` enum (rather than a second, read-only
+/// closure) keeps `Effect` data-driven and clone-safe.
+/// `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivationCostKind {
+    /// "By suspending this Tamer/Digimon, …"
+    SuspendSelf,
+    /// "By returning this Tamer to the bottom of the deck, …"
+    ReturnSelfToDeckBottom,
+    /// "By trashing this card, …" (`<Delay>` bodies).
+    TrashSelf,
+}
+
+impl ActivationCostKind {
+    /// Read-only "could this cost be paid right now?" probe.
+    ///
+    /// Mirrors the corresponding `EffectContext::*_as_cost` mutator's own
+    /// refusal conditions exactly — if this returns `true` the mutator must
+    /// not return `false`, or the mask and the resolution path drift apart.
+    pub fn is_payable(
+        &self,
+        game: &crate::game::Game,
+        source_permanent: Option<PermanentHandle>,
+    ) -> bool {
+        let Some(handle) = source_permanent else {
+            return false;
+        };
+        let Some(perm) = game
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+        else {
+            return false;
+        };
+        match self {
+            // `EffectContext::suspend_self_as_cost`: refuses an already
+            // suspended carrier and a `CannotSuspend` carrier (prohibition
+            // precedence 15-1-3; DCGO `CanActivatePermanentSuspendCostEffect`
+            // -> `!permanent.IsSuspended && permanent.CanSuspend`).
+            ActivationCostKind::SuspendSelf => {
+                !perm.is_suspended
+                    && !game
+                        .modifiers
+                        .has(handle, crate::enums::ModifierType::CannotSuspend)
+            }
+            // `return_self_to_deck_bottom_as_cost` / `trash_self_as_cost`
+            // refuse only when the source permanent is already gone, which
+            // the lookup above has just ruled out.
+            ActivationCostKind::ReturnSelfToDeckBottom | ActivationCostKind::TrashSelf => true,
+        }
+    }
+}
 pub type DynamicModifierFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static>;
 /// Closure that accepts a read-only context and a candidate host handle,
@@ -258,6 +323,14 @@ pub struct Effect {
     /// same activation key. Distinct from `pay_cost_fn`, which is
     /// consumed during play/digivolve `BeforePayCost` cost calculation.
     pub activation_cost_fn: Option<ActivationCostFn>,
+    /// Data twin of [`Self::activation_cost_fn`]: the cost's SHAPE, so a
+    /// read-only caller (the action mask, `explain_action`) can ask whether
+    /// the cost is payable without paying it. Set together with the closure
+    /// by [`EffectBuilder::activation_cost_of_kind`]; `None` on the raw
+    /// [`EffectBuilder::activation_cost`] escape hatch, which then simply
+    /// carries no mask gate.
+    /// `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+    pub activation_cost_kind: Option<ActivationCostKind>,
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
@@ -758,6 +831,7 @@ impl EffectBuilder {
                 cost_reduction_fn: None,
                 pay_cost_fn: None,
                 activation_cost_fn: None,
+                activation_cost_kind: None,
                 dp_modifier: 0,
                 dp_modifier_fn: None,
                 security_attack_fn: None,
@@ -1170,6 +1244,24 @@ impl EffectBuilder {
         F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
     {
         self.inner.activation_cost_fn = Some(Box::new(f));
+        self
+    }
+
+    /// Attach an activation cost by its DATA `kind`, wiring both the mutating
+    /// closure and the read-only [`ActivationCostKind`] probe in one step.
+    ///
+    /// Preferred over [`Self::activation_cost`] for every printed cost shape
+    /// the engine already models: because the two are set together they can
+    /// never drift, so the action mask's "can this be paid?" gate and the
+    /// resolution path's "pay it" step always agree.
+    /// `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+    pub fn activation_cost_of_kind(mut self, kind: ActivationCostKind) -> Self {
+        self.inner.activation_cost_kind = Some(kind);
+        self.inner.activation_cost_fn = Some(Box::new(move |ctx| match kind {
+            ActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
+            ActivationCostKind::ReturnSelfToDeckBottom => ctx.return_self_to_deck_bottom_as_cost(),
+            ActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
+        }));
         self
     }
 

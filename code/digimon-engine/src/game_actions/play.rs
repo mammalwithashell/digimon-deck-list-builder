@@ -481,6 +481,30 @@ impl Game {
                 {
                     perm.record_activation(source_handle, slot as u8);
                 }
+                // Printed "By <cost>, …" gate — an OPTIONAL PROCESSING
+                // CONDITION (general_rule.pdf 15-7-1). 15-7-2: "If the content
+                // of the optional processing conditions isn't executed, the
+                // processing after the conditions can't be executed." The
+                // triggered path pays this in
+                // `effect_queue::run_queued_effect_inner`; the `[Main]` ACTION
+                // path (this function, the FIELD_EFFECT +2 sub-slot the RL
+                // decoder hits) used to skip it entirely, so a field `[Main]`
+                // activated through the action space got its body for free.
+                //
+                // Matches the queue's failure semantics: the body does NOT run
+                // and the OPT slot stays consumed (recorded just above), so a
+                // cost-impossible activation cannot be retried this turn.
+                // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+                if let Some(activation_cost) = &effect.activation_cost_fn {
+                    let paid = {
+                        let mut ctx =
+                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
+                        activation_cost(&mut ctx)
+                    };
+                    if !paid {
+                        return false;
+                    }
+                }
                 if let Some(process) = &effect.process {
                     let mut ctx =
                         EffectContext::new(self, source_handle, Some(perm_handle), player_id);
