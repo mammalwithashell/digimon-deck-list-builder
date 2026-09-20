@@ -58,7 +58,21 @@ so the finding does not contaminate the clause. Same behaviour is expected for
 every dual-mode Plug-In Option (BT25-093, BT24-091, …). Needs the card-fix gate
 (failing-then-passing test); not applied in this stage.
 
-## `effect#2` oracle divergence — triaged 2026-09-19 (rules-ambiguous, not fixed)
+## `effect#2` — RE-MEASURED 2026-09-20: CLEAN, verdict `confirmed`
+
+The divergence below was measured BEFORE engine fix `5108e58ee` ("a used Option is
+trashed before the triggers its `[Main]` caused"; `general_rule.pdf` 9-1-5 + 18-1-2 +
+15-4-3-5) landed, and was never re-diffed against it. Re-run against the same
+preserved sidecar (`20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`,
+zero Unity time) the line is **CLEAN**, 12 of 13 rows compared (1 sim-only), so
+Iron Slash is now in `p0.trash` while Monica's stacked trigger resolves, exactly as
+DCGO has it. Verdict `diverged → confirmed`;
+`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` is RESOLVED in
+`docs/RUST_ENGINE_GAPS.md`. The ordering *choice* the rules give the turn player over
+their OWN pending triggers is still unsurfaced by both engines and lives on as
+`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (OPEN, unmeasured).
+
+### Original triage 2026-09-19 (superseded — kept for the record)
 `--all-diffs` against the preserved sidecar
 (`20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`): only steps 9-10 differ,
 `p0.trash ours=[] dcgo=[BT25-100]` — DCGO has trashed Iron Slash before Monica's stacked

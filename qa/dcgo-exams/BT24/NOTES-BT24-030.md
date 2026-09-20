@@ -119,3 +119,27 @@ preserved sidecar `20260918T123758Z_b45375dd` is CLEAN 18/18 → **confirmed**.
 authors `color: [blue, purple]` and only a Blue Lv.5 digivolve circle; the
 official bundle (`data/card_bundles/BT24-030.md`) prints **Blue/Black** with
 Blue Lv.5 AND Black Lv.5 cost-4 circles. Needs its own fix + guard test.
+
+
+## `effect#4` — RE-MEASURED 2026-09-20: CLEAN, verdict `confirmed`
+
+The 2026-09-19 oracle run of this line diverged at step 15 (`p1.trash ours=[]
+dcgo=[ST1-16]`): we asked P0's on-suspend trigger — raised while P1's Gaia Force
+`[Main]` was still resolving, by P0 paying the would-leave protection — before the
+used Option was disposed. That run predates engine fix `5108e58ee` ("a used Option is
+trashed the moment its `[Main]` body resolves, before the triggers that body caused").
+Re-diffed against the same preserved sidecar
+(`20260918T123854Z_b6852992350c46659e14b00b3c32657a.state.jsonl`, zero Unity time) the
+line is **CLEAN**, 18/18 rows compared. Verdict `diverged → confirmed`.
+
+Rules (verified in the PDF, not the derivations): 9-1-5 (p.19) makes the used Option's
+trash *pending processing* at the timing its 1st `[Main]` has resolved; 18-1-2 (p.40)
+orders coinciding processing like simultaneous triggering; 15-4-3-5-1/-2 (p.23) resolve
+**all** of the turn player's simultaneous items before **any** of the non-turn player's.
+The Option's trash belongs to its user (P1, the turn player) and the on-suspend trigger
+to P0, so this sub-case was never order-ambiguous — our old order was illegal. DCGO
+agrees (`CardController.cs` `UseOptionClass.UseOption` → `AddTrashCard` before the
+stacked skills resolve). Pinned by `cards_behavioral`
+`bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
+(fails with the `option_body_pending` hook in `drain_effect_queue_inner` disabled).
+`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` is RESOLVED.

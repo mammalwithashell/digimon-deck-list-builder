@@ -9,13 +9,16 @@ action-space digest `711d23bf`) — **Store:** `qa/qa-reports/exam-verdicts/<CAR
 
 ## The denominator, always first
 
-**224 clauses across the 64-card Three Musketeers pool: 192 confirmed — 6 diverged
+**224 clauses across the 64-card Three Musketeers pool: 194 confirmed — 4 diverged
 — 8 unreachable — 1 unavailable — 17 unmeasured.**
+(Updated 2026-09-20 by the close-out job `three-musketeers-2`: `BT25-091#effect#2` and
+`BT24-030#effect#4` re-diffed CLEAN against their preserved sidecars and moved
+`diverged → confirmed` — see "Re-measured at close-out" below.)
 
 **The 15-card competitive core (in ≥72 of 102 lists) is at 54 of 54 clauses
 adjudicated — 49 confirmed, 1 diverged, 4 unreachable, 0 unmeasured** — every core
 clause either ran clean against the oracle or carries a named, *measured* reason.
-There are **zero untriaged `diverged`** in the pool: all six carry a triage class
+There are **zero untriaged `diverged`** in the pool: all four carry a triage class
 and a citation (below).
 
 Recomputed from disk at close, not from stage reports:
@@ -23,7 +26,7 @@ Recomputed from disk at close, not from stage reports:
 ```
 PYTHONPATH=code python -m tools.clause_coverage.campaign --archetype "Three Musketeers" --json
   → denominator {total_cards: 64, total_clauses: 224,
-                 confirmed 192, diverged 6, unreachable 8, unavailable 1, unmeasured 17}
+                 confirmed 194, diverged 4, unreachable 8, unavailable 1, unmeasured 17}
 ```
 
 The five classes sum to the denominator per card and in total; `exam_binding.bind()`
@@ -222,10 +225,28 @@ to triage, not proof we are wrong: `general_rule.pdf` outranks DCGO.
 | BT7-056#effect#0 | DCGO quirk | `general_rule.pdf` §15-15-10-1 / §15-1-2; `RevealLibrary.cs:291-336` | Same family (Dorumon's two-bucket reveal). `NOTES-BT7-056.md`. |
 | BT6-060#effect#0 | DCGO quirk | `general_rule.pdf` 15-1-2 / 15-1-6; `RevealLibrary.cs:291-328` | Same family; `--all-diffs` shows one field at one step, end state identical. |
 | BT25-064#effect#1 | DCGO quirk | `general_rule.pdf` §15-1-2 / §15-1-4; `RevealLibrary.cs:291` | Same family ("Add 1 Option card and 1 [TS] trait card"). No files changed. |
-| BT25-091#effect#2 | Rules-ambiguous | `general_rule.pdf` 9-1-5 + 18-1-2 + 15-4-3; `CardController.cs:2000-2126` | Only the used Iron Slash's trash *position* differs while Monica's trigger resolves. The rules give the turn player that order; neither engine offers the choice. Logged `G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER`. |
-| BT24-030#effect#4 | Ours (open) | `general_rule.pdf` 15-8-3-2 + 9-1-5 + 18-1-2 + 15-4-3-5; DCGO `UseOptionClass.UseOption` | The turn player's used Option must be trashed before the **non**-turn player's trigger raised during its effect; we ask that trigger first. Second example under the same gap — the fix needs Option-trash to become an orderable queue entry. |
 
 **Untriaged diverged: 0.**
+
+### Re-measured at close-out (2026-09-20, `three-musketeers-2`)
+
+`BT25-091#effect#2` and `BT24-030#effect#4` were both logged under
+`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` from oracle runs taken *before*
+engine fix `5108e58ee` ("a used Option is trashed before the triggers its `[Main]`
+caused", 9-1-5 / 18-1-2 / 15-4-3-5) landed, and were never re-diffed against it.
+Re-run against their PRESERVED sidecars (zero Unity time) they are **CLEAN** —
+12/12 and 18/18 steps compared — and both verdicts are now `confirmed`. The gap is
+RESOLVED in `docs/RUST_ENGINE_GAPS.md`; a regression test
+(`bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`)
+now pins the non-turn-player half, which had no coverage. The rules-ambiguous
+residual — the turn player may *order* the trash among their **own** pending
+triggers, and neither engine surfaces that choice — survives as
+`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (OPEN, unmeasured).
+
+```
+RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.toml   --test cards_behavioral -- --test-threads=8
+  → test result: ok. 8199 passed; 0 failed; 37 ignored (420s)   # 2026-09-20, close-out
+```
 
 ## The 8 unreachable + 1 unavailable — each measured
 
@@ -258,8 +279,7 @@ campaign gate deliberately does not hold the line for (core first).
 
 | Gap | Where |
 |---|---|
-| `G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` | `docs/RUST_ENGINE_GAPS.md` (BT25-091#effect#2, BT24-030#effect#4) |
-| `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` | Residual of `5108e58ee`: the turn player may order the Option's trash among their own pending triggers; we always trash first (as DCGO does) |
+| `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` | Residual of `5108e58ee`: the turn player may order the Option's trash among their own pending triggers; we always trash first (as DCGO does). OPEN, unmeasured — no card in the pool has been shown to observe it. (`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` closed 2026-09-20; its two drivers re-measured clean.) |
 | `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID` | `activate_field_main` skips `activation_cost_fn` and the mask does not gate on it (BT25-089 / EX11-071) |
 | `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` | BT16-077#effect#2 / #inherited#0 |
 | `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST` | `qa/dcgo-exams/BT25/NOTES-BT25-091.md` |
@@ -283,6 +303,8 @@ dcgo-harness --root <harness-root> exam --scenario qa/dcgo-exams/BT25/BT25-078-e
 
 1. **BT25-085's three DUAL clauses** — core, and their blocking cause is already fixed.
 2. **BT25-028 (Dianamon)** — 5 unmeasured clauses, 24/102 lists, 3 lines already lowering.
-3. The Option-trash ordering gap (`G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER`) —
-   the one open *our-bug* divergence in the pool; it needs Option-trash to become an
-   orderable queue entry rather than a fixed point in the resolution.
+3. ~~The Option-trash ordering gap~~ — **closed 2026-09-20**: both drivers re-measured
+   CLEAN against `5108e58ee`, verdicts `confirmed`, regression test added. What remains
+   is `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` (the turn player's own ordering choice),
+   which is unmeasured and needs a card that reads the trash from a turn-player trigger
+   before it is worth the orderable-queue-entry substrate.

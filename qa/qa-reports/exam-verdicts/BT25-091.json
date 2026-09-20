@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:43:03.327875900+00:00",
+  "last_updated": "2026-09-20T20:42:01.979747500+00:00",
   "clauses": {
     "BT25-091#effect#0": {
       "clause_id": "BT25-091#effect#0",
@@ -23,12 +23,11 @@
     "BT25-091#effect#2": {
       "clause_id": "BT25-091#effect#2",
       "card_id": "BT25-091",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "aa7368bb6027c4115616416f76cec8d9ee98aaed3354e32757ad8fa5be171a81",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect2.yaml",
-      "reason": "DIVERGED at step 9 (compared 12 of 13 ours / 12 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-09-19T15:22:54.872784900+00:00"
+      "recorded_at": "2026-09-20T20:42:01.979747500+00:00"
     },
     "BT25-091#effect#3": {
       "clause_id": "BT25-091#effect#3",

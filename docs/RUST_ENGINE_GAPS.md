@@ -3279,56 +3279,58 @@ silently drops the rest of the using effect.
   clause through the `[When Digivolving]` arm instead; see
   `qa/dcgo-exams/EX7/NOTES-EX7-013.md`.
 
-## G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER — OPEN (finding, 2026-09-19)
+## G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER — RESOLVED 2026-09-20 (closed by 5108e58ee; re-measured, regression test added) (found 2026-09-19)
 
-**Driver:** exam `BT25-091#effect#2` (Monica Simmons, `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`),
-diverged at step 9/10: `p0.trash ours=[] dcgo=[BT25-100]` while Monica's
-"When you use [TS] trait Option cards" OptionalSkill and target pick are asked;
-the engines reconverge at step 11 and the clause's own outcome matches.
+**RESOLVED.** Both drivers were logged from exam runs taken BEFORE
+`5108e58ee` ("used Option is trashed before the triggers its [Main] caused")
+landed, and were never re-measured against it. Re-diffed 2026-09-20 against the
+PRESERVED sidecars (no Unity time):
 
-**What differs:** ours runs body → `fire_on_use_option_observers` → Arts → `dispose_option`
-(trash) (`effect_queue.rs` `advance_pending_option` / `finish_option_after_body`), so the used
-Option is in no zone while the observers resolve. DCGO `CardController.cs:2000-2126` STACKS the
-`OnUseOption` skill infos, runs `OptionSkill`, runs `OptionResolutionClass` and `AddTrashCard`,
-and only then do the stacked observers resolve — the Option is already in the trash.
+- `BT25-091#effect#2` (Monica Simmons, sidecar
+  `20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`) — CLEAN,
+  12/12 compared → verdict `confirmed`.
+- `BT24-030#effect#4` (Neptunemon, sidecar
+  `20260918T123854Z_b6852992350c46659e14b00b3c32657a.state.jsonl`) — CLEAN,
+  18/18 compared → verdict `confirmed`.
 
-**Rules:** neither fixed order is mandated. general_rule.pdf 9-1-5 makes the trash of a used
-Option *pending processing* at the timing its [Main] has resolved; the "when you use" trigger
-has been pending activation since the use (9-1-2); 18-1-2 → 15-4-3: processing at the same
-timing is ordered like simultaneous triggers, turn player first and choosing the order. Both
-engines hard-code one legal order and expose no ordering choice.
+**What was wrong (driver 2, the real defect).** `BT24-030#effect#4`: P1 (turn
+player) uses Gaia Force ST1-16 on P0's Neptunemon; P0 pays Neptunemon's
+would-leave replacement by suspending it, which raises P0's own `[All Turns]
+[OPT] When this Digimon suspends` while the Option's `[Main]` is still
+resolving. We asked that trigger before disposing the used Option, so at the
+prompt `p1.trash` was empty where DCGO had `ST1-16`. Citations (verified in the
+PDF this stage): **9-1-5** (p.19) — "A used Option card is trashed if it isn't
+in an area at the timing when its 1st [Main] effect has been resolved as
+pending processing"; **18-1-2** (p.40) — other processing coinciding with
+pending processing is performed like simultaneously triggering effects
+(→ 15-4-3); **15-4-3-5-1/-2** (p.23) — ALL of the turn player's simultaneous
+items are chosen and resolved first, and only then the non-turn player's. The
+Option's trash is the turn player's item and the OnSuspend trigger the non-turn
+player's, so the trash strictly precedes that prompt: this sub-case was never
+order-ambiguous, our order was illegal. DCGO agrees (`CardController.cs`
+`UseOptionClass.UseOption` → `AddTrashCard` before the stacked skills resolve).
+`5108e58ee`'s `Game::option_body_pending` + `complete_option_body_if_done`
+(driven from the top of `drain_effect_queue_inner`, `effect_queue.rs`) already
+disposes the Option the moment the `OptionMain` body resolves and before any
+queued trigger runs, which is exactly this ordering — the finding was stale, not
+unfixed.
 
-**Why not fixed:** switching our order to DCGO's would only replace one hard-coded order with
-the other (still no choice surfaced — rule 17). The faithful fix is substrate: make pending
-processing (Option self-trash, and by extension other 18-1 pending processing) an orderable
-entry beside simultaneous triggered effects, surfaced through `pending_selection` when the
-turn player has >1 entry. Observable only for an `on_use_option` observer that reads the trash
-or the used card's zone; Monica (BT25-091) and Mimi (BT3-096) are not affected in outcome.
+**Driver 1 (`BT25-091#effect#2`) was the rules-ambiguous half** (Option trash vs
+the turn player's OWN `OnUseOption` observer). Post-`5108e58ee` our order equals
+DCGO's (trash, then observers) and the clause re-measures clean. The residual —
+that 18-1-2/15-4-3-5 lets the turn player ORDER the trash among their own
+pending items, and neither engine surfaces that choice — is tracked separately
+in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (still OPEN, unmeasured: no
+card in the pool has been shown to observe it).
 
-**Second driver — body-raised trigger of the NON-turn player (2026-09-19, exam
-`BT24-030#effect#4`, `qa/dcgo-exams/BT24/BT24-030-effect4.yaml`, preserved sidecar
-`20260918T123854Z_b6852992350c46659e14b00b3c32657a.state.jsonl`; `--all-diffs` re-run shows
-ONE diff only):** step 15 `p1.trash ours=[] dcgo=[ST1-16]`. P1 (turn player) uses Gaia Force
-ST1-16 on Neptunemon; P0 pays Neptunemon's would-leave replacement by suspending it, which
-triggers Neptunemon's own `[All Turns][OPT] When this Digimon suspends` (effect#3). Ours asks
-that OptionalSkill inside the body's `drain_effect_queue` (`game_actions/options.rs`
-`play_option_core` step 6 / `effect_queue.rs` resume tail → `advance_pending_option` only runs
-once the queue is empty), i.e. before `dispose_option`; DCGO (`CardController.cs`
-`UseOptionClass.UseOption`, `AddTrashCard` before the stacked skills resolve) trashes first.
-Outcome identical (protection holds, final boards match).
-
-**This sub-case is NOT order-ambiguous — our order is illegal here.** The trigger cannot
-activate during effect processing (15-8-3-2), so at the moment the [Main] finishes the pending
-set is {Option trash = pending processing of the Option's user (9-1-5, 18-1-2), P0's
-OnSuspend trigger}. 15-4-3-5: the turn player's items all go first. When the Option's user is
-the turn player, every body-raised trigger of the non-turn player must therefore resolve AFTER
-the trash; only the turn player's own body-raised triggers are orderable against it. The
-substrate fix above (pending processing as an orderable queue entry, owner-attributed, so the
-turn-player-first bundling puts the trash ahead of the non-turn player's bundles) closes both
-drivers. Not landed this stage: a narrow "defer non-turn bundles until dispose" hook would
-touch the drain loop, the selection-resume tail and the OnUseOption observer step (observers
-can belong to either player) without the orderable entry, and would still hard-code the
-turn player's own ordering (rule 17).
+**Regression test (this stage):**
+`bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
+(`tests/cards_behavioral/bt24/bt24_030.rs`) pins driver 2 — P1 uses ST1-16 on
+P0's Neptunemon, P0 accepts the protection, and `p1.trash == ["ST1-16"]` at
+P0's on-suspend prompt. Verified to FAIL when the `option_body_pending` hook in
+`drain_effect_queue_inner` is disabled (alongside
+`p_170_opponent_option_is_trashed_before_on_deletion_resolves`) and to pass
+with it. Full `cards_behavioral` green.
 
 ## G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE — RESOLVED 2026-09-19 (701fad56a) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#4)
 
@@ -3380,9 +3382,11 @@ observers are enqueued (not drained) so they resolve after disposal, as in DCGO.
 Test `p_170_opponent_option_is_trashed_before_on_deletion_resolves`; oracle
 re-diff CLEAN, verdict confirmed.
 
-## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — OPEN (found 2026-09-19, same triage)
+## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — OPEN, unmeasured (found 2026-09-19, same triage)
 
-Residual of the entry above. Under 18-1-2 / 15-4-3-5 the used Option's trash is
+Residual of G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS, and the surviving
+half of G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER (whose two measured
+drivers both re-diffed CLEAN on 2026-09-20). Under 18-1-2 / 15-4-3-5 the used Option's trash is
 one of the TURN player's pending items, so when that player also has their OWN
 triggers pending from the Option's body, they may order the trash among them.
 We (like DCGO) always trash first and surface no choice. This matters only for
