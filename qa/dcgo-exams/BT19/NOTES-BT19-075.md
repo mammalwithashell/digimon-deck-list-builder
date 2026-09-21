@@ -171,4 +171,85 @@ the mechanism marked UNCONFIRMED — the symptom is measured, the cause (queued
 `OnAnyDeletion` entries never drained once `cancel_replacement` ends the outer batch)
 is a hypothesis to verify before fixing.
 
+> **SUPERSEDED (2026-09-21, later the same day — see the section below).** The
+> UNCONFIRMED mechanism above was verified and is WRONG. The dispatch happens, the
+> entry IS enqueued, and the deferred scope DOES flush it. The real cause is a
+> dangling-handle alias from battle-area compaction, it is not replacement-specific,
+> and the clause is now `confirmed`. Fixed by `4c609b5e2`.
+
 **4 clauses: 3 confirmed, 1 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#2` TRIAGED and FIXED: **confirmed**, and the cause was NOT what the gap predicted
+
+The `diverged` verdict above is resolved. Re-diffing the line against the **preserved**
+sidecar `20260921T041928Z_40f7887a` (zero Unity time) after the engine fix reports
+**CLEAN — compared 22 of 22 ours / 22 dcgo steps**. Verdict re-recorded `confirmed`.
+
+**Not a scenario artefact.** The slot-safety check was run first, as the triage brief
+requires: the re-authored line's digivolve and attack both landed on Millenniummon on
+both wires (no `p0.field[..].sources` row anywhere in the diff), and the three `select:`
+rows travelled by card identity. The single divergence was real.
+
+**The predicted MECHANISM was wrong; the symptom was right.** Two resumes of this file
+blamed "a `kind: replacement` cost `delete_permanent` takes a path with no
+`on_any_deletion` dispatch". Instrumenting the actual line disproves that at both ends:
+
+- The cost deletion DOES reach `drain_batch_on_any_deletion`, and it DOES enqueue an
+  `OnAnyDeletion` entry for BT19-075 slot 3. Nothing about the dispatch is missing.
+- The entry was then **dropped by the queue's condition filter**
+  (`effect_queue.rs::non_firing_queued_effect_indices_for`) because the clause's
+  `event_permanent_is_source: false` gate evaluated FALSE.
+
+**The real cause: a dangling `PermanentHandle` aliased by battle-area compaction.**
+`PermanentHandle` is `(player, battle-area INDEX)` and the battle area COMPACTS on
+removal. `drain_batch_on_any_deletion` enqueues the deleted permanent's **pre-trash**
+handle, but by then the survivors have already slid down. In this line p0 fielded
+`[0]=Monodramon, [1]=Deltamon, [2]=MoonMillenniummon`; deleting Deltamon at index 1 slid
+MoonMillenniummon into index 1, so the trigger's `event_permanent` `{0,1}` and the
+observer's `source_permanent` `{0,1}` compared EQUAL — the carrier looked like the thing
+that had just been deleted, and its own "other Digimon" gate rejected it. The trace:
+
+```
+non_firing? card=BT19-075 slot=3 passes=false
+  src_perm=Some(PermanentHandle { player: 0, index: 1 })
+  subject=Some(Permanent(PermanentHandle { player: 0, index: 1 }))
+```
+
+**This is not replacement-specific at all** — the replacement was only the reason the
+deleted Digimon happened to sit BELOW the carrier. The minimal reproducer needs no
+replacement, no security check and no attack: place an ally at index 0, the carrier at
+index 1, delete the ally, and the observer silently misses it
+(`bt19_075_observer_fires_when_deleted_ally_sits_below_the_carrier`, RED before the fix).
+That also explains why the sibling clauses stayed `confirmed`: `#effect#1`'s Tamer
+deletion and `#effect#3`'s battle deletion both delete from a HIGHER index or from the
+opponent's side, where no alias is possible. It is a **pool-wide** defect of every
+`[All Turns] When other Digimon or Tamers are deleted` observer, not a BT19-075 one.
+
+**The fix** (`code/digimon-engine/src/dsl_cards/predicate.rs`, `event_permanent_is_source`):
+handle equality alone is not identity once the event permanent is gone. When the trigger
+carries a `deleted_object` snapshot AND this effect's own carrier is still standing at
+`source_permanent` (it still holds `rctx.source_card`), the equality is the compaction
+alias and `is_source` is false. Every other case keeps the plain comparison — an observer
+whose carrier IS the deleted permanent finds no live carrier at that slot and still reads
+`is_source == true`, so `bt19_075_carrier_own_deletion_does_not_fire_observer` is unmoved.
+
+**Citations.** `general_rule.pdf` (Ver.3.6) **15-8-3-1** — a trigger-type effect "will
+always trigger as soon as its trigger conditions are met, then the effect will activate";
+**15-8-3-2** — it merely "can't activate during the processing for a rule or effect";
+**15-8-3-5** — it is then "pending activation"; **15-8-3-6** — "Once an effect triggers,
+it will remain triggered". Deferring the activation is licensed; discarding it is not.
+**15-8-5-4** documents this card's exact replacement shape ("[Main] Delete 1 of your
+opponent's Digimon" causing "[All Turns] When this Digimon would be deleted, by deleting
+1 other Digimon with [Sukamon] in its name, it isn't deleted") as ordinary immediate-type
+processing that the cause resolves out of. DCGO agrees: every deletion runs through
+`CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which raises
+`OnDestroyedAnyone` regardless of seating order.
+
+**Gate.** Four new tests in `tests/cards_behavioral/bt19/bt19_075.rs` — the minimal
+index-order reproducer plus three shapes of the exam line (top-level, nested inside an
+opponent Option's `[Main]`, and the full attack → security-check → P-180 `[Security]`
+line). Only the first was RED before the fix, which is itself the finding: the other
+three pass either way because they seat the carrier at index 0. Full `cards_behavioral`
+**8227 passed / 0 failed / 37 ignored**.
+
+**4 clauses: 4 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

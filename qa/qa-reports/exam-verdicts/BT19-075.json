@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-21T04:51:45.153040500+00:00",
+  "last_updated": "2026-09-21T08:09:27.760474100+00:00",
   "clauses": {
     "BT19-075#effect#0": {
       "clause_id": "BT19-075#effect#0",
@@ -23,12 +23,11 @@
     "BT19-075#effect#2": {
       "clause_id": "BT19-075#effect#2",
       "card_id": "BT19-075",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "9aee58506ed1e2fcf39e07e08037973568bb4950347fb4db5fd7acc8e1c8542b",
       "scenario_path": "qa/dcgo-exams/BT19/BT19-075-effect2.yaml",
-      "reason": "DIVERGED at step 21 (compared 22 of 22 ours / 22 dcgo steps -- nothing truncated) -- p1.security: ours=4 dcgo=3; p1.trash: ours=[P-180, ST1-10] dcgo=[P-180, ST1-04, ST1-10]. ENGINE FINDING, ours is wrong. This is the divergence NOTES-BT19-075.md predicted sim-side ('the OPT observer misses a replacement-cost deletion') and it is now oracle-measured on the re-authored slot-safe line (sidecar 20260921T041928Z_40f7887a). The clause's own replacement deletes Deltamon BT6-012 as its COST; DCGO deletes that cost through CardEffectCommons.DeletePeremanentAndProcessAccordingToResult, which raises OnDestroyedAnyone like any other deletion, so BT19-075's [All Turns] [Once Per Turn] observer (#effect#3, OtherPermanentDeleted) fires and trashes p1's top security (ST1-04). Our `kind: replacement` cost `delete_permanent` takes a path with no on_any_deletion dispatch, so the observer never fires. Printed text and the rules agree with DCGO: Deltamon is an 'other Digimon' and it WAS deleted, and the same observer demonstrably fires on this card for a battle deletion (#effect#3's own line) and for an effect deletion of a Tamer (#effect#1's line) -- both of which are `confirmed`. The LEAD is the only divergence and the clause's OWN witness (the replacement itself: MoonMillenniummon did not leave, Deltamon did) agrees on both wires -- the defect is the missing downstream trigger, not the replacement. NOT FIXED in this stage (verdict-recording); logged to docs/RUST_ENGINE_GAPS.md as G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER.",
-      "recorded_at": "2026-09-21T04:51:45.153040500+00:00"
+      "recorded_at": "2026-09-21T08:09:27.760474100+00:00"
     },
     "BT19-075#effect#3": {
       "clause_id": "BT19-075#effect#3",

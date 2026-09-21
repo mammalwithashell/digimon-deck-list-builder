@@ -109,7 +109,7 @@ RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.to
 | P-198 | DemiDevimon | 2/102 | 4 | 4 |  |  |  |  |
 | P-212 | Asuna Shiroki | 2/102 | 4 | 4 |  |  |  |  |
 | BT16-077 | Dinobeemon | 1/102 | 5 | 4 |  |  |  | 1 |
-| BT19-075 | MoonMillenniummon | 1/102 | 4 | 3 |  |  |  | 1 |
+| BT19-075 | MoonMillenniummon | 1/102 | 4 | 4 |  |  |  |  |
 | BT20-020 | Imperialdramon: Fighter Mode | 1/102 | 5 | 5 |  |  |  |  |
 | BT21-054 | Shotmon | 1/102 | 4 | 4 |  |  |  |  |
 | BT24-011 | Cyclonemon | 1/102 | 4 | 4 |  |  |  |  |
@@ -271,7 +271,8 @@ RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.to
 | BT25-026#effect#2, #inherited#0 | Scenarios authored and lowering; no oracle run. |
 | LM-056#effect#2, #effect#3 | Scenarios authored and lowering (effect#2 repaired at close, see above); no oracle run. |
 | P-108#effect#0, #effect#1 | Same (effect#1 repaired at close). |
-| BT25-058#effect#3, BT19-075#effect#2 | Scenario authored and lowering; no oracle run. |
+| BT25-058#effect#3 | Scenario authored and lowering; no oracle run. |
+| ~~BT19-075#effect#2~~ | **CLOSED in three-musketeers-2.** The line was re-authored slot-safe, run on the oracle (sidecar `20260921T041928Z_40f7887a`) and measured `diverged` on a single LEAD row (`p1.security ours=4 dcgo=3`): the card's own `[All Turns][Once Per Turn]` deletion observer missed the deletion its leave-replacement paid as a cost. That was a real engine finding, but NOT the replacement-specific one the notes predicted — `PermanentHandle` is a battle-area INDEX and the area compacts on removal, so a deletion trigger's `event_permanent` aliased onto the survivor that slid into the dead slot, and `event_permanent_is_source: false` rejected the carrier's own trigger. Pool-wide, and reproducible with no replacement at all. Fixed by `4c609b5e2` (`G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER`, now RESOLVED). Re-diffed against the same preserved sidecar: **CLEAN (22 of 22)**, verdict `confirmed`. **BT19-075 is 4/4 confirmed.** |
 | BT16-077#effect#0 (Special Digivolution Condition) | No scenario authored. |
 | ~~BT24-091#effect#4 (Link Condition)~~ | **CLOSED in three-musketeers-2.** Scenario `qa/dcgo-exams/BT24/BT24-091-effect4.yaml` authored 2026-09-21, run on the oracle, and measured `diverged` on a single LEAD row (the host pick: `memory ours=0 dcgo=3`, the Option already out of our hand). That was a real engine finding — the from-hand Plug-In **Option** link ran §10-1-3-2 (pay) before §10-1-3-1 (choose the host) — and is fixed by `9af21698c` (`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`, now RESOLVED). Re-diffed against the same preserved sidecar: **CLEAN**, verdict `confirmed`. **BT24-091 is 6/6 confirmed.** |
 | BT26-078#security#0, BT26-083#security#0 | Unimplementable — no BT26 card data (above). |
