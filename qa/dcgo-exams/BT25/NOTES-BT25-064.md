@@ -89,3 +89,53 @@ adjudicated correct; no further action.
 
 **Denominator: 3 clauses — 2 confirmed, 1 diverged (adjudicated DCGO quirk),
 0 unreachable, 0 unavailable, 0 unmeasured.**
+
+## Close-out triage 2026-09-21 (`three-musketeers-2`) — independently re-verified, DCGO quirk
+
+The clause was re-triaged from scratch at close-out, in the campaign's order of
+evidence, and the earlier reading holds at every layer.
+
+1. **Printed text** (official Bandai DB, `data/card_bundles/BT25-064.md`):
+   "[On Play] Reveal the top 3 cards of your deck. **Add 1 Option card and 1 [TS]
+   trait card among them to the hand.** Return the rest to the bottom of the deck."
+   ONE `Add` instruction carrying two differently-conditioned targets.
+2. **Rules** (`general_rule.pdf`, read directly): **15-15-10-1** (p.31) is the
+   on-point rule — "If a single effect allows you to select multiple targets with
+   different conditions, resolve the target conditions in accordance with the
+   following rules" — and **15-15-10-2..5** (p.31–32) then govern only WHICH
+   condition applies to WHICH target; none of them says when a chosen target moves.
+   **15-1-2** (a single effect is processed in the order shown in the text) and
+   **15-1-4** (multiple processes in one effect resolve once all have ended), p.22,
+   make choose-all-then-add the literal reading of one trailing `Add`.
+   **15-15-3-2** (p.29) — "A revealed card is treated as if it isn't placed in its
+   original area" — means nothing reads the intermediate hand.
+3. **DCGO C#**: the per-bucket add is shared-helper behaviour, not card-specific.
+   `BT25_064.cs:60-80` hands two
+   `SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1)`
+   to `SimplifiedRevealDeckTopCardsAndSelect`; `RevealLibrary.cs:291-329` runs one
+   `SelectCardEffect` per condition in a `foreach` (its own comment on the
+   `mutualConditions` branch says the conditions are "chosen at once (per card game
+   rules)"); and `SelectCardEffect.cs:751,813-815` runs `AddHandCards` at the end of
+   EACH prompt's own coroutine, before the loop sets the next bucket up.
+
+**Re-measured** with `--all-diffs` against the PRESERVED sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl` (zero Unity time):
+
+```
+DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row))
+  LEAD step 3:
+    p0.hand: ours=[BT2-052, BT2-056, BT3-059, BT8-061]
+             dcgo=[BT2-052, BT2-056, BT3-059, BT8-061, EX7-070]
+```
+
+`--all-diffs` prints that row and nothing else — one intermediate observation, never
+an outcome. **Not a slot-addressing artefact**: the scenario addresses no `field.N`
+(P0 holds one permanent, P1 none) and the diverging field is an ordered hand list.
+
+**Class: DCGO quirk. No engine, DSL or card change.** Verdict stays `diverged` in the
+store (the exam compares every step) with our side adjudicated correct; the triage is
+now written into `qa/qa-reports/exam-verdicts/BT25-064.json`'s `reason`, and this card
+is recorded as a measured driver of `G-EXAM-REVEAL-BUCKET-ADD-TIMING`.
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (adjudicated DCGO quirk),
+0 unreachable, 0 unavailable, 0 unmeasured.**

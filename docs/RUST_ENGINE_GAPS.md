@@ -3759,12 +3759,18 @@ engine-only prompt (DCGO asks nothing here).
 
 **Drivers:** exam `BT6-060#effect#0` (Deputymon, `qa/dcgo-exams/BT6/BT6-060-effect0.yaml`,
 preserved sidecar `20260918T131517Z_c0b8af78828f466a97394c011f63a37b.state.jsonl`), the
-same shape on `BT25-064#effect#1`, and — added 2026-09-21, three-musketeers-2 close-out —
+and — both added 2026-09-21, three-musketeers-2 close-out —
 `EX7-008#effect#1` (ToyAgumon, `qa/dcgo-exams/EX7/EX7-008-effect1.yaml`, preserved sidecar
-`20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl`). `--all-diffs` re-run against
+`20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl`) and `BT25-064#effect#1`
+(the other ToyAgumon, `qa/dcgo-exams/BT25/BT25-064-effect1.yaml`, preserved sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl`, triaged in
+`qa/dcgo-exams/BT25/NOTES-BT25-064.md`) — which is now MEASURED, not merely "the same
+shape". `--all-diffs` re-run against
 the preserved sidecar shows exactly ONE diff: the second bucket pick's row —
 BT6-060 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067] dcgo=[...,P-170]`;
-EX7-008 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-051]`. The next row
+EX7-008 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-051]`;
+BT25-064 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT8-061] dcgo=[..., EX7-070]`
+(4 differently-shaped scenarios across 4 cards, all one row). The next row
 (after resolution: hand, trash, field, memory) matches in both, and `--all-diffs` prints
 nothing else — so the divergence is exactly one intermediate observation, never an outcome.
 
