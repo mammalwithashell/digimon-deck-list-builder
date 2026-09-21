@@ -157,4 +157,41 @@ targets (`general_rule.pdf` 15-15-10-1, 15-1-2); DCGO's per-condition
 closes. Outcome-neutral — nothing triggers or resolves mid-effect and neither bucket
 reads the hand.
 
+### Close-out re-triage (2026-09-21, three-musketeers-2) — independent, from scratch
+
+Re-worked in the full order of evidence rather than re-reading the r1 note:
+
+1. **Printed text** (official Bandai DB, `data/card_bundles/BT7-056.md`): ONE
+   "Add 1 [Kota Domoto] and 1 card with the [X Antibody] trait among them to the hand"
+   — a single effect with a compound target choice, not two separate Adds.
+2. **Rules, read verbatim off `general_rule.pdf`** (which OUTRANKS DCGO):
+   **15-15-10-1** (p.31) "If a single effect allows you to select multiple targets with
+   different conditions, resolve the target conditions in accordance with the following
+   rules" — and 15-15-10-2..3 then govern only WHICH condition applies to which target,
+   never when a chosen target moves. **15-1-2** (p.22) "A single effect is processed in the
+   order shown in the text on the card" — the lone "Add" follows both target
+   specifications. **15-1-4** (p.22) "multiple processes will be performed in a single
+   effect. Once all of the processes for such an effect have ended, the effect will be
+   resolved." Choose-both-then-add-once is the literal reading: **ours is rules-faithful.**
+3. **DCGO C#**, both halves of the mechanism (the r1 note cited only the first):
+   `RevealLibrary.cs:291-329` runs one `SelectCardEffect` per condition in a `foreach`
+   (its own comment: the conditions are "chosen at once (per card game rules)"), and
+   `SelectCardEffect.cs:813-815` executes `CardObjectController.AddHandCards` at the END of
+   each prompt's own `Activate()` coroutine — *inside the loop body* — which is exactly why
+   the hand is already updated when the next bucket is asked. Shared-helper behaviour.
+
+**Slot-addressing artefact check (done first): NO.** The scenario addresses no `field.N`
+anywhere — selections are by `card_id`, P0 holds exactly one permanent and P1 none — and the
+diverging field is an ordered hand list, not a battle-area slot.
+
+`--all-diffs` against the preserved sidecar (zero Unity time) reproduces the reading exactly:
+the single `p0.hand` field at step 7 is the LEAD and the ONLY diff, 9 of 10 ours / 9 dcgo rows
+compared, nothing downstream. `--sim-only` passes all 7 end-state checks, so the outcome
+(both cards in hand, Titamon + SkullBaluchimon to the deck bottom) is identical.
+
+**Class: DCGO quirk. Fixed: no. Engine fix: no. Verdict stays `diverged`** (the exam compares
+every step), with our side adjudicated correct. BT7-056 is the **original** driver of
+`G-EXAM-REVEAL-BUCKET-ADD-TIMING` and had been dropped from that entry's Drivers list by an
+editing slip (it left a dangling "the / and"); restored at close-out.
+
 **2 clauses: 1 confirmed, 1 diverged (adjudicated DCGO quirk), 0 unreachable, 0 unavailable, 0 unmeasured.**

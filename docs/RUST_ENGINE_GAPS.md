@@ -3758,7 +3758,14 @@ engine-only prompt (DCGO asks nothing here).
 ## G-EXAM-REVEAL-BUCKET-ADD-TIMING — DCGO quirk (finding, 2026-09-19, not an engine gap)
 
 **Drivers:** exam `BT6-060#effect#0` (Deputymon, `qa/dcgo-exams/BT6/BT6-060-effect0.yaml`,
-preserved sidecar `20260918T131517Z_c0b8af78828f466a97394c011f63a37b.state.jsonl`), the
+preserved sidecar `20260921T042614Z_c72aa5cc9eb34b2f97c8fc448ff47a36.state.jsonl` —
+re-measured `--all-diffs` at the 2026-09-21 close-out; the earlier
+`20260918T131517Z_c0b8af78…` sidecar is the job-1 pass and is superseded), the
+ORIGINAL driver `BT7-056#effect#0` (Dorumon, `qa/dcgo-exams/BT7/BT7-056-effect0.yaml`,
+preserved sidecar `20260921T042630Z_14e62ea8938a4382a0882a38468c46a7.state.jsonl`, triaged in
+`qa/dcgo-exams/BT7/NOTES-BT7-056.md` — re-triaged from scratch and independently
+re-measured at the 2026-09-21 close-out; it had been dropped from this list by an editing
+slip that left a dangling "the / and" here),
 and — both added 2026-09-21, three-musketeers-2 close-out —
 `EX7-008#effect#1` (ToyAgumon, `qa/dcgo-exams/EX7/EX7-008-effect1.yaml`, preserved sidecar
 `20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl`) and `BT25-064#effect#1`
@@ -3769,7 +3776,8 @@ shape". `--all-diffs` re-run against
 the preserved sidecar shows exactly ONE diff: the second bucket pick's row —
 BT6-060 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067] dcgo=[...,P-170]`;
 EX7-008 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-051]`;
-BT25-064 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT8-061] dcgo=[..., EX7-070]`
+BT25-064 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT8-061] dcgo=[..., EX7-070]`;
+BT7-056 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-073]`
 (4 differently-shaped scenarios across 4 cards, all one row). The next row
 (after resolution: hand, trash, field, memory) matches in both, and `--all-diffs` prints
 nothing else — so the divergence is exactly one intermediate observation, never an outcome.
@@ -3779,7 +3787,10 @@ nothing else — so the divergence is exactly one intermediate observation, neve
 selectCardConditions)` → `selectCardEffect.SetUp(..., mode: selectCondition.Mode)` →
 `yield return … selectCardEffect.Activate()`, one `SelectCardEffect` per condition with the
 condition's `Mode` (AddHand), so each pick is moved to hand as soon as its prompt closes,
-before the next bucket is asked. The card scripts just hand it the bucket list — e.g.
+before the next bucket is asked. The move itself is `SelectCardEffect.cs:813-815`
+(`if (handCards.Count >= 1) yield return … CardObjectController.AddHandCards(handCards, …)`),
+which runs at the END of each prompt's own `Activate()` coroutine — i.e. inside the loop
+body, which is precisely why the hand is already updated when the next bucket is asked. The card scripts just hand it the bucket list — e.g.
 `Assets/Scripts/CardEffect/EX7/Red/EX7_008.cs` passes two
 `SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1)` entries
 to `SimplifiedRevealDeckTopCardsAndSelect` — so this is shared-helper behaviour, not per-card.
