@@ -220,3 +220,47 @@ the wire as the target's card identity.
 
 **6 clauses: 5 with an oracle verdict, `effect#4` now authored and
 `unmeasured` — 0 unreachable.**
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#4` MEASURED: **diverged** (engine finding), 0 unmeasured left
+
+The newly authored `effect#4` line drained `completed` on oracle build `scripted-v16`
+(DCGO `fc67f9ae6`). The `unmeasured` above is resolved; the clause is **diverged**.
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT24-091#effect#4` | `20260921T042039Z_c3e0a78e` | DIVERGED at step 11, compared 13 of 14 ours / 14 dcgo (1 sim-only + 1 DCGO intermediate row) | **diverged** |
+
+**The one divergence row**, at the HOST pick (`--all-diffs`: LEAD only, no
+downstream):
+
+- `memory: ours=0 dcgo=3`
+- `p0.hand: ours=[ST1-05, ST1-08, ST1-08, ST1-08, ST1-10]` /
+  `dcgo=[BT24-091, ST1-05, ST1-08, ST1-08, ST1-08, ST1-10]`
+
+Ours has already paid the link cost and removed the Option from hand when the host is
+chosen; DCGO has not.
+
+**The PDF backs DCGO.** `general_rule.pdf` §10-1-3 (p.19) spells the link procedure
+out in order: **10-1-3-1** declare the link and reveal the card, choose 1 link
+requirement, *then* choose 1 of your Digimon that meets it → **10-1-3-2** "The
+specified link cost is paid" → **10-1-3-3** the card is plugged in sideways. Payment
+is step 2 of 3, after the host. §10-1-2-3 makes the window observable rather than
+cosmetic: an immediate-type effect triggering on a link "will trigger immediately
+after the card is revealed and the Digimon to be linked is chosen", i.e. between the
+host choice and the payment.
+
+**What the clause itself still establishes.** Steps 12-13 agree on both wires: memory
+0, the Option off the hand and in Lekismon BT25-024's link slot, cost 3 paid, and the
+host gate held (Agumon ST1-03, red and non-`[TS]`, sat on the same board and was never
+offered). So `<Link> [TS] trait: Cost 3` **from the hand** is right on our side; only
+the ORDER of the payment is wrong.
+
+**Not fixed here** (verdict-recording stage). Routed to the EXISTING
+`G-ENGINE-OPTION-HAND-LINK-COST-TIMING` section of `docs/RUST_ENGINE_GAPS.md`, where
+this clause is now a third driver beside `BT25-093#effect#4` and `BT25-100#effect#5` —
+three independent Plug-In Options producing the identical single row, which makes it a
+property of `Game::activate_hand_link` → `play_option_core(.., OptionPlayMode::Link,
+OptionCostPolicy::Pay)` (`code/digimon-engine/src/game_actions/link.rs:197-217`) rather
+than of any one card. Our **Digimon**-link path is already correct.
+
+**6 clauses: 5 confirmed, 1 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

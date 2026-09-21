@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:16:01.278019600+00:00",
+  "last_updated": "2026-09-21T04:51:46.186263400+00:00",
   "clauses": {
     "BT6-060#effect#0": {
       "clause_id": "BT6-060#effect#0",
@@ -9,8 +9,8 @@
       "label": "Effect",
       "text_sha256": "57370c4fa86a637546e4ec0fff60d3dd3a16ccf3eabe67bad4edc54472d555bf",
       "scenario_path": "qa/dcgo-exams/BT6/BT6-060-effect0.yaml",
-      "reason": "DIVERGED at step 3 (compared 5 of 5 ours / 5 dcgo steps)",
-      "recorded_at": "2026-09-19T15:14:01.776759200+00:00"
+      "reason": "DIVERGED at step 3 (compared 5 of 5 ours / 5 dcgo steps) -- p0.hand: ours lacks P-170, dcgo already holds it. TRIAGED 2026-09-21 (three-musketeers-2, oracle sidecar 20260921T042614Z_c72aa5cc): DCGO QUIRK, no fix -- this is the PREDICTED RevealBucket add-timing divergence NOTES-BT6-060.md ('Second resume') wrote down before the oracle ran. The printed text is ONE 'Add' with two targets (general_rule.pdf 15-15-10-1: a single effect selecting multiple targets with different conditions; 15-1-2: processed in printed order, and the one 'Add' follows both selections). DCGO's SimplifiedRevealDeckTopCardsAndSelect runs one SelectCardEffect(mode: Mode.AddHand) PER CONDITION in a foreach (DCGO/Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:291-336, whose own comment says the conditions are 'chosen at once (per card game rules)'), so each pick moves to hand as its prompt closes; ours collects both picks and adds once. --all-diffs: this one p0.hand field at step 3 is the ONLY diff -- LEAD with no downstream rows, and the post-effect rows agree. Outcome-neutral: nothing triggers or resolves mid-effect and neither bucket reads the hand. Tracked as G-EXAM-REVEAL-BUCKET-ADD-TIMING in docs/RUST_ENGINE_GAPS.md (which already names this clause as a driver and adjudicates it: our order is the rules-faithful one, no fix). Same family as BT7-056#effect#0 and EX7-008#effect#1; see also docs/DCGO_EXAM.md 'Rows where one side looks rules-wrong' (RevealBucket add timing).",
+      "recorded_at": "2026-09-21T04:51:46.186263400+00:00"
     },
     "BT6-060#effect#1": {
       "clause_id": "BT6-060#effect#1",

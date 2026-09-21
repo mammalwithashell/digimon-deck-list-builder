@@ -113,8 +113,8 @@ pub fn lower_and_run(
     let lowered_steps = adapter.lowered_steps().to_vec();
     let lowered_owners = adapter.lowered_owners().to_vec();
     // Captured BEFORE the adapter moves into the replay session below.
-    let wire_rows_per_step = adapter.dcgo_wire_rows_per_step();
-    let ours_present_per_step = adapter.ours_present_per_step();
+    let wire_rows_per_step = adapter.dcgo_wire_rows_per_step(s.steps.len());
+    let ours_present_per_step = adapter.ours_present_per_step(s.steps.len());
     // How many `StepSpec`s each SCENARIO step contributes. Not always 1: a
     // `dcgo_only` row contributes none, a `materials:` / `dna:` declaration
     // several. See `ScenarioAdapter::specs_per_scenario_step`.

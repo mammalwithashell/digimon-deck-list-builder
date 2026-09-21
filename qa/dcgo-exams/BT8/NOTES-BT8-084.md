@@ -174,3 +174,34 @@ clause alone. Sim-only 2026-09-20: lowers 15 steps
 `effect#0` therefore moves `unreachable` -> `unmeasured`: it needs an oracle
 pass against `scripted-v16`, not a tooling change. The card's denominator is
 now **3 clauses: 2 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#0` MEASURED: the `unreachable` is RETRACTED, verdict **confirmed**
+
+The `G-TOOLING-EXAM-NO-DNA-VERB` `unreachable` recorded at the top of this file is
+now DEAD and has been rewritten in the verdict store. The `dna:` verb plus DCGO's
+`DNA_DIGIVOLVE` arm in `InputDriver.BuildMainPhaseAction` landed with oracle build
+`scripted-v16` (DCGO `fc67f9ae6`), the job drained `completed`, and the clause is
+**confirmed**.
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT8-084#effect#0` | `20260921T042655Z_50a45720` | CLEAN, compared 15 of 15 ours / 15 dcgo | **confirmed** |
+
+**The witness both engines agree on**, read straight off the sidecar's last row
+(DCGO step 17): p0 holds ONE permanent — Kimeramon BT8-084, DP 8000, **unsuspended**,
+`sources: [P-137, P-137]` — the second field slot is gone, memory is unchanged at 3,
+and both trashes are empty. That is `[DNA Digivolve] 0 from Lv.4 + Lv.4 — digivolve
+unsuspended with the 2 specified Digimon stacked on top of each other`, clause by
+clause.
+
+**It did not diff clean on the first attempt, and that was a HARNESS bug, not this
+card.** The first run reported `TRUNCATED, no divergence found (compared 14 of 15
+ours / 15 dcgo steps)` and was recorded `diverged`. Cause:
+`ScenarioAdapter::dcgo_wire_rows_per_step` mapped wire-row counts 1:1 over the
+LOWERED entries while the differ indexes them by SCENARIO step, so a `dna:` step
+(which lowers to `DnaDeclaration` + `SimOnlySelect`) pushed the tail row off the end
+of `ours_for_diff`. Fixed in this stage —
+`G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY` in `docs/RUST_ENGINE_GAPS.md`. The
+verdict above is from the re-diff against the SAME sidecar.
+
+**3 clauses: 3 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

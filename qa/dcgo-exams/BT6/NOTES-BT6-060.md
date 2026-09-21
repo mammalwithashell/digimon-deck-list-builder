@@ -52,3 +52,35 @@ pick and adds once (§15-15-10-1: one "Add" with two targets). Expect a
 one-field `p0.hand` divergence on the 2nd pick row (DCGO already shows P-170
 in hand) with no downstream rows; triage it as the documented DCGO quirk
 (measured on EX7-008#effect#1 and BT7-056#effect#0), not as an engine bug.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#0` re-measured: the PREDICTED quirk, verdict stays **diverged**
+
+Re-drained on oracle build `scripted-v16` (DCGO `fc67f9ae6`) against a fresh sidecar
+and re-diffed with `--all-diffs`.
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT6-060#effect#0` | `20260921T042614Z_c72aa5cc` | DIVERGED at step 3, compared 5 of 5 ours / 5 dcgo | **diverged** |
+
+The prediction written in "Second resume" above is exactly what the oracle produced —
+one field, on the 2nd bucket pick row:
+`p0.hand: ours=[BT2-052, BT2-056, BT3-059, BT3-067] dcgo=[…, P-170]`. `--all-diffs`
+confirms it is the LEAD **and the only row**; step 4 (after resolution: hand, trash,
+field, memory) matches.
+
+**DCGO quirk, no fix.** The printed text is ONE "Add" with two targets
+(`general_rule.pdf` 15-15-10-1 — a single effect selecting multiple targets with
+different conditions; 15-1-2 — processed in printed order, and the one "Add" follows
+both selections). DCGO's `RevealDeckTopCardsAndSelect` runs one
+`SelectCardEffect(mode: Mode.AddHand)` per condition in a `foreach`
+(`DCGO/Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:291-336`, whose own
+comment says the conditions are "chosen at once (per card game rules)"), so each pick
+moves to hand as its prompt closes; ours collects both and adds once. Outcome-neutral:
+revealed cards are in no area while revealed (15-15-3-2) and neither bucket reads the
+hand. Adjudicated under `G-EXAM-REVEAL-BUCKET-ADD-TIMING` in
+`docs/RUST_ENGINE_GAPS.md`, which already names this clause as a driver.
+
+`diverged` is the honest verdict — the exam compares every row and these rows differ —
+but it is a DCGO-quirk finding, not an engine bug, and no further action follows.
+
+**2 clauses: 1 confirmed, 1 diverged (adjudicated DCGO quirk), 0 unreachable, 0 unavailable, 0 unmeasured.**

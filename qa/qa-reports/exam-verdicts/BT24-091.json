@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T16:13:55.604904300+00:00",
+  "last_updated": "2026-09-21T04:51:45.705296100+00:00",
   "clauses": {
     "BT24-091#effect#0": {
       "clause_id": "BT24-091#effect#0",
@@ -37,6 +37,16 @@
       "text_sha256": "d60295ff4de9afb8fb1c5f21db89512215924e0d76725b5f0a7bbd68228cbb15",
       "scenario_path": "qa/dcgo-exams/BT24/BT24-091-effect3.yaml",
       "recorded_at": "2026-09-19T16:05:08.935153500+00:00"
+    },
+    "BT24-091#effect#4": {
+      "clause_id": "BT24-091#effect#4",
+      "card_id": "BT24-091",
+      "verdict": "diverged",
+      "label": "Link Condition",
+      "text_sha256": "9d4716573dac469c1419dcbf9269cd84ee848a841a854e159fbc7d67eb6af6fa",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-091-effect4.yaml",
+      "reason": "DIVERGED at step 11 (compared 13 of 14 ours / 14 dcgo steps; 1 sim-only row + 1 DCGO intermediate row excluded) -- memory: ours=0 dcgo=3; p0.hand: ours has already removed BT24-091, dcgo still holds it. ENGINE FINDING, ours is out of the printed procedure order. Step 11 is the HOST pick. general_rule.pdf 10-1-3 'A link is performed using the following procedure' (p.19) orders it explicitly: 10-1-3-1 declare the link and reveal the card, choose 1 link requirement, THEN choose 1 of your Digimon that meets it; 10-1-3-2 'The specified link cost is paid'; 10-1-3-3 the card is plugged in sideways and the link resolves. DCGO matches -- at the host prompt memory is still 3 and the revealed Option is still in hand. Our engine pays the cost (3 -> 0) and moves the Option out of hand AT THE DECLARATION, before the host prompt opens, i.e. 10-1-3-2 before 10-1-3-1. Observable in principle, not just cosmetic: 10-1-2-3 states that an immediate-type effect triggering on a link 'will trigger immediately after the card is revealed and the Digimon to be linked is chosen', so such an effect legitimately reads the board BETWEEN the host choice and the cost payment, and on our order it would see the memory already spent and the card already gone. On THIS line it is outcome-neutral: the LEAD is the only divergence, there are no downstream rows, and steps 12-13 agree (memory 0, the Option off the hand and in Lekismon BT25-024's link slot, cost 3 paid) -- so the clause's own witness (the <Link> [TS] trait: Cost 3 declaration from hand, host-gated to a [TS] Digimon with a non-[TS] Agumon ST1-03 on the same board) holds on both wires. NOT FIXED in this stage (verdict-recording); logged to the EXISTING docs/RUST_ENGINE_GAPS.md section G-ENGINE-OPTION-HAND-LINK-COST-TIMING, where this clause is now a third driver alongside BT25-093#effect#4 and BT25-100#effect#5 -- three independent Plug-In Options showing the identical single row, i.e. a property of the from-hand Option link path (Game::activate_hand_link -> play_option_core(.., OptionPlayMode::Link, OptionCostPolicy::Pay), code/digimon-engine/src/game_actions/link.rs:197-217), not of any one card. Our Digimon-link path is already correct (it installs the host selection first and pays inside begin_digimon_link); only the Plug-In Option branch pays up front.",
+      "recorded_at": "2026-09-21T04:51:45.705296100+00:00"
     },
     "BT24-091#effect#5": {
       "clause_id": "BT24-091#effect#5",

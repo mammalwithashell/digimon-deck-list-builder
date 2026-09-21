@@ -143,3 +143,11 @@ stacked skills resolve). Pinned by `cards_behavioral`
 `bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
 (fails with the `option_body_pending` hook in `drain_effect_queue_inner` disabled).
 `G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER` is RESOLVED.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — no work needed; card CLOSED
+
+Every clause already carried a `confirmed` verdict, so the close-out enumeration
+emitted no job for this card and no verdict changed. Recorded here only so the next
+pass does not re-derive that.
+
+**5 clauses: 5 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

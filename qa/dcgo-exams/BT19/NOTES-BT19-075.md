@@ -129,3 +129,46 @@ Sim-only after the repair: 10 checks / 0 failed. `effect#2` stays
 **`unmeasured`**; `effect0` / `effect1` / `effect3` keep their `confirmed`
 verdicts (untouched).
 **4 clauses: 3 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#2` MEASURED on the repaired line: **diverged**, and the predicted engine finding is CONFIRMED
+
+The re-authored slot-safe line drained `completed` on oracle build `scripted-v16`
+(DCGO `fc67f9ae6`). The `unmeasured` above is resolved.
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT19-075#effect#2` | `20260921T041928Z_40f7887a` | DIVERGED at step 21, compared **22 of 22 ours / 22 dcgo** — nothing truncated, nothing excluded | **diverged** |
+
+The slot repair worked: the digivolve landed on Millenniummon on both wires (no
+`p0.field[..].sources` row in the diff at all), and the three `select:` rows travelled
+by card identity as designed. The ONLY divergence is the one this file predicted
+sim-side two resumes ago:
+
+- `p1.security: ours=4 dcgo=3`
+- `p1.trash: ours=[P-180, ST1-10] dcgo=[P-180, ST1-04, ST1-10]`
+
+**ENGINE FINDING, ours is wrong.** The replacement pays its cost by deleting Deltamon
+BT6-012. DCGO deletes that cost through
+`CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which raises
+`OnDestroyedAnyone` like any other deletion, so this card's OWN `[All Turns]
+[Once Per Turn]` observer (`#effect#3`) fires and trashes p1's top security (Dracomon
+ST1-04). Ours does not fire. Printed text agrees with DCGO — Deltamon is an "other
+Digimon" and it was deleted — and the same observer demonstrably DOES fire on this
+card for a battle deletion (`#effect#3`'s own line) and for an effect deletion of a
+Tamer inside an ordinary resolution (`#effect#1`'s line); both are `confirmed`. What
+is special here is that the cost deletion happens inside ANOTHER deletion's
+replacement window.
+
+The card YAML is not at fault: `cards/bt19/BT19-075.yaml` authors the replacement as
+`kind: replacement` → `select_own_permanent` + `delete_permanent` +
+`cancel_replacement` and the observer via the production `on_any_deletion` timing,
+both faithful to `BT19_075.cs`. The clause's own witness also holds on both wires:
+MoonMillenniummon did not leave, Deltamon did.
+
+**Not fixed here** (verdict-recording stage). Logged as
+`G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER` in `docs/RUST_ENGINE_GAPS.md`, with
+the mechanism marked UNCONFIRMED — the symptom is measured, the cause (queued
+`OnAnyDeletion` entries never drained once `cancel_replacement` ends the outer batch)
+is a hypothesis to verify before fixing.
+
+**4 clauses: 3 confirmed, 1 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

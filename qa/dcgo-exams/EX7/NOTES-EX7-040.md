@@ -56,3 +56,31 @@ attack the player → P0 passes → at P1's first T6 decision the stack reads
 `suspended: false`. `RebootSelfStaticEffect(isInheritedEffect: true)` is static:
 nothing is asked. One Digimon per seat, no digivolution into BT25-085, no
 `<De-Digivolve>`: neither campaign-wide repair applies.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#0` `unreachable` RE-VERIFIED; card otherwise closed
+
+No job was emitted for `EX7-040` this pass (no scenario lacks a `confirmed` verdict
+except the `unreachable` one, which has no scenario by construction). The standing
+`unreachable` was re-checked rather than carried forward on trust, because a stale
+reason is worse than no reason.
+
+**The reason still holds, re-measured against `data/cards.json` on 2026-09-21.** The
+clause is `[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0`, and a line can only
+witness it if some Lv.2 card printing "[Three Musketeers]" digivolves into EX7-040 at a
+cost the printed circles do NOT already offer. Sweeping every card at `level: 2` whose
+effect / inherited / security text contains "Three Musketeers" returns exactly two:
+
+| Card | Colors | Why it cannot separate the clause |
+|---|---|---|
+| Kapurimon EX7-005 | `card_colors: [5]` (Black) | the printed Black Lv.2 cost-0 circle opens at the same cost |
+| Pagumon BT25-005 | `card_colors: [5]` (Black) | same |
+
+So every candidate line would confirm with the clause DELETED — it measures the
+printed circle, not the alt path. Independently, `EX7_040.cs` tests `ContainsTraits`
+(a TRAIT) where the card prints "in text", and no Lv.2 carries the `[Three Musketeers]`
+trait, so DCGO never opens this route either (DCGO quirk; printed data outranks it).
+
+Reachable the moment a **non-Black** Lv.2 printing `[Three Musketeers]` is released —
+re-run this sweep when a new set lands rather than re-deriving it.
+
+**3 clauses: 2 confirmed, 0 diverged, 1 unreachable (reason re-verified 2026-09-21), 0 unavailable, 0 unmeasured.**

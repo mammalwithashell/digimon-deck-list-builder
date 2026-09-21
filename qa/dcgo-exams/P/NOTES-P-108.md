@@ -116,3 +116,19 @@ is `SetUpActivateClass(null, …, -1, false, …)` (no `OptionalSkill`), one
 (`canNoSelect: true`) then `SelectHandEffect` (`canNoSelect: true`, via
 `CardEffectCommons.DigivolveIntoHandOrTrashCard` :1006-1031). Youkomon's single
 Purple Lv.3 / 2 circle goes to 0 under the -2, so no `SelectCountEffect`.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — ORACLE VERDICTS RECORDED: card CLOSED
+
+`effect#0` and `effect#1` drained `completed` on oracle build `scripted-v16`
+(DCGO `fc67f9ae6`, action-space digest `711d23bf12`) and both diffed **CLEAN**:
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `P-108#effect#0` | `20260921T043752Z_b3aa3e3d` | CLEAN, compared 8 of 9 ours / 8 dcgo (1 sim-only row) | **confirmed** |
+| `P-108#effect#1` | `20260921T043827Z_e15fafbf` | CLEAN, compared 19 of 20 ours / 19 dcgo (1 sim-only row) | **confirmed** |
+
+The single excluded row on each line is our own follow-on `select:` step, which
+answers a prompt DCGO does not open — it is NAMED in the denominator, not netted
+out, so "compared 8 of 9" is a complete accounting, not a shortfall.
+
+**3 clauses: 3 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

@@ -112,3 +112,18 @@ Sim-only at close: all four LM-056 lines lower with `tm_lm_056_pool.json`
 (`effect#0` 6/0, `effect#1` 6/0, `effect#2` 11/0, `effect#3` 8/0).
 `effect#2` and `effect#3` stay **`unmeasured`** — only an oracle diff moves
 them.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — ORACLE VERDICTS RECORDED: card CLOSED
+
+`effect#2` and `effect#3` drained `completed` on oracle build `scripted-v16`
+(DCGO `fc67f9ae6`, action-space digest `711d23bf12`) and both diffed **CLEAN**:
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `LM-056#effect#2` | `20260921T043609Z_6794b105` | CLEAN, compared 19 of 20 ours / 19 dcgo (1 sim-only row) | **confirmed** |
+| `LM-056#effect#3` | `20260921T043702Z_ece1cec6` | CLEAN, compared 14 of 15 ours / 14 dcgo (1 sim-only row) | **confirmed** |
+
+The excluded row on each line is our own follow-on `select:` step, which answers a
+prompt DCGO does not open; it is named in the denominator rather than netted out.
+
+**4 clauses: 4 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

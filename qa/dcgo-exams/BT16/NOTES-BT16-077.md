@@ -261,3 +261,29 @@ clause denominator at all — `grep -rn BT20-076 qa/dcgo-exams/` matches only
 `BT20-020-*.yaml`, where Imperialdramon: Dragon Mode is deck ballast and a
 name-match target, never an exam subject. Read as the DNA rider that actually
 exists in this pool, it is the `#effect#3` rider documented immediately above.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#0` MEASURED: verdict **confirmed**; card CLOSED
+
+The DNA clause drained `completed` on oracle build `scripted-v16` (DCGO `fc67f9ae6`)
+and diffed **CLEAN**:
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT16-077#effect#0` | `20260921T041912Z_234cef51` | CLEAN, compared 13 of 13 ours / 13 dcgo | **confirmed** |
+
+**It first reported a DIVERGENCE that was pure index offset, from a harness bug.**
+The first run read `DIVERGED at step 12 … turn: ours=6 dcgo=5, phase: ours=Breeding
+dcgo=Main, memory: ours=-3 dcgo=3` — a whole scenario step of skew, which is the
+signature of an offset rather than of a rules disagreement. Cause:
+`ScenarioAdapter::dcgo_wire_rows_per_step` mapped wire-row counts 1:1 over the
+LOWERED entries while the differ indexes them by SCENARIO step; this line's `dna:`
+step lowers to `DnaDeclaration` + `SimOnlySelect`, so every row after it was compared
+against our projection one step late and the last row fell off the end. Fixed in this
+stage — `G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY` in
+`docs/RUST_ENGINE_GAPS.md`. The `confirmed` above is the re-diff against the SAME
+sidecar, with all 13 rows compared on both sides.
+
+If a future exam line reports a lead whose `turn` / `phase` / `memory` all move
+together by exactly one step, suspect pairing before suspecting the engine.
+
+**5 clauses: 5 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

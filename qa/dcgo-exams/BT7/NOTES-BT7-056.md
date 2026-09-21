@@ -133,3 +133,28 @@ lowered with no compensation row (same observation as
   as `EX7-008#effect#1`; see `docs/DCGO_EXAM.md` "RevealBucket add timing". The
   verdict stays `diverged` (triaged); the engine is NOT changed to add per
   bucket.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#0` re-measured against a fresh sidecar: unchanged, verdict stays **diverged**
+
+Re-drained on oracle build `scripted-v16` (DCGO `fc67f9ae6`) and re-diffed with
+`--all-diffs`.
+
+| Clause | Sidecar | Diff | Verdict |
+|---|---|---|---|
+| `BT7-056#effect#0` | `20260921T042630Z_14e62ea8` | DIVERGED at step 7, compared 9 of 10 ours / 9 dcgo (1 sim-only row) | **diverged** |
+
+Identical to the 2026-09-18 measurement: one field on the 2nd reveal pick row,
+`p0.hand: ours=[BT24-088, BT24-088, BT24-088, BT25-092, BT25-092] dcgo=[…, EX7-073]`,
+LEAD with no downstream rows. The r1 triage stands and is re-confirmed on a newer DCGO
+commit.
+
+**DCGO quirk, no fix** — the RevealBucket add-timing family
+(`G-EXAM-REVEAL-BUCKET-ADD-TIMING`, `docs/RUST_ENGINE_GAPS.md`; same shape as
+`BT6-060#effect#0` and `EX7-008#effect#1`). The printed text is ONE "Add" with two
+targets (`general_rule.pdf` 15-15-10-1, 15-1-2); DCGO's per-condition
+`SelectCardEffect(Mode.AddHand)` `foreach`
+(`RevealLibrary.cs:291-336 RevealDeckTopCardsAndSelect`) moves each pick as its prompt
+closes. Outcome-neutral — nothing triggers or resolves mid-effect and neither bucket
+reads the hand.
+
+**2 clauses: 1 confirmed, 1 diverged (adjudicated DCGO quirk), 0 unreachable, 0 unavailable, 0 unmeasured.**

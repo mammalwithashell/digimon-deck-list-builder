@@ -8,7 +8,7 @@
       "verdict": "unreachable",
       "label": "Special Digivolution Condition",
       "text_sha256": "a10e78a1cfd57f8ed800bbb13075565f46ab02393f81209eb4435e8b666306d3",
-      "reason": "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0 -- no separating line exists (NOTES-EX7-040.md): the only Lv.2 cards printing \"[Three Musketeers]\" (Kapurimon EX7-005, Pagumon BT25-005) are both Black, so the printed Black Lv.2 cost-0 circle opens at the same cost and the line would confirm with the clause deleted. Independently, EX7_040.cs tests ContainsTraits (a trait) where the card prints \"in text\", and no Lv.2 carries the trait, so DCGO never opens this route (DCGO quirk; printed data outranks it). Reachable if a non-black Lv.2 printing [Three Musketeers] is released.",
+      "reason": "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0 -- no separating line exists (NOTES-EX7-040.md). RE-VERIFIED 2026-09-21 (three-musketeers-2) against data/cards.json: the ONLY Lv.2 cards printing '[Three Musketeers]' anywhere in their effect / inherited / security text are Kapurimon EX7-005 and Pagumon BT25-005, and BOTH are Black (card_colors [5]). So the printed Black Lv.2 cost-0 circle opens at the same cost and the line would confirm with this clause DELETED -- it cannot witness the clause. Independently, EX7_040.cs tests ContainsTraits (a TRAIT) where the card prints 'in text', and no Lv.2 carries the [Three Musketeers] trait, so DCGO never opens this route either (DCGO quirk; printed data outranks it). Reason still holds -- stays `unreachable`. Reachable if a non-Black Lv.2 printing [Three Musketeers] is released.",
       "recorded_at": "2026-09-19T15:14:57.194613+00:00"
     },
     "EX7-040#effect#1": {

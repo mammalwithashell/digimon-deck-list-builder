@@ -1,7 +1,25 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:17:23.859433800+00:00",
+  "last_updated": "2026-09-21T04:51:48.418667300+00:00",
   "clauses": {
+    "P-108#effect#0": {
+      "clause_id": "P-108#effect#0",
+      "card_id": "P-108",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "acbe6262037ed41a5ada427488214735a08cbb154a99fcbd35984cea1cb08bee",
+      "scenario_path": "qa/dcgo-exams/P/P-108-effect0.yaml",
+      "recorded_at": "2026-09-21T04:51:47.975932300+00:00"
+    },
+    "P-108#effect#1": {
+      "clause_id": "P-108#effect#1",
+      "card_id": "P-108",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "d86bb80ad0651f300ccc5e0f7cded02aa96b41f39305d8207777493e4307da61",
+      "scenario_path": "qa/dcgo-exams/P/P-108-effect1.yaml",
+      "recorded_at": "2026-09-21T04:51:48.418667300+00:00"
+    },
     "P-108#effect#2": {
       "clause_id": "P-108#effect#2",
       "card_id": "P-108",

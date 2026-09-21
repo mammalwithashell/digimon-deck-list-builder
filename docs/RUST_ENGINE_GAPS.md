@@ -3738,3 +3738,139 @@ intermediate hand.
 only if a "when a card is added to your hand" trigger could fire between picks — and even then
 15-5-2 fires it once for a single add. Clause stays `diverged` in the verdict store (the exam
 compares every step); treat it as adjudicated, no further action.
+
+## G-ENGINE-OPTION-HAND-LINK-COST-TIMING — open finding (2026-09-21)
+
+**Drivers:** exam `BT25-093#effect#4` (Ignition Flare, `<Link> [TS] trait: Cost 3`),
+`BT25-100#effect#5` (Iron Slash, `<Link> [TS] trait: Cost 2`) and — added 2026-09-21,
+three-musketeers-2 close-out — `BT24-091#effect#4` (Tidal Stream, `<Link> [TS] trait:
+Cost 3`, sidecar `20260921T042039Z_c3e0a78e`, `memory: ours=0 dcgo=3` /
+`p0.hand: ours` has already removed BT24-091 while `dcgo` still holds it, LEAD-only, later
+rows agree). Three independent Plug-In Options now show the same single row, which makes
+this a property of the from-hand Option link path rather than of any one card — the Plug-In
+Option
+`<Link>` declared **from the hand**. Both oracle diffs (`--all-diffs`, sidecars
+`20260921T042530Z_8f13b83c…` / `20260921T042552Z_0bad16abd…`) report exactly ONE
+divergence row, at the host-pick prompt:
+
+- BT25-093: `memory: ours=0 dcgo=3`; `p0.hand: ours=[BT1-028,BT1-028,BT2-024,BT3-020]
+  dcgo=[BT1-028,BT1-028,BT2-024,BT25-093,BT3-020]`
+- BT25-100: `memory: ours=1 dcgo=3`; same hand shape with BT25-100.
+
+Every later row matches and the link lands identically on both engines (host 1000 →
+3000 DP, the Option not in trash, the printed cost paid) — so the clause's substance
+(cost 3 / cost 2, from hand, into a `[TS]` host) is right on our side; only the ORDER
+of the payment differs.
+
+**What differs:** our engine routes the from-hand Plug-In Option link through the
+OPTION lifecycle — `Game::activate_hand_link` → `play_option_core(…,
+OptionPlayMode::Link { cost }, OptionCostPolicy::Pay)`
+(`code/digimon-engine/src/game_actions/link.rs:197-217`) — which pays the link cost and
+removes the card from the hand **at declaration**, and only then installs the host
+selection. DCGO runs `LinkEffect.ActivateCoroutine` (`Link.cs:70-88`): the
+`SelectPermanentEffect` host pick comes first, payment after.
+
+**Rules — the PDF backs DCGO.** `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the
+link procedure: **10-1-3-1** "The player declares a link and reveals 1 card to link. 1
+link requirement is chosen on the revealed card, then the player chooses 1 of their
+Digimon that meets the requirement." → **10-1-3-2** "The specified link cost is paid."
+→ **10-1-3-3** "The card to link is plugged in sideways into the chosen Digimon."
+Payment is step 2 of 3, after the host. Compare §9-1-8: a card that can't be used after
+being revealed goes back and "the memory doesn't move" — revealing is not paying.
+
+**Our Digimon-link path is already correct**: `activate_hand_link`'s second branch and
+`activate_field_link` install the host selection first and pay inside
+`begin_digimon_link`. Only the Plug-In **Option** branch pays up front.
+
+**Observability:** the end state converges, so neither exam line is wrong at rest. It
+becomes observable whenever something reads memory or the hand between the declaration
+and the host pick (a trigger/replacement raised on the link, a cost modifier reading the
+gauge, any prompt that lists hand cards).
+
+**Not fixed here.** A fix defers the Option's cost payment + hand removal into the
+host-selection resolution of `play_option_core`'s `Link` mode — engine surgery outside a
+verdict-recording stage, and it must keep the park on the clone-safe resumable VM
+(rule 28). Both clauses are recorded `diverged` with this section as their triage.
+
+
+## G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER — OPEN (found 2026-09-21, three-musketeers-2 close-out)
+
+**Driver:** exam `BT19-075#effect#2` (MoonMillenniummon, `[All Turns] When this Digimon
+would leave the battle area, by deleting 1 of your [Composite] trait Digimon, it doesn't
+leave`), scenario `qa/dcgo-exams/BT19/BT19-075-effect2.yaml`, oracle sidecar
+`20260921T041928Z_40f7887a`. The diff is fully accounted (compared 22 of 22 ours / 22
+dcgo, nothing truncated) and reports ONE divergence, the LEAD at step 21:
+
+- `p1.security: ours=4 dcgo=3`
+- `p1.trash: ours=[P-180, ST1-10] dcgo=[P-180, ST1-04, ST1-10]`
+
+**What differs.** The replacement pays its cost by deleting Deltamon BT6-012. That
+deletion should be observed by the SAME card's third clause — `[All Turns] [Once Per
+Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card`
+— which is live on the board. DCGO deletes the cost through
+`CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which raises
+`OnDestroyedAnyone` like any other deletion, so its `OtherPermanentDeleted` observer
+fires and trashes p1's top security (Dracomon ST1-04). Ours does not fire, so p1's
+security stays at 4.
+
+**Ours is wrong, and the card is not at fault.** `cards/bt19/BT19-075.yaml` authors the
+replacement as `kind: replacement` → `select_own_permanent` + `delete_permanent` +
+`cancel_replacement`, and the observer as the production `on_any_deletion` timing — both
+faithful to `BT19_075.cs`. Deltamon IS an "other Digimon" and it WAS deleted. The same
+observer demonstrably fires on this very card for a BATTLE deletion (`#effect#3`'s own
+line) and for an effect deletion of a Tamer inside an ordinary effect resolution
+(`#effect#1`'s line) — both `confirmed`. So the deferred-drain path works in general;
+what is special here is that the cost deletion happens INSIDE another deletion's
+replacement window.
+
+**Mechanism — hypothesis, NOT yet confirmed.** The cost deletion runs as a nested
+`Game::delete_permanents_batch` during the outer batch's replacement stage
+(`code/digimon-engine/src/combat/deletion.rs:73-125` saves/restores `active_deletion_batch`,
+so the batch itself is not clobbered). Its `OnAnyDeletion` broadcast is *queued*, and
+`maybe_drain_effect_queue` no-ops while `draining_deferred > 0`
+(`deletion.rs:763-777`); the suspicion is that once `cancel_replacement` ends the outer
+batch the queued entries are never drained, or are dropped by the post-deletion gate.
+Confirm this before fixing — the symptom is measured, the cause is not.
+
+**Not fixed here** (verdict-recording stage). `BT19-075#effect#2` is recorded `diverged`
+with this section as its triage. A fix needs a behavioral test in
+`tests/cards_behavioral/bt19/` that deletes a permanent as a replacement cost with an
+`on_any_deletion` observer on the board, plus the full `cards_behavioral` gate.
+
+## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (7fb705734) (found 2026-09-21, three-musketeers-2 close-out)
+
+**Symptom.** Every exam scenario containing an EXPANDING step (`dna:` or `materials:` —
+one scenario step our engine splits into several decisions) was recorded `diverged`, with
+a lead that was pure index offset:
+
+- `BT16-077#effect#0`: `DIVERGED at step 12 … turn: ours=6 dcgo=5, phase: ours=Breeding
+  dcgo=Main, memory: ours=-3 dcgo=3` — a whole scenario step of skew.
+- `BT8-084#effect#0`: `TRUNCATED, no divergence found (compared 14 of 15 ours / 15 dcgo
+  steps)` — only the tail row fell off, so nothing mismatched, but a truncated run is
+  (correctly) never clean.
+
+**Cause.** `ScenarioAdapter::dcgo_wire_rows_per_step` / `ours_present_per_step` mapped 1:1
+over `self.lowered`, while the differ indexes `ours_for_diff` — `projections.take(s.steps.len())`,
+one pre-step snapshot per SCENARIO step — with the same index
+(`code/tools/dcgo-harness/src/main.rs:983-997`). The two index spaces agree only while
+every step lowers to exactly one entry. A `dna:` step lowers to
+`DnaDeclaration` + `SimOnlySelect`, so from that step onward every later row was compared
+against the projection one step late, and the last row's index ran off the end of
+`ours_for_diff` and was silently dropped. The adapter's own doc comment already said "How
+many DCGO wire rows each SCENARIO step consumes" — the implementation simply did not.
+
+**Fix.** `fold_wire_rows_by_owner` / `fold_ours_present_by_owner`
+(`code/tools/dcgo-harness/src/exam/adapter.rs`) collapse the per-lowered-entry counts onto
+scenario steps via `lowered_owners()`; `dcgo_wire_rows_per_step(total_steps)` /
+`ours_present_per_step(total_steps)` now take the line length, mirroring the existing
+`specs_per_scenario_step(total_steps)`. Regression tests:
+`a_dna_step_folds_to_one_row_count_not_one_per_lowered_entry` and
+`ours_present_is_false_only_for_a_wholly_dcgo_only_step` (both fail against the 1:1
+mapping — it returns a 4-long vector for a 3-step line).
+
+**Measured after the fix**, against the same oracle sidecars: `BT8-084#effect#0`
+`CLEAN (compared 15 of 15 ours / 15 dcgo steps)` and `BT16-077#effect#0`
+`CLEAN (compared 13 of 13 ours / 13 dcgo steps)` — both now `confirmed`. Blast radius is
+exactly those two clauses: `dna:` / `materials:` appear in only two scenarios in
+`qa/dcgo-exams/` (`BT8-084-effect0.yaml`, `BT16-077-effect0.yaml`), so no other card's
+stored verdict was affected.

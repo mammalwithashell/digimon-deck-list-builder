@@ -717,23 +717,96 @@ impl ScenarioAdapter {
         &self.lowered
     }
 
-    /// How many DCGO wire rows each scenario step consumes, in line order —
+    /// How many DCGO wire rows each SCENARIO step consumes, in line order —
     /// the input the differ's step pairing is derived from.
-    pub fn dcgo_wire_rows_per_step(&self) -> Vec<usize> {
-        self.lowered.iter().map(LoweredStep::dcgo_wire_rows).collect()
+    ///
+    /// Folded onto scenario steps via [`Self::lowered_owners`], NOT mapped 1:1
+    /// over the lowered entries. See [`fold_wire_rows_by_owner`] for why the
+    /// 1:1 mapping this used to be is wrong.
+    pub fn dcgo_wire_rows_per_step(&self, total_steps: usize) -> Vec<usize> {
+        fold_wire_rows_by_owner(&self.lowered, &self.lowered_owner, total_steps)
     }
 
-    /// Whether each scenario step is one OUR engine also makes, in line order.
+    /// Whether each SCENARIO step is one OUR engine also makes, in line order.
     ///
-    /// False only for `dcgo_only` rows. The differ needs this because such a
-    /// step consumes a DCGO row while our trace stands still: pairing our
-    /// (already-advanced) state against it compares two different moments.
-    pub fn ours_present_per_step(&self) -> Vec<bool> {
-        self.lowered
-            .iter()
-            .map(|l| !matches!(l, LoweredStep::DcgoOnlySelect(_)))
-            .collect()
+    /// False only for a step whose every lowered entry is a `dcgo_only` row.
+    /// The differ needs this because such a step consumes a DCGO row while our
+    /// trace stands still: pairing our (already-advanced) state against it
+    /// compares two different moments.
+    pub fn ours_present_per_step(&self, total_steps: usize) -> Vec<bool> {
+        fold_ours_present_by_owner(&self.lowered, &self.lowered_owner, total_steps)
     }
+}
+
+/// Collapse per-LOWERED-ENTRY wire-row counts onto SCENARIO steps.
+///
+/// # Why the 1:1 mapping was wrong
+///
+/// The differ pairs by SCENARIO step: `ours_for_diff` is
+/// `projections.take(s.steps.len())`, one pre-step snapshot per scenario step,
+/// and `pair_by_wire_rows_with_ownership` uses the index into THIS vector as
+/// the index into that one. Mapping the row counts straight over `lowered` is
+/// only correct while every step lowers to exactly one entry. A `dna:` or
+/// `materials:` declaration lowers to several, and from that step onward every
+/// later index names the WRONG projection — our state is compared one (or
+/// more) steps late, and the tail rows fall off the end of `ours_for_diff`
+/// entirely.
+///
+/// Measured, on the 2026-09-21 oracle pass:
+///
+/// * `BT16-077#effect#0` (a `dna:` line) reported `DIVERGED at step 12` with
+///   `turn: ours=6 dcgo=5`, `phase: ours=Breeding dcgo=Main`,
+///   `memory: ours=-3 dcgo=3` — a whole scenario step of offset, not a
+///   disagreement about the rules.
+/// * `BT8-084#effect#0` (also `dna:`) lost only its tail row and reported
+///   `TRUNCATED, no divergence found (compared 14 of 15 ours / 15 dcgo steps)`.
+///
+/// Both were recorded `diverged` by a store that (correctly) refuses to call
+/// an unequal comparison clean. The defect is here, not in the differ.
+///
+/// A step with no lowered entry at all counts as 0 rows, which the pairing
+/// then reports as an unpairable row of ours rather than silently dropping it.
+pub fn fold_wire_rows_by_owner(
+    lowered: &[LoweredStep],
+    owners: &[usize],
+    total_steps: usize,
+) -> Vec<usize> {
+    let mut out = vec![0usize; total_steps];
+    for (l, owner) in lowered.iter().zip(owners.iter()) {
+        if let Some(slot) = out.get_mut(*owner) {
+            *slot += l.dcgo_wire_rows();
+        }
+    }
+    out
+}
+
+/// Whether our engine makes each SCENARIO step, folded from the lowered
+/// entries the same way [`fold_wire_rows_by_owner`] folds their row counts.
+///
+/// A step is ours whenever ANY of its lowered entries is one our engine makes;
+/// only a step that is `dcgo_only` throughout is false. A step with no lowered
+/// entry is true, so the pairing books it as ours-unpairable (a row we could
+/// not compare) rather than as DCGO's alone.
+pub fn fold_ours_present_by_owner(
+    lowered: &[LoweredStep],
+    owners: &[usize],
+    total_steps: usize,
+) -> Vec<bool> {
+    let mut seen = vec![false; total_steps];
+    let mut ours = vec![false; total_steps];
+    for (l, owner) in lowered.iter().zip(owners.iter()) {
+        if *owner >= total_steps {
+            continue;
+        }
+        seen[*owner] = true;
+        if !matches!(l, LoweredStep::DcgoOnlySelect(_)) {
+            ours[*owner] = true;
+        }
+    }
+    seen.iter()
+        .zip(ours.iter())
+        .map(|(s, o)| !*s || *o)
+        .collect()
 }
 
 /// The unambiguous `SelectionKind` -> DCGO prompt-class mappings, for the
@@ -2645,9 +2718,73 @@ steps:
         let (p0, p1) = select_line_decks();
         let s = Scenario::from_yaml(SELECT_LINE).unwrap();
         let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).unwrap();
-        let rows = a.dcgo_wire_rows_per_step();
+        let rows = a.dcgo_wire_rows_per_step(s.steps.len());
         assert_eq!(rows.len(), s.steps.len());
         assert_eq!(rows, vec![1, 1, 1, 1, 1, 1], "this line has no folds");
+        assert_eq!(a.ours_present_per_step(s.steps.len()), vec![true; 6]);
+    }
+
+    /// An EXPANDING step (`dna:` / `materials:`) must contribute ONE entry to
+    /// the row-count vector, not one per lowered entry.
+    ///
+    /// The differ indexes `ours_for_diff` -- one projection per SCENARIO step
+    /// -- with the index of this vector, so a vector that is longer than the
+    /// line slides every row after the expansion onto the wrong projection and
+    /// pushes the tail off the end. Both BT8-084#effect#0 and BT16-077#effect#0
+    /// were recorded `diverged` on the 2026-09-21 oracle pass for exactly that
+    /// reason; BT16-077's lead read `turn: ours=6 dcgo=5`, which is an offset,
+    /// not a disagreement. See `fold_wire_rows_by_owner`.
+    #[test]
+    fn a_dna_step_folds_to_one_row_count_not_one_per_lowered_entry() {
+        // The shape BT8-084#effect#0 lowers to, in miniature: a pass, then the
+        // DNA declaration (1 DCGO wire row) whose material picks our engine
+        // parks as a sim-only row (0 rows) under the SAME scenario step, then
+        // a trailing pass.
+        let lowered = vec![
+            LoweredStep::Action(62),
+            LoweredStep::DnaDeclaration {
+                action_id: 63,
+                material_ids: vec!["P-137".to_string(), "P-137".to_string()],
+            },
+            LoweredStep::SimOnlySelect,
+            LoweredStep::Action(62),
+        ];
+        let owners = vec![0, 1, 1, 2];
+        assert_eq!(
+            fold_wire_rows_by_owner(&lowered, &owners, 3),
+            vec![1, 1, 1],
+            "3 scenario steps, 1 DCGO row each -- the sim-only pick is folded              into its declaration's step, not given a step of its own"
+        );
+        assert_eq!(
+            fold_ours_present_by_owner(&lowered, &owners, 3),
+            vec![true, true, true]
+        );
+    }
+
+    /// A step that is `dcgo_only` THROUGHOUT is the only one our engine skips.
+    #[test]
+    fn ours_present_is_false_only_for_a_wholly_dcgo_only_step() {
+        let wire = SelectWire {
+            card_ids: Vec::new(),
+            ordinal: None,
+            trigger: None,
+            trigger_not: None,
+            value: None,
+            bool_answer: Some(true),
+            cancel: false,
+            optional_gate_fold: false,
+        };
+        let lowered = vec![
+            LoweredStep::Action(62),
+            LoweredStep::DcgoOnlySelect(wire.clone()),
+            LoweredStep::Select(wire),
+        ];
+        let owners = vec![0, 1, 2];
+        assert_eq!(
+            fold_ours_present_by_owner(&lowered, &owners, 3),
+            vec![true, false, true]
+        );
+        assert_eq!(fold_wire_rows_by_owner(&lowered, &owners, 3), vec![1, 1, 1]);
     }
 
     #[test]

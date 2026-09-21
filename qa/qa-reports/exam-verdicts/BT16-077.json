@@ -1,7 +1,16 @@
 {
   "version": 1,
-  "last_updated": "2026-09-21T00:47:08.434040300+00:00",
+  "last_updated": "2026-09-21T04:51:16.492899200+00:00",
   "clauses": {
+    "BT16-077#effect#0": {
+      "clause_id": "BT16-077#effect#0",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "d12e3f8b6c8d8776cf30f5a607edbe9cf4c0b76c4fbe8fe71dde2931e980f1f8",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect0.yaml",
+      "recorded_at": "2026-09-21T04:51:16.492899200+00:00"
+    },
     "BT16-077#effect#1": {
       "clause_id": "BT16-077#effect#1",
       "card_id": "BT16-077",

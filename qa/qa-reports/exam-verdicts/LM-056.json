@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:17:23.361706100+00:00",
+  "last_updated": "2026-09-21T04:51:47.545167900+00:00",
   "clauses": {
     "LM-056#effect#0": {
       "clause_id": "LM-056#effect#0",
@@ -19,6 +19,24 @@
       "text_sha256": "ba6248eb0985de1842805fe441cc8bcd82f7b28edd02438371bb50dc9a2fdb25",
       "scenario_path": "qa/dcgo-exams/LM/LM-056-effect1.yaml",
       "recorded_at": "2026-09-19T15:13:29.446171100+00:00"
+    },
+    "LM-056#effect#2": {
+      "clause_id": "LM-056#effect#2",
+      "card_id": "LM-056",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "39033ebb14d99ac213a8bac4de71a2b0d0b5c3a12c8b730332afdabf09ade153",
+      "scenario_path": "qa/dcgo-exams/LM/LM-056-effect2.yaml",
+      "recorded_at": "2026-09-21T04:51:47.097036500+00:00"
+    },
+    "LM-056#effect#3": {
+      "clause_id": "LM-056#effect#3",
+      "card_id": "LM-056",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "ba6248eb0985de1842805fe441cc8bcd82f7b28edd02438371bb50dc9a2fdb25",
+      "scenario_path": "qa/dcgo-exams/LM/LM-056-effect3.yaml",
+      "recorded_at": "2026-09-21T04:51:47.545167900+00:00"
     }
   }
 }
