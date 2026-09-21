@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T04:51:16.492899200+00:00",
+  "clauses": {
+    "BT16-077#effect#0": {
+      "clause_id": "BT16-077#effect#0",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "d12e3f8b6c8d8776cf30f5a607edbe9cf4c0b76c4fbe8fe71dde2931e980f1f8",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect0.yaml",
+      "recorded_at": "2026-09-21T04:51:16.492899200+00:00"
+    },
+    "BT16-077#effect#1": {
+      "clause_id": "BT16-077#effect#1",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect1.yaml",
+      "recorded_at": "2026-09-19T16:39:12.938996200+00:00"
+    },
+    "BT16-077#effect#2": {
+      "clause_id": "BT16-077#effect#2",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect2.yaml",
+      "recorded_at": "2026-09-21T00:47:02.099832800+00:00"
+    },
+    "BT16-077#effect#3": {
+      "clause_id": "BT16-077#effect#3",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "deb3af0f718c8d3ec134e3d209ebad3e1d5f93e714d51961886e0ece9e094c23",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-effect3.yaml",
+      "recorded_at": "2026-09-19T16:46:29.533727500+00:00"
+    },
+    "BT16-077#inherited#0": {
+      "clause_id": "BT16-077#inherited#0",
+      "card_id": "BT16-077",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "8a35b99a666692846590b6a265113e2987f41ad4503eb7480fbe51002cec447e",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-077-inherited0.yaml",
+      "recorded_at": "2026-09-21T00:47:08.434040300+00:00"
+    }
+  }
+}

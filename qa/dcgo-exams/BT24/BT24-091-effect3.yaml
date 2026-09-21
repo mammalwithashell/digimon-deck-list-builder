@@ -1,0 +1,130 @@
+# Exam scenario: Tidal Stream (BT24-091), clause BT24-091#effect#3 -- the
+# Link box "DP+2000".
+#
+# THE WITNESS is the host's DP once Tidal Stream is plugged in: Lekismon
+# BT25-024 prints 5000 and reads 7000 while linked. The plug-in comes from the
+# card's own [Security] -> [Main] -> "Then, you may link this card to 1 of
+# your Digimon on the field without paying the cost" (a DECLARED from-hand
+# <Link> of a Plug-In OPTION is unreachable for the exam -- NOTES-BT24-091.md).
+#
+# The line is BT24-091-effect1.yaml's with two changes: P1 also fields Biyomon
+# ST1-02 -- a NON-[TS] Digimon -- so the link pick's candidate set shows the
+# printed Link condition ("[TS] trait") gating even a free effect link
+# (candidates: Lekismon only), and the link is ACCEPTED.
+#
+#   T1 (P0, 0): Agumon ST1-03 (3 -> -3) -> P1 3.
+#   T2 (P1, 3): Biyomon (2: 3 -> 1), Lekismon (4: 1 -> -3; <Draw 1>, silent)
+#            -> P0 3.
+#   T3 (P0, 3): Agumon attacks the player; the check flips Tidal Stream:
+#            Agumon returns, P1 unsuspends Lekismon (only [TS] Digimon), P1
+#            links Tidal Stream to Lekismon. P0 passes (3 -> P1 3).
+#   T4 (P1): trailing breeding decision -- Lekismon still reads +2000 (the box
+#            is not turn-scoped).
+#
+# BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
+# used by BOTH seats (Tidal Stream x4, Lekismon BT25-024 x4, Cyclonemon
+# BT24-011 x4, red ST-1 vanillas, blue [TS] fillers; eggs Tsunomon ST2-01).
+#
+# PROMPT SHAPE (BT24_091.cs). `AddActivateMainOptionSecurityEffect` runs the
+# very same "Main" ActivateClass (SetUpActivateClass(null, ..., -1, FALSE) --
+# no OptionalSkill), for the DEFENDER, on the attacker's turn:
+#  - Bounce: prompt-free (BouncePeremanentAndProcessAccordingToResult over
+#    every IsMinLevel opposing Digimon).
+#  - Unsuspend: SelectPermanentEffect (Mode.UnTap, maxCount 1, canNoSelect
+#    FALSE) over own battle-area [TS] Digimon -- not filtered on being
+#    suspended, asked even with one candidate.
+#  - Link: SelectPermanentEffect (Mode.Custom, maxCount 1, canNoSelect TRUE)
+#    over own Digimon the card `CanLinkToTargetPermanent(permanent, false,
+#    true)` -- the printed [TS] Link condition gates the free link -- then
+#    `AddLinkCard`. No OptionalSkill in front (that gate belongs to a DECLARED
+#    <Link>, Link.cs).
+# Both rows are P1's (actor 1). Ours: `scope: inherited, when: on_security`
+# with the same three steps; the security-flipped link works since 35958972b
+# (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON, RESOLVED) -- the crashed
+# draft's "our engine silently skips the link" prediction is obsolete.
+#
+# LINK DP (was a predicted divergence, now pinned): once linked, Lekismon
+# reads 7000 on BOTH sides (5000 + the printed Link DP +2000). Ours read 5000
+# until `BT24-091.yaml` gained its printed Link box in 6d2ba79c2
+# (F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED, docs/RUST_ENGINE_GAPS.md;
+# rule 10-1-2-2 / 4-7 link cards; DCGO `CardEffectFactory.LinkEffect` +
+# `Permanent.cs:1278` `LinkedDP += addedLinkCard.LinkDP`; guard test
+# `bt24_091_main_link_gives_host_printed_link_dp_plus_2000`). Oracle re-diff
+# against the preserved sidecar 20260918T125014Z_267f7e1f: CLEAN, 11/11.
+card: BT24-091
+clause: BT24-091#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-04, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, ST1-02,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+  p1:
+    stack: [BT25-024, ST1-02, ST1-04, ST1-08, ST1-08,
+            ST1-02, ST1-02, ST1-04, ST1-04, BT24-091,
+            ST1-08, ST1-10, ST1-05, ST1-05]
+    rest: tm-ts-line
+steps:
+  # T1 (P0, memory 0): decline breeding; Agumon (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): Biyomon (3 -> 1), Lekismon (1 -> -3), <Draw 1> silent.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT25-024, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Agumon attacks the player -- Tidal Stream is flipped.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P1: unsuspend pick -- own [TS] Digimon only (Biyomon is not offered).
+  - actor: 1
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT25-024] }
+  # P1: the free link -- the [TS] Link condition still gates the host.
+  - actor: 1
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT25-024] }
+  # The attacker is gone; P0 passes out (3 -> P1 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): the trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the link pick: shared state, Lekismon still unlinked at 5000.
+  - at: 8
+    that:
+      turn: 3
+      p0.field: []
+      p1.security: 4
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
+  # After the link: the Option is plugged in (neither trash nor hand) and the
+  # host carries Link DP +2000 (5000 -> 7000).
+  - at: 9
+    that:
+      turn: 3
+      p0.field: []
+      p1.security: 4
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: BT25-024, dp: 7000, suspended: false, sources: [] }
+      p1.trash: []
+      p1.hand: [ST1-04, ST1-08, ST1-08, ST1-08, ST1-10]

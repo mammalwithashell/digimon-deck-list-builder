@@ -1,0 +1,111 @@
+# Exam scenario: Dorumon (BT7-056), clause BT7-056#effect#0 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 [Kota Domoto] and 1
+#  card with the [X Antibody] trait among them to the hand. Return the rest
+#  to the bottom of the deck."
+#
+# THE LINE (the EX7-008-effect1 shape). Dorumon is PLAYED from hand on T3
+# (cost 3: memory 3 -> 0, still P0's turn). The three revealed cards are
+# stacked so that EACH bucket has exactly ONE witness and the two witnesses
+# are DISJOINT:
+#   * BeelStarmon (X Antibody) EX7-073 -- prints the [X Antibody] TRAIT
+#     (Wizard/X Antibody/Three Musketeers); its name is not [Kota Domoto];
+#   * Kota Domoto BT7-090 -- the named Tamer; it prints NO traits (its
+#     text mentions [X-Antibody] but the bucket is a TRAIT scan on both
+#     engines: DCGO HasXAntibodyTraits, our `trait_has`);
+#   * Titamon + SkullBaluchimon BT24-081 -- fits neither, so it is the card
+#     that goes to the bottom.
+# Both cards are added (the official Q&A: "you still add that card" -- as
+# many as possible); the remainder returns to the deck bottom.
+#
+# Book: qa/dcgo-exams/BT7/tm_bt7_056_pool.json, deck tm-dorumon -- the
+# shared 50 with BT7-056 x4 and BT7-090 x2 swapped in for EX7-071 x3,
+# EX7-070 x2 and one P-180 (Kota Domoto is not in the shared pool). The
+# egg deck is Kapurimon EX7-005 x4 (unused on this line: nothing hatches).
+#
+# PROMPT SHAPE (BT7_056.cs, region OnEnterFieldAnyone -> CardEffectCommons.
+# SimplifiedRevealDeckTopCardsAndSelect -> RevealDeckTopCardsAndSelect):
+# ActivateClass(isOptional: false) -- no OptionalSkill; `canNoAction` is
+# not passed, so the ">= 2 conditions" generic_bool "Will you select cards?"
+# gate is NOT asked; then ONE SelectCardEffect per condition whose candidate
+# count is >= 1 (maxCount 1, canNoSelect false, root Library over the
+# revealed list), in CONDITION ORDER -- DCGO lists the [X Antibody] trait
+# condition FIRST and the [Kota Domoto] name condition SECOND (the printed
+# order is the reverse; the C# order is what the wire follows, and our
+# BT7-056.yaml buckets are authored in the same C# order). Under the
+# harness the AI branch of SelectCardEffect always routes through
+# SetTargetCardAndIndicies, so each single-candidate pick still consumes a
+# wire row. The remainder goes to the deck bottom with no prompt on DCGO's
+# side (one remaining card has one order); our engine parks the documented
+# one-choice `OrderedPermutation { remaining: 1 }` -- answered `sim_only`.
+card: BT7-056
+clause: BT7-056#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = the T3 turn draw; stack[11..13] = the three cards Dorumon
+    # reveals, in reveal order.
+    stack: [BT7-056, BT24-088, BT24-088, BT24-088, BT25-092,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, EX7-073, BT7-090, BT24-081]
+    rest: tm-dorumon
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- play Dorumon (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT7-056, from: hand } }
+    expect: { prompt: main_phase }
+  # Bucket 1 (C# condition 1): "1 card with [X Antibody] in its traits" --
+  # BeelStarmon (X Antibody), the only candidate.
+  - actor: 0
+    do: { select: { cards: [EX7-073] } }
+    expect: { prompt: SelectCardEffect }
+  # Bucket 2 (C# condition 2): "1 [Kota Domoto]" -- the only candidate.
+  - actor: 0
+    do: { select: { cards: [BT7-090] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: Titamon + SkullBaluchimon returns to the bottom. DCGO asks
+  # nothing (one remaining card has one order); our engine parks a
+  # one-choice, non-declinable `OrderedPermutation { remaining: 1 }` prompt
+  # -- the documented "OrderedPermutation at N=1 -- ours" finding in
+  # docs/DCGO_EXAM.md ("Rows where one side looks rules-wrong"): a prompt
+  # with a single valid action and no decline is not a choice under rule 17,
+  # and DCGO skips it. Answered sim-side only; zero wire rows.
+  - actor: 0
+    do: { select: { cards: [BT24-081], sim_only: true } }
+  # One step past the clause: memory 0 is still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT7-090, EX7-073]
+      p0.field:
+        - { card_id: BT7-056, dp: 1000, suspended: false, sources: [] }
+      p1.field: []
+      p1.security: 5

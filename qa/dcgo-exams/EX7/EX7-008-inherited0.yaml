@@ -1,0 +1,137 @@
+# Exam scenario: ToyAgumon (EX7-008), clause EX7-008#inherited#0 --
+# "[Your Turn] This Digimon gets +2000 DP."
+#
+# ToyAgumon must be a DIGIVOLUTION CARD for the inherited effect to apply, so
+# the line extends EX7-008-effect0.yaml by one digivolve: Scopemon BT21-071
+# (Lv.4, purple) goes onto ToyAgumon through Scopemon's own alt-circle "Lv.3
+# w/[Three Musketeers] in text: Cost 2" (ToyAgumon's [On Play] names the
+# trait; ToyAgumon is red, so Scopemon's purple circle is closed and no cost
+# prompt is asked -- the oracle-confirmed BT21-071-effect0 shape). THE
+# CLAUSE is then read off the projection's effective DP: Scopemon prints
+# 4000 and reads 6000 during P0's turn (the trailing P0 pass) and 4000 again
+# on P1's turn (the T6 breeding pass) -- both asserted.
+#
+# WHY KAPURIMON (EX7-005) IS THE EGG, AND WHY THIS FILE NEEDS ITS OWN BOOK.
+# The printed alt-circle "Lv.2 w/[Three Musketeers] in text: Cost 0" costs
+# exactly what the standard circle costs, so a base that satisfies BOTH is
+# indistinguishable (no cost prompt on either engine, same memory). Only two
+# Lv.2 cards in the whole pool print "[Three Musketeers]" -- Kapurimon EX7-005
+# and Pagumon BT25-005 -- and both are BLACK, which is the point: a RED ToyAgumon
+# can reach a black Lv.2 ONLY through the clause under exam. DCGO's
+# AddSelfDigivolutionRequirementStaticEffect for this circle passes no
+# `cardColor`, so its GetEvoCost applies no colour check (the
+# `ignoreDigivolutionRequirement: false` argument only means the circle does
+# not need a "may ignore requirements" grant); our alt_path likewise carries
+# no `color_is`. Kapurimon's own text ([Your Turn][Once Per Turn] gain 1
+# memory when an effect places a [Three Musketeers] Option under it) never
+# fires on this line -- nothing is placed under it -- and it has no [On
+# Deletion], unlike the shared book's Pagumon ST6-01. Kapurimon is implemented
+# on both sides (code/digimon-engine/cards/ex7/EX7-005.yaml, landed 61fc7c7d9;
+# DCGO EX7/Black/EX7_005.cs), and neither fires its trigger on a digivolution:
+# DCGO's OnAddDigivolutionCards needs a placing cardEffect, and our
+# `on_add_digivolution_cards` deliberately does not fire from normal
+# digivolution. Book: qa/dcgo-exams/EX7/tm_ex7_008_pool.json.
+#
+#   T1 (P0): hatch Kapurimon.        T2 (P1): pass.
+#   T3 (P0): ToyAgumon onto Kapurimon for 0 (EX7-008#effect#0's circle).
+#   T4 (P1): pass.
+#   T5 (P0, 3): promote; Scopemon onto ToyAgumon for 2 (memory 1, draw 1);
+#            DCGO-only decline of Scopemon's vacuous [When Digivolving] gate;
+#            pass (memory 1 -> P1 gets 3).
+#   T6 (P1): breeding pass -- the off-turn reading.
+#
+# PROMPT SHAPE: Scopemon's [When Digivolving] is BT21_071.cs's
+# CanActivateConditionShared -- "hand or trash non-empty and an own non-token
+# Digimon exists" -- so DCGO asks its OptionalSkill even with nothing to
+# place; our engine installs no prompt when the pick has zero candidates
+# (docs/DCGO_EXAM.md, "DCGO parks vacuous optional-cost gates our engine
+# skips"). Declined on the wire, exactly as in BT21-071-effect0.yaml.
+clause: EX7-008#inherited#0
+card: EX7-008
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws: T3 turn draw, T3 digivolve draw,
+    # T5 turn draw, T5 Scopemon digivolve draw. No [Appmon] / [Three
+    # Musketeers] TRAIT card ever reaches the hand, so Scopemon's [When
+    # Digivolving] has nothing to place.
+    stack: [EX7-008, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, EX7-051, BT25-083]
+    rest: tm-kapurimon-egg
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Kapurimon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- breeding-digivolve EX7-008 onto the BLACK
+  # Kapurimon for 0 (draw 1). No breeding-action step this turn: the breeding
+  # area holds a Lv.2 (cannot be moved) and is occupied (cannot hatch), so
+  # neither engine asks (the BT21-071-effect0 / BT21-029 shape).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote, so the digivolved stack is visible on the battle area
+  # (the projection dumps the battle area, not the breeding area).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Scopemon onto ToyAgumon for 2 (memory 3 -> 1).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT21-071 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Scopemon's vacuous [When Digivolving] OptionalSkill, declined.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE, on-turn reading: Scopemon 4000 + 2000 = 6000. P0 still holds
+  # memory 1, so this pass is P0's and ends the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): off-turn reading -- back to the printed 4000.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.field:
+        - { card_id: BT21-071, dp: 6000, suspended: false, sources: [EX7-005, EX7-008] }
+  - at: 12
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-083, BT25-092, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [EX7-005, EX7-008] }
+      p1.field: []

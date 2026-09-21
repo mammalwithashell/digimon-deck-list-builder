@@ -229,6 +229,71 @@ fn ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_
     );
 }
 
+/// Rule 15-8-3-2 (general_rule.pdf): a trigger-type effect "can't activate
+/// during rule/effect processing" -- it waits as pending activation until the
+/// resolving effect finishes. Ruin Mode's [End of Attack] deletes Ruin Mode
+/// FIRST, which triggers its own [On Deletion] (-5000 DP to all opposing
+/// Digimon); that trigger must NOT resolve until the whole [End of Attack]
+/// body (opposing pick, delete, Recovery, hatch) is done. DCGO agrees
+/// (`EX4_074.cs` OnEndAttack body: `DestroyPermanentsClass` on itself, then
+/// `SelectPermanentEffect`; the OnDestroyedAnyone skill is stacked and drained
+/// by `TriggeredSkillProcess` after the body returns). Exam
+/// `EX4-074-effect2.yaml` step 28: DCGO shows the opposing DP untouched at
+/// the pick.
+#[test]
+fn ex4_074_end_of_attack_self_deletion_on_deletion_waits_until_the_body_resolves() {
+    let mut runner = shine_runner()
+        .add_card(make_digimon("OPP-1", 9000))
+        .add_card(make_digimon("OPP-2", 12000))
+        .add_card(make_test_card("SECURITY", "Security"))
+        .deck(0, &["SECURITY"])
+        .security(1, &["SECURITY"])
+        .start();
+    let ruin = runner.place_on_field(0, "EX4-074", Some(0));
+    runner.place_on_field(1, "OPP-1", Some(0));
+    let opp_2 = runner.place_on_field(1, "OPP-2", Some(0));
+
+    runner.attack_player(ruin, 1, false);
+
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "two opposing Digimon: the [End of Attack] delete pick parks"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|perm| perm.top_card().card_id(&runner.game.card_data) != "EX4-074"),
+        "Ruin Mode has already deleted itself before the pick"
+    );
+    let dps: Vec<Option<i32>> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .enumerate()
+        .map(|(i, _)| runner.dp_of(PermanentHandle { player: 1, index: i as _ }))
+        .collect();
+    assert_eq!(
+        dps,
+        vec![Some(9000), Some(12000)],
+        "the self-deletion [On Deletion] -5000 must still be pending at the pick (15-8-3-2)"
+    );
+
+    runner.auto_resolve().expect("finish [End of Attack] and the pending [On Deletion]");
+    let _ = opp_2;
+    let survivors: Vec<i32> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(i, _)| runner.dp_of(PermanentHandle { player: 1, index: i as _ }))
+        .collect();
+    assert_eq!(survivors.len(), 1, "one opposing Digimon was deleted");
+    assert!(
+        survivors[0] == 4000 || survivors[0] == 7000,
+        "after the body completes the [On Deletion] -5000 applies to the survivor (got {})",
+        survivors[0]
+    );
+}
+
 /// NEGATIVE for the End-of-Attack chain's "if you have a Tamer in play" hatch
 /// sub-condition: with no Tamer on player 0's field the self-delete + opponent
 /// delete + Recovery +1 still resolve, but the hatch is skipped — no egg moves

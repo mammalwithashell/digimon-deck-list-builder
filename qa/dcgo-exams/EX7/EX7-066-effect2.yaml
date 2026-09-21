@@ -1,0 +1,132 @@
+# Exam scenario: Chaos Triangular (EX7-066), clause EX7-066#effect#2 --
+# "[Security] Delete 1 of your opponent's Digimon with 12000 DP or less."
+#
+# EX7-066 is pinned as P0's TOP security card (stack[9]; stack[5..9] is the
+# security stack, [9] flipped first -- docs/DCGO_EXAM.md "What each stack
+# position becomes"). P1 fields Biyomon ST1-02 (3000 DP), Dracomon ST1-04
+# (4000 DP) and Agumon ST1-03 (2000 DP; 3000 on its own turn is an INHERITED
+# effect, off while it is the top card) and attacks security with AGUMON, so
+# the flipped clause has THREE legal targets (all <= 12000) and the pick is a
+# real decision: Biyomon, which is NOT the attacker. EX7-066 is an Option, so
+# no security battle follows; Agumon stays suspended on the field.
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, memory 3): play Biyomon (3 -> 1), play Dracomon (1 -> -2, over).
+#   T3 (P0, memory 2): pass everything.
+#   T4 (P1, memory 3): play Agumon (3 -> 0); pass (P0 gets 3).
+#   T5 (P0): pass everything (Agumon shakes summoning sickness).
+#   T6 (P1, memory 3): Agumon attacks security. THE CLAUSE: EX7-066 flips,
+#            P0 (the defender) picks Biyomon. Attacking costs no memory, so
+#            the trailing step is P1's main prompt.
+#
+# REPAIRED 2026-09-18 -- WHY THREE DIGIMON AND THE THIRD ONE ATTACKS. The
+# crashed draft attacked with `field.1` on a TWO-Digimon board. `attack:
+# attacker: field.N` reaches DCGO as a COMPACT index over
+# Player.FieldPermanents in FRAME order, and CardSource.PreferredFrame seats
+# Digimon centre-out (4, 3, 5, ...): ours [Biyomon, Dracomon] is DCGO's
+# [Dracomon, Biyomon], so `field.1` would have sent BIYOMON into security on
+# DCGO -- the artefact measured on the sibling EX7-070-effect2.yaml r1
+# (recording 20260918T073957Z_8be88fd7...). The THIRD-entered Digimon sits at
+# frame 5 = field.2 on BOTH sides (../BT25/NOTES-BT25-083.md). The steps below
+# are that sibling's repaired r2 line verbatim; only the security card differs.
+# The pick itself (`opp.field.0`) goes on the wire by card identity.
+#
+# PROMPT SHAPE (EX7_066.cs, region "Security"): SetUpActivateClass(null,
+# ..., -1, false, ...) -- mandatory, no OptionalSkill; one
+# SelectPermanentEffect(Mode.Destroy, canNoSelect: false) over opponent
+# Digimon with DP <= MaxDP_DeleteEffect(12000), selectPlayer = card.Owner = P0.
+card: EX7-066
+clause: EX7-066#effect#2
+seed: 424242
+decks:
+  p0:
+    # [10], [11] = the T3 / T5 draws.
+    stack: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-066,
+            BT25-058, BT25-092]
+    rest: tm-chaos-triangular
+  p1:
+    # ONE ST1-03 in hand through T4 (a second copy makes `play: ST1-03`
+    # ambiguous); the draws (stack[10..12]) are BT1-009.
+    stack: [ST1-02, ST1-04, ST1-03, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-02, ST1-03, ST1-03,
+            BT1-009, BT1-009, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 2)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): the third Digimon -- the slot-safe attacker.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): THE CLAUSE -- Agumon (field.2 on both sides) into security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  # The flipped Option's [Security]: P0 deletes Biyomon (3000 <= 12000) -- one
+  # of THREE legal targets, and not the attacker.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The clause's pick row: the Option has flipped, all three are standing.
+  - at: 14
+    that:
+      turn: 6
+      p0.security: 4
+      p1.trash: []
+  - at: 15
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [EX7-066]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-058, BT25-092]
+      p0.field: []
+      p1.security: 5
+      p1.trash: [ST1-02]
+      p1.field:
+        - { card_id: ST1-04, dp: 4000, suspended: false, sources: [] }
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }

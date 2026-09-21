@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use digimon_dsl::compiled::CompiledStep;
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::DslCardEffect;
@@ -181,7 +181,7 @@ fn link_installs_host_selection() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let result = r.game.play_option_from_hand(0, 0);
+    let result = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     assert_eq!(result, OptionPlayResult::Pending);
     assert!(
         r.game.pending_selection.is_some(),
@@ -218,7 +218,7 @@ fn link_attaches_to_chosen_host() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     assert!(r.game.pending_selection.is_some());
 
     // Resolve the host-selection prompt.
@@ -254,7 +254,7 @@ fn when_would_link_cancel_prevents_attach() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -282,7 +282,7 @@ fn optional_when_would_link_accept_prevents_attach() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let host_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, host_action);
 
@@ -318,7 +318,7 @@ fn optional_when_would_link_decline_resumes_attach() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let host_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, host_action);
 
@@ -342,10 +342,26 @@ fn optional_when_would_link_decline_resumes_attach() {
     assert!(r.game.pending_selection.is_none());
 }
 
-/// Test 3: with no eligible hosts, the Link Option silently trashes — no
-/// selection is installed.
+/// Test 3: with no eligible hosts the declaration is NOT AVAILABLE — the card
+/// stays in hand and nothing is trashed.
+///
+/// This test used to read "the Link Option silently trashes". That behaviour
+/// was retired twice over. `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST`
+/// (`f24b986d0`) established the rule: general_rule.pdf §10-1-3-1 makes "the
+/// player chooses 1 of their Digimon that meets the requirement" part of the
+/// link procedure, so with no such Digimon the §6-5-1-4 main-phase action
+/// cannot be declared at all — DCGO's `CardEffectFactory.LinkEffect` returns
+/// `null` outright (`Link.cs:24`). `G-ENGINE-OPTION-LINK-FROM-HAND` then moved
+/// the declaration onto the `HAND_EFFECT` bit, so a link-ONLY Option now has
+/// no §6-5-1-3 play mode either: both bits are dark and the card is simply not
+/// declarable here. Paying a cost to trash a card linked to nothing was an
+/// illegal action exposed to the RL action space.
+///
+/// `dispose_option`'s "no candidate → trash" arm survives as the
+/// resolution-time safety net for a host that disappears MID-resolution; it is
+/// no longer reachable from a player declaration.
 #[test]
-fn link_no_eligible_hosts_trashes_card() {
+fn link_no_eligible_hosts_is_not_declarable() {
     let mut r = DebugRunner::builder()
         .add_card(option_card("LINK-CARD", 0, CardColor::Red))
         .add_card(digimon_card("RED-MATCH", CardColor::Red))
@@ -357,11 +373,23 @@ fn link_no_eligible_hosts_trashes_card() {
     r.place_on_field(0, "RED-MATCH", Some(0));
     advance_to_main(&mut r);
 
-    let result = r.game.play_option_from_hand(0, 0);
-    assert_eq!(result, OptionPlayResult::Trashed);
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 0.0,
+        "no eligible host -> the §6-5-1-4 link declaration is not offered"
+    );
+    assert!(!r.game.hand_effect_slot_is_link(0, 0));
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 0.0,
+        "a link-ONLY Option has no §6-5-1-3 use mode either"
+    );
+
+    let result = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
+    assert_eq!(result, OptionPlayResult::Invalid);
     assert!(r.game.pending_option.is_none());
     assert!(r.game.pending_selection.is_none());
-    assert_eq!(r.trash_size(0), 1, "Link with no eligible host trashes");
+    assert_eq!(r.trash_size(0), 0, "nothing is paid and nothing is trashed");
+    assert_eq!(r.hand_size(0), 1, "the card stays in hand");
 }
 
 /// Test 4: once attached, a `.linked()` effect on the linked card fires when
@@ -386,7 +414,7 @@ fn linked_card_sideways_inherits_effects() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     // Resolve host selection.
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
@@ -450,7 +478,7 @@ fn host_deletion_trashes_linked_card() {
     r.place_on_field(1, "P1-WITNESS", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -493,7 +521,7 @@ fn host_return_to_hand_trashes_linked_card() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -531,7 +559,7 @@ fn linked_card_not_targetable_by_attack_or_delete() {
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -627,7 +655,7 @@ fn on_link_observer_fires_on_both_sides_after_attach() {
     r.place_on_field(1, "P1-WITNESS", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -667,7 +695,7 @@ fn on_link_observer_sees_option_main_already_resolved() {
     r.place_on_field(0, "OBSERVER", Some(0));
     advance_to_main(&mut r);
 
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -716,7 +744,7 @@ effects:
     advance_to_main(&mut r);
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Pending
     );
     let mask = build_action_mask(&r.game, 0);
@@ -760,7 +788,7 @@ effects:
     advance_to_main(&mut r);
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Pending
     );
     let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
@@ -807,7 +835,7 @@ effects:
     advance_to_main(&mut r);
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Pending
     );
     assert_eq!(r.memory(), 1, "Link requirement cost is paid");
@@ -857,7 +885,7 @@ effects:
         "unaffordable Link cost must be masked before hand play"
     );
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Invalid
     );
     assert_eq!(r.memory(), -10, "failed Link cost leaves memory unchanged");
@@ -942,7 +970,7 @@ fn d6_self_filtered_when_linked_fires_once_and_not_on_sibling() {
     advance_to_main(&mut r);
 
     // Attach A to the host — A's WhenLinked fires exactly once.
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
     assert_eq!(
@@ -958,7 +986,7 @@ fn d6_self_filtered_when_linked_fires_once_and_not_on_sibling() {
     );
 
     // Attach B (sibling) to the same host — A's WhenLinked must NOT re-fire.
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
     assert_eq!(
@@ -1026,7 +1054,7 @@ fn host_side_when_linked_fires_for_receiving_host_only() {
     advance_to_main(&mut r);
 
     // Link LINK-A specifically to HOST-A.
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let pa = r.game.pending_selection.as_ref().unwrap();
     let target_a = pa
         .valid_action_ids
@@ -1058,7 +1086,7 @@ fn host_side_when_linked_fires_for_receiving_host_only() {
     );
 
     // Now link LINK-B to HOST-B — only HOST-B fires this time.
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let pb = r.game.pending_selection.as_ref().unwrap();
     let target_b = pb
         .valid_action_ids
@@ -1318,6 +1346,140 @@ effects:
     );
 }
 
+fn hand_link_bit(hand_index: usize) -> usize {
+    (digimon_engine::action::space::HAND_EFFECT_START + hand_index as u16) as usize
+}
+
+/// From-hand Digimon link (G-ENGINE-DIGIMON-LINK-FROM-HAND, closed 2026-09-17)
+/// — the other half of the printed keyword, "Plug this card from the HAND or
+/// battle area sideways into the specified Digimon". DCGO `LinkEffect` is
+/// declarable while `IsExistOnHand(card)`, and `ILinkCard.LinkCard` derives
+/// root `Hand` → `WhenWouldLink` → pay cost → `Permanent.AddLinkCard`.
+///
+/// Our surface: the hand slot's `HAND_EFFECT` bit (no `[Hand] [Main]` on the
+/// card, so the bit is the link), host selection through the same
+/// `OwnField` prompt the field origin installs, then the card is lifted out
+/// of the hand and attached — no absorb, no `[On Play]` — with `OnLink`
+/// firing so the linked card's `[When Linking]` and its linked ESS resolve.
+#[test]
+fn dsl_digimon_link_from_hand_attaches_pays_cost_and_fires_when_linked() {
+    use digimon_engine::enums::Keyword;
+    use digimon_engine::selection::SelectionKind;
+
+    let yaml = r#"
+card: GATCH-DSL
+name: Gatchmon
+kind: digimon
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { kind: digimon }
+  - scope: linked
+    when: when_linked
+    process:
+      - draw: { of: you, count: 1 }
+  - scope: linked
+    kind: grant_keyword
+    keyword: Raid
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH-DSL", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 5])
+        .hand(0, &["FILLER", "GATCH-DSL"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    // The hand card's self link-condition is readable from hand, with HOST as
+    // a legal host; the plain FILLER at slot 0 is not a link source.
+    let (cost, hosts) = r
+        .game
+        .hand_digimon_link_condition_targets(0, 1)
+        .expect("GATCH-DSL in hand carries a self link-condition");
+    assert_eq!(cost, 1);
+    assert!(hosts.contains(&host));
+    assert!(r.game.hand_digimon_link_condition_targets(0, 0).is_none());
+
+    // The mask offers the link on GATCH-DSL's hand slot and NOT on FILLER's.
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(1)], 1.0, "hand link offered for GATCH-DSL");
+    assert_eq!(mask[hand_link_bit(0)], 0.0, "no hand link for a plain Digimon");
+
+    // Declare → host prompt (never auto-picked, rule 17) → pick HOST.
+    let mem_before = r.memory();
+    let hand_before = r.hand_size(0);
+    r.game.decode_action(hand_link_bit(1) as u16, 0);
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("declaring a hand link installs the host-selection prompt");
+    assert_eq!(pending.kind, SelectionKind::OwnField);
+    assert!(pending.source_permanent.is_none(), "a hand card has no source permanent");
+    let action = pending.valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Attached from hand (the hand lost GATCH-DSL and gained the WhenLinked
+    // draw: net 0), nothing was absorbed from the field, cost paid, and the
+    // linked Raid ESS reaches the host.
+    assert_eq!(r.battle_area_size(0), 1, "HOST alone stands; nothing was played");
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "GATCH-DSL attached as a linked card");
+    assert_eq!(linked[0].card_id(&r.game.card_data), "GATCH-DSL");
+    assert!(
+        !r.game
+            .player(0)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "GATCH-DSL"),
+        "the linked card left the hand"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        hand_before,
+        "hand: -1 (GATCH-DSL linked) +1 (when_linked drew once)"
+    );
+    assert_eq!(r.memory(), mem_before - 1, "link cost 1 paid");
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(host, Keyword::Raid),
+        "scope: linked grant_keyword Raid reaches the host from a hand-origin link"
+    );
+}
+
+/// The hand link is gated exactly like the field one: no legal host (an empty
+/// battle area) or an unaffordable cost withholds the bit, and the decoder
+/// refuses the id rather than parking a prompt over nothing.
+#[test]
+fn digimon_link_from_hand_is_withheld_without_a_host_or_the_memory() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["GATCH"])
+        .memory(0)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkCondition));
+    advance_to_main(&mut r);
+
+    // No host on the field → no bit, and the decoder is a no-op.
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(0)], 0.0, "no host → no hand link");
+    r.game.decode_action(hand_link_bit(0) as u16, 0);
+    assert!(r.game.pending_selection.is_none(), "nothing parked without a host");
+    assert_eq!(r.hand_size(0), 1, "GATCH still in hand");
+
+    // With a host the bit appears (cost 1 against memory 0 is affordable down
+    // to the -10 floor, as for the field origin).
+    r.place_on_field(0, "HOST", Some(0));
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[hand_link_bit(0)], 1.0, "a host makes the hand link legal");
+}
+
 /// Facet #6/#11 (DSL host-side) — a host Digimon authored in YAML with
 /// `when: when_card_linked_to_this` fires its body once when a card gets
 /// linked to it. Confirms the DSL timing lowers to `OnLink` + the host
@@ -1348,7 +1510,7 @@ effects:
     advance_to_main(&mut r);
 
     let hand_before = r.hand_size(0);
-    let _ = r.game.play_option_from_hand(0, 0);
+    let _ = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action_id);
 
@@ -3679,7 +3841,7 @@ effects:
 
     let trash_before = r.trash_size(0);
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Pending,
         "the self-link option parks for the host selection"
     );

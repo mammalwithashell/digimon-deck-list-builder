@@ -420,7 +420,7 @@ impl Game {
                     let Some(card) = self.option_source_card(player_id, source) else {
                         return OptionPlayResult::Invalid;
                     };
-                    self.option_legal_play_modes(card, player_id)
+                    self.option_legal_play_modes(card, player_id, source)
                 };
                 match legal_modes.as_slice() {
                     [] => return OptionPlayResult::Invalid,
@@ -560,15 +560,20 @@ impl Game {
             subtype: mode.subtype(),
         });
 
-        // 6. Fire OnUseOption (global observer across every battle area) +
-        // OptionMain (this card's body). Drain between — OnUseOption fires
-        // first per spec §4 (global observer fires before body).
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnUseOption,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        // 6. Arm the board-wide `OnUseOption` observers ("when a player uses
+        // an Option card" — BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons).
+        // They fire AFTER this card's own body has fully resolved, NOT
+        // before it: DCGO `UseOptionClass.UseOption` STACKS the OnUseOption
+        // skill infos (`StackSkillInfos` → `PutStackedSkill`) and then runs
+        // `OptionSkill` inline, so the stacked observers resolve once the
+        // body is done; the official BT3-096 Q&A states it outright ("It can
+        // be activated after activating the used Option card's [Main]
+        // effect."). `fire_on_use_option_observers` consumes the flag from
+        // both the synchronous path below and the selection-resume path
+        // (`advance_pending_option`), so a body that parks a selection — or
+        // CLAIMS `pending_option` (`place_self_under_permanent`) — still
+        // fires the observers exactly once.
+        self.on_use_option_armed = Some((player_id, card_handle));
 
         // Phase 9 Task 3 — Counter-window overlay: when this Option is
         // being played as a defender's counter, the `.counter()` +
@@ -594,23 +599,36 @@ impl Game {
         // body — e.g. a Link Option whose `.link(..).process(..)` does the
         // plug-in's work). This split is what keeps a dual-mode Plug-In's
         // Standard `[Main]` body from firing on a Link play, and vice versa.
+        // `option_body_pending` makes the drain dispose the Option the moment
+        // this body resolves, before the triggers it caused (9-1-5, 18-1-2;
+        // `complete_option_body_if_done`).
+        self.option_body_pending = true;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
 
         // 7. If an effect parked a selection, suspend and let the caller drive.
+        // The resume path (`advance_pending_option`) fires the armed
+        // `OnUseOption` observers once the body's selection chain clears.
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }
 
-        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+        // 7b/8. Body fully resolved. Normally the drain above already
+        // disposed the Option (its loop-top hook); this explicit call covers
+        // a body that never went through the queue (no `OptionMain` effect)
+        // and a use made inside a deferred-drain scope (an effect-driven use
+        // from a selection callback), where the hook is skipped. It enqueues
+        // the board-wide OnUseOption observers (see step 6), offers
+        // <Arts Digivolve>, then disposes per subtype (Standard → trash;
+        // Delay → park on field; Link → install host-selection). A parked
+        // prompt returns Pending and defers check_turn_end.
+        self.complete_option_body_if_done();
+        if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }
-
-        // 8. Dispose per subtype (Standard → trash; Delay → park on field;
-        // Link → install host-selection). `dispose_option` may install a
-        // PendingSelection (Link flow); if so, return Pending and defer
-        // check_turn_end until `attach_linked_card` finishes the attach.
-        self.dispose_option();
+        // Resolve the observers + the triggers the body caused, now that the
+        // Option has left the executing area.
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }

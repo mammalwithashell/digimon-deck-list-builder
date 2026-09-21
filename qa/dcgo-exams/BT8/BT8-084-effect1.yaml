@@ -1,0 +1,185 @@
+# Exam scenario: Kimeramon (BT8-084), clause BT8-084#effect#1 --
+# "[When Digivolving] You may place 1 level 5 or lower Digimon card from your
+#  trash under this Digimon as its bottom digivolution card. Then, up to 4 of
+#  your opponent's Digimon get -1000 DP for each of this Digimon's colors
+#  until the end of your opponent's next turn."
+#
+# THE WITNESS both engines share: Hudiemon leaves p0's trash and becomes the
+# BOTTOM digivolution card (sources [BT23-101, P-137], bottom first). The
+# second sentence is DCGO-only today -- see PREDICTED DIVERGENCE.
+#
+# THE LINE (shared by BT8-084-effect1.yaml and BT8-084-effect2.yaml).
+# Kimeramon is reached through its PRINTED digivolution circle -- "Lv.4 / 4"
+# in an ALL-COLOUR ring (card image BT8-084.webp; DCGO BT8_084.asset lists
+# EvoCosts for all seven colours at Lv.4 / 4). The official-DB bundle misses
+# that ring and data/cards.json keeps only its RED entry (NOTES-BT8-084.md),
+# so the base is a RED Lv.4, legal in both engines: Flamedramon P-137
+# (red/blue, hard-played for 5; its only texts are <Armor Purge>, <Raid> and
+# an attack-target-switch trigger -- silent here). The DNA route (#effect#0)
+# has no exam verb and is not needed.
+#
+#   T2 (p1, 3): Biyomon A (2).
+#   T4 (p1, 3): Biyomon A attacks the player, flips p0's stack[9] = Hudiemon
+#               BT23-101 (green/yellow Lv.4, 7000, no [Security], no
+#               inherited) and dies; Hudiemon goes to p0's TRASH (a security
+#               Digimon is trashed after its battle). Then Biyomon B (3 -> 1)
+#               and Phoenixmon (1 -> -9): p0 opens T5 on 9.
+#   T5 (p0, 9): Flamedramon (9 -> 4), Kimeramon over it (4 -> 0): the turn
+#               stays p0's, which is what keeps the [Your Turn] clause live.
+#
+# PROMPT SHAPE (BT8_084.cs, OnEnterFieldAnyone / CanTriggerWhenDigivolving):
+# SetUpActivateClass(..., -1, false, ...) -> NO OptionalSkill. (1)
+# SelectCardEffect over the own trash (IsDigimon && HasLevel && Level <= 5;
+# maxCount 1, canNoSelect: true) -- the "you may"; ours a declinable
+# `select_trash`. 1:1. (2) AddDigivolutionCardsBottom. (3) minusDP = 1000 x
+# TopCard.CardColors.Count, read AFTER the placement and with the [Your Turn]
+# ChangeCardColorClass live: white + red/blue (Flamedramon) + green/yellow
+# (Hudiemon) = 5 -> -5000; SelectPermanentEffect over p1's Digimon (maxCount
+# min(4, 2) = 2, canNoSelect: false, canEndNotMax: true). The line picks
+# Phoenixmon ALONE (12000 -> 7000, until the end of p1's next turn): "up to 4"
+# is exercised by stopping short of the maximum, and Biyomon B (3000) is kept
+# out of a 0-DP rules deletion that would add nothing to the reading.
+#
+# FORMERLY PREDICTED DIVERGENCE -- closed 2026-09-19. The DP-minus sentence
+# (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), the "[Your Turn] treated as also
+# having the colors of its digivolution cards" treatment
+# (G-ENGINE-ADDITIVE-COLOR-TREATMENT) and the 4-colour +4000 DP
+# (G-DSL-OWN-STACK-COLOR-COUNT-GTE) are now authored in BT8-084.yaml, so both
+# engines park the SelectPermanentEffect pick and read Kimeramon at 12000 /
+# Phoenixmon at 7000 after the clause.
+#
+# Book: qa/dcgo-exams/BT8/tm_bt8_084_pool.json (--decks). p0 (`tm-kimeramon`)
+# is the quiet ST-1 list with Kimeramon x4 + Flamedramon P-137 x4 + Hudiemon
+# BT23-101 x4 in for its Options / Phoenixmon; p1 is the quiet ST-1 opponent.
+card: BT8-084
+clause: BT8-084#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Flamedramon (the Lv.4 base), Kimeramon, inert filler
+      - P-137
+      - BT8-084
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP -- Hudiemon, the future trash card
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - BT23-101
+      # (10+): T3 turn draw, T5 turn draw, the digivolve draw
+      - BT4-014
+      - BT4-014
+      - BT3-007
+    rest: tm-kimeramon
+  p1:
+    stack:
+      # hand (0-4): Biyomon A (attacks and dies), Biyomon B, Phoenixmon, filler
+      - ST1-02
+      - ST1-02
+      - ST1-10
+      - ST1-03
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-04
+      # (10+): the T2 / T4 / T6 turn draws
+      - BT4-014
+      - ST1-08
+      - BT3-007
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): Biyomon A (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Biyomon A attacks the player and dies to the security
+  # Hudiemon (7000), which goes to p0's trash. Then Biyomon B (3 -> 1) and
+  # Phoenixmon (1 -> -9): p0 opens T5 on 9.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 9): Flamedramon (9 -> 4), then Kimeramon over it (4 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-137, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT8-084 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving], first sentence: "You may place 1 level 5 or lower
+  # Digimon card from your trash ..." -- Hudiemon, the only card in the trash.
+  - actor: 0
+    do: { select: { cards: [BT23-101] } }
+    expect: { prompt: SelectCardEffect }
+  # Second sentence: "up to 4 of your opponent's Digimon get -1000 DP for
+  # each of this Digimon's colors" -- SelectPermanentEffect (maxCount 2,
+  # canNoSelect: false, canEndNotMax: true). ONE target, Phoenixmon: "up to".
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: memory 0, p0 still holds the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trash pick: Kimeramon is on Flamedramon, Hudiemon is
+  # still in the trash. Three colours (white + Flamedramon's red/blue) -> 8000
+  # on BOTH sides.
+  - at: 14
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.trash: [BT23-101]
+      p0.field:
+        - { card_id: BT8-084, dp: 8000, suspended: false, sources: [P-137] }
+      p1.trash: [ST1-02]
+  # After the clause. Only fields BOTH engines are expected to agree on are
+  # named: p0.field / p1.field carry DP values the known gaps make diverge
+  # (see the header), and are left to the oracle differ.
+  - at: 16
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [ST1-04, ST1-04, BT1-009, BT4-014, BT4-014, BT3-007]
+      p1.trash: [ST1-02]
+      p0.security: 4
+      p1.security: 5

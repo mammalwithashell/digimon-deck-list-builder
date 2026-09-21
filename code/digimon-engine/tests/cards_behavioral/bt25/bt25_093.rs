@@ -75,13 +75,16 @@ fn bt25_093_structure_use_req_main_security_when_attacking_and_link_requirement(
             if t.scope == CompiledScope::Inherited && t.when == vec![CompiledTiming::OnSecurity]
     )));
 
-    // Inherited [When Attacking] [OPT].
+    // Inherited [When Attacking] [OPT] — MANDATORY: the printed text has no
+    // "you may" and DCGO registers it `isOptional: false` (BT25_093.cs
+    // "Link ESS"). An `optional: true` here would over-expose a decline.
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
         CompiledClause::Triggered(t)
             if t.scope == CompiledScope::Inherited
                 && t.when == vec![CompiledTiming::WhenAttacking]
                 && t.once_per_turn
+                && !t.optional
     )));
 
     assert!(compiled.effects.iter().any(|clause| matches!(
@@ -107,7 +110,12 @@ fn bt25_093_main_deletes_all_lowest_dp_opponent_digimon() {
     runner.game.enter_main_phase();
 
     let field_before = runner.battle_area_size(1);
-    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Pending);
+    // No [TS] Digimon on our side, so the Link play mode is not offered
+    // (F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST; general_rule.pdf §10-1-3-1)
+    // and the Standard [Main] body runs straight through: every step here is
+    // automatic (delete ALL lowest-DP, no link host), so the play completes
+    // synchronously and the Option is trashed.
+    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Trashed);
     let _ = runner.auto_resolve();
 
     // Both lowest-DP (3000) Digimon deleted; the 5000 survives.
@@ -171,7 +179,9 @@ fn bt25_093_no_fallback_when_deletion_happened() {
         .top_card()
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Pending);
+    // As above: no legal link host → no mode-select, and the body's steps are
+    // all automatic, so the play resolves synchronously.
+    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Trashed);
     let _ = runner.auto_resolve();
 
     // The opponent Option survives (no fallback trash); only the Lv3 was deleted.
@@ -186,7 +196,175 @@ fn bt25_093_no_fallback_when_deletion_happened() {
     );
 }
 
+// ── Section 3: [Security] flip → link tail → the linked [When Attacking] ESS ─
+//
+// G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON: a security-flipped Ignition
+// Flare must still offer "you may link this card to 1 of your Digimon" and,
+// once plugged in, the host carries the linked ESS. The ESS is MANDATORY and
+// bounded by the host's DP ("as much DP as this Digimon or less").
+
+#[test]
+fn bt25_093_security_flip_links_then_host_when_attacking_deletes_dp_bounded_mandatory() {
+    let mut runner = flare_runner()
+        .add_card(make_ts_digimon("HOST", 3))
+        .add_card({
+            let mut c = make_digimon("OPP-LOW", 3);
+            c.dp = Some(2000);
+            c
+        })
+        .add_card(make_digimon("OPP-LV6", 6))
+        .security(1, &["OPP-LV3", "BT25-093"])
+        .security(0, &["OPP-LV3", "OPP-LV3"])
+        .memory(5)
+        .start();
+    // P1's host (3000 DP) and P0's attacker (5000): the flip deletes the
+    // attacker (P0's only, hence lowest-DP, Digimon) with no prompt, then
+    // asks the link.
+    let host = runner.place_on_field(1, "HOST", Some(1));
+    let attacker = runner.place_on_field(0, "OPP-LV5", Some(0));
+    runner.game.enter_main_phase();
+
+    let _ = runner.attack_player(attacker, 1, false);
+    let lview = runner
+        .pending_selection_view()
+        .expect("security [Main]: link-host prompt must be asked");
+    assert_eq!(lview.selecting_player, 1);
+    assert_eq!(lview.kind, SelectionKind::OwnField);
+    assert!(lview.is_optional);
+    runner
+        .execute_action(1, encode_attack(0, host.index as u16))
+        .expect("link Ignition Flare to the host");
+    assert!(runner.pending_selection().is_none());
+    let host_handle = digimon_engine::permanent::PermanentHandle {
+        player: 1,
+        index: host.index,
+    };
+    assert_eq!(
+        runner.game.player(1).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+    // Link DP +2000: the host now reads 5000.
+    assert_eq!(runner.effective_dp(host_handle), Some(5000));
+
+    // P1's turn: the host attacks. Opponent board: a 5000 (equal — legal),
+    // a 2000 (legal) and no 6000+. The ESS pick is MANDATORY.
+    runner.game.end_turn();
+    let eq = runner.place_on_field(0, "OPP-LV5", Some(0));
+    let low = runner.place_on_field(0, "OPP-LOW", Some(0));
+    let big = runner.place_on_field(0, "OPP-LV6", Some(0));
+    runner.game.enter_main_phase();
+    let field0_before = runner.battle_area_size(0);
+    let _ = runner.attack_player(host_handle, 0, false);
+    let view = runner
+        .pending_selection_view()
+        .expect("linked ESS: delete pick must park");
+    assert_eq!(view.selecting_player, 1);
+    assert_eq!(view.kind, SelectionKind::OppField);
+    assert!(
+        !view.is_optional,
+        "printed text has no 'you may'; DCGO canNoSelect:false — no decline"
+    );
+    assert!(view.valid_action_ids.contains(&encode_attack(0, eq.index as u16)));
+    assert!(view.valid_action_ids.contains(&encode_attack(0, low.index as u16)));
+    assert!(
+        !view.valid_action_ids.contains(&encode_attack(0, big.index as u16)),
+        "6000 DP exceeds the host's 5000 — not offered"
+    );
+    runner
+        .execute_action(1, encode_attack(0, eq.index as u16))
+        .expect("delete the equal-DP Digimon");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), field0_before - 1);
+}
+
+// ── Section 4: the §10-1-3 link procedure ORDER (from-hand declaration) ──
+//
+// general_rule.pdf (Ver.3.6) §10-1-3, p.19, fixes the order of the link
+// procedure and our from-hand Plug-In Option declaration must follow it:
+//   10-1-3-1  "The player declares a link and reveals 1 card to link. 1 link
+//              requirement is chosen on the revealed card, then the player
+//              chooses 1 of their Digimon that meets the requirement."
+//   10-1-3-2  "The specified link cost is paid."
+//   10-1-3-3  "The card to link is plugged in sideways into the chosen
+//              Digimon, and the link procedure is resolved."
+// Payment is step 2 of 3 — AFTER the host is chosen — and §9-1-8 says
+// revealing a card as part of a use procedure "isn't considered removal from
+// an area", so the revealed card is still in the hand while the host is being
+// picked. DCGO matches the PDF (`LinkEffect.ActivateCoroutine`,
+// `Link.cs:70-88`: the `SelectPermanentEffect` host pick runs first, payment
+// after), and the exam clause BT25-093#effect#4 measures exactly this row.
+// `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
+#[test]
+fn bt25_093_hand_link_pays_after_the_host_is_chosen_not_at_declaration() {
+    use digimon_engine::action::space::HAND_EFFECT_START;
+
+    let mut runner = flare_runner()
+        .hand(0, &["BT25-093"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    runner.game.decode_action(HAND_EFFECT_START, 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("§10-1-3-1: declaring the link parks the host pick");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+
+    // §10-1-3-2 has NOT happened yet.
+    assert_eq!(
+        runner.memory(),
+        before,
+        "§10-1-3-2: the link cost is paid AFTER the host is chosen, not at the          declaration"
+    );
+    // §9-1-8: revealing the card to link is not removal from an area.
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "§9-1-8: the revealed card to link is still in the hand until §10-1-3-3          plugs it in"
+    );
+    assert!(
+        runner.game.player(0).hand[0].card_id(&runner.game.card_data) == "BT25-093",
+        "the card still in hand is the declared Option"
+    );
+
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, host.index as u16))
+        .expect("§10-1-3-1: choose the [TS] host");
+
+    // §10-1-3-2 then §10-1-3-3.
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "the printed <Link> [TS] trait: Cost 3 is paid once the host is chosen"
+    );
+    assert_eq!(runner.hand_size(0), 0, "§10-1-3-3: the card leaves the hand");
+    let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "plugged in sideways");
+    assert_eq!(linked[0].card_id(&runner.game.card_data), "BT25-093");
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT25-093"),
+        "a linked Option is not trashed"
+    );
+}
+
 // ── fixtures ─────────────────────────────────────────────────────────────
+
+fn make_ts_digimon(id: &str, level: u8) -> digimon_engine::CardData {
+    let mut card = make_digimon(id, level);
+    card.traits = vec!["TS".to_string()];
+    card
+}
 
 fn flare_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()

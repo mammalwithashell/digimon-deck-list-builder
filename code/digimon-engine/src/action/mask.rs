@@ -125,7 +125,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // Standard `[Main]` mode or its Link mode fits the
                     // memory budget. An empty set means no mode is
                     // affordable right now.
-                    if game.option_legal_play_modes(card, player_id).is_empty() {
+                    if game
+                        .option_legal_play_modes(card, player_id, crate::game_actions::OptionSource::Hand(i))
+                        .is_empty()
+                    {
                         continue;
                     }
                 } else {
@@ -350,6 +353,22 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             let hand_limit = me.hand.len().min(HAND_MAIN_LIMIT);
             for h in 0..hand_limit {
                 if main_effect_select::hand_main_match(game, player_id, h).is_some() {
+                    mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
+                    continue;
+                }
+                // DigiLink Shape-B, hand origin: an Appmon Link Digimon in hand
+                // may declare its `<Link>` ("Plug this card from the hand ...")
+                // onto one of the controller's standing Digimon. Shares the
+                // slot's single `HAND_EFFECT` bit with a `[Hand] [Main]`
+                // effect, first-match-wins in the decoder's order ([Main] then
+                // link) — the same one-declarable-per-hand-slot limit DCGO's
+                // recorder has (`ActionEncoder.EncodeActivateCard`, skill 0).
+                // Host selection follows via the pending-selection mask.
+                // Either half of the §6-5-1-4 declaration: a Link Digimon, or
+                // a Plug-In Option being plugged in from hand (which is NOT
+                // the §6-5-1-3 "use an Option card from the hand" on the PLAY
+                // bit — two different main-phase actions).
+                if game.hand_link_available(player_id, h) {
                     mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
                 }
             }

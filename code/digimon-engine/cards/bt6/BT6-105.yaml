@@ -1,0 +1,96 @@
+# BT6-105 Gewalt Schwärmer — Option, Black, Cost 7. Traits: (none).
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/BT6-105.webp — authoritative; official DB bundle
+# data/card_bundles/BT6-105.md):
+#
+#   If you have a Digimon with [Three Musketeers] in its type in play, you may
+#   use this Option card without meeting its color requirements.
+#   [Main] Delete all Digimon with play costs of 7 or less.
+#
+# Inherited (Security):
+#   Security Effect [Security] Add this card to its owner's hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT6/Black/BT6_105.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` `IgnoreColorConditionClass`. CanUseCondition:
+#   `Owner.GetBattleAreaDigimons().Count(TopCard.CardTraits.Contains("Three
+#   Musketeers")) >= 1` — the OWNER's battle-area Digimon only (a [Three
+#   Musketeers] Tamer or a breeding-area Digimon does not count). CardCondition
+#   `cardSource == card` — the bypass scopes to THIS card only. Same shape as
+#   BT22-099 / P-151 / BT23-096 clause 0.
+#
+# Clause 1 — `EffectTiming.OptionSkill`, isOptional = FALSE.
+#   `Players_ForTurnPlayer.Map(GetBattleAreaDigimons().Filter(IsDigimon &&
+#   GetCostItself <= 7 && HasPlayCost)).Flat()` → ONE
+#   `DestroyPermanentsClass(list).Destroy()` — BOTH players' matches are
+#   deleted as a single batch. `HasPlayCost` (`!Option && PlayCost >= 0`) is
+#   false for tokens (no printed play cost), so tokens are never deleted.
+#
+# Clause 2 — `EffectTiming.SecuritySkill` → `AddThisCardToHand`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# Clause 0 is the top-level `use_requirement:` (EX7-066 Chaos Triangular /
+# EX7-071 idiom — the identical printed clause). `use_requirement` lowers to
+# the [Main] effect's `option_color_requirement_bypass` condition, which
+# `option_use_requirement_or_color_available` (action/mask.rs) consults at
+# use time: predicate true → the colour requirement is waived for THIS card;
+# false → normal colour matching applies. `of: you` + `zone: [battle_area]`
+# + `kind: digimon` = DCGO's `Owner.GetBattleAreaDigimons()` (a Tamer or a
+# breeding-area Digimon does not count). NOT modelled as a `kind: flood_gate`
+# granting `IgnoreColorRequirement`: that declarative is only ticked for
+# permanents on the field, so on a hand-resident Option it never reaches the
+# use-time colour check (the sibling flood-gate authorings are asserted
+# structurally only).
+#
+# Clause 1 uses `delete_all_permanents` (G-DSL-DELETE-ALL-PERMANENTS — the
+# step widened for this card): one scan of both battle areas, then
+# `Game::delete_permanents_batch` so the whole set leaves the field
+# simultaneously (rule 25 batched flow; DCGO DestroyPermanentsClass), rather
+# than `for_each` + `delete_permanent`, which would delete one at a time and
+# let [On Deletion] / "when another Digimon is deleted" observers see a
+# sequence. `kind: digimon` accepts tokens (they ARE Digimon on the field), so
+# `none_of: [kind: token]` reproduces DCGO's `HasPlayCost` exclusion — a token
+# has no play cost, so "play cost 7 or less" never describes it.
+
+card: BT6-105
+name: "Gewalt Schwärmer"
+kind: option
+color: [black]
+cost: 7
+
+# ─── Clause 0: "If you have a Digimon with [Three Musketeers] in its type in
+# play, you may use this Option card without meeting its color requirements."
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Three Musketeers"
+
+effects:
+  # ─── Clause 1: [Main] Delete all Digimon with play cost 7 or less ──────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Delete all Digimon with play costs of 7 or less"
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: any
+              - zone: [battle_area]
+              - kind: digimon
+              - play_cost_lte: 7
+              - none_of:
+                  - kind: token
+
+  # ─── Clause 2: [Security] Add this card to its owner's hand ────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Add this card to its owner's hand"
+    process:
+      - add_this_option_to_hand: {}

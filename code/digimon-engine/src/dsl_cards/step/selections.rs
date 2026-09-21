@@ -1060,6 +1060,11 @@ pub(crate) fn run_resume(
             game.run_trigger_order_selection_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
+        ResumeFrame::OptionTrashOrder(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_option_trash_order_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
         ResumeFrame::OptionalReplacement(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
             crate::replacement::run_optional_replacement_step(game, state, is_pass);
@@ -1140,6 +1145,15 @@ pub(crate) fn run_resume(
             );
             run_outer_conts(game, outer_conts);
         }
+        ResumeFrame::DelayBodyAfterCost {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_delay::continue_delay_body_after_selection(game, continuation);
+            run_outer_conts(game, outer_conts);
+        }
         ResumeFrame::AppFuseHostSelection(mut state) => {
             if is_pass {
                 return;
@@ -1165,6 +1179,9 @@ pub(crate) fn run_resume(
             let outer_conts = std::mem::take(&mut state.outer_conts);
             game.run_link_option_host_selection_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::OptionHandLinkHostSelection(state) => {
+            game.run_option_hand_link_host_selection_step(state, action_id);
         }
         ResumeFrame::DigimonLinkHostSelection(state) => {
             game.run_digimon_link_host_selection_step(state, action_id);
@@ -1550,47 +1567,28 @@ fn finish_non_dsl_count_capped(
             ctx.cancel_leave();
         }
         crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
-            let mut extracted: Vec<crate::card_source::CardHandle> = Vec::new();
-            for handle in &state.accum {
-                let removed = {
-                    let Some(permanent) = ctx
-                        .game
-                        .player_mut(subject.player)
-                        .battle_area
-                        .get_mut(subject.index as usize)
-                    else {
-                        continue;
-                    };
-                    let Some(pos) = permanent
-                        .card_sources
-                        .iter()
-                        .position(|c| c.handle() == *handle)
-                    else {
-                        continue;
-                    };
-                    permanent.card_sources.remove(pos)
-                };
-                let owner = removed.owner;
-                ctx.game.player_mut(owner).trash.push(removed);
-                extracted.push(*handle);
-            }
-            // Sources left the stack without the trash observer (partition
-            // trashes are intentionally observer-silent) — still refresh
-            // materialized declaratives so grants sourced from the departed
-            // cards stop applying before the follow-up plays below (same
-            // contract as `fire_digivolution_card_trashed`).
-            ctx.game.tick_declarative_effects();
-            let mut iter = extracted.into_iter();
-            if let Some(first) = iter.next() {
-                let second = iter.next();
-                let source_card = ctx.source_card;
-                let player = ctx.player;
-                let _ = ctx.play_from_trash_free_unsuspended(first);
-                if let Some(second) = second {
-                    ctx.game
-                        .queue_partition_second_play(player, source_card, second);
-                }
-            }
+            crate::cards::keyword_effects::partition_extract_and_play(
+                &mut ctx,
+                subject,
+                &state.accum,
+            );
+        }
+        // Slot-enforced <Partition>: chain to the next pick (or play, once
+        // one card is held for every printed slot).
+        crate::resume::NonDslCountCappedTerminal::KeywordPartitionSlots {
+            subject,
+            slots,
+            picked_so_far,
+        } => {
+            let mut picked = picked_so_far;
+            picked.extend(state.accum.iter().copied());
+            crate::cards::keyword_effects::drive_partition_picks(
+                ctx.game,
+                state.prov,
+                subject,
+                slots,
+                picked,
+            );
         }
         crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave { tamer } => {
             for source in &state.accum {
@@ -1861,9 +1859,11 @@ fn run_link_card_leave_selection_step(
         crate::resume::LinkCardLeaveMode::TrashAndCancel => {
             ctx.game.trash_specific_link_card(state.host, card)
         }
-        crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => ctx
-            .game
-            .place_specific_link_card_as_bottom_source(state.host, card),
+        crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => {
+            let cause = ctx.placing_effect_attribution();
+            ctx.game
+                .place_specific_link_card_as_bottom_source(state.host, card, cause)
+        }
         crate::resume::LinkCardLeaveMode::TrashDigivolutionOptionAndCancel => {
             ctx.game.trash_specific_source_card(state.host, card)
         }

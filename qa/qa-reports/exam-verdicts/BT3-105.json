@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:00.398726100+00:00",
+  "clauses": {
+    "BT3-105#effect#0": {
+      "clause_id": "BT3-105#effect#0",
+      "card_id": "BT3-105",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "79c5d7cdfd30cb832d664dcf326a573610442049d60acb14c48b1dd7c20fd319",
+      "scenario_path": "qa/dcgo-exams/BT3/BT3-105-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:00.398726100+00:00"
+    },
+    "BT3-105#effect#1": {
+      "clause_id": "BT3-105#effect#1",
+      "card_id": "BT3-105",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "a037dfda741d5eb10fcee5afd6c16e2a4c0c2133829cb93a4f71352ff2828c64",
+      "scenario_path": "qa/dcgo-exams/BT3/BT3-105-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:34.542737+00:00"
+    }
+  }
+}

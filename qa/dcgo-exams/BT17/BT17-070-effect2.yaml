@@ -1,0 +1,253 @@
+# Exam scenario: Gulfmon (BT17-070), clause BT17-070#effect#2 --
+# "[When Attacking] By returning 7 cards from your opponent's trash to the
+#  bottom of the deck, unsuspend this Digimon."
+#
+# The cost needs SEVEN cards in P1's trash, reached by legal play only:
+#   1 -- Biyomon, deleted by Gulfmon's [On Play] (T3);
+#   1 -- the security card Gulfmon's first attack checks (T5);
+#   5 -- four Monodramon BT1-009 (3000) and one Agumon BT3-007 (4000), all
+#        VANILLA, which attack P0's security on T6 and lose their security
+#        battles to BlackGatomon BT25-082 (6000) x4 and LadyDevimon BT25-083 (7000).
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, 3): play Biyomon (2: 3 -> 1); pass (P0 gets 3).
+#   T3 (P0, 3): play Gulfmon (12: 3 -> -9). [On Play]: WaruMonzaemon P-216
+#            from hand under Gulfmon, delete Biyomon. P1 trash: 1.
+#   T4 (P1, 9): play Monodramon x4 (2 each: 9 -> 1) and Agumon BT3-007 LAST
+#            (2: 1 -> -1, turn over).
+#   T5 (P0, 1): Gulfmon attacks the player. Its [When Attacking] is NOT live
+#            (2 < 7 cards even after the check; BT17_070.cs CanActivate
+#            counts the trash at declaration: 1) -- nothing is asked on
+#            either side. Security check: Dracomon ST1-04 (4000) loses.
+#            P1 trash: 2. P0 passes (P1 gets 3). Gulfmon stays SUSPENDED
+#            through T6, which matters (below).
+#   T6 (P1, 3): all five attack the player, one after another, and die in
+#            their security battles. P0's security 5 -> 0, P1 trash: 7.
+#            P1 passes (P0 gets 3).
+#   T7 (P0, 3): Gulfmon attacks the player. THE CLAUSE: accept, return all
+#            seven, Gulfmon UNSUSPENDS mid-attack; the security check then
+#            trashes Dracomon #2. Witness: an attacker that reads
+#            `suspended: false` after attacking, and P1's trash holding only
+#            the card checked AFTER the return. P0 passes at 3.
+#   T8 (P1): the trailing step.
+#
+# SLOT SAFETY on P1's FIVE-Digimon board. `attack: attacker: field.N` reaches
+# DCGO as a compact index over frames, and Digimon are seated centre-out
+# (frames 4, 3, 5, 2, 6: ../BT25/NOTES-BT25-083.md), so DCGO's order of
+# [M1, M2, M3, M4, Agumon] is [M4, M2, M1, M3, Agumon]. Every attack is
+# `field.0`: on each engine that names SOME Monodramon until only Agumon is
+# left, the four Monodramon are identical vanilla cards that all die the same
+# way, and Agumon -- played LAST, so at the highest frame on both sides -- is
+# `field.0` only when it is alone. Every projected row is therefore the same
+# multiset on both engines. The four Monodramon plays are pinned `hand.0`
+# (four copies in hand are otherwise ambiguous); P1's hand is
+# [M, M, M, M, ST1-04, BT3-007] in draw order, so slot 0 is a Monodramon for
+# all four plays on both engines (HandCards is append-on-draw).
+#
+# WHY GULFMON MUST BE SUSPENDED ON T6. On DCGO Gulfmon inherits <Blocker>
+# from WaruMonzaemon P-216 (P_216.cs "Blocker - ESS"); our engine has no spec
+# for P-216 and knows no such keyword. A standing Gulfmon would make DCGO open
+# five block windows our engine never parks. The T5 attack leaves it
+# suspended for the whole of T6 (no <Reboot>), so neither engine has a legal
+# blocker and neither asks. That is a P-216 coverage gap, not a Gulfmon
+# finding; it is recorded in NOTES-BT17-070.md.
+#
+# PROMPT SHAPE of the [On Play] (BT17_070.cs region "On Play"):
+#   1. SetUpActivateClass(..., -1, TRUE, ...) with CanActivate = a level 5
+#      DIGIMON card with [Dark Masters] in its text in hand or trash ->
+#      OptionalSkill. SHARED with our `optional: true` + `outer_prompt: true`
+#      gate (Replacement -> OptionalSkill, 1:1).
+#   2. The hand-or-trash zone menu (SetBoolSelection -> generic_bool) opens
+#      only when BOTH zones hold a candidate; the trash is empty, so DCGO
+#      takes `SetBool(canSelectHand)` -- no RPC, no row (the
+#      EX7-011-effect1.yaml shape).
+#   3. SelectHandEffect(maxCount 1, canNoSelect: true) -- WaruMonzaemon P-216,
+#      by identity. SHARED with our one declinable UnionZone{hand, trash} pick
+#      (the sim side cannot assert the class for a UnionZone kind; DCGO does).
+#   4. AddDigivolutionCardsBottom, then SelectPermanentEffect(Mode.Destroy,
+#      canNoSelect: false) over opponent Digimon with Level <= 5 -- Biyomon,
+#      consumed under the harness with one candidate. SHARED with our
+#      OppField pick.
+#
+# WaruMonzaemon P-216 (BLACK Lv.5; its [On Play] and [On Deletion] both name
+# the [Dark Masters] trait) has no YAML spec in our engine -- no Lv.5 card
+# that prints "[Dark Masters]" does (BT17-070-effect0.yaml header). Here it is
+# only ever a HAND card and then a DIGIVOLUTION card, so its own effects never
+# come up; the one thing it carries into the stack is its inherited <Blocker>
+# (P_216.cs "Blocker - ESS"), which our engine does not know about.
+#
+# PROMPT SHAPE of THE CLAUSE (BT17_070.cs region "When Attacking"):
+#   1. SetUpActivateClass(..., -1, TRUE, ...) with CanActivate = 7+ cards in
+#      the opponent's trash -> OptionalSkill. SHARED with our outer gate.
+#   2. ONE SelectCardEffect(Root.Custom over Owner.Enemy.TrashCards,
+#      maxCount 7, canEndNotMax: false, canNoSelect: true), selectPlayer =
+#      card.Owner = P0 -- seven identities in one row. Ours is a
+#      CountCappedMultiSelect { min 7, max 7 } over the opponent's trash that
+#      the resolver answers from the same seven-id row (SHARED; the sim side
+#      cannot assert the class for that kind, DCGO does).
+#   3. AddLibraryBottomCards + IUnsuspendPermanents: nothing asked.
+card: BT17-070
+clause: BT17-070#effect#2
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security, stack[9] flipped first: BlackGatomon x4
+    # then LadyDevimon BT25-083 (7000) under Agumon's attack; [10..12] = the
+    # T3 / T5 / T7 draws.
+    stack: [BT17-070, P-216, BT24-088, BT24-088, BT24-088,
+            BT25-083, BT25-082, BT25-082, BT25-082, BT25-082,
+            BT25-092, BT25-092, BT25-092]
+    rest: tm-gulfmon
+  p1:
+    # [0..4] hand; security stack[9], stack[8] = Dracomon ST1-04 (the T5 and
+    # T7 checks); [10] T2 draw (never played), [11] T4 draw = Agumon BT3-007,
+    # [12], [13] = the T6 / T8 draws.
+    stack: [ST1-02, BT1-009, BT1-009, BT1-009, BT1-009,
+            ST1-03, ST1-03, ST1-03, ST1-04, ST1-04,
+            ST1-04, BT3-007, ST1-05, ST1-05]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Gulfmon (3 -> -9); its [On Play] deletes Biyomon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT17-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [P-216] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1, 9): four Monodramon (pinned hand.0), then Agumon LAST (-1).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 1): Gulfmon's first attack -- the clause is not live (1 card).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): five attacks into P0's security; every attacker dies.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # 1: the optional gate -- SHARED.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # 2: the seven cards, one row -- SHARED.
+  - actor: 0
+    do: { select: { cards: [ST1-02, ST1-04, BT1-009, BT1-009, BT1-009, BT1-009, BT3-007] } }
+    expect: { prompt: SelectCardEffect }
+  # After the security check: Gulfmon is UNSUSPENDED. P0 passes at 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # P1's T6 opening: Gulfmon suspended, the first attack's check in the trash.
+  - at: 19
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: true, sources: [P-216] }
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-04]
+  # The clause's gate: seven cards, Gulfmon suspended by its own attack.
+  - at: 28
+    that:
+      turn: 7
+      p0.security: 0
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: true, sources: [P-216] }
+      p1.field: []
+      p1.trash: [BT1-009, BT1-009, BT1-009, BT1-009, BT3-007, ST1-02, ST1-04]
+  # After the attack: unsuspended; only the post-return check is in the trash.
+  - at: 30
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: false, sources: [P-216] }
+      p1.security: 3
+      p1.trash: [ST1-04]
+  - at: 31
+    that:
+      turn: 8
+      p0.memory: -3
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.trash: [BT25-082, BT25-082, BT25-082, BT25-082, BT25-083]
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: false, sources: [P-216] }
+      p1.security: 3
+      p1.trash: [ST1-04]

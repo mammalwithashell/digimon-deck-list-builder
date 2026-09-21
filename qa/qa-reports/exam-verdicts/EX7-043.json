@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:05.616588400+00:00",
+  "clauses": {
+    "EX7-043#effect#0": {
+      "clause_id": "EX7-043#effect#0",
+      "card_id": "EX7-043",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "36fb57c6b8d9719e4fc576d06ce37e1ee2a728aa4c0e27e889558ea750de4c15",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-043-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:04.928860200+00:00"
+    },
+    "EX7-043#effect#1": {
+      "clause_id": "EX7-043#effect#1",
+      "card_id": "EX7-043",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "7b5741213b0bfbc34f5f039640c4c61434a49db7cb9af4c70a8a4fd1baab8101",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-043-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:05.616588400+00:00"
+    },
+    "EX7-043#inherited#0": {
+      "clause_id": "EX7-043#inherited#0",
+      "card_id": "EX7-043",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "cd9dea1cebe1afa18ff06e6e70eb6c9242d593ddbff132535f10985f6b827106",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-043-inherited0.yaml",
+      "recorded_at": "2026-09-18T13:58:48.166474700+00:00"
+    }
+  }
+}

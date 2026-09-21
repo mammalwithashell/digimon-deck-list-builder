@@ -1,0 +1,173 @@
+# EX7-066 Chaos Triangular — Option, Red, Use cost 6. Traits: Three Musketeers.
+#
+# Printed card text (data/card_bundles/EX7-066.md — official Bandai DB):
+#
+#   When effects trash this card from digivolution cards, 1 of your Digimon
+#   gets +3000 DP until the end of your opponent's turn. While you have a
+#   [Three Musketeers] trait Digimon, you may ignore this card's color
+#   requirements. [Main] Delete 1 of your opponent's Digimon with 9000 DP or
+#   less. For each of your [Three Musketeers] trait Digimon with different
+#   names, add 3000 to this DP-deletion effect's maximum. Then, place this
+#   card as the bottom digivolution card of 1 of your [Three Musketeers]
+#   trait Digimon.
+#
+#   Security Effect: [Security] Delete 1 of your opponent's Digimon with
+#   12000 DP or less.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Red/EX7_066.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# OnDigivolutionCardDiscarded (`SetUpActivateClass(..., -1, false, ...)` =
+#   MANDATORY; SetIsInheritedEffect(true) + SetIsOptionEffect(true) are
+#   category markers, not an optional flag): CanUse =
+#   CanTriggerOnTrashSelfDigivolutionCard(hashtable, cardEffect != null, card)
+#   — fires when an EFFECT trashes THIS card from a digivolution stack (no
+#   host-trait gate); CanActivate = IsExistOnTrash(card) && an own battle-area
+#   Digimon exists. Body: mandatory SelectPermanentEffect over own Digimon →
+#   ChangeDigimonDP(+3000, UntilOpponentTurnEnd).
+#   → `scope: inherited`, `when: on_digivolution_card_trashed`,
+#     `trashed_source_card_id_is: EX7-066` + `event_target_owner: you` +
+#     `any_permanent` guard (EX7-070 / EX7-071 sibling idiom), mandatory
+#     `select_own_permanent { kind: digimon }` → `add_dp_modifier { +3000,
+#     expiry: end_of_opponents_turn }`. The engine's
+#     `OnDigivolutionCardTrashed` observer fires only for effect-driven source
+#     trashes (whole-permanent deletions route sources to trash without it),
+#     matching DCGO's `cardEffect != null` gate.
+#
+# IgnoreColorConditionClass (EffectTiming.None): CanUse = ≥1 own battle-area
+#   Digimon with EqualsTraits("Three Musketeers"); CardCondition = this card
+#   only. → top-level `use_requirement` (EX7-071 idiom; same net effect as
+#   DCGO's UseRequirements factory).
+#
+# OptionSkill [Main]: `maxDP = 9000 + 3000 × count()` where count() de-dups
+#   own [Three Musketeers] Digimon by HasSameCardName. Two INDEPENDENT
+#   mandatory picks, each behind its own HasMatchConditionPermanent guard:
+#     (a) SelectPermanentEffect (Mode.Destroy, canNoSelect: false) over
+#         opponent Digimon with DP ≤ MaxDP_DeleteEffect(maxDP).
+#     (b) SelectPermanentEffect over own [Three Musketeers] Digimon →
+#         AddDigivolutionCardsBottom(this card) (face-up).
+#   → `when: main_from_hand`; (a) `select_opponent_permanent { kind: digimon,
+#     dp_lte: { base: 9000, per: { distinct_names_count: { of: you, zone:
+#     battle_area, filter: { kind: digimon, trait_has: "Three Musketeers" } } },
+#     delta: 3000 } }` → `delete_permanent` — the per-different-names scaling
+#     uses the `distinct_names_count` per-selector widened for this card
+#     (G-DSL-FORMULA-DISTINCT-NAMES-COUNT; synth-identity-aware, same name
+#     normalisation as `distinct_named_count_gte`); (b) `select_own_permanent
+#     { kind: digimon, trait_has: "Three Musketeers" }` →
+#     `place_self_under_permanent` (claims the in-flight pending_option —
+#     EX7-070 / EX7-071 idiom). Both wrapped in `if any_permanent` guards to
+#     mirror DCGO's independent blocks.
+#
+# SecuritySkill [Security]: mandatory Destroy select over opponent Digimon
+#   with DP ≤ 12000. → `when: on_security` (EX7-071 idiom), no placement tail.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                   | Status      |
+# |-----------------------------------------------------------------------|-----------|
+# | [Inherited] effect-trash from digivolution cards → +3000 DP until opp EoT | IMPLEMENTED |
+# | While-you-have-TM-Digimon color bypass                              | IMPLEMENTED |
+# | [Main] delete 1 opp Digimon ≤ 9000 + 3000 per distinct-named TM Digimon | IMPLEMENTED |
+# | [Main] then place self as bottom source of 1 own TM Digimon         | IMPLEMENTED |
+# | [Security] delete 1 opp Digimon ≤ 12000 DP                          | IMPLEMENTED |
+
+card: EX7-066
+name: "Chaos Triangular"
+kind: option
+color: [red]
+cost: 6
+traits: [Three Musketeers]
+
+# "While you have a [Three Musketeers] trait Digimon, you may ignore this
+# card's color requirements."
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Three Musketeers"
+
+effects:
+  # ─── Clause 1: effect-trashed from digivolution cards → +3000 DP ──────────
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX7-066
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+    summary: "[Inherited] When effects trash this card from digivolution cards, 1 of your Digimon gets +3000 DP until the end of your opponent's turn"
+    process:
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets +3000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: buff_target
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [Main] scaled DP delete; then place self under a TM Digimon ─
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent Digimon with 9000 DP or less (+3000 per differently-named [Three Musketeers] Digimon you have); then place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte:
+                        base: 9000
+                        per:
+                          distinct_names_count:
+                            of: you
+                            zone: battle_area
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - trait_has: "Three Musketeers"
+                        delta: 3000
+                prompt: "Delete 1 of your opponent's Digimon with 9000 DP or less (+3000 for each of your [Three Musketeers] Digimon with different names)"
+            - delete_permanent: { target: delete_target }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              trait_has: "Three Musketeers"
+          then:
+            - select_own_permanent:
+                bind_as: place_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Three Musketeers"
+                prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+            - place_self_under_permanent:
+                target: place_target
+                face_down: false
+
+  # ─── Clause 3: [Security] delete 1 opp Digimon with 12000 DP or less ─────
+  - when: on_security
+    summary: "[Security] Delete 1 of your opponent's Digimon with 12000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 12000
+          prompt: "Delete 1 of your opponent's Digimon with 12000 DP or less"
+      - delete_permanent: { target: sec_target }

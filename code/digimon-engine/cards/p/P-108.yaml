@@ -1,0 +1,126 @@
+# P-108 Wisdom Training — Option, Purple, Cost 2. Traits: (none).
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/P-108.webp — authoritative; official DB bundle
+# data/card_bundles/P-108.md):
+#
+#   [Main] Reveal the top 2 cards of your deck. Add 1 purple card among them
+#   to the hand. Return the rest to the bottom of the deck in any order. Then,
+#   place this card in the battle area.
+#   [Main] <Delay> (After this card is placed, by trashing it the next turn or
+#   later, activate the effect below.)
+#   ・1 of your Digimon may digivolve into a purple Digimon card in your hand
+#   for its digivolution cost. When it would digivolve by this effect, reduce
+#   the cost by 2.
+#
+# Inherited (Security):
+#   Security Effect [Security] Place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_108.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill`, isOptional = FALSE.
+#   `SimplifiedRevealDeckTopCardsAndSelect(revealCount 2, one bucket
+#   {HasCardColor(Purple), mode AddHand, maxCount 1}, remainingCardsPlace
+#   DeckBottom)` then `PlaceDelayOptionCards(card)`.
+#
+# Clause 2 — `EffectTiming.OnDeclaration` + `CanDeclareOptionDelayEffect(card)`
+#   (the standard player-activated [Main] <Delay>). Activation:
+#   `DeletePeremanentAndProcessAccordingToResult(self)` (trash this card as
+#   the cost) → `SelectPermanentEffect(canNoSelect TRUE — the printed "may")`
+#   over own Digimon for which SOME purple Digimon card in hand
+#   `CanPlayCardTargetFrame` (a legal digivolution) → on a pick,
+#   `DigivolveIntoHandOrTrashCard(cardCondition IsDigimon && Purple, payCost
+#   true, reduceCost 2, isHand true)`.
+#
+# Clause 3 — `EffectTiming.SecuritySkill` → `PlaceSelfDelayOptionSecurityEffect`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# Clause 1 is the BT22-099 Kuremi Detective Agency single-bucket reveal
+# (`reveal_top_deck` 2 → `select_reveal_buckets` {color_is: purple, min 1,
+# max 1} — mandatory when a purple card is revealed, silently empty when
+# none) → `add_to_hand_from_reveal` → `order_remainder { deck_bottom }`, which
+# surfaces the printed "in any order" as an ordering choice whenever more
+# than one card remains. "Then, place this card in the battle area" is the
+# engine's Delay-option auto-seat: `classify_option_subtype` detects the
+# `kind: delay` clause and `dispose_option` seats this card as
+# `OptionState::Delayed` after the [Main] body resolves (BT22-099 precedent).
+#
+# Clause 2 is `kind: delay` + `trigger: delayed` (`DelayTrigger::
+# MainPhaseActivated` — a [Main] mask bit the controller activates from the
+# next turn on; activating pays the trash-self cost). The body is the LM-027
+# Red Scramble shape: optional `select_own_permanent` (the printed "may"),
+# then a mandatory `select_hand` over purple Digimon cards and
+# `effect_initiated_digivolve` with `cost: { reduce: 2 }` — the printed
+# "for its digivolution cost … reduce the cost by 2" (DCGO payCost true,
+# reduceCost 2). DCGO additionally pre-filters the permanent pick to Digimon
+# that have SOME legal purple evolution in hand; the engine validates the
+# digivolution at `effect_initiated_digivolve` time instead (an illegal
+# pairing no-ops without paying), so no extra legality gate is needed.
+#
+# Clause 3 is the inherited-security `place_self_as_delay_option: {}` step
+# (BT22-099 / P-035 precedent — RESOLVED G-PLACE-SELF-AS-OPTION-PERMANENT).
+
+card: P-108
+name: "Wisdom Training"
+kind: option
+color: [purple]
+cost: 2
+
+effects:
+  # ─── Clause 1: [Main] reveal 2 → add 1 purple → bottom the rest → seat ─────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal 2; add 1 purple card to hand; bottom the rest in any order; place this card in the battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 2, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: purple_pick
+              min: 1
+              max: 1
+              filter: { color_is: purple }
+          prompt: "Add 1 purple card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: purple_pick }
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+          prompt: "Return the rest to the bottom of your deck in any order"
+
+  # ─── Clause 2: [Main] <Delay> — 1 Digimon may digivolve into purple, −2 ───
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a purple Digimon card in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to digivolve (cost -2)"
+      - if:
+          condition: { binding_exists: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: purple
+                prompt: "Choose a purple Digimon card in your hand to digivolve into"
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: evo
+                cost: { reduce: 2 }
+                ignore_requirements: false
+
+  # ─── Clause 3: [Security] (inherited) Place this card in the battle area ───
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

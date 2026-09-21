@@ -1,0 +1,92 @@
+# Exam scenario: LadyDevimon (BT25-083), clause BT25-083#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 [Three Musketeers] trait card
+#  from your hand or trash as any of your Digimon's bottom digivolution
+#  cards, <Draw 1>."
+#
+# This file exercises the [On Play] arm (the [When Digivolving] arm shares the
+# same ActivateClass body via CardEffectFactory.ActivateClassesForSharedEffects;
+# playing from hand avoids stacking it beside BT25-083's OTHER [When
+# Digivolving] effect, which would bury the line under MultipleSkills).
+#
+#   T1 (P0): pass everything.   T2 (P1): pass everything.
+#   T3 (P0, memory 3): play LadyDevimon from hand (3 -> -4, turn over).
+#            THE CLAUSE fires as [On Play]. The only [Three Musketeers] TRAIT
+#            card P0 holds is Bind Red Trigger P-180 (hand); the trash is
+#            empty. It is placed under LadyDevimon itself (the only own
+#            Digimon -- DCGO's IsPermanentExistsOnOwnerBattleAreaDigimon
+#            admits the effect's own permanent), then <Draw 1>.
+#
+# PROMPT SHAPE (BT25_083.cs, region "OP/WD Shared"): optional: false ->
+# NO OptionalSkill. The body ALWAYS opens with UserSelectionManager.
+# SetIntSelection over {Hand=1 (if any), Trash=2 (if any), Don't place=3}
+# -- the "Don't place" element is unconditional, so the menu is asked even
+# with a single populated zone. Under the harness SetIntSelection routes
+# through SetIntForPlayer -> TryAnswerStep: a `generic_int` row that OUR
+# engine never parks (our single UnionZone pick spans hand+trash and folds
+# the zone into the pick), hence `dcgo_only: true`. Then SelectHandEffect
+# (canNoSelect: true) and SelectPermanentEffect (canNoSelect: true), then
+# DrawClass(1).
+card: BT25-083
+clause: BT25-083#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-083, P-180, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-078]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-02, ST1-04,
+            BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO's zone menu: 1 = "Hand". Wire-only -- our engine folds the zone into
+  # the pick below.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # The [Three Musketeers] trait card from hand.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # The Digimon that receives it: LadyDevimon itself.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # <Draw 1> resolves with no prompt. Memory is -4, so the seat is P1 (T4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -4
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-078]
+      p0.field:
+        - { card_id: BT25-083, dp: 7000, suspended: false, sources: [P-180] }
+      p1.field: []
+      p1.security: 5

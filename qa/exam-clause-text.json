@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-28T14:19:44.117620+00:00",
-  "source": "--card-ids (38 explicit ids)",
+  "generated_at": "2026-09-13T07:58:14.783202+00:00",
+  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13)",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -39,7 +39,67 @@
     "ST19-14",
     "BT21-029",
     "BT24-017",
-    "EX11-012"
+    "EX11-012",
+    "BT16-077",
+    "BT17-070",
+    "BT18-093",
+    "BT19-075",
+    "BT20-020",
+    "BT21-054",
+    "BT21-071",
+    "BT21-074",
+    "BT24-011",
+    "BT24-030",
+    "BT24-081",
+    "BT24-088",
+    "BT24-091",
+    "BT25-005",
+    "BT25-026",
+    "BT25-028",
+    "BT25-058",
+    "BT25-064",
+    "BT25-078",
+    "BT25-082",
+    "BT25-083",
+    "BT25-085",
+    "BT25-091",
+    "BT25-092",
+    "BT25-093",
+    "BT25-100",
+    "BT3-096",
+    "BT3-105",
+    "BT6-060",
+    "BT6-105",
+    "BT7-056",
+    "BT7-071",
+    "BT7-073",
+    "BT8-071",
+    "BT8-084",
+    "BT8-094",
+    "EX4-074",
+    "EX7-005",
+    "EX7-008",
+    "EX7-010",
+    "EX7-011",
+    "EX7-013",
+    "EX7-040",
+    "EX7-043",
+    "EX7-044",
+    "EX7-048",
+    "EX7-051",
+    "EX7-059",
+    "EX7-066",
+    "EX7-070",
+    "EX7-071",
+    "EX7-073",
+    "LM-032",
+    "LM-056",
+    "P-108",
+    "P-170",
+    "P-180",
+    "P-198",
+    "P-212",
+    "ST13-08"
   ],
   "clauses": [
     {
@@ -2028,18 +2088,2973 @@
       "text": "When this Digimon would leave the battle area, by deleting 1 Token, it doesn't leave.",
       "source": "bundle",
       "image_path": null
+    },
+    {
+      "id": "BT16-077#effect#0",
+      "card_id": "BT16-077",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "Purple Lv.4 + red Lv.4: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT16-077#effect#1",
+      "card_id": "BT16-077",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT16-077#effect#2",
+      "card_id": "BT16-077",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Partition",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT16-077#effect#3",
+      "card_id": "BT16-077",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If DNA digivolving, you may play 1 level 5 or lower Digimon card with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain ＜Rush＞ for the turn and attack a player.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT16-077#inherited#0",
+      "card_id": "BT16-077",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Partition",
+      "text": "(When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT17-070#effect#0",
+      "card_id": "BT17-070",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Dark Masters] in text: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT17-070#effect#1",
+      "card_id": "BT17-070",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 level 5 card with [Dark Masters] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 5 or lower Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT17-070#effect#2",
+      "card_id": "BT17-070",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "By returning 7 cards from your opponent's trash to the bottom of the deck, unsuspend this Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT18-093#effect#0",
+      "card_id": "BT18-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or less memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT18-093#effect#1",
+      "card_id": "BT18-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 Option card or 1 card with the [Ghost] or [Three Musketeers] trait in your hand, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT18-093#effect#2",
+      "card_id": "BT18-093",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT19-075#effect#0",
+      "card_id": "BT19-075",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Millenniummon]: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT19-075#effect#1",
+      "card_id": "BT19-075",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Your opponent trashes cards in their hand until they have 5 left. For every 2 this effect trashed, delete 1 of your opponent's Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT19-075#effect#2",
+      "card_id": "BT19-075",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When this Digimon would leave the battle area, by deleting 1 of your [Composite] trait Digimon, it doesn't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT19-075#effect#3",
+      "card_id": "BT19-075",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When other Digimon or Tamers are deleted, trash your opponent's top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-020#effect#0",
+      "card_id": "BT20-020",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Imperialdramon: Dragon Mode]: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-020#effect#1",
+      "card_id": "BT20-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-020#effect#2",
+      "card_id": "BT20-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-020#effect#3",
+      "card_id": "BT20-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Your opponent can't play Digimon or Tamers by effects until the end of their turn. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, trash your opponent's top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-020#effect#4",
+      "card_id": "BT20-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's security stack is removed from, delete 1 of their Digimon with as much or less DP as this Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-054#effect#0",
+      "card_id": "BT21-054",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-054#effect#1",
+      "card_id": "BT21-054",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-054#effect#2",
+      "card_id": "BT21-054",
+      "zone": "effect",
+      "label": "Special Rule",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "+2000 DP",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-054#inherited#0",
+      "card_id": "BT21-054",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-071#effect#0",
+      "card_id": "BT21-071",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Three Musketeers] in text: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-071#effect#1",
+      "card_id": "BT21-071",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-071#effect#2",
+      "card_id": "BT21-071",
+      "zone": "effect",
+      "label": "Special Rule",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "+3000 DP",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-071#inherited#0",
+      "card_id": "BT21-071",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-071#inherited#1",
+      "card_id": "BT21-071",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 2",
+      "text": "and trash 2 cards in your hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-074#effect#0",
+      "card_id": "BT21-074",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Three Musketeers] in text: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-074#effect#1",
+      "card_id": "BT21-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-074#effect#2",
+      "card_id": "BT21-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-074#effect#3",
+      "card_id": "BT21-074",
+      "zone": "effect",
+      "label": "Special Rule",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "+4000 DP",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-074#inherited#0",
+      "card_id": "BT21-074",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Delete 1 of your opponent's level 4 or lower Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-011#effect#0",
+      "card_id": "BT24-011",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[TS] trait: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-011#effect#1",
+      "card_id": "BT24-011",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-011#effect#2",
+      "card_id": "BT24-011",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-011#inherited#0",
+      "card_id": "BT24-011",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "(When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-030#effect#0",
+      "card_id": "BT24-030",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Aqua] or [Sea Animal] in any trait or w/[TS] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-030#effect#1",
+      "card_id": "BT24-030",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When this card would be played, if your opponent has 2 or more Digimon, reduce the play cost by 5.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-030#effect#2",
+      "card_id": "BT24-030",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-030#effect#3",
+      "card_id": "BT24-030",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon suspends, it may unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-030#effect#4",
+      "card_id": "BT24-030",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of their traits would leave the battle area by your opponent's effects, by suspending this Digimon, they don't leave. (Rule) Trait: Has [Aquatic] Type.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#0",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#1",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#2",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Execute",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#3",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#4",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost. (Rule) Trait: Has [Demon] Type.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-081#effect#5",
+      "card_id": "BT24-081",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -6: [Titamon]×[SkullBaluchimon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-088#effect#0",
+      "card_id": "BT24-088",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Asuna Shiroki] or 1 level 4 or lower Digimon card with the [TS] trait or [Three Musketeers] in its text from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-088#effect#1",
+      "card_id": "BT24-088",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with [Three Musketeers] in its text or the [TS] trait from your hand, ＜Draw 2＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-088#effect#2",
+      "card_id": "BT24-088",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#0",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you have a [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#1",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#2",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Return all of your opponent's lowest level Digimon to the hand. If this effect returned, 1 of your [TS] trait Digimon unsuspends. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#3",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Link DP",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "DP+2000",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#4",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Link Condition",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[TS] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT24-091#effect#5",
+      "card_id": "BT24-091",
+      "zone": "effect",
+      "label": "Link Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Return 1 of your opponent's lowest level Digimon to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-005#inherited#0",
+      "card_id": "BT25-005",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-026#effect#0",
+      "card_id": "BT25-026",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[TS] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-026#effect#1",
+      "card_id": "BT25-026",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-026#effect#2",
+      "card_id": "BT25-026",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Dianamon] in the trash with the cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-026#inherited#0",
+      "card_id": "BT25-026",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon's attack target can't change.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-028#effect#0",
+      "card_id": "BT25-028",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[TS] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-028#effect#1",
+      "card_id": "BT25-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When this card would be played, if your opponent has a level 6 or higher Digimon, reduce the cost by 5.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-028#effect#2",
+      "card_id": "BT25-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "None of your opponent's Digimon with 1 or fewer digivolution cards can suspend until their turn ends. Then, delete 1 of your opponent's unsuspended Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-028#effect#3",
+      "card_id": "BT25-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any Digimon are played or digivolve, you may trash any 4 digivolution cards from your opponent's Digimon. Then, 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-028#inherited#0",
+      "card_id": "BT25-028",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "1 of your opponent's Digimon or Tamers can't suspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#0",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[TS] trait: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#1",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Reboot",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#2",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#3",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Fortitude",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#4",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-058#effect#5",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-064#effect#0",
+      "card_id": "BT25-064",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[TS] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-064#effect#1",
+      "card_id": "BT25-064",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 Option card and 1 [TS] trait card among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-064#inherited#0",
+      "card_id": "BT25-064",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Reboot",
+      "text": "(This Digimon also unsuspends in your opponent's unsuspend phase.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-078#effect#0",
+      "card_id": "BT25-078",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Three Musketeers] in text or w/[TS] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-078#effect#1",
+      "card_id": "BT25-078",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[When Moving]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-078#effect#2",
+      "card_id": "BT25-078",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Among them, add 1 card with [Three Musketeers] in its text to the hand, or you may place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-078#inherited#0",
+      "card_id": "BT25-078",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Retaliation",
+      "text": "(When only this Digimon is deleted in battle, delete the Digimon it battled.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-082#effect#0",
+      "card_id": "BT25-082",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Three Musketeers] in text or w/[TS] trait: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-082#effect#1",
+      "card_id": "BT25-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If you have 1 or fewer Tamers, you may play 1 Tamer card with [Three Musketeers] in its text from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-082#effect#2",
+      "card_id": "BT25-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "While you have a Tamer with [Three Musketeers] in its text, this Digimon may digivolve into a [Three Musketeers] trait Digimon card for a digivolution cost of 4, ignoring digivolution requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-082#inherited#0",
+      "card_id": "BT25-082",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By placing 1 [Three Musketeers] trait card from your hand or trash as this Digimon's bottom digivolution card, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-083#effect#0",
+      "card_id": "BT25-083",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-083#effect#1",
+      "card_id": "BT25-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-083#effect#2",
+      "card_id": "BT25-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 Option card from any of your Digimon's digivolution cards, you may use 1 [Three Musketeers] trait Option card from your trash with the cost reduced by 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-083#inherited#0",
+      "card_id": "BT25-083",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 level 4 or lower Digimon card with [Three Musketeers] in its text from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#0",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#1",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#2",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#3",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Counter",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#4",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "DUAL Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#5",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "DUAL Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-085#effect#6",
+      "card_id": "BT25-085",
+      "zone": "effect",
+      "label": "DUAL Rule",
+      "kind": "timing",
+      "timings": [
+        "Arts Digivolve"
+      ],
+      "keyword": null,
+      "text": "(Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-091#effect#0",
+      "card_id": "BT25-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or less memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-091#effect#1",
+      "card_id": "BT25-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may return 1 [TS] trait Option card from your trash to the hand. If this effect didn't return, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-091#effect#2",
+      "card_id": "BT25-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When you use [TS] trait Option cards, by suspending this Tamer, 1 of your opponent's Digimon can't attack until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-091#effect#3",
+      "card_id": "BT25-091",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-092#effect#0",
+      "card_id": "BT25-092",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with [Three Musketeers] in its text or the [TS] trait from your hand, ＜Draw 1＞ and gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-092#effect#1",
+      "card_id": "BT25-092",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "By suspending this Tamer and trashing 1 Option card from your hand or your Digimon's digivolution cards, 1 of your Digimon may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand or trash with the cost reduced by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-092#effect#2",
+      "card_id": "BT25-092",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#0",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#1",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#2",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete all of your opponent's Digimon with the lowest DP. If this effect didn't delete, trash 1 of your opponent's Option cards in the battle area. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#3",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Link DP",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "DP+2000",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#4",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Link Condition",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[TS] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-093#effect#5",
+      "card_id": "BT25-093",
+      "zone": "effect",
+      "label": "Link Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with as much DP as this Digimon or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#0",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#1",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#2",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#3",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "De-Digivolve 2",
+      "text": "1 of your opponent's Digimon. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#4",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Link DP",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "DP+2000",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#5",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Link Condition",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Link",
+      "text": "[TS] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#6",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Link Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Collision",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT25-100#effect#7",
+      "card_id": "BT25-100",
+      "zone": "effect",
+      "label": "Link Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-096#effect#0",
+      "card_id": "BT3-096",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When a player uses an Option card, you may suspend this Tamer to gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-096#effect#1",
+      "card_id": "BT3-096",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying its memory cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-105#effect#0",
+      "card_id": "BT3-105",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "1 of your Digimon gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase) and \"This Digimon can't have its DP reduced or be returned to its owner's hand or deck\" until the end of your opponent's next turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-105#effect#1",
+      "card_id": "BT3-105",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Your opponent's Digimon can't attack players for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT6-060#effect#0",
+      "card_id": "BT6-060",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 4 cards of your deck. Add 1 Digimon card with [Three Musketeers] in its type and/or 1 Option card with a memory cost of 7 among them to your hand. Trash the remaining cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT6-060#effect#1",
+      "card_id": "BT6-060",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon can digivolve into a Digimon card with [Three Musketeers] in its type from your hand for a memory cost of 6, ignoring its digivolution requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT6-105#effect#0",
+      "card_id": "BT6-105",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "If you have a Digimon with [Three Musketeers] in its type in play, you may use this Option card without meeting its color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT6-105#effect#1",
+      "card_id": "BT6-105",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete all Digimon with play costs of 7 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT6-105#effect#2",
+      "card_id": "BT6-105",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Add this card to its owner's hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT7-056#effect#0",
+      "card_id": "BT7-056",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 [Kota Domoto] and 1 card with the [X Antibody] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT7-056#inherited#0",
+      "card_id": "BT7-056",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When your effects add to this Digimon's digivolution cards, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT7-071#effect#0",
+      "card_id": "BT7-071",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "You may digivolve this card from your hand onto one of your purple Tamers as if the Tamer is a level 3 purple Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT7-073#effect#0",
+      "card_id": "BT7-073",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "You may digivolve this card from your hand onto one of your purple Tamers as if the Tamer is a level 3 purple Digimon for a memory cost of 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT7-073#effect#1",
+      "card_id": "BT7-073",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If a card with [Hybrid] in its traits or [Koichi Kimura] is in this Digimon's digivolution cards, this Digimon gains ＜Retaliation＞ until the end of your opponent's next turn. (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-071#effect#0",
+      "card_id": "BT8-071",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "Players can't reduce paid play costs.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-084#effect#0",
+      "card_id": "BT8-084",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "0 from Lv.4 + Lv.4 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-084#effect#1",
+      "card_id": "BT8-084",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may place 1 level 5 or lower Digimon card from your trash under this Digimon as its bottom digivolution card. Then, up to 4 of your opponent's Digimon get -1000 DP for each of this Digimon's colors until the end of your opponent's next turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-084#effect#2",
+      "card_id": "BT8-084",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon is treated as also having the colors of its digivolution cards. While this Digimon has 4 or more colors, it gets +4000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-094#effect#0",
+      "card_id": "BT8-094",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your opponent's level 5 or lower Digimon are deleted, by suspending this Tamer, ＜Draw 1＞ .",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-094#effect#1",
+      "card_id": "BT8-094",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Opponent's Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your opponent's level 3 Digimon move from the breeding area to the battle area, gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-094#effect#2",
+      "card_id": "BT8-094",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX4-074#effect#0",
+      "card_id": "EX4-074",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[ShineGreymon]: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX4-074#effect#1",
+      "card_id": "EX4-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "All of your opponent's Digimon get -5000 DP until the end of their turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX4-074#effect#2",
+      "card_id": "EX4-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "End of Attack"
+      ],
+      "keyword": null,
+      "text": "Delete this Digimon and 1 of your opponent's Digimon, and ＜Recovery +1 ≪Deck≫＞. Then, if you have a Tamer, hatch in your breeding area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-005#inherited#0",
+      "card_id": "EX7-005",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-008#effect#0",
+      "card_id": "EX7-008",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Three Musketeers] in text: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-008#effect#1",
+      "card_id": "EX7-008",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with [Three Musketeers] in its text and 1 Option card with a use cost of 6 among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-008#inherited#0",
+      "card_id": "EX7-008",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-010#effect#0",
+      "card_id": "EX7-010",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Three Musketeers] in text: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-010#effect#1",
+      "card_id": "EX7-010",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may trash any 1 Option card from 1 Digimon's digivolution cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-010#effect#2",
+      "card_id": "EX7-010",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gains the [Three Musketeers] trait.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-010#inherited#0",
+      "card_id": "EX7-010",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-011#effect#0",
+      "card_id": "EX7-011",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Three Musketeers] in text: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-011#effect#1",
+      "card_id": "EX7-011",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By placing 1 Option card with the [Three Musketeers] trait from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with 6000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-011#inherited#0",
+      "card_id": "EX7-011",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "(When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-013#effect#0",
+      "card_id": "EX7-013",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Three Musketeers] in text: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-013#effect#1",
+      "card_id": "EX7-013",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may use 1 [Three Musketeers] trait Option card from your hand without paying the cost. Then, draw cards from the top of your deck until you have 6 in your hand. [End of Your Turn]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-013#effect#2",
+      "card_id": "EX7-013",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 Option card from this Digimon's digivolution cards, 1 of your [Three Musketeers] trait Digimon gains ＜Security A. +1＞ for the turn, and attacks.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-040#effect#0",
+      "card_id": "EX7-040",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Three Musketeers] in text: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-040#effect#1",
+      "card_id": "EX7-040",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with the [Three Musketeers] trait in your hand, ＜Draw 2＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-040#inherited#0",
+      "card_id": "EX7-040",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Reboot",
+      "text": "(This Digimon also unsuspends in your opponent's unsuspend phase.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-043#effect#0",
+      "card_id": "EX7-043",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Three Musketeers] in text: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-043#effect#1",
+      "card_id": "EX7-043",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By returning 3 cards with the [Three Musketeers] trait from your hand or trash to the top of the deck, ＜De-Digivolve 1＞ 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-043#inherited#0",
+      "card_id": "EX7-043",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Reboot",
+      "text": "(This Digimon also unsuspends in your opponent's unsuspend phase.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-044#effect#0",
+      "card_id": "EX7-044",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Three Musketeers] in text: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-044#effect#1",
+      "card_id": "EX7-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 4 cards of your deck. Place 1 Option card with the [Three Musketeers] trait among them as this Digimon's bottom digivolution card. Return the rest to the top or bottom of the deck. If this effect placed, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-044#inherited#0",
+      "card_id": "EX7-044",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Collision",
+      "text": "(During this Digimon's attack, give all of your opponent's Digimon ＜Blocker＞, and the opponent blocks if able.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-048#effect#0",
+      "card_id": "EX7-048",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Three Musketeers] in text: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-048#effect#1",
+      "card_id": "EX7-048",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-048#effect#2",
+      "card_id": "EX7-048",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 6 cards of your deck. You may use 1 [Three Musketeers] trait Option card among them without paying the cost. Return the rest to the top or bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-048#effect#3",
+      "card_id": "EX7-048",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your [Three Musketeers] trait Digimon would leave the battle area other than by your effects, by trashing 1 Option card from this Digimon's digivolution cards, they don't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-051#effect#0",
+      "card_id": "EX7-051",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[Three Musketeers] in text: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-051#effect#1",
+      "card_id": "EX7-051",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By placing 1 Option card with the [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-051#inherited#0",
+      "card_id": "EX7-051",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Retaliation",
+      "text": "(When only this Digimon is deleted in battle, delete the Digimon it battled.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-059#effect#0",
+      "card_id": "EX7-059",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Three Musketeers] in text: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-059#effect#1",
+      "card_id": "EX7-059",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[Hand]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-059#effect#2",
+      "card_id": "EX7-059",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Counter",
+        "Blast Digivolve",
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Return 1 Option card from your trash to the hand. Then, you may use 1 [Three Musketeers] trait Option card from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-059#effect#3",
+      "card_id": "EX7-059",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 Option card from this Digimon's digivolution cards, you may use 1 [Three Musketeers] trait Option card from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-059#effect#4",
+      "card_id": "EX7-059",
+      "zone": "effect",
+      "label": "Special Rule",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Overflow",
+      "text": "(As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-066#effect#0",
+      "card_id": "EX7-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from digivolution cards, 1 of your Digimon gets +3000 DP until the end of your opponent's turn. While you have a [Three Musketeers] trait Digimon, you may ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-066#effect#1",
+      "card_id": "EX7-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with 9000 DP or less. For each of your [Three Musketeers] trait Digimon with different names, add 3000 to this DP-deletion effect's maximum. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-066#effect#2",
+      "card_id": "EX7-066",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with 12000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-070#effect#0",
+      "card_id": "EX7-070",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. While you have a [Three Musketeers] trait Digimon, you may ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-070#effect#1",
+      "card_id": "EX7-070",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with the lowest play cost. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-070#effect#2",
+      "card_id": "EX7-070",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with the lowest play cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-071#effect#0",
+      "card_id": "EX7-071",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from digivolution cards, gain 1 memory. While you have a [Three Musketeers] trait Digimon, you may ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-071#effect#1",
+      "card_id": "EX7-071",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their level 5 Digimon. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-071#effect#2",
+      "card_id": "EX7-071",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their level 5 Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-073#effect#0",
+      "card_id": "EX7-073",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[Three Musketeers] trait w/o [X Antibody] trait: Cost 1",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-073#effect#1",
+      "card_id": "EX7-073",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may use 1 Option card with [Three Musketeers] in its text from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX7-073#effect#2",
+      "card_id": "EX7-073",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "By trashing 2 cards with the [Three Musketeers] trait from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with the highest level, and trash their top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-032#effect#0",
+      "card_id": "LM-032",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "1 of your purple Digimon may digivolve into a purple Digimon card in the hand with the digivolution cost reduced by 3. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-032#effect#1",
+      "card_id": "LM-032",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If your opponent has a Digimon, ＜Delay＞. ・Return 1 purple Digimon card from your trash to the top of the deck. Then, if you don't have a Digimon, you may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-032#effect#2",
+      "card_id": "LM-032",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "You may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-056#effect#0",
+      "card_id": "LM-056",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you don't have [Image Training] in the battle area, you can ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-056#effect#1",
+      "card_id": "LM-056",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 purple or blue card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-056#effect#2",
+      "card_id": "LM-056",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "1 of your Digimon may digivolve into a purple or blue Digimon card in the hand with the digivolution cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-056#effect#3",
+      "card_id": "LM-056",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 purple or blue card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-108#effect#0",
+      "card_id": "P-108",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 purple card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-108#effect#1",
+      "card_id": "P-108",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "(By trashing this card after the placing turn, activate the effect.) ・1 of your Digimon may digivolve into a purple Digimon card in the hand with the digivolution cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-108#effect#2",
+      "card_id": "P-108",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#0",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[Three Musketeers] in text: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#1",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When this card would be played, by returning 3 cards with [Three Musketeers] in their texts from your trash to the bottom of the deck, reduce the play cost by 6.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#2",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#3",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#4",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Retaliation",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-170#effect#5",
+      "card_id": "P-170",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost. (Rule) Trait: Has [Three Musketeers].",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-180#effect#0",
+      "card_id": "P-180",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon. While you have a [Three Musketeers] trait Digimon, you can ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-180#effect#1",
+      "card_id": "P-180",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Trash your opponent's top security card. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-180#effect#2",
+      "card_id": "P-180",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with the highest DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-198#effect#0",
+      "card_id": "P-198",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[TS] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-198#effect#1",
+      "card_id": "P-198",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Fallen Angel] or [TS] trait in the hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-198#inherited#0",
+      "card_id": "P-198",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-198#inherited#1",
+      "card_id": "P-198",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 1",
+      "text": "and trash 1 card in your hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-212#effect#0",
+      "card_id": "P-212",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "If your opponent has a Digimon, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-212#effect#1",
+      "card_id": "P-212",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-212#effect#2",
+      "card_id": "P-212",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 1",
+      "text": "and trash 1 card in your hand. If this effect trashed a card with the [Three Musketeers] or [TS] trait, delete 1 of your opponent's level 3 Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-212#effect#3",
+      "card_id": "P-212",
+      "zone": "effect",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST13-08#effect#0",
+      "card_id": "ST13-08",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "Players can't reduce play costs.",
+      "source": "bundle",
+      "image_path": null
     }
   ],
   "denominator": {
-    "total_clauses": 145,
-    "total_cards": 38,
+    "total_clauses": 361,
+    "total_cards": 98,
     "by_zone": {
-      "effect": 122,
-      "inherited": 19,
+      "effect": 314,
+      "inherited": 43,
       "security": 4
     },
     "by_source": {
-      "bundle": 43,
+      "bundle": 259,
       "cards_json": 98,
       "image-required": 4
     },

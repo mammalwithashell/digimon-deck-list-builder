@@ -1,10 +1,13 @@
 //! Lower `CompiledDeclarativeClause::Partition` into engine effects.
 //!
-//! Phase 1 scope: grant the `Keyword::Partition` keyword and install a
-//! declarative marker. Full source-list enforcement is engine-side
-//! (replacement dispatch) and orthogonal to this lowering.
-//! `active_when` and `sources` are accepted but ignored for now. A configured
-//! process body is emitted as an `OnDeletion` body at the partition event.
+//! This lowering grants the `Keyword::Partition` keyword and installs a
+//! declarative marker; the keyword's synthesized replacement body owns the
+//! behaviour. The per-slot `sources:` specs are NOT consumed here — they reach
+//! that body through [`crate::effect::CardEffect::partition_slots`], which
+//! `DslCardEffect` answers from this same clause, and are enforced there
+//! (general_rule.pdf 16-28-5/-6; was `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED`).
+//! `active_when` is still accepted and ignored. A configured process body is
+//! emitted as an `OnDeletion` body at the partition event.
 
 use std::sync::Arc;
 
@@ -22,8 +25,9 @@ use crate::enums::{Expiry, Keyword};
 /// Returns effects that grant `Keyword::Partition` to the source permanent and,
 /// when `process` is present, run that body when the carrier is deleted.
 ///
-/// `_active_when` and `_sources` are deferred to a future phase when
-/// engine-side dispatch enforces the source list.
+/// `_sources` is read by `DslCardEffect::partition_slots`, not here — the
+/// synthesized `Keyword::Partition` body pulls it at fire time and enforces it.
+/// `_active_when` is still deferred.
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,

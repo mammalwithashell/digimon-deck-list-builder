@@ -1,0 +1,151 @@
+# Exam scenario: Tankmon (EX7-043), clause EX7-043#effect#1 --
+# "[On Play] [When Digivolving] By returning 3 cards with the [Three
+#  Musketeers] trait from your hand or trash to the top of the deck,
+#  <De-Digivolve 1> 1 of your opponent's Digimon."
+#
+# This file exercises the [On Play] arm (EX7_043.cs registers one shared
+# body under both timings). P0 holds Tankmon and exactly three [Three
+# Musketeers]-TRAIT cards -- Bind Red Trigger P-180 x2 and BeelStarmon
+# BT25-085 -- with an empty trash, so the whole cost comes from the hand.
+# P1's De-Digivolve target is a real stack: Kokatorimon BT1-014 (vanilla
+# Lv.4) digivolved over Biyomon ST1-02 on T4, so <De-Digivolve 1>
+# (Mandatory, 16-11) trashes Kokatorimon and leaves Biyomon.
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0): pass everything.
+#   T4 (P1, 3): digivolve Biyomon into Kokatorimon (3 -> 1), pass.
+#   T5 (P0, 3): play Tankmon (cost 5: 3 -> -2). THE CLAUSE: return P-180,
+#            P-180, BeelStarmon to the deck top; De-Digivolve 1 the
+#            Kokatorimon stack. Memory -2 hands the turn over.
+#   T6 (P1): the trailing step.
+#
+# PROMPT SHAPE and the CARDINALITY FOLD (docs/DCGO_EXAM.md "Our selection
+# surface vs DCGO's"). EX7_043.cs: SetUpActivateClass(..., -1, TRUE, ...)
+# -> OptionalSkill yes/no; then ONE SelectHandEffect(maxCount min(3, hand
+# TM cards), canNoSelect: true, canEndNotMax: true); the trash pick is
+# skipped (HasMatchConditionOwnersCardInTrash false); then, with exactly 3
+# chosen, ONE ordering SelectCardEffect(Root.Custom over the 3, canNoSelect
+# false) -- "lower numbers on top": the FIRST card named ends on top; then
+# SelectPermanentEffect(canNoSelect: false) over opponent Digimon ->
+# IDegeneration(1). Our engine models the same cost as THREE sequential
+# `select_union_zone` picks over hand + trash (pick 1 declinable, 2 and 3
+# mandatory), each placed on the deck top at once (the 3rd pick ends on
+# top), and asks no separate ordering. Neither side can be expressed in the
+# other's cardinality, so the cost rows are split: three `sim_only` picks on
+# our side, and on the wire OptionalSkill(yes) + the 3-card SelectHandEffect
+# + the ordering row named so that BeelStarmon ends on top on both engines.
+# The De-Digivolve target row is SHARED -- that is the decision both engines
+# ask in the same shape, and the comparable end state (hand, trash, P1's
+# field) is what the diff measures. Then DCGO's IDegeneration(permanent, 1,
+# activateClass) -- constructed WITHOUT a DegenerationCountRuling -- opens a
+# SelectCountEffect("How many cards do you trash?") over the single
+# candidate {1}; SelectCountEffect.Activate() auto-picks it but does so
+# through SetCount, whose harness intercept (InputDriver.TryAnswerStep,
+# KindSelectCount) CONSUMES a scripted row (NOTES-BT21-074.md, the finding
+# this campaign applies to every <De-Digivolve> line). Our engine parks
+# nothing for <De-Digivolve 1> (keyword-semantics 16-11: mandatory, no
+# choice at x = 1), hence the `dcgo_only` count row. Re-lowered 2026-09-18:
+# the count row was added and the assert moved to the end of the line (the
+# crashed draft asserted BEFORE the target pick had resolved).
+card: EX7-043
+clause: EX7-043#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-043, P-180, P-180, BT25-085, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092]
+    rest: tm-tankmon
+  p1:
+    stack: [ST1-02, BT1-014, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): Kokatorimon over Biyomon -- the De-Digivolve target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: BT1-014 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-043, from: hand } }
+    expect: { prompt: main_phase }
+  # OUR side: three sequential union-zone picks (hand + trash; the trash is
+  # empty). The 3rd pick lands on top of the deck.
+  - actor: 0
+    do: { select: { cards: [P-180], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-085], sim_only: true } }
+  # DCGO side: the optional gate, the one 3-card hand pick, and the order
+  # (first named = top, matching our engine's BeelStarmon-on-top).
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [P-180, P-180, BT25-085], dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-085, P-180, P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # SHARED: <De-Digivolve 1> the Kokatorimon stack.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: IDegeneration's SelectCountEffect over the single candidate
+  # {1} (see the header). The VALUE, not an index.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: SelectCountEffect }
+  # Memory -2: the seat is P1 (T6).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 19
+    that:
+      turn: 6
+      p0.memory: -2
+      p0.trash: []
+      p0.hand: [BT24-088, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: EX7-043, dp: 5000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [BT1-014]
+      p1.security: 5

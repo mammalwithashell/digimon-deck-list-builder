@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T17:01:06.908176400+00:00",
+  "clauses": {
+    "BT20-020#effect#0": {
+      "clause_id": "BT20-020#effect#0",
+      "card_id": "BT20-020",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "6e07b08f755d0646c1d41403cffd4e8d1b0cc471f12a6ec66ddc83c1c254ad1a",
+      "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:28.486843400+00:00"
+    },
+    "BT20-020#effect#1": {
+      "clause_id": "BT20-020#effect#1",
+      "card_id": "BT20-020",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect1.yaml",
+      "recorded_at": "2026-09-19T15:16:29.447280700+00:00"
+    },
+    "BT20-020#effect#2": {
+      "clause_id": "BT20-020#effect#2",
+      "card_id": "BT20-020",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect2.yaml",
+      "recorded_at": "2026-09-19T15:16:30.627450900+00:00"
+    },
+    "BT20-020#effect#3": {
+      "clause_id": "BT20-020#effect#3",
+      "card_id": "BT20-020",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "1c16ad322c9b2e7d0190c2cd9eb16650a1084c26f6086743a16a71d0a90b57b9",
+      "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect3.yaml",
+      "recorded_at": "2026-09-19T17:01:06.908176400+00:00"
+    },
+    "BT20-020#effect#4": {
+      "clause_id": "BT20-020#effect#4",
+      "card_id": "BT20-020",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "086e6c191da5b06865624b0c684baec3827791426abb578ed4d67613d66f5119",
+      "scenario_path": "qa/dcgo-exams/BT20/BT20-020-effect4.yaml",
+      "recorded_at": "2026-09-19T15:16:32.905196500+00:00"
+    }
+  }
+}

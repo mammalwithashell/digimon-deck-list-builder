@@ -115,7 +115,7 @@ dual:
               defender: battle_target
   option:
     use_cost: 4
-    colors: [green, black]
+    colors: [green]
     effect_text: |
       [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it may attack.
     # Use Req. [Glowing Dawn] trait — a Glowing Dawn Digimon on the field

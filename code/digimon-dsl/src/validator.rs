@@ -262,15 +262,26 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 if b.dp_modifier.is_none()
                                     && b.security_attack.is_none()
                                     && b.grant_keyword.is_none()
+                                    && b.grant_traits.is_empty()
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, or effect_immunity"
                                             .to_string(),
                                     });
+                                }
+                                for (i, t) in b.grant_traits.iter().enumerate() {
+                                    if t.trim().is_empty() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.grant_traits[{i}]"),
+                                            message: "grant_traits entries must be non-empty trait names"
+                                                .to_string(),
+                                        });
+                                    }
                                 }
                                 // `effect_immunity` only lowers on the
                                 // self-aura declarative-tick path
@@ -596,6 +607,15 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(sub) = &pred.trashed_hand_card_matching {
+        validate_predicate(
+            sub,
+            &format!("{prefix}.trashed_hand_card_matching"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
     if let Some(ssc) = &pred.self_source_count {
         if let Some(filter) = &ssc.filter {
             validate_predicate(
@@ -703,6 +723,48 @@ fn validate_predicate(
             ctx,
             errors,
         );
+    }
+    if let Some(sc) = &pred.link_card_count {
+        validate_predicate(
+            &sc.filter,
+            &format!("{prefix}.link_card_count.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(hdc) = &pred.has_digivolve_candidate {
+        if hdc.zone.is_empty() {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.has_digivolve_candidate.zone"),
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash`"
+                    .to_string(),
+            });
+        }
+        for z in &hdc.zone {
+            if !matches!(
+                z,
+                crate::predicate::Zone::Hand | crate::predicate::Zone::Trash
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.has_digivolve_candidate.zone"),
+                    message: format!(
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` (got {z:?})"
+                    ),
+                });
+            }
+        }
+        if let Some(filter) = &hdc.filter {
+            validate_predicate(
+                filter,
+                &format!("{prefix}.has_digivolve_candidate.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
     }
     if let Some(d) = &pred.distinct_named_count_gte {
         validate_predicate(
@@ -1199,6 +1261,9 @@ fn validate_step(
                 validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
             }
         }
+        StepSpec::DeleteAllPermanents(a) => {
+            validate_predicate(&a.over, &format!("{prefix}.over"), card_id, ctx, errors);
+        }
         StepSpec::PerSelected(ps) => {
             for (k, s) in ps.body.iter().enumerate() {
                 validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
@@ -1639,6 +1704,12 @@ fn validate_step_binding_scope(
         StepSpec::RevealTopDeck(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        // `bind_placed_as` names the placed card ONLY on a successful
+        // placement — it is a legitimate optional binding for a downstream
+        // `if { binding_present }` "If this effect placed" gate (EX7-044).
+        StepSpec::PlaceAsBottomSource(args) => {
+            declare_optional_binding(scope, &args.bind_placed_as);
+        }
         StepSpec::PlayFromMaterials(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
@@ -1687,6 +1758,26 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+        }
+        StepSpec::ReturnUnionBoundToDeck(args) => {
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
+            if !matches!(
+                args.position,
+                crate::step::StackPosition::Top | crate::step::StackPosition::Bottom
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.position"),
+                    message: "return_union_bound_to_deck supports only position: top | bottom"
+                        .to_string(),
+                });
+            }
         }
         StepSpec::UseOptionBound(args) => {
             // The `binding` must name an in-scope `select_union_zone` bind_as.
@@ -1749,6 +1840,15 @@ fn validate_step_binding_scope(
             // maybe-bound visibility the optional Select*-with-`then` steps
             // already grant via their post-step `declare_optional_binding`.
             scope.extend(then_scope);
+        }
+        StepSpec::DeleteAllPermanents(args) => {
+            validate_predicate_binding_scope(
+                &args.over,
+                &format!("{prefix}.over"),
+                card_id,
+                scope,
+                errors,
+            );
         }
         StepSpec::ForEach(args) => {
             validate_predicate_binding_scope(
@@ -1893,6 +1993,7 @@ fn validate_predicate_binding_scope(
         ("binding_exists", &pred.binding_exists),
         ("binding_present", &pred.binding_present),
         ("binding_absent", &pred.binding_absent),
+        ("can_digivolve_onto", &pred.can_digivolve_onto),
     ] {
         if let Some(binding) = binding {
             report_if_undeclared_binding(
@@ -1953,6 +2054,15 @@ fn validate_predicate_binding_scope(
             errors,
         );
     }
+    if let Some(sub) = &pred.trashed_hand_card_matching {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.trashed_hand_card_matching"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(
             inh,
@@ -1961,6 +2071,17 @@ fn validate_predicate_binding_scope(
             scope,
             errors,
         );
+    }
+    if let Some(hdc) = &pred.has_digivolve_candidate {
+        if let Some(filter) = &hdc.filter {
+            validate_predicate_binding_scope(
+                filter,
+                &format!("{prefix}.has_digivolve_candidate.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
     }
     if let Some(ssc) = &pred.self_source_count {
         if let Some(filter) = &ssc.filter {
@@ -2133,7 +2254,8 @@ fn validate_per_selector_binding_scope(
     errors: &mut Vec<ValidationError>,
 ) {
     if let crate::formula::PerSelector::CardCountInZone(spec)
-    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    | crate::formula::PerSelector::DistinctColorsCount(spec)
+    | crate::formula::PerSelector::DistinctNamesCount(spec) = per
     {
         if let Some(filter) = &spec.filter {
             validate_predicate_binding_scope(
@@ -2323,7 +2445,8 @@ fn validate_per_selector(
     errors: &mut Vec<ValidationError>,
 ) {
     if let crate::formula::PerSelector::CardCountInZone(spec)
-    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    | crate::formula::PerSelector::DistinctColorsCount(spec)
+    | crate::formula::PerSelector::DistinctNamesCount(spec) = per
     {
         if let Some(filter) = &spec.filter {
             validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
@@ -2373,7 +2496,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
 fn per_uses_dp_aggregate(per: &crate::formula::PerSelector) -> bool {
     match per {
         crate::formula::PerSelector::CardCountInZone(spec)
-        | crate::formula::PerSelector::DistinctColorsCount(spec) => spec
+        | crate::formula::PerSelector::DistinctColorsCount(spec)
+        | crate::formula::PerSelector::DistinctNamesCount(spec) => spec
             .filter
             .as_deref()
             .is_some_and(predicate_uses_dp_aggregate),

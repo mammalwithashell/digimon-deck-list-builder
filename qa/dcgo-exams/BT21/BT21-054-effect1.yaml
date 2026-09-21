@@ -1,0 +1,192 @@
+# Exam scenario: Shotmon (BT21-054), clause BT21-054#effect#1 --
+# "[On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait
+#  from any of your Digimon's digivolution cards, <De-Digivolve 1> 1 of your
+#  opponent's Digimon."
+#
+# THE LINE. The [Appmon] source is Swipemon BT21-005 (green Digi-Egg, form
+# Appmon), under the FIRST Shotmon, which digivolves onto it in the breeding
+# area on T3 (the alt-circle route measured in BT21-054-effect0.yaml) and is
+# promoted on T5. The SECOND Shotmon is drawn on T5 and hard-played for 3:
+# THE CLAUSE fires as [On Play], trashes Swipemon from under Shotmon #1 (a
+# different Digimon than the carrier -- "any of your Digimon's digivolution
+# cards"), and <De-Digivolve 1> hits p1's Kokatorimon BT1-014 stack (Lv.4
+# over Biyomon ST1-02): Kokatorimon to the trash, Biyomon remains as the
+# witness. Kokatorimon is vanilla, so p1's digivolve prompts nothing on
+# either side.
+#
+# PROMPT SHAPE (BT21_054.cs, region "On Play"): SetUpActivateClass(..., -1,
+# true, ...) -> OPTIONAL: DCGO asks OptionalSkill (CanActivateCondition: some
+# own Digimon's digivolution cards hold an Appmon/[Three Musketeers] card),
+# and our engine parks its `Replacement` accept/decline gate for the clause's
+# `optional: true` (the body's first step is a mandatory union-material pick)
+# -> ONE shared row. Then CardEffectCommons.SelectTrashDigivolutionCards(
+# isFromOnly1Permanent: false, canNoTrash: false): SelectPermanentEffect over
+# own Digimon holding an eligible source (canNoSelect: false; consumed even
+# with the single candidate Shotmon #1) THEN SelectCardEffect over that
+# permanent's DigivolutionCards; our engine asks ONE union-material pick that
+# names the source card directly, so the permanent row is `dcgo_only` and the
+# card row is answered sim-side through the resolver's single-accept-id
+# `yes:` path (selection_resolve.rs's `Hand | UnionZone` arm scans hand and
+# trash only -- a digivolution-card candidate cannot be named by `cards:`;
+# same convention as BT21-074-effect2.yaml / BT25-083-effect2.yaml). Then the
+# De-Digivolve target: SelectPermanentEffect(canNoSelect: false) on both
+# sides. Then DCGO's IDegeneration(target, 1, activateClass) -- constructed
+# WITHOUT a DegenerationCountRuling -- opens SelectCountEffect("How many cards
+# do you trash?") with the single candidate {1}; SelectCountEffect.Activate()
+# auto-picks it but does so through SetCount, whose harness intercept
+# (InputDriver.TryAnswerStep, KindSelectCount) CONSUMES a scripted row. Our
+# engine parks nothing for <De-Digivolve 1> (keyword-semantics 16-11:
+# mandatory, no choice at x = 1), hence the `dcgo_only` count row.
+#
+# Shotmon #1's own [On Play] never fired (it was digivolved, not played), and
+# Swipemon's inherited "when this Digimon gets linked" trigger is silent (no
+# link in this line). ITrashDigivolutionCards raises OnDigivolutionCardDiscarded
+# for the trashed Swipemon, which has no such trigger.
+#
+# DRAW ACCOUNTING (5-8-4): T3 turn draw stack[10], T3 breeding-digivolve draw
+# stack[11], T5 turn draw stack[12] = the second Shotmon (so exactly ONE copy
+# is in hand when it is played -- a duplicate lowers as ambiguous).
+#
+# Memory: T1 p0 -> p1 3; T2 Biyomon (2): 3 -> 1, pass -> p0 3; T3 Shotmon #1
+# in breeding (0), pass -> p1 3; T4 Kokatorimon (2): 3 -> 1, pass -> p0 3;
+# T5 Shotmon #2 (3): 3 -> 0 -- the turn does NOT end at 0 (6-1-4-1), so the
+# trailing step is p0's own pass.
+#
+# Book: qa/dcgo-exams/BT21/tm_bt21_054_pool.json (--decks). p0's deck is
+# Shotmon x4 over the quiet ST-1 filler with Swipemon BT21-005 eggs; p1 is the
+# quiet ST-1 opponent.
+card: BT21-054
+clause: BT21-054#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the first Shotmon, inert filler
+      - BT21-054
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): T3 turn draw, T3 digivolve draw, T5 turn draw = Shotmon #2
+      - BT4-010
+      - BT4-010
+      - BT21-054
+    rest: tm-shotmon
+  p1:
+    stack:
+      # hand (0-4): Biyomon, Kokatorimon (the De-Digivolve target stack), filler
+      - ST1-02
+      - BT1-014
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): T2 turn draw, T4 turn draw, T4 digivolve draw
+      - BT4-014
+      - ST1-08
+      - ST1-10
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch Swipemon BT21-005, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon (3 -> 1) -- the future De-Digivolve
+  # remainder -- then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): the breeding area holds a Lv.2, so the turn opens on
+  # the main phase. Digivolve Shotmon #1 onto Swipemon for 0 (alt circle), pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT21-054 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Kokatorimon over Biyomon (3 -> 1) -- the De-Digivolve
+  # target -- then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: BT1-014 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): promote Shotmon #1 (battle-area slot 0), then play
+  # Shotmon #2 for 3 (3 -> 0). THE CLAUSE.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-054, from: hand } }
+    expect: { prompt: main_phase }
+  # "By trashing ..." is optional on BOTH sides: DCGO's OptionalSkill
+  # (isOptional: true) and our Replacement gate. Take it.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # DCGO: which Digimon's digivolution cards (Shotmon #1, the only own Digimon
+  # holding an eligible source). Wire-only: our engine's single union-material
+  # pick names the source directly.
+  - actor: 0
+    do: { select: { cards: [BT21-054], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The source to trash: Swipemon. OUR union-material pick (single candidate,
+  # answered through the resolver's single-accept-id path, sim-side only);
+  # DCGO's own card row rides the wire alone below.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-005], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # <De-Digivolve 1> 1 of your opponent's Digimon: the Kokatorimon stack.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: IDegeneration's SelectCountEffect over the single candidate
+  # {1} (see the header). The VALUE, not an index.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: SelectCountEffect }
+  # One step past the clause: p0 still holds the turn on 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 18
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.trash: [BT21-005]
+      p0.hand: [ST1-04, ST1-04, BT1-009, ST1-05, BT4-010, BT4-010]
+      p0.field:
+        - { card_id: BT21-054, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT21-054, dp: 1000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.security: 5
+      p1.trash: [BT1-014]

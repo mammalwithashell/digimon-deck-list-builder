@@ -4,7 +4,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect::CardEffect;
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
-use digimon_engine::selection::OptionPlayResult;
+use digimon_engine::action::space::HAND_EFFECT_START;
 use std::sync::Arc;
 
 fn compile_yaml(yaml: &str) -> Arc<digimon_dsl::compiled::CompiledCard> {
@@ -122,9 +122,22 @@ effects:
     let host = linked.place_on_field(0, "HOST", Some(0));
     linked.game.enter_main_phase();
 
-    assert_eq!(
-        linked.game.play_option_from_hand(0, 0),
-        OptionPlayResult::Pending
+    // `G-ENGINE-OPTION-LINK-FROM-HAND`: the from-hand link is its OWN
+    // main-phase action, not a mode of "use this Option". general_rule.pdf
+    // (Ver.3.6) §6-5-1 lists "use an Option card from the hand" (§6-5-1-3) and
+    // "link a card from the hand or battle area" (§6-5-1-4) separately, so the
+    // declaration lives on the `HAND_EFFECT` bit — `play_option_from_hand` no
+    // longer offers a Link mode and would refuse this card outright. Same
+    // shape as the `declare_from_hand` helper in
+    // `tests/option_flow/hand_declaration.rs`.
+    assert!(
+        linked.game.hand_effect_slot_is_link(0, 0),
+        "the Plug-In Option's hand slot must carry the §6-5-1-4 link declaration"
+    );
+    linked.game.decode_action(HAND_EFFECT_START, 0);
+    assert!(
+        linked.game.pending_selection.is_some(),
+        "the link declaration installs the host pick (§10-1-3-1 chooses the host first)"
     );
     let action = linked
         .game

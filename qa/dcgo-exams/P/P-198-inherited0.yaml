@@ -1,0 +1,192 @@
+# Exam scenario: DemiDevimon (P-198), clause P-198#inherited#0 --
+# the inherited line "[When Attacking] [Once Per Turn] <Draw 1> and trash 1
+# card in your hand." The extractor splits that one printed sentence at the
+# <Draw 1> keyword into #inherited#0 (the timing) and #inherited#1 (the
+# keyword + rider); this file is the "[When Attacking] [Once Per Turn]" half and the same line
+# exercises the whole sentence.
+#
+# THE LINE. An inherited clause needs a CARRIER: DemiDevimon's own [Start of
+# Your Main Phase] free digivolve (P-198-effect1.yaml) puts Devimon BT2-074 on
+# top of it on T7, and that stack attacks p1's security on T9. The witness is
+# p0's hand: one card drawn by the clause (ST1-05, stack[16]) and one card
+# (ST1-04) trashed -- net hand size unchanged -- with p0's trash holding
+# exactly ST1-04.
+#
+# DRAW ACCOUNTING (every digivolution draws 1, 5-8-4): T3 turn draw
+# stack[10], T3 breeding-digivolve draw stack[11], T5 draw stack[12], T7 draw
+# stack[13], T7 free-digivolve draw stack[14], T9 draw stack[15], the clause's
+# <Draw 1> stack[16]. The stack is pinned through [16] so the hand assert
+# names every card on both sides (sim-only otherwise draws the `rest:` list
+# from the back, which the oracle's shuffled remainder would not match).
+#
+# PROMPT SHAPE. DCGO's ESS is `SetUpActivateClass(..., 1, false, ...)` -- no
+# OptionalSkill -- and `DrawAndDiscardCards` draws first, then opens ONE
+# SelectHandEffect with `canNoSelect: false`. Ours: `draw` then a plain
+# `select_hand`. 1:1. Nothing else triggers on the attack: Devimon BT2-074's
+# only text is <Retaliation>, Pagumon BT25-005 has no [When Attacking], and
+# p1's only permanent is Phoenixmon (played T4), unsuspended and without
+# <Blocker>, so no blocker window opens. The check flips p1's stack[9]
+# (Biyomon ST1-02, 3000 DP), which loses to Devimon's 4000.
+#
+# WHY p1 HARD-PLAYS PHOENIXMON ON T4. DemiDevimon is digivolved in the breeding
+# area on T3 and can only be moved out in a later breeding phase, so p0 has
+# one turn start (T5) with a Lv.3 DemiDevimon still in breeding. DCGO's
+# P_198.cs gates the trigger on `IsExistOnBattleAreaDigimon` (breeding-area
+# effects don't activate, 3-4-6), while our engine was observed (sim-only,
+# first draft of BT25-058-effect5.yaml) to park the digivolve pick from the
+# breeding area BEFORE the breeding step -- a prompt DCGO never asks. The line
+# makes the trigger's own condition false on that turn instead of papering
+# over it: p1 overshoots by 7 on T4 (Phoenixmon ST1-10, 3 -> -7), p0 opens T5
+# on 7 memory, and "4 or less" fails on both sides. The finding is recorded in
+# NOTES-P-198.md (re-verified sim-only 2026-09-16).
+#
+# Book: qa/dcgo-exams/P/tm_p_198_pool.json (--decks). p0's deck is DemiDevimon
+# x4 + Devimon BT2-074 x4 over the quiet ST-1 filler with Pagumon BT25-005 eggs;
+# p1 is the quiet ST-1 opponent.
+card: P-198
+clause: P-198#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): DemiDevimon, Devimon, the ST1-04 that gets trashed, filler
+      - P-198
+      - BT2-074
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's draws, in order (see DRAW ACCOUNTING in the header)
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+      - ST1-05
+    rest: tm-demidevimon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T4 overshoot), inert filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch Pagumon BT25-005, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): digivolve DemiDevimon in the breeding area via the
+  # "[Digivolve] Lv.2 w/[TS] trait: Cost 0" path (Pagumon BT25-005 is black,
+  # so it is the only applicable path -- see P-198-effect0.yaml), then pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: P-198 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): hard-play Phoenixmon for 10 (3 -> -7). p0 opens T5 on 7,
+  # so DemiDevimon's "4 or less memory" trigger stays silent on both sides while
+  # it is still in the breeding area (see the header).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 7): move DemiDevimon to the battle area; the main phase
+  # opens on 7 memory -- no trigger. Pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): the trigger fires with DemiDevimon on the battle area;
+  # take it and digivolve into Devimon BT2-074 for free (the fold row -- see
+  # P-198-effect1.yaml). Then pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT2-074] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): Devimon (over DemiDevimon) attacks the player. THE CLAUSE
+  # fires from the digivolution cards: draw 1, then trash 1 card from hand.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The mandatory trash pick (DCGO SelectHandEffect, canNoSelect: false; ours a
+  # plain `select_hand`). Then the check flips p1's stack[9] (Biyomon, 3000 DP),
+  # which loses to Devimon's 4000.
+  - actor: 0
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause. The assert reads the PRE-step state of this
+  # pass (step index 20).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 20
+    that:
+      turn: 9
+      p0.memory: 3
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p0.trash: [ST1-04]
+      p0.hand: [ST1-04, BT1-009, BT4-014, BT4-014, BT4-010, BT4-010, BT3-007, BT3-007, ST1-05]
+      p0.field:
+        - card_id: BT2-074
+          dp: 4000
+          suspended: true
+          sources: [BT25-005, P-198]

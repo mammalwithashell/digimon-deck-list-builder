@@ -365,6 +365,44 @@ on_source_returned_to_deck_bottom`. A top-of-deck return fires nothing (the
 printed observer is bottom-scoped). It is still a **return, not a trash** — it
 never fires `OnDigivolutionCardTrashed`.
 
+**`OnAddDigivolutionCards` observer (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS).**
+The source-ADDED sibling of `OnDigivolutionCardTrashed`: fires ONCE per host
+permanent after an **effect** places one or more cards into that permanent's
+digivolution cards. Every effect-driven placement facade —
+`place_as_bottom_source` / `place_as_top_source` (hand / trash / deck-top /
+material / reveal / security sources, battle-area or breeding hosts),
+`place_card_under_permanent_bottom` (`<Save>` / `<Material Save>`),
+`place_cards_under_tamer_bottom_in_order`, `move_*_sources_under_tamer`,
+`attach_tamer_to_digimon` (`<Mind Link>`),
+`training_place_deck_top_under_self_face_down` (`<Training>`),
+`place_permanent_as_bottom_sources`, `place_specific_link_card_as_bottom_source`
+and the Option place-self tail (`seat_card_source_under_permanent`) — calls
+`Game::note_effect_added_sources(host, cards, cause)` after its `card_sources`
+mutation. That opens/extends a per-host **batch window**
+(`Game::pending_added_sources`) that is flushed at the outermost
+`drain_effect_queue` (next to the `OnDiscardHand` window), so a `<Material
+Save 3>` loop fires the observer once with all three cards — rule 15-5-2, and
+DCGO `Permanent.AddDigivolutionCardsBottom(list, cardEffect)` stacking the
+skill once per list. Deliberately **not** noted (DCGO passes `cardEffect:
+null` and `CanTriggerOnAddDigivolutionCard` requires non-null): normal
+digivolution, DNA / Blast DNA digivolution, DigiXros + Assembly material
+consumption, App Fusion, and restore/undo paths. Dispatch is board-wide
+(`TriggerSource::SourcesAddedToStack`, every battle-area + breeding permanent
+of both players), so the placed card's own inherited observer fires (rule
+15-5-3 — the manual's worked example is this exact effect). `TriggerContext`
+carries the host (`event_host_permanent` / `event_host_card`), the added batch
+(`added_source_cards()`, via `moved_card_sets`) and the placing effect
+(`event_cause_effect: EffectAttribution`); `event_card` is intentionally
+unset (batch event). Raw-Rust: `Effect::on_add_digivolution_cards(card)` +
+`ctx.event_host_permanent()` / `ctx.added_source_cards()` /
+`ctx.event_caused_by_own_effect()`. DSL: `when: on_add_digivolution_cards`
+gated in `active_when:` / `condition:` by `event_host_permanent_is_source:
+true` ("under THIS Digimon"), `event_caused_by_own_effect: true` ("one of
+YOUR effects", BT7-056) and `event_added_card_any: { <card predicate> }`
+(DCGO `cardCondition`, ANY added card matches — EX7-005
+`{ kind: option, trait_has: Three Musketeers }`). Tests:
+`tests/on_add_digivolution_cards.rs`.
+
 **DSL: leave-field "return N own sources to deck" replacement cost (BT21-062).**
 A `kind: replacement` clause with `trigger: when_would_leave_battle_area`,
 `optional: true`, `outcome: prevent`, and
@@ -1512,6 +1550,7 @@ MainFromHand, MainOnField, MainFromTrash
 
 // Archetype observers
 OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed,
+OnAddDigivolutionCards                   // an EFFECT placed cards into a permanent's digivolution cards (BT7-056 / EX7-005 / BT25-005); DSL `when: on_add_digivolution_cards`
 OnDigivolutionCardReturnedToDeckBottom   // source returned to deck BOTTOM (BT21-058 / BT18-065); DSL `when: on_source_returned_to_deck_bottom`
 
 None

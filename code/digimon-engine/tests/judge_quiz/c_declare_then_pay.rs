@@ -483,22 +483,21 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     let accept = view.valid_action_ids[0];
     r.execute_action(0, accept).expect("A activates Partition");
 
-    // 2-pick from the live stack: pick MedievalGallantmon (source index 1,
-    // the higher action id) FIRST so its would-play interrupt is the next
-    // flow, then BanchoLeomon.
-    for want_max in [true, false] {
-        let view = r
-            .pending_selection_view()
-            .expect("Partition source pick must surface");
-        let mut acts: Vec<u16> = view.valid_action_ids.clone();
-        acts.sort_unstable();
-        let pick = if want_max {
-            *acts.last().unwrap()
-        } else {
-            acts[0]
-        };
-        r.execute_action(0, pick).expect("pick a Partition source");
-    }
+    // Pick MedievalGallantmon (source index 1, the higher action id) FIRST so
+    // its would-play interrupt is the next flow. BanchoLeomon is then the only
+    // card left that can fill the other printed parenthetical
+    // (<Partition (Yellow Lv.6 & Green/Black Lv.6)> — Medieval is black/green,
+    // Bancho yellow/black), so it is taken WITHOUT a prompt: general_rule.pdf
+    // §16-28-6 ("a player can't choose to only play one or some of the
+    // specified cards") leaves no choice, and DCGO likewise skips the
+    // SelectCardEffect for a single-candidate slot (`Partition.cs:89,117`).
+    let view = r
+        .pending_selection_view()
+        .expect("Partition source pick must surface");
+    let mut acts: Vec<u16> = view.valid_action_ids.clone();
+    acts.sort_unstable();
+    r.execute_action(0, *acts.last().unwrap())
+        .expect("pick MedievalGallantmon as the Green/Black Lv.6");
 
     // ── MedievalGallantmon's interruptive suspend-2 cost reduction ─────────
     // Accept dialog for the would-play cost reduction.

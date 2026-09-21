@@ -1,0 +1,106 @@
+# BT6-060 Deputymon — Digimon, Lv.4, Black, DP 4000, Cost 5. Traits: Mutant.
+# Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT6-060.md — the card
+# image is not in the local mirror):
+#   [On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with
+#   [Three Musketeers] in its type and/or 1 Option card with a memory cost of
+#   7 among them to your hand. Trash the remaining cards.
+#   [Your Turn] This Digimon can digivolve into a Digimon card with
+#   [Three Musketeers] in its type from your hand for a memory cost of 6,
+#   ignoring its digivolution requirements.
+#   Official Q&A: either match alone is still added ("and/or").
+#
+# Digivolution: Black Lv.3 / cost 2 (official DB circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT6/Black/BT6_060.cs
+#   - OnEnterFieldAnyone / CanTriggerOnPlay, SetUpActivateClass(..., -1,
+#     false, ...) → outer trigger NOT optional.
+#     SimplifiedRevealDeckTopCardsAndSelect(revealCount: 4,
+#       bucket 0: IsDigimon && CardTraits.Contains("Three Musketeers"),
+#                 maxCount 1, AddHand;
+#       bucket 1: IsOption && GetCostItself == 7, maxCount 1, AddHand;
+#       remainingCardsPlace: Trash).
+#     CanActivateCondition: on field && deck ≥ 1 (implicit in reveal_top_deck).
+#   - EffectTiming.None → AddSelfDigivolutionRequirementStaticEffect(
+#       permanentCondition: this permanent,
+#       cardCondition: own HAND Digimon with trait "Three Musketeers",
+#       digivolutionCost: 6, ignoreDigivolutionRequirement: TRUE,
+#       condition: IsOwnerTurn && IsExistOnBattleArea).
+#     → `direction: into` alt-path on THIS card (ST20-10 idiom) with
+#       `condition: { your_turn: true }` and `ignore_requirements: true`.
+#
+# Source-priority notes:
+#   - Both reveal buckets are mandatory-if-present (no "you may"; DCGO
+#     maxCount 1 with no canNoSelect override): `min: 1, max: 1` per bucket
+#     (BT12-034 / BT18-007 idiom). `no_duplicate_cards` keeps one card from
+#     satisfying both buckets (a card can't be both a Digimon and an Option
+#     anyway — kept for the shared idiom).
+#   - "Trash the remaining cards": per_selected over the reveal remainder +
+#     trash_from_reveal (BT13-087 idiom), NOT place_remainder_on_deck.
+#   - "memory cost of 7" = exactly 7 → play_cost_lte: 7 + play_cost_gte: 7.
+
+card: BT6-060
+name: Deputymon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 4000
+traits: [Mutant]
+attribute: Vaccine
+
+alt_paths:
+  # Printed circle: Black Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+  # ─── [Your Turn] warp INTO a [Three Musketeers] Digimon from hand for 6 ──
+  # The alt-path lives on the SOURCE (this Digimon); `from:` filters the
+  # destination HAND card. Ignores the destination's digivolution
+  # requirements; gated to the controller's turn.
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      kind: digimon
+      trait_has: "Three Musketeers"
+    cost: 6
+    ignore_requirements: true
+    condition: { your_turn: true }
+
+effects:
+  # ─── [On Play] reveal 4; add 1 TM Digimon and/or 1 7-cost Option; trash rest
+  - when: on_play
+    summary: "[On Play] Reveal 4; add 1 [Three Musketeers] Digimon and/or 1 cost-7 Option to hand; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: musketeer_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: "Three Musketeers"
+            - bind_as: option_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: option
+                  - play_cost_lte: 7
+                  - play_cost_gte: 7
+          no_duplicate_cards: true
+          prompt: "Select 1 Digimon card with the [Three Musketeers] trait and 1 Option card with a memory cost of 7"
+      - add_to_hand_from_reveal: { of: you, card: musketeer_pick }
+      - add_to_hand_from_reveal: { of: you, card: option_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }

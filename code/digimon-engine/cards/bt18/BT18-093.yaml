@@ -1,0 +1,92 @@
+# BT18-093 Violet Inboots — Tamer, Purple, Cost 4. Traits: [LIBERATOR].
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/BT18-093.webp — authoritative; matches the official DB
+# bundle data/card_bundles/BT18-093.md):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Start of Your Main Phase] By trashing 1 Option card or 1 card with the
+#   [Ghost] or [Three Musketeers] trait in your hand, <Draw 1>.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Purple/BT18_093.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `CardEffectFactory.SetMemoryTo3TamerEffect`.
+#   Identical to BT18-087 / BT22-084 / BT25-091 clause 1.
+#
+# Clause 2 — `EffectTiming.OnStartMainPhase`, ActivateClass with
+#   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, true, …)`
+#   → isOptional = TRUE. `CanActivateCondition` =
+#   `HasMatchConditionOwnersHand(IsOption || ContainsTraits("Ghost") ||
+#   ContainsTraits("Three Musketeers"))` — the trigger is only offered while
+#   an eligible card is in hand. `SelectHandEffect(maxCount 1, canNoSelect
+#   TRUE, mode Discard)`; `AfterSelectCardCoroutine`: if ≥1 card was picked,
+#   `DrawClass(owner, 1)`. Declining the pick draws nothing.
+#
+# Clause 3 — `EffectTiming.SecuritySkill` → `PlaySelfTamerSecurityEffect`.
+#
+# ─── Modelling ───────────────────────────────────────────────────────────────
+#
+# Clause 2 is the BT18-092 Zenith idiom: `optional: true` on the clause
+# (§15-7-1 "By X, Y" optional processing condition; DCGO isOptional) and a
+# `select_hand` with `optional: true` + `cost: true` — the inner PASS IS the
+# decline path (no outer prompt is installed when the first step is an
+# optional selection), and `cost: true` aborts the clause tail on decline so
+# the <Draw 1> never fires without the trash (§15-7-2;
+# G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE). The `condition` mirrors DCGO's
+# `CanActivateCondition` so the trigger is not queued (no spurious prompt)
+# when nothing in hand is eligible.
+
+card: BT18-093
+name: "Violet Inboots"
+kind: tamer
+color: [purple]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] memory gate ────────────────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory <= 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [Start of Your Main Phase] trash Option/[Ghost]/[TM] → Draw 1 ─
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] By trashing 1 Option or 1 [Ghost]/[Three Musketeers] card in hand, <Draw 1>"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - kind: option
+            - trait_has: Ghost
+            - trait_has: "Three Musketeers"
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - kind: option
+              - trait_has: Ghost
+              - trait_has: "Three Musketeers"
+          prompt: "Trash 1 Option card or 1 card with the [Ghost] or [Three Musketeers] trait from your hand to <Draw 1>"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

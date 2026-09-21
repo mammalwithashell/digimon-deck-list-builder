@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:08.491669200+00:00",
+  "clauses": {
+    "BT24-081#effect#0": {
+      "clause_id": "BT24-081#effect#0",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect0.yaml",
+      "recorded_at": "2026-09-19T15:12:59.712131+00:00"
+    },
+    "BT24-081#effect#1": {
+      "clause_id": "BT24-081#effect#1",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect1.yaml",
+      "recorded_at": "2026-09-19T15:16:03.317911600+00:00"
+    },
+    "BT24-081#effect#2": {
+      "clause_id": "BT24-081#effect#2",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect2.yaml",
+      "recorded_at": "2026-09-19T15:16:04.524478900+00:00"
+    },
+    "BT24-081#effect#3": {
+      "clause_id": "BT24-081#effect#3",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4a3438cd1e1e897de87bf722e73dbd08bccef143b2c120e14a098491d792dde7",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect3.yaml",
+      "recorded_at": "2026-09-19T15:16:05.745195500+00:00"
+    },
+    "BT24-081#effect#4": {
+      "clause_id": "BT24-081#effect#4",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "76fcb952dc93dcf71c72efdce671f8ddbabbd5891d417bed353bb674ed70a169",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect4.yaml",
+      "recorded_at": "2026-09-19T15:16:07.248197700+00:00"
+    },
+    "BT24-081#effect#5": {
+      "clause_id": "BT24-081#effect#5",
+      "card_id": "BT24-081",
+      "verdict": "confirmed",
+      "label": "Special Play Condition",
+      "text_sha256": "7988d8826c4b8131d655494480d26ce6f07327852487a501e0237330e282290c",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-081-effect5.yaml",
+      "recorded_at": "2026-09-19T15:16:08.491669200+00:00"
+    }
+  }
+}

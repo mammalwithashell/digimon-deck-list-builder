@@ -1,0 +1,105 @@
+# Exam scenario: Image Training (LM-056), clause LM-056#effect#3 --
+# "[Security] Reveal the top 2 cards of your deck. Add 1 purple or blue card
+#  among them to the hand. Return the rest to the bottom of the deck. Then,
+#  place this card in the battle area."
+#
+# LM-056 is pinned at P0's stack[9] -- the TOP security card (stack[5..9] is
+# the security stack reversed, see docs/DCGO_EXAM.md). P0 does nothing all
+# game. P1 hatches Koromon, breeding-digivolves Agumon (ST1-03), promotes it on
+# T6 and attacks the player, flipping LM-056.
+#
+# THE CLAUSE resolves for P0 (the defender) during P1's turn: reveal P0's top 2
+# -- Lekismon (BT25-024, blue) and Patamon (BT25-031, yellow) -- add the blue
+# one (one eligible card: a single SelectCardEffect for actor 0), bottom the
+# other (1 card: no ordering prompt on DCGO's side), and place LM-056 in P0's
+# battle area (not the trash) as a <Delay> Option. Security falls 5 -> 4.
+#
+# Deck accounting for P0 (first player, no T1 draw): draws T3 = stack[10],
+# T5 = stack[11]; the reveal at T6 sees stack[12], stack[13].
+#
+# Book: qa/dcgo-exams/LM/tm_lm_056_pool.json (--decks).
+card: LM-056
+clause: LM-056#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-02, ST1-04, ST1-08, ST1-10, ST1-13,
+            ST1-02, ST1-04, ST1-08, ST1-10, LM-056,
+            ST1-13, ST1-14, BT25-024, BT25-031, ST1-14]
+    rest: tm-lm056-yellow-line
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, ST1-05, ST1-08,
+            ST1-10, ST1-13, ST1-14, ST1-02, ST1-04,
+            ST1-05, ST1-08, ST1-10, ST1-13, ST1-14]
+    rest: tm-lm056-quiet-red
+steps:
+  # T1 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): breeding-digivolve -> Agumon.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): promote Agumon and attack the player -- flips LM-056.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, answered by the DEFENDER (P0): add the 1 blue card.
+  - actor: 0
+    do: { select: { cards: [BT25-024] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: our `OrderedPermutation { remaining: 1 }` prompt for the single
+  # bottomed card; DCGO asks nothing at N=1.
+  - actor: 0
+    do: { select: { cards: [BT25-031], sim_only: true } }
+  # One step past the clause (P1 still holds the turn at memory 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of P1's trailing pass: LM-056 was placed in the DEFENDER's
+  # battle area (not trashed), P0's security fell to 4, Lekismon joined P0's
+  # hand, and Agumon (an Option flip is no battle) survives suspended.
+  - at: 14
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: []
+      p0.hand: [ST1-02, ST1-04, ST1-08, ST1-10, ST1-13, ST1-13, ST1-14, BT25-024]
+      p0.field:
+        - { card_id: LM-056, dp: -1, suspended: false, sources: [] }
+      p1.trash: []
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [ST1-01] }

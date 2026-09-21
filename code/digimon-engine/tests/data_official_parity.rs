@@ -113,3 +113,85 @@ fn official_db_digivolve_circles_present_in_cards_json() {
         failures.join("\n")
     );
 }
+
+/// Printed INHERITED text vs the official Bandai DB, for the ids that have been
+/// adjudicated against the card face.
+///
+/// `card_data.rs` parses printed keywords out of
+/// `inherited_effect_description_eng`, so a wrong string there silently grants a
+/// keyword to every Digimon that inherits from the card. BT25-026 Crescemon was
+/// ingested with a DIFFERENT card's inherited text — `<Security A. +1>` instead of
+/// the printed "[Your Turn] This Digimon's attack target can't change." — which gave
+/// the whole Crescemon line a free extra security check. The DCGO exam measured it:
+/// `qa/dcgo-exams/BT25/BT25-026-inherited0.yaml` diffed `p1.security ours=3 dcgo=4`
+/// with an extra card in `p1.trash`. Fixed via `data/card_overrides.json` +
+/// `data/cards.json` on 2026-09-21.
+///
+/// Scope is a REVIEWED allowlist, not the whole pool: a normalized sweep finds 16
+/// gross inherited-text mismatches against `card_official.json`, and the other 15 are
+/// a separate, unreviewed family (`BT19-011`, `BT19-037`, `BT19-050`, `EX9-013`,
+/// `EX9-020`, `LM-025`, `LM-026`, `LM-043`, `P-191` all carry an "Ace Overflow" line
+/// in the inherited field; `BT1-060`, `BT3-027`, `BT21-059`, `EX4-032`, `EX4-033`,
+/// `EX4-034` are wording drift). Add an id here once its face has been read.
+#[test]
+fn official_db_inherited_text_matches_cards_json() {
+    const REVIEWED: &[&str] = &["BT25-026"];
+
+    let official_path = repo_data("card_official.json");
+    let cards_path = repo_data("cards.json");
+    if !official_path.exists() || !cards_path.exists() {
+        eprintln!("Skipping: data/card_official.json or data/cards.json missing — full repo checkout required");
+        return;
+    }
+
+    let official: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&official_path).expect("read official"))
+            .expect("parse card_official.json");
+    let cards: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&cards_path).expect("read cards"))
+            .expect("parse cards.json");
+
+    // Compare on letters/digits only: the two sources differ freely in
+    // whitespace, full-width brackets and reminder-text parentheses.
+    fn norm(s: &str) -> String {
+        s.chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect()
+    }
+
+    let mut failures: Vec<String> = Vec::new();
+    for id in REVIEWED {
+        let want = official["cards"][id]["text_sections"]
+            .as_array()
+            .map(|secs| {
+                secs.iter()
+                    .filter(|s| s["label"].as_str() == Some("Inherited Effect"))
+                    .filter_map(|s| s["text"].as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .unwrap_or_default();
+        let got = cards[id]["inherited_effect_description_eng"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        if want.is_empty() {
+            failures.push(format!("{id}: official mirror has no Inherited Effect section"));
+            continue;
+        }
+        if norm(&want) != norm(&got) {
+            failures.push(format!(
+                "{id}: cards.json inherited text does not match the official DB\n  official: {want}\n  ours:     {got}"
+            ));
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "{} reviewed card(s) drifted from the official Bandai DB's inherited text \
+         (reconcile via data/card_overrides.json + data/cards.json):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}

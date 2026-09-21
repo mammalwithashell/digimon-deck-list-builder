@@ -1,0 +1,149 @@
+# Exam scenario: Gazimon (BT25-078), clause BT25-078#inherited#0 -- inherited
+# <Retaliation> "(When only this Digimon is deleted in battle, delete the Digimon it
+# battled.)" -- Mandatory (docs/digimon-rules/keyword-semantics.md, 16-12). DCGO:
+# RetaliationSelfEffect(isInheritedEffect: true) in BT25_078.cs, registered under
+# OnDestroyedAnyone with SetUpActivateClass(..., false) -> no prompt in either engine.
+#
+# THE LINE (book tm_bt25_078_pool.json). Gazimon must be a DIGIVOLUTION CARD, so:
+#   T1 (P0): hatch BT25-005 Pagumon (Black [TS] Lv.2 -- chosen over ST6-01 because
+#            ST6-01's inherited "[On Deletion] Trash the top 2 cards of your deck"
+#            would stack a SECOND trigger beside <Retaliation> at the deletion and
+#            open a trigger-order prompt this clause does not need).
+#   T2 (P1, memory 3): play Vermilimon (BT4-014) -- a VANILLA Red Lv.5, 8000 DP,
+#            cost 5. Memory 3 -> -2 hands the turn over at once. (P0's turn 1
+#            started at memory 0 and spent nothing, so P1 opened with 3.)
+#   T3 (P0, memory 2 -- an overspend hands over exactly the overspend, no top-up
+#            to 3): breeding-digivolve into Gazimon (BT25-078, cost 0 via the [TS]
+#            condition) and then into Youkomon (ST6-07) -- a VANILLA Purple Lv.4,
+#            6000 DP, Purple Lv.3 / 2. Memory 2 -> 0. Every card in the stack above
+#            Gazimon prints nothing, so the only effect that can fire when the stack
+#            is deleted is Gazimon's inherited <Retaliation>.
+#   T4 (P1): Vermilimon attacks P0's security (P0's top security card, LadyDevimon
+#            BT25-083 at 7000 DP, loses the security battle and is trashed; a
+#            security Digimon is not on the field, so its inherited [On Deletion]
+#            cannot fire, and it has no [Security] effect). Vermilimon is now
+#            SUSPENDED.
+#   T5 (P0): move the Youkomon stack to the battle area (Youkomon is the top card,
+#            so Gazimon's [When Moving] does NOT fire). It cannot attack this turn.
+#   T6 (P1): Vermilimon unsuspended in P1's unsuspend phase; it attacks P0's security
+#            again (BlackGatomon BT25-082, 6000 DP, loses) so it is suspended during
+#            P0's turn 7.
+#   T7 (P0): THE CLAUSE. Youkomon (6000) attacks the suspended Vermilimon (8000).
+#            Youkomon loses the battle and is deleted -- ONLY Youkomon -- so the
+#            inherited <Retaliation> deletes Vermilimon.
+#
+# WHY P1 ATTACKS TWICE. An unsuspended Digimon cannot be attacked, so Vermilimon
+# must be suspended on P0's turn 7; its own attacks are the only thing in the
+# quiet-opponent deck that suspends it, and it unsuspends every P1 turn.
+#
+# NO SHARED PROMPTS ANYWHERE. Both seats' cards are vanilla except Gazimon (a
+# source, so only its inherited keyword applies) and BT25-005 (a source whose
+# inherited effect only triggers on [Three Musketeers] trait cards being placed in
+# the stack).
+card: BT25-078
+clause: BT25-078#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[10..14] are P0's five draws in order: T3, the two digivolution
+    # draws on T3 (each digivolution draws 1), T5, T7.
+    stack: [BT25-078, ST6-07, BT21-074, BT21-074, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083, BT25-083, BT25-083, BT25-092, BT25-092]
+    rest: three-musketeers-gazimon
+  p1:
+    stack: [BT4-014, ST1-02, ST1-03, ST1-04, BT1-009,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014,
+            ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch Pagumon (BT25-005).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): play Vermilimon (BT4-014). Memory 3 -> -2 ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 2): two breeding-area digivolutions -- Gazimon (0), then
+  # Youkomon (2). Memory 2 -> 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-078 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST6-07 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): Vermilimon attacks P0's security. P0 security 5 -> 4.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): move the Youkomon stack out. Top card is Youkomon: no [When Moving].
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): Vermilimon attacks P0's security again. P0 security 4 -> 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): breeding area is empty again, so the breeding decision is asked.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE. Youkomon (6000) attacks the suspended Vermilimon (8000): Youkomon
+  # is deleted in battle; Gazimon's inherited <Retaliation> deletes Vermilimon.
+  # (`target: field.0` is the attack grammar for the OPPONENT's slot 0 -- an
+  # attack can only ever target the opponent's side, so the side is implicit.)
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # NO trigger-order prompt in EITHER engine: <Retaliation> is the only trigger at
+  # this deletion (DCGO: one RetaliationSelfEffect under OnDestroyedAnyone). Our
+  # engine used to park a phantom 2-candidate TriggerOrder here -- the keyword's
+  # body was synthesized twice (printed inherited text AND the DSL grant clause)
+  # -- fixed 2026-09-18, see NOTES-BT25-078.md.
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. P0's side is asserted in full: the battle
+  # area is empty and the trash holds the whole deleted stack (Pagumon, Gazimon,
+  # Youkomon) plus the two security cards P1's attacks trashed.
+  #
+  # THE CLAUSE'S OWN WITNESS: `p1.field: []` and `p1.trash: [BT4-014]` --
+  # Vermilimon deleted by <Retaliation> (16-12), nothing else in this line able
+  # to touch it.
+  - at: 17
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.security: 3
+      p0.hand: [BT21-074, BT21-074, BT25-083, BT25-083, BT25-083, BT25-085, BT25-092, BT25-092]
+      p0.field: []
+      p0.trash: [BT25-005, BT25-078, BT25-082, BT25-083, ST6-07]
+      p1.field: []
+      p1.trash: [BT4-014]

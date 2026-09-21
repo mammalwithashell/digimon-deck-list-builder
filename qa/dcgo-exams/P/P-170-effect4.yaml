@@ -1,0 +1,126 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#4 -- <Retaliation>.
+#
+# "When this Digimon is deleted in battle, delete the Digimon it battled"
+# (16-12, Mandatory -- docs/digimon-rules/keyword-semantics.md). DCGO:
+# CardEffectFactory.RetaliationSelfEffect at OnDestroyedAnyone in P_170.cs --
+# no prompt in either engine.
+#
+# THE LINE. AvengeKidmon is 13000 DP, so the only thing in a vanilla Red
+# opponent deck that can beat it in battle is Phoenixmon (ST1-10, 12000) with
+# Shadow Wing (ST1-13, "[Main] 1 of your Digimon gets +3000 DP for the
+# turn"): 15000. P1 hard-plays Phoenixmon on T2 (3 -> -7, which hands P0 a
+# 7-memory T3), P0 builds AvengeKidmon over Megadramon (EX7-011) by T5, and
+# on T6 P1 pumps Phoenixmon and attacks P0's security. P0 BLOCKS with
+# AvengeKidmon (its <Blocker>, measured on its own in P-170-effect3.yaml) so
+# the two meet in battle without anything else on the board; AvengeKidmon
+# loses, is deleted, and <Retaliation> deletes Phoenixmon.
+#
+# ONLY ONE TRIGGER STACKS ON THE DELETION. AvengeKidmon's [On Deletion] ("You
+# may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or
+# less from your hand or trash") is gated on a candidate existing
+# (P_170.cs CanActivateCondition; our `condition: count_gte 1`): P0's hand
+# holds no [Three Musketeers] TRAIT Digimon (Megadramon / LadyDevimon /
+# BlackGatomon / ToyAgumon are not trait carriers) and the trash holds only
+# the deleted Megadramon + AvengeKidmon (cost 13 > 12). So DCGO stacks a
+# single OnDestroyedAnyone effect (no MultipleSkills row) and <Retaliation>
+# resolves with no prompt. Megadramon's inherited <Piercing> is an attack
+# rider and is inert on a block.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Phoenixmon (10 -> -7).
+#   T3 (P0, 7): play Megadramon (7 -> 0); pass (P1 opens at 3).
+#   T4 (P1, 3): pass.
+#   T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+#   T6 (P1, 1): Shadow Wing on Phoenixmon (1 -> 0); Phoenixmon attacks
+#               security; P0 blocks. THE CLAUSE: AvengeKidmon (13000) loses
+#               to 15000 and <Retaliation> deletes Phoenixmon. Attacking
+#               spent no memory: the trailing step is P1's pass.
+card: P-170
+clause: P-170#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-011, P-170, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            BT25-083, BT25-083, BT25-082]
+    rest: tm-avengekidmon
+  p1:
+    stack: [ST1-10, ST1-13, ST1-03, ST1-04, BT1-009,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Phoenixmon (10 -> -7).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 7): Megadramon (7 -> 0), then pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T6 (P1, 1): Shadow Wing (1 -> 0) on Phoenixmon: 15000 for the turn.
+  # (P1 opens at 1 -- an overspend hands over exactly the overspend.)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Phoenixmon attacks P0's security; P0 blocks with AvengeKidmon.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE resolves inside the battle: AvengeKidmon is deleted,
+  # <Retaliation> deletes Phoenixmon. One step past it: P1's pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      turn: 6
+      p0.memory: 0
+      p0.security: 5
+      p0.field: []
+      p0.trash: [EX7-011, P-170]
+      p1.field: []
+      p1.trash: [ST1-10, ST1-13]

@@ -1,0 +1,221 @@
+# Exam scenario: LadyDevimon (BT25-083), clause BT25-083#effect#2 --
+# "[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 Option
+#  card from any of your Digimon's digivolution cards, you may use 1 [Three
+#  Musketeers] trait Option card from your trash with the cost reduced by 3."
+#
+# This file exercises the [When Attacking] arm and takes the FULL clause: the
+# cost (trash P-180 from BeelStarmon (X Antibody)'s digivolution cards) AND the reduced-cost
+# use of that same P-180 from the trash (cost 6 - 3 = 3: memory 3 -> 0 --
+# the memory delta is the witness for "reduced by 3").
+#
+# WHY THE OPPONENT HAS NO DIGIMON. P-180's own "when effects trash this card
+# from digivolution cards" trigger is STACKED by DCGO (ITrashDigivolutionCards
+# -> StackSkillInfos) and resolves only after LadyDevimon's effect finishes;
+# by then P-180 has been re-used and sits under BeelStarmon (X) again, and DCGO's
+# CanActivateCondition (IsExistOnTrash) fails. Our P-180 clause has no such
+# zone gate. With no opponent Digimon the trigger has no legal target on
+# EITHER engine and parks nothing, so this line measures LadyDevimon alone.
+# (P-180-effect0.yaml measures that trigger, by DECLINING the reuse.)
+#
+#   T1 (P0): pass.  T2 (P1): pass.
+#   T3 (P0, 3): play BeelStarmon (X Antibody) EX7-073 #1 (12: 3 -> -9). It has
+#            no [On Play]; it is here only as a [Three Musketeers] TRAIT
+#            Digimon for P-180 to tuck under.
+#   T4 (P1, 9): pass (a pass hands P0 the usual 3).
+#   T5 (P0, 3): use P-180 (3 -> -3): trashes P1's top security, tucks under
+#            the only BeelStarmon (X) on the board (copy #1).
+#   T6 (P1): pass.
+#   T7 (P0, 3): play a SECOND BeelStarmon (X Antibody), drawn this turn so
+#            the `play:` row is never ambiguous (3 -> -9). Pure slot
+#            ballast -- see ATTACKER SLOT below.
+#   T8 (P1): pass.
+#   T9 (P0, 3): play LadyDevimon (3 -> -4). Its [On Play] does NOT fire: no
+#            [Three Musketeers] TRAIT card is in P0's hand or trash (P-180 is
+#            under BeelStarmon (X); the hand holds only Tamers).
+#   T10 (P1): pass.
+#   T11 (P0, 3): LadyDevimon attacks security. THE CLAUSE fires as [When
+#            Attacking]: trash P-180 from BeelStarmon (X) #1, use P-180 from
+#            trash for 3 (P1's top security trashed again, P-180 tucked under
+#            BeelStarmon (X) #2). The attack then checks 1 security card:
+#            Biyomon (3000) loses the security battle to LadyDevimon (7000).
+#            Memory is 0 -- still P0's turn -- so the trailing step is P0's pass.
+#
+# ATTACKER SLOT (measured, run exam-BT25-083-effect2-r2, recording
+# 20260918T091206Z_3d49d468...). `attack: field.N` reaches DCGO as a raw action
+# id = COMPACT index into Player.GetFieldPermanents(), which walks FRAME ids.
+# CardSource.PreferredFrame() seats P0's Digimon centre-out -- 1st play frame 4,
+# 2nd frame 3, 3rd frame 5 -- so with TWO Digimon the compact order is the
+# REVERSE of our play-order battle area ([2nd, 1st] vs ours [1st, 2nd]) and
+# `field.1` made BeelStarmon (X) attack in DCGO (its optional [When Attacking]
+# then asked the OptionalSkill that aborted r2). With THREE Digimon the third
+# sits at index 2 on BOTH sides ([2nd, 1st, 3rd] vs [1st, 2nd, 3rd]), so
+# LadyDevimon is played third and attacks as `field.2`. For the same reason the
+# final tuck names OUR field.1 (copy #2): the wire carries the identity
+# "EX7-073" and DCGO resolves duplicates in ITS candidate order, whose first
+# EX7-073 is frame 3 = copy #2.
+#
+# HOST HISTORY (2026-09-18 triage). The first oracle run (recording
+# 20260918T072301Z_cab6f074...) hosted P-180 under BeelStarmon (X) BT25-085 reached
+# by `play: BT25-085`. BT25-085 is a DUAL card ("Can't play to the field"):
+# DCGO resolved that row as an Option use, the board stayed empty and P-180 had
+# no tuck target, so the job aborted at step 10 before the clause. Our engine
+# played a Digimon only because data/cards.json mis-typed the card (fixed in
+# 20df249e6). The host is now the non-dual EX7-073, whose only effects are
+# [When Digivolving] / [When Attacking] (it is played, and never attacks).
+#
+# PROMPT SHAPE (BT25_083.cs, region "WD/WA Shared"): optional: false -> NO
+# OptionalSkill. DCGO asks SelectPermanentEffect (which Digimon holds the
+# Option; canNoSelect: true) THEN SelectCardEffect over that Digimon's
+# DigivolutionCards; our engine asks ONE union-material pick that names the
+# Option card directly, so the permanent row is `dcgo_only`. Then
+# SelectCardEffect over the trash (canNoSelect: true) for the reduced-cost
+# use, then P-180's own [Main] tuck pick (SelectPermanentEffect).
+card: BT25-083
+clause: BT25-083#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-073, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, P-180, EX7-073, EX7-051, BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-05]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): BeelStarmon (X Antibody), the non-dual Option host.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-073, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): P-180 under BeelStarmon (X).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-180, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): BeelStarmon (X Antibody) #2 -- slot ballast (header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-073, from: hand } }
+    expect: { prompt: main_phase }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, 3): LadyDevimon, [On Play] inert (no trait card in hand/trash).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # T10 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  # DCGO: which Digimon's digivolution cards (BeelStarmon). Wire-only: our
+  # engine's single union-material pick names the Option directly.
+  # OUR engine parks a yes/no gate here for the effect's `optional: true`
+  # (SelectionKind::Replacement); DCGO's ActivateClass is optional: false and
+  # asks nothing -- its picks are individually declinable instead. A
+  # prompt-EXISTENCE difference (both decision spaces are equivalent), so the
+  # gate is answered sim-side only and puts nothing on the wire.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [EX7-073], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # The Option to trash: P-180.
+  # OUR union-material pick names the Option directly; its only candidate is
+  # P-180, and the harness resolves a card identity against a UnionZone prompt
+  # by scanning HAND and TRASH only (selection_resolve.rs, the
+  # `Hand | UnionZone` arm) -- a digivolution-card candidate cannot be named
+  # by `cards:`. So the pick is answered sim-side through the resolver's
+  # single-accept-id `yes:` path, and DCGO's own card row rides the wire
+  # alone below.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # "You may use 1 [Three Musketeers] trait Option card from your trash with
+  # the cost reduced by 3": use P-180 for 3 (memory 3 -> 0).
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectCardEffect }
+  # P-180's [Main]: security trashed with no prompt, then the tuck target.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attack's security check (Biyomon 3000 vs 7000) resolves with no
+  # prompt. Memory is 0: still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 29
+    that:
+      turn: 11
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: EX7-073, dp: 12000, suspended: false, sources: [] }
+        - { card_id: EX7-073, dp: 12000, suspended: false, sources: [P-180] }
+        - { card_id: BT25-083, dp: 7000, suspended: true, sources: [] }
+      p1.field: []
+      p1.security: 2
+      p1.trash: [ST1-04, ST1-04, ST1-02]

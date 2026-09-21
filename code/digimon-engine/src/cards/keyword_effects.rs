@@ -105,9 +105,12 @@
 //! finalizes the carrier but BEFORE the `OnAnyDeletion` broadcast.
 //!
 //! Color grouping (`firstSources`/`secondSources` in DCGO) is per-card and
-//! comes from injected `partitionConditions`; the auto-install offers ANY
-//! source (no color filter). Per-card-text overrides apply color grouping
-//! via hand-rolled `CardEffect` if needed.
+//! comes from injected `partitionConditions`. Since
+//! `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` the auto-install reads the
+//! card's own per-slot specs through
+//! [`crate::effect::CardEffect::partition_slots`] (the YAML `kind: partition`
+//! → `sources:` list) and enforces them; only a card that publishes NO slots
+//! falls back to the historical slot-blind pick.
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
@@ -218,6 +221,343 @@ fn park_keyword_count_capped_frame(
                 outer_conts: Vec::new(),
             })],
         });
+    }
+}
+
+// ── <Partition> per-slot source enforcement ─────────────────────────────────
+//
+// general_rule.pdf §16-28:
+//   -1  "When a Digimon with this effect AND 1 OF EACH of the specified cards
+//        in its digivolution cards would be removed from the battle area
+//        other than by one of your effects or a battle, you may play 1 of
+//        each of the specified cards from the digivolution cards without
+//        paying their costs."
+//   -5  "The 'specified cards' refers to the cards that meet the conditions
+//        shown in parentheses in the <Partition> icon text."
+//   -6  "When <Partition> is activated, 1 of each of the specified cards is
+//        played ... A PLAYER CAN'T CHOOSE TO ONLY PLAY ONE OR SOME of the
+//        specified cards."
+//
+// DCGO mirrors this with one candidate list per `PartitionCondition`
+// (`CardEffectFactory/KeyWordEffects/Partition.cs:66-119`), gates activation
+// on every list being non-empty (`:145-159`), and opens a `SelectCardEffect`
+// for a slot ONLY when that slot has more than one candidate
+// (`CardEffectCommons/KeyWordEffects/Partition.cs:89,117`) — a lone candidate
+// is taken without a prompt, because there is no choice to expose.
+
+/// The card's printed `<Partition (A & B)>` slot specs, or `None` when the
+/// card publishes none (see [`crate::effect::CardEffect::partition_slots`]).
+///
+/// `source_card` is the card the keyword body is mounted on — the carrier's
+/// top card for the face `<Partition>`, a digivolution source for the
+/// inherited copy — so the scope is derived by comparing it with the
+/// subject's top card.
+fn partition_slots_for(
+    game: &crate::game::Game,
+    source_card: CardHandle,
+    subject: crate::permanent::PermanentHandle,
+) -> Option<std::sync::Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>> {
+    let inherited = {
+        let perm = game
+            .player(subject.player)
+            .battle_area
+            .get(subject.index as usize)?;
+        perm.top_card().handle() != source_card
+    };
+    let card_id = game.card_data_for_handle(source_card)?.card_id.clone();
+    game.effect_registry
+        .get(&card_id)?
+        .partition_slots(inherited)
+}
+
+/// The carrier's digivolution cards (everything BELOW the top card), as
+/// `(source_index, handle)`, capped to the action space's per-field source
+/// window so every candidate is addressable.
+fn partition_stack_sources(
+    game: &crate::game::Game,
+    subject: crate::permanent::PermanentHandle,
+) -> Vec<(u8, CardHandle)> {
+    use crate::action::space::SOURCES_PER_FIELD;
+    let Some(perm) = game
+        .player(subject.player)
+        .battle_area
+        .get(subject.index as usize)
+    else {
+        return Vec::new();
+    };
+    let count = perm
+        .card_sources
+        .len()
+        .saturating_sub(1)
+        .min(SOURCES_PER_FIELD as usize);
+    (0..count)
+        .map(|i| (i as u8, perm.card_sources[i].handle()))
+        .collect()
+}
+
+fn partition_source_matches(
+    game: &crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    pred: &digimon_dsl::compiled::CompiledPredicate,
+    source_index: u8,
+    card: CardHandle,
+) -> bool {
+    use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+    let rctx = EffectReadContext::new(game, prov.source_card, Some(subject), prov.controller);
+    eval_predicate(
+        pred,
+        &rctx,
+        PredicateSubject::Source(crate::selection::SourceSelectionRef {
+            permanent: subject,
+            field_index: subject.index,
+            source_index,
+            card,
+        }),
+    )
+}
+
+/// Is there an assignment of one DISTINCT stack source to EVERY slot that
+/// uses every card in `picked`?
+///
+/// §16-28-6 is all-or-nothing, so a pick that strands a slot is not a legal
+/// partial answer — it is masked out — and a stack that cannot fill every
+/// slot does not trigger at all (§16-28-1). Slot ORDER is deliberately not
+/// imposed on the picks: §16-28-6 plays the specified cards as one
+/// simultaneous action (judge-quiz Q30 — "played out simultaneously", which
+/// our sequential play linearizes in the controller's chosen order), so the
+/// constraint is a perfect matching, not a fixed sequence. This is the same
+/// shape as the hand-written substrate's `partition_can_extend`
+/// (`effect_context/selections.rs`).
+fn partition_matching_exists(
+    game: &crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    sources: &[(u8, CardHandle)],
+    slots: &[digimon_dsl::compiled::CompiledPredicate],
+    picked: &[CardHandle],
+    slot_idx: usize,
+    used: &mut Vec<CardHandle>,
+) -> bool {
+    if slot_idx >= slots.len() {
+        return picked.iter().all(|card| used.contains(card));
+    }
+    for &(source_index, card) in sources {
+        if used.contains(&card) {
+            continue;
+        }
+        if !partition_source_matches(game, prov, subject, &slots[slot_idx], source_index, card) {
+            continue;
+        }
+        used.push(card);
+        if partition_matching_exists(
+            game,
+            prov,
+            subject,
+            sources,
+            slots,
+            picked,
+            slot_idx + 1,
+            used,
+        ) {
+            return true;
+        }
+        used.pop();
+    }
+    false
+}
+
+/// Every source that may still be picked: one that is not already picked and
+/// that leaves a complete slot assignment reachable.
+fn partition_pick_candidates(
+    game: &crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    slots: &[digimon_dsl::compiled::CompiledPredicate],
+    picked: &[CardHandle],
+) -> Vec<(u8, CardHandle)> {
+    let sources = partition_stack_sources(game, subject);
+    sources
+        .iter()
+        .copied()
+        .filter(|(_, card)| {
+            if picked.contains(card) {
+                return false;
+            }
+            let mut next = picked.to_vec();
+            next.push(*card);
+            let mut used = Vec::new();
+            partition_matching_exists(game, prov, subject, &sources, slots, &next, 0, &mut used)
+        })
+        .collect()
+}
+
+/// Whether the carrier's live stack satisfies the printed `<Partition>` gate
+/// (§16-28-1: "a Digimon with this effect AND 1 of each of the specified
+/// cards in its digivolution cards"). DCGO refuses to activate when any
+/// `PartitionCondition`'s filtered list is empty (`Partition.cs:145-159`).
+fn partition_gate_satisfied(
+    game: &crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    slots: &[digimon_dsl::compiled::CompiledPredicate],
+) -> bool {
+    if slots.is_empty() {
+        return false;
+    }
+    let sources = partition_stack_sources(game, subject);
+    let mut used = Vec::new();
+    partition_matching_exists(game, prov, subject, &sources, slots, &[], 0, &mut used)
+}
+
+/// Take the next `<Partition>` pick and chain: a single remaining candidate is
+/// taken silently (DCGO `Partition.cs:89,117` — a slot with one candidate is
+/// never prompted, because there is no choice to expose), more than one parks
+/// a MANDATORY 1-pick (no PASS: §16-28-6 forbids playing only some of the
+/// specified cards), and once one card is held for every slot they are played.
+pub(crate) fn drive_partition_picks(
+    game: &mut crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    slots: std::sync::Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>,
+    mut picked: Vec<CardHandle>,
+) {
+    loop {
+        if picked.len() >= slots.len() {
+            let mut ctx = EffectContext::new_with_source_kind_and_override(
+                game,
+                prov.source_card,
+                prov.source_permanent,
+                prov.source_kind,
+                prov.controller,
+                prov.override_pin,
+            );
+            partition_extract_and_play(&mut ctx, subject, &picked);
+            return;
+        }
+        let candidates = partition_pick_candidates(game, prov, subject, &slots, &picked);
+        match candidates.len() {
+            // The gate is re-checked at process time, so an empty candidate
+            // set here means the stack changed under us mid-chain: §16-28-6
+            // forbids a partial <Partition>, so nothing is played and the
+            // carrier's departure proceeds with whatever is left.
+            0 => return,
+            1 => picked.push(candidates[0].1),
+            _ => {
+                install_partition_pick_selection(game, prov, subject, slots, picked, candidates);
+                return;
+            }
+        }
+    }
+}
+
+fn install_partition_pick_selection(
+    game: &mut crate::game::Game,
+    prov: ResumeProvenance,
+    subject: crate::permanent::PermanentHandle,
+    slots: std::sync::Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>,
+    picked: Vec<CardHandle>,
+    candidates: Vec<(u8, CardHandle)>,
+) {
+    let prompt = format!(
+        "<Partition>: select 1 of the specified cards to play ({} of {})",
+        picked.len() + 1,
+        slots.len()
+    );
+    let allowed: Vec<CardHandle> = candidates.iter().map(|(_, card)| *card).collect();
+    let slots_for_cb = std::sync::Arc::clone(&slots);
+    let picked_for_cb = picked.clone();
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.source_kind,
+        prov.controller,
+        prov.override_pin,
+    );
+    ctx.select_count_capped_multi_min(
+        prov.controller,
+        CountCappedZone::Material(subject),
+        /*min=*/ 1,
+        /*max=*/ 1,
+        &prompt,
+        /*is_optional_zero=*/ false,
+        /*distinct_by=*/ None,
+        move |_g, source| allowed.contains(&source.handle()),
+        move |cctx, picks| {
+            let mut next = picked_for_cb;
+            next.extend(picks.iter().copied());
+            drive_partition_picks(cctx.game, prov, subject, slots_for_cb, next);
+        },
+    );
+    park_keyword_count_capped_frame(
+        &mut ctx,
+        prov,
+        prov.controller,
+        CountCappedZone::Material(subject),
+        1,
+        1,
+        false,
+        NonDslCountCappedTerminal::KeywordPartitionSlots {
+            subject,
+            slots,
+            picked_so_far: picked,
+        },
+    );
+}
+
+/// Extract the chosen sources from the carrier's live stack and play them.
+///
+/// Every pick leaves the stack FIRST — silently (they are played, not
+/// trashed, so no on-trash event fires; they only transit the trash zone) —
+/// so none is on the field while another's would-play interrupts resolve (the
+/// judge's "played out simultaneously" observable, judge-quiz Q30). Later
+/// plays are chained through `queue_partition_second_play` so each starts only
+/// after the previous play's interrupt chain settles. No `cancel_leave()`:
+/// <Partition> is interruptive, not preventive (§16-28-2).
+pub(crate) fn partition_extract_and_play(
+    ctx: &mut EffectContext<'_>,
+    subject: crate::permanent::PermanentHandle,
+    picks: &[CardHandle],
+) {
+    let mut extracted: Vec<CardHandle> = Vec::new();
+    for handle in picks {
+        let removed = {
+            let Some(permanent) = ctx
+                .game
+                .player_mut(subject.player)
+                .battle_area
+                .get_mut(subject.index as usize)
+            else {
+                continue;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == *handle)
+            else {
+                continue;
+            };
+            permanent.card_sources.remove(pos)
+        };
+        let owner = removed.owner;
+        ctx.game.player_mut(owner).trash.push(removed);
+        extracted.push(*handle);
+    }
+    // Sources left the stack without the trash observer (partition trashes are
+    // intentionally observer-silent) — still refresh materialized declaratives
+    // so grants sourced from the departed cards stop applying before the
+    // follow-up plays (same contract as `fire_digivolution_card_trashed`).
+    ctx.game.tick_declarative_effects();
+    let mut iter = extracted.into_iter();
+    if let Some(first) = iter.next() {
+        let source_card = ctx.source_card;
+        let player = ctx.player;
+        let _ = ctx.play_from_trash_free_unsuspended(first);
+        for later in iter {
+            ctx.game
+                .queue_partition_second_play(player, source_card, later);
+        }
     }
 }
 
@@ -456,6 +796,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 // — the inner pick UI does not offer "no selection".
                 let controller = subject.player;
                 let prov = resume_provenance(&rctx.effect);
+
                 rctx.effect.select_count_capped_multi(
                     controller,
                     CountCappedZone::Material(subject),
@@ -1046,12 +1387,35 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     return false;
                 }
                 // Gate: >=2 sources under the top card, read off the LIVE
-                // stack (the carrier has not left yet).
-                ctx.game
+                // stack (the carrier has not left yet). DCGO
+                // `CanActivatePartition` (`Partition.cs:28-39`).
+                if !ctx
+                    .game
                     .player(subject.player)
                     .battle_area
                     .get(subject.index as usize)
                     .is_some_and(|p| p.card_sources.len() >= 3)
+                {
+                    return false;
+                }
+                // Slot gate (§16-28-1): the stack must hold 1 of EACH
+                // specified card. DCGO refuses to activate when any
+                // `PartitionCondition`'s filtered list is empty
+                // (`CardEffectFactory/.../Partition.cs:145-159`). A card that
+                // publishes no slots keeps the pre-slot behaviour.
+                match partition_slots_for(ctx.game, ctx.source_card, *subject) {
+                    Some(slots) => {
+                        let prov = ResumeProvenance {
+                            source_card: ctx.source_card,
+                            source_permanent: ctx.source_permanent,
+                            source_kind: ctx.source_kind,
+                            controller: subject.player,
+                            override_pin: None,
+                        };
+                        partition_gate_satisfied(ctx.game, prov, *subject, &slots)
+                    }
+                    None => true,
+                }
             })
             .replacement_process(|rctx| {
                 use crate::replacement::ReplacementSubject;
@@ -1080,6 +1444,19 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
 
                 let controller = subject.player;
                 let prov = resume_provenance(&rctx.effect);
+
+                // Slot-enforced path (§16-28-5/-6): one pick per printed
+                // parenthetical, all-or-nothing, a lone candidate taken
+                // without a prompt. Only a card that publishes no slot specs
+                // falls through to the historical slot-blind pick below.
+                if let Some(slots) = partition_slots_for(rctx.effect.game, prov.source_card, subject)
+                {
+                    if partition_gate_satisfied(rctx.effect.game, prov, subject, &slots) {
+                        drive_partition_picks(rctx.effect.game, prov, subject, slots, Vec::new());
+                    }
+                    return;
+                }
+
                 rctx.effect.select_count_capped_multi(
                     controller,
                     CountCappedZone::Material(subject),
@@ -1092,51 +1469,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         if picks.len() != 2 {
                             return;
                         }
-                        // Extract BOTH picks from the live stack first —
-                        // silently (these cards are played, not trashed;
-                        // no on-trash event). With both out of the stack,
-                        // neither is on the field while the other's
-                        // would-play interrupts resolve.
-                        let mut extracted: Vec<crate::card_source::CardHandle> = Vec::new();
-                        for handle in picks {
-                            let removed = {
-                                let Some(permanent) = ctx
-                                    .game
-                                    .player_mut(subject.player)
-                                    .battle_area
-                                    .get_mut(subject.index as usize)
-                                else {
-                                    continue;
-                                };
-                                let Some(pos) = permanent
-                                    .card_sources
-                                    .iter()
-                                    .position(|c| c.handle() == handle)
-                                else {
-                                    continue;
-                                };
-                                permanent.card_sources.remove(pos)
-                            };
-                            let owner = removed.owner;
-                            ctx.game.player_mut(owner).trash.push(removed);
-                            extracted.push(handle);
-                        }
-                        // Play sequentially: the second play starts only
-                        // after the first play's interrupt chain (if any)
-                        // fully resolves.
-                        let mut iter = extracted.into_iter();
-                        if let Some(first) = iter.next() {
-                            let second = iter.next();
-                            let source_card = ctx.source_card;
-                            let player = ctx.player;
-                            let _ = ctx.play_from_trash_free_unsuspended(first);
-                            if let Some(second) = second {
-                                ctx.game
-                                    .queue_partition_second_play(player, source_card, second);
-                            }
-                        }
-                        // No cancel_leave(): the carrier's departure
-                        // proceeds with the remaining stack.
+                        partition_extract_and_play(ctx, subject, &picks);
                     },
                 );
                 park_keyword_count_capped_frame(

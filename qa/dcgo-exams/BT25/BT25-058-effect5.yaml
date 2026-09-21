@@ -1,0 +1,203 @@
+# Exam scenario: Callismon (BT25-058), clause BT25-058#effect#5 --
+# "[All Turns] [Once Per Turn] When effects play or digivolve any Digimon,
+#  <De-Digivolve 1> 1 of your opponent's Digimon. Then, this Digimon may battle
+#  1 of your opponent's Digimon."
+#
+# THE EFFECT-INITIATED DIGIVOLVE. DemiDevimon (P-198) prints "[Start of Your
+# Main Phase] If you have 4 or less memory, this Digimon may digivolve into a
+# Digimon card with the [Fallen Angel] or [TS] trait in the hand without
+# paying the cost." With Callismon already on the battle area, that free
+# digivolve (into Devimon BT2-074, a purple Lv.4 [Fallen Angel]) is a Digimon
+# digivolved BY AN EFFECT, which is exactly the trigger under exam -- DCGO's
+# `IsByEffect` gate, our `event_is_effect_initiated`. A hand-paid digivolve
+# would not fire it.
+#
+# SLOT SAFETY -- WHY BOTH PIECES ARE HARD-PLAYED (re-authored 2026-09-18).
+# The first draft bred DemiDevimon, hard-played Aegiochusmon, moved
+# DemiDevimon out and then ran `digivolve: { from: field.0, using: BT25-058 }`
+# on a TWO-Digimon board. `field.N` reaches DCGO as a compact index over
+# frame order and Digimon seat centre-out (frames 4, 3, 5, ...), so on DCGO
+# `field.0` named DemiDevimon, not the [TS] Lv.5 (NOTES-BT25-083.md; the
+# EX7-070 / P-180 artefact). Here p0 NEVER addresses a slot: DemiDevimon
+# (cost 3) and Callismon (cost 13) are both played from hand, DemiDevimon's
+# trigger digivolves ITSELF, and every Callismon pick is an opponent
+# permanent, carried on the wire by identity. p1 holds two Digimon but never
+# addresses a slot either.
+#
+# WHY p1 HARD-PLAYS PHOENIXMON ON T2. DemiDevimon is on the battle area from
+# T1, so its "4 or less memory" trigger would open at the start of p0's T3
+# main phase -- before Callismon exists. p1 overshoots by 7 on T2 (Phoenixmon
+# ST1-10, 3 -> -7), so p0 opens T3 on 7 memory and the condition fails on
+# both sides (DCGO: CanActivateCondition `MemoryForPlayer <= 4`; ours:
+# `condition: { memory_lte: 4 }`). Callismon then lands for 13 (7 -> -6, the
+# opponent's gauge reads 6 -- legal), and the trigger first fires on T5 at
+# memory 3. Phoenixmon doubles as the [On Play] (#effect#4) pick target.
+#
+# PROMPT SEQUENCE.
+#   T3, Callismon is played FROM HAND (not by an effect), so only its
+#   [On Play] (#effect#4) is active -- no MultipleSkills. Its two
+#   SelectPermanentEffect picks (suspend Phoenixmon: canNoSelect true; lock
+#   Phoenixmon: canNoSelect false) -- the BT25-058-effect4.yaml shape.
+#   T5, start of main phase (memory 3):
+#   1. DemiDevimon's trigger. DCGO: OptionalSkill (P_198.cs `isOptional: true`)
+#      then the SelectHandEffect hand pick (canNoSelect: true). Ours: the
+#      effect-level `optional` folds into ONE declinable `select_hand` (the
+#      gate is only installed when the body opens with a mandatory step), so
+#      the row is authored with the `expect: OptionalSkill` FOLD MARKER: the
+#      emitter splits it into OptionalSkill(yes) + the pick on the wire.
+#      Devimon is the only legal candidate on both sides (the hand's other
+#      cards are traitless or the wrong level).
+#   2. Devimon has no [When Digivolving]; Callismon's [All Turns] is the lone
+#      trigger and is mandatory (`..., 1, false, ...`) -- no gate, no
+#      MultipleSkills.
+#   3. SelectPermanentEffect (p0) -- the <De-Digivolve 1> target, mandatory
+#      (Mode.Degenerate, canNoSelect: false). Biyomon is a bare Lv.3, so
+#      IDegeneration's SelectCountEffect has MaxCount 0 and `Activate()` skips
+#      the prompt entirely (`if (_maxCount >= 1)`): NO count row. (Against a
+#      real stack that row IS consumed -- NOTES-BT21-074.md -- which is why
+#      this line keeps the target bare; see NOTES-BT25-058.md for what that
+#      costs the witness.)
+#   4. SelectPermanentEffect (p0) -- "may battle" (canNoSelect: true); taken.
+#      Callismon (13000) battles Biyomon (3000): Biyomon is deleted. An effect
+#      battle suspends nobody and checks no security.
+#
+# WHY NOTHING ELSE FIRES. Phoenixmon and Biyomon are vanilla; Devimon's
+# <Retaliation> needs Devimon to lose a battle.
+#
+# Memory ledger:
+#   T1 p0 plays DemiDevimon (3): 0 -> -3            -> p1 3
+#   T2 p1 plays Phoenixmon (10): 3 -> -7            -> p0 7
+#   T3 p0 plays Callismon (13): 7 -> -6             -> p1 6
+#   T4 p1 plays Biyomon (2): 6 -> 4, passes         -> p0 3
+#   T5 p0: free digivolve; THE CLAUSE; passes       -> p1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_058_pool.json (--decks).
+card: BT25-058
+clause: BT25-058#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): DemiDevimon, the Callismon, Devimon, inert filler
+      - P-198
+      - BT25-058
+      - BT2-074
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's T3 / T5 turn draws, the T5 digivolve draw
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+    rest: tm-callismon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot), Biyomon (the battle target), filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent-tm
+steps:
+  # T1 (p0, memory 0): hard-play DemiDevimon for 3 (0 -> -3). Its trigger is a
+  # [Start of Your Main Phase] effect and the main phase has already started.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-198, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): hard-play Phoenixmon for 10 (3 -> -7). p0 opens T3 on 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 7): the main phase opens on 7, so DemiDevimon's "4 or
+  # less" trigger stays silent on both sides. Hard-play Callismon for 13
+  # (7 -> -6); #effect#4 [On Play] suspends and locks Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-058, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1, memory 6): play Biyomon for 2 (6 -> 4), pass out. Phoenixmon
+  # stays suspended through p1's unsuspend phase (the lock).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): breeding area empty (a hatch is legal -- decline it).
+  # The main phase opens with DemiDevimon's trigger.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE FOLD: one declinable hand pick on our side, OptionalSkill(yes) + the
+  # SelectHandEffect pick on DCGO's. Devimon digivolves for free -- by effect.
+  - actor: 0
+    do: { select: { cards: [BT2-074] } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: <De-Digivolve 1> Biyomon (p1's slot 1 on our side; the wire
+  # carries ST1-02; nothing to trash on a bare Lv.3), then battle it.
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: 3
+      p1.trash: [ST1-02]
+      p1.field:
+        - card_id: ST1-10
+          dp: 12000
+          suspended: true
+          sources: []
+      # The projection sorts the field by card_id, so BT2-074 precedes BT25-058.
+      p0.field:
+        - card_id: BT2-074
+          dp: 4000
+          suspended: false
+          sources: [P-198]
+        - card_id: BT25-058
+          dp: 13000
+          suspended: false
+          sources: []

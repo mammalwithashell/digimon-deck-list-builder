@@ -1,0 +1,102 @@
+# Exam scenario: Shotmon (BT21-054), clause BT21-054#effect#0 --
+# the special digivolution condition
+# "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0".
+#
+# THE WITNESS. Shotmon's printed circle is Black Lv.2 / cost 0, and the alt
+# condition is also cost 0 -- the two are told apart by the COLOUR of the egg.
+# Swipemon BT21-005 is a GREEN Lv.2 whose form is [Appmon] (DCGO `CardTraits`
+# = Form + Attribute + Type, so `EqualsTraits("Appmon")` matches the form;
+# ours `trait_has: Appmon` over the same trait list), so the printed circle
+# cannot apply and the digivolve is legal only through the clause under exam.
+# One applicable path, one cost: no cost-choice prompt on either side (ours
+# asks an `EffectChoice` only on >1 distinct cost; DCGO's `SelectCountEffect`
+# likewise). The digivolve happens in the breeding area on T3 -- a main-phase
+# action -- and the witness is Shotmon leaving p0's hand while the breeding
+# area holds a Lv.3.
+#
+# DRAW ACCOUNTING. Digivolving draws 1 (5-8-4): p0 draws stack[10] at T3's
+# draw step and stack[11] for the digivolve, so its hand at the assert is the
+# opening five minus Shotmon plus BOTH BT4-010s.
+#
+# Nothing else is live: Swipemon's only text is an inherited "when this
+# Digimon gets linked" trigger, and Shotmon's own [On Play] does not fire on a
+# digivolution. Its <Link> is a declared action, never a trigger.
+#
+# Book: qa/dcgo-exams/BT21/tm_bt21_054_pool.json (--decks). p0's deck is
+# Shotmon x4 over the quiet ST-1 filler with Swipemon BT21-005 eggs; p1 is the
+# quiet ST-1 opponent.
+card: BT21-054
+clause: BT21-054#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Shotmon, inert filler
+      - BT21-054
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's T3 turn draw, then the digivolve draw
+      - BT4-010
+      - BT4-010
+    rest: tm-shotmon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card in this line
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): hatch Swipemon BT21-005, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): the breeding area holds a Lv.2 (no hatch, no move), so
+  # the turn opens on the main phase. THE CLAUSE: digivolve Shotmon onto the
+  # green [Appmon] Swipemon for 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT21-054 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.hand: [ST1-04, ST1-04, BT1-009, ST1-05, BT4-010, BT4-010]
+      p0.field: []

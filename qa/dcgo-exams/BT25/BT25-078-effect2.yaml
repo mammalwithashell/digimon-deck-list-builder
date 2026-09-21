@@ -1,0 +1,117 @@
+# Exam scenario: Gazimon (BT25-078), clause BT25-078#effect#2 -- the [On Play] arm of
+# "Reveal the top 3 cards of your deck. Among them, add 1 card with [Three Musketeers]
+#  in its text to the hand, or you may place 1 [Three Musketeers] trait card as this
+#  Digimon's bottom digivolution card. Return the rest to the bottom of the deck."
+#
+# THE LINE is the shortest one possible: P0 plays Gazimon (BT25-078) from hand on
+# turn 1 (cost 3, memory 0 -> -3) and the [On Play] arm fires. The first player does
+# not draw on turn 1, so the three revealed cards are exactly stack[10..12].
+#
+# THE BRANCH TAKEN. The reveal holds ONE card with [Three Musketeers] in its text and
+# WITHOUT the trait -- Sparrowmon (EX7-051) -- beside two cards that print neither
+# (Callismon BT25-058, Titamon + SkullBaluchimon BT24-081). Picking Sparrowmon takes
+# the "add to hand" branch. The other branch (a TRAIT card placed as a digivolution
+# card) is exercised by the [When Moving] line, BT25-078-effect1.yaml.
+#
+# PROMPT SHAPE, from BT25_078.cs (the C# decides it):
+#   * The effect is registered via ActivateClassesForSharedEffects(optional: FALSE,
+#     maxCountPerTurn: 1, whenMoving, onPlay) -- DCGO parks NO OptionalSkill gate.
+#     Our YAML authors the effect `optional: true`, so our engine installs an outer
+#     accept/decline gate DCGO never asks. That row is `sim_only`.
+#   * DCGO then runs SimplifiedRevealDeckTopCardsAndSelect with ONE condition
+#     (HasText("Three Musketeers"), maxCount 1, canNoSelect: true) -> a single
+#     SelectCardEffect over the revealed cards. Our engine asks the hand-or-source
+#     BRANCH first (`select_effect_choice`) and the reveal pick second; DCGO asks the
+#     pick first and only asks a generic_bool branch question afterwards, and only
+#     when the picked card carries the trait. So our branch row is `sim_only` and the
+#     pick is the one SHARED decision.
+#   * Sparrowmon has the text but not the trait, so DCGO's post-pick branch is the
+#     silent `userSelectionManager.SetBool(true)` path -- no prompt, no wire row.
+#   * ReturnRevealedCardsToLibraryBottom then opens a deck-bottom ORDERING
+#     SelectCardEffect for the 2 remaining cards (RevealLibrary.cs, the
+#     `remainingCards.Count == 1` ELSE branch, canNoSelect: false) BEFORE the card
+#     reaches the hand. Our engine parks the same ordering (OrderedPermutation
+#     { remaining: 2 }) AFTER it. See the row's own comment for why it is split
+#     sim_only + dcgo_only. Do NOT answer it with `decline:` (see the
+#     BT24-017-effect3 header for what a cancelled order prompt does to a line).
+#
+# REPAIRED 2026-09-18 (resumed campaign): the crashed author's draft answered our
+# EffectChoice with `value: 0` (unresolvable -- now `choice:`), had no row for our
+# OrderedPermutation park, and asserted "memory 3 -> 0 on turn 1" (T1 memory is 0:
+# the play crosses to -3 and the turn passes, so the trailing step is P1's).
+card: BT25-078
+clause: BT25-078#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            EX7-051, BT25-058, BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): no hatch -- keep the board empty so nothing else can trigger.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: play Gazimon (BT25-078) from hand. Memory 0 -> -3.
+  - actor: 0
+    do: { play: { card: BT25-078, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine's outer accept/decline gate for an effect our YAML marks
+  # optional; DCGO builds it optional: false and asks nothing here.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # SIM-ONLY: our engine's branch choice ("Add a [Three Musketeers] card to hand"),
+  # named by LABEL -- an EffectChoice branch carries no number `value:` could
+  # match. DCGO decides the branch AFTER the pick, from the picked card's trait.
+  - actor: 0
+    do: { select: { choice: "card to hand", sim_only: true } }
+  # SHARED: the reveal pick. Sparrowmon (EX7-051) is the only revealed card with
+  # [Three Musketeers] in its text.
+  - actor: 0
+    do: { select: { cards: [EX7-051] } }
+    expect: { prompt: SelectCardEffect }
+  # The deck-bottom ORDERING of the two leftovers exists on both sides (DCGO's ONE
+  # multi-pick "Specify the order to place the card at the bottom of the deck",
+  # ReturnRevealedCardsToLibraryBottom Count >= 2; our per-position
+  # OrderedPermutation { remaining: 2 }) -- but it is authored as a sim_only row
+  # PLUS a dcgo_only row, not one shared row, because the two engines sit in
+  # different mid-resolution states when they ask it: ours has ALREADY moved
+  # Sparrowmon to the hand (choose_from_reveal resolves its destination at pick
+  # time), DCGO only records `selectedCard` and adds it to the hand AFTER the
+  # helper returns (BT25_078.cs: the AddHandCards call follows
+  # SimplifiedRevealDeckTopCardsAndSelect). A shared row would compare those two
+  # pre-decision snapshots and report a p0.hand divergence that is pure
+  # sequencing -- nothing observable can happen between the two points. Both
+  # engines take the same order (Callismon, then Titamon + SkullBaluchimon).
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # One step past the clause. T1 memory is 0, so the cost-3 play crossed to -3
+  # and the turn passes once the [On Play] resolves: the trailing step is P1's
+  # turn-2 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of P1's trailing pass. Sparrowmon joined the opening hand (minus
+  # the Gazimon that was played); Gazimon stands alone on the field at its printed
+  # 1000 DP with no digivolution cards -- the "add to hand" branch leaves the stack
+  # untouched. Memory is 3 on P1's side (-3 from P0's perspective).
+  - at: 7
+    that:
+      turn: 2
+      p0.memory: -3
+      p0.hand: [BT21-074, BT21-074, BT25-085, BT25-085, EX7-051]
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-078
+          dp: 1000
+          suspended: false
+          sources: []

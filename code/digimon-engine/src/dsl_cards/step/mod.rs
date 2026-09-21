@@ -288,6 +288,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DigiXrosMaterialSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OuterOptionalTrigger(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::OptionTrashOrder(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DelayCancelAfterSelection { outer_conts, .. }) => {
                 outer_conts.push(cont)
@@ -305,12 +306,14 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DelayPlayFromUnionAfterSelection { outer_conts, .. }) => {
                 outer_conts.push(cont)
             }
+            Some(ResumeFrame::DelayBodyAfterCost { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::AppFuseHostSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::DigimonLinkHostSelection(_)) => unreachable!(
-                "Digimon Link prompts are top-level player actions, never nested in a DSL clause"
+            Some(ResumeFrame::DigimonLinkHostSelection(_))
+            | Some(ResumeFrame::OptionHandLinkHostSelection(_)) => unreachable!(
+                "Link declaration prompts are top-level player actions, never nested in a DSL clause"
             ),
             Some(ResumeFrame::PlayFromHandCostReductionPrompt(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::InteractiveDigivolveCostReductionPrompt(s)) => {
@@ -716,7 +719,15 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
     };
 
     let Some(pending_snapshot) = ctx.game.pending_option.as_ref().cloned() else {
-        return true;
+        // No in-flight Option use. The one other place a Plug-In Option's
+        // `[Main]` body runs is "[Security] Activate this card's [Main]
+        // effects" — the card is then the one resolving from security
+        // (`Game::pending_security`), not a `pending_option`. DCGO links it
+        // straight out of the security stack (`Permanent.AddLinkCard` →
+        // `RemoveFromAllArea`), and §13-1-7-4 trashes a checked security
+        // card only "unless it belongs to an area", so the link is legal.
+        // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON (BT25-100 / BT25-093).
+        return try_run_link_step_from_security(ctx, *optional, filter);
     };
     let owner = pending_snapshot.owner;
     let source_card = pending_snapshot.card.handle();
@@ -755,5 +766,78 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
     });
     ctx.game
         .install_link_host_selection(owner, source_card, candidates, *optional);
+    true
+}
+
+/// `link_to_own_digimon` reached from a security-flipped Option ("[Security]
+/// Activate this card's [Main] effects"). The card lives in
+/// `Game::pending_security`; a legal host pick lifts it out of the security
+/// resolution (the `played` bit — the same "belongs to an area now" signal
+/// `play_pending_security` raises, so `DisposeFinalize` does not trash it)
+/// and hands it to the ordinary Link-Option attach path through a
+/// `LinkSelectHost` `pending_option`. With no legal host the card stays in
+/// the security resolution and is trashed at dispose, exactly as DCGO's
+/// `HasMatchConditionPermanent` guard skips the prompt.
+fn try_run_link_step_from_security(
+    ctx: &mut EffectContext<'_>,
+    optional: bool,
+    filter: &digimon_dsl::compiled::CompiledPredicate,
+) -> bool {
+    use crate::selection::{OptionSubtype, OptionUseSource};
+
+    let Some(pending_sec) = ctx.game.pending_security.as_ref() else {
+        return true;
+    };
+    // Only the card resolving from security may plug itself in; a
+    // `link_to_own_digimon` inside some OTHER security effect's body is not
+    // this card's "link this card" clause.
+    if pending_sec.played || pending_sec.card.handle() != ctx.source_card {
+        return true;
+    }
+    let owner = pending_sec.card.owner;
+    let card = pending_sec.card.clone();
+    let source_card = card.handle();
+
+    let read_ctx = EffectReadContext::new(ctx.game, source_card, None, owner);
+    let candidates: Vec<PermanentHandle> = ctx
+        .game
+        .player(owner)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(i, perm)| {
+            if !perm.is_digimon(&ctx.game.card_data) {
+                return None;
+            }
+            if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+                return None;
+            }
+            let handle = PermanentHandle {
+                player: owner,
+                index: i as u8,
+            };
+            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+        })
+        .collect();
+
+    if candidates.is_empty() {
+        return true;
+    }
+
+    // Claim the card: from here it belongs to the Option attach path
+    // (attach on pick, trash on decline / vanished host), never to the
+    // security dispose.
+    if let Some(pending_sec) = ctx.game.pending_security.as_mut() {
+        pending_sec.played = true;
+    }
+    ctx.game.pending_option = Some(PendingOption {
+        owner,
+        card,
+        source_kind: OptionUseSource::Revealed,
+        resolution_phase: OptionResolutionPhase::LinkSelectHost,
+        subtype: OptionSubtype::Link,
+    });
+    ctx.game
+        .install_link_host_selection(owner, source_card, candidates, optional);
     true
 }

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:02.321012700+00:00",
+  "clauses": {
+    "BT7-073#effect#0": {
+      "clause_id": "BT7-073#effect#0",
+      "card_id": "BT7-073",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "556adfd63ab29630eb33109385ee7c11c6fb27f2df63616724adb1fb4fd2c97d",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-073-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:02.321012700+00:00"
+    },
+    "BT7-073#effect#1": {
+      "clause_id": "BT7-073#effect#1",
+      "card_id": "BT7-073",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "260b74e113a7b1353a82f5d527ace2a264fca5c77010230811933552ef93a351",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-073-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:39.700107600+00:00"
+    }
+  }
+}

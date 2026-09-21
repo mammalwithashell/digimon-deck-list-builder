@@ -1,0 +1,170 @@
+# Exam scenario: Iron Slash (BT25-100), clause BT25-100#effect#3 --
+# "<De-Digivolve 2> 1 of your opponent's Digimon. Then, you may link this card to
+#  1 of your Digimon on the field without paying the cost."
+# 
+# THE ROUTE. This Option is a dual-mode Plug-In (a [Main] body AND a [Link]
+# condition). Our engine parks a two-branch EffectChoice ("Play as a [Main]
+# Option" / "Plug in via Link Requirements (Cost 2)") the moment it is played
+# from hand. When this file was first drafted the scenario vocabulary could
+# not answer that prompt; the `choice:` select form (harness d5f23792f) now
+# can, and BT25-100-effect0.yaml takes the from-hand route. THIS file keeps
+# the other route the printed card allows: "[Security]
+# Activate this card's [Main] effects." The card is pinned at the DEFENDER's
+# stack[9] (top of security) and P0 attacks the player into it on T9.
+# 
+# THE LINE. P0 grows a four-card red vanilla stack (Koromon -> Agumon ->
+# Birdramon -> Vermilimon; no printed effect anywhere in it) so <De-Digivolve 2>
+# has two cards to trash. P1 plays one quiet [TS] Digimon, Kamemon BT24-019, on
+# T2 -- the only legal host for "you may link this card to 1 of your Digimon".
+# 
+# PROMPT SHAPE (BT25_100.cs, activated through ActivateMainOptionSecurityEffect):
+#   1. SelectPermanentEffect, DEFENDER picks 1 of the attacker's Digimon to
+#      De-Digi(2) -- canNoSelect: false, maxCount 1. Ours: select_opponent_permanent.
+#   2. SelectPermanentEffect, DEFENDER picks 1 own Digimon to link to --
+#      canNoSelect: true (the printed "you may"). Ours: link_to_own_digimon
+#      optional -> OwnField, declinable. 1:1 -- no fold needed.
+# No OptionalSkill anywhere: SetUpActivateClass(..., -1, false, ...) on both the
+# [Main] and the security wrapper.
+#
+# LINK ROW -- formerly a predicted divergence (our `link_to_own_digimon`
+# returned without linking when `Game::pending_option` was None, which a
+# security-flipped Option never sets). RESOLVED in engine 35958972b
+# (G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON): the flipped card is lifted
+# onto the ordinary LinkSelectHost path. Re-measured sim-side 2026-09-18: the
+# row is a LIVE OwnField pick, Kamemon reads 3000 afterwards and p1's trash
+# is empty. NOT YET RUN AGAINST THE ORACLE.
+#
+# THE <De-Digivolve 2> COUNT ROW (added 2026-09-18, pre-Unity review): DCGO
+# asks SelectCountEffect {1, 2} after the target pick; ours parks nothing
+# (G-DEDIGIVOLVE-NO-DECLARATION). See the `dcgo_only` row in the steps.
+# 
+# <De-Digivolve 2> is MANDATORY (keyword-semantics 16-11: trashing can't be
+# chosen as 0; stops at Lv.3). Vermilimon (Lv.5) -> Birdramon (Lv.4) trashed ->
+# Agumon (Lv.3) remains with Koromon under it. The link half is the printed "you
+# may", taken here.
+# 
+# WITNESS: p0.trash = [BT4-014, ST1-05]; p0.field top is Agumon over Koromon;
+# Kamemon reads 3000 DP and P1's trash is empty (Iron Slash lives under Kamemon).
+card: BT25-100
+clause: BT25-100#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-03, ST1-05, BT4-014, ST1-02, ST1-04, BT1-009, BT3-007, ST1-04, ST1-02, ST1-03, BT1-014, BT4-010, BT1-009, BT3-007, BT4-010, BT1-014, ST1-08]
+    rest: tm-red-attacker
+  p1:
+    stack: [BT24-019, BT1-028, BT3-020, BT4-022, BT2-024, BT1-038, BT2-027, BT5-023, BT4-024, BT25-100, BT1-027, BT1-028, BT3-020, BT4-022, BT2-024, BT5-023, BT2-027]
+    rest: tm-blue-defender
+steps:
+  # T1 (P0, memory 0): hatch Koromon ST1-01, pass -> P1 3.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; play Kamemon BT24-019 (cost 3 -> 0) -- the
+  # quiet [TS] Digimon the security-activated [Main] can link the Option to.
+  # Kamemon prints only a passive cost reducer and inherited <Jamming>: no prompt.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT24-019, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): breeding-digivolve Agumon ST1-03 (free); pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, digivolve Birdramon ST1-05 (2 -> 1); pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): digivolve Vermilimon BT4-014 (3 -> 0); pass. The stack is now
+  # [BT4-014, ST1-05, ST1-03, ST1-01] -- four cards, so <De-Digivolve 2> has room to bite.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT4-014 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 3): attack the player. Kamemon has no <Blocker>, so no block
+  # window opens; the check flips Iron Slash BT25-100 -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # [Security] -> [Main] step 1: P1 De-Digivolves 2 the attacking Vermilimon
+  # (its only legal target -- `opp` is relative to the ACTOR, P1).
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: the <De-Digivolve 2> COUNT. SelectPermanentEffect.cs:1008 builds
+  # `new IDegeneration(target, 2, cardEffect)` with no DegenerationCountRuling,
+  # so Degeneration() opens SelectCountEffect "How many cards do you trash?"
+  # with MaxCount = min(3 digivolution cards, 2) and CanNoSelect false:
+  # candidates {1, 2} -- a REAL choice (general_rule 16-11 "trash up to x",
+  # 16-11-6 "the declared number"). Our engine parks nothing and always takes
+  # the maximum (docs/RUST_ENGINE_GAPS.md G-DEDIGIVOLVE-NO-DECLARATION, a
+  # tracked rule-17 gap), so the row is wire-only and declares the SAME 2 ours
+  # trashes. The selecting player is the effect's owner -- P1.
+  - actor: 1
+    do: { select: { value: 2, dcgo_only: true } }
+    expect: { prompt: SelectCountEffect }
+  # [Main] step 2: P1 may link Iron Slash to Kamemon, its only Digimon.
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attack ends after the check (an Option flip has no battle). P0 passes.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 24
+    that:
+      turn: 9
+      p0.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: true
+          sources: [ST1-01]
+      p0.trash: [BT4-014, ST1-05]
+      p1.security: 4

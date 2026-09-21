@@ -1,0 +1,181 @@
+# Exam scenario: Titamon + SkullBaluchimon (BT24-081), clause
+# BT24-081#effect#2 -- <Execute> ("At the end of your turn, this Digimon may
+# attack. At the end of that attack, delete this Digimon. Your opponent's
+# unsuspended Digimon can also be attacked with this effect").
+#
+# Same spine as BT24-081-effect5.yaml, which DECLINES this gate; this file
+# SPENDS it.
+#
+#   T1..T8 as effect5.
+#   T9 (P0, 9): Assembly play (9 -> 1); [On Play] hand cost declined. Pass at
+#            1 -> the end-of-turn window. THE CLAUSE: attack the player.
+#            [When Attacking] (effect#3): declined. Security: Agumon ST1-03
+#            (2000) loses. At the end of that attack <Execute> DELETES the
+#            carrier, which fires its [On Deletion] (effect#4): Titamon
+#            BT1-080 -- an Assembly material, in the trash with the rest of
+#            the stack -- is played for free (vanilla, no prompt).
+#
+# PROMPT SHAPE (KeyWordEffects/Execute.cs, CardEffectFactory ExecuteSelfEffect:
+# SetUpActivateClass(..., -1, TRUE, ...)): OptionalSkill, then
+# SelectAttackEffect -- the documented end-of-turn fold: ONE `attack:` row
+# with `expect: OptionalSkill` emits OptionalSkill(yes) + the attack answer.
+# Then SelectHandEffect ([When Attacking] cost, declined), then the [On
+# Deletion] pick: DCGO one SelectCardEffect (isOptional FALSE, canNoSelect
+# true); ours the outer accept gate (answered `sim_only`, zero wire rows --
+# the BT24-081-effect4.yaml shape) and the shared pick. Our engine then sits
+# in EndOfTurnAction until a PASS; DCGO rotates by itself (the sim-only pass,
+# EX12-004-effect0.yaml convention).
+#
+# WITNESS: BT24-081 and SkullBaluchimon in p0.trash, Titamon alone on P0's
+# board, p1.security 3 -> 2, all on turn 9 with no main-phase attack declared.
+card: BT24-081
+clause: BT24-081#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (stack[9] = top,
+    # the card Phoenixmon's T8 attack flips: ToyAgumon EX7-008, no security
+    # effect); stack[10..13] = the T3/T5/T7/T9 draws.
+    stack: [BT1-080, BT10-080, BT24-081, EX7-008, EX7-051,
+            BT25-082, BT25-082, BT25-082, BT25-082, EX7-008,
+            BT21-071, BT21-071, BT21-071, BT21-071]
+    rest: tm-titan
+  p1:
+    # stack[9] = Phoenixmon ST1-10 = TOP of security (Titamon's T5 attack),
+    # stack[8] = Garudamon ST1-08 (SkullBaluchimon's T7 attack);
+    # stack[10..13] = the T2/T4/T6/T8 draws.
+    stack: [ST1-10, ST1-10, ST1-02, ST1-14, ST1-03,
+            ST1-04, ST1-04, ST1-03, ST1-08, ST1-10,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Titamon BT1-080 (vanilla), 3 -> -7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT1-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Titamon into Phoenixmon (tie: both deleted), then
+  # SkullBaluchimon BT10-080, 3 -> -4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT10-080, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 4): Phoenixmon from hand, 4 -> -6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T7 (P0, 6): SkullBaluchimon into Garudamon (tie: both deleted); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): Phoenixmon attacks P0's security (ToyAgumon loses), then the
+  # memory donation: Biyomon (3 -> 1), Phoenixmon #2 (1 -> -9).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T9 (P0, 9): the Assembly play (effect#5, measured in BT24-081-effect5.yaml).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-081, from: hand } }
+    expect: { prompt: main_phase }
+  # Assembly element 1: [Titamon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect }
+  # Assembly element 2: [SkullBaluchimon] from trash.
+  - actor: 0
+    do: { select: { cards: [BT10-080] } }
+    expect: { prompt: SelectCardEffect }
+  # [On Play] (effect#3): decline the hand cost.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Memory 1: pass the main phase -> the <Execute> end-of-turn window.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: spend the window on the player (fold: OptionalSkill(yes) +
+  # SelectAttackEffect).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: OptionalSkill }
+  # [When Attacking] (effect#3): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # End of attack: <Execute> deletes the carrier -> [On Deletion] (effect#4).
+  # Our outer accept gate (sim-only), then the shared trash pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT1-080] } }
+    expect: { prompt: SelectCardEffect, count: 1, candidates: [BT1-080] }
+  # Sim-only phase exit (our EndOfTurnAction park; nothing on the wire).
+  - actor: 0
+    do: { pass: {} }
+  # One step past: P1's turn-10 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 26
+    that:
+      turn: 9
+      p1.security: 3
+      p0.field:
+        - { card_id: BT24-081, dp: 14000, suspended: false, sources: [BT1-080, BT10-080] }
+  - at: 31
+    that:
+      turn: 10
+      p1.security: 2
+      p0.trash: [EX7-008, BT10-080, BT24-081]
+      p0.field:
+        - { card_id: BT1-080, dp: 12000, suspended: false, sources: [] }

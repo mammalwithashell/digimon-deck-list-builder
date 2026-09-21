@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T04:51:46.636412900+00:00",
+  "clauses": {
+    "BT7-056#effect#0": {
+      "clause_id": "BT7-056#effect#0",
+      "card_id": "BT7-056",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "0d8a3e1916676a32a741e8fa1719fe2094590f6594d7a2eb459fe0dcab6a42be",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-effect0.yaml",
+      "reason": "DIVERGED at step 7 (2nd reveal pick row): p0.hand ours lacks EX7-073, dcgo already holds it -- DCGO adds the first bucket's pick to hand before asking the second bucket; ours adds both after the last pick. End state agrees (no downstream rows). TRIAGED 2026-09-18 (three-musketeers-1): DCGO QUIRK, no fix -- the printed text is ONE 'Add' with two targets (general_rule.pdf 15-15-10-1: a single effect selecting multiple targets with different conditions; 15-1-2: processed in printed order, and the one 'Add' follows both selections); DCGO's per-condition SelectCardEffect(Mode.AddHand) foreach (RevealLibrary.cs:291-336 RevealDeckTopCardsAndSelect, whose own comment says the conditions are 'chosen at once (per card game rules)') moves each pick as its prompt closes -- an implementation artifact, outcome-neutral (nothing triggers or resolves mid-effect; neither bucket reads the hand). RE-MEASURED 2026-09-21 (three-musketeers-2) against the FRESH oracle sidecar 20260921T042630Z_14e62ea8 with --all-diffs: unchanged -- the single p0.hand field at step 7 is still the LEAD and the ONLY diff, 9 of 10 ours / 9 dcgo rows compared, no downstream. Verdict stays `diverged` (a DCGO-quirk finding, not an engine bug). Tracked as G-EXAM-REVEAL-BUCKET-ADD-TIMING in docs/RUST_ENGINE_GAPS.md (adjudicated: our order is the rules-faithful one, no fix). Same family as BT6-060#effect#0 and EX7-008#effect#1; see also docs/DCGO_EXAM.md 'Rows where one side looks rules-wrong' (RevealBucket add timing). RE-TRIAGED FROM SCRATCH 2026-09-21 (close-out, independent of the r1 note) in the full order of evidence: (1) PRINTED TEXT (official Bandai DB, data/card_bundles/BT7-056.md) is ONE 'Add 1 [Kota Domoto] and 1 card with the [X Antibody] trait among them to the hand' -- a single effect with a compound target choice, not two Adds. (2) RULES, read verbatim off general_rule.pdf (which OUTRANKS DCGO): 15-15-10-1 (p.31, 'Effect Text That Specifies Multiple Targets' -- 'If a single effect allows you to select multiple targets with different conditions, resolve the target conditions in accordance with the following rules'), whose sub-rules 15-15-10-2..3 govern only WHICH condition applies to which target and never when a chosen target moves; 15-1-2 (p.22, 'A single effect is processed in the order shown in the text on the card' -- the lone 'Add' follows both target specifications); 15-1-4 (p.22, 'multiple processes will be performed in a single effect. Once all of the processes for such an effect have ended, the effect will be resolved'). Choose-both-then-add-once is the literal reading, so OUR order is the rules-faithful one. (3) DCGO C# -- both halves of the mechanism: RevealLibrary.cs:291-329 runs one SelectCardEffect per condition in a foreach (its own comment: the conditions are 'chosen at once (per card game rules)'), and SelectCardEffect.cs:813-815 executes CardObjectController.AddHandCards at the END of each prompt's own Activate() coroutine -- inside the loop body -- so the hand is already updated when the next bucket is asked. Shared-helper behaviour, not card-specific. NOT A SLOT-ADDRESSING ARTEFACT: the scenario addresses no field.N anywhere (selections are by card_id; P0 holds exactly one permanent, P1 none) and the diverging field is an ordered hand list. Re-ran --all-diffs against the PRESERVED sidecar (zero Unity time): the single p0.hand field at step 7 is the LEAD and the ONLY diff, 9 of 10 ours / 9 dcgo rows compared, nothing downstream; --sim-only passes all 7 end-state checks, so the outcome (both cards in hand, Titamon + SkullBaluchimon to the deck bottom) is identical. Outcome-neutral and observable only if an 'added to your hand' trigger could fire between picks. CLASS: DCGO QUIRK, no fix, no engine/DSL/card change. BT7-056 is the ORIGINAL driver of G-EXAM-REVEAL-BUCKET-ADD-TIMING and had been dropped from that entry's Drivers list by an editing slip; restored at close-out.",
+      "recorded_at": "2026-09-21T04:51:46.636412900+00:00"
+    },
+    "BT7-056#inherited#0": {
+      "clause_id": "BT7-056#inherited#0",
+      "card_id": "BT7-056",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "5e0c6da4c1c1d427893beaeff19ff57cd59412380cfdcfce396508d270259572",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-inherited0.yaml",
+      "recorded_at": "2026-09-18T07:55:06.259785300+00:00"
+    }
+  }
+}

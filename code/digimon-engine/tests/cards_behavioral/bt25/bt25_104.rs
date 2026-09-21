@@ -97,7 +97,15 @@ fn bt25_104_is_a_dual_card() {
     assert_eq!(dual.option.use_cost, 6);
 }
 
-/// The Digimon face is Red+Yellow; the Option face is Yellow.
+/// The Digimon face is Red+Yellow, and so is the Option face.
+///
+/// This test previously asserted a Yellow-only Option face, which was wrong:
+/// the official Bandai DB's "DUAL Color" field for BT25-104 reads "Red Yellow"
+/// (mirrored as `dual_colors` in data/card_official.json), and the printed
+/// Option band lights both the Red and Yellow slots of its colour stripe.
+/// Option colour decides option-use colour legality
+/// (action/mask.rs `option_color_match_available`), so the difference is live:
+/// a Red-only board can use this Option face.
 #[test]
 fn bt25_104_face_colors() {
     let card = compiled("BT25-104");
@@ -105,7 +113,10 @@ fn bt25_104_face_colors() {
     use digimon_dsl::compiled::CompiledColor;
     assert!(dual.digimon.colors.contains(&CompiledColor::Red));
     assert!(dual.digimon.colors.contains(&CompiledColor::Yellow));
-    assert_eq!(dual.option.colors, vec![CompiledColor::Yellow]);
+    assert_eq!(
+        dual.option.colors,
+        vec![CompiledColor::Red, CompiledColor::Yellow]
+    );
 }
 
 /// The Option face carries <Arts Digivolve>.

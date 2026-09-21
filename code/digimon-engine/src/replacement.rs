@@ -1613,7 +1613,13 @@ fn commit_deferred_outcome(
                 game.replacement_pending_outcome = None;
                 return;
             }
+            // A player-declared Digimon-link's `WhenWouldLink` window: the
+            // subject zone is the linking card's ORIGIN (battle area for a
+            // standing Digimon, hand for a from-hand link), so both arms park
+            // on the same continuation. The `pending_digimon_link` guard is what
+            // keeps the hand arm from shadowing the would-play resume above.
             ReplacementSubject::Card(card, Zone::BattleArea)
+            | ReplacementSubject::Card(card, Zone::Hand)
                 if game
                     .pending_digimon_link
                     .as_ref()

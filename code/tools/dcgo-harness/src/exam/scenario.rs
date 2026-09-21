@@ -61,6 +61,85 @@ pub enum StepAction {
     /// DCGO's `CanDeclareOptionDelayEffect` gates its own on the same
     /// not-the-placing-turn rule.
     Main { on: String },
+    /// Declare a DigiLink: the Appmon Link Digimon `card` at `from` activates
+    /// its printed `<Link>` and plugs itself sideways into one of the
+    /// controller's Digimon -- from either origin the keyword prints ("Plug
+    /// this card from the hand or battle area ..."):
+    ///
+    ///   * `from: field[.N]` -- a standing, un-linked permanent. Lowers to the
+    ///     per-permanent `FIELD_EFFECT` range at sub-slot
+    ///     `FIELD_EFFECT_SLOT_FOR_LINK` (`mask.rs` emits it for a self
+    ///     link-condition with a legal host and an affordable cost). DCGO's
+    ///     `Harness/InputDriver.cs` dispatches that id to the
+    ///     `CardEffectFactory.LinkEffect` `ActivateClass` on the permanent --
+    ///     the "Link (Cost: N)" command a human clicks. The whole permanent is
+    ///     absorbed (under-sources trashed, top card becomes the linked card).
+    ///   * `from: hand[.N]` -- a card in hand. Lowers to that hand slot's
+    ///     `HAND_EFFECT` bit, which the engine makes the link whenever the card
+    ///     has no `[Hand] [Main]` of its own (`Game::hand_effect_slot_is_link`;
+    ///     the decoder dispatches `[Main]` first, so a card carrying both
+    ///     exposes only its `[Main]` on that bit -- the same one-declarable-
+    ///     per-hand-slot limit DCGO's recorder has). DCGO dispatches it to
+    ///     `ActivateCardAction` on the hand card's `LinkEffect`. The card is
+    ///     lifted out of the hand and attached; nothing is absorbed and no
+    ///     `[On Play]` fires.
+    ///
+    /// `from` defaults to the bare `field`.
+    ///
+    /// The HOST is NOT named on this step. Both engines park a host pick the
+    /// moment the link is declared (ours: `install_digimon_link_host_selection`,
+    /// an `OwnField` prompt; DCGO: `SelectPermanentEffect` "Select 1 Digimon to
+    /// link."), and that pick is answered by the NEXT step,
+    /// `select: { targets: [own.field.N] }` -- exactly how every other
+    /// action-then-prompt pair (attack -> blocker, play -> [On Play] target)
+    /// is authored. Folding the host into this verb would make one scenario
+    /// step consume two decisions on both wires, which the replay session
+    /// (one `step()` per scenario step) and the differ's per-step pairing do
+    /// not model; the pending-selection invariant in the adapter already
+    /// forces the answering `select:` to follow.
+    ///
+    /// (Before 2026-09-17 the hand origin was an engine gap,
+    /// `G-ENGINE-DIGIMON-LINK-FROM-HAND`: the only hand-side link was the
+    /// Plug-In *Option* play mode. It closed in the same change that added
+    /// this verb.)
+    Link { card: String, from: String },
+    /// Declare a **DNA digivolution** (§8-2 / general_rule.pdf §6-5-1-2-2):
+    /// two of the controller's own Digimon in the battle area are digivolved
+    /// into one `[DNA Digivolve]` card in hand, which lands unsuspended with
+    /// the two specified Digimon stacked on top of each other.
+    ///
+    /// `card` is the HAND card (the DNA result); `from` is `hand[.N]`, with the
+    /// same pinned / unpinned semantics as `play`. `materials` names the two
+    /// battle-area Digimon, in DECLARATION order, in the slot grammar the rest
+    /// of the format uses (`field.N`, or the explicit `own.field.N`) — they are
+    /// always the actor's own (§8-2), so an `opp.` reference is refused.
+    ///
+    /// Unlike `link:`, the materials ride the VERB rather than a following
+    /// `select:` step, because the two wires disagree about how many decisions
+    /// this declaration contains and neither answer is authorable on the other:
+    ///
+    ///   * ours is THREE decisions — the `DNA_DIGIVOLVE` action bit (which
+    ///     names only the hand slot), then two `SelectionKind::Material`
+    ///     prompts over raw own-battle-area indices
+    ///     (`Game::initiate_dna_digivolve`);
+    ///   * DCGO's is ONE — a single `PlayCardAction` whose
+    ///     `JogressEvoRootsFrameIDs` carries both materials
+    ///     (`MainPhaseAction/PlayCardAction.cs`), with no prompt at all.
+    ///
+    /// So the step lowers to one wire row carrying the action id AND the two
+    /// materials' top-card identities, plus a sim-only row that answers our two
+    /// prompts — the same one-row/N-picks shape `SelectPayload::Materials`
+    /// already uses for `[Assembly]` / `[DigiXros]`.
+    ///
+    /// (Before this verb existed the clause was unreachable on both wires:
+    /// `G-TOOLING-EXAM-NO-DNA-VERB`, `qa/dcgo-exams/BT8/NOTES-BT8-084.md`,
+    /// `qa/dcgo-exams/BT16/NOTES-BT16-077.md`.)
+    Dna {
+        card: String,
+        from: String,
+        materials: Vec<String>,
+    },
+
     Select(SelectPayload),
     /// A selection DCGO asks that OUR engine never parks -- authored
     /// `select: { ..., dcgo_only: true }`.
@@ -154,6 +233,28 @@ pub enum SelectPayload {
     /// Count / generic-int prompts: the VALUE chosen (a cost, a quantity),
     /// never a branch index.
     Value(i32),
+    /// An either/or `EffectChoice` branch named by a substring of OUR engine's
+    /// branch LABEL (case-insensitive; exactly one branch must match).
+    ///
+    /// Added 2026-09-18 for the two-branch prompts whose labels carry no
+    /// number -- Gazimon BT25-078's "Add a [Three Musketeers] card to hand" /
+    /// "Place a [Three Musketeers] trait card as bottom digivolution card",
+    /// Gigadramon EX7-044's "Top of deck" / "Bottom of deck". `value:` cannot
+    /// answer those: it is a VALUE matched against the label's digits
+    /// (`selection_resolve::label_mentions_value`), and a raw index would be
+    /// the position-vs-value trap `value:` was cleaned up to avoid.
+    ///
+    /// SIM-ONLY BY CONSTRUCTION. DCGO has no `EffectChoice` class
+    /// (docs/DCGO_EXAM.md "The table": "genuinely multi-class") -- the same
+    /// decision is a `generic_int` / `generic_bool` whose payload is the
+    /// CARD-DEFINED value (`SetIntSelection(value: 1|2|3)`), not a branch
+    /// index, and it is asked at a different point in the sequence more often
+    /// than not (Gazimon: DCGO picks the card first and asks the branch
+    /// after). So a `choice:` row must carry `sim_only: true` and DCGO's side
+    /// is authored as its own `dcgo_only` `value:` / `decline:` row. Refusing
+    /// the shared form keeps the two value spaces from ever meeting on one
+    /// row.
+    Choice(String),
     /// Affirm an optional (yes/no) prompt.
     Yes,
     /// Cancel / decline an optional prompt.
@@ -204,8 +305,9 @@ pub enum SelectPayload {
 /// `pub` so `exam::validate`'s lint can check a step's verb against the same
 /// list this parser enforces, rather than keeping a second copy that could
 /// drift from it.
-pub const STEP_VERBS: &[&str] =
-    &["hatch", "pass", "move", "play", "digivolve", "attack", "main", "select"];
+pub const STEP_VERBS: &[&str] = &[
+    "hatch", "pass", "move", "play", "digivolve", "dna", "attack", "main", "link", "select",
+];
 
 fn hand() -> String {
     "hand".to_string()
@@ -213,6 +315,10 @@ fn hand() -> String {
 
 fn breeding() -> String {
     "breeding".to_string()
+}
+
+fn field() -> String {
+    "field".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -256,6 +362,52 @@ struct MainArgs {
     on: String,
 }
 
+/// `do: { link: { card: BT21-071, from: field.1 } }`.
+///
+/// `from` is `field[.N]` or `hand[.N]` and defaults to the bare `field`; pin
+/// it when two copies share the zone, exactly as `play`'s `hand.N` pin works. `into:` is deliberately NOT a
+/// field -- see [`StepAction::Link`] -- but it is declared here (rather than
+/// left to `deny_unknown_fields`) so an author who writes it is told what to
+/// write instead, not just "unknown field".
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LinkArgs {
+    card: String,
+    #[serde(default = "field")]
+    from: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    into: Option<String>,
+}
+
+/// `do: { dna: { card: BT8-084, materials: [field.0, field.1] } }`.
+///
+/// `from` is `hand[.N]` and defaults to the bare `hand`, exactly like `play`'s.
+/// `materials` is REQUIRED and must name exactly two own-field slots: the
+/// [DNA Digivolve] requirement is a fixed pair, and a defaulted or partial list
+/// would silently pick materials the scenario never asked for.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DnaArgs {
+    card: String,
+    #[serde(default = "hand")]
+    from: String,
+    materials: Vec<String>,
+}
+
+/// Rendered when a `dna:` step's `materials:` list is not a pair of own-field
+/// slots.
+const DNA_MATERIALS_RULE: &str = "step `do: dna`: `materials:` must name exactly TWO of your own \
+battle-area slots, in declaration order -- e.g. `materials: [field.0, field.1]`. DNA digivolution \
+digivolves 2 of YOUR Digimon into the hand card (general_rule.pdf 6-5-1-2-2 / 8-2), so an \
+`opp.` reference, a shorter list or a longer one names materials the rule cannot use";
+
+/// Rendered when a `link:` step names its host inline.
+const LINK_INTO_RULE: &str = "step `do: link`: `into:` is not a field of the link verb. The \
+host is a SEPARATE decision on both wires -- our engine parks an own-field pick and DCGO opens \
+`SelectPermanentEffect` (\"Select 1 Digimon to link.\") the moment the link is declared -- so \
+answer it with the NEXT step: `select: { targets: [own.field.N] }` with \
+`expect: { prompt: select_permanent, count: 1 }`";
+
 /// The raw YAML surface of a `select:` step. All five forms are optional here
 /// so the exactly-one rule can be validated with a message that names every
 /// form, instead of serde's opaque "unknown field" refusal.
@@ -282,6 +434,10 @@ struct SelectArgs {
     targets: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     value: Option<i32>,
+    /// A substring of OUR engine's `EffectChoice` branch label -- see
+    /// [`SelectPayload::Choice`]. Legal only with `sim_only: true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    choice: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     yes: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -301,9 +457,16 @@ struct SelectArgs {
     materials: Option<Vec<String>>,
 }
 
-/// The five select forms, for the exactly-one error message.
+/// The select forms, for the exactly-one error message.
 const SELECT_FORMS: &str =
-    "cards: [..] / materials: [..] / targets: [..] / value: N / yes: true / decline: true";
+    "cards: [..] / materials: [..] / targets: [..] / value: N / choice: \"label\" / yes: true / decline: true";
+
+/// Rendered when `choice:` is written on a row that is not `sim_only: true`.
+const CHOICE_SIM_ONLY_RULE: &str = "select `choice:` names a branch of OUR engine's \
+`EffectChoice` prompt by its label, and DCGO has no such prompt class: its analogue is a \
+`generic_int` / `generic_bool` row whose payload is the CARD-DEFINED value, asked at its own \
+point in the sequence. So a `choice:` row must be `sim_only: true`, and DCGO's side is authored \
+as a separate `dcgo_only: true` row with `value: N` (or `decline: true`)";
 
 /// Rendered in the error an author gets for `ordinal:` without `cards:`.
 const ORDINAL_RULE: &str = "select `ordinal:` is only legal alongside `cards:`: it is the 0-based \
@@ -371,6 +534,7 @@ impl SelectArgs {
             self.materials.is_some(),
             self.targets.is_some(),
             self.value.is_some(),
+            self.choice.is_some(),
             self.yes.is_some(),
             self.decline.is_some(),
         ]
@@ -493,6 +657,18 @@ impl SelectArgs {
         if let Some(value) = self.value {
             return Ok(SelectPayload::Value(value));
         }
+        if let Some(choice) = self.choice {
+            if choice.trim().is_empty() {
+                return Err(
+                    "select `choice:` must name a non-empty substring of the branch label"
+                        .to_string(),
+                );
+            }
+            if self.sim_only != Some(true) {
+                return Err(CHOICE_SIM_ONLY_RULE.to_string());
+            }
+            return Ok(SelectPayload::Choice(choice));
+        }
         if let Some(yes) = self.yes {
             if !yes {
                 return Err(
@@ -529,6 +705,13 @@ impl SelectArgs {
             SelectPayload::Materials(m) => a.materials = Some(m.clone()),
             SelectPayload::Targets(t) => a.targets = Some(t.clone()),
             SelectPayload::Value(v) => a.value = Some(*v),
+            SelectPayload::Choice(label) => {
+                a.choice = Some(label.clone());
+                // A choice row is sim-only by construction (see the payload
+                // doc); the marker is re-applied by `StepAction::serialize`
+                // as well, but set it here so a bare payload round-trips.
+                a.sim_only = Some(true);
+            }
             SelectPayload::Yes => a.yes = Some(true),
             SelectPayload::Decline => a.decline = Some(true),
         }
@@ -590,6 +773,22 @@ impl<'de> Deserialize<'de> for StepAction {
                     using: a.using,
                 }
             }
+            "dna" => {
+                let a: DnaArgs = args_of::<DnaArgs, D::Error>(verb, args)?;
+                if a.materials.len() != 2
+                    || a.materials.iter().any(|m| {
+                        let m = m.trim();
+                        m.starts_with("opp.") || m.starts_with("opponent.")
+                    })
+                {
+                    return Err(D::Error::custom(DNA_MATERIALS_RULE));
+                }
+                StepAction::Dna {
+                    card: a.card,
+                    from: a.from,
+                    materials: a.materials,
+                }
+            }
             "attack" => {
                 let a: AttackArgs = args_of::<AttackArgs, D::Error>(verb, args)?;
                 StepAction::Attack {
@@ -600,6 +799,16 @@ impl<'de> Deserialize<'de> for StepAction {
             "main" => {
                 let a: MainArgs = args_of::<MainArgs, D::Error>(verb, args)?;
                 StepAction::Main { on: a.on }
+            }
+            "link" => {
+                let a: LinkArgs = args_of::<LinkArgs, D::Error>(verb, args)?;
+                if a.into.is_some() {
+                    return Err(D::Error::custom(LINK_INTO_RULE));
+                }
+                StepAction::Link {
+                    card: a.card,
+                    from: a.from,
+                }
             }
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
@@ -659,6 +868,18 @@ impl Serialize for StepAction {
                     using: using.clone(),
                 },
             )?,
+            StepAction::Dna {
+                card,
+                from,
+                materials,
+            } => map.serialize_entry(
+                "dna",
+                &DnaArgs {
+                    card: card.clone(),
+                    from: from.clone(),
+                    materials: materials.clone(),
+                },
+            )?,
             StepAction::Attack { attacker, target } => map.serialize_entry(
                 "attack",
                 &AttackArgs {
@@ -669,6 +890,14 @@ impl Serialize for StepAction {
             StepAction::Main { on } => {
                 map.serialize_entry("main", &MainArgs { on: on.clone() })?
             }
+            StepAction::Link { card, from } => map.serialize_entry(
+                "link",
+                &LinkArgs {
+                    card: card.clone(),
+                    from: from.clone(),
+                    into: None,
+                },
+            )?,
             StepAction::Select(payload) => {
                 map.serialize_entry("select", &SelectArgs::from_payload(payload))?
             }
@@ -985,6 +1214,227 @@ assert:
         assert!(err.contains("main"), "the verb list must name `main`: {err}");
     }
 
+    // -- dna: DNA digivolution declaration ------------------------------
+    //
+    // G-TOOLING-EXAM-NO-DNA-VERB (qa/dcgo-exams/BT8/NOTES-BT8-084.md,
+    // qa/dcgo-exams/BT16/NOTES-BT16-077.md): before this verb the
+    // `[DNA Digivolve]` clause was unreachable on both wires -- `STEP_VERBS`
+    // had no DNA entry, `matches_intent` had no `DnaDigivolve` arm, and DCGO's
+    // `InputDriver.BuildMainPhaseAction` refused the range outright.
+
+    #[test]
+    fn dna_verb_parses_with_its_two_materials() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1] } }",
+        ))
+        .expect("dna step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Dna {
+                card: "BT8-084".to_string(),
+                from: "hand".to_string(),
+                materials: vec!["field.0".to_string(), "field.1".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn dna_verb_accepts_a_pinned_hand_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, from: hand.3, materials: [field.0, field.1] } }",
+        ))
+        .expect("dna step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Dna {
+                card: "BT8-084".to_string(),
+                from: "hand.3".to_string(),
+                materials: vec!["field.0".to_string(), "field.1".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn dna_verb_requires_materials() {
+        // A defaulted or missing pair would silently digivolve Digimon the
+        // scenario never named.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("dna"), "got: {err}");
+        assert!(err.contains("materials"), "must name the field: {err}");
+    }
+
+    #[test]
+    fn dna_verb_refuses_a_list_that_is_not_a_pair() {
+        for bad in [
+            "do: { dna: { card: BT8-084, materials: [field.0] } }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1, field.2] } }",
+        ] {
+            let err = Scenario::from_yaml(&GOOD.replace("do: { hatch: {} }", bad)).unwrap_err();
+            assert!(err.contains("exactly TWO"), "got: {err}");
+        }
+    }
+
+    #[test]
+    fn dna_verb_refuses_an_opponent_material() {
+        // general_rule.pdf 6-5-1-2-2 / 8-2: the materials are YOUR Digimon.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, opp.field.0] } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("exactly TWO"), "got: {err}");
+    }
+
+    #[test]
+    fn dna_verb_rejects_an_unknown_argument() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1], cost: 0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("cost"), "got: {err}");
+    }
+
+    #[test]
+    fn dna_verb_round_trips_through_yaml() {
+        let act = StepAction::Dna {
+            card: "BT8-084".to_string(),
+            from: "hand.2".to_string(),
+            materials: vec!["field.0".to_string(), "field.1".to_string()],
+        };
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act, "round trip of {yaml}");
+    }
+
+    #[test]
+    fn dna_is_listed_among_the_verbs_an_author_is_offered() {
+        let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
+        let err = Scenario::from_yaml(&bad).unwrap_err();
+        assert!(err.contains("dna"), "the verb list must name `dna`: {err}");
+        assert!(STEP_VERBS.contains(&"dna"));
+    }
+
+    // ── link: DigiLink declaration from the battle area ─────────────────
+
+    #[test]
+    fn link_verb_parses_with_a_pinned_field_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: field.1 } }",
+        ))
+        .expect("link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field.1".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_defaults_from_to_the_bare_field() {
+        // The dominant Appmon shape links a Digimon already on the field, so
+        // `from:` may be omitted and means `field`. The bare form stays
+        // AMBIGUOUS at lowering when two copies stand on the board, exactly
+        // as `play: { from: hand }` is with two copies in hand.
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071 } }",
+        ))
+        .expect("bare link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "field".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_accepts_the_hand_origin() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: hand.3 } }",
+        ))
+        .expect("hand-origin link step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Link {
+                card: "BT21-071".to_string(),
+                from: "hand.3".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn link_verb_requires_card() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { from: field.0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("link"), "got: {err}");
+        assert!(err.contains("card"), "must name the missing field: {err}");
+    }
+
+    #[test]
+    fn link_verb_refuses_an_inline_host_and_says_what_to_write_instead() {
+        // The host is a separate decision on BOTH wires (our own-field pick /
+        // DCGO's SelectPermanentEffect), answered by the next `select:` step.
+        // A bare "unknown field `into`" would leave the author guessing.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, from: field.1, into: field.0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("into"), "got: {err}");
+        assert!(
+            err.contains("select: { targets: [own.field.N] }"),
+            "must say how to answer the host: {err}"
+        );
+    }
+
+    #[test]
+    fn link_verb_rejects_an_unknown_argument() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { link: { card: BT21-071, cost: 2 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("cost"), "got: {err}");
+    }
+
+    #[test]
+    fn link_verb_round_trips_through_yaml() {
+        // The codec is hand-written, so an asymmetric arm would emit
+        // drafter/backfill output that fails to re-parse.
+        let act = StepAction::Link {
+            card: "BT21-074".to_string(),
+            from: "field.2".to_string(),
+        };
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(!yaml.contains("into"), "the absent host key must be omitted: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act, "round trip of {yaml}");
+    }
+
+    #[test]
+    fn link_is_listed_among_the_verbs_an_author_is_offered() {
+        let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
+        let err = Scenario::from_yaml(&bad).unwrap_err();
+        assert!(err.contains("link"), "the verb list must name `link`: {err}");
+        assert!(STEP_VERBS.contains(&"link"));
+    }
+
     // ── select: the five symbolic forms ─────────────────────────────────
 
     /// Parse GOOD with its select step's args replaced by `args`, returning
@@ -999,6 +1449,64 @@ assert:
             StepAction::Select(p) => Ok(p.clone()),
             other => Err(format!("expected a select step, got {other:?}")),
         }
+    }
+
+    // ── select: `choice:` (EffectChoice branch by label; sim-only) ───────
+
+    /// Like `select_payload_of`, but returns the whole step action so the
+    /// sim-only routing is visible.
+    fn select_action_of(args: &str) -> Result<StepAction, String> {
+        let text = GOOD.replace(
+            "do: { select: { targets: [opp.field.0] } }",
+            &format!("do: {{ select: {args} }}"),
+        );
+        Ok(Scenario::from_yaml(&text)?.steps[2].act.clone())
+    }
+
+    #[test]
+    fn select_choice_parses_on_a_sim_only_row() {
+        let act = select_action_of("{ choice: \"Bottom of deck\", sim_only: true }").unwrap();
+        assert_eq!(
+            act,
+            StepAction::SelectSimOnly(SelectPayload::Choice("Bottom of deck".to_string()))
+        );
+    }
+
+    #[test]
+    fn select_choice_without_sim_only_is_rejected_loudly() {
+        // DCGO has no EffectChoice class: a shared `choice:` row would put our
+        // branch label and DCGO's card-defined value on one line.
+        let err = select_action_of("{ choice: \"Bottom of deck\" }").unwrap_err();
+        assert!(err.contains("sim_only: true"), "got: {err}");
+        assert!(err.contains("dcgo_only"), "must name DCGO's side: {err}");
+    }
+
+    #[test]
+    fn select_choice_on_a_dcgo_only_row_is_rejected() {
+        let err = select_action_of("{ choice: \"x\", dcgo_only: true }").unwrap_err();
+        assert!(err.contains("sim_only: true"), "got: {err}");
+    }
+
+    #[test]
+    fn an_empty_select_choice_is_rejected() {
+        let err = select_action_of("{ choice: \" \", sim_only: true }").unwrap_err();
+        assert!(err.contains("non-empty"), "got: {err}");
+    }
+
+    #[test]
+    fn select_choice_alongside_value_is_rejected() {
+        let err = select_action_of("{ choice: \"x\", value: 1, sim_only: true }").unwrap_err();
+        assert!(err.contains("choice:"), "must list the forms: {err}");
+    }
+
+    #[test]
+    fn select_choice_round_trips_through_yaml() {
+        let act = StepAction::SelectSimOnly(SelectPayload::Choice("Top of deck".to_string()));
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        assert!(yaml.contains("choice"), "the key must survive: {yaml}");
+        assert!(yaml.contains("sim_only"), "the marker must survive: {yaml}");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act);
     }
 
     #[test]

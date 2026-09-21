@@ -1,0 +1,150 @@
+# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#effect#2 --
+# "[Security] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their
+#  level 5 Digimon."
+#
+# SEATING. P0 is the Three Musketeers deck (the defender) with the card under exam
+# pinned at stack[9] -- the TOP of P0's security stack. P1 is the quiet-opponent
+# deck: it builds one vanilla Digimon of each level (Biyomon ST1-02 Lv.3, Kokatorimon
+# BT1-014 Lv.4, Vermilimon BT4-014 Lv.5) over turns 2/4/6 and attacks the player
+# with VERMILIMON on turn 8. The security check flips Hurricane Screw Shot; THE CLAUSE
+# deletes all three -- INCLUDING the attacker, which ends the attack.
+#
+# WHY THE THIRD-ENTERED DIGIMON ATTACKS (r2, 2026-09-18). `attack: attacker: field.N`
+# reaches DCGO as a COMPACT index over Player.FieldPermanents in FRAME order, and
+# DCGO seats Digimon centre-out (frames 4, 3, 5, ...). r1 attacked with `field.0`:
+# ours = Biyomon (entry order), DCGO = Kokatorimon (recording 20260918T074334Z_72bebad9...:
+# lead divergence at step 18 = swapped `suspended` flags). The THIRD-entered Digimon
+# sits at frame 5 = `field.2` on BOTH sides (ours [Biyomon, Kokatorimon, Vermilimon];
+# DCGO [Kokatorimon, Biyomon, Vermilimon]) -- the reusable rule from
+# ../BT25/NOTES-BT25-083.md, same re-author as EX7-070-effect2.yaml r2.
+#
+# PROMPT SHAPE, from EX7_071.cs:292-394 (Security region): SetIsSecurityEffect, three
+# independent SelectPermanentEffect picks (level 3 / 4 / 5, maxCount 1,
+# canNoSelect: false) accumulated into `selectedPermanents` and destroyed TOGETHER by
+# one DestroyPermanentsClass(...).Destroy() after the third pick; NO placement tail.
+# The picks belong to P0 (the security card's owner) during P1's turn. Each has
+# exactly one candidate: DCGO's forced-selection path still passes through the
+# SetTargetFrames RPC the driver hooks, so each consumes one wire row.
+#
+# SIMULTANEOUS DELETION (card fix 2026-09-18). r1 also measured that our YAML deleted
+# after EACH pick (steps 19-20: ours p1.trash=[ST1-02] / [BT1-014, ST1-02], DCGO []).
+# The card now collects the three picks and deletes them as one batch, so nothing
+# leaves P1's field until the third pick -- hence the picks address OUR slots
+# `opp.field.0` / `.1` / `.2` (no slot shift between picks; the wire carries top-card
+# ids, so DCGO's different frame order does not matter for the select rows), and the
+# `at: 19` / `at: 20` asserts pin the empty trash at the 2nd and 3rd pick rows.
+#
+# P0 stays idle throughout -- no hatch, so nothing on P0's side can ever trigger.
+card: EX7-071
+clause: EX7-071#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-074, BT21-074, BT25-085, BT25-085, BT25-082,
+            BT25-082, BT25-082, BT25-082, BT25-083, EX7-071,
+            BT25-083, BT25-083, BT25-083]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, BT1-014, BT4-014, ST1-03, ST1-04,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-009,
+            ST1-08, ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): play Biyomon (ST1-02, Lv.3). Memory 3 -> 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): play Kokatorimon (BT1-014, Lv.4). Memory 3 -> 0.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): play Vermilimon (BT4-014, Lv.5). Memory 3 -> -2 ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T7 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): Vermilimon (third-entered = field.2 on both sides) attacks the player --
+  # THE CLAUSE flips Hurricane Screw Shot.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  # P0 (the card's owner) picks. Level 3: Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 4: Kokatorimon -- Biyomon is STILL on the field (batch delete), so slot 1.
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Level 5: Vermilimon, the attacker itself.
+  - actor: 0
+    do: { select: { targets: [opp.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attacker was deleted, so the attack ends; P1 still holds memory 3 and is
+  # back in its turn-8 Main phase. One step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the 2nd and 3rd pick rows: NOTHING has been deleted yet.
+  - at: 19
+    that:
+      p1.trash: []
+  - at: 20
+    that:
+      p1.trash: []
+  # Pre-step state of P1's trailing pass: P1's battle area is EMPTY, its trash holds
+  # all three Digimon, P0's security is down to 4 and the flipped Option sits in
+  # P0's trash.
+  - at: 21
+    that:
+      turn: 8
+      p0.security: 4
+      p0.trash: [EX7-071]
+      p1.field: []
+      p1.trash: [BT1-014, BT4-014, ST1-02]

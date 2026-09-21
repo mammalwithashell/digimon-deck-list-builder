@@ -1,0 +1,99 @@
+# Exam scenario: Asuna Shiroki (BT24-088), clause BT24-088#effect#2 --
+# "[Security] Play this card without paying the cost."
+#
+# SEATING. P0 is the quiet-opponent deck (the attacker), P1 the Three Musketeers
+# deck (the defender). The card under exam is pinned at P1's stack[9] -- the TOP of
+# P1's security stack (stack[5..9] is the security stack, REVERSED; see
+# docs/DCGO_EXAM.md "What each stack position becomes").
+#
+# THE LINE. T1 P0 plays Biyomon (ST1-02, a vanilla Red Lv.3, cost 2) from an
+# opening memory of 0, so the turn ends at -2. T3 (memory 3) Biyomon attacks the
+# player: the top security card is Asuna Shiroki and THE CLAUSE plays her without
+# paying the cost. A Tamer security card has no DP, so there is no security battle;
+# the attack ends after the effect. "One step past" is P0 playing Agumon (ST1-03,
+# cost 3 -> memory 0) so P0's turn does NOT end: ending it would start P1's turn 4
+# and park the revived Asuna's [Start of Your Turn] gate, which is not this
+# clause's business.
+#
+# PROMPT SHAPE. DCGO: PlaySelfTamerSecurityEffect -> SetUpActivateClass(..., -1,
+# FALSE) -- mandatory, no prompt; PlayPermanentCards(activateETB: true) then fires
+# Asuna's [On Play] (SetUpActivateClass(..., TRUE) -> OptionalSkill; CanActivate is
+# `hand >= 1`). Our engine's `play_from_security` likewise plays her and queues the
+# [On Play], which our YAML installs only when a [TS]/[Three Musketeers]-text card is
+# in hand -- P1's opening hand keeps Gazimon (BT25-078, [TS]) so both engines ask.
+# The decision is P1's (the Tamer's owner), even though it is P0's turn. It is
+# taken through the `optional_gate_fold` and PAID (Gazimon trashed, 2 drawn) rather
+# than declined: sim-only showed our engine draws 2 even on a declined cost
+# (BT24-088.yaml's `draw` is not gated on the pick -- see NOTES-BT24-088.md), so a
+# declined branch here would surface that #effect#1 finding as a hand divergence
+# on THIS clause's line.
+card: BT24-088
+clause: BT24-088#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014,
+            ST1-08]
+    rest: quiet-opponent
+  p1:
+    # stack[10]: P1's T2 draw; [11..12]: Asuna's [On Play] draws.
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT24-088,
+            BT25-083, BT25-083, BT25-083]
+    rest: three-musketeers
+steps:
+  # T1 (P0, memory 0): no hatch; play Biyomon (ST1-02). Memory 0 -> -2 ends the
+  # turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Biyomon attacks the player -- THE CLAUSE flips Asuna Shiroki.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Asuna's [On Play] (P1's decision, fold): pay it -- trash Gazimon, draw 2.
+  - actor: 1
+    do: { select: { cards: [BT25-078] } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause, still inside P0's turn-3 Main phase: play Agumon
+  # (ST1-03, cost 3 -> memory 0).
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing Agumon play: Asuna Shiroki stands on P1's field
+  # (a Tamer projects dp -1), P1's security is down to 4, P1's trash holds only the
+  # Gazimon paid for her [On Play] (the security card itself was PLAYED, not
+  # trashed), P1's hand is the opening five minus Gazimon plus its T2 draw and the
+  # two [On Play] draws, and Biyomon is suspended from its attack.
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 3
+      p1.security: 4
+      p1.trash: [BT25-078]
+      p1.hand: [BT21-074, BT21-074, BT25-083, BT25-083, BT25-083, BT25-085, BT25-085]
+      p1.field:
+        - card_id: BT24-088
+          dp: -1
+          suspended: false
+          sources: []
+      p0.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: true
+          sources: []

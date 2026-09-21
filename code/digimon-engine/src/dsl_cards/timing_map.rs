@@ -42,6 +42,8 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
         CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
+        // Source-ADDED observer maps 1:1. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+        CompiledTiming::OnAddDigivolutionCards => EffectTiming::OnAddDigivolutionCards,
         CompiledTiming::OnDigivolutionCardReturnedToDeckBottom => {
             EffectTiming::OnDigivolutionCardReturnedToDeckBottom
         }
@@ -67,6 +69,14 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::BeforePayCostObserve => EffectTiming::BeforePayCostObserve,
         CompiledTiming::OnOptionPlaced => EffectTiming::OnOptionPlaced,
         CompiledTiming::OnOptionTrashed => EffectTiming::OnOptionTrashed,
+        // Board-wide Option-use observer: `Game::use_option_from` arms it
+        // when the cost is paid and `fire_on_use_option_observers` enqueues
+        // `OnUseOption` against BOTH players' battle areas AFTER the Option's
+        // own body has fully resolved (DCGO stacks OnUseOption and runs the
+        // OptionSkill inline; BT3-096 Q&A). No forced actor filter — gate
+        // with `active_when:` (`your_turn` / `all_turns`).
+        // G-DSL-ON-USE-OPTION-TIMING.
+        CompiledTiming::OnUseOption => EffectTiming::OnUseOption,
         CompiledTiming::OnPlaceSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::OnAddedToSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::Main => EffectTiming::OptionMain,

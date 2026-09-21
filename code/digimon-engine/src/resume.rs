@@ -520,6 +520,13 @@ pub enum ResumeFrame {
     /// Accept runs the chosen queued effect; optional PASS drops every
     /// remaining optional queued effect for that chooser.
     TriggerOrderSelection(TriggerOrderSelectionState),
+    /// Ordering pick between the used Option's PENDING TRASH (9-1-5) and the
+    /// using player's own simultaneously-pending triggered effects. 18-1-2
+    /// performs pending processing that coincides with other processing like
+    /// simultaneously triggering effects (15-4-3), and 15-4-3-5-1 has that
+    /// player choose one of their own items at a time — so the trash is not
+    /// automatically first. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    OptionTrashOrder(OptionTrashOrderState),
     /// Optional replacement-effect accept/decline prompt. Accept re-runs the
     /// parked replacement process and commits its outcome; PASS commits the
     /// original event with no replacement.
@@ -581,6 +588,14 @@ pub enum ResumeFrame {
         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
         outer_conts: Vec<OuterContinuation>,
     },
+    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-16-1
+    /// trash-this-card cost parked a selection first. Resolve that inner
+    /// selection as data, then run the body iff the carrier reached the trash.
+    DelayBodyAfterCost {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_delay::DelayBodyContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// Effect-initiated App Fuse host prompt. Accept installs the result-card
     /// prompt; PASS declines without running any composed tail, matching the
     /// legacy prompt's absent `on_decline`.
@@ -595,6 +610,11 @@ pub enum ResumeFrame {
     /// Link Option host prompt installed while an Option is resolving. Accept
     /// attaches the pending Option as a link; optional PASS trashes it.
     LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    /// From-hand Plug-In **Option** link host prompt (the §6-5-1-4
+    /// declaration). Top-level player action installed BEFORE any payment:
+    /// accept pins the chosen host and re-enters `play_option_core`, which then
+    /// pays the link cost (§10-1-3-2) and plugs the card in (§10-1-3-3).
+    OptionHandLinkHostSelection(crate::game_actions::OptionHandLinkHostSelectionState),
     /// Field Digimon Link host prompt. Top-level player action; accept begins
     /// the WhenWouldLink window and then commits/resumes the Digimon link.
     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
@@ -814,6 +834,17 @@ pub struct TriggerOrderSelectionState {
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 
+/// Data for `ResumeFrame::OptionTrashOrder`: the Option's user picks whether
+/// the card's pending trash or one of their own pending triggered effects
+/// resolves next.
+#[derive(Debug, Clone)]
+pub struct OptionTrashOrderState {
+    /// The player who used the Option — the one whose pending items are being
+    /// ordered (15-4-3-5-1 / -2 bucket owner).
+    pub(crate) owner: PlayerId,
+    pub(crate) outer_conts: Vec<OuterContinuation>,
+}
+
 #[derive(Debug, Clone)]
 pub struct KeywordSaveSelectionState {
     pub prov: ResumeProvenance,
@@ -993,6 +1024,19 @@ pub enum NonDslCountCappedTerminal {
     },
     KeywordPartition {
         subject: PermanentHandle,
+    },
+    /// Slot-enforced `<Partition (A & B)>`: ONE pick toward the printed slot
+    /// set (general_rule.pdf §16-28-5/-6 — one card per parenthetical,
+    /// all-or-nothing). Every pick must keep a complete slot assignment
+    /// reachable; the terminal chains to the next pick, or plays
+    /// `picked_so_far` once one card is held for every slot. Mirrors the
+    /// `Assembly` per-element chain; DCGO's analogue is
+    /// `CardEffectCommons.PartitionClass.Partition`'s per-condition
+    /// `SelectCardEffect`.
+    KeywordPartitionSlots {
+        subject: PermanentHandle,
+        slots: Arc<Vec<CompiledPredicate>>,
+        picked_so_far: Vec<CardHandle>,
     },
     KeywordMaterialSave {
         tamer: PermanentHandle,

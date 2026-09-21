@@ -1,0 +1,88 @@
+# Exam scenario: Cyclonemon (BT24-011), clause BT24-011#effect#2 -- the printed
+# <Raid> ("When this Digimon attacks, you may switch the target of attack to 1 of
+#  your opponent's unsuspended Digimon with the highest DP.").
+# 
+# DECK NOTE. Both seats use the ToyAgumon books' decks (`tm-toy-black` /
+# `tm-quiet-red`, see BT25-064-effect0.yaml for the shell). Cyclonemon is red;
+# it lives in the black shell only as the card under exam.
+# 
+# THE MEMORY LADDER. Cyclonemon costs 5 and has to attack the SAME turn, so P0 needs
+# memory to spare: P1 hard-plays Phoenixmon ST1-10 (a 12000 DP vanilla, cost 10) on
+# T2 from 3, overshooting to -7 and handing P0 7. P0 then plays Cyclonemon (7 -> 2)
+# and still holds the turn. Neither seat hatches -- the breeding decisions are
+# declined so the line stays four steps of real play.
+# 
+# Phoenixmon is unsuspended and P1's highest-DP Digimon, so Cyclonemon's own <Raid>
+# window opens at attack declaration (16-22-2). <Raid> is OPTIONAL (16-22-3): DCGO
+# gates it behind an OptionalSkill yes/no before the target pick
+# (KeyWordEffects/Raid.cs), while our engine surfaces ONE declinable pick that is
+# gate and target at once -- the documented <Raid> fold, authored with
+# `expect: {prompt: OptionalSkill}` on the pick row.
+# 
+# This file TAKES the switch onto Phoenixmon (the only unsuspended opposing Digimon,
+# hence the highest DP). 5000 vs 12000: Cyclonemon loses and is deleted; Phoenixmon
+# is a vanilla with no [On Deletion] or battle text, and P1's security is never
+# touched.
+# 
+# WITNESS: p0.field empty and BT24-011 in p0.trash after an attack that was
+# DECLARED on the player; p1.security still 5. Only the Raid switch produces that.
+card: BT24-011
+clause: BT24-011#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-011, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066]
+    rest: tm-toy-black
+  p1:
+    stack: [ST1-10, ST1-03, ST1-04, BT1-009, BT3-007, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; pass -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Phoenixmon (10 -> -7) -> P0 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 7): decline breeding; play Cyclonemon (5 -> 2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-011, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE (<Rush>): Cyclonemon attacks the turn it came into play.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: take the switch. The fold marker splits this one row into
+  # OptionalSkill(yes) + the SelectPermanentEffect pick on the wire.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.field: []
+      p0.trash: [BT24-011]
+      p1.security: 5
+      p1.field:
+        - card_id: ST1-10
+          dp: 12000
+          suspended: false
+          sources: []

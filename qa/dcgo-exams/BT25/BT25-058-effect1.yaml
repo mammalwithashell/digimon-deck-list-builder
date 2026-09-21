@@ -1,0 +1,136 @@
+# Exam scenario: Callismon (BT25-058), clause BT25-058#effect#1 -- <Reboot>.
+#
+# "This Digimon also unsuspends in your opponent's unsuspend phase" (16-10,
+# Mandatory -- no prompt on either side). Measured as the thing it changes:
+# Callismon attacks on p0's T7 (and so is suspended when that turn ends), and
+# at p1's T8 breeding step -- i.e. AFTER p1's unsuspend phase -- it reads
+# unsuspended. Without <Reboot> it would still be suspended there.
+#
+# THE LINE reuses BT25-058-effect0.yaml's prefix (hard-played Aegiochusmon
+# BT24-014, Callismon digivolved onto it via the [TS] Lv.5 alt path -- see that
+# file for the memory ledger and why this book is used). Callismon then idles
+# one round so it is unsuspended and off summoning sickness, and attacks p1's
+# security on T7.
+#
+# The attack is otherwise silent: p1's board is empty, so the shared
+# [When Attacking] clause (#effect#4) has no target and opens nothing on either
+# side; the flipped security card is a vanilla Biyomon (ST1-02, 3000 DP) that
+# loses the battle to 13000 with no [Security] text; and Aegiochusmon's only
+# inherited effect is <Decode>, which is not a [When Attacking] trigger.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_058_pool.json (--decks).
+card: BT25-058
+clause: BT25-058#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 to hard-play, the Callismon, inert filler
+      - BT24-014
+      - BT25-058
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's turn draws, in order
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+    rest: tm-callismon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card here
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent-tm
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Callismon onto the [TS] Lv.5 for 4 (3 -> -1,
+  # the turn hands over). p1's board is empty, so #effect#4 opens no prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-058 } }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): Callismon attacks the player. It suspends; the check
+  # flips p1's stack[9] (Biyomon, 3000 DP) which loses the battle.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1): THE WITNESS. p1's unsuspend phase has run by the time this step is
+  # answered, and <Reboot> unsuspended Callismon in it.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 8
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p0.field:
+        - card_id: BT25-058
+          dp: 13000
+          suspended: false
+          sources: [BT24-014]

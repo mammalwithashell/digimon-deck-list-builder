@@ -1,0 +1,155 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#1 --
+# "When this card would be played, by returning 3 cards with [Three
+#  Musketeers] in their texts from your trash to the bottom of the deck,
+#  reduce the play cost by 6."
+#
+# THE LINE fills P0's trash with exactly three "[Three Musketeers] in text"
+# cards by letting P1 break P0's security three times: P0's top three
+# security cards are Gazimon (BT25-078), Sparrowmon (EX7-051) and ToyAgumon
+# (EX7-008) -- 1000 DP each, every one naming [Three Musketeers] in its
+# printed text, and none with a [Security] effect or an active inherited
+# effect while in security (Gazimon's / Sparrowmon's <Retaliation> is
+# INHERITED, so it is dead on a security Digimon). P1's TWO Biyomon (3000
+# each) win every security battle silently. They are two copies of ONE card
+# on purpose: DCGO seats Digimon centre-out, so on a two-Digimon board
+# `attack: field.N` names the OTHER Digimon there (../BT25/NOTES-BT25-083.md,
+# "never address a slot on a TWO-Digimon board"); with identical attackers
+# the projected field multiset is the same whichever one DCGO suspends.
+# Then P0 hard-plays
+# AvengeKidmon with 3 memory: the reduction makes it cost 7, and memory
+# 3 -> -4 is the witness (13 unreduced would read -10).
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Biyomon ST1-02 (3 -> 1), play Biyomon #2 (1 -> -1).
+#   T3 (P0, 1): pass (P1 opens at 3).
+#   T4 (P1, 3): both Biyomon attack security (Gazimon, then
+#               Sparrowmon, to the trash). Pass.
+#   T5 (P0, 3): pass.
+#   T6 (P1, 3): a Biyomon attacks security (ToyAgumon to the trash). Pass.
+#   T7 (P0, 3): THE CLAUSE -- play AvengeKidmon; return the three cards to
+#               the deck bottom; pay 7. Memory -4 hands the turn over.
+#   T8 (P1):    breeding decision -- the trailing step.
+#
+# PROMPT SHAPE (P_170.cs, region "Before Pay Cost - Condition Effect"):
+# ActivateClass at EffectTiming.BeforePayCost, SetUpActivateClass(..., -1,
+# isOptional: FALSE, ...) -- DCGO opens NO OptionalSkill. Its
+# SelectCardEffect(Root.Trash, maxCount: 3, canEndNotMax: false) has
+# `canNoSelect` true only when the full cost is affordable (PayingCost <=
+# MaxMemoryCost). MaxMemoryCost is 10 + memory (Player.cs:1131), so at
+# memory 3 it is 13 and the unreduced 13 IS affordable: the pick is
+# CANCELLABLE here (it would be forced only at memory 2 or less). Either way
+# the same ONE SelectCardEffect row is asked and this line answers it with
+# the three cards. The chosen order IS the deck-bottom order
+# (selectedCards.Reverse() + AddLibraryBottomCards) -- there is no separate
+# ordering prompt. Our engine renders the printed "by returning ..." as an
+# outer accept/decline gate (`cost_reduction ... optional: true`) BEFORE its
+# trash pick, so that gate row is SIM-ONLY (BT24-017 idiom) and the
+# three-card pick is the shared row.
+card: P-170
+clause: P-170#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[5..9] security, flipped from stack[9] down: Gazimon, Sparrowmon,
+    # ToyAgumon are the three cards P1's attacks trash. Draws: T3, T5, T7.
+    stack: [P-170, ST1-02, EX7-008, BT25-082, BT25-083,
+            BT25-082, BT25-083, EX7-008, EX7-051, BT25-078,
+            EX7-010, EX7-010, BT25-082]
+    rest: tm-avengekidmon
+  p1:
+    # Two Biyomon at hand.0 / hand.1 (pinned: two copies in one zone are
+    # ambiguous to the lowering pass until pinned).
+    stack: [ST1-02, ST1-02, ST1-03, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-03, ST1-04,
+            ST1-05, ST1-05, ST1-08, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): two identical attackers.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 1)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): two security checks -- Gazimon, then Sparrowmon, to the trash.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): third security check -- ToyAgumon to the trash.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-170, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine's accept/decline gate on the "by returning ..."
+  # processing condition. DCGO builds the BeforePayCost class non-optional
+  # and forces the pick (see the header), so this row puts nothing on the
+  # wire.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # The shared row: the three [Three Musketeers]-in-text cards, in the order
+  # they go to the deck bottom. Cost 13 - 6 = 7: memory 3 -> -4.
+  - actor: 0
+    do: { select: { cards: [BT25-078, EX7-051, EX7-008] } }
+    expect: { prompt: SelectCardEffect }
+  # T8 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 20
+    that:
+      turn: 8
+      p0.memory: -4
+      p0.security: 2
+      p0.trash: []
+      p0.field:
+        - { card_id: P-170, dp: 13000, suspended: false, sources: [] }
+      p0.hand: [BT25-082, BT25-082, BT25-083, EX7-008, EX7-010, EX7-010, ST1-02]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

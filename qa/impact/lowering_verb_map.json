@@ -193,6 +193,7 @@
       "return_selected_sources_to_hand",
       "return_to_deck_from_reveal",
       "return_trash_list_to_deck_bottom",
+      "return_union_bound_to_deck",
       "reveal_top_deck",
       "search_own_security_stack",
       "security_place_stacked_card",

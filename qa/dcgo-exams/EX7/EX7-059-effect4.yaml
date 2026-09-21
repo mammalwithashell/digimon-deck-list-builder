@@ -1,0 +1,140 @@
+# Exam scenario: BeelStarmon ACE (EX7-059), clause EX7-059#effect#4 --
+# "<Overflow (-4)> (As this card moves from the field or under a card to an
+#  area other than those, lose 4 memory.)"
+#
+# THE LINE. The ACE is digivolved over Megadramon on T5 (the
+# EX7-059-effect0.yaml entry: special line, cost 3, no prompts) and P1
+# deletes it on T6 with Gaia Force (ST1-16, "[Main] Delete 1 of your
+# opponent's Digimon.", cost 8). The ACE moves from the field to the trash,
+# so its owner loses 4 memory.
+#
+# THE WITNESS IS THE MEMORY GAUGE. P1 opens T6 at 3 and pays 8: the gauge
+# reads 5 on P0's side. <Overflow (-4)> takes 4 of those back: P0 opens T7 at
+# 1, not 5 -- `p0.memory: 1` on the trailing row. (1 is still on P0's side,
+# so the turn does pass to P0 either way; the VALUE is the measurement.)
+#
+# An opponent's EFFECT deletion, not a battle, keeps the line prompt-free
+# after the target pick: the ACE has no [On Deletion], Megadramon's
+# inherited text is <Piercing> only, and P1 holds no other Digimon whose
+# trigger could stack.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Biyomon (3 -> 1) -- a RED permanent, so P1 meets Gaia
+#               Force's colour requirement on T6. It never attacks (so the
+#               ACE in P0's hand never sees a counter timing). Pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4).      T4 (P1, 4): pass.
+#   T5 (P0, 3): the ACE over Megadramon for 3 (3 -> 0, draw 1). Pass.
+#   T6 (P1, 3): Gaia Force (8: 3 -> -5) on the ACE. THE CLAUSE: P0 loses 4.
+#   T7 (P0, 1): breeding decision -- the trailing step.
+#
+# PROMPT SHAPE. DCGO does not script <Overflow> per card: EX7_059.cs has no
+# Overflow region. It is a card-data property (CEntity_Base.OverflowMemory;
+# `IsACE => OverflowMemory >= 1`) applied by AceOverflowClass.Overflow()
+# (CardController.cs ~6131: `Owner.AddMemory(-OverflowMemory, null)`) from
+# every leave-the-field path (CardObjectController.RemoveField / trash
+# paths). No ActivateClass, no prompt, and NO `effect_activation` row -- the
+# clause is measured by the state diff alone. Ours: `ace_overflow: -4`.
+# Gaia Force's pick is ONE SelectPermanentEffect (the P-170-effect5.yaml
+# shape), consumed under the harness even with a single candidate.
+#
+# RESOLVED DIVERGENCE (2026-09-19, ENGINE FIX) -- an ENGINE FINDING measured while authoring
+# (NOTES-EX7-059.md). Our engine reads `p0.memory: 9` on the trailing row,
+# not 1: `Game::apply_ace_overflow_for_sources` (game/mod.rs) does
+# `self.memory += penalty` on the raw seesaw, which is TURN-PLAYER relative
+# ("positive = favor of memory_pair.0"), so on the OPPONENT's turn the ACE's
+# owner GAINS 4 instead of losing 4 (-5 - 4 = -9 for P1 -> 9 for P0). On the
+# owner's own turn the sign happens to be right, which is the only case
+# `ex7_059_overflow_minus_4_fires_on_leave_field` covers. Printed text ("lose
+# 4 memory" -- the card's owner) and DCGO (`cardSource.Owner.AddMemory(
+# -OverflowMemory)`) agree on 1. Expected oracle verdict: `diverged`, class
+# OUR BUG; the fix is `lose_memory_for_player(owner, 4)` per leaving ACE.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_059_pool.json (--decks).
+card: EX7-059
+clause: EX7-059#effect#4
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), draws: T3, T5,
+    # then the digivolution draw. No Option ever reaches P0's hand or trash.
+    stack: [EX7-011, EX7-059, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02]
+    rest: tm-beelstarmon-ace
+  p1:
+    # Gaia Force and Biyomon in the opening hand.
+    stack: [ST1-16, ST1-02, ST1-03, ST1-04, BT1-009,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent-059
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the red body Gaia Force needs on T6.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4). No prompt: no TM Option in hand/trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): the ACE over Megadramon for 3 (3 -> 0); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-059 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): Gaia Force (8: 3 -> -5) deletes the ACE. THE CLAUSE: <Overflow
+  # (-4)> -- the gauge goes from 5 on P0's side to 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T7 (P0, 1): one step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # p0.memory: 1 -- the clause's witness. Our engine read 9 until the
+  # owner-relative <Overflow> fix (G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE,
+  # docs/RUST_ENGINE_GAPS.md); oracle re-diff against the preserved sidecar
+  # 20260918T133846Z_0b5e93f1... is CLEAN.
+  - at: 15
+    that:
+      turn: 7
+      p0.memory: 1
+      p0.field: []
+      p0.trash: [EX7-011, EX7-059]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [ST1-16]

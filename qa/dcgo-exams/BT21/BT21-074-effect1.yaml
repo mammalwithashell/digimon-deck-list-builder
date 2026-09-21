@@ -1,0 +1,103 @@
+# Exam scenario: Satellamon (BT21-074), clause BT21-074#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers]
+#  trait card from your hand or trash as any of your Digimon's bottom
+#  digivolution card, until your opponent's turn ends, their effects can't
+#  return that Digimon to hands or decks or affect it with <De-Digivolve>
+#  effects."
+#
+# This file exercises the [On Play] arm (BT21_074.cs registers two separate
+# ActivateClasses with one shared body; playing from hand keeps the tuck away
+# from Satellamon's OTHER [When Digivolving] effect, which would bury the
+# line under MultipleSkills). The tuck card is Scopemon BT21-071 ([Appmon]
+# trait) from the hand; the trash is empty. The host is Satellamon itself
+# (the only own Digimon -- DCGO's CanTuckUnderCondition admits any own
+# non-token battle-area Digimon, the effect's own permanent included).
+#
+#   T1 (P0): pass.   T2 (P1): pass.
+#   T3 (P0, 3): play Satellamon (cost 7: 3 -> -4, turn over). THE CLAUSE
+#            fires as [On Play]: Scopemon goes under Satellamon, and
+#            Satellamon gains the three protections until P1's turn ends.
+#   T4 (P1): the trailing step.
+#
+# PROMPT SHAPE (BT21_074.cs, region "On Play"): SetUpActivateClass(...,
+# -1, false, ...) -> MANDATORY, NO OptionalSkill. The zone question is asked
+# ONLY when both hand and trash qualify (SetBoolSelection); with the trash
+# empty the script calls UserSelectionManager.SetBool(true) directly, which
+# sets the value with no RPC and therefore consumes NO wire row. Then
+# SelectHandEffect(canNoSelect: true) and SelectPermanentEffect(canNoSelect:
+# true), AddDigivolutionCardsBottom, then GainCanNotReturnToHand /
+# GainCanNotReturnToDeck / ImmuneFromDeDigivolveClass -- none of which
+# prompts. Our engine: the clause has no outer gate (the union pick is itself
+# declinable) -> select_union_zone (hand row) -> select_own_permanent.
+#
+# WHAT IS AND IS NOT MEASURED. The placement half is observable (Scopemon in
+# Satellamon's sources). The protection half ("their effects can't ...") is a
+# modifier the state projection cannot see, and the quiet-opponent pool holds
+# no bounce / De-Digivolve effect P1 could aim at Satellamon on T4; it is
+# deliberately NOT probed here -- see NOTES-BT21-074.md. Both engines resolve
+# the immunity at De-Digivolve time as a no-op rather than by hiding the
+# target (DCGO IDegeneration.Degeneration `if (ImmuneFromDeDigivolve()) yield
+# break`; ours WhenWouldBeDeDigivolved cancel), so a future probe would not
+# split on prompt existence.
+card: BT21-074
+clause: BT21-074#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw.
+    stack: [BT21-074, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-02, ST1-04,
+            BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Appmon] trait card from hand (single qualifying zone: no zone menu,
+  # no OptionalSkill -- the effect is mandatory in DCGO).
+  - actor: 0
+    do: { select: { cards: [BT21-071] } }
+    expect: { prompt: SelectHandEffect }
+  # The Digimon that receives it: Satellamon itself.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory is -4, so the seat is P1 (T4): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.memory: -4
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092]
+      p0.field:
+        - { card_id: BT21-074, dp: 7000, suspended: false, sources: [BT21-071] }
+      p1.field: []
+      p1.security: 5

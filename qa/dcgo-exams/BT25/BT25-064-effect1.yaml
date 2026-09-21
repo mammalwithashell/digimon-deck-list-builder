@@ -1,0 +1,82 @@
+# Exam scenario: ToyAgumon (BT25-064), clause BT25-064#effect#1 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 Option card and 1 [TS] trait
+#  card among them to the hand. Return the rest to the bottom of the deck."
+# 
+# DECK NOTE. `tm-toy-black` is a black vanilla shell (Hagurumon/Commandramon/
+# Numemon/Tankmon/WaruMonzaemon/HiAndromon/Gotsumon -- no printed text) carrying
+# 4x ToyAgumon BT25-064, 4x Thundermon BT8-061 (black Lv.4 vanilla), 4x Cyclonemon
+# BT24-011, 4x Vermilimon BT4-014, 4x EX7-070 and 2x BT25-100 (the Options the
+# [On Play] reveal needs); eggs 4x Tsunomon BT24-007 -- a PURPLE Lv.2 with the [TS]
+# trait whose only text is an inherited trigger on Demon/Titan hand-trashes,
+# which never fires here. `tm-quiet-red` is the shared quiet ST1 shell plus Tai /
+# Gaia Force for the Neptunemon lines; in these lines P1 does nothing but hold
+# security.
+# 
+# THE LINE is one action: P0 hard-plays ToyAgumon on T1 (memory 0 -> -3; the effect
+# resolves before the turn hands over). The first player takes no T1 draw, so the
+# revealed three are stack[10..12] exactly, engineered so BOTH picks are real
+# choices:
+#   [10] EX7-070  -- Option, not [TS]       -> Option bucket only
+#   [11] BT25-100 -- Option AND [TS] trait  -> eligible for either bucket
+#   [12] BT25-064 -- [TS] Digimon           -> [TS] bucket only
+# 
+# PROMPT SHAPE (BT25_064.cs -> SimplifiedRevealDeckTopCardsAndSelect, two
+# conditions, mutualConditions: true, canNoSelect: false): ONE SelectCardEffect per
+# condition in order -- "Select 1 Option card." then "Select 1 [TS] trait card."
+# (RevealLibrary.cs:291 loops the conditions). The mutualConditions relaxation
+# (RevealLibrary.cs:302) needs the FIRST pick to also satisfy the second and to be
+# the only first-condition card, which taking EX7-070 first rules out. Ours:
+# select_reveal_buckets, two min:1/max:1 buckets -> one RevealBucket park per pick,
+# same class. No leading generic_bool gate: canNoAction is false on this helper.
+# The one remaining card goes to the deck bottom with NO DCGO prompt
+# (ReturnRevealedCardsToLibraryBottom, Count == 1 -> AddLibraryBottomCards); our
+# engine still parks its one-item OrderedPermutation, answered `sim_only`.
+# 
+# WITNESS: EX7-070 and the second ToyAgumon are in P0's hand; BT25-100 is not.
+card: BT25-064
+clause: BT25-064#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-064, BT8-061, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, EX7-070, BT25-100, BT25-064, BT3-067, BT5-066]
+    rest: tm-toy-black
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play ToyAgumon (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-064, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, pick 1: the Option bucket. EX7-070 by identity (BT25-100 was the
+  # other legal answer).
+  - actor: 0
+    do: { select: { cards: [EX7-070] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, pick 2: the [TS] bucket. ToyAgumon by identity (BT25-100 was the
+  # other legal answer).
+  - actor: 0
+    do: { select: { cards: [BT25-064] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: the single leftover (BT25-100) to the deck bottom. DCGO auto-places a
+  # lone remainder (RevealLibrary.cs:478); our engine parks a one-item permutation.
+  - actor: 0
+    do: { select: { cards: [BT25-100], sim_only: true } }
+  # Memory -3 ended P0's turn after resolution: P1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 5
+    that:
+      turn: 2
+      p0.hand: [BT8-061, BT2-052, BT3-059, BT2-056, EX7-070, BT25-064]
+      p0.field:
+        - card_id: BT25-064
+          dp: 2000
+          suspended: false
+          sources: []
+      p0.trash: []

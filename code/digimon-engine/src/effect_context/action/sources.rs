@@ -122,8 +122,24 @@ impl<'a> EffectContext<'a> {
         target: PermanentHandle,
         face_down: bool,
     ) -> bool {
-        self.game
-            .place_as_bottom_source_observed(source, target, self.player, face_down)
+        self.game.place_as_bottom_source_by_effect(
+            source,
+            target,
+            self.player,
+            face_down,
+            self.source_card,
+        )
+    }
+
+    /// The placing effect's attribution (controller + carrier card) for the
+    /// `OnAddDigivolutionCards` batch window every effect-driven source
+    /// placement on this context opens. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) fn placing_effect_attribution(&self) -> crate::trigger_context::EffectAttribution {
+        crate::trigger_context::EffectAttribution {
+            controller: self.player,
+            source_card: Some(self.source_card),
+            source_permanent: self.source_permanent,
+        }
     }
 
     /// Insert a card as `target`'s TOP digivolution source — directly
@@ -141,8 +157,13 @@ impl<'a> EffectContext<'a> {
         target: PermanentHandle,
         face_down: bool,
     ) -> bool {
-        self.game
-            .place_as_top_source_observed(source, target, self.player, face_down)
+        self.game.place_as_top_source_by_effect(
+            source,
+            target,
+            self.player,
+            face_down,
+            self.source_card,
+        )
     }
 
     pub fn place_hand_card_under_tamer(
@@ -279,7 +300,9 @@ impl<'a> EffectContext<'a> {
         source: PermanentHandle,
         target: PermanentHandle,
     ) -> bool {
-        self.game.place_permanent_as_bottom_sources(source, target)
+        let cause = self.placing_effect_attribution();
+        self.game
+            .place_permanent_as_bottom_sources_by_effect(source, target, cause)
     }
 
     pub fn move_all_matching_sources_under_tamer<F>(
@@ -318,6 +341,7 @@ impl<'a> EffectContext<'a> {
             .remove_sources_from_permanent(source, &source_indices);
         moved.reverse();
         let moved_count = moved.len();
+        let moved_handles: Vec<CardHandle> = moved.iter().map(|c| c.handle()).collect();
 
         let Some(target_perm) = self
             .game
@@ -328,6 +352,10 @@ impl<'a> EffectContext<'a> {
             return 0;
         };
         target_perm.card_sources.splice(0..0, moved);
+        // Effect-driven source placement → OnAddDigivolutionCards batch
+        // (DCGO `AddDigivolutionCardsBottom(list, activateClass)`).
+        let cause = self.placing_effect_attribution();
+        self.game.note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -370,6 +398,7 @@ impl<'a> EffectContext<'a> {
         if moved_count == 0 {
             return 0;
         }
+        let moved_handles: Vec<CardHandle> = moved.iter().map(|c| c.handle()).collect();
         let Some(target_perm) = self
             .game
             .player_mut(tamer.player)
@@ -379,6 +408,8 @@ impl<'a> EffectContext<'a> {
             return 0;
         };
         target_perm.card_sources.splice(0..0, moved);
+        let cause = self.placing_effect_attribution();
+        self.game.note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -470,6 +501,14 @@ impl<'a> EffectContext<'a> {
         }
         taken.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(taken);
+        // Effect-driven (Save / Material Save keyword bodies, DSL
+        // `select_sources` tucks): open / extend the host's
+        // OnAddDigivolutionCards batch. The per-card loop in the Material
+        // Save body coalesces into ONE firing per host because the window
+        // flushes only when the effect body completes — matching DCGO
+        // `AddDigivolutionCardsBottom(selectedCards, activateClass)`.
+        let cause = self.placing_effect_attribution();
+        self.game.note_effect_added_sources(target, vec![card], cause);
     }
 
     pub fn place_cards_under_tamer_bottom_in_order(
@@ -493,6 +532,7 @@ impl<'a> EffectContext<'a> {
         if moved_count == 0 {
             return 0;
         }
+        let moved_handles: Vec<CardHandle> = moved.iter().map(|c| c.handle()).collect();
 
         let Some(target_perm) = self
             .game
@@ -503,6 +543,8 @@ impl<'a> EffectContext<'a> {
             return 0;
         };
         target_perm.card_sources.splice(0..0, moved);
+        let cause = self.placing_effect_attribution();
+        self.game.note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -643,6 +685,15 @@ impl<'a> EffectContext<'a> {
         // Insert at the bottom of the target's stack. `face_down` stays
         // `false` (MindLink places face-up).
         target_player.battle_area[digimon_idx].push_under(top);
+        // DCGO `IPlacePermanentToDigivolutionCards(..., activateClass)` →
+        // `AddDigivolutionCardsBottom(..., _cardEffect)` fires
+        // OnAddDigivolutionCards for the receiving Digimon.
+        let host = PermanentHandle {
+            player: controller,
+            index: digimon_idx as u8,
+        };
+        let cause = self.placing_effect_attribution();
+        self.game.note_effect_added_sources(host, vec![top_handle], cause);
     }
 
     /// Trash the current top Digimon of `perm` and promote the next-highest
@@ -770,6 +821,8 @@ impl<'a> EffectContext<'a> {
         };
         // Mark face-down — DCGO `AddDigivolutionCardsBottom(..., isFacedown: true)`.
         card.face_down = true;
+        let placed = card.handle();
+        let cause = self.placing_effect_attribution();
 
         // Locate the carrier in battle area; if it's not there, look in
         // breeding area. (Breeding-area permanents never co-exist with a
@@ -779,10 +832,19 @@ impl<'a> EffectContext<'a> {
         if let Some(p) = player.battle_area.get_mut(perm.index as usize) {
             // Insert at bottom of stack (index 0).
             p.card_sources.insert(0, card);
+            // DCGO `Training.cs:29` passes `activateClass` → fires
+            // OnAddDigivolutionCards for the Training carrier.
+            self.game.note_effect_added_sources(perm, vec![placed], cause);
             return;
         }
         if let Some(ref mut breeding) = player.breeding_area {
             breeding.card_sources.insert(0, card);
+            let breeding_handle = PermanentHandle {
+                player: owner,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            };
+            self.game
+                .note_effect_added_sources(breeding_handle, vec![placed], cause);
             return;
         }
         // Carrier no longer exists in either zone (defensive — the calling

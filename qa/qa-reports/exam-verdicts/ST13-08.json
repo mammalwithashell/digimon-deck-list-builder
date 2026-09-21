@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T21:05:31.478657+00:00",
+  "clauses": {
+    "ST13-08#effect#0": {
+      "clause_id": "ST13-08#effect#0",
+      "card_id": "ST13-08",
+      "verdict": "unavailable",
+      "label": "Effect",
+      "text_sha256": "497de23de086cd5a0a1a73d31b43e538494ba4f1941a004385335d954bdd37eb",
+      "reason": "DCGO has no script for Chikurimon (ST13-08): the set directory exists ($BASE_DCGO/Assets/Scripts/CardEffect/ST13/{Black,Red}/) and holds ST13_01..06/09/11/13..16, but `find -name 'ST13_08*'` returns nothing -- so there is no oracle to cross-examine against. Measured per card, not per set; see qa/dcgo-exams/ST13/NOTES-ST13-08.md (three-musketeers-1).",
+      "recorded_at": "2026-09-19T21:05:31.478657+00:00"
+    }
+  }
+}

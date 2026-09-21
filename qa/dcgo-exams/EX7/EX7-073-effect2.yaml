@@ -1,0 +1,350 @@
+# Exam scenario: BeelStarmon (X Antibody) (EX7-073), clause EX7-073#effect#2 --
+# "[When Digivolving] [When Attacking] By trashing 2 cards with the [Three
+#  Musketeers] trait from this Digimon's digivolution cards, delete 1 of your
+#  opponent's Digimon with the highest level, and trash their top security
+#  card."
+#
+# THE [When Digivolving] HALF is what this file reads (DCGO registers the two
+# timings as two INDEPENDENT ActivateClasses -- `#region When Digivolving`
+# EffectTiming.OnEnterFieldAnyone and `#region When Attacking`
+# EffectTiming.OnAllyAttack -- and our YAML mirrors that with clause 2 /
+# clause 3). The witness is the whole printed sentence at once: TWO [Three
+# Musketeers]-trait cards leave the stack for the trash, P1's only Digimon is
+# deleted, and P1's security falls by one more card.
+#
+# REACHABLE ONLY SINCE 2026-09-20. The clause was `unreachable` for
+# `G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK`: the payment parks as
+# `SelectionKind::SourceMulti { min: 0, max: 2 }` and
+# `runners/selection_resolve.rs` had no identity arm for it, so
+# `select: { cards: [...] }` failed with "card pick '<ID>' not found in
+# SourceMulti". `8cb317bb4` added that arm (it reads the parked
+# `ResumeFrame::SourceMultiStep`'s own candidate snapshot and matches explicit
+# (action id, card id) pairs, because `select_own_sources` sweeps every
+# permanent and its accepted ids are SPARSE). The `yes:` single-accept path
+# could never have stood in: the cost is exactly two cards, so the first pick
+# always has two accept ids.
+#
+# WHERE THE SECOND TRAIT SOURCE COMES FROM -- and why it is P-180 rather than
+# a second BeelStarmon. The stack reaches EX7-073 with exactly ONE [Three
+# Musketeers]-trait digivolution card (BT25-085, the Lv.6 base). The second
+# arrives at the SAME [When Digivolving] timing, from this card's OTHER
+# clause: #effect#1 uses Bind Red Trigger P-180 from hand for free, and
+# P-180's own [Main] "place this card as the bottom digivolution card of 1 of
+# your [Three Musketeers] trait Digimon" tucks it under EX7-073. DCGO
+# evaluates clause 2's `CanActivateCondition` (`DigivolutionCards.Count(TM
+# trait) >= 1`, EX7_073.cs:179-186) WHEN THE TRIGGER COMES UP -- the reading
+# EX7-073-effect1.yaml already measured at the oracle -- so running #effect#1
+# FIRST (ordinal 0, the registration order effect0 confirmed) makes the
+# two-card cost payable in one turn. No extra turn, no second board Digimon,
+# no slot-addressing exposure.
+#
+# THE P-180 TRASH-TRIGGER RACE IS DISARMED BY THE BOARD, NOT BY ORDERING.
+# P-180 prints "When effects trash this card from digivolution cards, delete 1
+# of your opponent's 7000 DP or lower Digimon", and paying this clause's cost
+# trashes it -- a second delete that would race this one. `P_180.cs:60-66`
+# gates that trigger on `IsExistOnTrash(card) && HasMatchConditionPermanent
+# (opponent Digimon && DP <= 7000)`, so P1 fields VERMILIMON BT4-014 (Lv.5,
+# 8000 DP, printed vanilla -- no effect, inherited or security text) and
+# NOTHING ELSE: 8000 > 7000, the condition is false whether it is checked
+# before or after this clause's delete, and DCGO opens no widget for it. The
+# clause's own delete is unaffected -- it selects on LEVEL ("your opponent's
+# Digimon with the highest level"), and Vermilimon is the only Digimon.
+#
+# THE LINE is EX7-073-effect0.yaml's, with three changes:
+#   * stack[15] -- P0's T7 TURN draw -- is P-180. Not stack[13]/[14] (the two
+#     T5 digivolution draws): P-180 in hand during the T5 grant digivolve
+#     would give BeelStarmon BT25-085's own "[When Digivolving] ... use 1
+#     [Three Musketeers] or [TS] trait Option card from your hand" a candidate
+#     and open a prompt pair that measures nothing here. Drawn at T7's draw
+#     phase it is in hand for EX7-073's [When Digivolving] and for nothing
+#     else. (Asuna's [Start of Your Main Phase] hand scan already had
+#     candidates in the base line and is declined the same way.)
+#   * P1 hard-plays Vermilimon BT4-014 on T4 instead of Agumon ST1-03 on T2
+#     (see the paragraph above). Memory: T4 P1 3 -> -2 hands P0 2, so the T5
+#     digivolutions run 2 -> 0 -> -4 and P0 still opens T7 on 3 and pays 1.
+#   * the T7 rows after the digivolve carry the clause instead of declining it.
+#
+# PROMPT SHAPE at T7 (EX7_073.cs):
+#  - TWO [When Digivolving] ActivateClasses are active -> DCGO `MultipleSkills`
+#    / our `TriggerOrder`, both listing EX7-073 twice. `ordinal: 0` is clause 1
+#    ("Play an Option card from hand", registered first; our YAML's clause 1
+#    is first too) -- the ordinal EX7-073-effect0.yaml carried through a clean
+#    oracle run. `count:` on a MultipleSkills row is the PICK count (a literal
+#    1), never the number of stacked triggers.
+#  - clause 1: `SetUpActivateClass(..., -1, FALSE, ...)` -> NO OptionalSkill;
+#    the printed "may" is the SelectHandEffect's `canNoSelect: true`. One
+#    candidate (P-180) and still asked.
+#  - our engine then parks a two-entry TriggerOrder [EX7-073, P-180] -- clause
+#    2 against the used Option's pending disposal -- while DCGO runs the
+#    Option inline inside clause 1's coroutine (`PlayOptionCards`) and asks
+#    nothing. A `sim_only` row; see "THE PREDICTED DIVERGENCE" below for why
+#    the branch taken is `EX7-073`.
+#  - P-180's [Main]: `IDestroySecurity(P1, 1, fromTop: true)` is prompt-free,
+#    then ONE `SelectPermanentEffect` over own [Three Musketeers]-trait Digimon
+#    (`P_180.cs:104-136`). EX7-073 is the lone candidate and the row is still
+#    on the wire (DCGO's single-candidate short-circuit lives in
+#    SelectPermanentEffect's human-UI branch, which the harness never takes).
+#  - clause 2: `SetUpActivateClass(CanActivateCondition, ..., -1, TRUE, ...)`
+#    -> an `OptionalSkill` gate, then `SelectCardEffect` over the permanent's
+#    digivolution cards filtered by `EqualsTraits("Three Musketeers")`
+#    (maxCount 2, `canNoSelect: () => true`, `canEndNotMax: false`) -- exactly
+#    two candidates here, so the pick is forced in content but still asked.
+#    Our engine has no outer gate (the YAML's `select_own_sources min: 0` IS
+#    the decline path) and, on this line, has already resolved clause 2 by the
+#    time these rows are reached -- so the gate is authored as its own
+#    `dcgo_only` accept row rather than as an `expect: {prompt: OptionalSkill}`
+#    fold, which only splits a LIVE sim prompt.
+#  - `trashed == true` -> ONE `SelectPermanentEffect` (Destroy, canNoSelect
+#    false) over `IsMaxLevel` opponent Digimon, then an UNCONDITIONAL
+#    `IDestroySecurity(P1, 1, fromTop: true)` outside the target gate.
+#
+# THE DIVERGENCE THIS LINE FOUND -- MEASURED, TRIAGED AND FIXED (2026-09-21,
+# close-out job three-musketeers-2). The oracle run (sidecar
+# 20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3) returned DIVERGED at step
+# 25: DCGO had `p0.trash [BT25-085, P-180]`, `p1.field []` and `p1.security 3`;
+# we had an untouched trash, Vermilimon alive and security 4. ONE root cause,
+# ours wrong.
+#
+# OUR BUG: the used Option's `[Main]` body was not carried to COMPLETION before
+# the still-pending sibling clause activated. Two interleaves, both in
+# `Game::drain_effect_queue_inner`:
+#   1. `play_option_core` enqueues the body as an ordinary `OptionMain` queue
+#      entry and drains. With clause 2 still queued the drain saw TWO items for
+#      one chooser and installed a `TriggerOrder` [EX7-073, P-180] -- a choice
+#      the rules do not grant at this timing -- and either branch was wrong
+#      (run clause 2 first: one trait source, cost unpayable; dispose P-180
+#      first: Bind Red Trigger is trashed before its own `[Main]`'s placement
+#      lands and the card is lost).
+#   2. Even with the body given priority, its FIRST step (`trash_top_security`)
+#      reaches `fire_effect_security_removal`, which calls `drain_effect_queue`
+#      directly -- a NESTED drain that ran clause 2 from inside the body.
+#
+# RULES (general_rule.pdf, read directly): **15-8-3-2** (p.25) "Trigger-type
+# effects can't activate during the processing for a rule or effect" -- the
+# pending sibling `[When Digivolving]` is a trigger-type effect, and clause 1's
+# processing includes the `[Main]` of the Option it used (9-1-5 puts the
+# Option's disposal at the timing that `[Main]` RESOLVES, so the body is inside
+# the use). p.23 agrees from the other side: 15-4-3-4 (the next pending
+# activation effect is chosen only AFTER each effect has resolved) and
+# 15-4-4-2 (pending effects activate 1 at a time). DCGO is structurally the
+# same: `CardController.cs` `UseOptionClass.UseOption` runs the `OptionSkill`
+# INLINE inside the using coroutine.
+#
+# FIX: `drain_effect_queue_inner` now gives a queued `OptionMain` of the
+# in-flight `pending_option` absolute priority, and holds every other queued
+# effect back while that body is mid-resolution (a nested drain).
+# G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER, RESOLVED. Guard test:
+# `ex7_073_used_options_main_completes_before_pending_sibling_clause`
+# (code/digimon-engine/tests/cards_behavioral/ex7/ex7_073.rs). The `assert:`
+# block below now pins the DCGO/rules reading, and our engine no longer parks
+# the bogus TriggerOrder -- so the former `sim_only` row for it is GONE.
+#
+# SLOT HYGIENE: P0's only two permanents are the one Digimon stack and Asuna
+# (a Tamer), the same pair EX7-073-effect0.yaml addresses with
+# `digivolve: { from: field.0 }` through a CLEAN oracle run; P1 holds exactly
+# one Digimon. Every `select:` here is an identity pick.
+#
+# Book: qa/dcgo-exams/EX7/three_musketeers_pool.json (--decks), decks
+# `three-musketeers` / `quiet-opponent` -- unchanged.
+card: EX7-073
+clause: EX7-073#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. Draw budget: T3 turn draw
+    # [10], T3 Sparrowmon digivolve draw [11], T5 turn draw [12], T5
+    # BlackGatomon digivolve draw [13], T5 grant-digivolve draw [14], T7 turn
+    # draw [15] = P-180, T7 EX7-073 digivolve draw [16].
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-083,
+            P-180, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # [0] Vermilimon BT4-014, the Lv.5 / 8000 DP vanilla body this line needs.
+    # Security [5..9] is five vanilla low-DP Digimon; [10] T2 draw, [11] T4
+    # draw, [12] T6 draw.
+    stack: [BT4-014, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, pass out (memory 3 -> P0 3).
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): Koromon is a Lv.2 in an occupied breeding area -- no
+  # breeding prompt. Hard-play Vermilimon for 5 (3 -> -2); the turn ends on
+  # the play and P0 opens T5 on 2.
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 2): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Sparrowmon's [Start of Your Main Phase] -- SHARED (BeelStarmon BT25-085 in
+  # hand is a DUAL card, a [Three Musketeers] trait Option, so the placement
+  # cost IS payable). Declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2
+  # (2 -> 0).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick: Asuna BT25-092.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # With Asuna on the field, BlackGatomon (Lv.4) digivolves into BeelStarmon
+  # BT25-085 (Lv.6) for 4, ignoring digivolution requirements (0 -> -4). Its
+  # own [When Digivolving] clauses find no Option in hand or under it, so
+  # neither engine asks anything. The turn hands over; P1 opens T6 on 4.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 4): a single main-phase pass (no breeding prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): empty breeding area -> breeding prompt; pass it. The
+  # turn draw is P-180.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase] -- a different card's clause, declined.
+  # TWO rows for one decision: BT25_092.cs builds it `optional: false` and
+  # asks ONE cancellable SelectHandEffect, while our engine installs an outer
+  # accept/decline gate before its hand pick.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # EX7-073 onto BeelStarmon for 1 (memory 3 -> 2).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-073 } }
+    expect: { prompt: main_phase }
+  # Trigger order between EX7-073's two [When Digivolving] effects: clause 1
+  # FIRST, so the Option it uses is a digivolution card by the time clause 2's
+  # CanActivateCondition is evaluated.
+  - actor: 0
+    do: { select: { cards: [EX7-073], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
+  # Clause 1 (#effect#1): use Bind Red Trigger for free. One candidate.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # (Until 2026-09-21 our engine parked a bogus two-entry TriggerOrder
+  # [EX7-073, P-180] here -- clause 2 versus the used Option's body. That was
+  # G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER; the row is gone now
+  # that the Option's [Main] runs to completion inside clause 1.)
+  # SHARED: P-180's "place this card as the bottom digivolution card of 1 of
+  # your [Three Musketeers] trait Digimon" -- EX7-073 is the lone candidate.
+  # (Its prompt-free "trash your opponent's top security card" already took
+  # P1's security from 5 to 4.)
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE, payment: the two [Three Musketeers]-trait digivolution cards.
+  # SHARED since the fix. Clause 2 comes up AFTER clause 1 finished on BOTH
+  # sides now, so DCGO's `CanActivateCondition` and our `select_own_sources`
+  # both see BT25-085 and P-180 and the cost is payable.
+  # DCGO-ONLY first: clause 2's `isOptional: true` gate, accepted. Our engine
+  # has no outer gate (the YAML's `select_own_sources min: 0` IS the decline
+  # path), so the accept is its own row rather than an `optional_gate_fold`
+  # marker on the pick below.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT25-085, P-180] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, delete: "1 of your opponent's Digimon with the highest level".
+  # Vermilimon is P1's only Digimon; a single-candidate mandatory pick still
+  # consumes a wire row under the harness. SHARED since the fix.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause; P0 still holds memory 2, so the pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-digivolve (T7): BeelStarmon BT25-085 caps the stack with ONE
+  # [Three Musketeers]-trait digivolution card under it, Asuna beside it,
+  # Vermilimon alone on P1's board, security untouched at 5.
+  - at: 18
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.field:
+        - card_id: BT25-085
+          dp: 12000
+          suspended: false
+          sources: [BT25-082, EX7-051, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p0.trash: []
+      p1.field:
+        - card_id: BT4-014
+          dp: 8000
+          suspended: false
+          sources: []
+      p1.security: 5
+  # After the clause -- the DCGO/rules reading, which both engines now produce.
+  # Clause 1 landed first: P-180 tucked itself under EX7-073 as the bottom
+  # digivolution card and its own [Main] took P1's security 5 -> 4. Clause 2
+  # then found TWO [Three Musketeers]-trait sources, paid them (BT25-085 and
+  # P-180 to P0's trash, leaving [BT25-082, EX7-051, ST6-01] under EX7-073),
+  # deleted Vermilimon BT4-014 and trashed P1's top security card (4 -> 3).
+  # P-180's own "when effects trash this card from digivolution cards" clause
+  # is correctly silent on both sides (P_180.cs:60-66 needs DP <= 7000;
+  # Vermilimon is 8000 -- and by then already deleted).
+  - at: 25
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 2
+      p0.field:
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+        - card_id: EX7-073
+          dp: 12000
+          suspended: false
+          sources: [BT25-082, EX7-051, ST6-01]
+      p0.trash: [BT25-085, P-180]
+      p1.field: []
+      p1.security: 3

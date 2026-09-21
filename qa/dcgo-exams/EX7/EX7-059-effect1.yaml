@@ -1,0 +1,156 @@
+# Exam scenario: BeelStarmon ACE (EX7-059), clause EX7-059#effect#1 --
+# "[Hand] [Counter] <Blast Digivolve>" (16-25: "allows one of your Digimon to
+# digivolve into a card with this keyword effect in the hand without paying
+# the cost"; the processing is OPTIONAL, 16-25-3).
+#
+# THE LINE. P0 hard-plays Megadramon (EX7-011, red Lv.5, "[Three Musketeers]"
+# in text -- the ACE's special digivolution line, EX7-059-effect0.yaml) on T3
+# and attacks P1's security with it on T5, so it is SUSPENDED on T6. P1's
+# Biyomon (ST1-02, 3000) attacks the suspended Megadramon; in the counter
+# timing P0 Blast Digivolves the ACE from hand onto Megadramon for free. The
+# ACE (11000) then wins the battle and Biyomon is deleted.
+#
+# WHY THE ATTACK IS AIMED AT A DIGIMON (an ENGINE FINDING, recorded in
+# NOTES-EX7-059.md). The first draft had Biyomon attack P0's SECURITY. Our
+# engine opened NO counter window: `combat/mod.rs::try_enter_counter` returns
+# false for `AttackTarget::Player` ("Scope: Digimon-target attacks only ...
+# to match Python"). Counter timing is a step of EVERY attack
+# (general_rule.pdf 11-1-3) and DCGO's BlastDigivolveEffect triggers on
+# CanTriggerOnPermanentAttack(opponent permanent) with no target restriction,
+# so a player-target line would abort the oracle job on prompt sequence at
+# the OptionalSkill and measure that gap instead of this clause. A
+# Digimon-target attack opens the window on both engines.
+#
+#   T1 (P0, 0): pass.        T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4). No prompt (no TM Option held).
+#   T4 (P1, 4): pass.
+#   T5 (P0, 3): Megadramon attacks security: Biyomon #2 (stack[9], 3000)
+#               loses silently, P1 security 5 -> 4. P1 holds no [Counter]
+#               card. Megadramon's <Piercing> is INHERITED: inert face-up.
+#               Pass.
+#   T6 (P1, 3): Biyomon attacks the suspended Megadramon. THE CLAUSE: P0
+#               Blast Digivolves. Battle 11000 vs 3000: Biyomon is deleted.
+#               Attacking spent no memory: the trailing step is P1's pass.
+#
+# PROMPT SHAPE (CardEffectFactory/KeyWordEffects/BlastDigivolution.cs):
+# SetUpActivateClass(..., -1, TRUE, ...) + SetIsCounterEffect(true) ->
+# OptionalSkill; then SelectPermanentEffect(maxCount 1, canNoSelect: FALSE)
+# over own Digimon the card can legally digivolve onto (Megadramon, the lone
+# candidate -- consumed under the harness's AI branch anyway); then
+# PlayCardClass(payCost: false, targetPermanent, root: Hand, activateETB:
+# true). Our engine parks ONE declinable prompt in GamePhase::CounterTiming
+# (kind Hand, prompt "Counter (blast / option / field ability)") whose single
+# accept id is encode_digivolve(hand, field) = (card, target) at once. The
+# resolver cannot name that id by `cards:` (it is not a hand-select id), so
+# it is answered through the single-accept-id `yes:` path, SIM-ONLY, and
+# DCGO's two rows ride the wire as `dcgo_only` (the permanent by its
+# top-card id).
+#
+# The ACE's [When Digivolving] fires on the Blast (activateETB: true; ours
+# enqueues WhenDigivolving) but asks nothing: no Option in P0's trash, no
+# [Three Musketeers] trait Option in P0's hand (EX7_059.cs wraps each half in
+# its own candidate check).
+#
+# DIGIVOLUTION DRAW (was a predicted divergence, NOTES-EX7-059.md finding
+# 2 -- RESOLVED). DCGO's PlayCardClass draws 1 for ANY digivolution (`if
+# (isEvolution) ... DrawClass(card.Owner, 1)`, CardController.cs ~1762), and
+# general_rule.pdf 8-1-3-3 makes the draw part of the digivolution procedure
+# (16-25-4: Blast Digivolve "is an effect that digivolves the chosen
+# Digimon"). Our `execute_blast_digivolve` used to skip it; fixed, so P0 now
+# holds the extra ST1-02 (stack[12]) and `p0.hand` IS asserted below.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_059_pool.json (--decks).
+card: EX7-059
+clause: EX7-059#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand (the ACE is held from the start: P1 declares no attack
+    # before T6), stack[5..9] security (never flipped), draws: T3, T5, then
+    # stack[12] = the card a digivolution draw would take.
+    stack: [EX7-011, EX7-059, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02]
+    rest: tm-beelstarmon-ace
+  p1:
+    # stack[9] = Biyomon: the security card Megadramon's T5 attack checks.
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent-059
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future attacker.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Megadramon attacks security and stays suspended.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, 3): Biyomon attacks the suspended Megadramon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. Ours: the counter-window prompt, single accept id -- sim-only.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # DCGO: the optional gate, then the Digimon to digivolve (by top-card id).
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [EX7-011], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause; attacking spent no memory, P1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      turn: 6
+      p0.hand: [BT25-082, EX7-008, EX7-010, EX7-010, ST1-02, ST1-02]
+      p0.memory: -3
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX7-059, dp: 11000, suspended: true, sources: [EX7-011] }
+      p1.field: []
+      p1.trash: [ST1-02, ST1-02]
+      p1.security: 4

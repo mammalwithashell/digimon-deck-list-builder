@@ -1,0 +1,133 @@
+# Exam scenario: Neptunemon (BT24-030), clause BT24-030#effect#4 -- "[All Turns]
+# When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of
+#  their traits would leave the battle area by your opponent's effects, by
+#  suspending this Digimon, they don't leave."
+# 
+# DECK NOTE. `tm-neptune` is a black vanilla shell (Hagurumon/Commandramon/Numemon/
+# Tankmon/WaruMonzaemon/Megadramon BT2-060/HiAndromon/Gotsumon/Bearmon -- no printed
+# text) carrying 4x Neptunemon BT24-030, 4x Aegiochusmon BT24-014 (red/yellow Lv.5 [TS]),
+# 4x Thundermon BT8-061 (black Lv.4 vanilla) and 4x ToyAgumon BT25-064; eggs 4x
+# Pagumon BT25-005 (black [TS] Lv.2 whose inherited trigger needs a [Three
+# Musketeers] card placed under it -- never here). `tm-quiet-red` is the quiet ST1
+# shell plus 4x Tai Kamiya ST1-12 and 4x Gaia Force ST1-16.
+# 
+# THE LINE. P1 plays Tai Kamiya ST1-12 on T2 -- a red Tamer, so Gaia Force ST1-16's
+# color requirement is met without a Digimon (Neptunemon's [On Play] bounces only
+# Digimon, so Tai survives). P0 hard-plays Neptunemon on T5 for the FULL 12 (P1 has
+# no Digimon, so no reduction): 3 -> -9 hands P1 9, enough for Gaia Force (8) on
+# T6, targeting Neptunemon itself -- a [TS] Digimon of P0's leaving by an
+# opponent's effect. Neptunemon protects ITSELF: the printed subject is "any of your
+# Digimon with the [TS] trait" with no "other", and BT24_030.cs's PermanentCondition
+# is HasTSTraits || HasAquaTraits on any owner Digimon.
+# 
+# PROMPT SHAPE. DCGO: SetUpActivateClass(..., -1, TRUE, ...) gated on
+# CanActivateSuspendCostEffect (unsuspended) -> ONE OptionalSkill, then the suspend
+# is paid with no further prompt. Ours: a `Replacement` "May accept replacement:
+# when_would_leave_battle_area" -- 1:1 with that OptionalSkill.
+#
+# THE SECOND PROMPT IS A DIFFERENT CLAUSE, NOT A DUPLICATE. Paying the cost
+# SUSPENDS Neptunemon, which triggers its own effect#3 ("[All Turns] [Once Per
+# Turn] When this Digimon suspends, it may unsuspend"): DCGO's
+# SuspendPermanentsClass.Tap() stacks EffectTiming.OnTappedAnyone
+# (CardController.cs ~5952) and BT24_030.cs "All Turns - OPT" is
+# SetUpActivateClass(..., 1, TRUE, ...) -> a second OptionalSkill, asked of P0
+# once Gaia Force's resolution lets the queue drain; ours goes through
+# `Game::suspend` -> OnSuspend -> the `optional: true` accept/decline ("You may
+# activate BT24-030's triggered effect"; cards_behavioral
+# bt24_030_protects_matching_digimon_from_opponent_effects_by_suspending pins the
+# same order). Both rows are SHARED. (The crashed draft answered the second row
+# `sim_only` as a "duplicate" -- that would have aborted the oracle line.) This
+# file DECLINES the unsuspend so the paid cost stays visible.
+# 
+# WITNESS (at P1's trailing pass, still T6): Neptunemon is still on P0's field,
+# SUSPENDED (the cost was paid), and Gaia Force is in P1's trash.
+card: BT24-030
+clause: BT24-030#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-030, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066]
+    rest: tm-neptune
+  p1:
+    stack: [ST1-12, ST1-16, ST1-03, ST1-04, BT1-009, BT1-014, BT3-007, BT1-009, BT4-014, ST1-02, BT3-007, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): decline breeding; pass -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): decline breeding; Tai Kamiya (2 -> 1); pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): decline breeding; Neptunemon for the full 12 (3 -> -9) -> P1 9.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-030, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 9): decline breeding; Gaia Force (8 -> 1), targeting Neptunemon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: P0 accepts, suspending Neptunemon so it doesn't leave.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # effect#3's own trigger (Neptunemon just suspended): declined, so the cost
+  # stays visible. Shared row -- DCGO asks its OptionalSkill too.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): trailing breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 6
+      p0.field:
+        - card_id: BT24-030
+          dp: 12000
+          suspended: true
+          sources: []
+      p1.trash: [ST1-16]
+      p1.field:
+        - card_id: ST1-12
+          dp: -1
+          suspended: false
+          sources: []

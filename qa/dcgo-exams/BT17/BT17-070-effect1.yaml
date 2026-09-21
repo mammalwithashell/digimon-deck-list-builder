@@ -1,0 +1,118 @@
+# Exam scenario: Gulfmon (BT17-070), clause BT17-070#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 level 5 card with [Dark Masters]
+#  in its text from your hand or trash as this Digimon's bottom digivolution
+#  card, delete 1 of your opponent's level 5 or lower Digimon."
+#
+# This file exercises the [On Play] arm (BT17_070.cs registers two identical
+# bodies), with the cost paid from the HAND.
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, 3): play Biyomon ST1-02 (2: 3 -> 1); pass (P0 gets 3).
+#   T3 (P0, 3): play Gulfmon (12: 3 -> -9). THE CLAUSE: accept, place
+#            WaruMonzaemon P-216 from hand under Gulfmon, delete Biyomon
+#            (Lv.3). Memory -9 hands the turn over.
+#   T4 (P1, 9): the trailing step. Nothing attacks on this line, so the
+#            inherited <Blocker> P-216 gives Gulfmon on DCGO's side (below)
+#            never gets a window.
+#
+# PROMPT SHAPE of the [On Play] (BT17_070.cs region "On Play"):
+#   1. SetUpActivateClass(..., -1, TRUE, ...) with CanActivate = a level 5
+#      DIGIMON card with [Dark Masters] in its text in hand or trash ->
+#      OptionalSkill. SHARED with our `optional: true` + `outer_prompt: true`
+#      gate (Replacement -> OptionalSkill, 1:1).
+#   2. The hand-or-trash zone menu (SetBoolSelection -> generic_bool) opens
+#      only when BOTH zones hold a candidate; the trash is empty, so DCGO
+#      takes `SetBool(canSelectHand)` -- no RPC, no row (the
+#      EX7-011-effect1.yaml shape).
+#   3. SelectHandEffect(maxCount 1, canNoSelect: true) -- WaruMonzaemon P-216,
+#      by identity. SHARED with our one declinable UnionZone{hand, trash} pick
+#      (the sim side cannot assert the class for a UnionZone kind; DCGO does).
+#   4. AddDigivolutionCardsBottom, then SelectPermanentEffect(Mode.Destroy,
+#      canNoSelect: false) over opponent Digimon with Level <= 5 -- Biyomon,
+#      consumed under the harness with one candidate. SHARED with our
+#      OppField pick.
+#
+# WaruMonzaemon P-216 (BLACK Lv.5; its [On Play] and [On Deletion] both name
+# the [Dark Masters] trait) has no YAML spec in our engine -- no Lv.5 card
+# that prints "[Dark Masters]" does (BT17-070-effect0.yaml header). Here it is
+# only ever a HAND card and then a DIGIVOLUTION card, so its own effects never
+# come up; the one thing it carries into the stack is its inherited <Blocker>
+# (P_216.cs "Blocker - ESS"), which our engine does not know about.
+card: BT17-070
+clause: BT17-070#effect#1
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (never flipped); [10] the T3 draw.
+    stack: [BT17-070, P-216, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: tm-gulfmon
+  p1:
+    # [10], [11] = the T2 / T4 draws.
+    stack: [ST1-02, ST1-03, ST1-03, ST1-03, ST1-04,
+            BT1-009, BT1-009, ST1-04, ST1-04, ST1-04,
+            BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the level 5 or lower delete target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT17-070, from: hand } }
+    expect: { prompt: main_phase }
+  # 1: the optional gate -- SHARED.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # 3: the level 5 [Dark Masters]-in-text card to place -- SHARED.
+  - actor: 0
+    do: { select: { cards: [P-216] } }
+    expect: { prompt: SelectHandEffect }
+  # 4: the delete -- SHARED.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory -9: the seat is P1 (T4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The delete row: the cost is already paid (P-216 under Gulfmon).
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: -9
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: false, sources: [P-216] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -9
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092]
+      p0.field:
+        - { card_id: BT17-070, dp: 11000, suspended: false, sources: [P-216] }
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5

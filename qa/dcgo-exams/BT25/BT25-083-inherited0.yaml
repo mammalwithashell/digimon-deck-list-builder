@@ -1,0 +1,192 @@
+# Exam scenario: LadyDevimon (BT25-083), clause BT25-083#inherited#0 --
+# "[On Deletion] You may play 1 level 4 or lower Digimon card with [Three
+#  Musketeers] in its text from your trash without paying the cost."
+#
+# An inherited effect: LadyDevimon must be a DIGIVOLUTION CARD of the deleted
+# Digimon. The line plays LadyDevimon, digivolves BeelStarmon BT25-085
+# (purple Lv.5 / cost 4) on top of it, and deletes BeelStarmon in a security
+# battle against P1's Phoenixmon ST1-10 (12000 vs 12000 -- a tie deletes the
+# attacker). The revive target is Scopemon BT21-071 ("[Three Musketeers]" is
+# printed in its digivolve-condition text; Lv.4), put in the trash by losing a
+# security battle to Birdramon ST1-05 (4000 < 5000) BEFORE LadyDevimon lands.
+#
+# WHY SCOPEMON DIES BEFORE LADYDEVIMON IS PLAYED (re-authored 2026-09-18, run
+# r1 abort "step 15 expected prompt 'SelectCountEffect' but DCGO asked
+# 'SelectPermanentEffect'"). DCGO seats Digimon centre-out
+# (CardSource.PreferredFrame: frames 4, 3, 5, 2, ...) and the harness addresses
+# the battle area by COMPACT frame order (InputDriver.FieldSlotToFrameId), so
+# on a TWO-Digimon board the second Digimon played is compact slot 0 on DCGO
+# and slot 1 on ours. r1's `digivolve: { from: field.1 }` therefore named
+# SCOPEMON on DCGO; a Lv.6 cannot digivolve onto a Lv.4, the PlayCardAction of
+# the dual card resolved as an OPTION USE (Scopemon has [Three Musketeers] in
+# its text, so the Use Req. was met) and the Option face's [Main] asked its
+# SelectPermanentEffect. A slot-addressing artefact of the line, not a finding
+# about either card. With Scopemon already in the trash LadyDevimon is the
+# ONLY Digimon on P0's board for the digivolve and the attack: field.0 on both
+# engines.
+#
+#   T1 (P0): pass.  T2 (P1): pass.
+#   T3 (P0, 3): play Scopemon (3 -> -1). Its [On Play] has nothing to place
+#            (no [Appmon]/[Three Musketeers] TRAIT card in hand or trash --
+#            LadyDevimon's traits are Fallen Angel/Titan/TS; Asuna is TS), but
+#            DCGO still asks its vacuous OptionalSkill: a DCGO-only decline.
+#   T4 (P1): pass.
+#   T5 (P0, 3): Scopemon attacks security -> Birdramon 5000 deletes it (attacks
+#            cost nothing). Then play LadyDevimon (3 -> -4); [On Play] inert:
+#            Scopemon in the trash is an [Appmon] card, not a [Three
+#            Musketeers] TRAIT card (BT25_083.cs AdditionalActivateCondition).
+#   T6 (P1): pass.
+#   T7 (P0, 3): digivolve LadyDevimon into BeelStarmon (3 -> -1; the
+#            digivolution draws 1 -- stack[13]). BeelStarmon's
+#            two [When Digivolving] effects need a [Three Musketeers]/[TS]
+#            Option in hand or under it, or an Option in ANY own Digimon's
+#            sources; none exists, so neither activates (BT25_085.cs
+#            CanActivateUseOption / CanActivateUnsuspend).
+#   T8 (P1): pass.
+#   T9 (P0, 3): BeelStarmon attacks security -> Phoenixmon 12000
+#            ties -> both deleted. THE CLAUSE: LadyDevimon's inherited [On
+#            Deletion] offers the revive; take it, choose Scopemon. Scopemon's
+#            [On Play] then DOES have a candidate (BeelStarmon, a [Three
+#            Musketeers] trait card, is now in the trash) and is DECLINED.
+#            Attacks cost nothing: the trailing step is P0's pass.
+#
+# PROMPT SHAPE (BT25_083.cs, region "Inherited"): SetUpActivateClass(...,
+# isOptional: true) -> OptionalSkill yes/no, then CardEffectCommons.
+# PlayByEffect(Root.Trash) = SelectCardEffect(canNoSelect: true). Scopemon's
+# [On Play] (BT21_071.cs) is isOptional: true -> OptionalSkill, declined.
+#
+# P1's security: stack[9] = Birdramon (flipped first), stack[8] = Phoenixmon.
+card: BT25-083
+clause: BT25-083#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-071, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-085, BT25-092, EX7-051]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-10, ST1-05,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Scopemon -- the future revive target.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Scopemon's [On Play] OptionalSkill is VACUOUS here. BT21_071.cs
+  # gates it on CanActivateConditionShared -- "hand or trash non-empty and an
+  # own non-token Digimon exists" -- and only checks for an ELIGIBLE
+  # [Appmon]/[Three Musketeers] trait card inside the coroutine, so DCGO asks
+  # the yes/no even though there is nothing to place. Our engine installs no
+  # prompt when the pick has zero candidates (docs/DCGO_EXAM.md, "DCGO parks
+  # vacuous optional-cost gates our engine skips"). Declined on the wire.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Scopemon into Birdramon (deleted, to trash), THEN LadyDevimon
+  # -- alone on P0's board, so field.0 on both engines from here on.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): BeelStarmon on top of LadyDevimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # BeelStarmon opens TWO routes from LadyDevimon -- the printed Purple Lv.5 /
+  # cost 4 circle and "[Digivolve] Lv.5 w/[Three Musketeers] in text or
+  # w/[TS] trait: Cost 3" (LadyDevimon satisfies both) -- so both engines ask
+  # which cost to pay: DCGO through the digivolution-cost SelectCountEffect
+  # (BT25_085.cs registers the alt route with `ignoreDigivolutionRequirement:
+  # true`, which Player.CanIgnoreDigivolutionRequirement answers `true` by
+  # default -- it only returns false under a "can't ignore" effect), ours
+  # through the rule-17 distinct-cost EffectChoice. The answer is the VALUE
+  # (EX12-015 idiom): 4 keeps the printed route and the 3 -> -1 arithmetic
+  # this line is built on. (Added 2026-09-16: the row was missing when this
+  # file was first committed; BT25-085's alt route landed in the card spec
+  # afterwards, 9aa21ed0f.)
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, 3): BeelStarmon (field.0) into Phoenixmon: tie.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: "You may play ..." -- take it, then choose Scopemon.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT21-071] } }
+    expect: { prompt: SelectCardEffect }
+  # Revived Scopemon's [On Play] (BeelStarmon in trash qualifies): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Memory 3, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 24
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.trash: [BT25-083, BT25-085]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+      p1.field: []
+      p1.security: 3
+      p1.trash: [ST1-05, ST1-10]

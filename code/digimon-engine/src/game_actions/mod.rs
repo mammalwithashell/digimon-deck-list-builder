@@ -230,10 +230,34 @@ pub(crate) struct LinkOptionHostSelectionState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+/// The from-hand Plug-In **Option** link host prompt (`§6-5-1-4` declaration).
+/// Unlike [`LinkOptionHostSelectionState`] — which is installed while the
+/// Option is already mid-resolution, after its use cost was paid — this one is
+/// installed BEFORE anything is paid or removed from the hand, because
+/// `general_rule.pdf` (Ver.3.6) §10-1-3 pays the link cost only after the host
+/// is chosen. The resolved pick re-enters `play_option_core` with the host
+/// pinned on `Game::pending_option_link_host`.
+#[derive(Debug, Clone)]
+pub(crate) struct OptionHandLinkHostSelectionState {
+    pub(crate) owner: PlayerId,
+    pub(crate) hand_index: usize,
+    /// The declared Option, addressed by handle so the re-entry can verify the
+    /// hand slot still holds the same card.
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) cost: u16,
+    pub(crate) candidates: Vec<PermanentHandle>,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct DigimonLinkHostSelectionState {
     pub(crate) owner: PlayerId,
-    pub(crate) source: PermanentHandle,
+    /// The linking card's origin (standing permanent or hand) — see
+    /// `game::DigimonLinkOrigin`.
+    pub(crate) origin: crate::game::DigimonLinkOrigin,
+    /// The linking card itself. For a standing origin this is the top card at
+    /// the source slot when the ability was activated; for a hand origin it is
+    /// the hand card, addressed by handle because the hand can shift.
+    pub(crate) card: crate::card_source::CardHandle,
     pub(crate) cost: u16,
     pub(crate) candidates: Vec<PermanentHandle>,
 }
@@ -901,15 +925,30 @@ impl Game {
     /// a single affordable mode plays directly; an empty result means the
     /// Option cannot be played at all.
     ///
-    /// Only affordability is filtered here — host availability for a Link
-    /// play is resolved later by `dispose_option` (a Link play with no
-    /// eligible host trashes the card, identical to a single-mode Link
-    /// Option). This keeps `PLAY_HAND` masking and the mode-select offer
-    /// consistent with the engine's existing Link-Option contract.
+    /// Two things are filtered here: affordability, and — for the Link mode —
+    /// the existence of at least one legal HOST.
+    ///
+    /// `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST`. general_rule.pdf §10-1-3-1:
+    /// "The player declares a link and reveals 1 card to link. 1 link
+    /// requirement is chosen on the revealed card, then the player chooses 1 of
+    /// their Digimon that meets the requirement." With no Digimon meeting the
+    /// requirement the link procedure cannot be carried out, so the §6-5-1-4
+    /// "Linking a Card in the Hand or Battle Area" main-phase action is not
+    /// available at all. DCGO enforces exactly this: `CardEffectFactory
+    /// .LinkEffect` returns `null` when `!HasMatchConditionPermanent(
+    /// CanSelectPermanentCondition)` (`Link.cs:24`, re-checked in
+    /// `CanUseCondition` at `Link.cs:53`), so the declaration is never offered.
+    /// The Digimon-side (Shape-B) hand link already holds this contract via
+    /// `hand_digimon_link_available`; this is the Option-side half.
+    ///
+    /// `dispose_option`'s "no candidate → trash" arm stays as the resolution-
+    /// time safety net for a host that disappears mid-resolution; it is no
+    /// longer reachable from a player-declared Link play.
     pub(crate) fn option_legal_play_modes(
         &self,
         card: &CardSource,
         player_id: PlayerId,
+        source: OptionSource,
     ) -> Vec<OptionPlayMode> {
         let effects = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
@@ -918,18 +957,48 @@ impl Game {
             .option_use_cost(&self.card_data)
             .unwrap_or_else(|| card.play_cost(&self.card_data));
         let memory_min = self.rules.memory_range.0;
-        classify_option_modes(&effects)
-            .into_iter()
-            .filter(|mode| {
-                let cost = match mode {
-                    OptionPlayMode::Link { cost } => (*cost as i32
-                        + self.modifiers.link_cost_delta_for_player(player_id))
-                    .max(0) as i16,
-                    _ => use_cost as i16,
-                };
-                (self.memory - cost) >= memory_min
-            })
-            .collect()
+        let mut modes = classify_option_modes(&effects);
+        modes.retain(|mode| {
+            let cost = match mode {
+                OptionPlayMode::Link { cost } => {
+                    (*cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0)
+                        as i16
+                }
+                _ => use_cost as i16,
+            };
+            (self.memory - cost) >= memory_min
+        });
+        if modes.iter().any(|m| m.is_link())
+            && self
+                .link_host_candidates(player_id, card.handle(), &effects)
+                .is_empty()
+        {
+            modes.retain(|m| !m.is_link());
+        }
+        // `G-ENGINE-OPTION-LINK-FROM-HAND`. From the HAND the Link mode is not
+        // a mode of this action at all. general_rule.pdf (Ver.3.6) §6-5-1 lists
+        // "use an Option card from the hand" (§6-5-1-3) and "link a card from
+        // the hand or battle area" (§6-5-1-4) as two SEPARATE main-phase
+        // actions, and §10-1-1 says a card is linked from the hand "by paying
+        // the cost as part of the main phase actions" — its own declaration,
+        // not a branch of using the card. So the from-hand link lives on the
+        // `HAND_EFFECT` bit (`hand_option_link_available` /
+        // `activate_hand_link`), exactly where the Link DIGIMON's already does,
+        // and the PLAY bit means only §6-5-1-3.
+        //
+        // DCGO draws the same line: the from-hand link is an
+        // `ActivateCardAction` over `CardEffectFactory.LinkEffect`
+        // (`Link.cs:19`), never a `PlayCardAction`.
+        //
+        // Every OTHER source keeps the Link mode: a `[Security]`-flipped
+        // Option resolves into play with no main-phase declaration to make, so
+        // its link is a mode of that resolution (G-ENGINE-SECURITY-OPTION-LINK-
+        // TO-OWN-DIGIMON, `35958972b`), and the same holds for the trash /
+        // revealed / digivolution-source uses an effect drives.
+        if matches!(source, OptionSource::Hand(_)) {
+            modes.retain(|m| !m.is_link());
+        }
+        modes
     }
 
     pub(crate) fn pending_option_can_arts_digivolve(&self) -> bool {
@@ -1430,6 +1499,20 @@ impl Game {
                     return;
                 }
 
+                // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: a from-hand §6-5-1-4
+                // declaration already asked §10-1-3-1's host question BEFORE
+                // anything was paid (`install_option_hand_link_host_selection`),
+                // and pinned the answer here. Plug straight into it — asking
+                // again would be a second prompt for one choice. The pin is
+                // re-checked against the live candidate set because the
+                // link-mode body could have moved the board between the pick
+                // and the disposal; a pin that no longer qualifies falls back
+                // to the ordinary prompt rather than forcing an illegal host.
+                let pinned = self
+                    .pending_option_link_host
+                    .take()
+                    .filter(|h| candidates.contains(h));
+
                 // Re-install pending_option in LinkSelectHost and park a
                 // field-selection prompt. The selection callback threads
                 // straight into `attach_linked_card`.
@@ -1440,7 +1523,10 @@ impl Game {
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
                     subtype: pending.subtype,
                 });
-                self.install_link_host_selection(owner, source_card, candidates, false);
+                match pinned {
+                    Some(host) => self.attach_linked_card(host),
+                    None => self.install_link_host_selection(owner, source_card, candidates, false),
+                }
             }
             OptionSubtype::Training => {
                 // Phase 8 Task 5: park as an `OptionState::Training` permanent on
@@ -2034,7 +2120,29 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, false)
+        self.place_as_source_observed(source, target, observer_player, face_down, false, None)
+    }
+
+    /// `place_as_bottom_source_observed` with the placing effect's source card
+    /// attached, so the `OnAddDigivolutionCards` batch it opens carries the
+    /// full `EffectAttribution` (controller + source card). The controller is
+    /// `observer_player` on both entry points. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) fn place_as_bottom_source_by_effect(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        effect_source_card: CardHandle,
+    ) -> bool {
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            false,
+            Some(effect_source_card),
+        )
     }
 
     /// Top-position sibling of `place_as_bottom_source_observed`: the card is
@@ -2050,7 +2158,26 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, true)
+        self.place_as_source_observed(source, target, observer_player, face_down, true, None)
+    }
+
+    /// Top-position sibling of `place_as_bottom_source_by_effect`.
+    pub(crate) fn place_as_top_source_by_effect(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        effect_source_card: CardHandle,
+    ) -> bool {
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            true,
+            Some(effect_source_card),
+        )
     }
 
     /// Shared body for `place_as_bottom_source_observed` /
@@ -2061,6 +2188,17 @@ impl Game {
     /// Both fire the identical lifecycle: security sources materialize and
     /// route through `fire_effect_security_removal`, and Material-source
     /// extraction soft-removes an emptied carrier.
+    ///
+    /// Every successful placement here is EFFECT-driven (this body is reached
+    /// only from `EffectContext` placement verbs and the public
+    /// `Game::place_as_*_source` effect API — never from normal / DNA
+    /// digivolution, DigiXros / Assembly materials or App Fusion), so it
+    /// opens the host's `OnAddDigivolutionCards` batch window with
+    /// `observer_player` as the placing effect's controller
+    /// (`note_effect_added_sources`; G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS).
+    /// `effect_source_card` is the placing effect's carrier when the caller
+    /// knows it. The Security branch notes nothing here — the card is only
+    /// placed inside `complete_effect_security_removal`, which notes it.
     fn place_as_source_observed(
         &mut self,
         source: crate::enums::CardSourceRef,
@@ -2068,6 +2206,7 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
         top: bool,
+        effect_source_card: Option<CardHandle>,
     ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -2100,6 +2239,9 @@ impl Game {
             } else {
                 crate::selection::SecurityRemovalDestination::BottomSource(target)
             };
+            // The placing effect's carrier, read back by
+            // `complete_effect_security_removal` when it seats the card.
+            self.pending_security_source_cause_card = effect_source_card;
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
@@ -2122,6 +2264,7 @@ impl Game {
             };
             let mut card = taken.card;
             card.face_down = face_down;
+            let placed = card.handle();
             if top {
                 breeding.push_as_top_source(card);
             } else {
@@ -2135,6 +2278,15 @@ impl Game {
             if let crate::enums::CardSourceRef::Material(carrier, _) = source {
                 let _ = self.soft_remove_if_emptied(carrier);
             }
+            self.note_effect_added_sources(
+                target,
+                vec![placed],
+                crate::trigger_context::EffectAttribution {
+                    controller: observer_player,
+                    source_card: effect_source_card,
+                    source_permanent: None,
+                },
+            );
             return true;
         }
 
@@ -2145,11 +2297,24 @@ impl Game {
         }
         let mut card = taken.card;
         card.face_down = face_down;
+        let placed = card.handle();
         if top {
             target_player.battle_area[target.index as usize].push_as_top_source(card);
         } else {
             target_player.battle_area[target.index as usize].push_under(card);
         }
+        // Note the batch BEFORE the carrier soft-remove below: the note keys
+        // the host by its stable top card, but `target` is only guaranteed
+        // positionally valid until that soft-remove shifts indices.
+        self.note_effect_added_sources(
+            target,
+            vec![placed],
+            crate::trigger_context::EffectAttribution {
+                controller: observer_player,
+                source_card: effect_source_card,
+                source_permanent: None,
+            },
+        );
         // Soft-remove the carrier slot if Material extraction emptied it.
         // Sibling of the digivolve-from-material fix landed in PR #533. The
         // soft-remove runs AFTER push_under so the target index is still

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:16:23.592216800+00:00",
+  "clauses": {
+    "BT24-011#effect#0": {
+      "clause_id": "BT24-011#effect#0",
+      "card_id": "BT24-011",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "31c778407299cbdd7784e8057a534f1b8b8bd3463754b748c44bbd39734d24a1",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-011-effect0.yaml",
+      "recorded_at": "2026-09-19T15:16:20.486941+00:00"
+    },
+    "BT24-011#effect#1": {
+      "clause_id": "BT24-011#effect#1",
+      "card_id": "BT24-011",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-011-effect1.yaml",
+      "recorded_at": "2026-09-19T15:16:21.531086400+00:00"
+    },
+    "BT24-011#effect#2": {
+      "clause_id": "BT24-011#effect#2",
+      "card_id": "BT24-011",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-011-effect2.yaml",
+      "recorded_at": "2026-09-19T15:16:22.482358700+00:00"
+    },
+    "BT24-011#inherited#0": {
+      "clause_id": "BT24-011#inherited#0",
+      "card_id": "BT24-011",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "4eeda4ce3936bcd776f36d05d87758a586359f409f5695bb0c6f4a91e62ec3b7",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-011-inherited0.yaml",
+      "recorded_at": "2026-09-19T15:16:23.592216800+00:00"
+    }
+  }
+}

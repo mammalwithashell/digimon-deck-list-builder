@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:51.660603300+00:00",
+  "clauses": {
+    "P-198#effect#0": {
+      "clause_id": "P-198#effect#0",
+      "card_id": "P-198",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "39e459441c3cdb81288d588a179bd3ff2704b55b69a250a215d7d263e163bc29",
+      "scenario_path": "qa/dcgo-exams/P/P-198-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:49.270843300+00:00"
+    },
+    "P-198#effect#1": {
+      "clause_id": "P-198#effect#1",
+      "card_id": "P-198",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "887896b2084c53a341c662952af795f84af4dc7c0894a09738a114f0236b0cf8",
+      "scenario_path": "qa/dcgo-exams/P/P-198-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:50.044902700+00:00"
+    },
+    "P-198#inherited#0": {
+      "clause_id": "P-198#inherited#0",
+      "card_id": "P-198",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/P/P-198-inherited0.yaml",
+      "recorded_at": "2026-09-19T15:13:50.946248300+00:00"
+    },
+    "P-198#inherited#1": {
+      "clause_id": "P-198#inherited#1",
+      "card_id": "P-198",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "197abf1ab3df097ce3c0d53a9e6349e4292d8f678e8592868ad1f3bd26f0a789",
+      "scenario_path": "qa/dcgo-exams/P/P-198-inherited1.yaml",
+      "recorded_at": "2026-09-19T15:13:51.660603300+00:00"
+    }
+  }
+}

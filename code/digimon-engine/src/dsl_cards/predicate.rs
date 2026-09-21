@@ -934,6 +934,8 @@ fn eval_result_bound_fields(
             && pred.effect_suspended_any_opponent_digimon != Some(true)
             && pred.effect_returned_any_card != Some(true)
             && pred.returned_card_matching.is_none()
+            && pred.effect_trashed_any_hand_card != Some(true)
+            && pred.trashed_hand_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
             && pred.effect_deleted_opponent_digimon_dp_gte.is_none()
@@ -971,6 +973,32 @@ fn eval_result_bound_fields(
     // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
     if let Some(inner) = &pred.returned_card_matching {
         let any_match = log.returned_cards.iter().any(|&handle| {
+            eval_predicate_with_bindings(
+                inner,
+                rctx,
+                PredicateSubject::Card(handle),
+                Some(bindings),
+            )
+        });
+        if !any_match {
+            return false;
+        }
+    }
+    // G-DSL-EFFECT-TRASHED-HAND-CARD — hand-trash siblings of the returned-card
+    // result predicates. `trash_from_hand_by_index` / hand-origin
+    // `trash_union_bound` record the trashed card's identity; the filtered
+    // variant evaluates each recorded handle as a `Card` subject (zone-agnostic
+    // identity read, so the card now sitting in the trash is what is tested).
+    // Driver P-212 Asuna Shiroki ("If this effect trashed a card with the
+    // [Three Musketeers] or [TS] trait, ...").
+    if let Some(want) = pred.effect_trashed_any_hand_card {
+        let actual = !log.trashed_from_hand.is_empty();
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.trashed_hand_card_matching {
+        let any_match = log.trashed_from_hand.iter().any(|&handle| {
             eval_predicate_with_bindings(
                 inner,
                 rctx,
@@ -1776,17 +1804,43 @@ fn eval_event_fields(
         }
     }
     if let Some(want) = pred.event_caused_by_own_effect {
-        // on_discard_hand: true when the causing effect belongs to the observer
-        // (ST16-14 Matt Ishida "one of YOUR effects"). Compare
-        // `discard_cause_controller` to the observer's controller.
+        // on_discard_hand (ST16-14 Matt Ishida "one of YOUR effects") and
+        // on_add_digivolution_cards (BT7-056 Dorumon "when one of your effects
+        // places a digivolution card under this Digimon"): true when the
+        // causing effect belongs to the observer. Reads the discard batch's
+        // `discard_cause_controller`, else the explicit `event_cause_effect`
+        // captured by the source-placement facade. Mirrors DCGO
+        // `cardEffect.EffectSourceCard.Owner == card.Owner`.
         let is_own = rctx
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.discard_cause_controller)
+            .and_then(|trigger| {
+                trigger
+                    .discard_cause_controller
+                    .or_else(|| trigger.event_cause_effect.map(|cause| cause.controller))
+            })
             .map(|controller| controller == rctx.player())
             .unwrap_or(false);
         if is_own != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.event_added_card_any {
+        // on_add_digivolution_cards: ANY card of the just-placed batch matches
+        // the inner card predicate (DCGO `CanTriggerOnAddDigivolutionCard`'s
+        // `CardSources.Count(cardCondition) >= 1`). Outside that timing the
+        // batch is empty and the gate fails. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+        let added: Vec<CardHandle> = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.added_source_cards().to_vec())
+            .unwrap_or_default();
+        let any_match = added.iter().any(|card| {
+            eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(*card), None)
+        });
+        if !any_match {
             return false;
         }
     }
@@ -1843,7 +1897,46 @@ fn eval_event_fields(
         let Some(source_permanent) = rctx.source_permanent else {
             return false;
         };
-        if (event_permanent == source_permanent) != want {
+        // `PermanentHandle` is (player, battle-area INDEX), and the battle
+        // area COMPACTS when a permanent is removed. A deletion trigger's
+        // `event_permanent` is therefore a DANGLING handle by the time the
+        // observer is evaluated: `drain_batch_on_any_deletion` enqueues the
+        // pre-trash handle, but the surviving permanents have already slid
+        // down. Every survivor that sat ABOVE the deleted one now answers to
+        // a lower index — and the one that inherits the dead permanent's
+        // index compares EQUAL to it.
+        //
+        // That alias is how `[All Turns] When other Digimon or Tamers are
+        // deleted` observers silently lost a deletion: an ally deleted from a
+        // LOWER index than the carrier made `event_permanent ==
+        // source_permanent` true, so the clause's `event_permanent_is_source:
+        // false` gate rejected the carrier's own trigger. Measured on exam
+        // `BT19-075#effect#2` (MoonMillenniummon, oracle sidecar
+        // `20260921T041928Z_40f7887a`: `p1.security ours=4 dcgo=3`).
+        //
+        // `general_rule.pdf` 15-8-3-1 / 15-8-3-2 / 15-8-3-5 / 15-8-3-6: the
+        // trigger fires as soon as its conditions are met and waits as a
+        // pending activation for the current processing to resolve; nothing
+        // licenses discarding it. DCGO agrees — every deletion goes through
+        // `CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`,
+        // which raises `OnDestroyedAnyone` regardless of seating order.
+        //
+        // So: handle equality alone is not identity once the event permanent
+        // is gone. When the trigger carries a `deleted_object` snapshot and
+        // THIS effect's own carrier is still standing at `source_permanent`
+        // (it still holds `rctx.source_card`), the equality is the compaction
+        // alias, not the observer watching itself — the deleted permanent was
+        // someone else. Every other case keeps the plain handle comparison:
+        // an observer whose carrier is itself the deleted permanent finds no
+        // live carrier at that slot and still reads `is_source == true`.
+        let is_source = event_permanent == source_permanent
+            && !(trigger.deleted_object.is_some()
+                && permanent_for_handle(rctx, source_permanent).is_some_and(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .any(|card| card.handle() == rctx.source_card)
+                }));
+        if is_source != want {
             return false;
         }
     }
@@ -2818,6 +2911,20 @@ fn eval_card_fields(
             return false;
         }
     }
+    // `can_digivolve_onto: <binding>` — the binding-targeted sibling of
+    // `can_digivolve_from_source`: the candidate has ≥1 normal-digivolve
+    // route onto the permanent bound under `binding` (DCGO
+    // `CanPlayCardTargetFrame(selectedPermanent.PermanentFrame, …)`).
+    // Absent / non-permanent binding → false (no target, no route).
+    // G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(binding) = &pred.can_digivolve_onto {
+        let Some(target) = bindings.and_then(|b| b.get_permanent(binding)) else {
+            return false;
+        };
+        if !can_card_digivolve_onto(rctx, card, target) {
+            return false;
+        }
+    }
     if let Some(ref alt_kind) = pred.has_alt_path {
         if !card_has_alt_path(rctx, &data.card_id, alt_kind) {
             return false;
@@ -2864,17 +2971,90 @@ fn alt_path_kind_matches(kind: &digimon_dsl::compiled::CompiledAltPathKind, name
     kind.as_key() == normalized
 }
 
+/// `can_digivolve_from_source: true` — the candidate card has at least one
+/// normal-digivolve route onto the SOURCE permanent. Routes are enumerated by
+/// the SAME machinery the effect-initiated digivolve commit path uses
+/// (`Game::all_digivolve_routes_for_card`, App Fusion excluded — it is an
+/// alt-PLAY mechanic the `effect_initiated_digivolve` step also skips): the
+/// printed evo-cost circles, DSL `alt_paths: kind: digivolve` special circles
+/// (e.g. BT25-005 Pagumon's "[TS] trait" targets whose only applicable circle
+/// is "Lv.3 w/[TS] trait"), and the `CanOnlyDigivolveInto` restriction gate.
+/// Mirrors DCGO `DigivolveIntoHandOrTrashCard`'s `CanSelectCardCondition`
+/// (`cardSource.CanPlayCardTargetFrame(...)`) so the hand prompt offers
+/// exactly the cards the commit would accept — a pick the commit would reject
+/// is never surfaced. (Previously routed through `Game::can_digivolve`, which
+/// scans printed `evo_costs` only and so hid alt-path-only candidates.)
 fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
     let Some(source_handle) = rctx.source_permanent else {
         return false;
     };
-    let Some(source_permanent) = permanent_for_handle(rctx, source_handle) else {
+    can_card_digivolve_onto(rctx, card, source_handle)
+}
+
+/// Shared route probe behind `can_digivolve_from_source` (target = the
+/// effect's source permanent) and `can_digivolve_onto` / `has_digivolve_candidate`
+/// (target = an arbitrary bound permanent): true when `card` has at least one
+/// non-App-Fusion normal-digivolve route onto `target` per
+/// `Game::all_digivolve_routes_for_card` — printed evo circles, DSL
+/// alt-digivolve paths, and the `CanOnlyDigivolveInto` gate, exactly what the
+/// `effect_initiated_digivolve` commit path accepts. A target handle that no
+/// longer addresses a permanent yields false.
+fn can_card_digivolve_onto(
+    rctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    target: PermanentHandle,
+) -> bool {
+    if permanent_for_handle(rctx, target).is_none() {
         return false;
-    };
+    }
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
-    rctx.game.can_digivolve(candidate, source_permanent)
+    rctx.game
+        .all_digivolve_routes_for_card(candidate, target)
+        .iter()
+        .any(|route| !route.app_fusion)
+}
+
+/// `has_digivolve_candidate` — permanent-subject probe: does any card in the
+/// listed hand/trash zones of `of` satisfy `filter` AND have a normal-digivolve
+/// route onto `handle`? DCGO BT25_092 `CanDigivolveDigimon(permanent)` =
+/// `HasMatchConditionOwnersHand(ValidTarget(…, Root.Hand, permanent)) ||
+/// HasMatchConditionOwnersCardInTrash(ValidTarget(…, Root.Trash, permanent))`.
+/// The nested filter is evaluated as a card subject (same evaluator a
+/// `select_union_zone` hand/trash pick uses), so the permanent gate and the
+/// later result pick agree on the candidate set.
+/// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+fn permanent_has_digivolve_candidate(
+    spec: &digimon_dsl::compiled::CompiledDigivolveCandidate,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> bool {
+    for player in resolve_predicate_players(spec.of, rctx) {
+        let state = rctx.game.player(player);
+        for zone in &spec.zones {
+            let cards: &[crate::card_source::CardSource] = match zone {
+                CompiledZone::Hand => &state.hand,
+                CompiledZone::Trash => &state.trash,
+                // Validated away at compile time; defensively contribute
+                // nothing rather than scanning an unsupported zone.
+                _ => continue,
+            };
+            for card in cards {
+                let h = card.handle();
+                if let Some(filter) = &spec.filter {
+                    if !eval_card_fields(filter, rctx, h, false, None, bindings) {
+                        continue;
+                    }
+                }
+                if can_card_digivolve_onto(rctx, h, handle) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
@@ -3235,6 +3415,17 @@ fn eval_permanent_fields(
     // token field permanent; the line-`kind_matches_field` check remains the sole
     // kind authority for permanent subjects.
     let has_kind_constraint = pred.kind.is_some();
+    // `self_color_count_gte` on a permanent subject counts the SYNTHESIZED
+    // colors (checked below against `synth_identity.colors`, which folds in
+    // `ChangeBaseCardColor` / `AddColor`). The delegated card-field pass would
+    // re-check it against the PRINTED colors and wrongly reject a permanent
+    // whose color treatment raised its count (BT8-084 Kimeramon: printed white,
+    // "[Your Turn] treated as also having the colors of its digivolution
+    // cards", "while this Digimon has 4 or more colors" — DCGO reads
+    // `TopCard.CardColors.Count` after ChangeCardColorClass). Strip it from the
+    // delegated predicate; the synth check is the sole authority.
+    // G-DSL-OWN-STACK-COLOR-COUNT-GTE.
+    let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
         || trait_overlay_match
@@ -3245,6 +3436,7 @@ fn eval_permanent_fields(
         || name_in_overlay_match
         || color_is_overlay_match
         || color_only_overlay_match
+        || has_self_color_count_constraint
         || has_dp_constraint
     {
         let mut p = pred.clone();
@@ -3276,6 +3468,9 @@ fn eval_permanent_fields(
         }
         if color_only_overlay_match {
             p.color_only = None;
+        }
+        if has_self_color_count_constraint {
+            p.self_color_count_gte = None;
         }
         if has_dp_constraint {
             p.dp_eq = None;
@@ -3402,6 +3597,30 @@ fn eval_permanent_fields(
                 .count()
         };
         if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `link_card_count` — the LINK-CARD sibling of `source_count`: count
+    // `perm.linked_cards` satisfying the nested `filter` (each evaluated as a
+    // card subject, like a `select_own_sources` filter) and require ≥
+    // `at_least`. DCGO `permanent.LinkedCards.Count(predicate) >= N` — paired
+    // with `source_count` it models `DigivolutionOrLinkCards.Any(...)`
+    // (BT25-085). G-DSL-LINK-CARD-COUNT-FILTERED.
+    if let Some((filter, at_least)) = &pred.link_card_count {
+        let matching = perm
+            .linked_cards
+            .iter()
+            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .count();
+        if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `has_digivolve_candidate` — DCGO's per-permanent `CanDigivolveDigimon`
+    // gate: some hand/trash card matching the nested filter can digivolve
+    // onto THIS permanent. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(spec) = &pred.has_digivolve_candidate {
+        if !permanent_has_digivolve_candidate(spec, rctx, handle, bindings) {
             return false;
         }
     }
@@ -3686,6 +3905,32 @@ fn eval_breeding_permanent_fields(
                 .count()
         };
         if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `link_card_count` on a breeding-area Digimon: link cards only exist on
+    // battle-area permanents (`Permanent.linked_cards` of a breeding permanent
+    // is always empty), so any `at_least >= 1` gate is false here.
+    // G-DSL-LINK-CARD-COUNT-FILTERED.
+    if let Some((filter, at_least)) = &pred.link_card_count {
+        let matching = perm
+            .linked_cards
+            .iter()
+            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .count();
+        if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
+    // `has_digivolve_candidate` on a breeding permanent — probe routes onto
+    // the BREEDING_TARGET sentinel handle (the route enumerator branches on
+    // it). G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    if let Some(spec) = &pred.has_digivolve_candidate {
+        let sentinel = PermanentHandle {
+            player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        if !permanent_has_digivolve_candidate(spec, rctx, sentinel, bindings) {
             return false;
         }
     }

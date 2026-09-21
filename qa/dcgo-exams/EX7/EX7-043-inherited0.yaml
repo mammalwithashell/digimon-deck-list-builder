@@ -1,0 +1,99 @@
+# Exam scenario: Tankmon (EX7-043), clause EX7-043#inherited#0 --
+# "<Reboot> (This Digimon also unsuspends in your opponent's unsuspend
+#  phase.)"
+#
+# An inherited effect: Tankmon must be a DIGIVOLUTION CARD. The line plays
+# it, digivolves the vanilla black Lv.5 MetalTyrannomon ST5-10 on top (the
+# printed Black Lv.4 / cost 3 circle -- ST5-10 has no special condition, so
+# there is exactly one route and no cost prompt), attacks security with the
+# stack the same turn (Tankmon was played two turns earlier, so it is not
+# summoning-sick), and hands the turn over. THE CLAUSE is measured in P1's
+# unsuspend phase: at P1's first decision the stack reads suspended: false.
+#
+#   T1 (P0): pass everything.   T2 (P1): pass everything.
+#   T3 (P0, 3): play Tankmon (cost 5: 3 -> -2, turn over). Its [On Play] is
+#            inert: fewer than three [Three Musketeers]-trait cards in hand +
+#            trash (EX7_043.cs SharedCanActivateCondition; our clause
+#            condition is the same gate).
+#   T4 (P1, 2): pass everything.
+#   T5 (P0, 3): digivolve MetalTyrannomon onto Tankmon (3 -> 0, draw 1);
+#            attack security with it (9000 vs P1's top security Biyomon
+#            3000: the security battle asks nothing); pass.
+#   T6 (P1): P1's unsuspend phase -- <Reboot> (Mandatory, 16-10) unsuspends
+#            the stack. The trailing step is P1's breeding prompt.
+#
+# PROMPT SHAPE: <Reboot> is a static keyword (EX7_043.cs
+# RebootSelfStaticEffect(isInheritedEffect: true)); nothing is asked. The
+# book tm_ex7_043_pool.json carries 4x ST5-10 for exactly this line.
+card: EX7-043
+clause: EX7-043#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-043, ST5-10, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092]
+    rest: tm-tankmon
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, ST1-02, ST1-02, ST1-02,
+            ST1-04, ST1-04]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Tankmon (3 -> -2); its [On Play] has no payable cost.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-043, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 2)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): MetalTyrannomon over Tankmon, then attack security.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST5-10 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): THE CLAUSE has resolved in P1's unsuspend phase.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: ST5-10, dp: 9000, suspended: false, sources: [EX7-043] }
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p1.field: []

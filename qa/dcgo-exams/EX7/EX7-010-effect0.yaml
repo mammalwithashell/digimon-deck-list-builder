@@ -1,0 +1,105 @@
+# Exam scenario: Deputymon (EX7-010), clause EX7-010#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.3 w/[Three Musketeers] in text:
+# Cost 2".
+#
+# WHY SPARROWMON. Deputymon's printed circle is Red Lv.3 / 2 -- the SAME cost
+# as the special line -- so a red Lv.3 base cannot separate the two (no cost
+# prompt, same memory). Sparrowmon (EX7-051) is a PURPLE Lv.3 whose printed
+# text names [Three Musketeers]: the red circle fails on colour and the ONLY
+# legal route is the clause under exam. The witness is DCGO accepting the
+# digivolve at all (an illegal action aborts the job as a finding) plus the
+# projected state: Deputymon over Sparrowmon, memory 3 -> 1.
+#
+#   T1 (P0, 0): play Sparrowmon (3: 0 -> -3). It has no [On Play].
+#   T2 (P1, 3): pass.
+#   T3 (P0, 3): Sparrowmon's vacuous [Start of Your Main Phase] gate
+#               (DCGO-only), then THE CLAUSE -- Deputymon over Sparrowmon for
+#               2 (3 -> 1, draw 1), then Deputymon's vacuous [When
+#               Digivolving] gate (DCGO-only). Memory 1: still P0's turn, so
+#               the trailing step is P0's pass.
+#
+# PROMPT SHAPE.
+#  * EX7_010.cs "Digivolution Condition":
+#    AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText("Three
+#    Musketeers") && Level == 3, digivolutionCost: 2,
+#    ignoreDigivolutionRequirement: false) -- no cardColor, so no colour
+#    check (GetEvoCost); one open route, no cost SelectCountEffect.
+#  * Sparrowmon's [Start of Your Main Phase] (EX7_051.cs,
+#    SetUpActivateClass(..., -1, TRUE, ...), CanActivate = "hand or trash
+#    non-empty and a Digimon on the battle area") asks an OptionalSkill with
+#    nothing to pay with; our engine gates the trigger on a payable Option
+#    and parks nothing -- the documented vacuous-gate class
+#    (docs/DCGO_EXAM.md "Known gaps"; confirmed shape:
+#    EX7-051-effect0.yaml). DCGO-only decline.
+#  * Deputymon's [When Digivolving] (EX7_010.cs "When Digivolving":
+#    SetUpActivateClass(CanActivateConditionShared, ..., 1, TRUE, ...), where
+#    CanActivateConditionShared is merely IsExistOnBattleAreaDigimon(card))
+#    ALSO asks an OptionalSkill although no Digimon on either side carries an
+#    Option digivolution card (SelectTrashDigivolutionCards would break out
+#    at once: maxDigivolutionDiscardCount == 0). Our EX7-010.yaml gates the
+#    trigger on `any_permanent ... source_count {kind: option} >= 1` and
+#    parks nothing. Same vacuous-gate class: DCGO-only decline.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_010_pool.json (--decks).
+card: EX7-010
+clause: EX7-010#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped: P1 never
+    # attacks), stack[10..] draws: T3, then the digivolution draw. No Option
+    # card is ever in P0's hand or trash.
+    stack: [EX7-051, EX7-010, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, BT25-083, BT25-083,
+            BT25-082, ST1-02]
+    rest: tm-deputymon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-010
+steps:
+  # T1 (P0, 0): Sparrowmon (3: 0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-051, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: Deputymon over the PURPLE Sparrowmon for 2 (3 -> 1).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-010 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Deputymon's vacuous [When Digivolving] OptionalSkill.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause (memory 1: still P0's turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.field:
+        - { card_id: EX7-010, dp: 6000, suspended: false, sources: [EX7-051] }
+      p0.hand: [BT25-082, BT25-082, EX7-008, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []

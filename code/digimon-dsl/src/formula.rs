@@ -216,6 +216,18 @@ pub enum PerSelector {
     },
     CardCountInZone(CardCountInZoneSpec),
     DistinctColorsCount(CardCountInZoneSpec),
+    /// Number of DISTINCT card names among the cards / permanents in `zone`
+    /// for `of` that match `filter`. Battle-area permanents contribute their
+    /// synth-identity `card_names` (so a `ChangeBaseCardName` overlay or a
+    /// multi-name card counts each distinct name — same normalisation as the
+    /// `distinct_named_count_gte` predicate); every other zone reads the
+    /// card's printed name(s). YAML form: `per: { distinct_names_count: { of:
+    /// you, zone: battle_area, filter: { kind: digimon, trait_has: "Three
+    /// Musketeers" } } }`. Drives EX7-066 Chaos Triangular's "for each of your
+    /// [Three Musketeers] trait Digimon with different names, add 3000 to
+    /// this DP-deletion effect's maximum" (DCGO: `choices.Filter(...)`
+    /// de-duplicated by `HasSameCardName`). G-DSL-FORMULA-DISTINCT-NAMES-COUNT.
+    DistinctNamesCount(CardCountInZoneSpec),
     /// Count of the effect carrier's *own* digivolution sources (the cards
     /// beneath its top card) that match `filter`. YAML form:
     /// `source_stack_count: { filter: { any_of: [...] } }`. Composes inside a
@@ -254,6 +266,18 @@ pub enum PerSelector {
     /// `source_link_card_count`. The per-host sibling of `own_link_card_count`.
     /// G-DSL-LINK-N-CARDS-PER-HOST (formula facet).
     SourceLinkCardCount,
+    /// Number of distinct colors the effect carrier (`ctx.source_permanent`)
+    /// HAS for rules purposes — its synthesized identity colors, i.e. the top
+    /// card's printed colors after every color modifier (replace-style
+    /// `ChangeBaseCardColor`, additive `AddColor` incl. "treated as also
+    /// having the colors of its digivolution cards"). YAML form:
+    /// `per: source_rules_color_count`. Drives BT8-084 Kimeramon's "-1000 DP
+    /// for each of this Digimon's colors" (DCGO `TopCard.CardColors.Count`,
+    /// read with its [Your Turn] ChangeCardColorClass live). Contrast
+    /// `source_color_count` (sources only, printed colors) and
+    /// `digivolution_color_count` (anchored at the formula TARGET).
+    /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT.
+    SourceRulesColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -318,6 +342,11 @@ impl Serialize for PerSelector {
                 outer.serialize_entry("distinct_colors_count", spec)?;
                 outer.end()
             }
+            Self::DistinctNamesCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("distinct_names_count", spec)?;
+                outer.end()
+            }
             Self::SourceStackCount(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("source_stack_count", spec)?;
@@ -342,6 +371,7 @@ impl Serialize for PerSelector {
                 outer.end()
             }
             Self::SourceLinkCardCount => serializer.serialize_str("source_link_card_count"),
+            Self::SourceRulesColorCount => serializer.serialize_str("source_rules_color_count"),
         }
     }
 }

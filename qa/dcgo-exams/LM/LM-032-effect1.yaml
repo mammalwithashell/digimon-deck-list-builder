@@ -1,0 +1,228 @@
+# Exam scenario: Purple Scramble (LM-032), clause LM-032#effect#1 --
+# "[Start of Your Turn] If your opponent has a Digimon, <Delay>.
+#  - Return 1 purple Digimon card from your trash to the top of the deck.
+#    Then, if you don't have a Digimon, you may play 1 purple Digimon card with
+#    2000 DP or less from your trash without paying the cost."
+#
+# (Re-authored on resume. The crashed agent's line used LM-032 on T1 with
+# only a hatched Pagumon as the colour source and never lowered -- see
+# NOTES-LM-032.md. This line gets LM-032 onto the field THROUGH its [Main],
+# then empties P0's battle area by attacking into big security Digimon.)
+#
+# SLOT HYGIENE (the campaign's centre-out rule, ../BT25/NOTES-BT25-083.md).
+# `attack: field.N` reaches DCGO as a COMPACT index into GetFieldPermanents()
+# (frame-id order) and DCGO seats Digimon centre-out (frames 4, 3, 5, ...), so
+# on a TWO-Digimon board our play-order slots are DCGO's reversed. The first
+# resumed draft fielded Youkomon + Gabumon on T7 and attacked `field.0` twice:
+# DCGO would have sent Gabumon into Phoenixmon and then Youkomon (6000) into
+# Birdramon (5000), which Youkomon WINS -- a scenario artefact, not a finding.
+# This line never has two P0 Digimon at once: Gabumon attacks and dies ALONE
+# on T5 before DemiDevimon is played (DemiDevimon then takes the vacated
+# centre frame), and Youkomon is P0's only Digimon on T7 (LM-032 is an Option
+# permanent: back row, sorted after every Digimon on DCGO; played after
+# DemiDevimon on ours -- slot 0 is the Digimon on both).
+#
+# THE LINE.
+#   T1 (P0): nothing.                                               -> P1 3
+#   T2 (P1, 3): hatch Koromon; pass.                                -> P0 3
+#   T3 (P0, 3): Gabumon ST6-03 (3, -> 0); pass. Vanilla as a top card
+#            (its text is an INHERITED [When Attacking]).           -> P1 3
+#   T4 (P1, 3): breeding-digivolve Agumon (main phase: Koromon is a
+#            Lv.2 in an occupied breeding area); pass.              -> P0 3
+#   T5 (P0, 3): Gabumon attacks the player into Birdramon ST1-05 (2000
+#            vs 5000: Gabumon to the trash). DemiDevimon ST6-02 (2,
+#            -> 1). Use LM-032 (2, -> -1). Its [Main]: pick DemiDevimon
+#            (the only candidate; the row is consumed on both sides),
+#            then Youkomon ST6-07 from hand; Youkomon's Purple Lv.3 /
+#            cost 2 circle minus 3 floors at 0. LM-032 is then placed in
+#            the battle area, and the -1 gauge hands the turn over. -> P1 1
+#   T6 (P1, 1): promote Agumon; pass. P1 now has a BATTLE-AREA
+#            Digimon, which is what arms the clause.                -> P0 3
+#   T7 (P0, 3): the <Delay> gate opens (P1 has Agumon; LM-032 was placed
+#            on an earlier turn) -- DECLINE it: P0 still has a Digimon,
+#            and the line wants the "if you don't have a Digimon" arm.
+#            Then Youkomon attacks the player into Phoenixmon ST1-10
+#            (6000 vs 12000: the whole Youkomon stack is deleted --
+#            Youkomon and DemiDevimon to the trash). P0 now has NO
+#            Digimon and three purple Digimon cards in the trash. Pass.
+#                                                                   -> P1 3
+#   T8 (P1): nothing.                                               -> P0 3
+#   T9 (P0, 3): THE CLAUSE. Accept the gate: LM-032 is trashed; return
+#            Youkomon (of DemiDevimon / Gabumon / Youkomon) to the deck
+#            top; P0 has no Digimon, so the optional play opens with
+#            Gabumon (2000) as its only <=2000 DP candidate -- play it.
+#
+# PROMPT SHAPE (LM_032.cs, OnStartTurn region): SetUpActivateClass(null,
+# ..., -1, TRUE, ...) -> OptionalSkill yes/no, offered while IsOwnerTurn,
+# self on the battle area, opponent GetBattleAreaDigimons().Count >= 1 and
+# CanDeclareOptionDelayEffect (not the placing turn). Ours: `kind: delay,
+# trigger: start_of_your_turn`, `active_when: any_permanent opponent
+# battle_area digimon` -> the same declinable gate. Neither side checks its
+# own board or trash before asking, so the T7 gate opens on both. On acceptance, in
+# order: (1) LM-032 trashed, no prompt; (2) SelectCardEffect(Root.Trash,
+# canNoSelect: false) over purple Digimon cards -- THREE candidates, a real
+# pick (ours: select_trash optional: false); AddLibraryTopCards; (3)
+# GetBattleAreaDigimons().Count == 0 -> SelectCardEffect(Root.Trash,
+# canNoSelect: true, maxCount 1) over purple Digimon with DP <= 2000 --
+# Gabumon is the only candidate, and SelectCardEffect has no forced-pick
+# shortcut, so it is asked on both sides (ours: select_trash optional:
+# true); PlayPermanentCards(payCost: false). 1:1 at every row.
+#
+# THE [Main] AT T5 (LM_032.cs, OptionSkill region): SelectPermanentEffect
+# (canNoSelect: true) over own purple Digimon that some purple hand card can
+# legally digivolve -- DemiDevimon alone (Gabumon is already in the trash);
+# SelectPermanentEffect consumes the scripted row even with one candidate
+# (both seats take its AI branch under the harness, P/P-180-effect1.yaml) --
+# then DigivolveIntoHandOrTrashCard -> SelectHandEffect(canNoSelect: true),
+# then PlayCardClass at cost 0, then PlaceDelayOptionCards. Ours:
+# select_own_permanent (optional) -> select_hand -> effect_initiated_
+# digivolve (cost reduce 3) -> auto-placement. Same two picks. Youkomon is
+# vanilla, so the digivolve opens nothing further (it does draw a card).
+#
+# Deck accounting for P0 (no T1 draw): draws T3 = stack[10], T5 = [11], the
+# T5 digivolve = [12], T7 = [13]. The T9 draw is YOUKOMON, not stack[14]:
+# [Start of Your Turn] effects resolve before the unsuspend phase (6-2-1-1;
+# DCGO TurnStateMachine.ActivePhase stacks OnStartTurn before DrawPhase), so
+# the <Delay> puts Youkomon on the deck top and the draw phase takes it.
+# P1: T2 = [10], T4 = [11], the T4 breeding digivolve = [12], T6 = [13],
+# T8 = [14]. P1's security: stack[9] Birdramon is flipped first (T5, beats
+# Gabumon), stack[8] Phoenixmon second (T7, beats Youkomon).
+card: LM-032
+clause: LM-032#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [LM-032, ST6-02, ST6-03, ST6-07, ST1-04,
+            ST6-09, ST6-05, ST1-02, ST6-09, ST6-05,
+            ST1-02, ST1-04, ST6-05, ST6-09, ST1-02]
+    rest: tm-purple-line
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, ST1-08, ST1-13,
+            ST1-14, ST1-13, ST1-02, ST1-10, ST1-05,
+            ST1-04, ST1-08, ST1-14, ST1-13, ST1-02]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): hatch Koromon; pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Gabumon (3 -> 0); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST6-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): breeding-digivolve Agumon (main phase directly); pass.
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): Gabumon -- P0's ONLY Digimon -- attacks the player and
+  # dies to Birdramon (2000 vs 5000).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # DemiDevimon (3 -> 1), then use LM-032 (1 -> -1); [Main]: DemiDevimon
+  # digivolves into Youkomon for 0; LM-032 is placed; the turn hands over.
+  - actor: 0
+    do: { play: { card: ST6-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: LM-032, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [ST6-07] } }
+    expect: { prompt: SelectHandEffect }
+  # T6 (P1, memory 1): promote Agumon; pass.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): the gate opens -- decline (P0 still has a Digimon).
+  # Then Youkomon, P0's only Digimon, attacks into Phoenixmon and is deleted.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 3): THE CLAUSE. Accept the <Delay>.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Return 1 purple Digimon card from the trash to the deck top (mandatory;
+  # DemiDevimon and Gabumon were the other legal answers).
+  - actor: 0
+    do: { select: { cards: [ST6-07] } }
+    expect: { prompt: SelectCardEffect }
+  # No Digimon: play Gabumon (2000 DP) from the trash for free.
+  - actor: 0
+    do: { select: { cards: [ST6-03] } }
+    expect: { prompt: SelectCardEffect }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-step state of the trailing breeding decision: Gabumon is back on P0's
+  # battle area, LM-032 and DemiDevimon are in P0's trash, Youkomon went to
+  # the deck top and was drawn in T9's draw phase (it is the last card in
+  # P0's hand), and P1's security fell 5 -> 3 to the T5 and T7 attacks -- the
+  # two Security Digimon that won those battles (Phoenixmon, Birdramon) are
+  # in P1's trash, as every checked security card is.
+  - at: 26
+    that:
+      turn: 9
+      p0.memory: 3
+      p0.security: 5
+      p0.trash: [ST6-02, LM-032]
+      p0.hand: [ST1-04, ST1-02, ST1-04, ST6-05, ST6-09, ST6-07]
+      p0.field:
+        - card_id: ST6-03
+          dp: 2000
+          suspended: false
+          sources: []
+      p1.security: 3
+      p1.trash: [ST1-10, ST1-05]
+      p1.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: false
+          sources: [ST1-01]

@@ -20,7 +20,9 @@
 #
 # Clause 1 — `EffectTiming.OnDigivolutionCardDiscarded` (=
 #   `on_digivolution_card_trashed`). `SetIsInheritedEffect(true)` +
-#   `SetIsOptionEffect(true)` — OPTIONAL. CanUseCondition:
+#   `SetIsOptionEffect(true)` (tags the effect as an Option card's — NOT
+#   optionality). `SetUpActivateClass(..., -1, false, ...)` (EX7_070.cs:18):
+#   isOptional = FALSE — MANDATORY. CanUseCondition:
 #   `CanTriggerOnTrashSelfDigivolutionCard(hashtable, cardEffect => cardEffect
 #   != null, card)` — fires when an EFFECT trashes THIS SPECIFIC card as a
 #   digivolution source (any host, no host-trait gate — unlike the
@@ -32,7 +34,11 @@
 #   → `when: on_digivolution_card_trashed`, `scope: inherited` (this is the
 #   card's own inherited/security-adjacent ability, mirrors EX10-025/032's
 #   `scope: inherited` sibling shape even though it's an Option not a
-#   Digimon), `optional: true`, `trashed_source_card_id_is: EX7-070` (this
+#   Digimon), MANDATORY (no `optional:` — printed text has no "may";
+#   <De-Digivolve> is Mandatory, general_rule 16-11; the earlier `optional:
+#   true` misread SetIsOptionEffect and over-exposed an illegal decline —
+#   fixed 2026-09-18, exam EX7-070#effect#0 triage),
+#   `trashed_source_card_id_is: EX7-070` (this
 #   card's own identity — DCGO's `CanTriggerOnTrashSelfDigivolutionCard`),
 #   `event_target_owner: you` (the trashed-from host belongs to this card's
 #   controller — DCGO only wires this on cards already attached to the
@@ -96,7 +102,7 @@
 #
 # | Card-text element                                                | Status      |
 # |-------------------------------------------------------------------|-----------|
-# | [Inherited] self-source-trash → De-Digivolve 1 opp Digimon (OPT) | IMPLEMENTED |
+# | [Inherited] self-source-trash → De-Digivolve 1 opp Digimon (MAND)| IMPLEMENTED |
 # | While-you-have-TM-Digimon color bypass                          | IMPLEMENTED |
 # | [Main] delete 1 opp lowest-play-cost Digimon (independent)       | IMPLEMENTED |
 # | [Main] place self as bottom source of 1 own TM Digimon (indep.) | IMPLEMENTED |
@@ -113,11 +119,11 @@ effects:
   # ─── Clause 1: Inherited self-source-trash → De-Digivolve 1 opp Digimon ────
   #
   # "When effects trash this card from digivolution cards, <De-Digivolve 1>
-  # 1 of your opponent's Digimon." Optional (DCGO SetIsOptionEffect(true));
+  # 1 of your opponent's Digimon." MANDATORY (EX7_070.cs:18 isOptional =
+  # false; no "may" printed; <De-Digivolve> Mandatory, general_rule 16-11);
   # no host-trait gate — fires regardless of which Digimon carried this card.
   - scope: inherited
     when: on_digivolution_card_trashed
-    optional: true
     condition:
       all_of:
         - event_target_owner: you

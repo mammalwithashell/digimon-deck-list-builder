@@ -103,7 +103,7 @@ cost is a known risk — see "Known gaps".
 | `decks.<seat>.stack` | Prefix of the draw order. See below. |
 | `decks.<seat>.rest` | Named deck the remainder is seeded-shuffled from. |
 | `steps[].actor` | `0` or `1`. Both seats are scripted. |
-| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `select`. |
+| `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `link`, `select`. |
 | `steps[].expect` | The prompt this step expects to be answering. Optional per step, asserted **before** answering. |
 | `assert` | `at: <step index>` + `that: {path: value}`. Backfilled from the oracle — see "Assertion backfill". |
 
@@ -308,16 +308,148 @@ Matching is on the SLOT, never on `card_id` alone — two copies of the same Opt
 on the field are two different decisions, and this format refuses an ambiguous
 intent rather than picking.
 
-Nothing is needed on the DCGO side: `InputDriver` already maps the
-`FIELD_EFFECT_START..FIELD_EFFECT_END` range to `ActivatePermanentAction(slot, 0)`
-(refusing any sub-slot but `FIELD_EFFECT_SLOT_FOR_MAIN`), so a `main:` step
-lowers to a plain `Action(id)` and rides the wire like any other.
+Matching is also on the `[Main]` **sub-slot** (`FIELD_EFFECT_SLOT_FOR_MAIN`, 2),
+not on the `FieldEffect` kind alone: the per-permanent effect range packs several
+semantic sub-slots (0 = Overclock, 2 = `[Main]`, 3 = DigiLink) and `explain`
+reports them all as `FieldEffect` on the same slot. Until 2026-09-17 a `main:` on
+an Appmon Link Digimon with no `[Main]` of its own silently lowered to its LINK
+bit — which DCGO then refused — and was ambiguous when the card had both.
+
+On the DCGO side `InputDriver.BuildMainPhaseAction` maps the
+`FIELD_EFFECT_START..FIELD_EFFECT_END` range to `ActivatePermanentAction(slot,
+skillIndex)`, resolving the sub-slot to a POSITIONAL index into the permanent's
+`EffectList(EffectTiming.OnDeclaration)`: the `[Main]` sub-slot takes the first
+activatable effect that is **not** the `<Link>` declaration, the link sub-slot
+takes the `<Link>` declaration (see `link:` below). Any other sub-slot is refused.
+So a `main:` step lowers to a plain `Action(id)` and rides the wire like any other.
 
 `<Delay>` in particular: our engine offers a placed Delay Option's activation on
 the same action bit once `turn_count > placed_on_turn`
 (`Game::delayed_option_main_activation_available`), and DCGO gates its own with
 `CanDeclareOptionDelayEffect` on the same not-the-placing-turn rule. So the line
 is "flip/place it on turn N, `main:` it on turn N+1".
+
+### `dna:` — DNA digivolution (added 2026-09-20)
+
+`[DNA Digivolve]` digivolves TWO of your own battle-area Digimon into one hand
+card (`general_rule.pdf` §6-5-1-2-2, §8-2). Until this verb existed the clause
+was unreachable on both wires — `STEP_VERBS` had no DNA entry, `matches_intent`
+had no `DnaDigivolve` arm, and DCGO's `InputDriver.BuildMainPhaseAction` refused
+the whole `DNA_DIGIVOLVE` range with "has no MainPhaseAction shape"
+(`G-TOOLING-EXAM-NO-DNA-VERB`; `qa/dcgo-exams/BT8/NOTES-BT8-084.md`,
+`qa/dcgo-exams/BT16/NOTES-BT16-077.md` are the measured record).
+
+```yaml
+- actor: 0
+  do: { dna: { card: BT8-084, materials: [field.0, field.1] } }
+```
+
+`card:` is the hand card (the DNA result) and `from:` is `hand[.N]` with the
+same pin grammar as `play:`'s. `materials:` is **required** and must name
+exactly two of the actor's own field slots, in declaration order; an `opp.`
+reference, a shorter list or a longer one is refused, because the requirement is
+a fixed pair and a defaulted list would digivolve Digimon the scenario never
+named.
+
+**The materials ride the VERB, not a following `select:` step** — the one place
+this format departs from the `link:` precedent, and the reason is that the two
+wires disagree about how many decisions the declaration contains:
+
+- OURS is three. The `DNA_DIGIVOLVE` bit names only the hand slot, then
+  `Game::initiate_dna_digivolve` parks two `SelectionKind::Material` prompts
+  whose action ids are RAW own-battle-area indices (not the `SOURCE_SELECT` band
+  the other `Material` prompts use).
+- DCGO's is ONE. A single `PlayCardAction` carries both materials in
+  `JogressEvoRootsFrameIDs` (`MainPhaseAction/PlayCardAction.cs`,
+  `CardController` "#region Set target(s)") and no prompt is opened at all.
+
+So the step lowers to one wire row carrying the action id **and** both
+materials' top-card identities (`dna_materials` on `HarnessJobStep`), plus a
+sim-only row that answers our two prompts — the same one-row/N-picks shape
+`select: { materials: [...] }` already uses for `[Assembly]` / `[DigiXros]`.
+`dna_materials` is a field of its own rather than `select_card_ids` because
+DCGO's `HarnessJobStep.IsSelection` is true whenever the latter is non-empty,
+and a step that reads as a selection answer arriving at an action-id prompt
+aborts the job as a prompt mismatch.
+
+Requires a DCGO build at or after `fc67f9ae6` (`D:/dcgo-build/scripted-v16`);
+earlier players abort the line on "action id N has no MainPhaseAction shape".
+The 2192 action space is unchanged, so `ActionSpace.cs` needed no regeneration.
+
+### `link:` — DigiLink declaration from the battle area (added 2026-09-17)
+
+`<Link>` on an Appmon Link *Digimon* ("Plug this card from the hand or battle
+area sideways into the specified Digimon") is a player-declared action, not a
+triggered effect, so every `[When Linking]` / `[Link]`-box clause was
+`unreachable` until the format could declare one
+(`qa/dcgo-exams/BT21/NOTES-BT21-071.md`, `NOTES-BT21-074.md` are the measured
+record). `link:` is that verb:
+
+```yaml
+- actor: 0
+  do: { link: { card: BT21-071, from: field.1 } }   # Scopemon declares its <Link>
+- actor: 0
+  do: { select: { targets: [own.field.0] } }        # ...onto the Appmon at slot 0
+  expect: { prompt: select_permanent, count: 1 }
+```
+
+`card:` is required; `from:` is `field[.N]` (default: the bare `field`) or
+`hand[.N]` — both origins the keyword prints — and takes the same pin grammar as
+`play:`'s `hand.N`, so two copies in one zone are ambiguous until pinned.
+
+- `field` lowers to the per-permanent `FIELD_EFFECT` range at sub-slot
+  `FIELD_EFFECT_SLOT_FOR_LINK` (3), which `mask.rs` emits for an un-linked
+  standing Digimon whose `link_condition` has at least one legal host and an
+  affordable cost. The whole permanent is absorbed (under-sources trashed, top
+  card becomes the linked card — DCGO `IPlacePermanentToLinkCards`).
+- `hand` lowers to that hand slot's `HAND_EFFECT` bit, which the engine makes
+  the link whenever the card has no `[Hand] [Main]` of its own
+  (`Game::hand_effect_slot_is_link` — the decoder dispatches `[Main]` first, so
+  a card carrying both exposes only its `[Main]` on the bit, the same
+  one-declarable-per-hand-slot limit DCGO's recorder has). The card is lifted
+  out of the hand and attached; nothing is absorbed and no `[On Play]` fires
+  (DCGO `Permanent.AddLinkCard`, root `Hand`).
+
+Either way it is the same bit an RL agent takes.
+
+**The host is the NEXT step, never an `into:` on this one.** Both engines park
+the host pick the moment the link is declared (ours:
+`install_digimon_link_host_selection`, an `OwnField` prompt; DCGO:
+`SelectPermanentEffect` "Select 1 Digimon to link.", `maxCount 1`,
+`canNoSelect: false`), and both ask it even with a single candidate. That is one
+decision per scenario step, exactly like attack → blocker or play → `[On Play]`
+target; folding it into the verb would make one scenario step consume two
+decisions on both wires, which the replay session (one `step()` per scenario
+step) and the differ's per-step pairing do not model. Writing `into:` is refused
+with a message that says this.
+
+DCGO side: `InputDriver.BuildMainPhaseAction` dispatches the link sub-slot to
+`ActivatePermanentAction(slot, i)` where `i` is the positional index of the
+`CardEffectFactory.LinkEffect` `ActivateClass` in the permanent's
+`EffectList(EffectTiming.OnDeclaration)` — the "Link (Cost: N)" command a human
+clicks on the field card's panel — and a `HAND_EFFECT` bit to
+`ActivateCardAction(card, i)` over `CanDeclareSkillList` with the engine's order
+(first non-link declarable, else the link). The link declaration is recognised
+structurally (an `ActivateICardEffect` whose `EffectDiscription` is
+`DataBase.LinkEffectDiscription()`, with the `"Link (Cost: "` name prefix as a
+fallback), not by position, because a card that adds its `[Main]` after its
+`LinkEffect` would otherwise have the two swapped. Requires a build at or after
+DCGO `c98bab2a4` (`D:/dcgo-build/scripted-v15`); `scripted-v14` and earlier
+abort a field link with "field-effect sub-slot 3 is not the [Main] slot" and
+send a hand link to positional skill 0.
+
+The from-hand origin was an engine gap until this change
+(`G-ENGINE-DIGIMON-LINK-FROM-HAND`: the only hand-side link was the Plug-In
+*Option* play mode). It is closed — `Game::activate_hand_link` /
+`DigimonLinkOrigin::Hand` in `game_actions/link.rs`, tests
+`dsl_digimon_link_from_hand_*` in `tests/option_flow/link_flow.rs`.
+
+What the recorder writes for that row is a separate, known limit:
+`ActionEncoder.EncodeActivatePermanent` still labels EVERY `ActivatePermanentAction`
+with `SkillIndex 0` as the `[Main]` sub-slot, so a link DCGO's own AI declares is
+recorded as a `[Main]` activation. The exam is unaffected (the differ pairs by
+wire-row count and compares state projections, never action ids), but
+`dcgo-replay` will read such a corpus row as an illegal `[Main]`.
 
 ## Selection steps (`select:`) — added 2026-08-22
 
@@ -500,10 +632,27 @@ against this list before an eighth mechanism is invented.
 | `SimOnlySelect` | `Material` (multi-pick declarations) | The 2nd..Nth pick of a `materials:` declaration: contributes a comparable state row on our side and ZERO wire rows, keeping the traces aligned across the cardinality gap. |
 | `DcgoOnlySelect` | `TriggerOrder` ↔ `MultipleSkills`, from the other side | A prompt DCGO asks that we never park — DCGO batches a same-timing trigger into `MultipleSkills` where we model it as a combat-state window. Emitted to the wire, consumed by nothing sim-side. |
 | `materials:` | `Material` (`[Assembly]` / `[DigiXros]`) | One authored step answering N successive sim prompts against a single DCGO row. The mirror of `optional_gate_fold`. Exact only for a ONE-ELEMENT recipe — see the scope note on `SelectPayload::Materials`. |
+| `choice:` | `EffectChoice` ↔ `generic_int` / `generic_bool` | Names a branch of OUR either/or `EffectChoice` prompt by a case-insensitive substring of its LABEL (exactly one branch must match), for labels that carry no number `value:` could match ("Top of deck" / "Bottom of deck"). **Sim-only by construction**: the parser refuses it without `sim_only: true`, and DCGO's side — a card-defined value, usually asked at a different point in the sequence — is its own `dcgo_only` `value:` / `decline:` row. |
 
-Three of the seven — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` —
+Three of the eight — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` —
 exist purely because the engines disagree about whether a decision EXISTS, not
-about what it is. Those are the rows worth re-reading before adding an eighth.
+about what it is. Those are the rows worth re-reading before adding a ninth.
+
+**A scenario owns every one of OUR prompts — nothing is auto-answered for it.**
+The shared replay core carries one helper that answers an engine-only prompt on
+the oracle's behalf (`ReplayDriver::auto_answer_option_trash_order`, for the
+9-1-5 Option-trash order that no DCGO recording can contain). That helper exists
+for the `dcgo-replay` corpus, where the alternative is a stall. It is switched
+OFF for the exam by `RecordingSource::answers_engine_only_prompts()`, which
+`ScenarioAdapter` returns `true` from, because in a scenario the author writes
+that decision as a `sim_only:` row. When both fired, the scenario's row landed on
+whatever our engine parked NEXT and spent it — and every later row was one
+decision ahead of where its author put it, which is invisible in the lowering
+(the lowering pass never auto-answered) and shows up only as a one-field diff in
+the oracle run. Two `confirmed` verdicts stood on that for a day. If you add
+another engine-only prompt, author a `sim_only:` row for it; do NOT add a second
+auto-answer. See `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in
+`qa/resolved-gaps.md`.
 
 ### Rows where one side looks rules-wrong
 
@@ -541,6 +690,25 @@ entries.
   zone-declaration step as part of choosing a card, and DCGO's own code skips
   its zone menu when only one zone qualifies. It is a UI affordance; the exam
   should fold it, not model it as a decision.
+- **`RevealBucket` add timing — ours is the one the rules endorse (DCGO
+  quirk).** On a multi-bucket reveal ("Add 1 card with [X] … **and** 1 Option
+  card … among them to the hand" — ToyAgumon (EX7-008), Dorumon (BT7-056), every
+  `SimplifiedRevealDeckTopCardsAndSelect` card with ≥2 conditions) DCGO runs
+  one `SelectCardEffect` per condition (`RevealLibrary.cs`
+  `RevealDeckTopCardsAndSelect`, the `foreach` over `selectCardConditions`),
+  and each one, being `Mode.AddHand`, moves its pick to the hand when that
+  prompt closes (`SelectCardEffect.cs` ~726) — so the state row at the SECOND
+  pick already shows the first card in hand. We collect every bucket's pick,
+  then add. The printed text is ONE "Add" with two targets: §15-15-10-1 treats
+  that as "a single effect [that] allows you to select multiple targets with
+  different conditions" — targets are selected, then the one action is
+  performed — and DCGO's own comment in that loop says the conditions are
+  "chosen at once (per card game rules)". Outcome-neutral: nothing can trigger
+  or resolve between the two picks (mid-effect), candidate sets do not read the
+  hand, and the end state agrees. The exam
+  reads it as a one-field `p0.hand` divergence on the 2nd pick row with **no
+  downstream rows**; triage it as a DCGO quirk, do not "fix" the engine to add
+  per bucket. (Measured: EX7-008#effect#1, BT7-056 [On Play].)
 
 ## Execution
 

@@ -33,6 +33,47 @@ impl Game {
     /// use the plain `suspend` (`false`). Feeds `event_is_effect_initiated`
     /// ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
     pub fn suspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
+        if let Some(card) = self.suspend_state_only(handle) {
+            self.enqueue_on_suspend(handle, card, effect_initiated);
+        }
+        // `maybe_` -- inside a deferred-drain scope (e.g. the <Alliance>
+        // resolution callback) the OnSuspend observers park until the
+        // enclosing effect finishes (official trigger timing; judge Q24).
+        self.maybe_drain_effect_queue();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    /// Enqueue the `OnSuspend` event for `handle` (whose top card is `card`)
+    /// without draining. Split out of [`Self::suspend_with_cause`] so the
+    /// attack-declaration suspension can batch it with the declaration's
+    /// other triggers (general_rule.pdf 11-2-1 / 11-1-4;
+    /// G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND).
+    pub(crate) fn enqueue_on_suspend(
+        &mut self,
+        handle: PermanentHandle,
+        card: crate::card_source::CardHandle,
+        effect_initiated: bool,
+    ) {
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnSuspend,
+            crate::selection::TriggerSource::EventObserved {
+                player: handle.player,
+                permanent: handle,
+                card,
+                effect_initiated,
+            },
+        );
+    }
+
+    /// The state half of [`Self::suspend_with_cause`]: gate on
+    /// `CannotSuspend`, flip `is_suspended`, re-tick suspension-keyed auras.
+    /// Returns the suspended permanent's top card when the permanent
+    /// actually transitioned (the `OnSuspend` event card), `None` when it was
+    /// already suspended / missing / prohibited. Enqueues and drains nothing.
+    pub(crate) fn suspend_state_only(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
         // Prohibition gate (15-1-3 "a prohibiting effect takes precedence"):
         // a permanent under `CannotSuspend` is not suspended by effects or
         // cost payments — the suspension silently no-ops, mirroring DCGO's
@@ -43,7 +84,7 @@ impl Game {
         // candidate walk); this chokepoint is the universal backstop for
         // every other suspension source.
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
-            return;
+            return None;
         }
         let is_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
         let event_card = if is_breeding {
@@ -71,7 +112,7 @@ impl Game {
                 .unwrap_or(true)
         }; // treat out-of-range as "already suspended" to no-op
         if already {
-            return;
+            return None;
         }
         let perm = if is_breeding {
             self.players
@@ -91,22 +132,7 @@ impl Game {
         // recomputes DP at read time — judge-quiz Q24).
         self.tick_declarative_effects();
         self.mark_until_condition_dirty();
-        if let Some(card) = event_card {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnSuspend,
-                crate::selection::TriggerSource::EventObserved {
-                    player: handle.player,
-                    permanent: handle,
-                    card,
-                    effect_initiated,
-                },
-            );
-        }
-        // `maybe_` — inside a deferred-drain scope (e.g. the <Alliance>
-        // resolution callback) the OnSuspend observers park until the
-        // enclosing effect finishes (official trigger timing; judge Q24).
-        self.maybe_drain_effect_queue();
-        self.reevaluate_until_condition_modifiers_if_dirty();
+        event_card
     }
 
     /// Unsuspend a single permanent. Fires `OnUnsuspend` observers in every

@@ -233,6 +233,7 @@ impl Game {
             pending_would_play_resume: None,
             pending_assembly_materials: None,
             pending_would_link_resume: None,
+            pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
             pending_would_digivolve_resume: None,
@@ -241,6 +242,9 @@ impl Game {
             pending_interactive_digivolve_reduction: 0,
             pending_interactive_option_use_reduction: 0,
             interactive_option_use_reducer_prompted: false,
+            on_use_option_armed: None,
+            option_body_pending: false,
+            option_trash_order_deferred: false,
             pending_cost_reduction_amount_override: None,
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
@@ -278,6 +282,8 @@ impl Game {
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
             pending_hand_discard: None,
+            pending_added_sources: Vec::new(),
+            pending_security_source_cause_card: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,
@@ -375,6 +381,7 @@ impl Game {
         self.last_play_order_choice = None;
         self.pending_would_play_resume = None;
         self.pending_would_link_resume = None;
+        self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;
         self.pending_would_digivolve_resume = None;
@@ -383,6 +390,9 @@ impl Game {
         self.pending_interactive_digivolve_reduction = 0;
         self.pending_interactive_option_use_reduction = 0;
         self.interactive_option_use_reducer_prompted = false;
+        self.on_use_option_armed = None;
+        self.option_body_pending = false;
+        self.option_trash_order_deferred = false;
         self.pending_cost_reduction_amount_override = None;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;

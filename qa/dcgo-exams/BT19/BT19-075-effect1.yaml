@@ -1,0 +1,195 @@
+# Exam scenario: MoonMillenniummon (BT19-075), clause BT19-075#effect#1 --
+# "[On Play] [When Digivolving] Your opponent trashes cards in their hand until
+#  they have 5 left. For every 2 this effect trashed, delete 1 of your
+#  opponent's Tamers."
+#
+# This file exercises the [When Digivolving] arm, with BOTH sentences live:
+# p1 is held on 7 cards and owns a Tamer (Tai Kamiya ST1-12, whose only text
+# is a [Your Turn] DP aura and a [Security] play -- silent here), so the
+# digivolve makes p1 trash 2 and p0 delete 1 Tamer.
+#
+# PROMPT SEQUENCE. BT19_075.cs: (1) SelectHandEffect for p1 (`selectPlayer:
+# card.Owner.Enemy`, maxCount = hand - 5 = 2, canNoSelect: false) -- ONE prompt
+# taking both cards; (2) with trashed >= 2, SelectPermanentEffect for p0
+# (maxCount = min(floor(2/2), tamers) = 1, canNoSelect: false). Ours:
+# `trash_opponent_hand_to_count` parks a count-capped multi-pick for p1 over
+# the hand (answered with both ids in one row), then `select_count_capped_multi`
+# (max 1) for p0 over p1's Tamers. The p1 picks are the two vanilla cards named
+# below; p1's hand is fully pinned by the stack so the answer is unambiguous.
+#
+# THE OBSERVER FIRES TOO. Tai Kamiya's deletion is "other Digimon or Tamers
+# ... deleted" for MoonMillenniummon's own [All Turns][Once Per Turn]
+# observer (#effect#3): on both sides (DCGO OnDestroyedAnyone with
+# `permanent.IsTamer`; ours `on_any_deletion` + `event_target_kind: tamer`)
+# it trashes p1's top security card -- Biyomon ST1-02, p1's stack[9] -- with
+# no prompt. So the witness is p1's trash holding the two hand cards, the
+# Tamer AND that security card, with p1's security at 4.
+#
+# WHY THE LINE IS NINE TURNS. p1's hand only grows by passing: after funding
+# the line (Phoenixmon on T2) and playing the Tamer (T4) it sits on 5, and two
+# more p1 turns (T6, T8) bring it to 7. p0 idles until then.
+#
+# MILLENNIUMMON'S OWN TEXT ALONG THE WAY. Its [On Play] "delete 1 of your
+# opponent's Digimon" is mandatory on both sides (BT18_019.cs shared effect
+# `optional: false`, one SelectPermanentEffect with canNoSelect: false; ours
+# `if: any_permanent` + a plain pick) and deletes the Phoenixmon p1 hard-played
+# to fund the line; the "if DNA digivolving" rider is off for a hard play. Its
+# [On Deletion] never fires (it is never deleted). It is a Lv.7 red/black
+# [Composite], so MoonMillenniummon's printed Purple Lv.6 circle cannot apply
+# and "[Digivolve] [Millenniummon]: Cost 2" is the only legal path -- one cost,
+# no cost-choice prompt.
+#
+# Memory: T1 p0 -> p1 3; T2 Phoenixmon (10): 3 -> -7 -> p0 7; T3 Millenniummon
+# (14): 7 -> -7 -> p1 7; T4 p1 plays Tai (2): 7 -> 5, passes -> p0 3; T5-T8
+# all-pass; T9 MoonMillenniummon (2): 3 -> 1.
+#
+# Book: qa/dcgo-exams/BT19/tm_bt19_075_pool.json (--decks). p0's deck is
+# MoonMillenniummon x4 + Millenniummon BT18-019 x4 + Deltamon BT6-012 x4 over
+# the quiet ST-1 filler; p1 (`quiet-opponent-mm`) is the quiet ST-1 opponent
+# with 2x Bind Red Trigger (P-180) and 2x Tai Kamiya (ST1-12) in for the
+# Options.
+card: BT19-075
+clause: BT19-075#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Millenniummon, MoonMillenniummon, inert filler
+      - BT18-019
+      - BT19-075
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+      - ST1-05
+    rest: tm-moonmillenniummon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot), Tai Kamiya (the Tamer), the rest is p1's 7-card hand at T9
+      - ST1-10
+      - ST1-12
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's T2 / T4 / T6 / T8 draws
+      - BT4-014
+      - ST1-08
+      - BT3-007
+      - BT1-014
+    rest: quiet-opponent-mm
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): hard-play Phoenixmon ST1-10 for 10 (3 -> -7). p0 opens
+  # T3 on 7 -- the only way a 14-cost play fits under the -10 floor.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 7): hard-play Millenniummon BT18-019 for 14 (7 -> -7). Its
+  # [On Play] deletes Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT18-019, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1, memory 7): play Tai Kamiya for 2 (7 -> 5), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): all-pass (hand 6).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): all-pass (hand 7).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): THE CLAUSE -- digivolve MoonMillenniummon for 2 (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT19-075 } }
+    expect: { prompt: main_phase }
+  # p1 trashes 2 (hand 7 -> 5): one prompt, two picks.
+  - actor: 1
+    do: { select: { cards: [ST1-03, ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  # 2 trashed -> p0 deletes 1 Tamer: Tai Kamiya.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause. The assert below reads the PRE-step state of
+  # this pass (step index 22): both picks have resolved, Tai Kamiya is in
+  # p1's trash, and p0 still holds the turn on 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 22
+    that:
+      turn: 9
+      p0.memory: 1
+      p1.field: []
+      p1.hand: [BT1-009, BT4-014, ST1-08, BT3-007, BT1-014]
+      p1.security: 4
+      p1.trash: [ST1-10, ST1-03, ST1-04, ST1-12, ST1-02]
+      p0.field:
+        - card_id: BT19-075
+          dp: 15000
+          suspended: false
+          sources: [BT18-019]

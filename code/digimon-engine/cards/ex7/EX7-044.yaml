@@ -1,0 +1,148 @@
+# EX7-044 Gigadramon — Digimon, Lv.5, Black, DP 7000, Cost 7.
+# Traits: Cyborg. Form: Ultimate. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX7-044.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-044.webp):
+#
+#   [On Play] [When Digivolving] Reveal the top 4 cards of your deck. Place 1
+#   Option card with the [Three Musketeers] trait among them as this
+#   Digimon's bottom digivolution card. Return the rest to the top or bottom
+#   of the deck. If this effect placed, delete 1 of your opponent's Digimon
+#   or Tamers with a play cost of 3 or less.
+#
+#   Inherited Effect: ＜Collision＞ (During this Digimon's attack, give all of
+#   your opponent's Digimon ＜Blocker＞, and the opponent blocks if able.)
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Black Lv.4 / cost 3
+#   - xros_req: "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_044.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.IsLevel4 && HasText("Three Musketeers")`, cost 3
+#   → `in_text_contains`. Standard Black Lv.4 / 3 also authored.
+#
+# [On Play] / [When Digivolving] — two ActivateClass entries (isOptional
+#   FALSE — the reveal is mandatory). SimplifiedRevealDeckTopCardsAndSelect(
+#   revealCount 4, ONE Mode.Custom slot filtering `IsOption &&
+#   ContainsTraits("Three Musketeers")`, maxCount 1) → SelectCardCoroutine:
+#   `AddDigivolutionCardsBottom` + `cardWasPlaced = true`; remainder
+#   RemainingCardsPlace.DeckTopOrBottom (ONE player-elected top/bottom choice
+#   for the whole leftover pool, fires whether or not a card was placed).
+#   Then `if (cardWasPlaced && HasMatchConditionPermanent(opp Digimon OR
+#   Tamer with HasPlayCost && GetCostItself <= 3))` MANDATORY
+#   SelectPermanentEffect(Mode.Destroy, canNoSelect: false).
+#   → `reveal_top_deck 4` + MANDATORY `select_reveal` (no printed "may": when
+#     a TM Option is revealed one MUST be placed; with several the player
+#     picks which; with none the step continues — `install_select_reveal`
+#     returns Continue on an empty candidate set, so the remainder placement
+#     below still runs) + `place_as_bottom_source { source: picked, target:
+#     source, bind_placed_as: placed }` (binds the placed card ONLY on a
+#     successful placement — this is the "If this effect placed" bit) +
+#     `place_remainder_on_deck { position: choice }` (§3.1 StackPosition::
+#     Choice — EX7-048 idiom, one binary top/bottom pick for the remainder)
+#     + `if binding_present: placed AND any opp Digimon/Tamer with play cost
+#     <= 3` guarding the mandatory `select_opponent_permanent` →
+#     `delete_permanent`. The `play_cost_lte: 3` filter reads the printed
+#     play cost (DCGO `GetCostItself`); `any_of: [kind: digimon, kind: tamer]`
+#     = "Digimon or Tamers".
+#
+# ESS — CollisionSelfStaticEffect(isInheritedEffect: true) → inherited
+#   `grant_keyword` Collision.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|-------------|
+# | Std digivolve Black Lv.4 / 3                                  | IMPLEMENTED |
+# | Special digivolve Lv.4 w/[Three Musketeers] in text / 3       | IMPLEMENTED |
+# | [OP][WD] reveal 4, place 1 TM Option under self, rest top/bottom | IMPLEMENTED |
+# | "If this effect placed" → delete opp Digimon/Tamer play cost ≤3 | IMPLEMENTED |
+# | Inherited <Collision>                                         | IMPLEMENTED |
+
+card: EX7-044
+name: Gigadramon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+attribute: Virus
+form: Ultimate
+
+alt_paths:
+  # Standard printed circle: Black Lv.4 / cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: black
+    cost: 3
+  # Special: "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - in_text_contains: "Three Musketeers"
+    cost: 3
+
+effects:
+  # ─── [OP][WD] reveal 4 → place 1 TM Option under self → rest top/bottom →
+  #     if placed, delete 1 opp Digimon/Tamer with play cost 3 or less ───────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal top 4; place 1 [Three Musketeers] Option among them as this Digimon's bottom digivolution card; return the rest to top or bottom; if placed, delete 1 opponent Digimon or Tamer with play cost 3 or less"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      # Mandatory pick of 1 [Three Musketeers] Option among the revealed
+      # cards (no printed "may"). With no candidate the step is skipped and
+      # the process continues to the remainder placement.
+      - select_reveal:
+          of: you
+          bind_as: picked
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Three Musketeers"
+          prompt: "Place 1 Option card with the [Three Musketeers] trait among them as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: picked
+          target: source
+          bind_placed_as: placed
+      # Return the rest to the top OR bottom of the deck — one player-elected
+      # choice for the whole remainder (DCGO RemainingCardsPlace.DeckTopOrBottom),
+      # fired whether or not an Option was placed.
+      - place_remainder_on_deck: { of: you, position: choice }
+      # "If this effect placed" — `placed` is bound only on a successful
+      # placement. Mandatory delete, silently skipped when the opponent has no
+      # Digimon or Tamer with play cost 3 or less.
+      - if:
+          condition:
+            all_of:
+              - binding_present: placed
+              - any_permanent:
+                  of: opponent
+                  zone: [battle_area]
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                  play_cost_lte: 3
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                    - play_cost_lte: 3
+                prompt: "Delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less"
+            - delete_permanent: { target: victim }
+
+  # ─── Inherited <Collision> ──────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Collision
+    summary: "Inherited <Collision>"

@@ -1,0 +1,161 @@
+# EX7-043 Tankmon — Digimon, Lv.4, Black, DP 5000, Cost 5.
+# Traits: Cyborg. Form: Champion. Attribute: Data.
+#
+# Printed card text (data/card_bundles/EX7-043.md — official Bandai DB,
+# verbatim; the card image is not in the local mirror):
+#
+#   [On Play] [When Digivolving] By returning 3 cards with the [Three
+#   Musketeers] trait from your hand or trash to the top of the deck,
+#   ＜De-Digivolve 1＞ 1 of your opponent's Digimon.
+#
+#   Inherited Effect: ＜Reboot＞ (This Digimon also unsuspends in your
+#   opponent's unsuspend phase.)
+#
+# Official Q&A: "No, you can choose 3 cards with the [Three Musketeers] trait
+# to return to the top of the deck from your hand, trash, or both. For
+# example, you can choose 3 cards from your hand or choose a combination of 1
+# card from your hand and 2 cards from your trash."
+#
+# Digivolution requirements (official Bandai DB):
+#   - Standard circle: Black Lv.3 / cost 2
+#   - xros_req: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_043.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — `TopCard.IsLevel3 && HasText("Three Musketeers")`, cost 2
+#   → `in_text_contains`. Standard Black Lv.3 / 2 also authored.
+#
+# [On Play] / [When Digivolving] — two ActivateClass entries (isOptional
+#   TRUE) sharing one body. SharedCanActivateCondition:
+#   `hand.Count(TM trait) + trash.Count(TM trait) >= 3` (the cost must be
+#   fully payable). Body: SelectHandEffect (up to 3, canNoSelect: true,
+#   canEndNotMax: true) then SelectCardEffect(Root.Trash, up to 3 - picked);
+#   ONLY `if (selectedCards.Count == 3)`: the player specifies the ORDER, the
+#   3 cards are removed from their zones and `AddLibraryTopCards` places them
+#   on the deck top; then, if an opponent Digimon exists, a MANDATORY
+#   SelectPermanentEffect → `IDegeneration(permanent, 1)`.
+#   → ONE clause `when: [on_play, when_digivolving]`, `optional: true`,
+#     `condition: count_gte 3` over hand+trash TM-trait cards. The 3-card
+#     cost is three sequential `select_union_zone` picks over hand ∪ trash
+#     (any hand/trash combination per the official Q&A — EX12-077 idiom),
+#     each immediately `return_union_bound_to_deck { position: top }`
+#     (G-DSL-RETURN-UNION-BOUND-TO-DECK, landed with this card). Pick 1 is
+#     declinable (`optional: true, cost: true` — the inner PASS is the
+#     printed "may"; a decline aborts the whole clause, matching DCGO's
+#     `Count == 3` gate); picks 2 and 3 are mandatory once engaged (DCGO
+#     commits nothing until 3 are chosen, so the only faithful surface for
+#     "started but did not reach 3" is not to offer it — a partial pick here
+#     would already have moved cards). Ordering: each pick lands on the deck
+#     top at once, so the pick ORDER is the deck order (the 3rd pick ends on
+#     top) — every ordering DCGO's separate "specify the order" prompt can
+#     produce is reachable, with no auto-selection. Then a nested
+#     `if any_permanent(opp Digimon)` guard wraps the mandatory
+#     `select_opponent_permanent` → `de_digivolve { amount: 1, stop_at_level:
+#     3 }` (EX7-070 Clause 1 idiom).
+#
+# ESS — RebootSelfStaticEffect(isInheritedEffect: true) → inherited
+#   `grant_keyword` Reboot.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|-------------|
+# | Std digivolve Black Lv.3 / 2                                  | IMPLEMENTED |
+# | Special digivolve Lv.3 w/[Three Musketeers] in text / 2       | IMPLEMENTED |
+# | [OP][WD] return 3 TM cards (hand/trash) to deck top → De-Digivolve 1 | IMPLEMENTED |
+# | Inherited <Reboot>                                            | IMPLEMENTED |
+
+card: EX7-043
+name: Tankmon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Cyborg]
+attribute: Data
+form: Champion
+
+alt_paths:
+  # Standard printed circle: Black Lv.3 / cost 2.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - color_is: black
+    cost: 2
+  # Special: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - in_text_contains: "Three Musketeers"
+    cost: 2
+
+effects:
+  # ─── [OP][WD] return 3 TM cards from hand/trash to deck top → De-Digivolve 1
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] By returning 3 [Three Musketeers] trait cards from your hand or trash to the top of the deck, De-Digivolve 1 one of your opponent's Digimon"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          trait_has: "Three Musketeers"
+        n: 3
+    process:
+      # Pick 1/3 — declinable ("By returning ..." is a may-pay cost).
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: return_1
+          optional: true
+          cost: true
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Return 3 cards with the [Three Musketeers] trait from your hand or trash to the top of the deck (1/3)"
+      - return_union_bound_to_deck: { binding: return_1, position: top }
+      # Picks 2/3 and 3/3 — mandatory once engaged; guaranteed payable by the
+      # clause-level `count_gte: 3` gate.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: return_2
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Return 3 cards with the [Three Musketeers] trait from your hand or trash to the top of the deck (2/3)"
+      - return_union_bound_to_deck: { binding: return_2, position: top }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: return_3
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Return 3 cards with the [Three Musketeers] trait from your hand or trash to the top of the deck (3/3)"
+      - return_union_bound_to_deck: { binding: return_3, position: top }
+      # De-Digivolve 1 — mandatory, silently skipped when the opponent has no
+      # Digimon (DCGO HasMatchConditionPermanent guard).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: dedigivolve_target
+                filter: { kind: digimon }
+                prompt: "De-Digivolve 1 one of your opponent's Digimon"
+            - de_digivolve:
+                target: dedigivolve_target
+                amount: 1
+                stop_at_level: 3
+
+  # ─── Inherited <Reboot> ─────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "Inherited <Reboot>"

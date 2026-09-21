@@ -1,0 +1,158 @@
+# Exam scenario: Dianamon (BT25-028), clause BT25-028#effect#1 --
+# "When this card would be played, if your opponent has a level 6 or higher
+#  Digimon, reduce the cost by 5."
+#
+# THE WITNESS is the memory delta of a HARD-PLAY: Dianamon prints play cost
+# 12; with p1's Phoenixmon ST1-10 (a vanilla Lv.6) on the board it costs 7,
+# and p0's 5 memory goes to -2 (12 would have been -7). Both sides apply the
+# reduction with no prompt (DCGO: MandatorySelfPlayCostReduction; ours:
+# `kind: cost_reduction`).
+#
+# HOW p0 REACHES 5 MEMORY WITH A Lv.6 OPPOSITE. p0 overshoots on T3 by
+# hard-playing Aegiochusmon BT24-014 (8): 3 -> -5, handing p1 5; p1 hard-plays
+# Phoenixmon (10): 5 -> -5, handing p0 5. Aegiochusmon is quiet when
+# hard-played (no [On Play]; <Decode> needs a non-battle leave) and also
+# gives p0 a second Digimon, which is what makes the DNA half of Dianamon's
+# [All Turns] body reachable in DCGO's helper (it needs two own Digimon) --
+# it still asks nothing because no [GraceNovamon] is in hand.
+#
+# TRIGGERS AFTER THE PLAY. Dianamon's shared [On Play] body (#effect#2) and
+# its "[All Turns] When any Digimon are played" body (#effect#3) both fire on
+# its own play; DCGO opens MultipleSkills over two same-id candidates,
+# answered by ordinal (0 = the [On Play] body, predicted from registration
+# order -- see NOTES-BT25-028.md). The [On Play] body locks Phoenixmon (a bare
+# Lv.6: 0 digivolution cards) with no prompt and then deletes 1 unsuspended
+# opponent Digimon through ONE mandatory SelectPermanentEffect -- Phoenixmon,
+# the only candidate. The [All Turns] body then runs alone and is silent:
+# no opponent Digimon remains, and no [GraceNovamon] is in p0's hand.
+#
+# Memory ledger:
+#   T1 p0 passes                             -> p1 3
+#   T2 p1 passes                             -> p0 3
+#   T3 p0 plays Aegiochusmon (8): 3 -> -5    -> p1 5
+#   T4 p1 plays Phoenixmon (10): 5 -> -5     -> p0 5
+#   T5 p0 plays Dianamon (12 - 5 = 7): 5 -> -2, THE CLAUSE -> p1 2
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_028_pool.json (--decks).
+card: BT25-028
+clause: BT25-028#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Aegiochusmon, Dianamon, inert filler
+      - BT24-014
+      - BT25-028
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - ST1-02
+      # (10+): p0 T3 / T5 turn draws
+      - BT4-010
+      - BT3-007
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the Lv.6), inert filler
+      - ST1-10
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1 T2 / T4 / T6 turn draws
+      - BT1-009
+      - ST1-08
+      - ST1-02
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): hard-play Phoenixmon for 10 (5 -> -5).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 5): THE CLAUSE -- hard-play Dianamon for 7 (5 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-028, from: hand } }
+    expect: { prompt: main_phase }
+  # Two same-card triggers, answered by ORDINAL against each engine's OWN
+  # list. Observed at lowering: our bundle lists the [On Play] body at 0 (its
+  # delete pick is the next live prompt); DCGO's is predicted to list it at 0
+  # as well (registration order in BT25_028.cs). Even if DCGO orders them the
+  # other way the choice is outcome-neutral: the other body runs right after,
+  # and the [All Turns] body is silent in this position on DCGO's side -- see
+  # NOTES-BT25-028.md.
+  # `count:` on a MultipleSkills row is the PICKS THE PROMPT ASKS FOR (always 1 --
+  # MultipleSkills.cs:597-599 passes the literal 1 to TryAnswerStep), NOT the number
+  # of stacked bodies. The stack size is asserted by `candidates:` below. Authored as
+  # `count: 2` until 2026-09-21, which aborted this line before the candidate multiset
+  # was ever compared ('expected count 2 but DCGO asked for count 1').
+  - actor: 0
+    do: { select: { cards: [BT25-028], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-028, BT25-028] }
+  # The mandatory delete: Phoenixmon, p1's only Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # SIM-ONLY: our [All Turns] yes/no gate (`optional: true` in
+  # BT25-028.yaml), declined -- nothing to trash, no [GraceNovamon] in hand;
+  # DCGO runs that body silently. Zero wire rows.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T6 (p1, memory 2): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      turn: 6
+      p0.memory: -2
+      p0.field:
+        - card_id: BT24-014
+          dp: 8000
+          suspended: false
+          sources: []
+        - card_id: BT25-028
+          dp: 12000
+          suspended: false
+          sources: []
+      p1.field: []
+      p1.trash: [ST1-10]

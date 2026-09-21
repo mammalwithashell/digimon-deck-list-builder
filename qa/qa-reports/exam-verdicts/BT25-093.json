@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T07:16:51.208469600+00:00",
+  "clauses": {
+    "BT25-093#effect#0": {
+      "clause_id": "BT25-093#effect#0",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:21.506194800+00:00"
+    },
+    "BT25-093#effect#1": {
+      "clause_id": "BT25-093#effect#1",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4bdbcca3019740331dcb40e2bee74b37330245ecb726a13996c7412a1bd0ea1d",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:22.870271900+00:00"
+    },
+    "BT25-093#effect#2": {
+      "clause_id": "BT25-093#effect#2",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c37cf4f038bca4c5a0d1d30dc30e77c84e67748fb20ff5f1d8320cd12d767dea",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect2.yaml",
+      "recorded_at": "2026-09-19T15:22:49.301833+00:00"
+    },
+    "BT25-093#effect#3": {
+      "clause_id": "BT25-093#effect#3",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Link DP",
+      "text_sha256": "d60295ff4de9afb8fb1c5f21db89512215924e0d76725b5f0a7bbd68228cbb15",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect3.yaml",
+      "recorded_at": "2026-09-19T15:22:50.392968200+00:00"
+    },
+    "BT25-093#effect#4": {
+      "clause_id": "BT25-093#effect#4",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Link Condition",
+      "text_sha256": "9d4716573dac469c1419dcbf9269cd84ee848a841a854e159fbc7d67eb6af6fa",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect4.yaml",
+      "recorded_at": "2026-09-21T07:16:51.208469600+00:00"
+    },
+    "BT25-093#effect#5": {
+      "clause_id": "BT25-093#effect#5",
+      "card_id": "BT25-093",
+      "verdict": "confirmed",
+      "label": "Link Effect",
+      "text_sha256": "10a4ebe079953aefb06a10a7f7086eb3e830739ba23294243b6a2ed4784c46b8",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect5.yaml",
+      "recorded_at": "2026-09-19T15:13:26.949810500+00:00"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:10.905139500+00:00",
+  "clauses": {
+    "EX7-066#effect#0": {
+      "clause_id": "EX7-066#effect#0",
+      "card_id": "EX7-066",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "5ecd5a6a6201ad0161616abc1daf32bea42386ff592040eca3da83a3c7a3a882",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-066-effect0.yaml",
+      "recorded_at": "2026-09-18T13:58:56.493284500+00:00"
+    },
+    "EX7-066#effect#1": {
+      "clause_id": "EX7-066#effect#1",
+      "card_id": "EX7-066",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "2f00c980bf0116297219fed2337562d421ad4676e7c126b23d6e61b3bb8e4dee",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-066-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:10.281761700+00:00"
+    },
+    "EX7-066#effect#2": {
+      "clause_id": "EX7-066#effect#2",
+      "card_id": "EX7-066",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "c18a994c7dcc3b93c7de9f476dbafd6830c3b2b510bd5ec5a14ad41d14738a2b",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-066-effect2.yaml",
+      "recorded_at": "2026-09-19T15:13:10.905139500+00:00"
+    }
+  }
+}

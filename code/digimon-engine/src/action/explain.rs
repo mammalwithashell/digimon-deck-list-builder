@@ -5,7 +5,8 @@ use crate::action::space::{
     decode_attack, decode_breeding_source_select, decode_digivolve, decode_field_effect,
     decode_source_select, ACTION_SPACE_SIZE, ATTACK_END, ATTACK_START, BREEDING_SOURCE_SELECT_END,
     BREEDING_SOURCE_SELECT_START, BREEDING_TARGET, DIGIVOLVE_END, DIGIVOLVE_START,
-    DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN,
+    DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_LINK,
+    FIELD_EFFECT_SLOT_FOR_MAIN,
     FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS,
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, SOURCE_SELECT_END, SOURCE_SELECT_START,
     TRASH_EFFECT_END, TRASH_EFFECT_START,
@@ -281,9 +282,18 @@ fn explain_main(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExpla
         );
         e.source_zone = Some(ActionZone::Hand);
         e.source_index = Some(hand_idx as u16);
-        let e = with_hand_card(e, game, player_id, hand_idx);
+        let mut e = with_hand_card(e, game, player_id, hand_idx);
         let name = main_effect_select::hand_main_match(game, player_id, hand_idx)
             .and_then(|m| m.name_opt());
+        if game.hand_effect_slot_is_link(player_id, hand_idx) {
+            // No `[Hand] [Main]` on this slot: the bit is the from-hand
+            // DigiLink declaration (decoder order: [Main] first, then link).
+            e.label = match &e.card_name {
+                Some(card) => format!("Declare <Link> from hand: {card}"),
+                None => format!("Declare <Link> from hand slot {hand_idx}"),
+            };
+            return e;
+        }
         return finalize_main_effect(e, name);
     }
 
@@ -593,6 +603,12 @@ fn with_breeding_card(
 fn field_effect_label(prefix: &str, perm: u16, effect: u16) -> String {
     if perm == BREEDING_TARGET && effect == FIELD_EFFECT_SLOT_FOR_MAIN {
         format!("{prefix} {effect} in breeding area")
+    } else if effect == FIELD_EFFECT_SLOT_FOR_LINK {
+        // DigiLink Shape-B: the standing Digimon at `perm` declares its
+        // `<Link>` (host chosen by the pending selection that follows).
+        // Named so a legal-action listing distinguishes it from the [Main]
+        // sub-slot on the same permanent.
+        format!("Declare <Link> from slot {perm}")
     } else {
         format!("{prefix} {effect} on slot {perm}")
     }

@@ -597,6 +597,20 @@ impl Game {
         };
         for (handle, snapshot) in kill_list.iter().zip(snapshots.iter()) {
             let queue_start = self.effect_queue.len();
+            // 16-12: capture WHO this carrier battled now, while the attack is
+            // live and the carrier is still in its slot -- see
+            // `TriggerContext::battle_opponent_card`.
+            let battle_opponent_card = (snapshot.cause
+                == crate::trigger_context::EventCause::BattleDeletion)
+                .then(|| self.live_battle_opponent_of(*handle))
+                .flatten()
+                .and_then(|opp| {
+                    self.player(opp.player)
+                        .battle_area
+                        .get(opp.index as usize)
+                        .and_then(|perm| perm.card_sources.last())
+                        .map(|c| c.handle())
+                });
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnDeletion,
                 crate::selection::TriggerSource::Permanent(*handle),
@@ -613,9 +627,63 @@ impl Game {
                     trigger.affected_player = Some(snapshot.former_controller);
                     trigger.subject =
                         Some(crate::trigger_context::EventSubject::Permanent(*handle));
+                    trigger.battle_opponent_card = battle_opponent_card;
                 }
             }
         }
+    }
+
+    /// The other combatant of the LIVE `pending_attack`, if `handle` is one of
+    /// its two sides. `None` with no attack in flight, on a direct player
+    /// attack, or for a non-combatant.
+    pub(crate) fn live_battle_opponent_of(
+        &self,
+        handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let defender = match pa.effective_target {
+            crate::AttackTarget::Digimon(h) => h,
+            crate::AttackTarget::Player(_) => return None,
+        };
+        if handle == pa.attacker {
+            Some(defender)
+        } else if handle == defender {
+            Some(pa.attacker)
+        } else {
+            None
+        }
+    }
+
+    /// Resolve the battle opponent for the effect currently resolving.
+    ///
+    /// Prefers the identity captured at TRIGGER time
+    /// (`TriggerContext::battle_opponent_card`) and finds where that Digimon is
+    /// NOW; if it was captured but is no longer in a battle area (mutual
+    /// destruction, or it left play while a prompt was parked) the answer is
+    /// `None` -- never a fall-through to whatever attack is live at resolution.
+    /// Only with no captured identity does it read the live `pending_attack`.
+    pub(crate) fn resolving_battle_opponent_of(
+        &self,
+        handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        if let Some(card) = self
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.battle_opponent_card)
+        {
+            for (pid, player) in self.players.iter().enumerate() {
+                for (index, perm) in player.battle_area.iter().enumerate() {
+                    if perm.card_sources.iter().any(|c| c.handle() == card) {
+                        return Some(PermanentHandle {
+                            player: pid as crate::enums::PlayerId,
+                            index: index as u8,
+                        });
+                    }
+                }
+            }
+            return None;
+        }
+        self.live_battle_opponent_of(handle)
     }
 
     /// Enqueue global OnAnyDeletion and OnLeaveField per survivor with

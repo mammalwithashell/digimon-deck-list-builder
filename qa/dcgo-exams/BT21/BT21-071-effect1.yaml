@@ -1,0 +1,100 @@
+# Exam scenario: Scopemon (BT21-071), clause BT21-071#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three
+#  Musketeers] trait from your hand or trash as 1 of your Digimon's bottom
+#  digivolution card, gain 1 memory."
+#
+# This file exercises the [On Play] arm (both arms share one coroutine in
+# BT21_071.cs). The tuck card is Bind Red Trigger P-180 ([Three Musketeers]
+# trait) from the hand; the trash is empty. The host is Scopemon itself (the
+# only own Digimon; DCGO's CanTuckUnderCondition admits it).
+#
+# MEMORY IS ENGINEERED AWAY FROM ZERO. At the default memory 3, playing
+# Scopemon (cost 4) lands on -1 and the +1 lands on exactly 0 -- whether the
+# turn then continues is a rules edge this file must not depend on. So P1
+# overspends on T2 (Biyomon 2, then Garudamon ST1-08 from hand for 6: 3 -> 1
+# -> -5), handing P0 FIVE memory on T3: Scopemon takes it to 1, THE CLAUSE
+# takes it to 2, and P0 still holds the turn for the trailing pass. Garudamon
+# has only a [When Digivolving] effect, so playing it prompts nothing.
+#
+# PROMPT SHAPE (BT21_071.cs, region "On Play"): SetUpActivateClass(...,
+# isOptional: true) -> OptionalSkill yes/no. The zone question is asked ONLY
+# when both hand and trash qualify (SetBoolSelection); with the trash empty
+# the script calls UserSelectionManager.SetBool(true) directly, which sets
+# the value with no RPC and therefore consumes NO wire row. Then
+# SelectHandEffect(canNoSelect: true), SelectPermanentEffect(canNoSelect:
+# true), AddDigivolutionCardsBottom, AddMemory(1).
+card: BT21-071
+clause: BT21-071#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-071, P-180, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # "By placing ... gain 1 memory" is optional in DCGO: take it. Wire-only:
+  # our engine parks no separate yes/no gate here -- its single hand+trash
+  # union pick is itself declinable, and UnionZone is outside the
+  # OptionalSkill+pick fold (adapter.rs kind_is_pick_shaped), so the gate
+  # rides the wire as a DCGO-only row.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # The [Three Musketeers] trait card from hand (single zone: no zone menu).
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # The host: Scopemon itself.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory 2 -- still P0's turn. The assert reads the pre-step state here.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [P-180] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }

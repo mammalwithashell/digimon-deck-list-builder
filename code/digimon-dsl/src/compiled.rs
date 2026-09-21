@@ -359,6 +359,11 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
+    /// Card-subject leaf: the candidate has ≥1 non-App-Fusion digivolve
+    /// route onto the permanent bound under this name. Compiled form of
+    /// `can_digivolve_onto`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    #[serde(default)]
+    pub can_digivolve_onto: Option<String>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,
@@ -375,6 +380,16 @@ pub struct CompiledPredicate {
     /// G-DSL-SOURCE-COUNT-FILTERED.
     #[serde(default)]
     pub source_count: Option<(Box<CompiledPredicate>, u8)>,
+    /// `(filter, at_least)` — count of LINK cards (`Permanent.linked_cards`)
+    /// matching `filter` must be ≥ `at_least`. Compiled form of the
+    /// `link_card_count` leaf. G-DSL-LINK-CARD-COUNT-FILTERED.
+    #[serde(default)]
+    pub link_card_count: Option<(Box<CompiledPredicate>, u8)>,
+    /// Permanent-subject leaf: some card in `zones` of `of` matches `filter`
+    /// AND can digivolve onto this permanent. Compiled form of
+    /// `has_digivolve_candidate`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+    #[serde(default)]
+    pub has_digivolve_candidate: Option<CompiledDigivolveCandidate>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -577,6 +592,14 @@ pub struct CompiledPredicate {
     /// predicate is evaluated as a `Card` subject against each returned card
     /// identity in the per-effect result log. G-ANY-RETURNED-CARD-PREDICATE.
     pub returned_card_matching: Option<Box<CompiledPredicate>>,
+    /// Bare-bool "this effect trashed >=1 hand card" result predicate.
+    /// G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub effect_trashed_any_hand_card: Option<bool>,
+    /// Filtered variant of `effect_trashed_any_hand_card`: the inner predicate
+    /// is evaluated as a `Card` subject against each hand card trashed by
+    /// this effect (result log `trashed_from_hand`). Driver P-212.
+    /// G-DSL-EFFECT-TRASHED-HAND-CARD.
+    pub trashed_hand_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
     /// DP-threshold sibling of `effect_deleted_any_opponent_digimon`: true iff
@@ -616,8 +639,12 @@ pub struct CompiledPredicate {
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
-    /// `on_discard_hand`: true when the causing effect is the observer's own.
+    /// `on_discard_hand` / `on_add_digivolution_cards`: true when the causing
+    /// effect is the observer's own.
     pub event_caused_by_own_effect: Option<bool>,
+    /// `on_add_digivolution_cards`: ANY card of the just-placed batch matches
+    /// this card predicate (DCGO `cardCondition`). G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub event_added_card_any: Option<Box<CompiledPredicate>>,
     /// True when this permanent was played by an effect (OnPlay firing).
     /// G-ENGINE-ON-DISCARD-HAND.
     pub played_by_effect: Option<bool>,
@@ -759,6 +786,17 @@ pub struct CompiledExistential {
     pub predicate: CompiledPredicate,
 }
 
+/// Compiled form of `has_digivolve_candidate` — "some card in `zones` of `of`
+/// matches `filter` and has a normal-digivolve route onto the subject
+/// permanent". `zones` is validated to `Hand` / `Trash` only.
+/// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDigivolveCandidate {
+    pub of: CompiledPlayerRef,
+    pub zones: Vec<CompiledZone>,
+    pub filter: Option<Box<CompiledPredicate>>,
+}
+
 /// Compiled form of `no_face_up_security_named`. Exactly one of
 /// `card_number_is` / `name_is` / `color_is` is populated.
 /// G-PRED-NO-FACE-UP-SECURITY-NAMED (+ color arm for EX10-020 / Q3).
@@ -875,6 +913,14 @@ pub enum CompiledPerSelector {
         of: CompiledPlayerRef,
         filter: Option<Box<CompiledPredicate>>,
     },
+    /// Number of distinct card names among the matching cards / permanents in
+    /// `zone` for `of` (synth-identity-aware on the field). Drives EX7-066's
+    /// per-different-name DP cap. G-DSL-FORMULA-DISTINCT-NAMES-COUNT.
+    DistinctNamesCountScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+        filter: Option<Box<CompiledPredicate>>,
+    },
     /// Count of the effect carrier's own digivolution sources (beneath its top
     /// card) matching `filter`. Composes in `BasePerDelta` to scale a numeric
     /// by source count. Drives EX3-014's scaling DP cap.
@@ -897,6 +943,9 @@ pub enum CompiledPerSelector {
     /// Link cards on the effect carrier's OWN permanent (`ctx.source_permanent`).
     /// Per-host sibling of `OwnLinkCardCount`. G-DSL-LINK-N-CARDS-PER-HOST.
     SourceLinkCardCount,
+    /// Distinct rules colors (synth identity) of the effect carrier.
+    /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT (BT8-084).
+    SourceRulesColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -997,6 +1046,12 @@ pub enum CompiledDeclarativeClause {
         security_attack: Option<i32>,
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
+        /// Traits ADDED to each matched permanent while the aura is active
+        /// (`ModifierType::ChangeTraits`, `ModifierPayload::Traits { add,
+        /// replace: false }`). No `skip_serializing_if`: bincode round-trip.
+        /// G-DSL-AURA-GRANT-TRAITS (EX7-010 Deputymon).
+        #[serde(default)]
+        grant_traits: Vec<String>,
         modifier: Option<String>,
         /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
         /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
@@ -1190,6 +1245,12 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// An EFFECT placed cards into a permanent's digivolution cards
+    /// (`when: on_add_digivolution_cards`); lowers to
+    /// `EffectTiming::OnAddDigivolutionCards`. Scope-gate via `active_when:`
+    /// (`event_host_permanent_is_source`, `event_caused_by_own_effect`,
+    /// `event_added_card_any`). G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    OnAddDigivolutionCards,
     /// A digivolution source RETURNED to the bottom of a player's deck (not
     /// trashed). Galacticmon / Vemmon-LIBERATOR observer (BT21-058, BT18-065).
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
@@ -1201,6 +1262,8 @@ pub enum CompiledTiming {
     OnSecurity,
     OnOptionPlaced,
     OnOptionTrashed,
+    /// Board-wide "a player uses an Option card" observer. G-DSL-ON-USE-OPTION-TIMING.
+    OnUseOption,
     OnPlaceSecurity,
     OnAddedToSecurity,
     Main,
@@ -1331,6 +1394,15 @@ pub enum CompiledStep {
     Draw {
         of: CompiledPlayerRef,
         count: u8,
+    },
+    /// Formula-valued draw (`draw: { of, count: <formula> }`), evaluated at
+    /// resolution time against the effect carrier and clamped at 0. Mirror of
+    /// the literal `Draw` with runtime-computed magnitude — EX7-013 "draw
+    /// until you have 6 in your hand" = `max(6 - hand_count, 0)`.
+    /// G-DSL-DRAW-FORMULA-COUNT.
+    DrawFn {
+        of: CompiledPlayerRef,
+        formula: CompiledFormula,
     },
     TrashFromTop {
         of: CompiledPlayerRef,
@@ -1464,6 +1536,16 @@ pub enum CompiledStep {
     },
     DeleteBoundPermanents {
         binding: String,
+    },
+    /// Batched simultaneous deletion of several separately-bound single
+    /// permanents (EX7-071). G-DSL-DELETE-PERMANENTS-BATCH.
+    DeletePermanents {
+        targets: Vec<CompiledBindingRef>,
+    },
+    /// Batched "delete all permanents matching `over`" (BT6-105).
+    /// G-DSL-DELETE-ALL-PERMANENTS.
+    DeleteAllPermanents {
+        over: CompiledPredicate,
     },
     /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR (EX9-074 Kimeramon Branch B):
     /// per game-color, a mandatory pick of 1 not-yet-chosen opponent Digimon of
@@ -1783,6 +1865,12 @@ pub enum CompiledStep {
     },
     TrashUnionBound {
         binding: String,
+    },
+    /// G-DSL-RETURN-UNION-BOUND-TO-DECK — return a `select_union_zone`-bound
+    /// card from its true origin zone to the top/bottom of its owner's deck.
+    ReturnUnionBoundToDeck {
+        binding: String,
+        position: CompiledStackPosition,
     },
     PlayFromSecurity,
     PlayFromMaterials {

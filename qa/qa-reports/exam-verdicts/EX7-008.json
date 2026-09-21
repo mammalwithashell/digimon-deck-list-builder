@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T04:44:56.488824400+00:00",
+  "clauses": {
+    "EX7-008#effect#0": {
+      "clause_id": "EX7-008#effect#0",
+      "card_id": "EX7-008",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "a10e78a1cfd57f8ed800bbb13075565f46ab02393f81209eb4435e8b666306d3",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-008-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:13.279937200+00:00"
+    },
+    "EX7-008#effect#1": {
+      "clause_id": "EX7-008#effect#1",
+      "card_id": "EX7-008",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "ec09c3a770835b1ea6d2db8d9582066eaba3023ff43af59e7fcde596bf3ca786",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-008-effect1.yaml",
+      "reason": "DIVERGED at step 7 (2nd reveal pick row): p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[... , EX7-051] -- DCGO adds the FIRST picked card to hand before asking the second pick; ours adds both after the last pick. End state agrees (no downstream rows). RE-MEASURED 2026-09-21 (close-out job three-musketeers-2) against a FRESH oracle pass on DCGO scripted-v16 (commit fc67f9ae6), sidecar 20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl: --all-diffs prints this ONE p0.hand field at step 7 and nothing else, reproducing the 2026-09-18 reading exactly. TRIAGE UNCHANGED -- DCGO QUIRK, no fix: the printed text is ONE 'Add' with two targets (general_rule.pdf 15-15-10-1, a single effect selecting multiple targets with different conditions); DCGO's per-condition SelectCardEffect(Mode.AddHand) loop (RevealLibrary.cs RevealDeckTopCardsAndSelect) moves each pick as its prompt closes, an implementation artifact that is outcome-neutral. See docs/DCGO_EXAM.md 'Rows where one side looks rules-wrong' (RevealBucket add timing) and G-EXAM-REVEAL-BUCKET-ADD-TIMING in docs/RUST_ENGINE_GAPS.md.",
+      "recorded_at": "2026-09-21T04:44:56.488824400+00:00"
+    },
+    "EX7-008#inherited#0": {
+      "clause_id": "EX7-008#inherited#0",
+      "card_id": "EX7-008",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-008-inherited0.yaml",
+      "recorded_at": "2026-09-18T07:55:14.662036700+00:00"
+    }
+  }
+}

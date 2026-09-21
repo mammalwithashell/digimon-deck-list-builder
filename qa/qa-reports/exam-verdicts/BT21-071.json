@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T08:01:48.051247700+00:00",
+  "clauses": {
+    "BT21-071#effect#0": {
+      "clause_id": "BT21-071#effect#0",
+      "card_id": "BT21-071",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "36fb57c6b8d9719e4fc576d06ce37e1ee2a728aa4c0e27e889558ea750de4c15",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-effect0.yaml",
+      "recorded_at": "2026-09-18T08:01:48.051247700+00:00"
+    },
+    "BT21-071#effect#1": {
+      "clause_id": "BT21-071#effect#1",
+      "card_id": "BT21-071",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "ffc67eb44dfce5aefc9e17c057fa6663f87009beb8996011160b4ba8fa0b4540",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-effect1.yaml",
+      "recorded_at": "2026-09-18T07:55:18.491014600+00:00"
+    },
+    "BT21-071#effect#2": {
+      "clause_id": "BT21-071#effect#2",
+      "card_id": "BT21-071",
+      "verdict": "confirmed",
+      "label": "Special Rule",
+      "text_sha256": "59fa855d65f388d17ea29e8718796e2545e37f51f53c477db3a6984287d483aa",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-effect2.yaml",
+      "recorded_at": "2026-09-18T08:00:44.621441800+00:00"
+    },
+    "BT21-071#inherited#0": {
+      "clause_id": "BT21-071#inherited#0",
+      "card_id": "BT21-071",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "7210d6b5b482795bee14adbaaefa8b79e784e9b1be6aba9d3397b1b3420a3516",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-inherited0.yaml",
+      "recorded_at": "2026-09-18T08:00:45.076824500+00:00"
+    },
+    "BT21-071#inherited#1": {
+      "clause_id": "BT21-071#inherited#1",
+      "card_id": "BT21-071",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "c2597d0900d78673e6258b6da3959c05fa48c91442ff6625cd109326f1f32d6c",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-inherited1.yaml",
+      "recorded_at": "2026-09-18T08:00:45.571762600+00:00"
+    }
+  }
+}

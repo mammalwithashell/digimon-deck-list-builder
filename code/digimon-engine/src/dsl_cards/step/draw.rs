@@ -12,6 +12,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.draw(p, *count);
             true
         }
+        CompiledStep::DrawFn { of, formula } => {
+            // G-DSL-DRAW-FORMULA-COUNT: runtime-evaluated draw count (EX7-013
+            // "draw until you have 6 in your hand" = max(6 - hand, 0)).
+            // Evaluated against the effect carrier so source-relative leaves
+            // read "this Digimon"; a non-positive result draws nothing.
+            let p = resolve_player(ctx, *of);
+            let target = ctx
+                .source_permanent
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: ctx.player,
+                    index: 0,
+                });
+            let n = crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0) as usize;
+            if n > 0 {
+                ctx.draw(p, n.min(u8::MAX as usize) as u8);
+            }
+            true
+        }
         CompiledStep::TrashFromTop {
             of,
             count,

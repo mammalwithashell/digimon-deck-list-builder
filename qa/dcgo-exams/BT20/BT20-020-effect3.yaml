@@ -1,0 +1,180 @@
+# Exam scenario: Imperialdramon: Fighter Mode (BT20-020), clause
+# BT20-020#effect#3 -- "[When Digivolving] Your opponent can't play Digimon or
+# Tamers by effects until the end of their turn. Then, if [Imperialdramon:
+# Dragon Mode] is in this Digimon's digivolution cards, trash your opponent's
+# top security card."
+#
+# THE WITNESS is the second sentence: Fighter Mode digivolves onto a
+# hard-played Dragon Mode (BT20-076), so Dragon Mode IS in the digivolution
+# cards and p1's security falls 5 -> 4 with the top card (Biyomon ST1-02,
+# stack[9]) in p1's trash. Mandatory on both sides (BT20_020.cs
+# `SetUpActivateClass(..., -1, false, ...)`; ours has no `optional`), and the
+# `IDestroySecurity` / `trash_top_security` takes no pick -- no prompt.
+#
+# THE FIRST SENTENCE (the can't-play-by-effect gate on p1) is witnessed too
+# (added on the resumed audit -- the crashed draft left it unmeasured): p1's
+# SECOND security card is Tai Kamiya ST1-12, whose "[Security] Play this card
+# without paying the cost" is a Tamer played by p1's own effect. Fighter Mode
+# attacks on the digivolve turn, the check flips Tai, and the gate stops the
+# play: DCGO's CanNotPutFieldClass (cardCondition Digimon/Tamer/DigiEgg,
+# cardEffectCondition: effect source owned by the opponent) makes
+# `CanPlayAsNewPermanent` false, so `PlaySelfTamerSecurityEffect`'s
+# CanActivateCondition fails (CardEffectFactory.cs:165-169) and the card is
+# trashed; ours: player modifier CannotPlayTamerByEffect, enforced in
+# game_actions/play.rs. Mandatory, no prompt on either side. The book's
+# `quiet-opponent` carries Tai x4 (in place of ST1-13) for this.
+#
+# PREDICTED DIVERGENCE -- RESOLVED 2026-09-19 (engine fix in
+# effect_context/selections.rs play_pending_security; oracle re-diff CLEAN).
+# History: (ours, ENGINE -- measured sim-side while authoring,
+# 2026-09-18): our engine PLAYED Tai anyway. The modifier is installed, but a
+# security-flipped "[Security] Play this card" resolves through
+# `CompiledStep::PlayFromSecurity` -> `ctx.play_pending_security()`
+# (dsl_cards/step/play_digivolve.rs ~805), which marks the parked
+# `pending_security` card as played WITHOUT consulting
+# CannotPlayTamerByEffect / CannotPlayDigimonByEffect -- those are checked
+# only on the from-hand / from-trash ByEffect paths (game_actions/mod.rs ~440,
+# game_actions/play.rs ~140). Logged as G-ENGINE-PLAY-PENDING-SECURITY-
+# IGNORES-CANNOT-PLAY-BY-EFFECT (docs/RUST_ENGINE_GAPS.md, NOTES-BT20-020.md).
+# The oracle run reported `p1.field` / `p1.trash` at step 11 until the fix.
+#
+# Both security removals (the trash, then the check) trigger the [All Turns]
+# observer (#effect#4) on both sides; p1's board is empty, so it has no target
+# and asks nothing.
+#
+# THE LINE is BT20-020-effect0.yaml's (see it for the memory ledger and why the
+# [Dragon Mode] alt path is the only legal one).
+#
+# Book: qa/dcgo-exams/BT20/tm_bt20_020_pool.json (--decks). p0's deck is
+# Fighter Mode x4 + Dragon Mode BT20-076 x4 over the quiet ST-1 filler; p1 is
+# the quiet ST-1 opponent.
+card: BT20-020
+clause: BT20-020#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Dragon Mode (hard-played), Fighter Mode, inert filler
+      - BT20-076
+      - BT20-020
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-imperialdramon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card here. stack[9] = the security card that gets trashed
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-12
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Imperialdramon: Dragon Mode (BT20-076) for 7
+  # (3 -> -5). Its [On Play] "delete 1 of your opponent's Digimon with 11000 DP
+  # or less" has no target on p1's empty board (BT20_076.cs guards the pick with
+  # HasMatchConditionPermanent; ours with `if: any_permanent`), and the "if DNA
+  # digivolving" rider is off for a hard play. Silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT20-076, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Fighter Mode onto Dragon Mode for 2 (3 -> 1)
+  # via "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2". The printed Red /
+  # Purple Lv.5 circles do not apply to a Lv.6 source, so this is the only
+  # legal path -- one cost, no cost-choice prompt. [When Digivolving] then
+  # installs the can't-play-by-effect gate on p1 and, because Dragon Mode is in
+  # the digivolution cards, trashes p1's top security card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT20-020 } }
+    expect: { prompt: main_phase }
+  # SENTENCE 1's WITNESS. Fighter Mode (on the board since T3 as Dragon Mode,
+  # so attack-legal, and unsuspended) attacks the player. No <Raid> window:
+  # p1 has no Digimon. The check flips p1's new top card, Tai Kamiya ST1-12
+  # -- "[Security] Play this card without paying the cost" -- which is a
+  # TAMER played by p1's EFFECT, exactly what the gate forbids: it is trashed
+  # instead of played. No prompt on either side.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # One step past the clause; p0 keeps the turn on 1 and passes out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Sentence 2: after the digivolve, p1's top security card is in the trash.
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p0.field:
+        - card_id: BT20-020
+          dp: 13000
+          suspended: false
+          sources: [BT20-076]
+  # Sentence 1: the gated Tai is trashed, not played. Backfilled from the
+  # oracle (CLEAN re-diff, 2026-09-19) after the engine gap closed --
+  # play_pending_security now consults CannotPlayTamerByEffect.
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.security: 3
+      p1.trash: [ST1-02, ST1-12]
+      p1.field: []
+      p0.field:
+        - card_id: BT20-020
+          dp: 13000
+          suspended: true
+          sources: [BT20-076]

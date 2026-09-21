@@ -28,20 +28,55 @@ effects:
               - trait_has: TS
           prompt: "Return 1 [TS] trait Option card from your trash to your hand"
       - add_to_hand_from_trash: { of: you, card: pick }
+      # "If this effect didn't return" reads the trash -> hand move, which
+      # `add_to_hand_from_trash` records in the result log's `added_to_hand`
+      # (NOT `returned_cards`, which tracks field/deck returns). Gating on
+      # `effect_returned_any_card` was always-false here, so the draw fired
+      # even after a successful return (DCGO exam BT25-091#effect#1). DCGO
+      # BT25_091.cs:52-93 draws only on `!returned`, set iff a card was picked.
       - if:
-          condition: { effect_returned_any_card: false }
+          condition: { effect_added_any_card_to_hand: false }
           then:
             - draw: { of: you, count: 1 }
 
   # [Your Turn] When you use [TS] trait Option cards, by suspending this Tamer,
   # 1 of your opponent's Digimon can't attack until their turn ends.
   #
-  # BLOCKED (dsl): no DSL timing lowers the engine `OnUseOption`
-  # (EffectTiming::OnUseOption exists in enums.rs but `digimon-dsl/src/compile.rs`
-  # has no `on_use_option` / `when_you_use_option` token). Tracked as DSL gap
-  # G-DSL-ON-USE-OPTION-TIMING. Authoring this clause now would require a timing
-  # the compiler rejects. The suspend-self cost + CannotAttack (UntilOpponentTurnEnd)
-  # payload are otherwise expressible; only the trigger timing is missing.
+  # `when: on_use_option` (G-DSL-ON-USE-OPTION-TIMING, RESOLVED 2026-09-15)
+  # fires AFTER the used Option's own body (DCGO stacks `OnUseOption`; BT3-096
+  # Q&A). The trigger context now carries the using player and the used card
+  # (`TriggerSource::OptionUsed`, G-ENGINE-ON-USE-OPTION-EVENT-CARD,
+  # 2026-09-18), so "when YOU use [TS] trait Option cards" is
+  # `event_target_owner: you` + `event_card_trait_has: TS` — the two facts
+  # DCGO's `CanTriggerWhenOwnerUseOption(hashtable, OptionTrigger, ..)` reads.
+  # "by suspending this Tamer" is a §15-7-1 optional cost: `optional: true` +
+  # `activation_cost: { suspend_self: true }` (BT3-096 / BT25-086 idiom); DCGO
+  # gates the offer on `CanActivateSuspendCostEffect` (Monica unsuspended),
+  # mirrored by `source_is_unsuspended`. The target pick is mandatory
+  # (DCGO `canNoSelect: false`). The offer is NOT gated on the opponent having
+  # a Digimon: DCGO's CanActivateCondition checks only the suspend cost, so
+  # Monica may still be suspended for nothing (BT25_091.cs:119-123); only the
+  # pick is skipped (`HasMatchConditionPermanent`, :142).
+  - when: on_use_option
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When you use a [TS] trait Option card, you may suspend this Tamer: 1 opponent Digimon can't attack until their turn ends"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_card_trait_has: TS
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          bind_as: locked
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon can't attack until their turn ends"
+      - add_modifier:
+          target: locked
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
 
   # [Security] Play this card without paying the cost.
   - when: on_security

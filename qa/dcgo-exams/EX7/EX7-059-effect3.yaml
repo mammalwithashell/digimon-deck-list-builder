@@ -1,0 +1,167 @@
+# Exam scenario: BeelStarmon ACE (EX7-059), clause EX7-059#effect#3 --
+# "[When Attacking] [Once Per Turn] By trashing 1 Option card from this
+#  Digimon's digivolution cards, you may use 1 [Three Musketeers] trait
+#  Option card from your hand without paying the cost."
+#
+# THE LINE. The ACE needs an Option among ITS OWN digivolution cards and a
+# [Three Musketeers] trait Option in hand. Two copies of Bind Red Trigger
+# (P-180) do both jobs:
+#   * copy #1 goes under Megadramon (EX7-011) through Megadramon's own [On
+#     Play] on T3 (the EX7-011-effect1.yaml shape, minus the delete: P1 has
+#     no Digimon, and EX7_011.cs guards the delete pick with
+#     HasMatchConditionPermanent) and is inherited by the ACE on T5;
+#   * copy #2 stays in hand and is the Option THE CLAUSE uses for free.
+# The ACE attacks P1's security the turn it digivolves (Megadramon has been
+# on the field since T3). Witnesses: copy #1 in P0's trash, copy #2 UNDER the
+# ACE (P-180's [Main] tuck), P1's security 5 -> 4 (P-180's [Main]) -> 3 (the
+# attack's own check).
+#
+# P1 FIELDS NOTHING, on purpose. P-180's "When effects trash this card from
+# digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon"
+# WOULD fire off THE CLAUSE's cost. Our engine resolves such a trigger in the
+# middle of the trashing effect where DCGO stacks it (the open engine finding
+# in ../P/NOTES-P-180.md, general_rule.pdf 15-8-3-2), and THE CLAUSE still
+# has a prompt to ask after the trash -- so with a target on the board the
+# two engines would order those prompts differently and the oracle run would
+# measure that finding, not this card. With no opponent Digimon P_180.cs's
+# CanUseCondition (HasMatchConditionPermanent) is false and our trigger has
+# no target: nothing is asked or changed on either side.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4); its [On Play] seats P-180 #1.
+#   T4 (P1, 4): pass.
+#   T5 (P0, 3): the ACE over Megadramon for 3 (3 -> 0, draw 1). Its mandatory
+#               [When Digivolving]: no Option in the trash (half 1 skipped);
+#               P-180 #2 is a candidate for the "you may use" half --
+#               DECLINED, it is kept for the attack. Then the ACE attacks
+#               security. THE CLAUSE: accept; trash P-180 #1; use P-180 #2
+#               free (P1 security 5 -> 4; tuck under the ACE). The attack
+#               checks Biyomon (3000): 4 -> 3. Trailing step: P0's pass.
+#
+# PROMPT SHAPE (EX7_059.cs "When Attacking": SetUpActivateClass(..., 1, TRUE,
+# ...), CanActivate = an Option among THIS permanent's DigivolutionCards):
+#   1. OptionalSkill. Ours: the clause is `optional: true` over a body whose
+#      first step is the declinable cost pick, so ONE prompt is gate and pick
+#      (kind UnionZone over `material`, not fold-shaped): DCGO's gate is a
+#      DCGO-ONLY row.
+#   2. SelectCardEffect(Root.Custom over DigivolutionCards, IsOption,
+#      maxCount 1, canNoSelect: () => true) -- DCGO-only by identity; ours is
+#      the single-candidate union pick the resolver cannot name by `cards:`
+#      (it scans hand and trash only), answered through the
+#      single-accept-id `yes:` path, sim-only.
+#   3. ITrashDigivolutionCards; `if (trashed)` and a hand candidate exists ->
+#      SelectHandEffect(maxCount 1, canNoSelect: true) -- SHARED with our
+#      declinable `use_option_from_hand` pick.
+#   4. PlayOptionCards(payCost: false) -> P_180.cs "Main" (mandatory):
+#      security trash, then ONE SelectPermanentEffect(canNoSelect: false) for
+#      the tuck -- SHARED.
+# Megadramon's [On Play] rows are the EX7-011-effect1.yaml shape: DCGO-only
+# OptionalSkill (our union pick is gate and pick), SHARED SelectHandEffect;
+# the hand-or-trash menu is skipped (`SetBool(canSelectHand)`, trash empty).
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_059_pool.json (--decks).
+card: EX7-059
+clause: EX7-059#effect#3
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand: two P-180. stack[5..9] security (never flipped: P1
+    # never attacks -- so holding the ACE from the start opens no counter
+    # window). Draws: T3, T5, then the digivolution draw.
+    stack: [EX7-011, EX7-059, P-180, P-180, ST1-02,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-008, EX7-010, ST1-02]
+    rest: tm-beelstarmon-ace
+  p1:
+    # stack[9] = Biyomon (trashed by P-180's [Main]); stack[8] = Biyomon (the
+    # card the ACE's attack checks: 3000 vs 11000, no [Security] effect).
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent-059
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4); [On Play] seats P-180 #1 under it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): the ACE over Megadramon for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-059 } }
+    expect: { prompt: main_phase }
+  # The ACE's [When Digivolving], "you may use" half: P-180 #2 is offered --
+  # DECLINED (kept for the attack).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # The ACE attacks P1's security.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. 1: DCGO's optional gate (wire-only).
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # 2: the Option to trash from the ACE's digivolution cards -- P-180 #1.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # 3: the [Three Musketeers] trait Option to use for free -- P-180 #2.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # 4: P-180's [Main]: security trashed with no prompt; the tuck target.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The attack resolves (Biyomon checked and lost). One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 19
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: [P-180]
+      p0.field:
+        - { card_id: EX7-059, dp: 11000, suspended: true, sources: [EX7-011, P-180] }
+      p0.hand: [EX7-008, EX7-010, ST1-02, ST1-02]
+      p1.field: []
+      p1.security: 3
+      p1.trash: [ST1-02, ST1-02]

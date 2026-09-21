@@ -1,0 +1,161 @@
+# Exam scenario: Gundramon (EX7-048), clause EX7-048#effect#2 --
+# "[On Play] [When Digivolving] Reveal the top 6 cards of your deck. You may
+#  use 1 [Three Musketeers] trait Option card among them without paying the
+#  cost. Return the rest to the top or bottom of the deck."
+#
+# This file exercises the [When Digivolving] arm WITH the use taken
+# (EX7_048.cs registers one shared body for both timings through
+# ActivateClassesForSharedEffects). EX7-048-effect0.yaml is the same entry
+# with NO candidate among the six (the "return the rest" half alone).
+#
+# WHY NOT THE [On Play] ARM -- an ENGINE FINDING (NOTES-EX7-048.md). The
+# first draft hard-played Gundramon (12: 3 -> -9) and picked P-180 from the
+# reveal. Our engine accepted the pick and then SILENTLY DID NOT USE the
+# Option: no security trash, no tuck, P-180 went back to the deck with the
+# remainder. Cause: `Game::option_legal_play_modes` (game_actions/mod.rs)
+# filters play modes by `(memory - PRINTED use cost) >= -10` even under
+# `OptionCostPolicy::Free`, so at memory -9 a cost-6 Option has no legal mode
+# and `play_option_core` returns Invalid. "Without paying the cost" pays
+# nothing, so no affordability test applies (DCGO: PlayOptionCards(payCost:
+# false)). On that arm an oracle run could only abort at DCGO's tuck prompt
+# and measure the engine gap instead of this clause. On THIS arm the gauge
+# reads -1 when the Option is used (-1 - 6 = -7), the gate passes, and both
+# engines walk the same sequence.
+#
+# THE LINE. Megadramon (EX7-011) on T3, Gundramon over it on T5 for 4 (the
+# special line, measured by EX7-048-effect0.yaml). The six revealed cards
+# (stack[13..18]) hold exactly ONE candidate: Bind Red Trigger (P-180). It is
+# used for free: "[Main] Trash your opponent's top security card. Then, place
+# this card as the bottom digivolution card of 1 of your [Three Musketeers]
+# trait Digimon." P-180 is RED and P0 fields only the black Gundramon: legal
+# through P-180's own ignore-colour sentence (Gundramon prints the trait) --
+# the confirmed P-180-effect1.yaml reading. Witnesses: P1's security 5 -> 4,
+# Biyomon in P1's trash, P-180 UNDER Gundramon, and memory still -1 (the use
+# cost of 6 was not paid).
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Megadramon (7: 3 -> -4). No prompt (no TM Option held).
+#   T4 (P1, 4): pass.
+#   T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1, draw 1). THE
+#               CLAUSE: reveal six; use P-180; tuck it under Gundramon; the
+#               other five to the deck bottom. Memory -1 hands the turn over.
+#   T6 (P1, 1): breeding decision -- the trailing step.
+#
+# PROMPT SHAPE (EX7_048.cs "Shared OP / WD", optional: false -> no
+# OptionalSkill; CardEffectCommons/RevealLibrary.cs):
+#   1. SimplifiedRevealDeckTopCardsAndSelect(6, ONE Custom condition,
+#      maxCount 1, canNoSelect: true): with a candidate revealed, ONE
+#      SelectCardEffect over the revealed cards -- SHARED with our
+#      `select_reveal_buckets` pick (RevealBucket -> SelectCardEffect; a
+#      single bucket, so no leading generic_bool gate).
+#   2. The condition's selectCardCoroutine runs when that prompt closes:
+#      PlayOptionCards(payCost: false, root: Library) -> P_180.cs "Main"
+#      (mandatory): IDestroySecurity asks nothing; ONE
+#      SelectPermanentEffect(maxCount 1, canNoSelect: false) for the tuck --
+#      SHARED, and BEFORE the remainder is placed on both sides (ours:
+#      `use_option_from_revealed` precedes `place_remainder_on_deck`).
+#   3. RemainingCardsPlace.DeckTopOrBottom: generic_bool ("Deck Top" = true /
+#      "Deck Bottom" = false), then ONE ordering SelectCardEffect over the
+#      five. Ours: an EffectChoice named by LABEL (`choice:`, sim-only) and a
+#      position-by-position OrderedPermutation -- split sim_only / dcgo_only
+#      exactly as in EX7-048-effect0.yaml (confirmed idiom:
+#      BT25-078-effect1.yaml).
+# Nothing observes the tuck (OnAddDigivolutionCards observers: BT25-005,
+# EX7-005, BT7-056).
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_048_pool.json (--decks).
+card: EX7-048
+clause: EX7-048#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), stack[10..12]
+    # draws (T3, T5, digivolution), stack[13..18] THE REVEALED SIX -- exactly
+    # ONE [Three Musketeers] trait Option (P-180) beside five Digimon. No
+    # Option ever reaches P0's hand, so Megadramon's [On Play] stays silent.
+    stack: [EX7-011, EX7-048, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-010, EX7-010, ST1-02,
+            BT25-083, P-180, BT25-083, BT25-082, EX7-051, EX7-008]
+    rest: tm-gundramon
+  p1:
+    # stack[9] = Biyomon: the security card P-180's [Main] trashes.
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-048
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7: 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Gundramon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-048 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. The "you may use" pick: P-180, the one candidate. SHARED.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectCardEffect }
+  # P-180 is USED at once (before the remainder is placed): its [Main]
+  # trashes P1's top security with no prompt, then asks the tuck target --
+  # Gundramon, P0's only [Three Musketeers] trait Digimon. SHARED.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # "Return the rest": the other five to the BOTTOM. Ours by label
+  # (sim-only); DCGO's generic_bool false (wire-only).
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, EX7-051, EX7-008], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083, BT25-083, BT25-082, EX7-051, EX7-008], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T6 (P1, 1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 6
+      p0.memory: -1
+      p0.field:
+        - { card_id: EX7-048, dp: 12000, suspended: false, sources: [EX7-011, P-180] }
+      p0.hand: [BT25-082, EX7-008, EX7-010, EX7-010, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []
+      p1.security: 4
+      p1.trash: [ST1-02]

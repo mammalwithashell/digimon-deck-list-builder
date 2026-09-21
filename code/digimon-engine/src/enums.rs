@@ -386,6 +386,27 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires ONCE per host permanent after an EFFECT places one or more cards
+    /// into that permanent's digivolution cards (the source-ADDED sibling of
+    /// `OnDigivolutionCardTrashed`). Mirrors DCGO `EffectTiming.
+    /// OnAddDigivolutionCards`, stacked from `Permanent.AddDigivolutionCardsTop`
+    /// / `AddDigivolutionCardsBottom` (Permanent.cs:1133 / 1237) once per
+    /// added list, and consumed via `CardEffectCommons.
+    /// CanTriggerOnAddDigivolutionCard` — which requires a non-null placing
+    /// `CardEffect`, so normal / DNA digivolution, DigiXros + Assembly material
+    /// consumption and App Fusion (all `cardEffect: null` in DCGO) never fire
+    /// it. Rule 15-5-2 (`general_rule.pdf` p.23): one trigger condition met
+    /// several times at once triggers once — hence the per-host batch. Rule
+    /// 15-5-3 (p.23-24, whose worked example IS this timing): the placed
+    /// card's own inherited effect triggers when it is itself placed. The
+    /// `TriggerContext` carries the host (`event_host_permanent` /
+    /// `event_host_card`), the added cards (`moved_card_sets[0].cards` →
+    /// `added_source_cards()`), and the placing effect
+    /// (`event_cause_effect`) so BT7-056's "one of YOUR effects" and
+    /// EX7-005's added-card trait gate can filter it. Board-wide fan-out
+    /// (every battle-area + breeding permanent of both players).
+    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    OnAddDigivolutionCards,
     /// Fires when a card is RETURNED from a permanent's digivolution stack to
     /// the BOTTOM of a player's deck (a return, not a trash — distinct from
     /// `OnDigivolutionCardTrashed`). Carries the former host + returned card as
@@ -711,6 +732,12 @@ pub enum ModifierType {
 
     // Color
     ChangeColor,
+    /// Additive color grant, read by `Permanent::synth_identity` AFTER the
+    /// replace-style `ChangeBaseCardColor` pass (append-dedup). Payload
+    /// `Colors { value }` gains the listed colors; payload `None` gains the
+    /// colors of every non-flipped digivolution card beneath the top card
+    /// ("treated as also having the colors of its digivolution cards" —
+    /// BT8-084, DCGO `ChangeCardColorClass`). G-ENGINE-ADDITIVE-COLOR-TREATMENT.
     AddColor,
 
     // Level

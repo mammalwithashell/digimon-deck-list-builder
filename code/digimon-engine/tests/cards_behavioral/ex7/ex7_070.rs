@@ -20,11 +20,12 @@
 //! # Patterns this test covers
 //! - Structural: card metadata + 4 clauses (2 triggered/inherited + 1 main +
 //!   1 flood_gate declarative).
-//! - Clause 1 (inherited, optional): `on_digivolution_card_trashed` self-scoped
+//! - Clause 1 (inherited, MANDATORY): `on_digivolution_card_trashed` self-scoped
 //!   via `trashed_source_card_id_is` + `event_target_owner: you`, gated on an
 //!   opponent Digimon existing. `de_digivolve { amount: 1, stop_at_level: 3 }`.
 //!   Positive fire, negative (host-owner mismatch / different source card /
-//!   no opponent Digimon), and optional-decline coverage.
+//!   no opponent Digimon), and no-decline coverage (EX7_070.cs:18 isOptional
+//!   = false; printed text has no "may"; <De-Digivolve> is Mandatory, 16-11).
 //! - Clause 2 (flood_gate): positive-gate ignore-color while a [Three
 //!   Musketeers] Digimon is on the field (vs BT19-093's negative-gate
 //!   sibling), scoped to this card only via `card_number_is`.
@@ -186,9 +187,11 @@ fn ex7_070_has_expected_clause_shape() {
     );
 }
 
-/// Clause 1 is inherited, optional, on_digivolution_card_trashed.
+/// Clause 1 is inherited, MANDATORY, on_digivolution_card_trashed.
+/// `SetUpActivateClass(..., -1, false, ...)` (EX7_070.cs:18) — isOptional is
+/// FALSE; `SetIsOptionEffect(true)` only tags the effect as an Option card's.
 #[test]
-fn ex7_070_clause1_is_inherited_optional_source_trash() {
+fn ex7_070_clause1_is_inherited_mandatory_source_trash() {
     let runner = base_builder().start();
     let compiled = runner
         .compiled_card(CARD_ID)
@@ -199,13 +202,13 @@ fn ex7_070_clause1_is_inherited_optional_source_trash() {
             c,
             CompiledClause::Triggered(t)
                 if t.scope == CompiledScope::Inherited
-                    && t.optional
+                    && !t.optional
                     && t.when == vec![CompiledTiming::OnDigivolutionCardTrashed]
         )
     });
     assert!(
         found,
-        "Clause 1 must be inherited + optional + on_digivolution_card_trashed"
+        "Clause 1 must be inherited + mandatory + on_digivolution_card_trashed"
     );
 }
 
@@ -275,8 +278,8 @@ fn ex7_070_clause4_is_inherited_security() {
 
 /// POSITIVE: when EX7-070 (as a digivolution source under the controller's
 /// own Digimon) is trashed by an effect, and the opponent has a Digimon, the
-/// optional De-Digivolve 1 prompt installs; accepting pops 1 source off the
-/// opponent's stack.
+/// mandatory De-Digivolve 1 target pick installs directly (no accept/decline
+/// gate); resolving it pops 1 source off the opponent's stack.
 #[test]
 fn ex7_070_source_trash_offers_dedigivolve_and_resolves() {
     let host = plain_digimon("HOST", 5, 6000);
@@ -299,27 +302,17 @@ fn ex7_070_source_trash_offers_dedigivolve_and_resolves() {
         ctx.trash_card_source(host_handle, source);
     }
 
-    // The optional trigger installs as an outer accept/decline Replacement
-    // gate first (standard optional-triggered-clause shape); accepting it
-    // then installs the actual De-Digivolve target selection.
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "the optional inherited clause must first offer an accept/decline gate"
-    );
-    assert!(
-        runner.pending_is_optional(),
-        "the source-trash clause is optional (DCGO SetIsOptionEffect(true))"
-    );
-
-    runner
-        .accept_optional_trigger()
-        .expect("accept the optional De-Digivolve trigger");
-
+    // Mandatory trigger (EX7_070.cs:18 isOptional = false; printed text has
+    // no "may"; <De-Digivolve> Mandatory per general_rule 16-11): NO outer
+    // accept/decline gate — the target pick installs directly.
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OppField),
-        "accepting must install the De-Digivolve target selection"
+        "the mandatory clause must go straight to the De-Digivolve target pick"
+    );
+    assert!(
+        !runner.pending_is_optional(),
+        "the source-trash clause is mandatory — no decline may be offered"
     );
 
     runner
@@ -335,10 +328,10 @@ fn ex7_070_source_trash_offers_dedigivolve_and_resolves() {
     );
 }
 
-/// NEGATIVE: declining the optional prompt leaves the opponent's stack
-/// untouched.
+/// NEGATIVE: the clause is mandatory — PASS (decline) is rejected at the
+/// target pick and the opponent's stack still loses a level once resolved.
 #[test]
-fn ex7_070_source_trash_decline_leaves_stack_untouched() {
+fn ex7_070_source_trash_cannot_be_declined() {
     let host = plain_digimon("HOST-D", 5, 6000);
     let opp_base = lvl_digimon("OPP-BASE-D", 3, 2000);
     let opp_mid = lvl_digimon("OPP-MID-D", 4, 4000);
@@ -359,28 +352,23 @@ fn ex7_070_source_trash_decline_leaves_stack_untouched() {
         ctx.trash_card_source(host_handle, source);
     }
 
-    // The optional trigger installs as an outer accept/decline Replacement
-    // gate; PASS is accepted to decline even though it is not itself listed
-    // in `valid_action_ids` (which holds only the single ACCEPT entry per
-    // the `SelectionKind::Replacement` contract) — `decline_optional_trigger`
-    // resolves PASS directly, matching the `is_optional` decline path.
-    assert!(runner.pending_is_optional());
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "De-Digivolve prompt installs as the outer optional accept/decline gate"
+    let view = runner
+        .pending_selection_view()
+        .expect("the mandatory De-Digivolve target pick must be pending");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    assert!(!view.is_optional, "no decline on a mandatory clause");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "PASS must not be a legal answer to the mandatory pick"
     );
-    runner
-        .decline_optional_trigger()
-        .expect("decline the optional De-Digivolve trigger");
 
+    runner
+        .auto_resolve()
+        .expect("De-Digivolve target selection resolves");
     let opp_sources = runner.game.player(1).battle_area[opponent.index as usize]
         .card_sources
         .len();
-    assert_eq!(
-        opp_sources, 2,
-        "declining must leave the opponent's stack untouched"
-    );
+    assert_eq!(opp_sources, 1, "the mandatory De-Digivolve 1 must resolve");
 }
 
 /// NEGATIVE: no De-Digivolve fires when the opponent has no Digimon at all.

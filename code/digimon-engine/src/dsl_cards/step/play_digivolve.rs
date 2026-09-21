@@ -559,11 +559,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
             };
             // Resolve the `select_union_zone` binding: the picked Option, its
-            // origin zone (hand or trash), and that zone's owner. Route to the
-            // matching origin through `Game::use_option_from`. A `Material`
-            // origin is not a legal Option-use zone (no driver uses it) — silent
-            // no-op. The binding is read directly (not via `resolve_binding_ref`)
-            // so the origin tag is preserved.
+            // origin zone (hand, trash, or a carrier's digivolution cards), and
+            // that zone's owner. Route to the matching origin through
+            // `Game::use_option_from`. A `Material` origin routes through
+            // `OptionSource::Source { host, card }` — driver BT25-085
+            // BeelStarmon "use 1 [Three Musketeers] or [TS] trait Option card
+            // from your hand OR this Digimon's digivolution cards" (one
+            // `select_union_zone { zones: [hand, material], material_of:
+            // source }` pick). The binding is read directly (not via
+            // `resolve_binding_ref`) so the origin tag is preserved.
             if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
                 match origin {
                     UnionZoneOrigin::Hand => {
@@ -596,7 +600,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             );
                         }
                     }
-                    UnionZoneOrigin::Material { .. } => {}
+                    UnionZoneOrigin::Material { carrier, .. } => {
+                        ctx.game.use_option_from(
+                            owner,
+                            crate::game_actions::OptionSource::Source {
+                                host: carrier,
+                                card,
+                            },
+                            delta,
+                        );
+                    }
                 }
             }
             true

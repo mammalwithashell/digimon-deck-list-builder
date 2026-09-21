@@ -494,6 +494,21 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::OptionUsed { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::OptionTrashed { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -689,6 +704,41 @@ impl Game {
                             self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
+                }
+            }
+            TriggerSource::SourcesAddedToStack { .. } => {
+                // Board-wide fan-out over every battle-area AND breeding
+                // permanent of both players (an effect can place sources under
+                // a breeding-area Digimon — `place_as_source_observed` has a
+                // breeding branch — and the host's own stack now holds the
+                // added cards, so their inherited observers are scanned here
+                // per rule 15-5-3). The host / added batch / placing effect
+                // ride in the per-handle `TriggerContext`; scope gates live in
+                // each observer's `active_when:`. Mirrors `OptionPlaced`.
+                // G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                    let breeding_handle = PermanentHandle {
+                        player,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
+                    self.enqueue_from_breeding_permanent(
+                        timing,
+                        breeding_handle,
+                        Some(trigger_context),
+                    );
                 }
             }
         }
@@ -1029,6 +1079,25 @@ impl Game {
                     }
                 }
             }
+            // Flush the OnAddDigivolutionCards batch windows the same way
+            // (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS): the placing effect body
+            // has finished, so each host's added-card batch is complete. Fire
+            // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
+            // rule 15-5-2), then drain the observers. Loop-guarded because an
+            // observer can itself place sources (a nested batch).
+            if self.pending_selection.is_none() {
+                let mut added_guard: u16 = 0;
+                while !self.pending_added_sources.is_empty() && self.pending_selection.is_none() {
+                    self.flush_pending_added_sources();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    added_guard += 1;
+                    if added_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
             let mut guard: u16 = 0;
             loop {
                 if self.pending_selection.is_some() {
@@ -1074,6 +1143,16 @@ impl Game {
             if self.pending_selection.is_some() {
                 return;
             }
+            // 9-1-5 / 18-1-2: a used Option whose `[Main]` body has just
+            // finished is disposed before any trigger that body caused
+            // resolves. Skipped inside a deferred-drain scope (the body is
+            // still running there); the flush at scope exit re-enters here.
+            if self.option_body_pending && self.draining_deferred == 0 {
+                self.complete_option_body_if_done();
+                if self.pending_selection.is_some() {
+                    return;
+                }
+            }
             if self.effect_queue.is_empty() {
                 // Track H §3 Phase 4i superseded the prior inline-fire
                 // flush: granted-triggered-effect entries now ride the
@@ -1095,6 +1174,58 @@ impl Game {
                 self.effect_queue.clear();
                 self.effect_chain_depth = 0;
                 return;
+            }
+
+            // 9-1-4 / 15-8-3-2: the `[Main]` body of an Option that an effect
+            // USED is part of the RESOLUTION of the effect that used it. It is
+            // not itself an effect "pending activation", so it may neither be
+            // deferred behind a sibling trigger that was already queued nor be
+            // offered as one of that player's simultaneous items in a
+            // `TriggerOrder` bundle: "trigger-type effects can't activate
+            // during the processing for a rule or effect" (15-8-3-2), "effects
+            // that are pending activation must be activated 1 at a time"
+            // (15-4-4-2), and "the activation order is determined ... by
+            // choosing the next pending activation effect AFTER each effect
+            // has been resolved" (15-4-3-4). While that body is still queued it
+            // is therefore the ONLY entry this drain may run — every other
+            // queued trigger stays put until the using effect has finished.
+            //
+            // DCGO agrees structurally: `CardController.cs`
+            // `UseOptionClass.UseOption` runs the `OptionSkill` INLINE inside
+            // the using coroutine, so the stacked triggers only resolve once
+            // that coroutine returns.
+            //
+            // G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER
+            // (reproducer: BeelStarmon (X Antibody) (EX7-073) Clause 1 uses
+            // Bind Red Trigger (P-180), whose `[Main]` tucks itself under the
+            // Digimon as the second `[Three Musketeers]`-trait digivolution
+            // card that the still-pending Clause 2 needs to pay its cost).
+            if self.option_body_pending {
+                if let Some(idx) = self.queued_option_main_index() {
+                    let qe = self
+                        .effect_queue
+                        .remove(idx)
+                        .expect("index from queued_option_main_index is in-bounds");
+                    // Same deferred-drain scope the ordinary single-entry path
+                    // uses, so triggers the body causes stay queued until it
+                    // has resolved.
+                    self.enter_deferred_drain();
+                    self.run_queued_effect(qe);
+                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                    self.rules_check_between_queued_effects();
+                    continue;
+                }
+                if self.draining_deferred > 0 {
+                    // The body has been popped but `complete_option_body_if_done`
+                    // has not released it yet: we are INSIDE the `[Main]`'s
+                    // resolution, reached through a nested `drain_effect_queue`
+                    // that one of its steps performed (the security-removal
+                    // observer dispatch in `fire_effect_security_removal` is the
+                    // driver). 15-8-3-2 again: nothing pending may activate here.
+                    // Hold the queue for the outer drain, which re-enters once
+                    // the body has finished and the Option has been disposed.
+                    return;
+                }
             }
 
             let Some(chooser) = self.next_chooser() else {
@@ -1272,7 +1403,23 @@ impl Game {
                     self.install_outer_optional_trigger_selection(qe);
                     return;
                 }
+                // Every queued effect's body runs as ONE effect: triggers it
+                // causes (e.g. `[On Deletion]` of a Digimon the body deletes)
+                // stay queued until it has resolved — "trigger-type effects
+                // can't activate during the processing for a rule or effect"
+                // (general_rule.pdf 15-8-3-2). For an Option's `[Main]` the
+                // Option is also disposed first (9-1-5 — see
+                // `complete_option_body_if_done`). Originally scoped to
+                // OptionMain (P-170); generalized for EX4-074's [End of
+                // Attack], whose self-deletion [On Deletion] resolved before
+                // the body's own target pick (DCGO stacks it and drains after
+                // the body returns). Manual decrement (no flush): this loop
+                // continues the drain itself. A body that parks leaves the
+                // scope here; its resume runs in `resolve_generic_selection`'s
+                // own deferred scope, so no counter leaks across the park.
+                self.enter_deferred_drain();
                 self.run_queued_effect(qe);
+                self.draining_deferred = self.draining_deferred.saturating_sub(1);
                 self.rules_check_between_queued_effects();
                 continue;
             }
@@ -1512,6 +1659,20 @@ impl Game {
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
+            // NO `target_permanent` / `target_card`: every `event_*`
+            // predicate falls back to those when `event_permanent` is absent,
+            // and an Option use has no event permanent — seeding them with
+            // the OBSERVER would make `event_target_owner: you` read the
+            // observer's own controller (vacuously "you"). With them unset
+            // the owner resolves from `event_card` (the used Option), which
+            // is DCGO's `cardSource.Owner == card.Owner`
+            // (WhenUseOption.cs:13).
+            TriggerSource::OptionUsed { player, card } => TriggerContext {
+                event_card: Some(card),
+                event_source_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
             TriggerSource::OptionTrashed {
                 player,
                 card,
@@ -1738,6 +1899,43 @@ impl Game {
                 affected_player: Some(player),
                 source_player: Some(cause_controller),
                 effect_initiated: true,
+                ..TriggerContext::default()
+            },
+            TriggerSource::SourcesAddedToStack {
+                host,
+                host_card,
+                ref cards,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The host whose digivolution cards grew ("under THIS
+                // Digimon" -> `event_host_permanent_is_source`) and the placing
+                // effect ("one of YOUR effects" -> `event_caused_by_own_effect`).
+                // The added batch rides in `moved_card_sets` (read back via
+                // `TriggerContext::added_source_cards`); the single-card
+                // `event_card` is deliberately left unset — the event is a
+                // batch, and a one-card alias would silently mis-gate the
+                // multi-card case (`event_added_card_any` is the gate).
+                event_host_permanent: Some(host),
+                event_host_card: Some(host_card),
+                event_permanent: Some(host),
+                affected_player: Some(host.player),
+                source_player: Some(cause.controller),
+                cause: Some(if cause.controller == host.player {
+                    crate::trigger_context::EventCause::OwnEffect
+                } else {
+                    crate::trigger_context::EventCause::OpponentEffect
+                }),
+                source_effect: Some(cause),
+                event_cause_effect: Some(cause),
+                effect_initiated: true,
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
+                    from: None,
+                    to: Some(crate::enums::Zone::BattleArea),
+                }],
                 ..TriggerContext::default()
             },
         };
@@ -2800,6 +2998,10 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, qe: QueuedEffect) {
+        // A queued entry is resolving, so the Option user's "my trigger first"
+        // pick (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER) is spent: 15-4-3-5-1
+        // re-chooses before each remaining item.
+        self.option_trash_order_deferred = false;
         // Set the effect-source attribution for replacement-cause inference.
         // Saved on entry, restored on exit — supports nested drains (an
         // effect queues another effect that recursively drains before this
@@ -3538,11 +3740,19 @@ impl Game {
                         }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
+                        // Effect-driven placement (only `place_as_source_observed`
+                        // routes a security card here): note the host's
+                        // `OnAddDigivolutionCards` batch once the card is seated.
+                        // G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+                        let placed = security.card.handle();
+                        let cause_card = self.pending_security_source_cause_card.take();
+                        let mut seated = false;
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
                                 breeding.push_under(security.card);
+                                seated = true;
                             } else {
                                 let owner = security.card.owner;
                                 self.player_mut(owner).trash.push(security.card);
@@ -3553,9 +3763,21 @@ impl Game {
                             .get_mut(target.index as usize)
                         {
                             perm.push_under(security.card);
+                            seated = true;
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);
+                        }
+                        if seated {
+                            self.note_effect_added_sources(
+                                target,
+                                vec![placed],
+                                crate::trigger_context::EffectAttribution {
+                                    controller: pending.source_player,
+                                    source_card: cause_card,
+                                    source_permanent: None,
+                                },
+                            );
                         }
                     }
                     // Top-position sibling of BottomSource: insert directly
@@ -3563,11 +3785,15 @@ impl Game {
                     // (`push_as_top_source`). Same fallbacks (missing target
                     // → owner's trash). G-DSL-PLACE-AS-TOP-SOURCE.
                     SecurityRemovalDestination::TopSource(target) => {
+                        let placed = security.card.handle();
+                        let cause_card = self.pending_security_source_cause_card.take();
+                        let mut seated = false;
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
                                 breeding.push_as_top_source(security.card);
+                                seated = true;
                             } else {
                                 let owner = security.card.owner;
                                 self.player_mut(owner).trash.push(security.card);
@@ -3578,9 +3804,21 @@ impl Game {
                             .get_mut(target.index as usize)
                         {
                             perm.push_as_top_source(security.card);
+                            seated = true;
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);
+                        }
+                        if seated {
+                            self.note_effect_added_sources(
+                                target,
+                                vec![placed],
+                                crate::trigger_context::EffectAttribution {
+                                    controller: pending.source_player,
+                                    source_card: cause_card,
+                                    source_permanent: None,
+                                },
+                            );
                         }
                     }
                     SecurityRemovalDestination::Digivolve {
@@ -4341,26 +4579,41 @@ impl Game {
     ///   window for Option self-trash).
     /// - `Done`: terminal.
     fn advance_pending_option(&mut self) {
-        let Some(pending) = self.pending_option.as_ref() else {
-            return;
-        };
         if !self.effect_queue.is_empty() {
             return;
         }
+        let Some(pending) = self.pending_option.as_ref() else {
+            // The body CLAIMED `pending_option` (`place_self_under_permanent`,
+            // `add_this_option_to_hand`, a link plug-in) while a selection was
+            // parked. The board-wide OnUseOption observers are still owed —
+            // fire them now that the claimed body has finished.
+            // (`resolve_generic_selection`'s tail owns `check_turn_end`
+            // here, exactly as it did when this arm returned early before.)
+            if self.on_use_option_armed.is_some() {
+                self.fire_on_use_option_observers();
+            }
+            return;
+        };
         match pending.resolution_phase {
             crate::selection::OptionResolutionPhase::MainEffectDrain => {
-                // Dispatch on the card's subtype flags. Standard → trash;
-                // Delay → park on field (Task 3). Link / Training land in
-                // Tasks 4-5 via the same dispatcher.
-                if self.pending_option_can_arts_digivolve()
-                    && self.install_arts_digivolve_selection()
-                {
-                    return;
+                // The body's selection chain has cleared: fire the armed
+                // board-wide OnUseOption observers (DCGO stacks them and runs
+                // the body inline; BT3-096 Q&A — "after activating the used
+                // Option card's [Main] effect"). A parked observer prompt
+                // resumes into the `OnUseOptionDrain` arm below.
+                if self.on_use_option_armed.is_some() {
+                    self.fire_on_use_option_observers();
+                    if self.pending_selection.is_some() {
+                        return;
+                    }
                 }
-                self.dispose_option();
-                if self.pending_selection.is_none() {
-                    self.check_turn_end();
-                }
+                self.finish_option_after_body();
+            }
+            crate::selection::OptionResolutionPhase::OnUseOptionDrain => {
+                // An OnUseOption observer's prompt (e.g. Mimi's optional
+                // suspend-cost gate) has resolved — continue into arts /
+                // disposal exactly as the synchronous path does.
+                self.finish_option_after_body();
             }
             crate::selection::OptionResolutionPhase::ArtsSelectTarget => {
                 // Arts selection callbacks finish the flow directly.
@@ -4394,6 +4647,305 @@ impl Game {
             crate::selection::OptionResolutionPhase::Done => {
                 // Terminal; no-op.
             }
+        }
+    }
+
+    /// Fire the board-wide `OnUseOption` observers ("when a player uses an
+    /// Option card" — BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons) for
+    /// the Option use armed by `use_option_from`, AFTER the Option's own body
+    /// has fully resolved. DCGO `UseOptionClass.UseOption` STACKS the
+    /// `OnUseOption` skill infos (`StackSkillInfos` → `PutStackedSkill`) and
+    /// runs `OptionSkill` inline, so the stacked observers resolve once the
+    /// body is done; the official BT3-096 Q&A: "It can be activated after
+    /// activating the used Option card's [Main] effect."
+    ///
+    /// Consumes `on_use_option_armed` (exactly-once across the synchronous
+    /// and selection-resume paths) and moves a still-present `pending_option`
+    /// into `OnUseOptionDrain` so `advance_pending_option` does not re-enter
+    /// the `MainEffectDrain` arm after an observer's prompt resolves.
+    pub(crate) fn fire_on_use_option_observers(&mut self) {
+        let Some((player, card)) = self.on_use_option_armed.take() else {
+            return;
+        };
+        if let Some(p) = self.pending_option.as_mut() {
+            p.resolution_phase = crate::selection::OptionResolutionPhase::OnUseOptionDrain;
+        }
+        // One board-wide scan (both battle areas) carrying the using player
+        // and the used card, so an observer can gate on "when YOU use [TS]
+        // trait Option cards" (`event_target_owner: you` +
+        // `event_card_trait_has: TS`, BT25-091) — DCGO
+        // `CanTriggerWhenOwnerUseOption(hashtable, OptionTrigger, ..)` reads
+        // the same two facts off its hashtable. The used card is still the
+        // in-flight `pending_option` (or already linked / placed), which the
+        // handle resolvers now see. G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+        self.enqueue_triggered(
+            EffectTiming::OnUseOption,
+            TriggerSource::OptionUsed { player, card },
+        );
+        self.drain_effect_queue();
+    }
+
+    /// Dispose the used Option as soon as its `[Main]` (`OptionMain`) body
+    /// has fully resolved — BEFORE the triggered effects that body caused.
+    ///
+    /// Rules: 9-1-5 "A used Option card is trashed if it isn't in an area at
+    /// the timing when its 1st [Main] effect has been resolved as pending
+    /// processing"; 18-1-2 pending processing performed at the same time as
+    /// other processing is ordered like simultaneous triggering (15-4-3); and
+    /// 15-4-3-5 the turn player's pending items go first. The Option's owner
+    /// is the turn player on every Main-phase use, so its trash precedes the
+    /// non-turn player's `[On Deletion]` etc. DCGO
+    /// (`CardController.cs` `UseOptionClass.UseOption`): `AddTrashCard(card)`
+    /// runs straight after the `OptionSkill` `ActivateEffectProcess`, while
+    /// the triggers stacked during the body resolve only after `UseOption`
+    /// returns — including the `OnUseOption` observers it stacked before the
+    /// body, which is why those are ENQUEUED here (not drained) and so resolve
+    /// after the disposal too.
+    ///
+    /// When the Option's USER has their OWN triggered effects pending
+    /// alongside the trash, both are that player's simultaneous items, so
+    /// 18-1-2 -> 15-4-3-5-1 gives THEM the order:
+    /// `install_option_trash_order_selection` surfaces that pick instead of
+    /// trashing unconditionally (DCGO hard-codes trash-first, which stays one
+    /// of the two legal answers). G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    ///
+    /// No-op unless `option_body_pending` is set, a `MainEffectDrain`
+    /// `pending_option` is in flight, no `OptionMain` entry for it is still
+    /// queued, and no selection is parked. G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
+    pub(crate) fn complete_option_body_if_done(&mut self) {
+        if !self.option_body_pending || self.pending_selection.is_some() {
+            return;
+        }
+        let Some(pending) = self.pending_option.as_ref() else {
+            // The body CLAIMED the card (placed it under a Digimon, added it
+            // to hand, linked it). Nothing to dispose; the observers are
+            // still owed.
+            self.option_body_pending = false;
+            if let Some((player, card)) = self.on_use_option_armed.take() {
+                self.enqueue_triggered(
+                    EffectTiming::OnUseOption,
+                    TriggerSource::OptionUsed { player, card },
+                );
+            }
+            return;
+        };
+        if pending.resolution_phase != crate::selection::OptionResolutionPhase::MainEffectDrain {
+            return;
+        }
+        let card = pending.card.handle();
+        let owner = pending.owner;
+        if self
+            .effect_queue
+            .iter()
+            .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
+        {
+            return;
+        }
+        if let Some((player, used)) = self.on_use_option_armed.take() {
+            self.enqueue_triggered(
+                EffectTiming::OnUseOption,
+                TriggerSource::OptionUsed { player, card: used },
+            );
+        }
+        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            self.option_body_pending = false;
+            return;
+        }
+        // 18-1-2 -> 15-4-3-5-1: when the Option's USER also has their own
+        // triggered effects pending at this same timing, the trash is just one
+        // of that player's simultaneous items and THEY choose which resolves
+        // next. `option_body_pending` stays set across the prompt so the drain
+        // loop re-enters this function after each pick.
+        if self.option_trash_order_deferred {
+            if !self.option_orderable_trigger_indices(owner).is_empty() {
+                // The player asked for one of their triggers first; the drain
+                // resolves it (with its own optional / activation-cost gates
+                // intact) and `run_queued_effect` clears the deferral, so the
+                // choice is offered again before the next item.
+                return;
+            }
+            self.option_trash_order_deferred = false;
+        } else if self.install_option_trash_order_selection(owner) {
+            return;
+        }
+        self.option_body_pending = false;
+        self.dispose_option();
+    }
+
+    /// Index of the queued `OptionMain` body of the Option currently being
+    /// used (`pending_option`), while it has not run yet. `None` once the body
+    /// has been popped, or when no Option use is in flight.
+    ///
+    /// The drain gives that entry absolute priority — see the call site in
+    /// `drain_effect_queue_inner` for the rules citation
+    /// (G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER).
+    fn queued_option_main_index(&self) -> Option<usize> {
+        let card = self.pending_option.as_ref()?.card.handle();
+        self.effect_queue
+            .iter()
+            .position(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
+    }
+
+    /// Queue indices of the Option user's OWN pending triggered effects that
+    /// would fire right now -- the items 15-4-3-5-1 lets them order against
+    /// the used Option's pending trash. Empty unless that player is also the
+    /// next chooser, so the turn player's bucket still resolves ahead of a
+    /// non-turn player's Option trash (15-4-3-5-2).
+    fn option_orderable_trigger_indices(&mut self, owner: PlayerId) -> Vec<usize> {
+        if self.effect_queue.is_empty() || self.next_chooser() != Some(owner) {
+            return Vec::new();
+        }
+        let non_firing = self.non_firing_queued_effect_indices_for(owner);
+        self.effect_queue
+            .iter()
+            .enumerate()
+            .filter(|(i, qe)| qe.controller == owner && !non_firing.contains(i))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Install the 9-1-5 trash-vs-own-trigger ordering pick. Returns false (no
+    /// prompt; the caller trashes straight away) when the user has no pending
+    /// item of their own -- a lone pending processing is not a choice.
+    ///
+    /// The pick is a TWO-entry `TriggerOrder`: "trash the used Option now" or
+    /// "resolve one of my triggered effects first". Choosing a trigger only
+    /// DEFERS the trash by one item; the drain then runs that trigger through
+    /// the ordinary single-entry path, so its outer-optional prompt and
+    /// `activation_cost` decline gate (15-7-1) survive, and the pick is
+    /// re-offered before the next item. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    fn install_option_trash_order_selection(&mut self, owner: PlayerId) -> bool {
+        let pending_triggers = self.option_orderable_trigger_indices(owner);
+        let Some(&first_idx) = pending_triggers.first() else {
+            return false;
+        };
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        let source_card = pending.card.handle();
+        let option_id = pending.card.card_id(&self.card_data).to_string();
+        let (
+            trigger_card_id,
+            trigger_slot,
+            trigger_source_card,
+            trigger_source_kind,
+            trigger_timing,
+            trigger_optional,
+        ) = {
+            let qe = &self.effect_queue[first_idx];
+            (
+                qe.card_id.clone(),
+                qe.effect_slot,
+                qe.source_card,
+                qe.source_kind,
+                qe.timing,
+                qe.is_optional,
+            )
+        };
+        let trigger_label = if pending_triggers.len() == 1 {
+            format!("Resolve your triggered effect first ({trigger_card_id} slot {trigger_slot})")
+        } else {
+            format!(
+                "Resolve one of your {} triggered effects first",
+                pending_triggers.len()
+            )
+        };
+        let trash_action = HAND_EFFECT_START;
+        let trigger_action = HAND_EFFECT_START + 1;
+        let choices = vec![
+            EffectChoiceEntry {
+                label: format!("Trash the used Option ({option_id})"),
+                action_id: trash_action,
+                source_card: Some(source_card),
+                source_kind: Some(EffectSourceKind::Option),
+                timing: None,
+                is_optional: false,
+                keyword: None,
+                observation_metadata: Default::default(),
+            },
+            EffectChoiceEntry {
+                label: trigger_label,
+                action_id: trigger_action,
+                source_card: Some(trigger_source_card),
+                source_kind: Some(trigger_source_kind),
+                timing: Some(trigger_timing),
+                is_optional: trigger_optional,
+                keyword: None,
+                observation_metadata: Default::default(),
+            },
+        ];
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::TriggerOrder,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids: vec![trash_action, trigger_action],
+            is_optional: false,
+            prompt: "Choose which of your pending items resolves next: the used Option's trash, or one of your triggered effects".to_string(),
+            effect_choices: Some(choices),
+            source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                game.apply_option_trash_order_choice(action_id);
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OptionTrashOrder(
+                crate::resume::OptionTrashOrderState {
+                    owner,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+        true
+    }
+
+    fn apply_option_trash_order_choice(&mut self, action_id: u16) {
+        if action_id == HAND_EFFECT_START + 1 {
+            // A triggered effect goes first; the trash stays pending.
+            self.option_trash_order_deferred = true;
+            return;
+        }
+        self.option_trash_order_deferred = false;
+        self.option_body_pending = false;
+        self.dispose_option();
+    }
+
+    /// Resume step for `ResumeFrame::OptionTrashOrder`.
+    pub(crate) fn run_option_trash_order_step(
+        &mut self,
+        state: crate::resume::OptionTrashOrderState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        let _ = state;
+        if is_pass {
+            // The prompt is not optional; a PASS reaching here resolves as the
+            // rules-legal default both engines used before (trash first).
+            self.apply_option_trash_order_choice(HAND_EFFECT_START);
+            return;
+        }
+        self.apply_option_trash_order_choice(action_id);
+    }
+
+    /// Shared post-body tail of an Option use: offer <Arts Digivolve>, then
+    /// dispose per subtype (trash / park as Delay / Link host-select /
+    /// Training). Reached from `advance_pending_option` once the body AND the
+    /// OnUseOption observers have drained.
+    fn finish_option_after_body(&mut self) {
+        // Dispatch on the card's subtype flags. Standard → trash;
+        // Delay → park on field (Task 3). Link / Training land in
+        // Tasks 4-5 via the same dispatcher.
+        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            return;
+        }
+        self.dispose_option();
+        if self.pending_selection.is_none() {
+            self.check_turn_end();
         }
     }
 }

@@ -22,30 +22,21 @@
 //! - [When Digivolving] optional (non-cost) select_trash +
 //!   place_as_bottom_source (printed BOTTOM position — sibling of EX9-074's
 //!   top-source shape)
-//! - Gap tripwires: the DP-minus leg and both [Your Turn] color clauses are
-//!   gap-blocked (see below) — structural tests PIN that no approximated
-//!   substitute shipped.
+//! - [When Digivolving] up-to-4 DP-minus scaled by this Digimon's RULES
+//!   colors, read after the placement (`per: source_rules_color_count`)
+//! - [Your Turn] additive color treatment (`modifier: AddColor` self-aura;
+//!   non-flipped sources only) and the 4-color +4000 DP boost
+//!   (`self_color_count_gte: 4`)
 //!
-//! # Known engine/DSL gaps affecting this card (full writeup in the YAML
-//! header + qa/dsl-vocab-gaps.md)
+//! # Gaps closed by this card (2026-09-19)
 //!
-//! - **G-DSL-SOURCE-STACK-UNION-COLOR-COUNT** — no source-anchored formula
-//!   for "distinct colors across the carrier's top card + non-flipped
-//!   sources" (union incl. top). `source_color_count` is sources-only;
-//!   `digivolution_color_count` anchors at the formula TARGET (here: the
-//!   opponent Digimon receiving the debuff). Blocks the "-1000 DP for each
-//!   of this Digimon's colors" amount, so the whole "Then, up to 4 ..."
-//!   leg is unauthorable without approximating.
-//! - **G-DSL-OWN-STACK-COLOR-COUNT-GTE** — `own_source_stack_color_count_gte`
-//!   counts source colors EXCLUDING the top card; the printed "While this
-//!   Digimon has 4 or more colors" needs union-incl-top (white top +
-//!   3-color sources = 4 must qualify). Blocks the +4000 DP aura gate.
-//! - **G-ENGINE-ADDITIVE-COLOR-TREATMENT** — "[Your Turn] treated as also
-//!   having the colors of its digivolution cards" is a cross-card-visible
-//!   continuous color grant. `ModifierType::AddColor` exists in the enum but
-//!   is never read by `Permanent::synth_identity` (only the replace-style
-//!   `ChangeBaseCardColor` is), and no DSL aura surface installs a dynamic
-//!   union-color payload. Engine primitive missing.
+//! - G-DSL-SOURCE-STACK-UNION-COLOR-COUNT — new per-selector
+//!   `source_rules_color_count` (the carrier's synthesized colors).
+//! - G-ENGINE-ADDITIVE-COLOR-TREATMENT — `Permanent::synth_identity` now reads
+//!   `ModifierType::AddColor` additively (payload `None` = the non-flipped
+//!   digivolution cards' colors).
+//! - G-DSL-OWN-STACK-COLOR-COUNT-GTE — collapses into `self_color_count_gte`
+//!   once the treatment is live.
 
 #![allow(dead_code, unused_imports)]
 
@@ -240,43 +231,46 @@ fn bt8_084_when_digivolving_clause_shape() {
     );
 }
 
-/// GAP TRIPWIRE — the "Then, up to 4 of your opponent's Digimon get -1000
-/// DP for each of this Digimon's colors" leg is BLOCKED on
-/// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT (no source-anchored union-incl-top
-/// color-count formula). Until that gap closes, the clause must NOT carry an
-/// approximated DP-minus (e.g. `source_color_count`, which undercounts by
-/// 1000 whenever white is absent from the sources). When this test starts
-/// failing because the leg was authored, verify the amount formula is the
-/// NEW union-incl-top vocabulary, then update this tripwire into a positive
-/// assertion.
+/// The "Then, up to 4 of your opponent's Digimon get -1000 DP for each of
+/// this Digimon's colors" leg is authored (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT
+/// RESOLVED): an up-to-4 opponent pick + a per-target `add_dp_modifier` whose
+/// amount is the carrier's RULES color count (`source_rules_color_count` —
+/// DCGO `TopCard.CardColors.Count`, read with the [Your Turn]
+/// ChangeCardColorClass live), until the end of the opponent's next turn.
 #[test]
-fn bt8_084_gap_tripwire_no_approximated_dp_minus_leg() {
+fn bt8_084_dp_minus_leg_is_authored() {
     let runner = kimeramon_runner();
     let card = runner.compiled_card("BT8-084").expect("compiles");
 
-    for clause in &card.effects {
-        if let CompiledClause::Triggered(t) = clause {
-            assert!(
-                !contains_step_recursive(&t.process, &|s| matches!(
-                    s,
-                    CompiledStep::AddDpModifier { .. }
-                        | CompiledStep::SelectCountCappedMulti { .. }
-                )),
-                "the DP-minus leg is gap-blocked (G-DSL-SOURCE-STACK-UNION-\
-                 COLOR-COUNT); shipping it with an approximated amount \
-                 violates no-approximations"
-            );
-        }
-    }
+    let triggered = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .expect("[When Digivolving] clause");
+    assert!(
+        contains_step_recursive(&triggered.process, &|s| matches!(
+            s,
+            CompiledStep::SelectCountCappedMulti { .. }
+        )),
+        "the up-to-4 opponent Digimon pick is authored"
+    );
+    assert!(
+        contains_step_recursive(&triggered.process, &|s| matches!(
+            s,
+            CompiledStep::AddDpModifier { .. }
+        )),
+        "the -1000-per-color DP modifier is authored"
+    );
 }
 
-/// GAP TRIPWIRE — both [Your Turn] clauses (treated-as-colors + the 4-color
-/// +4000 DP boost) are BLOCKED (G-ENGINE-ADDITIVE-COLOR-TREATMENT /
-/// G-DSL-OWN-STACK-COLOR-COUNT-GTE). No declarative clause may ship a
-/// stand-in (`own_source_stack_color_count_gte: 4` excludes the white top
-/// card and is NOT the printed gate).
+/// Both [Your Turn] clauses ship as declarative self-auras
+/// (G-ENGINE-ADDITIVE-COLOR-TREATMENT / G-DSL-OWN-STACK-COLOR-COUNT-GTE
+/// RESOLVED): the additive color treatment and the 4-color +4000 DP boost.
 #[test]
-fn bt8_084_gap_tripwire_no_approximated_your_turn_color_clauses() {
+fn bt8_084_your_turn_color_clauses_are_authored() {
     let runner = kimeramon_runner();
     let card = runner.compiled_card("BT8-084").expect("compiles");
 
@@ -286,11 +280,11 @@ fn bt8_084_gap_tripwire_no_approximated_your_turn_color_clauses() {
         .filter(|c| matches!(c, CompiledClause::Declarative(_)))
         .count();
     assert_eq!(
-        declarative_count, 0,
-        "both [Your Turn] color clauses are gap-blocked; no declarative \
-         stand-in may ship (see YAML header + qa/dsl-vocab-gaps.md)"
+        declarative_count, 2,
+        "[Your Turn] treated-as-colors + [Your Turn] 4-color +4000 DP"
     );
 }
+
 
 fn contains_step_recursive(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {
     steps.iter().any(|s| {
@@ -460,5 +454,267 @@ fn bt8_084_filter_rejects_non_digimon() {
     assert!(
         runner.pending_selection().is_none(),
         "kind: digimon filter must reject a Tamer card"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 3 — [Your Turn] additive color treatment + 4-color +4000 DP
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT8_084.cs: ChangeCardColorClass (IsOwnerTurn && >= 1 digivolution
+// card) appends every NON-FLIPPED digivolution card's colors to the top
+// card's CardColors; ChangeSelfDPStaticEffect(4000) gated on IsOwnerTurn &&
+// TopCard.CardColors.Count >= 4. Official Q&A: a white card with red + green
+// sources "is treated as a 3-color white/red/green card".
+
+fn colored_digimon(id: &str, colors: &[CardColor]) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.colors = colors.to_vec();
+    c
+}
+
+fn opp_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.level = Some(6);
+    c.dp = Some(12000);
+    c.colors = vec![CardColor::Red];
+    c
+}
+
+fn color_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT8-084 YAML parses")
+        .add_card(make_filler("FILL"))
+        .add_card(colored_digimon("SRC-RG", &[CardColor::Red, CardColor::Green]))
+        .add_card(colored_digimon("SRC-BLUE", &[CardColor::Blue]))
+        .add_card(colored_digimon("SRC-WHITE", &[CardColor::White]))
+        .add_card(make_lv5_digimon("TRASH-YELLOW", "Yellow Material", CardColor::Yellow))
+        .add_card(opp_digimon("OPP-A"))
+        .add_card(opp_digimon("OPP-B"))
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start()
+}
+
+fn sorted(mut v: Vec<CardColor>) -> Vec<CardColor> {
+    v.sort_by_key(|c| *c as u8);
+    v
+}
+
+fn rules_colors(runner: &mut DebugRunner, h: PermanentHandle) -> Vec<CardColor> {
+    runner.game.tick_declarative_effects();
+    let perm = &runner.game.players[h.player as usize].battle_area[h.index as usize];
+    sorted(perm.colors_for_rules(&runner.game.card_data, &runner.game.modifiers, h))
+}
+
+#[test]
+fn bt8_084_your_turn_treated_as_also_having_source_colors() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-RG", "BT8-084"]);
+    assert_eq!(runner.turn_player(), 0);
+    assert_eq!(
+        rules_colors(&mut runner, kimera),
+        sorted(vec![CardColor::White, CardColor::Red, CardColor::Green]),
+        "Q&A: white + red/green source = a 3-color white/red/green card"
+    );
+}
+
+#[test]
+fn bt8_084_opponent_turn_has_only_printed_color() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-RG", "BT8-084"]);
+    runner.set_first_player(1);
+    assert_eq!(runner.turn_player(), 1);
+    assert_eq!(
+        rules_colors(&mut runner, kimera),
+        vec![CardColor::White],
+        "the treatment is [Your Turn] only (DCGO IsOwnerTurn)"
+    );
+}
+
+#[test]
+fn bt8_084_face_down_source_colors_not_added() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-BLUE", "SRC-RG", "BT8-084"]);
+    runner.game.players[0].battle_area[kimera.index as usize].card_sources[1].face_down = true;
+    assert_eq!(
+        rules_colors(&mut runner, kimera),
+        sorted(vec![CardColor::White, CardColor::Blue]),
+        "flipped (face-down) sources are skipped (DCGO `if (cardSource1.IsFlipped) continue`)"
+    );
+}
+
+#[test]
+fn bt8_084_four_colors_gets_plus_4000_on_your_turn() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-BLUE", "SRC-RG", "BT8-084"]);
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.effective_dp(kimera),
+        Some(12000),
+        "white + blue + red + green = 4 colors -> +4000"
+    );
+}
+
+#[test]
+fn bt8_084_three_colors_no_boost() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-WHITE", "SRC-RG", "BT8-084"]);
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.effective_dp(kimera),
+        Some(8000),
+        "white (twice) + red + green = 3 distinct colors -> no boost"
+    );
+}
+
+#[test]
+fn bt8_084_four_color_stack_no_boost_on_opponent_turn() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-BLUE", "SRC-RG", "BT8-084"]);
+    runner.set_first_player(1);
+    runner.game.tick_declarative_effects();
+    assert_eq!(runner.effective_dp(kimera), Some(8000));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 4 — [When Digivolving] -1000 DP per color, up to 4 opponent Digimon
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Responses go through `Game::decode_action` (the real action boundary, which
+// refreshes materialized declaratives before resolving the selection) so the
+// [Your Turn] AddColor treatment is live when the amount is read — exactly as
+// in a real game.
+
+fn finish_multi_select(runner: &mut DebugRunner) {
+    // "up to 4": after the first pick the prompt turns optional — PASS ends it
+    // (DCGO canEndNotMax: true).
+    // With a single candidate the pick completes on its own.
+    if let Some(view) = runner.pending_selection_view() {
+        assert!(view.is_optional, "may stop before 4 after one pick");
+        runner.game.decode_action(PASS, 0);
+    }
+    assert!(runner.pending_selection().is_none(), "clause finished");
+}
+
+/// White top + blue source, then the placement adds a yellow card: 3 colors
+/// read AFTER the placement (DCGO computes minusDP after
+/// AddDigivolutionCardsBottom) -> -3000 on the single picked target.
+#[test]
+fn bt8_084_dp_minus_counts_colors_after_placement() {
+    let mut runner = color_runner();
+    push_to_trash(&mut runner, 0, "TRASH-YELLOW");
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let opp_b = runner.place_on_field(1, "OPP-B", Some(0));
+    let kimera = runner.place_stack(0, &["SRC-BLUE", "BT8-084"]);
+    fire_when_digivolving(&mut runner, kimera);
+
+    let view = runner.pending_selection_view().expect("trash prompt");
+    runner.game.decode_action(view.valid_action_ids[0], 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("up-to-4 opponent Digimon prompt");
+    assert!(
+        !view.is_optional,
+        "DCGO canNoSelect: false — at least one target must be picked"
+    );
+    assert_eq!(
+        view.valid_action_ids.iter().filter(|a| **a != PASS).count(),
+        2,
+        "both opponent Digimon are candidates"
+    );
+    runner.game.decode_action(view.valid_action_ids[0], 0);
+    finish_multi_select(&mut runner);
+
+    assert_eq!(
+        runner.effective_dp(opp_a),
+        Some(9000),
+        "white + blue + yellow = 3 colors -> -3000"
+    );
+    assert_eq!(runner.effective_dp(opp_b), Some(12000), "unpicked target untouched");
+}
+
+/// Declining the placement still runs the DP-minus leg ("Then" is not
+/// conditional on the placement): white + red/green = 3 colors.
+#[test]
+fn bt8_084_dp_minus_runs_after_declined_placement() {
+    let mut runner = color_runner();
+    push_to_trash(&mut runner, 0, "TRASH-YELLOW");
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let kimera = runner.place_stack(0, &["SRC-RG", "BT8-084"]);
+    fire_when_digivolving(&mut runner, kimera);
+
+    runner.pending_selection_view().expect("trash prompt");
+    runner.game.decode_action(PASS, 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("up-to-4 opponent Digimon prompt");
+    runner.game.decode_action(view.valid_action_ids[0], 0);
+    finish_multi_select(&mut runner);
+
+    assert_eq!(runner.effective_dp(opp_a), Some(9000));
+}
+
+/// The -DP lasts into the opponent's next turn.
+#[test]
+fn bt8_084_dp_minus_persists_through_opponent_turn() {
+    let mut runner = color_runner();
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let kimera = runner.place_stack(0, &["SRC-RG", "BT8-084"]);
+    fire_when_digivolving(&mut runner, kimera);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("up-to-4 opponent Digimon prompt (no trash prompt: trash empty)");
+    runner.game.decode_action(view.valid_action_ids[0], 0);
+    finish_multi_select(&mut runner);
+    assert_eq!(runner.effective_dp(opp_a), Some(9000));
+
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 1);
+    assert_eq!(
+        runner.effective_dp(opp_a),
+        Some(9000),
+        "still applied during the opponent's next turn"
+    );
+}
+
+/// No opponent Digimon -> the DP-minus leg installs no prompt.
+#[test]
+fn bt8_084_no_opponent_digimon_no_dp_prompt() {
+    let mut runner = color_runner();
+    let kimera = runner.place_stack(0, &["SRC-RG", "BT8-084"]);
+    fire_when_digivolving(&mut runner, kimera);
+    assert!(
+        runner.pending_selection().is_none(),
+        "empty trash + empty opponent field -> nothing to choose"
+    );
+}
+
+
+/// A single opponent Digimon is still a PICK (DCGO SelectPermanentEffect with
+/// maxCount 1, canNoSelect: false) — never auto-selected.
+#[test]
+fn bt8_084_single_opponent_digimon_still_prompts() {
+    let mut runner = color_runner();
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let kimera = runner.place_stack(0, &["SRC-BLUE", "SRC-RG", "BT8-084"]);
+    fire_when_digivolving(&mut runner, kimera);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the -DP pick parks even with one candidate");
+    runner.game.decode_action(view.valid_action_ids[0], 0);
+    finish_multi_select(&mut runner);
+    assert_eq!(
+        runner.effective_dp(opp_a),
+        Some(8000),
+        "white + blue + red + green = 4 colors -> -4000"
     );
 }

@@ -1,0 +1,133 @@
+# Exam scenario: Deputymon (EX7-010), clause EX7-010#effect#1 --
+# "[When Digivolving] [When Attacking] [Once Per Turn] You may trash any 1
+#  Option card from 1 Digimon's digivolution cards."
+#
+# This file exercises the [When Digivolving] arm (EX7_010.cs registers two
+# ActivateClass entries sharing the hash "TrashOption_EX7_010").
+#
+# THE LINE. The Option has to be under a Digimon BEFORE Deputymon arrives, on
+# a ONE-Digimon board (DCGO seats Digimon centre-out, so a slot on a
+# two-Digimon board names the other Digimon there --
+# ../BT25/NOTES-BT25-083.md). Sparrowmon (EX7-051, purple Lv.3) does both
+# jobs: its [Start of Your Main Phase] seats Hurricane Screw Shot (EX7-071)
+# under ITSELF on T3 -- the confirmed EX7-051-effect1.yaml shape -- and it is
+# then the base Deputymon digivolves onto (through the special "Lv.3
+# w/[Three Musketeers] in text" line, measured on its own by
+# EX7-010-effect0.yaml). Deputymon's [When Digivolving] trashes EX7-071 from
+# its own digivolution cards.
+#
+# WHY EX7-071. Its "When effects trash this card from digivolution cards,
+# gain 1 memory" is mandatory and PROMPT-FREE (EX7_071.cs, confirmed by
+# EX7-071-effect0.yaml), and nothing in Deputymon's effect is asked AFTER the
+# trash, so the known trigger-timing finding (ours resolves the source-trash
+# trigger mid-effect, DCGO stacks it: ../P/NOTES-P-180.md) cannot show at any
+# row. The +1 memory (1 -> 2) doubles as a witness that the trash was an
+# EFFECT trash on both engines.
+#
+#   T1 (P0, 0): play Sparrowmon (3: 0 -> -3).      T2 (P1, 3): pass.
+#   T3 (P0, 3): Sparrowmon's [Start of Your Main Phase]: EX7-071 from hand
+#               under Sparrowmon, <Draw 1>. Deputymon over Sparrowmon for 2
+#               (3 -> 1, draw 1). THE CLAUSE: accept; host = Deputymon; trash
+#               EX7-071; its trigger gains 1 memory (1 -> 2). Still P0's
+#               turn: the trailing step is P0's pass.
+#
+# PROMPT SHAPE (EX7_010.cs "Shared WD / WA" + CardEffectCommons/
+# TrashDigivolutionCards.cs SelectTrashDigivolutionCards(permanentCondition:
+# any battle-area Digimon, cardCondition: IsOption, maxCount 1, canNoTrash:
+# false, isFromOnly1Permanent: true)):
+#   1. SetUpActivateClass(..., 1, TRUE, ...) -> OptionalSkill. Ours: the
+#      clause's `optional: true` gate (kind Replacement, 1:1) -- SHARED.
+#   2. SelectPermanentEffect(maxCount 1, canNoSelect: false) over EVERY
+#      battle-area Digimon of either player (DCGO does not filter hosts to
+#      those holding an Option; ours does -- identical here, the board is one
+#      Digimon). SHARED with our `select_any_permanent` (AnyField). Consumed
+#      under the harness even with one candidate.
+#   3. SelectCardEffect (Root.Custom over the host's DigivolutionCards,
+#      filtered IsOption, canNoSelect: false) -- DCGO-only by identity. Ours
+#      is a single-candidate source pick the resolver cannot name by `cards:`
+#      (selection_resolve.rs has no digivolution-card identity arm), answered
+#      through the single-accept-id `yes:` path, sim-only (the P-180 /
+#      EX7-071-effect0 idiom).
+#   4. ITrashDigivolutionCards -> EX7-071's trigger: AddMemory(1), no prompt.
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_010_pool.json (--decks).
+card: EX7-010
+clause: EX7-010#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), stack[10..]
+    # draws: T3 turn, Sparrowmon's <Draw 1>, the digivolution draw. EX7-071
+    # is the only Option P0 ever holds.
+    stack: [EX7-051, EX7-010, EX7-071, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, BT25-083, BT25-083,
+            BT25-082, ST1-02, ST1-02]
+    rest: tm-deputymon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-010
+steps:
+  # T1 (P0, 0): Sparrowmon (3: 0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-051, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T3 (P0, 3). Sparrowmon's [Start of Your Main Phase]: DCGO-only gate (our
+  # union pick is gate and pick at once), then the two SHARED picks.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [EX7-071] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Deputymon over Sparrowmon for 2 (3 -> 1); sources [EX7-051, EX7-071].
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-010 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. 1: the optional gate -- SHARED.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # 2: the host Digimon -- Deputymon itself. SHARED.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # 3: the Option to trash. Ours: single-accept-id `yes:`, sim-only. DCGO:
+  # SelectCardEffect by identity, wire-only.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX7-071], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # EX7-071's trigger resolved with no prompt (1 -> 2). One step past the
+  # clause: still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.field:
+        - { card_id: EX7-010, dp: 6000, suspended: false, sources: [EX7-051] }
+      p0.hand: [BT25-082, BT25-082, EX7-008, ST1-02, ST1-02]
+      p0.trash: [EX7-071]
+      p1.field: []

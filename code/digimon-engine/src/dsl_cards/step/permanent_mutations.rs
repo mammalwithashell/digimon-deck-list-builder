@@ -105,6 +105,71 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // G-DSL-DELETE-PERMANENTS-BATCH (EX7-071 "Delete 1 of your opponent's
+        // level 3, 1 of their level 4, and 1 of their level 5 Digimon"): the
+        // picks are separate selections but the deletion is ONE event (DCGO
+        // `EX7_071.cs` accumulates `selectedPermanents`, then a single
+        // `DestroyPermanentsClass(list).Destroy()`; general_rule 15-4-3-2).
+        // Unset bindings (self-skipped arms) are ignored, duplicates collapse,
+        // vanished / effect-immune permanents are skipped, then ONE batched
+        // deletion runs so every target leaves the field simultaneously.
+        CompiledStep::DeletePermanents { targets } => {
+            let mut handles: Vec<crate::permanent::PermanentHandle> = Vec::new();
+            for target in targets {
+                if let Some(ResolvedBinding::Permanent(h)) =
+                    resolve_binding_ref(target, ctx, bindings)
+                {
+                    let exists = ctx
+                        .game
+                        .player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .is_some();
+                    if exists && !handles.contains(&h) && ctx.can_affect_permanent(h) {
+                        handles.push(h);
+                    }
+                }
+            }
+            if handles.is_empty() {
+                return true;
+            }
+            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>)> = handles
+                .iter()
+                .map(|&h| (h, ctx.game.effective_dp(h)))
+                .collect();
+            let cause = ctx.game.infer_deletion_cause(handles[0]);
+            ctx.game.delete_permanents_batch(handles, cause);
+            for (h, dp) in snapshots {
+                bindings.record_deleted(h, dp);
+            }
+            true
+        }
+        // G-DSL-DELETE-ALL-PERMANENTS (BT6-105 "Delete all Digimon with play
+        // costs of 7 or less"): scan BOTH battle areas once, drop targets this
+        // effect cannot affect (immunity — the same gate `ctx.delete_permanent`
+        // applies), snapshot each survivor's pre-removal DP for the result
+        // log (rule 25), then run ONE batched deletion so the whole set leaves
+        // the field simultaneously (DCGO `DestroyPermanentsClass(list)`).
+        CompiledStep::DeleteAllPermanents { over } => {
+            let matches: Vec<crate::permanent::PermanentHandle> =
+                crate::dsl_cards::step::permanent_scan::scan(ctx, over, Some(bindings))
+                    .into_iter()
+                    .filter(|h| ctx.can_affect_permanent(*h))
+                    .collect();
+            if matches.is_empty() {
+                return true;
+            }
+            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>)> = matches
+                .iter()
+                .map(|&h| (h, ctx.game.effective_dp(h)))
+                .collect();
+            let cause = ctx.game.infer_deletion_cause(matches[0]);
+            ctx.game.delete_permanents_batch(matches, cause);
+            for (h, dp) in snapshots {
+                bindings.record_deleted(h, dp);
+            }
+            true
+        }
         CompiledStep::TrashBreedingPermanent { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {

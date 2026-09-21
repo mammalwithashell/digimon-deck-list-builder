@@ -1,0 +1,127 @@
+# Exam scenario: Violet Inboots (BT18-093), clause BT18-093#effect#1 --
+# "[Start of Your Main Phase] By trashing 1 Option card or 1 card with the
+#  [Ghost] or [Three Musketeers] trait in your hand, <Draw 1>."
+#
+# THE LINE. The Tamer is hard-played on T3; p1 passes T4 out normally, so p0
+# opens T5 on 3 (the [Start of Your Turn] clause stays silent: 3 > 2). p0's
+# hand holds Shadow Wing ST1-13 -- an Option card, the cheapest fodder in the
+# pool -- so the trigger is offered at the start of the main phase; p0 pays it
+# (Shadow Wing to the trash) and draws 1. The witness is p0's trash holding
+# ST1-13 and p0's hand size unchanged (one trashed, one drawn).
+#
+# PROMPT SHAPE (BT18_093.cs, region "Start of Your Main Phase"):
+# SetUpActivateClass(..., -1, true, ...) -> an OptionalSkill yes/no, gated on
+# `HasMatchConditionOwnersHand(IsOption || Ghost || Three Musketeers)`; then
+# ONE SelectHandEffect (maxCount 1, canNoSelect: true, Mode.Discard) whose
+# AfterSelect runs `DrawClass(1)` only if a card was picked. Ours: `optional:
+# true` on the clause over a `select_hand { optional: true, cost: true }` --
+# no outer gate is installed when the first step is itself declinable, so the
+# ONE declinable hand pick is both gate and pick. That is the documented
+# `optional_gate_fold`: the pick row below carries `expect: OptionalSkill`
+# as the fold marker and the emitter writes OptionalSkill(yes) + the
+# SelectHandEffect answer on the wire (same shape as P-198-effect1.yaml).
+# <Draw 1> is Mandatory (keyword-semantics 16-7).
+#
+# Memory: T1 p0 -> p1 3; T2 pass -> p0 3; T3 Inboots (4): 3 -> -1 -> p1 1;
+# T4 p1 passes on 1 -> p0 3; T5: the clause costs no memory.
+#
+# Book: qa/dcgo-exams/BT18/tm_bt18_093_pool.json (--decks). p0's deck is Violet
+# Inboots BT18-093 x4 + Shadow Wing ST1-13 x4 (a red Option, the [Start of
+# Your Main Phase] fodder) over the quiet ST-1 filler; p1 is the quiet ST-1
+# opponent.
+card: BT18-093
+clause: BT18-093#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Tamer, Shadow Wing (the Option fodder), inert filler
+      - BT18-093
+      - ST1-13
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's T3 turn draw, T5 turn draw, the clause's <Draw 1>
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-inboots
+  p1:
+    stack:
+      # hand (0-4): the Biyomon, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Inboots for 4 (3 -> -1; the turn hands over on 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT18-093, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 1): all-pass (p1 passes with memory on its side, so p0
+  # opens T5 on 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): breeding step (empty area, hatch declined), then THE
+  # CLAUSE opens the main phase.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE FOLD: our one declinable hand pick = DCGO's OptionalSkill(yes) + pick.
+  - actor: 0
+    do: { select: { cards: [ST1-13] } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: [ST1-13]
+      p0.hand: [ST1-04, BT1-009, ST1-05, BT4-010, BT4-010, BT3-007]
+      p0.field:
+        - { card_id: BT18-093, dp: -1, suspended: false, sources: [] }
+      p1.field: []

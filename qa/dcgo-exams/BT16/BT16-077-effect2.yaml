@@ -1,0 +1,200 @@
+# Exam scenario: Dinobeemon (BT16-077), clause BT16-077#effect#2 --
+# <Partition (purple Lv.4 & red Lv.4)> ("When this Digimon with each of the
+# specified digivolution cards would leave the battle area other than by your
+# effects or a battle, you may play 1 each of the specified cards without
+# paying the costs").
+#
+# REACHING "EACH OF THE SPECIFIED CARDS" WITHOUT A DNA VERB. The natural way to
+# hold a purple Lv.4 AND a red Lv.4 under Dinobeemon is its DNA digivolution,
+# which the exam cannot declare on either wire (NOTES-BT16-077.md, effect#0).
+# This line gets there legally anyway:
+#   - Dinobeemon digivolves onto a hard-played Youkomon ST6-07 (purple Lv.4,
+#     vanilla) through its ordinary purple circle (cost 4);
+#   - Scopemon BT21-071's [On Play] ("By placing 1 card with the [Appmon] or
+#     [Three Musketeers] trait from your hand or trash as 1 of your Digimon's
+#     bottom digivolution card, gain 1 memory") tucks Effecmon BT22-009 -- a
+#     RED Lv.4 with the [Appmon] trait -- under DINOBEEMON.
+# Dinobeemon now holds [Effecmon (red Lv.4), Youkomon (purple Lv.4)]: both
+# PartitionConditions (BT16_077.cs: (4, Purple), (4, Red)) are met.
+#
+# THE REMOVAL is P1's Gaia Force ST1-16 ("[Main] Delete 1 of your opponent's
+# Digimon") -- an OPPONENT's effect, neither "your effects" nor a battle. P1's
+# red Tai Kamiya ST1-12 (T2) meets its colour requirement.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): Tai Kamiya (2: 3 -> 1); pass -> P0 3.
+#   T3 (P0, 3): Youkomon (5: 3 -> -2) -> P1 2.
+#   T4 (P1, 2): pass -> P0 3.
+#   T5 (P0, 3): Dinobeemon onto Youkomon (4: 3 -> -1). DCGO asks the [When
+#            Digivolving] OptionalSkill on every digivolution (isOptional TRUE,
+#            CanActivate = on the battle area): DECLINED. Our engine opens
+#            the same optional window since the 2026-09-19 triage (f3a02b5f4:
+#            the DNA gate covers only the trash play, BT16_077.cs:182); before
+#            that the whole clause was `dna_origin`-gated and this line
+#            diverged here at step 11. -> P1 1.
+#   T6 (P1, 1): pass -> P0 3.
+#   T7 (P0, 3): Scopemon (4: 3 -> -1). [On Play]: DCGO OptionalSkill (yes,
+#            `dcgo_only` -- ours folds gate and pick into the union pick, the
+#            BT21-071-effect1.yaml shape), SelectHandEffect (Effecmon: the only
+#            [Appmon]/[Three Musketeers] trait card in hand, trash empty so no
+#            zone menu), SelectPermanentEffect host = Dinobeemon (identity
+#            pick; two own Digimon are offered). +1 memory -> 0: still P0's
+#            turn; pass -> P1 3.
+#   T8 (P1, 3): Gaia Force (8: 3 -> -5) on Dinobeemon. THE CLAUSE, for P0 on
+#            P1's turn.
+#
+# PROMPT SHAPE (KeyWordEffects/Partition.cs + CardEffectFactory Partition.cs):
+# WhenRemoveField, `SetUpActivateClass(CanActivateCondition, ..., -1, TRUE,
+# ...)` -> ONE OptionalSkill. `PartitionClass.Partition` opens a
+# SelectCardEffect per condition ONLY when that condition has MORE THAN ONE
+# matching digivolution card; here each has exactly one (Youkomon / Effecmon),
+# so both are taken without a prompt and played free (`PlayPermanentCards`).
+# Effecmon's [On Play] ("Delete 1 of your opponent's Digimon with 4000 DP or
+# less") then activates with no target (P1 fields only a Tamer): its
+# SelectPermanentEffect sits behind `HasMatchConditionPermanent` -- nothing
+# asked; ours is `condition`-gated the same way. Youkomon is a vanilla.
+#
+# OURS ASKS ONE MORE: after the `Replacement` "May accept replacement:
+# <Partition>" (1:1 with the OptionalSkill) our engine parks a
+# `CountCappedMultiSelect { min: 1, max: 2 }` "select 2 cards to play" over
+# the digivolution cards -- per-slot Partition source enforcement is
+# engine-deferred (BT16-077.yaml "Modeling notes"; lower_partition.rs), so the
+# generic source pick governs even when each slot has a single legal card. It
+# is answered `sim_only` (zero wire rows). With only the two specified cards
+# under the stack the pick cannot go wrong here; that the prompt admits
+# `min: 1` (a Partition that plays only ONE of the two) is recorded in
+# NOTES-BT16-077.md as a finding, not exercised.
+#
+# WITNESS: Dinobeemon alone in P0's trash; Youkomon and Effecmon on P0's board
+# unsuspended with no sources; Gaia Force in P1's trash; all on P1's turn 8.
+card: BT16-077
+clause: BT16-077#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never checked); [10..] draws.
+    stack: [ST6-07, BT16-077, BT21-071, BT22-009, ST6-02,
+            ST6-02, ST6-03, ST6-09, ST1-03, ST1-05,
+            ST1-02, ST1-04, ST6-03, ST1-05, ST1-02]
+    rest: tm-partition
+  p1:
+    stack: [ST1-12, ST1-16, ST1-04, ST1-05, ST1-08,
+            ST1-02, ST1-04, ST1-05, ST1-08, ST1-03,
+            ST1-03, ST1-04, ST1-10, ST1-02, ST1-03]
+    rest: tm-quiet-gaia
+steps:
+  # T1 (P0, memory 0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Tai Kamiya (3 -> 1); pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Youkomon, the purple Lv.4 (3 -> -2) -> P1 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST6-07, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 2): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Dinobeemon onto Youkomon (3 -> -1). ONE Digimon: slot-safe.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT16-077 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving] OptionalSkill in both engines: decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T6 (P1, 1): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): Scopemon (3 -> -1); its [On Play] tucks the red Lv.4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT22-009] } }
+    expect: { prompt: SelectHandEffect }
+  # Host: Dinobeemon (identity pick -- Scopemon is offered too).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory 0: still P0's turn; pass -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): Gaia Force (3 -> -5) on Dinobeemon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: P0 accepts <Partition>.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Our per-slot source pick (sim-only; DCGO auto-takes the lone card per
+  # slot). Since the slot-enforcement fix our engine offers ONLY the two
+  # specified cards and needs one answer: the other is then the only card that
+  # can fill the remaining parenthetical, so it is taken without a prompt.
+  - actor: 0
+    do: { select: { cards: [BT22-009], sim_only: true } }
+  # Memory -5 -> P0's turn-9 breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the tuck (step 19): both specified cards are under Dinobeemon.
+  - at: 19
+    that:
+      turn: 7
+      p0.memory: 0
+      p0.trash: []
+      p0.field:
+        - { card_id: BT16-077, dp: 8000, suspended: false, sources: [BT22-009, ST6-07] }
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  # After <Partition> (step 25): Dinobeemon left, its two Lv.4s were played.
+  - at: 25
+    that:
+      turn: 9
+      p0.memory: 5
+      p0.trash: [BT16-077]
+      p1.trash: [ST1-16]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT22-009, dp: 4000, suspended: false, sources: [] }
+        - { card_id: ST6-07, dp: 6000, suspended: false, sources: [] }

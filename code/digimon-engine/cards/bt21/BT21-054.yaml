@@ -1,0 +1,154 @@
+# BT21-054 Shotmon — Digimon (Appmon), Lv.3, Black, DP 1000, Cost 3.
+# Traits: Stnd. / Appmon / Shooting. Attribute: Game.
+#
+# Printed card text (data/card_bundles/BT21-054.md — official Bandai DB):
+#
+#   [On Play] By trashing 1 card with the [Appmon] or [Three Musketeers]
+#   trait from any of your Digimon's digivolution cards, ＜De-Digivolve 1＞
+#   1 of your opponent's Digimon.
+#   Special Rule: +2000 DP  (the Appmon link box)
+#   Inherited Effect: ＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the
+#   hand or battle area sideways into the specified Digimon in the battle
+#   area.) [When Linking] Delete 1 of your opponent's Digimon with a play
+#   cost of 3 or less.
+#
+# Digivolution requirements (official Bandai DB):
+#   Standard circle: Black Lv.2 / cost 0.
+#   [Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_054.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Link Condition: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#   → `kind: link_condition, cost: 1, filter: trait_has Appmon` (BT21-009 /
+#   BT25-007 idiom). Link box "+2000 DP" → `scope: linked` DP aura 2000.
+#
+# Alternative Digivolution Condition: IsLevel2 && (EqualsTraits("Appmon") ||
+#   HasText("Three Musketeers")), cost 0 → `level_eq: 2` + `any_of:
+#   [trait_has Appmon, in_text_contains "Three Musketeers"]`; the standard
+#   Black Lv.2 / 0 circle is also authored.
+#
+# On Play (`SetUpActivateClass(..., -1, true, ...)` = OPTIONAL): CanActivate
+#   = some own Digimon's DigivolutionCards contain ≥1 Appmon-or-TM-trait card;
+#   SelectTrashDigivolutionCards(permanentCondition: own Digimon w/ eligible
+#   source, cardCondition: Appmon || TM trait, maxCount 1, canNoTrash: false,
+#   isFromOnly1Permanent: false) → `if (cardsTrashed)` mandatory
+#   SelectPermanentEffect over opponent Digimon → IDegeneration(1).
+#   → `optional: true` clause; cost = `select_union_zone { zones: [material] }`
+#     with `material_of` omitted (scans EVERY own Digimon's digivolution
+#     cards — BT25-083 clause-2 idiom, one pick encoding DCGO's
+#     Digimon-then-card two-step) filtered Appmon-or-TM trait +
+#     `trash_union_bound`; then mandatory `select_opponent_permanent { kind:
+#     digimon }` → `de_digivolve { amount: 1, stop_at_level: 3 }`.
+#
+# WhenLinked (SetIsLinkedEffect(true)): mandatory Destroy select over opponent
+#   Digimon with HasPlayCost && GetCostItself ≤ 3 → `scope: linked, when:
+#   when_linked`, `select_opponent_permanent { kind: digimon, play_cost_lte:
+#   3 }` → `delete_permanent` (BT25-007 idiom; self-skips on 0 candidates).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |--------------------------------------------------------------------|-----------|
+# | Alt-source Lv.2 w/[Three Musketeers] in text or [Appmon] / 0 (+ Black circle) | IMPLEMENTED |
+# | [On Play] trash 1 Appmon/TM card from any own Digimon's sources → De-Digivolve 1 | IMPLEMENTED |
+# | Link box +2000 DP                                                  | IMPLEMENTED |
+# | <Link> [Appmon] trait: Cost 1                                      | IMPLEMENTED |
+# | [When Linking] delete 1 opp Digimon with play cost ≤ 3             | IMPLEMENTED |
+
+card: BT21-054
+name: Shotmon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: ["Stnd.", Appmon, Shooting]
+attribute: Game
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from:
+      level_eq: 2
+      any_of:
+        - trait_has: Appmon
+        - in_text_contains: "Three Musketeers"
+    cost: 0
+
+effects:
+  # ─── <Link> [Appmon] trait: Cost 1 ────────────────────────────────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+    summary: "<Link> [Appmon] trait: Cost 1"
+
+  # ─── Link box: +2000 DP to the host while linked ──────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
+
+  # ─── [On Play] trash Appmon/TM source from any own Digimon → De-Digivolve 1 ─
+  - when: on_play
+    optional: true
+    # DCGO CanActivateCondition: some own Digimon's digivolution cards hold
+    # an [Appmon]/[Three Musketeers] card — otherwise the optional gate is
+    # not offered. `source_count` evaluates its nested filter per source card
+    # with the card-leaf evaluator (no combinators), so the OR is expressed as
+    # two existential legs with single-trait filters.
+    condition:
+      any_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            source_count:
+              filter: { trait_has: Appmon }
+              at_least: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            source_count:
+              filter: { trait_has: "Three Musketeers" }
+              at_least: 1
+    summary: "[On Play] By trashing 1 [Appmon] or [Three Musketeers] card from any of your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          filter:
+            any_of:
+              - trait_has: Appmon
+              - trait_has: "Three Musketeers"
+          bind_as: fodder
+          prompt: "Trash 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: fodder
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── [When Linking] delete 1 opp Digimon with play cost ≤ 3 ───────────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: link_target
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 3
+          prompt: "Delete 1 of your opponent's Digimon with a play cost of 3 or less"
+      - delete_permanent: { target: link_target }

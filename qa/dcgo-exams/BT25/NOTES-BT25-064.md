@@ -1,0 +1,141 @@
+# NOTES — ToyAgumon (BT25-064)
+
+Denominator (`PYTHONPATH=code python -m tools.clause_coverage.extract --card-ids BT25-064`):
+**3 clauses** — `effect#0`, `effect#1`, `inherited#0`.
+DCGO script: `BT25/Black/BT25_064.cs` exists — the card is **not** `unavailable`.
+All three clauses have a scenario; none is `unreachable`.
+Book: `qa/dcgo-exams/BT25/tm_bt25_064_pool.json` (decks `tm-toy-black`, `tm-quiet-red`).
+
+| Clause | Text | Scenario | Sim-only |
+|---|---|---|---|
+| `BT25-064#effect#0` | `[Digivolve] Lv.2 w/[TS] trait: Cost 0` | `BT25-064-effect0.yaml` | lowers, asserts pass |
+| `BT25-064#effect#1` | `[On Play] Reveal the top 3 cards of your deck. Add 1 Option card and 1 [TS] trait card among them to the hand. Return the rest to the bottom of the deck.` | `BT25-064-effect1.yaml` | lowers, asserts pass |
+| `BT25-064#inherited#0` | `<Reboot>` (inherited) | `BT25-064-inherited0.yaml` | lowers, asserts pass |
+
+## Audit of the crashed agent's files (resumed campaign, 2026-09-18)
+
+All three files were on disk, uncommitted; all lowered and asserted as
+found, and the prompt sequences hold against `BT25_064.cs`:
+
+- `effect#0`: `AddSelfDigivolutionRequirementStaticEffect(HasTSTraits, 0,
+  false, card, null, level: 2)` with the default `cardColor: None`
+  (`AddDigivolutionRequirement.cs` applies no colour check then). The base
+  is a PURPLE Lv.2 [TS] egg (Tsunomon BT24-007), so the printed Black Lv.2
+  circle fails and the clause is the only route: one cost, no
+  `SelectCountEffect`. Breeding-area effects are inert, so no `[On Play]`.
+- `effect#1`: `SetUpActivateClass(..., -1, false, ...)` — mandatory;
+  `SimplifiedRevealDeckTopCardsAndSelect(revealCount 3, two conditions,
+  mutualConditions: true, canNoSelect: false)` → `RevealLibrary.cs`
+  loops the conditions: ONE `SelectCardEffect` "Select 1 Option card." then
+  ONE "Select 1 [TS] trait card." (the `mutualConditions` relaxation only
+  fires when the first pick was the sole first-condition card AND also
+  satisfies the second — taking Der Blitz EX7-070 first rules it out, since
+  Iron Slash BT25-100 also satisfies condition 1). No leading `generic_bool`
+  (`canNoAction` is false on the simplified helper). The lone remainder goes
+  to the deck bottom with no prompt (`ReturnRevealedCardsToLibraryBottom`,
+  `Count == 1` → `AddLibraryBottomCards`); our engine parks a one-item
+  `OrderedPermutation`, answered `sim_only` — the known
+  `OrderedPermutation`-at-N=1 row of `docs/DCGO_EXAM.md`.
+- `inherited#0`: `RebootSelfStaticEffect(isInheritedEffect: true)`;
+  <Reboot> is mandatory (keyword-semantics 16-10), no prompt on either side.
+  Witness: the host (Thundermon BT8-061, vanilla) reads unsuspended at P1's
+  breeding decision after attacking on P0's turn.
+
+## Second resume (2026-09-18): re-lowered; slot hygiene; one PREDICTED oracle diff
+
+All three files re-lowered unchanged against the current harness. None
+digivolves into BT25-085, resolves a `<De-Digivolve>`, or links. Slot hygiene
+(`NOTES-BT25-083.md`): P0 never holds more than one permanent and P1 holds
+none, so `field.0` is the same permanent on both engines.
+
+**Predicted for `effect#1` — the `RevealBucket` add-timing quirk.**
+`docs/DCGO_EXAM.md` ("Rows where one side looks rules-wrong") records that on
+a ≥2-condition `SimplifiedRevealDeckTopCardsAndSelect` DCGO moves each
+bucket's pick to the hand when THAT prompt closes, while ours collects every
+pick and adds once (§15-15-10-1). Expect a one-field `p0.hand` divergence on
+the 2nd pick row (DCGO already shows EX7-070 in hand) with no downstream
+rows; triage it as the documented DCGO quirk (the sister ToyAgumon
+EX7-008#effect#1 measured exactly this), not as an engine bug.
+
+## Oracle run 2026-09-21 (close-out job `three-musketeers-2`) — the PREDICTED diff, measured
+
+`effect#0` and `inherited#0` were already `confirmed` from the earlier pass.
+`effect#1` ran `completed` (sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl`) and the
+`--all-diffs` re-run reports **exactly the one row this file predicted**, and
+nothing else:
+
+```
+DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps, 1 sim-only row)
+  LEAD step 3:
+    p0.hand: ours=[BT2-052, BT2-056, BT3-059, BT8-061]
+             dcgo=[BT2-052, BT2-056, BT3-059, BT8-061, EX7-070]
+```
+
+Step 3 is the SECOND bucket pick. DCGO has already moved the first bucket's
+EX7-070 to hand; ours adds both picks after the last bucket closes. Step 4 (the
+lone-remainder row) and step 5 (the T2 hand-over) match, so the end state —
+EX7-070 + the second ToyAgumon in hand, BT25-100 to the deck bottom — is
+identical on both engines.
+
+**Triage: the documented DCGO quirk, not an engine bug** —
+`G-EXAM-REVEAL-BUCKET-ADD-TIMING` in `docs/RUST_ENGINE_GAPS.md` (DCGO
+`RevealLibrary.cs:291-328` moves each pick on its own `SelectCardEffect`'s
+`Mode`; ours is the 15-1-2 / 15-1-6 choose-all-then-add reading, and 15-15-3-2
+puts revealed cards in no area meanwhile). The sister ToyAgumon
+`EX7-008#effect#1` and Deputymon `BT6-060#effect#0` measured the same single
+row. The clause therefore stands as `diverged` in the store with our side
+adjudicated correct; no further action.
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (adjudicated DCGO quirk),
+0 unreachable, 0 unavailable, 0 unmeasured.**
+
+## Close-out triage 2026-09-21 (`three-musketeers-2`) — independently re-verified, DCGO quirk
+
+The clause was re-triaged from scratch at close-out, in the campaign's order of
+evidence, and the earlier reading holds at every layer.
+
+1. **Printed text** (official Bandai DB, `data/card_bundles/BT25-064.md`):
+   "[On Play] Reveal the top 3 cards of your deck. **Add 1 Option card and 1 [TS]
+   trait card among them to the hand.** Return the rest to the bottom of the deck."
+   ONE `Add` instruction carrying two differently-conditioned targets.
+2. **Rules** (`general_rule.pdf`, read directly): **15-15-10-1** (p.31) is the
+   on-point rule — "If a single effect allows you to select multiple targets with
+   different conditions, resolve the target conditions in accordance with the
+   following rules" — and **15-15-10-2..5** (p.31–32) then govern only WHICH
+   condition applies to WHICH target; none of them says when a chosen target moves.
+   **15-1-2** (a single effect is processed in the order shown in the text) and
+   **15-1-4** (multiple processes in one effect resolve once all have ended), p.22,
+   make choose-all-then-add the literal reading of one trailing `Add`.
+   **15-15-3-2** (p.29) — "A revealed card is treated as if it isn't placed in its
+   original area" — means nothing reads the intermediate hand.
+3. **DCGO C#**: the per-bucket add is shared-helper behaviour, not card-specific.
+   `BT25_064.cs:60-80` hands two
+   `SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1)`
+   to `SimplifiedRevealDeckTopCardsAndSelect`; `RevealLibrary.cs:291-329` runs one
+   `SelectCardEffect` per condition in a `foreach` (its own comment on the
+   `mutualConditions` branch says the conditions are "chosen at once (per card game
+   rules)"); and `SelectCardEffect.cs:751,813-815` runs `AddHandCards` at the end of
+   EACH prompt's own coroutine, before the loop sets the next bucket up.
+
+**Re-measured** with `--all-diffs` against the PRESERVED sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl` (zero Unity time):
+
+```
+DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row))
+  LEAD step 3:
+    p0.hand: ours=[BT2-052, BT2-056, BT3-059, BT8-061]
+             dcgo=[BT2-052, BT2-056, BT3-059, BT8-061, EX7-070]
+```
+
+`--all-diffs` prints that row and nothing else — one intermediate observation, never
+an outcome. **Not a slot-addressing artefact**: the scenario addresses no `field.N`
+(P0 holds one permanent, P1 none) and the diverging field is an ordered hand list.
+
+**Class: DCGO quirk. No engine, DSL or card change.** Verdict stays `diverged` in the
+store (the exam compares every step) with our side adjudicated correct; the triage is
+now written into `qa/qa-reports/exam-verdicts/BT25-064.json`'s `reason`, and this card
+is recorded as a measured driver of `G-EXAM-REVEAL-BUCKET-ADD-TIMING`.
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (adjudicated DCGO quirk),
+0 unreachable, 0 unavailable, 0 unmeasured.**

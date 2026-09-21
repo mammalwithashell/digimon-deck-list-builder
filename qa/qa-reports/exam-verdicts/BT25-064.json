@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T06:20:00.000000000+00:00",
+  "clauses": {
+    "BT25-064#effect#0": {
+      "clause_id": "BT25-064#effect#0",
+      "card_id": "BT25-064",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "39e459441c3cdb81288d588a179bd3ff2704b55b69a250a215d7d263e163bc29",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:14.847812600+00:00"
+    },
+    "BT25-064#effect#1": {
+      "clause_id": "BT25-064#effect#1",
+      "card_id": "BT25-064",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "f7489a8b7ba819c2cb88eeaa168e7606110fcce7e928d1989fdd0930db17a87a",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-effect1.yaml",
+      "reason": "DIVERGED at step 3 (2nd reveal-bucket pick row; compared 5 of 6 ours / 5 dcgo steps, 1 sim-only row with no DCGO prompt): p0.hand ours=[BT2-052, BT2-056, BT3-059, BT8-061] dcgo=[BT2-052, BT2-056, BT3-059, BT8-061, EX7-070] -- DCGO has already moved the FIRST bucket's pick (Der Blitz EX7-070) to hand before asking the [TS] bucket; ours adds both picks after the last bucket closes. TRIAGED 2026-09-21 (close-out job three-musketeers-2), re-measured with --all-diffs against the PRESERVED sidecar 20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl (zero Unity time): this ONE p0.hand field at step 3 is the LEAD and the ONLY diff -- no downstream rows, and step 4 (lone remainder to deck bottom) and step 5 (T2 hand-over) agree, so the end state (EX7-070 + the 2nd ToyAgumon in hand, Iron Slash BT25-100 on the deck bottom) is identical. NOT a slot-addressing artefact: the scenario addresses no field.N (P0 holds exactly one permanent, P1 none) and the diverging field is an ordered hand list. CLASS: DCGO QUIRK, no fix. Printed text (official Bandai DB, data/card_bundles/BT25-064.md) is ONE 'Add 1 Option card and 1 [TS] trait card among them to the hand' -- a single effect selecting multiple targets with different conditions, general_rule.pdf 15-15-10-1 (p.31), whose sub-rules 15-15-10-2..5 (p.31-32) govern only WHICH condition applies to which target and never when a chosen target moves; 15-1-2 (processed in the order shown in the text) and 15-1-4 (multiple processes in a single effect resolve once all have ended) make choose-all-then-add the literal reading, and 15-15-3-2 (p.29: a revealed card is treated as if it isn't placed in its original area) means nothing reads the intermediate hand. DCGO's order is a shared-helper artifact, not card-specific: BT25_064.cs:60-80 passes two SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1) to SimplifiedRevealDeckTopCardsAndSelect; RevealLibrary.cs:291-329 runs ONE SelectCardEffect per condition in a foreach (its own comment: the conditions are 'chosen at once (per card game rules)'); and SelectCardEffect.cs:751,813-815 executes AddHandCards at the end of EACH prompt's own coroutine, before the loop sets up the next bucket. Outcome-neutral here and observable only if an 'added to your hand' trigger could fire between picks. Verdict stays `diverged` (the exam compares every step) with our side adjudicated correct. Tracked as G-EXAM-REVEAL-BUCKET-ADD-TIMING in docs/RUST_ENGINE_GAPS.md (DCGO quirk, explicitly not an engine gap). Same family as BT6-060#effect#0, BT7-056#effect#0 and EX7-008#effect#1; see docs/DCGO_EXAM.md 'Rows where one side looks rules-wrong' (RevealBucket add timing).",
+      "recorded_at": "2026-09-21T06:20:00.000000000+00:00"
+    },
+    "BT25-064#inherited#0": {
+      "clause_id": "BT25-064#inherited#0",
+      "card_id": "BT25-064",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "cd9dea1cebe1afa18ff06e6e70eb6c9242d593ddbff132535f10985f6b827106",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-064-inherited0.yaml",
+      "recorded_at": "2026-09-19T15:13:17.172499+00:00"
+    }
+  }
+}

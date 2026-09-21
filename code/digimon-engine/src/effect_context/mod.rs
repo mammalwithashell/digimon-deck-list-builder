@@ -502,6 +502,35 @@ impl<'a> EffectReadContext<'a> {
             .unwrap_or(false)
     }
 
+    /// The cards an EFFECT just placed into the event host's digivolution
+    /// cards (`OnAddDigivolutionCards`); empty on every other timing.
+    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub fn added_source_cards(&self) -> &[CardHandle] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.added_source_cards())
+            .unwrap_or(&[])
+    }
+
+    /// The effect that caused the current event, for effect-caused event
+    /// timings (`OnAddDigivolutionCards`): controller + carrier card.
+    pub fn event_cause_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_cause_effect)
+    }
+
+    /// True when the current effect-caused event (`OnAddDigivolutionCards`)
+    /// was caused by an effect the OBSERVER controls — BT7-056 Dorumon "when
+    /// one of your effects places a digivolution card under this Digimon".
+    pub fn event_caused_by_own_effect(&self) -> bool {
+        self.event_cause_effect()
+            .map(|cause| cause.controller == self.player())
+            .unwrap_or(false)
+    }
+
     /// True when the permanent carrying THIS effect was played by an effect
     /// (`PlaySource::ByEffect`), read at the OnPlay firing (BT25-080).
     pub fn played_by_effect(&self) -> bool {
@@ -743,18 +772,10 @@ impl<'a> EffectReadContext<'a> {
     /// Direct player attacks (`AttackTarget::Player`) return `None` because
     /// there is no opposing Digimon.
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        let pa = self.game.pending_attack.as_ref()?;
-        let defender = match pa.effective_target {
-            crate::AttackTarget::Digimon(h) => Some(h),
-            crate::AttackTarget::Player(_) => None,
-        }?;
-        if self_handle == pa.attacker {
-            Some(defender)
-        } else if self_handle == defender {
-            Some(pa.attacker)
-        } else {
-            None
-        }
+        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // prompt), live `pending_attack` otherwise. See
+        // `Game::resolving_battle_opponent_of`.
+        self.game.resolving_battle_opponent_of(self_handle)
     }
 }
 
@@ -1271,6 +1292,30 @@ impl<'a> EffectContext<'a> {
             .unwrap_or(false)
     }
 
+    /// See [`EffectReadContext::added_source_cards`].
+    pub fn added_source_cards(&self) -> Vec<CardHandle> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.added_source_cards().to_vec())
+            .unwrap_or_default()
+    }
+
+    /// See [`EffectReadContext::event_cause_effect`].
+    pub fn event_cause_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_cause_effect)
+    }
+
+    /// See [`EffectReadContext::event_caused_by_own_effect`].
+    pub fn event_caused_by_own_effect(&self) -> bool {
+        self.event_cause_effect()
+            .map(|cause| cause.controller == self.player)
+            .unwrap_or(false)
+    }
+
     /// See [`EffectReadContext::played_by_effect`].
     pub fn played_by_effect(&self) -> bool {
         self.game
@@ -1473,18 +1518,10 @@ impl<'a> EffectContext<'a> {
 
     /// See [`EffectReadContext::battle_opponent_of`].
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        let pa = self.game.pending_attack.as_ref()?;
-        let defender = match pa.effective_target {
-            crate::AttackTarget::Digimon(h) => Some(h),
-            crate::AttackTarget::Player(_) => None,
-        }?;
-        if self_handle == pa.attacker {
-            Some(defender)
-        } else if self_handle == defender {
-            Some(pa.attacker)
-        } else {
-            None
-        }
+        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // prompt), live `pending_attack` otherwise. See
+        // `Game::resolving_battle_opponent_of`.
+        self.game.resolving_battle_opponent_of(self_handle)
     }
 
     // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────

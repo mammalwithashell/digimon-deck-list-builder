@@ -10,6 +10,7 @@ mod cross_check;
 mod delay;
 mod delay_union_play_flow;
 mod digixros_aliases;
+mod digivolve_target_predicates;
 mod digixros_transaction_steps;
 mod effect_battle;
 mod effect_granted_attack;

@@ -1,0 +1,98 @@
+# Exam scenario: Megadramon (EX7-011), clause EX7-011#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.4 w/[Three Musketeers] in text:
+# Cost 3".
+#
+# WHY BLACKGATOMON. Megadramon's printed circle is Red Lv.4 / 3, so a Red
+# Lv.4 base cannot separate the circle from the special line. BlackGatomon
+# (BT25-082) is a PURPLE/BLACK Lv.4 whose printed text names [Three
+# Musketeers] twice: the standard circle fails on colour, and the ONLY legal
+# way for it to digivolve into Megadramon is the clause under exam -- a
+# single distinct cost, so neither engine opens a cost prompt. The witness
+# is DCGO accepting the digivolve at all (an illegal action aborts the job
+# as a finding) plus the projected state: Megadramon over BlackGatomon and
+# memory 3 -> 0.
+#
+# NO PROMPTS. BlackGatomon's [On Play] is gated on a [Three Musketeers]-text
+# Tamer in hand (BT25_082.cs AdditionalActivateCondition) -- none is held.
+# BlackGatomon's "[All Turns] ... may digivolve into a [Three Musketeers]
+# trait Digimon card for 4, ignoring requirements" needs a [Three
+# Musketeers]-text Tamer on the field -- none. Megadramon's [When
+# Digivolving] is gated on a [Three Musketeers] trait Option in hand or
+# trash (EX7_011.cs CanActivateCondition) -- none.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play BlackGatomon (6 -> -3).      T4 (P1, 3): pass.
+#   T5 (P0, 3): THE CLAUSE -- digivolve BlackGatomon into Megadramon for 3.
+#               Memory 0: still P0's turn, so the trailing step is P0's pass.
+#
+# PROMPT SHAPE (EX7_011.cs, region "Digivolution Condition"):
+# AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText("Three
+# Musketeers") && Level == 4, digivolutionCost: 3,
+# ignoreDigivolutionRequirement: false).
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_011_pool.json (--decks).
+card: EX7-011
+clause: EX7-011#effect#0
+seed: 424242
+decks:
+  p0:
+    # Draws: T3, T5, then the card the digivolution draws.
+    stack: [BT25-082, EX7-011, ST1-02, EX7-008, EX7-010,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            EX7-008, EX7-010, ST1-02]
+    rest: tm-megadramon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-011
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): BlackGatomon (6 -> -3). No Tamer in hand: no [On Play] prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-082, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE -- Megadramon over BlackGatomon for 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-011 } }
+    expect: { prompt: main_phase }
+  # One step past the clause (memory 0: still P0's turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.field:
+        - { card_id: EX7-011, dp: 7000, suspended: false, sources: [BT25-082] }
+      p0.hand: [EX7-008, EX7-008, EX7-010, EX7-010, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []

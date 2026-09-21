@@ -1,0 +1,210 @@
+# Exam scenario: BeelStarmon (X Antibody) (EX7-073), clause EX7-073#effect#0 --
+# "[Digivolve] Lv.6 w/[Three Musketeers] trait w/o [X Antibody] trait: Cost 1".
+#
+# The printed alt-circle. Measured as the COST ACTUALLY PAID: EX7-073
+# digivolves onto BeelStarmon (BT25-085 -- Lv.6, [Three Musketeers] trait, no
+# [X Antibody]) and memory falls 3 -> 2. Only this circle is open (the printed
+# Purple Lv.5 / cost 4 circle does not fit a Lv.6 base), so neither engine
+# asks which cost to pay.
+#
+# THE LINE reuses qa/dcgo-exams/BT25/BT25-082-effect2.yaml -- the only way
+# this pool puts a Lv.6 [Three Musketeers] Digimon on the field by T5 is
+# BlackGatomon's grant (see that file's header) -- idles P1's turn 6, and
+# digivolves on T7.
+#
+# WHAT THE DIGIVOLVE TRIGGERS, AND WHY THE ROWS BELOW ARE SHAPED THIS WAY.
+# EX7_073.cs registers TWO independent [When Digivolving] ActivateClasses:
+#   (a) "Play an Option card from hand" -- `SetUpActivateClass(.., -1, false, ..)`,
+#       CanActivateCondition = merely "self on the battle area". It is offered
+#       every time. Its body opens a SelectHandEffect only when a
+#       [Three Musketeers]-text Option is in hand; none is, so it resolves
+#       silently.
+#   (b) "Trash 2 cards to delete ..." -- `SetUpActivateClass(.., -1, TRUE, ..)`,
+#       CanActivateCondition = >= 1 [Three Musketeers]-trait digivolution card.
+#       BeelStarmon (BT25-085) just became one, so (b) is offered too, as an
+#       OptionalSkill gate -- even though only ONE trait card is under it and
+#       the cost of two can never be paid (the DCGO gate is vacuous here; our
+#       engine parks the up-to-2 source pick with a single candidate and lets
+#       the player PASS it).
+# Two active triggers from ONE card -> DCGO opens MultipleSkills and our engine
+# a TriggerOrder, both listing EX7-073 twice. Neither branch carries a keyword,
+# so `trigger:` cannot name them; `ordinal:` (position among the same-id
+# candidates, in EACH engine's own list) is the only handle. `ordinal: 0` is
+# authored on the C# registration order ((a) first) and our YAML order (clause
+# 1 first). IF THE ORACLE RUN ABORTS with a MultipleSkills index message, read
+# DCGO's order off it ([0:EX7-073 '<name>' | 1:EX7-073 '<name>']) and flip the
+# ordinal -- do not guess twice. Whichever runs first, the observable outcome
+# is identical: (a) does nothing, (b) is declined.
+#
+# T7 also opens with Asuna's [Start of Your Main Phase] (declined -- see
+# BT25-082-inherited0.yaml for the shape).
+card: EX7-073
+clause: EX7-073#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 grant-digivolve draw, T7 turn draw, ...
+    # stack[14] (the card the grant digivolve draws) is LadyDevimon BT25-083 here,
+    # NOT the BT25-082-effect2 prefix's BeelStarmon #2: BT25-085 is a DUAL
+    # card (Digimon face / "Fly Bullet" Option face, [Three Musketeers]
+    # trait), and whether DCGO's `IsOption && EqualsTraits` hand scans
+    # (BeelStarmon's [WD] use-Option gate, EX7-073's own clause-1 hand pick)
+    # count a dual card in hand is not something this line should have to
+    # answer -- so no Option-faced card is in P0's hand from T5 on.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-083,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (see the header). Declined; our engine has no prompt here.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: with Asuna on the field, BlackGatomon (Lv.4) digivolves into
+  # BeelStarmon (Lv.6) for 4, ignoring digivolution requirements. Memory
+  # 1 -> -3, which hands the turn over.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): empty breeding area -> breeding prompt; pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase] -- a different card's clause, declined.
+  # TWO rows for one decision: BT25_092.cs builds it `optional: false` and
+  # asks ONE cancellable SelectHandEffect, while our engine installs an outer
+  # accept/decline gate (kind `Replacement`) before its hand pick. The first
+  # row declines OUR gate and emits nothing; the second is DCGO's cancel.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: EX7-073 onto BeelStarmon for 1 (memory 3 -> 2).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-073 } }
+    expect: { prompt: main_phase }
+  # Trigger order between EX7-073's two [When Digivolving] effects (see header).
+  - actor: 0
+    do: { select: { cards: [EX7-073], ordinal: 0 } }
+    # `count` on a MultipleSkills row is the PICK count (MultipleSkills.cs
+    # SetTargetSkill hands TryAnswerStep a literal 1), never the number of
+    # stacked triggers -- the first oracle run aborted on `count: 2` for exactly
+    # that reason (triage 2026-09-18). The two-trigger claim is `candidates:`.
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
+  # Effect (b)'s gate. Only one [Three Musketeers]-trait source exists, so the
+  # two-card cost cannot be paid, and BOTH wires decline -- but in different
+  # SHAPES, so it takes one row each.
+  #
+  # REPAIRED 2026-09-21 (close-out job three-musketeers-2). This used to be a
+  # lone `dcgo_only` row, because our engine "resolved the unpayable pick with
+  # no prompt at all". It no longer does: `b77d1b288` (which also fixed
+  # `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT` -- the exam resolver's
+  # trailing PASS used to silently eat a freshly parked `min: 0` SourceMulti)
+  # leaves the cost pick PARKED and visible, as the no-approximations rule
+  # requires: `SourceMulti { min: 0, max: 2, picked: 0 }`, "Trash 2 cards with
+  # the [Three Musketeers] trait in this Digimon's digivolution cards". `min: 0`
+  # IS the decline path (the same authored shape EX7-073-effect2.yaml uses), so
+  # the row below declines it explicitly instead of relying on a trailing PASS.
+  # End state is unchanged and still CLEAN against the preserved sidecar.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause; P0 still holds memory 2, so the pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. Memory 2 = 3 - 1 is the witness.
+  # EX7-073 caps a five-card stack; nothing was trashed or deleted.
+  - at: 22
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 2
+      p0.field:
+        - card_id: EX7-073
+          dp: 12000
+          suspended: false
+          sources: [BT25-082, BT25-085, EX7-051, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p0.trash: []
+      p1.security: 5

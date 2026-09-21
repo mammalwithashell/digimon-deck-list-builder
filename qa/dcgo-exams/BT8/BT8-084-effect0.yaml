@@ -1,0 +1,178 @@
+# Exam scenario: Kimeramon (BT8-084), clause BT8-084#effect#0 --
+# "[DNA Digivolve] 0 from Lv.4 + Lv.4 -- Digivolve unsuspended with the 2
+#  specified Digimon stacked on top of each other."
+#
+# THE WITNESS both engines share: after the declaration p0 holds ONE permanent
+# whose top card is Kimeramon over BOTH Flamedramons ([P-137, P-137] as
+# digivolution sources, bottom first), UNSUSPENDED, for 0 memory -- and the
+# second field slot is gone, because the two materials became one stack.
+#
+# Reachable at all only since 2026-09-20: the `dna:` verb + DCGO's
+# DNA_DIGIVOLVE arm in `InputDriver.BuildMainPhaseAction` (fc67f9ae6, build
+# D:/dcgo-build/scripted-v16). Before that neither wire could name the
+# declaration -- `G-TOOLING-EXAM-NO-DNA-VERB`, NOTES-BT8-084.md.
+#
+# THE LINE. Both materials are Flamedramon P-137 (red/blue Lv.4, DP 5000,
+# cost 5) and NOT the deck's other Lv.4, Hudiemon BT23-101: Hudiemon's
+# `[On Play]` ("you may play 1 play cost 5 or lower [CS] trait card ... Then,
+# to 1 of your opponent's Digimon, give -3000 DP ...") would add a prompt pair
+# that measures nothing about this clause. Flamedramon's only texts are
+# <Armor Purge>, <Raid> and an attack-target-switch trigger, all silent for a
+# Digimon that is merely played.
+#
+#   T1 (p0, 0): all-pass -> p1 on 3.
+#   T2 (p1, 3): all-pass -> p0 on 3.
+#   T3 (p0, 3): Flamedramon A (3 -> -2). Memory crosses to p1, so the turn
+#               ends on the play itself -- no trailing main pass.
+#   T4 (p1, 2): all-pass -> p0 on 3.
+#   T5 (p0, 3): Flamedramon B (3 -> -2) into the second field slot.
+#   T6 (p1, 2): all-pass -> p0 on 3.
+#   T7 (p0, 3): the DNA declaration, cost 0 -> memory stays 3 and the turn
+#               stays p0's, which is what makes "digivolve UNSUSPENDED"
+#               readable (a freshly played Digimon would be unsuspended too,
+#               but this one is a Lv.5 that just digivolved).
+#
+# THE [When Digivolving] IS DELIBERATELY SILENT. It fires on this route like
+# any other, so the line keeps both of its prompts empty on both wires:
+# p0's trash is EMPTY (nothing has been trashed all game), so DCGO's
+# SelectCardEffect over the own trash has no candidate and `Activate()` skips
+# it; and p1 has NO Digimon, so the SelectPermanentEffect never opens either.
+# That keeps this file a reading of the DNA clause alone -- #effect#1 is where
+# those two prompts are measured.
+#
+# PROMPT SHAPE (BT8_084.cs): the DNA condition is
+# `AddJogressConditionClass` with two `JogressConditionElement`s, each
+# "own battle-area Digimon whose Levels_ForJogress contains 4", and
+# `JogressCondition(elements, 0)`. DCGO asks NOTHING for it: the whole
+# declaration is one `PlayCardAction` whose `JogressEvoRootsFrameIDs` names
+# both materials. Our engine asks twice (`Game::initiate_dna_digivolve` parks
+# a `SelectionKind::Material` prompt per material, over raw own-battle-area
+# indices), which is why the `dna:` verb carries the pair itself and the wire
+# gets one row.
+#
+# Book: qa/dcgo-exams/BT8/tm_bt8_084_pool.json (--decks), the same pair
+# #effect#1 and #effect#2 use.
+card: BT8-084
+clause: BT8-084#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the two materials, the DNA result, inert filler
+      - P-137
+      - P-137
+      - BT8-084
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP. Never touched -- nobody attacks.
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      # (10+): the T3 / T5 / T7 turn draws
+      - BT4-014
+      - BT3-007
+      - BT3-007
+    rest: tm-kimeramon
+  p1:
+    stack:
+      # hand (0-4): inert -- p1 passes every turn.
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      - ST1-08
+      # security (5-9)
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-13
+      - ST1-14
+      # (10+): the T2 / T4 / T6 turn draws
+      - BT4-014
+      - ST1-08
+      - BT3-007
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Flamedramon A (3 -> -2); the turn ends on the play.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-137, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 2): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): Flamedramon B (3 -> -2) into the second slot.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-137, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 2): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): THE CLAUSE. [DNA Digivolve] 0 from Lv.4 + Lv.4, both
+  # Flamedramons, cost 0 -- memory is unchanged and p0 keeps the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { dna: { card: BT8-084, materials: [field.0, field.1] } }
+    expect: { prompt: main_phase }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-declaration: two separate Lv.4 permanents, memory 3.
+  - at: 13
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.field:
+        - { card_id: P-137, dp: 5000, suspended: false, sources: [] }
+        - { card_id: P-137, dp: 5000, suspended: false, sources: [] }
+      p1.field: []
+      p0.trash: []
+  # After the declaration: ONE permanent, Kimeramon over both materials,
+  # unsuspended, for 0 memory. The [When Digivolving] ran with both of its
+  # prompts empty (no trash candidate, no opponent Digimon), so nothing else
+  # moved.
+  - at: 14
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT8-084, dp: 8000, suspended: false, sources: [P-137, P-137] }
+      p1.field: []
+      p0.trash: []
+      p1.trash: []
+      p0.security: 5
+      p1.security: 5

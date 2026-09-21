@@ -1,0 +1,100 @@
+# Exam scenario: Neptunemon (BT24-030), clause BT24-030#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.5 w/[Aqua] or [Sea Animal] in any trait
+# or w/[TS] trait: Cost 3".
+#
+# DECK NOTE. `tm-neptune` (qa/dcgo-exams/BT24/tm_bt24_030_pool.json) is a black
+# vanilla shell (Hagurumon/Commandramon/Numemon/Tankmon/WaruMonzaemon/Megadramon
+# BT2-060/HiAndromon/Gotsumon/Bearmon -- no printed text) carrying 4x Neptunemon
+# BT24-030, 4x Aegiochusmon BT24-014, 4x Thundermon BT8-061 and 4x ToyAgumon
+# BT25-064; eggs 4x Pagumon BT25-005. `tm-quiet-red` is the quiet ST1 shell
+# plus 4x Tai Kamiya ST1-12 and 4x Gaia Force ST1-16.
+#
+# ISOLATION. Neptunemon's printed circles are Blue Lv.5 / cost 4 and Black
+# Lv.5 / cost 4 (official DB bundle; card_overrides.json evo_costs colours 1
+# and 5). The base here is Aegiochusmon BT24-014 -- RED/YELLOW, Lv.5,
+# [Shaman/Iliad/TS/Dragonkin] -- so neither circle applies and the T5
+# digivolve is legal ONLY through the special condition, at cost 3
+# (BT24_030.cs: IsLevel5 && (HasAquaTraits || HasTSTraits), digivolutionCost:
+# 3). A single legal route means no cost-choice prompt on either side.
+#
+# WHY AEGIOCHUSMON, HARD-PLAYED. It carries no [On Play] (its printed trigger
+# is [When Digivolving] only -- BT24_014.cs) and its keywords (<Security A.
+# +1>, <Decode>) are passive, so the T3 hard play is silent on both sides. A
+# previous draft used Vademon BT24-061, but data/cards.json ingests that card
+# with no DP (`dp: None`, `play_cost: 0`; the official DB prints 7000 / 6) and
+# our engine deletes it at 0 DP the moment it lands -- a card-data gap, not a
+# Neptunemon finding. Neptunemon's own [When Digivolving] has no opposing
+# Digimon to bounce (P1 fields nothing all line): DCGO's coroutine finds
+# `opponentDigimons.Any()` false and asks nothing (the ActivateClass is
+# `isOptional: false`), ours runs an empty `for_each`.
+#
+# Memory: T1 P0 -> P1 3; T2 P1 -> P0 3; T3 Aegiochusmon (8): 3 -> -5 -> P1 5;
+# T4 P1 -> P0 3; T5 Neptunemon (3): 3 -> 0, P0 keeps the turn and passes.
+#
+# WITNESS: the digivolve lowers; Neptunemon stands over Aegiochusmon and P0
+# paid exactly 3 (memory 3 -> 0).
+card: BT24-030
+clause: BT24-030#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-014, BT24-030, BT2-052, BT3-059, BT2-056,
+            BT3-067, BT5-066, BT2-052, BT3-059, BT2-056,
+            BT3-067, BT5-066, BT2-060, BT2-064]
+    rest: tm-neptune
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT1-014, BT3-007,
+            BT1-009, BT4-014, ST1-02, BT3-007, ST1-04,
+            ST1-03, BT1-014, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; pass -> P1 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): decline breeding; hard-play Aegiochusmon (8 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 5): nothing -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): decline breeding; THE CLAUSE -- Neptunemon off a
+  # red/yellow [TS] Lv.5 for 3; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-030 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.field:
+        - card_id: BT24-030
+          dp: 12000
+          suspended: false
+          sources: [BT24-014]
+      p1.field: []

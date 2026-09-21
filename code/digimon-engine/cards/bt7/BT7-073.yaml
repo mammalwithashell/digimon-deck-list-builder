@@ -1,0 +1,70 @@
+# BT7-073 KaiserLeomon — Digimon, Lv.4, Purple, DP 6000, Cost 6.
+# Traits: Hybrid / Variable / Cyborg. Attribute: Variable. Form: Hybrid.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT7-073.md; card image
+# confirms):
+#   You may digivolve this card from your hand onto one of your purple Tamers
+#   as if the Tamer is a level 3 purple Digimon for a memory cost of 2.
+#   [When Digivolving] If a card with [Hybrid] in its traits or [Koichi Kimura]
+#   is in this Digimon's digivolution cards, this Digimon gains ＜Retaliation＞
+#   until the end of your opponent's next turn. (When this Digimon is deleted
+#   after losing a battle, delete the Digimon it was battling.)
+#
+# Digivolution: Purple Lv.3 / cost 3 AND Purple Lv.4 / cost 1 (card image +
+# official DB; both rows are in data/card_overrides.json).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT7/Purple/BT7_073.cs
+#   - EffectTiming.None → AddSelfDigivolutionRequirementStaticEffect(
+#       TopCard Purple && IsTamer, digivolutionCost: 2, ignore false).
+#   - OnEnterFieldAnyone / CanTriggerWhenDigivolving,
+#     SetUpActivateClass(..., -1, false, ...) → NOT optional.
+#     CanActivateCondition: on field && DigivolutionCards.Count(trait
+#       "Hybrid" || name "Koichi Kimura") >= 1  → clause `condition:`
+#     ActivateCoroutine: GainRetaliation(self, EffectDuration.UntilOpponentTurnEnd)
+#       → grant_keyword Retaliation, expiry end_of_opponents_next_turn.
+#
+# The Tamer route mirrors BT7-071 Loweemon (`source_treated_as`); here the
+# printed "for a memory cost of 2" is the route's literal cost (the printed
+# Lv.3 circle would cost 3). `self_digivolution_sources_*` scan the
+# digivolution cards only (not the top card) — exactly DCGO's
+# `DigivolutionCards`, so KaiserLeomon's own [Hybrid] trait never satisfies
+# its own gate.
+
+card: BT7-073
+name: KaiserLeomon
+kind: digimon
+level: 4
+color: [purple]
+cost: 6
+dp: 6000
+traits: [Hybrid, Variable, Cyborg]
+attribute: Variable
+
+alt_paths:
+  # Printed circles: Purple Lv.3 / cost 3; Purple Lv.4 / cost 1.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 1
+
+  # ─── Hybrid: onto one of your purple Tamers as a Lv.3 purple Digimon, cost 2
+  - kind: digivolve
+    from: { kind: tamer, color_is: purple }
+    source_treated_as: level_3_purple_digimon
+    cost: 2
+
+effects:
+  # ─── [When Digivolving] conditional <Retaliation> until end of opp's next turn
+  - when: when_digivolving
+    condition:
+      any_of:
+        - self_digivolution_sources_trait_has: Hybrid
+        - self_digivolution_sources_contain_name: "Koichi Kimura"
+    summary: "[When Digivolving] If a [Hybrid] card or [Koichi Kimura] is in this Digimon's digivolution cards, gain <Retaliation> until the end of your opponent's next turn"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Retaliation
+          expiry: end_of_opponents_next_turn

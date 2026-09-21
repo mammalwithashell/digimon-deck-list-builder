@@ -35,7 +35,7 @@ fn parse_gain_memory() {
 fn parse_draw() {
     let step = parse_single_step("draw: { of: you, count: 2 }");
     match step {
-        StepSpec::Draw(d) => assert_eq!(d.count, 2),
+        StepSpec::Draw(d) => assert_eq!(d.count, digimon_dsl::formula::FormulaSpec::Literal(2)),
         _ => panic!("expected Draw"),
     }
 }

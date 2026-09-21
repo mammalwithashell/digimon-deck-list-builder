@@ -1,0 +1,123 @@
+# Exam scenario: Deputymon (EX7-010), clause EX7-010#effect#2 --
+# "[Your Turn] This Digimon gains the [Three Musketeers] trait."
+#
+# A trait is not in the state projection, so the grant is measured through
+# the two things that READ it on another card. Hurricane Screw Shot (EX7-071)
+# is a PURPLE Option: "While you have a [Three Musketeers] trait Digimon, you
+# may ignore this card's color requirements. [Main] Delete 1 of your
+# opponent's level 3, 1 of their level 4, and 1 of their level 5 Digimon.
+# Then, place this card as the bottom digivolution card of 1 of your [Three
+# Musketeers] trait Digimon."
+#
+#   1. LEGALITY. P0's only permanent is the RED Deputymon (printed traits:
+#      [Mutant] only), hard-played -- nothing purple is on P0's field or in
+#      its breeding area. Using the purple Option is legal on either engine
+#      ONLY if Deputymon counts as a [Three Musketeers] trait Digimon on
+#      P0's turn (an illegal action aborts the oracle job as a finding).
+#   2. THE TUCK. The Option's "Then, place this card as the bottom
+#      digivolution card of 1 of your [Three Musketeers] trait Digimon" is
+#      gated on such a Digimon existing (EX7_071.cs: HasMatchConditionPermanent
+#      over `TopCard.EqualsTraits("Three Musketeers")`); without the grant
+#      the Option would go to the trash (the measured outcome of
+#      EX7-071-effect1.yaml, where P0 holds no trait carrier). Here it ends
+#      under Deputymon: `sources: [EX7-071]`, `p0.trash: []`.
+#
+#   T1 (P0, 0): pass.            T2 (P1, 3): pass.
+#   T3 (P0, 3): play Deputymon (6: 3 -> -3). It has no [On Play].
+#   T4 (P1, 3): pass.
+#   T5 (P0, 3): THE CLAUSE -- use Hurricane Screw Shot (6: 3 -> -3). P1's
+#               board is empty, so none of the three level picks opens
+#               (each is gated by HasMatchConditionPermanent); the tuck pick
+#               is asked. Memory -3 hands the turn over.
+#   T6 (P1, 3): breeding decision -- the trailing step.
+#
+# PROMPT SHAPE.
+#  * EX7_010.cs "Your Turn": ChangeTraitsClass gated IsOwnerTurn &&
+#    IsExistOnBattleAreaDigimon && PermanentOfThisCard().TopCard == card,
+#    appending "Three Musketeers" to CardSource.CardTraits (CardSource.cs
+#    ~2590: CardTraits folds every IChangeTraitsEffect of the card itself) --
+#    so ContainsTraits / EqualsTraits on other cards see it. Static: no
+#    prompt. Ours: a face-up `kind: aura` `grant_traits` overlay read by
+#    `trait_has` filters.
+#  * EX7_071.cs "Main": SetUpActivateClass(null, ..., -1, FALSE, ...) --
+#    mandatory, no OptionalSkill. Level picks skipped (no candidates). The
+#    tuck is ONE SelectPermanentEffect(maxCount 1, canNoSelect: false); under
+#    the harness the AI branch's SetTargetFrames hook consumes the row even
+#    with a single candidate (P-180-effect1.yaml, confirmed).
+#  * Placing the Option under Deputymon is an effect adding a digivolution
+#    card; nothing on the board observes OnAddDigivolutionCards (the
+#    observers are BT25-005, EX7-005, BT7-056).
+#
+# Book: qa/dcgo-exams/EX7/tm_ex7_010_pool.json (--decks).
+card: EX7-010
+clause: EX7-010#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand, stack[5..9] security (never flipped), draws: T3, T5.
+    # EX7-071 is the only Option that ever reaches P0's hand.
+    stack: [EX7-010, EX7-071, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, BT25-083, BT25-083,
+            BT25-082, ST1-02]
+    rest: tm-deputymon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05]
+    rest: tm-red-opponent-010
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Deputymon (6: 3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE -- a PURPLE Option used with only a RED Digimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-071, from: hand } }
+    expect: { prompt: main_phase }
+  # The tuck target: Deputymon, P0's only Digimon -- a candidate only because
+  # it has the [Three Musketeers] trait on P0's turn.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1, 3): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - { card_id: EX7-010, dp: 6000, suspended: false, sources: [EX7-071] }
+      p0.hand: [BT25-082, BT25-082, EX7-008, ST1-02, ST1-02]
+      p0.trash: []
+      p1.field: []
+      p1.security: 5

@@ -143,6 +143,28 @@ pub enum StepSpec {
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
     DeleteForCostReduction(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
+    /// `delete_permanents: { targets: [<binding>, ...] }` — delete several
+    /// SEPARATELY-bound single permanents SIMULTANEOUSLY through the batched
+    /// deletion flow (`Game::delete_permanents_batch`, rule 25). For the
+    /// printed "Delete 1 X, 1 Y, and 1 Z" shape, where each pick is its own
+    /// selection but the deletion is one event (DCGO: picks accumulated into
+    /// one list, then a single `DestroyPermanentsClass(list).Destroy()`).
+    /// Unset bindings (an arm that self-skipped) are ignored; duplicates are
+    /// deleted once; effect-immune permanents are skipped. Driver EX7-071
+    /// Hurricane Screw Shot. G-DSL-DELETE-PERMANENTS-BATCH.
+    DeletePermanents(DeletePermanentsArgs),
+    /// `delete_all_permanents: { over: <predicate> }` — delete EVERY
+    /// battle-area permanent matching `over` SIMULTANEOUSLY through the
+    /// engine's batched deletion flow (`Game::delete_permanents_batch`, rule
+    /// 25) — the printed "Delete all ..." shape (DCGO `DestroyPermanentsClass`
+    /// over a pre-scanned list). Unlike `for_each` + `delete_permanent`, the
+    /// matches are scanned ONCE up front and leave the field as one batch, so
+    /// `[On Deletion]` / "when another Digimon is deleted" observers see a
+    /// single simultaneous deletion rather than a sequence. Effect-immune
+    /// permanents (`can_affect_permanent`) are skipped. Driver BT6-105
+    /// Gewalt Schwärmer "[Main] Delete all Digimon with play costs of 7 or
+    /// less." G-DSL-DELETE-ALL-PERMANENTS.
+    DeleteAllPermanents(DeleteAllPermanentsArgs),
     /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR — per-color mandatory pick +
     /// batch delete (EX9-074 Kimeramon Branch B).
     DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
@@ -286,6 +308,18 @@ pub enum StepSpec {
     /// for costs that can be paid by trashing a card from hand or from one of
     /// your Digimon's digivolution cards.
     TrashUnionBound(UnionBoundArgs),
+    /// G-DSL-RETURN-UNION-BOUND-TO-DECK (EX7-043 Tankmon "By returning 3
+    /// cards with the [Three Musketeers] trait from your hand or trash to the
+    /// top of the deck"). Return a `select_union_zone`-bound card from its
+    /// TRUE origin zone (hand, trash, or a carrier's digivolution sources) to
+    /// the top or bottom of its OWNER's deck. A return, not a trash — fires no
+    /// `OnDiscardHand` / `OnDigivolutionCardTrashed`. Sibling of
+    /// `trash_union_bound` / `play_union_bound_free`. Each call moves ONE
+    /// card, so a "return N" cost is authored as N sequential union picks,
+    /// each immediately returned — the pick order IS the deck order (the last
+    /// card returned to `top` ends up on top), so every ordering DCGO's
+    /// "specify the order" prompt can reach is reachable here too.
+    ReturnUnionBoundToDeck(ReturnUnionBoundToDeckArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
@@ -527,6 +561,8 @@ impl Serialize for StepSpec {
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
+            StepSpec::DeletePermanents(v) => kv!(s, "delete_permanents", v),
+            StepSpec::DeleteAllPermanents(v) => kv!(s, "delete_all_permanents", v),
             StepSpec::DeleteOnePerOpponentColor(v) => {
                 kv!(s, "delete_one_per_opponent_color", v)
             }
@@ -591,6 +627,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
             StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::TrashUnionBound(v) => kv!(s, "trash_union_bound", v),
+            StepSpec::ReturnUnionBoundToDeck(v) => kv!(s, "return_union_bound_to_deck", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
@@ -805,6 +842,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
+            "delete_permanents" => StepSpec::DeletePermanents(map.next_value()?),
+            "delete_all_permanents" => StepSpec::DeleteAllPermanents(map.next_value()?),
             "delete_one_per_opponent_color" => {
                 StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
             }
@@ -868,6 +907,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "trash_union_bound" => StepSpec::TrashUnionBound(map.next_value()?),
+            "return_union_bound_to_deck" => {
+                StepSpec::ReturnUnionBoundToDeck(map.next_value()?)
+            }
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -1043,6 +1085,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "delete_permanent",
                         "delete_for_cost_reduction",
                         "delete_bound_permanents",
+                        "delete_permanents",
                         "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
                         "return_to_hand",
@@ -1185,6 +1228,25 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `delete_permanents` (G-DSL-DELETE-PERMANENTS-BATCH): each entry
+/// of `targets` is a single-permanent binding; all that resolve are deleted in
+/// one batch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeletePermanentsArgs {
+    pub targets: Vec<BindingRef>,
+}
+
+/// Args for `delete_all_permanents` (G-DSL-DELETE-ALL-PERMANENTS): `over` is
+/// a permanent-subject predicate scanned over BOTH battle areas (scope it with
+/// `of: you` / `of: opponent` / `of: any`); every match is deleted in one
+/// batch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteAllPermanentsArgs {
+    pub over: PredicateSpec,
 }
 
 /// Args for `delete_one_per_opponent_color`
@@ -1720,7 +1782,15 @@ pub struct SubstituteReplacementArgs {
 #[serde(deny_unknown_fields)]
 pub struct DrawArgs {
     pub of: PlayerRef,
-    pub count: u8,
+    /// Literal (`count: 2`) or formula (`count: { max: [ { subtract: [6,
+    /// { base: 0, per: { card_count_in_zone: { of: you, zone: hand } },
+    /// delta: 1 }] }, 0 ] }`) draw count. A literal compiles to
+    /// `CompiledStep::Draw`; a formula compiles to `CompiledStep::DrawFn`
+    /// and is evaluated at resolution time (clamped at 0). Driver EX7-013
+    /// MagnaKidmon "draw cards from the top of your deck until you have 6
+    /// in your hand". `Recover` shares this args struct but accepts only a
+    /// literal. G-DSL-DRAW-FORMULA-COUNT.
+    pub count: FormulaSpec,
 }
 
 /// Args for `trash_from_top` — mill `count` cards from the top of `of`'s
@@ -2511,6 +2581,17 @@ pub struct UnionBoundArgs {
     /// the selected card's origin zone so consumers can move it from the right
     /// place without re-prompting.
     pub binding: String,
+}
+
+/// Args for `return_union_bound_to_deck` (G-DSL-RETURN-UNION-BOUND-TO-DECK).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnUnionBoundToDeckArgs {
+    /// Name of the `select_union_zone` binding to consume (origin-tagged).
+    pub binding: String,
+    /// Deck end the card returns to: `top` (drawn first) or `bottom`.
+    /// `random` / `choice` are not supported by this verb.
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

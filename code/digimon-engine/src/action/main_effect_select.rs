@@ -123,6 +123,20 @@ pub(crate) fn field_main_match(
                     continue;
                 }
             }
+            // A printed "By <cost>, …" gate is an OPTIONAL PROCESSING
+            // CONDITION (general_rule.pdf 15-7-1); 15-7-2 — if its content
+            // isn't executed, the processing after it can't be executed. An
+            // unpayable cost therefore makes this `[Main]` a guaranteed
+            // no-op, and DCGO does not even offer it (BT25_089.cs's
+            // `CanUseCondition` -> `CardEffectCommons.CanActivateSuspendCostEffect`).
+            // Suppressing the bit keeps the policy out of a no-op loop — the
+            // CannotAttack-mask precedent.
+            // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+            if let Some(kind) = effect.activation_cost_kind {
+                if !kind.is_payable(game, Some(perm_handle)) {
+                    continue;
+                }
+            }
             return Some(MainEffectMatch {
                 name: effect.name.clone(),
             });

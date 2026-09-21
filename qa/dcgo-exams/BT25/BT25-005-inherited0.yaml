@@ -1,0 +1,179 @@
+# Exam scenario: Pagumon (BT25-005), clause BT25-005#inherited#0 --
+# "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are
+#  placed in this Digimon's digivolution cards, it may digivolve into a
+#  Digimon card with [Three Musketeers] in its text or the [TS] trait in the
+#  hand with the cost reduced by 2."
+#
+# THE LINE. Pagumon BT25-005 (BLACK egg; book tm_bt25_005_pool.json, deck
+# tm-pagumon-bt25-005-egg -- the shared 50 with BT25-005 x4 in the egg deck)
+# is hatched on T1 and breeding-digivolved into ToyAgumon EX7-008 on T3
+# through ToyAgumon's printed alt-circle "Lv.2 w/[Three Musketeers] in
+# text: Cost 0" (Pagumon prints "[Three Musketeers]" in its inherited text;
+# ToyAgumon's RED standard circle fails on colour -> ONE route, cost 0, no
+# cost prompt on either engine: the oracle-authored EX7-008-effect0 shape).
+# T5: promote the stack, then play LadyDevimon BT25-083 (cost 7: 3 -> -4).
+# LadyDevimon's [On Play] is the PLACING EFFECT: its cost puts Bind Red
+# Trigger P-180 -- a [Three Musketeers] TRAIT card -- from the hand as the
+# bottom digivolution card of the ToyAgumon stack (P0's field.0), then
+# <Draw 1>. THE CLAUSE then fires from the stacked OnAddDigivolutionCards
+# window: Pagumon sits in that Digimon's digivolution cards, it is P0's
+# turn, a [Three Musketeers] trait card was placed there (DCGO
+# `cardEffectCondition: null` -- ANY effect qualifies). P0 accepts the
+# "may", and the ToyAgumon stack digivolves into BlackGatomon BT25-082 from
+# the hand with the cost reduced by 2: BlackGatomon's ONLY open route onto a
+# RED Lv.3 is its alt-circle "Lv.3 w/[Three Musketeers] in text or w/[TS]
+# trait: Cost 2" (ToyAgumon prints "[Three Musketeers]" in its effect
+# text; both purple / black standard circles fail on colour), 2 - 2 = 0.
+# ONE route -> no digivolution-cost prompt on either side; memory stays -4;
+# the digivolve draws 1. The turn ends at -4 -> the trailing step is P1's.
+#
+# WHY A RED BASE AND A FREE TARGET. A purple Lv.3 base (Sparrowmon) would
+# open BlackGatomon's purple circle (3) BESIDE the alt (2) -> a two-cost
+# SelectCountEffect / EffectChoice inside the effect-initiated digivolve,
+# a prompt shape no committed line has oracle-confirmed yet. ToyAgumon
+# closes every route but the alt one, so the ONLY decisions on the clause
+# are the two the printed text names: the "may" and the hand card.
+#
+# WHY NO [Three Musketeers]-TEXT TAMER IN HAND. BlackGatomon's [When
+# Digivolving] ("if you have 1 or fewer Tamers, you may play 1 Tamer card
+# with [Three Musketeers] in its text from your hand ...") is gated in DCGO
+# by AdditionalActivateCondition (a TM-text Tamer in HAND && <= 1 Tamers on
+# the field): with no Asuna in hand DCGO activates nothing and asks
+# nothing after the digivolve. Every draw is stacked so no BT24-088 /
+# BT25-092 reaches the hand. (Our BT25-082.yaml carries only the "<= 1
+# Tamers" half of that gate -- see NOTES-BT25-005.md if a sim-only row
+# appears here.)
+#
+# PROMPT SHAPE:
+#   LadyDevimon (BT25_083.cs, region "OP/WD Shared"; oracle-authored in
+#   BT25-083-effect1.yaml): optional: false -> NO OptionalSkill. The body
+#   opens with UserSelectionManager.SetIntSelection over {Hand=1, Trash=2
+#   (only if the trash qualifies -- it is empty), Don't place=3}: a
+#   `generic_int` row our engine never parks (our single UnionZone pick
+#   folds the zone into the pick) -> `dcgo_only`. Then SelectHandEffect
+#   (canNoSelect: true) over HasThreeMusketeersTraits -- P-180 is the only
+#   candidate (LadyDevimon herself is [TS], not [Three Musketeers]) --
+#   SHARED; then SelectPermanentEffect (canNoSelect: true) over own Digimon
+#   -- the ToyAgumon stack (field.0) or LadyDevimon (field.1) -- SHARED;
+#   then AddDigivolutionCardsBottom(..., activateClass) -> StackSkillInfos
+#   (OnAddDigivolutionCards); DrawClass(1).
+#   Pagumon (BT25_005.cs): SetUpActivateClass(..., 1 /* OPT */, TRUE, ...)
+#   -> the stacked lone trigger is asked as an OptionalSkill (at bundle
+#   length 1 DCGO asks no MultipleSkills). Our engine: `optional: true` +
+#   `outer_prompt: true` -> a `Replacement`-kind yes/no -- the 1:1 row of
+#   the surface table -> SHARED `select: { yes: true }`. Body:
+#   HasMatchConditionOwnersHand(HasText("Three Musketeers") || HasTSTraits)
+#   holds (BlackGatomon: [TS] trait AND TM text), so
+#   DigivolveIntoHandOrTrashCard asks ONE SelectHandEffect (maxCount 1,
+#   canNoSelect: isOptional=true) over Digimon cards passing the condition
+#   AND CanPlayCardTargetFrame under the -2 ChangeDigivolutionCost effect
+#   -> BlackGatomon is the only candidate (Gazimon / Sparrowmon are Lv.3;
+#   LadyDevimon is already on the field) -- SHARED with our `select_hand`.
+#   PlayCardClass.PlayCard with ONE open route asks no SelectCountEffect.
+#   BlackGatomon's [When Digivolving]: DCGO-gated off (above).
+card: BT25-005
+clause: BT25-005#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand: ToyAgumon, LadyDevimon, Bind Red Trigger,
+    # BlackGatomon, Titamon+SkullBaluchimon (Lv.7 filler; never played).
+    # stack[5..9] = security (never flipped: P1 never attacks).
+    # stack[10..] = draws in order: T3 turn draw, T3 digivolve draw, T5 turn
+    # draw, LadyDevimon's <Draw 1>, the clause's digivolve draw. All Lv.3
+    # Gazimon / a Lv.6 -- none is a Lv.4 [TS] / TM-text card, so the clause's
+    # hand pick has exactly ONE candidate, and no TM-text Tamer ever reaches
+    # the hand.
+    stack: [EX7-008, BT25-083, P-180, BT25-082, BT24-081,
+            BT21-074, BT21-074, BT25-085, BT25-085, BT25-085,
+            BT25-078, BT25-078, BT25-078, BT25-078, BT25-058]
+    rest: tm-pagumon-bt25-005-egg
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): hatch Pagumon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve ToyAgumon onto the BLACK Pagumon through
+  # its "[Three Musketeers] in text" alt-circle for 0 (draw 1). No breeding
+  # prompt: Pagumon is a Lv.2 in an occupied breeding area. ToyAgumon has
+  # only an [On Play], which a digivolve does not fire.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote the ToyAgumon stack (no [When Moving]; nothing fires).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # The PLACING EFFECT: play LadyDevimon (3 -> -4); her [On Play] resolves
+  # before the turn passes.
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO's zone menu: 1 = "Hand". Wire-only -- our engine folds the zone into
+  # the pick below.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the [Three Musketeers] trait card from hand -- Bind Red Trigger.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: the Digimon that receives it -- the ToyAgumon stack over Pagumon
+  # (P0's field.0; LadyDevimon is field.1). <Draw 1> then resolves, and the
+  # OnAddDigivolutionCards window fires THE CLAUSE.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE, decision 1: "it may digivolve" -- DCGO's OptionalSkill on the
+  # lone stacked trigger; our outer yes/no. Accepted.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE, decision 2: the hand card -- BlackGatomon ([TS] trait, TM
+  # text), the only Lv.4 candidate; its alt-circle cost 2 is reduced to 0.
+  # The stack digivolves (draw 1); memory stays -4.
+  - actor: 0
+    do: { select: { cards: [BT25-082] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause: memory -4 -> seat P1 (T6; P1's breeding area
+  # is empty, so its breeding prompt opens).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 15
+    that:
+      turn: 6
+      p0.memory: -4
+      p0.trash: []
+      p0.hand: [BT24-081, BT25-058, BT25-078, BT25-078, BT25-078, BT25-078]
+      p0.field:
+        - { card_id: BT25-082, dp: 6000, suspended: false, sources: [BT25-005, EX7-008, P-180] }
+        - { card_id: BT25-083, dp: 7000, suspended: false, sources: [] }
+      p1.field: []
+      p1.security: 5

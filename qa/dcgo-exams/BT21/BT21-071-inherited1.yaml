@@ -1,0 +1,155 @@
+# Exam scenario: Scopemon (BT21-071), clause BT21-071#inherited#1 --
+# "[When Linking] <Draw 2> and trash 2 cards in your hand."
+#
+# Measured through the BATTLE-AREA origin of <Link> ("Plug this card from the
+# hand or battle area"), so the two Scopemon link files between them cover
+# both origins (BT21-071-inherited0.yaml is the from-hand one). Scopemon B is
+# PLAYED, then on a later turn declares its link from the field into
+# Scopemon A: the whole B permanent is absorbed (DCGO ILinkCard root None ->
+# IPlacePermanentToLinkCards; B has no digivolution cards to trash), the
+# mandatory [When Linking] draws 2 and trashes 2.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): Biyomon (2) + Garudamon ST1-08 (6): 3 -> -5. P0 gets 5.
+#   T3 (P0, 5): play Scopemon A (5 -> 1). Hand = [TS] Tamers only -> A's [On
+#            Play] is vacuous: `dcgo_only` OptionalSkill decline (see
+#            BT21-071-effect0.yaml). Pass.
+#   T4 (P1, 3): pass.
+#   T5 (P0, 3): draws Scopemon B; play it (3 -> -1). B's [On Play] is vacuous
+#            the same way (hand BT24-088 x4 + BT25-092, trash empty) ->
+#            second `dcgo_only` decline. Memory -1: the turn passes by
+#            overshoot, P1 starts T6 on exactly 1.
+#   T6 (P1, 1): pass -> P0 gets 3.
+#   T7 (P0, 3): THE CLAUSE. Link B from field.1 into A at field.0 (3 -> 1).
+#            <Draw 2> = P-180, EX7-051; trash BT25-092 + EX7-051 (a held and
+#            a drawn card, so the pick is visibly over the WHOLE hand, after
+#            the draw). Memory 1: still P0's turn for the trailing pass.
+#
+# PROMPT SHAPE: see BT21-071-inherited0.yaml. Differences here: the
+# declaration rides the FIELD_EFFECT link sub-slot (InputDriver ->
+# ActivatePermanentAction(slot, index of the LinkEffect in OnDeclaration));
+# CanSelectPermanentCondition excludes B's own permanent, so the host prompt
+# again has the single candidate A and is still asked (canNoSelect: false).
+# WhenLinked isOptional: false -> no OptionalSkill. ONE SelectHandEffect
+# (maxCount 2, canEndNotMax: false) against our two sequential picks: one
+# two-card `cards:` answer, one wire row.
+card: BT21-071
+clause: BT21-071#inherited#1
+seed: 424242
+decks:
+  p0:
+    # [10] T3 draw, [11] T5 draw (Scopemon B), [12] T7 draw, [13],[14] the
+    # <Draw 2>.
+    stack: [BT21-071, BT24-088, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-071, BT25-092, P-180, EX7-051]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): Scopemon A, the host.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Scopemon B onto the field (3 -> -1); vacuous [On Play] again.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T6 (P1, 1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): THE CLAUSE -- link B from the battle area into A.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT21-071, from: field.1 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: LinkEffect is SetUpActivateClass(..., isOptional: true)
+  # (CardEffectFactory/KeyWordEffects/Link.cs), so DCGO confirms the declared
+  # <Link> with an OptionalSkill yes/no BEFORE the host pick. Our engine treats
+  # the declaration itself as the decision and parks nothing. Measured
+  # 2026-09-18: the first oracle run aborted here ("expected prompt
+  # 'SelectPermanentEffect' but DCGO asked 'OptionalSkill'").
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # <Draw 2> has resolved; trash 2 of the 8 cards now in hand.
+  - actor: 0
+    do: { select: { cards: [BT25-092, EX7-051] } }
+    expect: { prompt: SelectHandEffect, count: 2 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  - at: 20
+    that:
+      p0.memory: 1
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, P-180, EX7-051]
+  - at: 21
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 1
+      p0.trash: [BT25-092, EX7-051]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, P-180]
+      p0.field:
+        - { card_id: BT21-071, dp: 7000, suspended: false, sources: [] }

@@ -1,0 +1,150 @@
+# Exam scenario: BeelStarmon / Fly Bullet (BT25-085), clause
+# BT25-085#effect#4 -- the OPTION face's
+#   "<Use Req. ([Three Musketeers] in text)> (Specified cards let you ignore
+#    color requirements.)"
+#
+# WHY THIS LINE MEASURES THE CLAUSE AND NOT SOMETHING ELSE.
+# Fly Bullet is a Purple/Black Option. The only permanent P0 controls when it
+# is used is ToyAgumon EX7-008 -- a RED Lv.3 whose printed effect text reads
+# "Add 1 card with [Three Musketeers] in its text ...". So P0 has NO
+# colour-matching Digimon or Tamer, and the ordinary colour requirement
+# (general_rule.pdf 6-5-1-3 / the "you can only use an Option whose colour you
+# have in play" gate) FAILS. The use is legal on both engines only because the
+# printed <Use Req.> is satisfied -- remove ToyAgumon and no legal line exists.
+# That is the whole measurement: the clause is the sole admitting condition.
+#
+#   DCGO: CardEffectFactory.UseRequirements(card, HasText("Three Musketeers"))
+#         builds an IgnoreColorConditionClass whose CanUseCondition is
+#         "an own BATTLE-AREA or BREEDING permanent that IsDigimon||IsTamer and
+#         whose TopCard HasText(...)" (CardEffectFactory.cs:722-748).
+#   Ours: BT25-085.yaml `use_requirement: any_permanent { of: you, zone:
+#         [battle_area, breeding], in_text_contains: "Three Musketeers" }`,
+#         consulted by `option_use_requirement_or_color_available`
+#         (mask.rs:806) as an OR beside the colour check -- the same shape.
+#
+# ToyAgumon reaches the battle area WITHOUT firing its [On Play] (which would
+# add three reveal/add rows that have nothing to do with this clause): it is
+# DIGIVOLVED in the breeding area on top of the hatched Koromon ST1-01 (Red
+# Lv.2, standard circle Red Lv.2 / cost 0 -- the alt "[Digivolve] Lv.2
+# w/[Three Musketeers] in text" route needs TM text on the BASE, which Koromon
+# has not, so exactly one route is open and neither engine asks a cost
+# question), then MOVED on T5. Moving from the breeding area is not playing
+# (BT25-078 prints [When Moving] and [On Play] as different timings), so no
+# [On Play] fires on either side.
+#
+#   T1 (P0, 0): hatch; pass.
+#   T2 (P1, 3): pass breeding; play Biyomon ST1-02 (3 -> 1); pass.
+#   T3 (P0, 3): no breeding prompt (Lv.2 in an occupied egg slot cannot move);
+#               breeding-digivolve into ToyAgumon for 0; pass.
+#   T4 (P1, 3): pass breeding; pass.
+#   T5 (P0, 3): move ToyAgumon out; USE Fly Bullet for 6 (3 -> -3). THE CLAUSE.
+#
+# PROMPT SHAPE downstream of the use, re-derived from BT25_085.cs
+# "#region Option Effects / #region Main":
+#   * SetUpActivateClass(null, ActivateCoroutine, -1, FALSE, ...) -- isOptional
+#     is FALSE, so DCGO asks NO OptionalSkill yes/no for the [Main]. An
+#     `expect:` row there would desynchronise everything after it.
+#   * `if (HasMatchConditionOpponentsPermanent(IsStrongestEnemy))` -> ONE
+#     mandatory SelectPermanentEffect(Mode.Destroy, canNoSelect: false).
+#     Biyomon is P1's only Digimon and therefore also its highest level, so the
+#     row is asked with a single candidate (a single candidate still consumes a
+#     row -- P-180-effect1.yaml). SHARED.
+#   * `if (HasMatchConditionOwnersPermanent(own battle-area Digimon))` then
+#     `canSelectHand || canSelectTrash` over EqualsTraits("Three Musketeers"):
+#     P0's hand is Agumon/Monodramon/Dracomon fillers and its trash is empty,
+#     so BOTH are false and the whole place block is SKIPPED -- no generic_int
+#     zone menu, no card pick, no placement pick. Ours skips the mirrored
+#     `if` for the same reason.
+#   * ArtsDigivolveEffect's CanResolveCondition needs an own Digimon Fly Bullet
+#     could digivolve into. ToyAgumon is Lv.3 and every BeelStarmon route needs
+#     Lv.5; the breeding area is empty after the move. So NO Arts Digivolve
+#     prompt on either side and the Option is disposed the ordinary way --
+#     which is what `p0.trash: [BT25-085]` below witnesses.
+#   * P0 has no trigger of its own pending at the disposal, so the
+#     option-trash ordering prompt (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER,
+#     5aef07fa8) is not parked either.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_085_pool.json (a per-card book -- the shared
+# three_musketeers_pool.json carries neither the Red egg nor a Purple Lv.5
+# vanilla, and `ordered_deck` refuses to stack a card the named deck lacks).
+card: BT25-085
+clause: BT25-085#effect#4
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped -- P1
+    # never attacks); stack[10] = T3 turn draw, stack[11] = the breeding
+    # digivolve draw, stack[12] = T5 turn draw. None of the three is a
+    # [Three Musketeers] TRAIT card, which is what keeps the [Main]'s place
+    # block silent.
+    stack: [EX7-008, BT25-085, ST1-03, ST1-03, ST1-03,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-02, ST1-04]
+    rest: tm-dual-085
+  p1:
+    stack: [ST1-02, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-05, BT1-014]
+    rest: quiet-red-085
+steps:
+  # T1 (P0, memory 0): hatch Koromon, then pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future delete target -- then pass at 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve into ToyAgumon for 0. No breeding prompt.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): a quiet turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote ToyAgumon -- P0's ONLY permanent, and it is RED.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: a Purple/Black Option used with no Purple or Black permanent in
+  # play. Only <Use Req. ([Three Musketeers] in text)> admits it.
+  - actor: 0
+    do: { play: { card: BT25-085, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Main]'s mandatory delete (a different clause's body, shared here).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1): one step past the clause, for the reading below.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - { card_id: EX7-008, dp: 1000, suspended: false, sources: [ST1-01] }
+      # The Option resolved and was disposed the ordinary way (no Arts
+      # Digivolve target existed).
+      p0.trash: [BT25-085]
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5

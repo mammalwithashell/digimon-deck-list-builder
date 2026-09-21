@@ -1,0 +1,51 @@
+# BT7-071 Loweemon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: Hybrid / Variable / Warrior. Attribute: Variable. Form: Hybrid.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT7-071.md; card image
+# confirms):
+#   You may digivolve this card from your hand onto one of your purple Tamers
+#   as if the Tamer is a level 3 purple Digimon.
+#   Official Q&A: the Tamer is treated as a Digimon that digivolves — "when a
+#   Digimon would digivolve" / "when a Digimon digivolves" effects trigger,
+#   and a "Digimon can't digivolve" effect blocks this route too.
+#
+# Digivolution: Purple Lv.3 / cost 2 (official DB circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT7/Purple/BT7_071.cs
+#   EffectTiming.None → AddSelfDigivolutionRequirementStaticEffect(
+#     permanentCondition: TopCard.CardColors has Purple && IsTamer,
+#     digivolutionCost: 2, ignoreDigivolutionRequirement: false,
+#     condition: card is in owner's hand).
+#
+# Modelled as a Hybrid Tamer alt-path (`tests/dsl/hybrid_tamer_digivolve.rs`
+# substrate): `from:` gates the base to an own purple Tamer and
+# `source_treated_as: level_3_purple_digimon` makes the Tamer satisfy this
+# card's Purple Lv.3 circle — the engine keeps the Tamer's printed kind and
+# routes the digivolution through the normal digivolve action (so the
+# "when a Digimon digivolves" observers fire, matching the Q&A). The route's
+# cost is the printed Purple Lv.3 circle cost (2). "You may" = the route is
+# one more legal action in the action space, never forced.
+
+card: BT7-071
+name: Loweemon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Hybrid, Variable, Warrior]
+attribute: Variable
+
+alt_paths:
+  # Printed circle: Purple Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+
+  # ─── Hybrid: onto one of your purple Tamers as if a Lv.3 purple Digimon ──
+  - kind: digivolve
+    from: { kind: tamer, color_is: purple }
+    source_treated_as: level_3_purple_digimon
+    cost: 2
+
+effects: []

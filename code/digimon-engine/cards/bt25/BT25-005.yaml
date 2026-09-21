@@ -1,0 +1,131 @@
+# BT25-005 Pagumon — DIGI-EGG, Lv.2, Black, Cost 0.
+# Traits: Lesser / Iliad / TS. Form: In-Training.
+#
+# Printed card text (data/card_bundles/BT25-005.md — official Bandai DB,
+# verbatim; cross-checked against the card image BT25-005.webp):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When [Three Musketeers]
+#   trait cards are placed in this Digimon's digivolution cards, it may
+#   digivolve into a Digimon card with [Three Musketeers] in its text or the
+#   [TS] trait in the hand with the cost reduced by 2.
+#
+# Official Q&A ("in its text"): a card that contains the specified text or
+# icon in its name, traits, effects, inherited effects, (Rule), digivolution
+# requirements, DNA digivolution, DigiXros requirements, burst digivolve, App
+# Fusion, Link, or Assembly requirements → the whole-card `in_text_contains`
+# scan (name + traits + all printed text).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_005.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAddDigivolutionCards` ActivateClass, `SetIsInheritedEffect
+# (true)`, `SetUpActivateClass(..., 1 /* OPT */, TRUE /* optional yes/no */)`.
+#   CanUse  = IsExistOnBattleAreaDigimon(card)
+#             && CanTriggerOnAddDigivolutionCard(hashtable,
+#                  PermanentCondition: permanent == card.PermanentOfThisCard(),
+#                  cardEffectCondition: null,            ← ANY effect
+#                  CardCondition: cardSource.HasThreeMusketeersTraits)
+#             && IsOwnerTurn(card)
+#   Body    = if HasMatchConditionOwnersHand(card, HasText("Three Musketeers")
+#                || HasTSTraits)
+#               DigivolveIntoHandOrTrashCard(
+#                 targetPermanent: card.PermanentOfThisCard(),
+#                 cardCondition: HasText("Three Musketeers") || HasTSTraits,
+#                 payCost: true, reduceCostTuple: (2, null), isHand: true)
+#             — the hand prompt lists only Digimon cards that satisfy the
+#             condition AND can legally digivolve from the host
+#             (`CanPlayCardTargetFrame`), and is declinable (canNoSelect).
+#
+#   → `scope: inherited`, `when: on_add_digivolution_cards` (per-host batch
+#     window fires ONCE per placing effect — rule 15-5-2), `active_when:
+#     { your_turn: true }`, `once_per_turn: true`.
+#   → Trigger gate: `event_host_permanent_is_source` ("this Digimon's
+#     digivolution cards") AND `event_added_card_any: { trait_has: Three
+#     Musketeers }` (any card KIND with the trait — Digimon, Option, Tamer).
+#     NOT owner-gated (cardEffectCondition: null): the opponent's effect
+#     placing a [Three Musketeers] card under this Digimon on your turn
+#     triggers too. Normal / DNA digivolution, DigiXros / Assembly materials
+#     and App Fusion never fire the timing (DCGO cardEffect: null).
+#   → "it may digivolve": `optional: true` + `outer_prompt: true` — DCGO's
+#     always-shown initial yes/no. Declining it drops the queued effect
+#     BEFORE its [Once Per Turn] use is recorded (rule 15-14-1-5: only
+#     CHOOSING to activate counts; DCGO `RemoveUse`), so a second [Three
+#     Musketeers] placement in the same turn re-triggers. Accepting it and
+#     then declining the hand pick DOES count (the activation was chosen).
+#   → Body: `select_hand` (optional — DCGO canNoSelect) filtered to Digimon
+#     cards with `in_text_contains: "Three Musketeers"` OR `trait_has: TS`
+#     that `can_digivolve_from_source` (the same route enumeration the
+#     commit uses — printed circles AND DSL alt-path special circles, e.g.
+#     "Lv.3 w/[TS] trait" — so no pick the commit would reject is offered),
+#     then `effect_initiated_digivolve { target: source, from_hand, cost:
+#     { reduce: 2 }, ignore_requirements: false }` (payCost: true +
+#     reduceCostTuple (2, null); the reduction clamps at 0).
+#   → No-legal-target guard: DCGO's `HasMatchConditionOwnersHand` sits inside
+#     the body (the yes/no would still show and a "yes" would burn the OPT
+#     for nothing). Authored instead as a `count_gte` trigger condition over
+#     the same hand filter (BT17-070 / BT19-101 idiom): with nothing legal in
+#     hand the effect does not trigger at all — no dead prompt, no
+#     self-harming OPT burn, and the OPT stays available for a later
+#     placement this turn.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |------------------------------------------------------------------|-------------|
+# | Inherited [Your Turn][OPT] when [Three Musketeers]-trait cards   |             |
+# |   are placed under this Digimon → may digivolve into a [Three    |             |
+# |   Musketeers]-text / [TS]-trait Digimon in hand, cost −2         | IMPLEMENTED |
+
+card: BT25-005
+name: Pagumon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser, Iliad, TS]
+form: In-Training
+
+effects:
+  # ─── Inherited [Your Turn][OPT] TM card placed under this Digimon → may digivolve (cost −2)
+  - scope: inherited
+    when: on_add_digivolution_cards
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_added_card_any: { trait_has: Three Musketeers }
+        # DCGO HasMatchConditionOwnersHand guard (see header): at least one
+        # legal digivolve target in hand.
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              can_digivolve_from_source: true
+              any_of:
+                - in_text_contains: "Three Musketeers"
+                - trait_has: TS
+            n: 1
+    summary: "[Your Turn][Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - in_text_contains: "Three Musketeers"
+                  - trait_has: TS
+          prompt: "Digivolve this Digimon into a Digimon card with [Three Musketeers] in its text or the [TS] trait from your hand, with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false

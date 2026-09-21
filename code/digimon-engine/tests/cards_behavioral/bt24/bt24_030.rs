@@ -190,6 +190,44 @@ fn bt24_030_self_suspend_may_unsuspend_once_per_turn() {
     );
 }
 
+/// Declaring an attack IS suspending the attacker (general_rule.pdf 11-2-1:
+/// "The turn player can suspend their Digimon in the battle area and make an
+/// attack declaration"; 11-1-4 names the triggered effects that resolve at
+/// declaration). DCGO suspends the attacker through `SuspendPermanentsClass
+/// (...).Tap()` (`AttackProcess.cs:166`), which fires `OnTappedAnyone` — the
+/// timing BT24_030.cs keys its unsuspend on. So Neptunemon's "[All Turns][Once
+/// Per Turn] When this Digimon suspends, it may unsuspend" must open on its own
+/// attack, and the attack still proceeds to the security check
+/// (G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND; exam BT24-030#effect#3).
+#[test]
+fn bt24_030_attack_declaration_suspension_triggers_may_unsuspend() {
+    let mut runner = neptunemon_runner()
+        .security(1, &["OPP-A", "OPP-B"])
+        .deck(0, &["OPP-A"; 4])
+        .deck(1, &["OPP-A"; 4])
+        .start();
+    let neptunemon = runner.place_on_field(0, "BT24-030", Some(0));
+
+    runner.attack_player(neptunemon, 1, false);
+    assert!(
+        runner.game.pending_selection.is_some() && runner.pending_is_optional(),
+        "attack-declaration suspension must open Neptunemon's optional unsuspend"
+    );
+    runner
+        .auto_resolve()
+        .expect("accept the unsuspend and finish the attack");
+
+    assert!(
+        !runner.game.players[0].battle_area[neptunemon.index as usize].is_suspended,
+        "Neptunemon should be unsuspended after accepting its on-suspend trigger"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "the attack continues to its security check after the unsuspend"
+    );
+}
+
 #[test]
 fn bt24_030_protects_matching_digimon_from_opponent_effects_by_suspending() {
     let mut runner = neptunemon_runner().start();
@@ -269,4 +307,101 @@ fn deck_contains(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
         .deck
         .iter()
         .any(|card| card.card_id(&runner.game.card_data) == card_id)
+}
+
+// ─── Option-trash timing vs a trigger raised by the NON-turn player mid-body ──
+//
+// Exam BT24-030#effect#4 (qa/dcgo-exams/BT24/BT24-030-effect4.yaml): the TURN
+// player uses Gaia Force (ST1-16) on the NON-turn player's Neptunemon; that
+// player pays the would-leave protection by suspending Neptunemon, which
+// raises Neptunemon's own "[All Turns][Once Per Turn] When this Digimon
+// suspends, it may unsuspend" (effect#3) while the Option's [Main] is still
+// resolving.
+//
+// Rules: the used Option is trashed at the timing its 1st [Main] has resolved,
+// as PENDING PROCESSING (general_rule.pdf 9-1-5, p.19); pending processing that
+// coincides with other processing is ordered like simultaneous triggering
+// (18-1-2, p.40 -> 15-4-3); and 15-4-3-5-1/-2 (p.23) resolve ALL of the turn
+// player's simultaneous items before ANY of the non-turn player's. The Option's
+// trash belongs to the turn player (its user) and the unsuspend trigger to the
+// non-turn player, so the trash strictly precedes the prompt -- this sub-case is
+// NOT order-ambiguous. DCGO agrees: `CardController.cs`
+// `UseOptionClass.UseOption` calls `AddTrashCard(card)` right after the
+// OptionSkill process, before the stacked triggers resolve.
+// G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER.
+#[test]
+fn bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt() {
+    let mut runner = neptunemon_runner()
+        .dsl_card("ST1-16")
+        .expect("ST1-16 is in the embedded DSL pack")
+        .hand(1, &["ST1-16"])
+        .memory(10)
+        .start();
+    runner.set_first_player(1);
+    assert_eq!(runner.turn_player(), 1, "P1 is the turn player / Option user");
+    let neptunemon = runner.place_on_field(0, "BT24-030", Some(0));
+    // Gaia Force is red: its user needs a red card in play (4-19 color
+    // requirements) -- the exam line uses Tai Kamiya ST1-12 for this.
+    runner.place_on_field(1, "OPP-A", Some(0));
+
+    let result = runner.game.play_option_from_hand(1, 0);
+    assert!(
+        !matches!(result, digimon_engine::selection::OptionPlayResult::Invalid),
+        "P1 can use Gaia Force: {result:?}"
+    );
+
+    // Gaia Force's [Main] target pick: Neptunemon is P0's only Digimon.
+    let view = runner
+        .pending_selection_view()
+        .expect("Gaia Force target pick");
+    assert_eq!(view.selecting_player, 1);
+    let pick = view.valid_action_ids[0];
+    runner
+        .execute_action(1, pick)
+        .expect("target Neptunemon for deletion");
+
+    // P0's would-leave replacement: pay by suspending Neptunemon.
+    assert!(
+        runner.pending_is_optional(),
+        "Neptunemon's protection is declinable"
+    );
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Neptunemon's protection");
+
+    // The suspension raised P0's own optional unsuspend trigger ...
+    let view = runner
+        .pending_selection_view()
+        .expect("P0's [All Turns][OPT] on-suspend prompt");
+    assert_eq!(
+        view.selecting_player, 0,
+        "the non-turn player answers their own on-suspend trigger"
+    );
+    // ... and the turn player's used Option is ALREADY in their trash.
+    let p1_trash: Vec<String> = runner.game.players[1]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        p1_trash,
+        vec!["ST1-16".to_string()],
+        "the used Option is trashed before the non-turn player's body-raised trigger resolves"
+    );
+
+    runner.decline_optional_trigger().expect("decline the unsuspend");
+    runner.auto_resolve().ok();
+    assert!(
+        battle_area_contains(&runner, 0, "BT24-030"),
+        "the protection held: Neptunemon stays in the battle area"
+    );
+    assert!(
+        runner.game.players[0].battle_area[neptunemon.index as usize].is_suspended,
+        "the paid cost stays visible: Neptunemon is suspended"
+    );
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        1,
+        "the Option is trashed exactly once"
+    );
 }

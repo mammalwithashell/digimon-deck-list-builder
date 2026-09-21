@@ -405,6 +405,17 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ## Open gaps
 
+### From-hand Digimon-link initiation (DigiLink Shape-B, root `Hand`)  [G-ENGINE-DIGIMON-LINK-FROM-HAND]  — RESOLVED 2026-09-17
+- **Severity:** was 🟡 PARTIAL (deferred residual of the 2026-06-06 Shape-B landing, below) — the printed keyword says "Plug this card from the **hand** or battle area", DCGO `LinkEffect` is declarable while `IsExistOnHand(card)`, but our action space exposed no hand-initiated *Digimon* link (only the Plug-In *Option* play mode), so an RL agent could never take it and every exam line had to play the Digimon first.
+- **Discovered in:** three-musketeers-1 exam-tooling stage (the `link:` scenario verb, `qa/dcgo-exams/BT21/NOTES-BT21-071.md` / `-074.md`).
+- **Card(s):** every Appmon Link Digimon with a `kind: link_condition` (BT21-009/018/023/043/047/054/059/070/071/073/074, the BT25 Appmon line, …).
+- **Resolution:** the hand slot's `HAND_EFFECT` bit carries the link whenever the card has no `[Hand] [Main]` (`Game::hand_effect_slot_is_link` — decoder order `[Main]` first, link second; the same one-declarable-per-hand-slot limit as DCGO's recorder). `Game::hand_digimon_link_condition_targets` / `hand_digimon_link_available` (mask) → `activate_hand_link` (decode) → the shared `install_digimon_link_host_selection` (an `OwnField` prompt, never auto-picked) → `begin_digimon_link` with `DigimonLinkOrigin::Hand` (`WhenWouldLink` subject `Card(card, Zone::Hand)`, dispatched to `commit_digimon_link` like the battle-area subject) → pay `link_cost_delta`-adjusted cost → `link_chosen_card_into_host(host, card, LinkCardSource::Hand)` (DCGO `Permanent.AddLinkCard`; nothing absorbed, no `[On Play]`, `OnLink` fires). `PendingDigimonLink.source` became `origin: DigimonLinkOrigin { Standing(handle) | Hand(player) }`. `ACTION_SPACE_SIZE` unchanged. Tests: `tests/option_flow/link_flow.rs::dsl_digimon_link_from_hand_attaches_pays_cost_and_fires_when_linked`, `digimon_link_from_hand_is_withheld_without_a_host_or_the_memory`; exam lowering `exam::lower::tests::a_link_step_from_hand_*`. DCGO harness mirror: `InputDriver.BuildMainPhaseAction` (base DCGO `c98bab2a4`).
+- **Residual (unchanged):** the rarer DCGO roots — trash / under-stack / re-link from another host's linked area — stay effect-driven only (`link_chosen_card_into_host`), not player-declared.
+
+### `activation_cost` on a `main_on_field` clause is never paid on the `[Main]` action path, and the mask does not gate on it  [G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID]  — RESOLVED 2026-09-20
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#activation_cost-on-a-main_on_field-clause-is-never-paid-on-the-main-action-path-and-the-mask-does-not-gate-on-it-g-engine-main-on-field-activation-cost-unpaid--resolved-2026-09-20).
+> `Game::activate_field_main` now runs `effect.activation_cost_fn` between the condition gate and the body `process` (queue failure semantics: body suppressed, OPT consumed), and `Effect` carries a data twin `activation_cost_kind: Option<ActivationCostKind>` whose read-only `is_payable` probe lets `main_effect_select::field_main_match` suppress the `[Main]` bit when the printed "By &lt;cost&gt;, …" gate is unpayable. Citation: `general_rule.pdf` (Ver.3.6) §15-7-1/§15-7-2 (optional processing conditions — "if the content … isn't executed, the processing after the conditions can't be executed"); DCGO `BT25_089.cs:36` → `CanSuspend.cs:17-25`. Gate: 4 new tests in `tests/cards_behavioral/{bt25/bt25_089,ex11/ex11_071}.rs`. Commit `b96ebd4df`.
+
 ### `place_self_as_delay_option` does not compose with the real Option-play disposal lifecycle  [G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH]
 > RESOLVED 2026-06-16. Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#place_self_as_delay_option-does-not-compose-with-the-real-option-play-disposal-lifecycle-g-option-place-self-as-delay-on-play-path--resolved-2026-06-16). The engine now claims the in-flight Option from `pending_option` inside `place_self_as_delay_option_permanent` (`src/effect_context/action/lifecycle.rs`), so a Standard Option's `[Main]` body seats it as a Delay on the real `play_option_from_hand` path. Covered by `omnimon_ace::combo1_mega_knight_*` + DNA Omnimon Combo B on the real play path.
 
@@ -1333,10 +1344,14 @@ Items where the existing primitive **likely works** but no behavioral test cover
 
 - **Updated 2026-06-07 (link-appmon-1 slice re-adjudication, post DigiLink Shape-B):** With the Shape-B engine substrate + DSL vocabulary LANDED (2026-06-06; engine note above + `qa/dsl-vocab-gaps.md` G-DSL-DIGILINK), the **standing-permanent-absorb** Appmon Link Digimon now ships in DSL. Implemented this slice: **BT25-007 Gatchmon** and **BT25-061 Offmon** — both author `kind: link_condition` (Appmon host, cost 1) + a cost-0 Appmon alt-digivolve + a `when: when_linked` payoff (007: delete opp DP≤3000; 061: opp `CannotUnsuspend` until their turn ends), plus their non-link clauses (007 OnPlay reveal-3 two-bucket add; 061 [Start Main] optional trash-Appmon→draw+memory). Tests in `tests/cards_behavioral/bt25/bt25_007.rs` + `bt25_061.rs` (7 each, green). The following remain BLOCKED on **residual** Link facets NOT closed by Shape-B: (#10 — host-filtered optional `WhenWouldLink` cost-reduction `ActivateClass`) **BT25-004 Tapmon** (its only clause) and **BT25-045 Onmon** (mandatory alongside an otherwise-expressible link payoff — BLOCKED not PARTIAL); (#9 — link a *chosen* card from hand/digivolution-cards, not the standing carrier) **BT25-052 Logimon** (`[Main][OPT]` link-of-chosen-card; the wired path only absorbs a standing permanent). Separately, **BT25-036 Craftmon** is BLOCKED on the **App Fuse** primitive (`AddAppfuseMethodByName`, see App Fuse entry below) — its prior `G-DSL-WHEN-LINKED-TIMING` block is now resolved.
 
-### `OnAddDigivolutionCards` trigger timing (fires when cards are placed into a Digimon's digivolution stack)
-- **Severity:** 🔴 BLOCKED — net-new trigger timing + dispatch hook. Not expressible by composing existing DSL vocabulary.
+### `OnAddDigivolutionCards` trigger timing (fires when cards are placed into a Digimon's digivolution stack)  [G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS]
+- **Status: RESOLVED (2026-09-17, three-musketeers-1 campaign / engine-gaps stage).** `EffectTiming::OnAddDigivolutionCards` + DSL `when: on_add_digivolution_cards`, fired via `TriggerSource::SourcesAddedToStack { host, host_card, cards, cause }` from a per-host **batch window** (`Game::pending_added_sources`, noted by `Game::note_effect_added_sources` at every effect-driven source-placement facade and flushed at the outermost `drain_effect_queue`, exactly like the `OnDiscardHand` window) so `<Material Save N>`'s per-card loop fires ONCE per host (rule 15-5-2; DCGO `AddDigivolutionCardsBottom(list, cardEffect)` once per list). Noting sites: `Game::place_as_source_observed` (hand / trash / deck-top / material / reveal → bottom or top source, battle-area AND breeding hosts), `complete_effect_security_removal` (`BottomSource` / `TopSource` destinations), `EffectContext::{place_card_under_permanent_bottom (Save / Material Save), place_cards_under_tamer_bottom_in_order, move_all_matching_sources_under_tamer, move_selected_sources_under_tamer, attach_tamer_to_digimon (Mind Link), training_place_deck_top_under_self_face_down (Training)}`, `Game::place_permanent_as_bottom_sources_by_effect`, `Game::place_specific_link_card_as_bottom_source`, `Game::seat_card_source_under_permanent` (Option place-self). **Deliberately NOT noted** (DCGO passes `cardEffect: null` and `CanTriggerOnAddDigivolutionCard` requires non-null): normal digivolution, DNA / Blast DNA digivolution, DigiXros + Assembly material consumption, App Fusion, and restore/undo paths. `TriggerContext` carries the host (`event_host_permanent` / `event_host_card`), the added batch (`moved_card_sets` → `added_source_cards()`), and the placing effect (`event_cause_effect: EffectAttribution`); board-wide fan-out over every battle-area + breeding permanent of both players, so the placed card's own inherited observer fires (rule 15-5-3 — whose worked example is this exact timing). Predicates: `event_host_permanent_is_source` (host == self), `event_caused_by_own_effect` (generalized from the discard batch to read `event_cause_effect`; BT7-056 "one of YOUR effects"), and the new `event_added_card_any: { <card predicate> }` (DCGO `cardCondition` — ANY added card matches; EX7-005 `{ kind: option, trait_has: Three Musketeers }`). The single-card `event_card_*` leaves are intentionally unset on this timing (batch event). Citations: `general_rule.pdf` 15-5-2 / 15-5-3 (p.23-24); DCGO `Permanent.cs:1078-1136` (`AddDigivolutionCardsTop`), `:1147-1240` (`AddDigivolutionCardsBottom`), `CardEffectCommons/CanUseEffects/OnAddDigivolutionCards.cs`, `CardController.cs:1736` (DNA null), `SelectDigiXrosClass.cs:910` (DigiXros null), `SelectAssemblyClass.cs:302` (Assembly null), `SelectAppFusionEffect.cs:234` (App Fusion null), `Save.cs:61` / `MaterialSave.cs:114` / `Training.cs:29` (keyword placements pass `activateClass`). Tests: `tests/on_add_digivolution_cards.rs` (11: single-card fire with host + batch + own-effect attribution; multi-card batch fires once; own-only vs any-effect gates against the opponent's placing effect; host gate vs sibling; rule 15-5-3 self-placement; normal digivolution and DNA digivolution do NOT fire; host deleted before flush fires nothing; DSL Dorumon-shape + Kapurimon-shape inline YAML incl. the `event_added_card_any` positive/negative cases). Unblocks BT25-005 Pagumon, EX7-005 Kapurimon, BT7-056 Dorumon (+ BT7-005, RB1-001, BT8-005, BT9-066, ST13-05/14, EX11-074 per the notes below) — driver YAML intentionally left to the next card-authoring stage. Archived in `qa/resolved-gaps.md`.
+- **Severity (at close):** 🔴 BLOCKED — net-new trigger timing + dispatch hook. Not expressible by composing existing DSL vocabulary.
 - **Discovered in:** BT25 orphan-staples-1 slice (2026-06-06).
-- **Card(s):** **BT25-005 Pagumon** (inherited: "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2."). DCGO's hash string (`EX11_074_OnAddDigivolutionCards`) indicates EX11-074 Vortexdramon shares the same trigger — so this unblocks ≥2 cards.
+- **Driver cards shipped (2026-09-17, three-musketeers-1 / stage on-add-digivolution-cards drivers):** **EX7-005 Kapurimon**, **BT7-056 Dorumon** and **BT25-005 Pagumon** are now IMPLEMENTED on this timing (`code/digimon-engine/cards/{ex7/EX7-005,bt7/BT7-056,bt25/BT25-005}.yaml`, tests `tests/cards_behavioral/{ex7/ex7_005,bt7/bt7_056,bt25/bt25_005}.rs` — 13 / 16 / 18 tests). Shapes: Kapurimon = `event_host_permanent_is_source` + `event_added_card_any { kind: option, trait_has: Three Musketeers }` (not owner-gated); Dorumon = host-is-source + `event_caused_by_own_effect` (any card kind; rule 15-5-3's own example — Dorumon itself tucked by your effect — is tested); Pagumon = host-is-source + `event_added_card_any { trait_has: Three Musketeers }` (any effect) with `optional` + `outer_prompt` (DCGO yes/no; decline refunds the OPT per 15-14-1-5), a `count_gte` hand guard and `select_hand` → `effect_initiated_digivolve { cost: { reduce: 2 } }`. Companion substrate fix: the `can_digivolve_from_source` card predicate now enumerates routes via `Game::all_digivolve_routes_for_card` (printed circles + DSL alt-path special circles, App Fusion excluded) instead of the printed-`evo_costs`-only `Game::can_digivolve`, so a hand filter offers exactly what the effect-digivolve commit accepts. Still open on the same timing (no YAML yet): BT7-005, RB1-001, BT8-005, BT9-066, ST13-05, ST13-14, EX11-074.
+- **Card(s):** **BT25-005 Pagumon** (inherited: "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2."). **EX7-005 Kapurimon** (inherited: "[Your Turn] [Once Per Turn] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory." — DCGO `EX7_005.cs` `CanTriggerOnAddDigivolutionCard(permanentCondition: this permanent, cardEffectCondition: EffectSourceCard != null, cardCondition: IsOption && ContainsTraits("Three Musketeers"))` → `AddMemory(1)`; re-confirmed BLOCKED 2026-09-12 by the three-musketeers-1 campaign — body is a trivial `gain_memory: 1` once the trigger exists, so this timing now unblocks ≥3 cards). DCGO's hash string (`EX11_074_OnAddDigivolutionCards`) indicates EX11-074 Vortexdramon shares the same trigger — so this unblocks ≥2 cards.
+- **Re-confirmed 2026-09-13** (three-musketeers-1 / slice ex7-tops): `Timing` still has no source-ADDED sibling of `on_digivolution_card_trashed` and no engine dispatch fires on `place_as_bottom_source` / `place_self_under_permanent` / material placement — BT25-005 Pagumon stays BLOCKED (engine); nothing else in its text is unexpressible (the body is `effect_initiated_digivolve` from hand with `cost: { reduce: 2 }`).
+- **Re-confirmed 2026-09-13** (three-musketeers-1 / slice splash-digimon): **BT7-056 Dorumon** joins the list — inherited "[Your Turn] [Once Per Turn] When one of your effects places a digivolution card under this Digimon, gain 1 memory." (DCGO `BT7_056.cs` `EffectTiming.OnAddDigivolutionCards` + `CanTriggerOnAddDigivolutionCard(permanent == self, cardEffect.EffectSourceCard.Owner == card.Owner, cardCondition: null)` → `AddMemory(1)`, hash `Memory+1_BT7_056`). Its [On Play] reveal-3 / two-bucket add / bottom-the-rest body is a plain BT18-007-shape clause, so the ONLY blocker is this timing (note the extra "one of YOUR effects" gate — the trigger context must carry the placing effect's controller, as DCGO's `cardEffectCondition` does). Same shape prints on BT7-005, RB1-001 (<Draw 1>), BT8-005 (+1000 DP), BT9-066, ST13-05/ST13-14 — this timing now unblocks ≥7 cards. Card stays BLOCKED (engine): no YAML, no test file authored (no stub).
 - **Effect text:** as above (BT25-005 inherited).
 - **What's missing:** A trigger that fires when one or more digivolution-source cards are **added underneath** a permanent (e.g. by another effect placing sources, or by a material/under-placement step) and exposes the added cards + host permanent to a triggered clause. DCGO models this as `EffectTiming.OnAddDigivolutionCards` consumed via `CardEffectCommons.CanTriggerOnAddDigivolutionCard(hashtable, permanentCondition, _, cardCondition)` — `permanentCondition` pins the host to *this* permanent, `cardCondition` gates on the added card's traits ([Three Musketeers]). The Rust DSL `Timing` enum (`code/digimon-dsl/src/clause.rs`) has `OnDigivolutionCardTrashed` (the *opposite* event — a source leaving the stack) but no "source added/placed" counterpart, and the engine has no dispatch site that fires such a timing when `place_as_bottom_source` / under-placement runs.
 - **Suggested API shape:** Add `Timing::OnAddDigivolutionCards` (DSL `when: on_add_digivolution_cards`) → `EffectTiming::OnAddDigivolutionCards`; fire it from the engine's stack-source-placement path (wherever sources are pushed under a permanent by effect), carrying `TriggerContext` with the host permanent + the added `CardSource`(s) so `event_card_trait_has` / a host-self predicate can gate it. The downstream body (optional OPT `effect_initiated_digivolve` from hand into a [Three Musketeers]-text/[TS]-trait card with `cost: { reduce: 2 }`) is already expressible once the trigger exists.
@@ -2133,12 +2148,14 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger
 - **Suggested fix:** route the scheduled scan through the same outer-optional prompt machinery (`install_outer_optional_trigger_selection`) the OnEvent path now uses; decline leaves the Delay parked and re-armable at the next matching boundary.
 - **Blast radius:** any scheduled-delay card where declining is strategically meaningful (e.g. keeping the option in the battle area as Decode/Partition fodder or to dodge a punish window).
 
-## G-ENGINE-DELAY-BODY-BEFORE-TRASH — [Main]-activated Delay runs its body before trashing the Option (OPEN 2026-07-10)
+## G-ENGINE-DELAY-BODY-BEFORE-TRASH — [Main]-activated Delay runs its body before trashing the Option (RESOLVED 2026-09-19, 70694334d)
 
 - **Found by:** buglist faithfulness campaign, BT25-098 audit.
 - **What's wrong:** `activate_delayed_option_main` resolves the Delay BODY first, then trashes the Option card (cause=Cost). DCGO trashes the Option FIRST and only runs the body on trash success (§16-16: "trash this card to activate the linked effect" — the trash is the cost). Divergence surfaces when the trash can be replaced/prevented (e.g. an effect protecting Options in the battle area) or when the body cares about the Option's zone.
 - **Scope:** shared machinery for all MainPhaseActivated Delay options (P-035/037/039/103–107/193/205/235/236, LM-033/035/037/047/049/054/056, BT13-110, BT21-097, BT25-098, ST12-15).
 - **Fix shape:** reorder in `activate_delayed_option_main`: pay the trash cost (through the replacement pipeline) first; abort the body if the Option did not actually leave.
+- **RESOLVED 2026-09-19 (`70694334d`, ENGINE FIX):** broader than the `[Main]` path — the turn-scheduled scan (`resolve_delayed_options_matching`) and the event-gated path had the same body-then-trash order; exam LM-032#effect#1 (step 24) caught it on the `[Start of Your Turn]` scan. Fixed once at the shared point: the lowered `DelayEffect` process (`dsl_cards/lower_delay.rs`) now pays the carrier trash via `trash_delay_source_status()` FIRST and aborts the body when unpaid (§16-16-1; DCGO LM_032.cs:146-158); a replacement selection parked around the trash resumes through the data-driven `ResumeFrame::DelayBodyAfterCost` (clone-safe). The three lifecycles' post-body delete now re-finds nothing and no-ops. Marker-only delays (empty process: ST23-15/ST24-15) are untouched. Test: `lm_032_delay_trashes_this_card_before_the_body_selection`; cards_behavioral 8198/0.
+- **Residual finding (RESOLVED 2026-09-20, `5f091f5b2`):** when a turn-scheduled Delay's `active_when` was FALSE at its window (e.g. LM-032 with no opponent Digimon) the body was never enqueued, yet `resolve_delayed_options_matching` still deleted the carrier after the drain. `general_rule.pdf` (Ver.3.6) **§16-16-1** (p.35) makes that trash the ACTIVATION -- "While a card with this effect is in the battle area, **by trashing that card**, the effect specified in <Delay> will activate" -- so an un-activated Delay must not pay it; DCGO gates the window on `CanUseCondition` BEFORE offering it (`LM_032.cs:137-143`, `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1`) and leaves the card in the battle area when it is false. Fixed in `game_phases.rs`: the scan probes the carrier's `DelayEffect` clauses (`scheduled_delay_is_activatable`) and, when every matching clause's condition is currently false, leaves the carrier and moves its window forward via `reschedule_delayed_option` (extracted from `take_declined_delay_reschedule`, the §16-16-2 decline path's existing helper). Full entry in `qa/resolved-gaps.md`.
 
 ## EX12 Shambala / Virus Busters keyword gaps (RESOLVED 2026-07-08)
 
@@ -2254,7 +2271,18 @@ That is correct as far as it goes — the grantor must not host the recipient's 
 * `tests/replacements/granted_keywords.rs` — `mass_granted_fortitude_fires_on_a_non_source_recipient` (trigger half on a non-source), `mass_granted_fortitude_fires_on_its_own_grantor` (the grantor matches its own filter — the case a naive "aura source == target" de-dup would drop), `mass_granted_evade_prompts_on_a_non_source_recipient` (replacement half).
 
 
-## A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+## ~~A parked sibling `[On Deletion]` clause clears the battle state `<Retaliation>` reads~~ — RESOLVED 2026-09-18  [G-ONDELETION-PARK-CLEARS-BATTLE-STATE]
+
+**RESOLVED 2026-09-18 in `a46c74066`** (ENGINE FIX — flagged for human review; found triaging exam clause `BT25-078#inherited#0`, which also closed `EX7-051#inherited#0`). The fix is the shape predicted below: the battle opponent's top-card identity is captured when the `[On Deletion]` entries are ENQUEUED (`Game::enqueue_batch_on_deletion` → `TriggerContext::battle_opponent_card`, while `pending_attack` is live), and `battle_opponent_of` resolves that identity to its CURRENT slot (`Game::resolving_battle_opponent_of`); a captured opponent that has left the battle area yields `None`, never a fall-through to whatever attack is live. Citation: general_rule.pdf 16-12-1/-3/-4 — mandatory, and a triggered instance activates "as long as the battled opponent's Digimon is in the battle area".
+
+Two sibling defects surfaced and were fixed in the same commit, both in `Game::build_effects_for_card` and both invisible to the embedded DSL pack (empty text fields) — only live `cards.json` games and the exam saw them:
+* **Duplicate inherited keyword body.** A printed inherited keyword (`inherited_text`) AND the card's `scope: inherited` `kind: grant_keyword` clause each synthesized the keyword's trigger, so ONE `<Retaliation>` queued twice and opened a phantom 2-candidate TriggerOrder prompt (DCGO: one `RetaliationSelfEffect`, `BT25_078.cs:113-115`). That phantom park is what turned this gap from order-dependent into always-on for every DSL card with a printed inherited `<Retaliation>`.
+* **`under_top`-dependent slot layout.** Printed inherited keyword bodies were synthesized only while the card was under the top; an `[On Deletion]` entry is queued by `effect_slot` in the stack and resolved from the trash (rule 25), where the slot no longer existed. Inherited bodies are now always synthesized (flagged `inherited`); face synthesis reads `face_keywords()` rather than `CardData::keywords`, which had put inherited-text keywords on the card's own face.
+
+Provers: `tests/cards_behavioral/bt25/bt25_078.rs` (4 new), plus both reproducers below, un-ignored and green.
+
+*Original entry:*
+
 
 **Found 2026-08-24** while closing `G-ENGINE-AURA-GRANT-NO-TRIGGER` — independent of it, and it predates that fix.
 
@@ -2861,3 +2889,1242 @@ and which is NOT recognised as one of the fused Delay flows would still run the
 rest of its clause. Fixing that needs the cost-vs-effect distinction described
 above (an `<Evade>` on "Delete 1 of your opponent's Digimon. Then draw 1." must
 not eat the draw), and no test currently demonstrates a card hitting it.
+
+## G-ENGINE-ON-USE-OPTION-EVENT-CARD — RESOLVED 2026-09-18 (35958972b)
+
+**Driver:** Monica Simmons (BT25-091) clause 3 — "[Your Turn] When you use [TS]
+trait Option cards, by suspending this Tamer, …". The board-wide `OnUseOption`
+observers fired from `TriggerSource::PlayerBattleArea`, whose context names
+neither the user nor the used card, so "YOU" and "[TS] trait" were ungateable.
+
+**Fix:** `Game::on_use_option_armed: Option<(PlayerId, CardHandle)>`; observers
+fire through `TriggerSource::OptionUsed { player, card }` (one scan of both
+battle areas) with `event_card` / `event_source_card` / `source_player` set and
+`target_permanent` deliberately UNSET — every `event_*` predicate falls back to
+`target_permanent`, so seeding it with the observer made
+`event_target_owner: you` vacuously true (caught by
+`bt25_091::on_use_option_event_target_owner_reads_the_user_not_the_observer`,
+which fails with the observer seeded). `card_data_for_handle` /
+`card_source_for_handle` now resolve the in-flight `pending_option` /
+`pending_security` card. Citation: DCGO `CanTriggerWhenOwnerUseOption` →
+`cardSource.Owner == card.Owner` (WhenUseOption.cs:11-16), BT25_091.cs:99-174.
+Authoring idiom: `when: on_use_option` + `condition: { event_target_owner: you,
+event_card_trait_has: <Trait> }`.
+
+## G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON — RESOLVED 2026-09-18 (35958972b)
+
+**Drivers:** Iron Slash (BT25-100), Ignition Flare (BT25-093) — "[Security]
+Activate this card's [Main] effects" where [Main] ends "you may link this card
+to 1 of your Digimon". `link_to_own_digimon` silently returned when there was no
+`pending_option`, so a security-flipped copy was never offered the link and was
+always trashed.
+
+**Fix:** `try_run_link_step_from_security` (dsl_cards/step/mod.rs): when the
+resolving `pending_security` card is the step's source and a legal host exists,
+mark it `played` (the "belongs to an area now" bit `DisposeFinalize` honours) and
+hand it to the ordinary `LinkSelectHost` path via `install_link_host_selection`
+(data VM — clone-safe). Decline / vanished host trashes it once; no host → no
+prompt, ordinary security dispose. Citation: DCGO `Permanent.AddLinkCard` →
+`RemoveFromAllArea` (BT25_100.cs:147); general_rule §13-1-7-4. Tests:
+`bt25_100_security_flip_*` (3), `bt25_093_security_flip_links_then_host_…`.
+
+## F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED — OPEN (3 of 6 Link DP fixed 2026-09-19)
+
+Found while finishing the gap above: Plug-In **Option** cards were authored
+without their printed Link box. Nothing data-drives Link DP (`queries.rs` sums
+only authored `scope: linked|inherited` `dp_modifier` clauses), so a missing
+clause is a silently missing +DP. Scan = every YAML with `kind: link_requirement`
+and no `dp_modifier`, against `data/card_bundles/<ID>.md` "### Link DP":
+
+| Card | Printed Link DP | State |
+|---|---|---|
+| Iron Slash (BT25-100) | +2000, plus linked `<Collision>` also missing | FIXED 2026-09-18 |
+| Ignition Flare (BT25-093) | +2000 | FIXED 2026-09-18 |
+| BT25-101 | +4000 | OPEN |
+| BT24-091 | +2000 (+ linked [When Attacking] bounce, effect#5) | FIXED 2026-09-19 |
+| BT24-095 | +2000 | OPEN |
+| ST22-08 | +2000 | OPEN |
+
+**BT24-091 Link DP RESOLVED 2026-09-19** (BT24-091#effect#2 triage): `scope: linked`
+`dp_modifier: 2000` aura added to `BT24-091.yaml` (citation: bundle "### Link DP
+DP+2000"; DCGO `BT24_091.cs` "Link" region -> `CardEffectFactory.LinkEffect`).
+Guard test `bt24_091_main_link_gives_host_printed_link_dp_plus_2000` (4000 != 6000
+before, green after). Exam `BT24-091-effect2.yaml` re-diffed CLEAN against the
+preserved sidecar and re-recorded CONFIRMED, host DP now pinned at 7000. The
+linked "[When Attacking] [Once Per Turn]" bounce (effect#5) is STILL unauthored.
+BT24-091's Main-tail host filter already carried `{digimon, TS}`.
+
+The same two cards also let an effect-link pick ANY own Digimon; DCGO filters
+hosts through `card.CanLinkToTargetPermanent(permanent, false, true)`
+(CardSource.cs:3346-3358 — the printed Link condition still applies to a free
+effect link). Fixed on BT25-093 / BT25-100 (`filter: { kind: digimon, trait_has:
+TS }`); the four OPEN cards above need the same check when their Link box is
+authored. A `dsl-lint` rule ("link_requirement without a Link DP clause while
+the bundle prints one") would close the family.
+
+## F-DATA-DUAL-CARD-KIND-MISSING-IN-CARDS-JSON — OPEN (found 2026-09-18, Three Musketeers exam stage)
+
+`data/cards.json` types five DUAL cards as plain Digimon — **BT25-085
+BeelStarmon / Fly Bullet, BT25-043, BT25-057, BT25-104, ST23-09** are
+`card_kind: 0` with no `dual` block (only EX12-018/-033/-052 are `4`). The
+engine takes `CardKind` from that file (`card_data.rs::parse_card_kind`) and
+`dsl_bridge::enrich_card_data_with_dsl_alt_paths` does not carry the YAML's
+`kind: dual` / `dual:` block across, so every surface that loads `cards.json`
+(exam harness, hosted API, desktop, RL) sees a Digimon. `cards_behavioral` is
+green because `DebugRunner` builds `CardData` from the compiled YAML.
+
+Measured through the exam harness (`play: { card: BT25-085, from: hand }`, a
+[Three Musketeers]-text Digimon on own field, a Digimon on the opponent's):
+the card is offered as a 6-cost **Digimon play** (it prints "Can't play to the
+field."), lands on the battle area at 12000 DP, the Option face's `[Main]`
+delete fires as part of that play, and `<Arts Digivolve>` never runs. Record:
+`qa/dcgo-exams/BT25/NOTES-BT25-085.md` (its three Option-face clauses are
+`unreachable` on this reason). Fix is data: `card_kind: 4` + a `dual` block per
+card (`code/tools/ingest_cards.py` emits one when the API types a card `Dual`,
+which it did not for these) — or have the DSL bridge promote `kind: dual` YAML
+into `CardData`. A guard ("YAML `kind: dual` while `cards.json` says otherwise")
+would close the family.
+
+**PARTIALLY RESOLVED 2026-09-18 (BT25-082#effect#2 triage) — BT25-085 only.**
+`data/cards.json` + `data/card_overrides.json` now carry BT25-085 as
+`card_kind: 4` with a `dual` block (Option face: use cost 6, Purple/Black, the
+printed `<Use Req.>` + `[Main]` text; the Option `[Main]` the ingest had misfiled
+as inherited text is cleared). Citations: official Bandai DB "DUAL Effect" /
+"DUAL Rule" (`data/card_bundles/BT25-085.md`); DCGO `BT25_085.cs:60`
+(`IsTraitedOption` => `cardSource.IsOption`). Guard test:
+`cards_behavioral::bt25::bt25_085::bt25_085_data_cards_json_is_a_dual_card`
+(fails before, passes after). Oracle effect: the abort on
+`BT25-082-effect2.yaml` is gone and `BT25-082#effect#2` re-measured CONFIRMED;
+nine Three Musketeers lines whose Sparrowmon (EX7-051) start-of-main row was
+authored `dcgo_only` ("vacuous optional-cost gate") turned out to be this same
+gap — with BeelStarmon in hand the cost is payable on both sides — and are now a
+SHARED OptionalSkill fold (identical wire row). Follow-ups left open:
+`BT25-085#effect#4/#5/#6` are no longer `unreachable` for this reason and need
+authoring; `BT25-083-effect2.yaml` / `EX7-066-effect1.yaml` reach BeelStarmon
+with an (always-illegal) Digimon play that our engine now correctly refuses —
+re-author with a digivolve prefix; `BT25-082-inherited0.yaml`'s attack segment
+now has three live triggers (trigger order) and needs re-authoring.
+**STILL OPEN: BT25-043, BT25-057, BT25-104, ST23-09.**
+
+## F-ENGINE-TRIGGER-GATE-IS-TRIGGER-TIME-NOT-ACTIVATION-TIME — OPEN (found 2026-09-18, same stage)
+
+BeelStarmon BT25-085's two [When Digivolving]/[When Attacking] clauses trigger
+together. When only the first is payable at the trigger (an Option in hand, none
+under a Digimon) and resolving it MAKES the second payable (the used Option
+tucks itself under BeelStarmon), DCGO then offers the second: its
+`additionalActivateCondition` lives in `CanActivateCondition`, the effect is
+stacked on `CanTrigger` alone, and `MultipleSkills.ActivateMultipleSkills_OnePlayer`
+re-tests `CanActivate` for every still-stacked effect on each loop pass. Our
+engine never offers it — the clause-level `condition:` that mirrors the DCGO
+gate is not re-tested after the first effect resolves (measured at exam
+lowering: nothing is parked after the tuck). `general_rule.pdf` 15-8-3 (a
+trigger-type effect waits as pending activation; a "By ..." cost is attempted at
+activation) supports DCGO, and on [When Attacking] this is the archetype's core
+line (use an Option free, then trash it to unsuspend). Wanted primitive: an
+ACTIVATION-time gate (queue the trigger; test the condition when it comes up to
+resolve; park nothing if it fails) — it would also be the right home for the
+LadyDevimon BT25-083 gates `NOTES-BT25-083.md` asks for. Record:
+`qa/dcgo-exams/BT25/NOTES-BT25-085.md`, `BT25-085-effect2.yaml` (the
+`dcgo_only` row).
+
+## F-ENGINE-RETALIATION-LOST-BEHIND-TRIGGER-ORDER + ON-MOVE-FIRES-ON-DELETION — OPEN (re-measured 2026-09-18)
+
+`qa/dcgo-exams/BT25/BT25-078-inherited0.yaml`: a stack with Gazimon BT25-078 as a
+digivolution card loses a battle. Our engine parks a 2-candidate `TriggerOrder`
+`[BT25-078 <Retaliation>, BT25-078]` — the second is Gazimon's [When Moving]
+body, enqueued by the board-wide `on_move` observer scan when the stack leaves
+the battle area by DELETION (it no-ops later on `event_permanent_is_source`) —
+and the inherited `<Retaliation>` (16-12, Mandatory) then deletes nothing: the
+attack context is gone when it resolves and `battle_opponent_of` finds no
+opponent. DCGO has one trigger, no prompt, and deletes the battled Digimon.
+Record: `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.
+
+## F-CARD-BT24-088-DRAW-NOT-GATED-ON-COST / F-CARD-BT25-078-YAML-COLOUR — OPEN (2026-09-18)
+
+- **BT24-088 Asuna Shiroki** `[On Play] By trashing 1 card ... <Draw 2>`: the
+  YAML's `select_hand { optional: true }` → `trash_from_hand_by_index` → `draw 2`
+  draws 2 even when the pick is declined (measured); `BT24_088.cs` draws only
+  `if (discarded)`. Needs a `binding_present` guard or a mandatory inner pick
+  behind the clause-level gate. `qa/dcgo-exams/BT24/NOTES-BT24-088.md`.
+- **BT25-078 Gazimon** is authored `color: [black]` with a `Lv.2 Black / 0`
+  alt-path; the official DB, the card face and DCGO print Purple, circle
+  `Purple Lv.2 / 0`. The extra Black route admits a Black Lv.2 with no
+  [TS]/[Three Musketeers] text. `qa/dcgo-exams/BT25/NOTES-BT25-078.md`.
+
+## G-OUTER-OPTIONAL-USE-OPTION-FIRST-STEP — RESOLVED 2026-09-18 (three-musketeers-1 / exam triage EX7-073#effect#1)
+
+`body_first_step_is_declinable` (`code/digimon-engine/src/dsl_cards/lower_triggered.rs`)
+did not recognise `use_option_from_hand` / `use_option_from_trash` with
+`optional: true` as a declinable first step. An `optional: true` clause led by one
+therefore got an UNGUARDED outer accept/decline prompt (`first_step_candidate_guard`
+has no arm for these steps either), which installed even with zero qualifying Options
+in hand — a vacuous prompt DCGO never asks (`EX7_073.cs:85`,
+`HandCards.Count(CanSelectCardCondition) >= 1`) — and double-prompted the "may" when a
+candidate existed. Both steps install a PASS-able pick (DCGO `SelectHandEffect
+canNoSelect: true`) and install nothing when no card qualifies, so the inner PASS is
+the decline path. Fixed by adding both to the declinable arm. Surfaced while moving
+EX7-073 Clause 1 off `select_hand` + `play_from_hand_free` (which PLAYED the Option to
+the battle area as a dp-less permanent — the exam's lead divergence) onto
+`use_option_from_hand`. Tests: `cards_behavioral/ex7/ex7_073.rs`
+(`*_free_use_sends_option_to_trash_not_battle_area`,
+`*_free_use_resolves_the_options_main_effect`; the pre-existing
+`*_wd_delete_targets_highest_level_opponent_only` is the regression witness for the
+vacuous outer prompt). Full `cards_behavioral` 8172 green.
+
+## F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE — HALF RESOLVED `b77d1b288`, half still OPEN (found 2026-09-18, exam triage EX7-073#effect#1)
+
+**The ordering half is CLOSED** (superseded by
+`G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER`, RESOLVED `b77d1b288`).
+As found: when an effect USED an Option (`use_option_from_hand`, free) while another
+of the controller's triggers was still queued (EX7-073's second [When Digivolving]),
+our engine queued the used Option's [Main] as a trigger BESIDE the still-queued one
+and parked a `TriggerOrder` ([EX7-073, P-180]) — a choice the rules do not grant.
+DCGO resolves the Option inline inside the using effect's own coroutine
+(`PlayOptionCards(payCost: false)`, `EX7_073.cs:112-130`) and asks nothing.
+`b77d1b288` gives the in-flight Option's queued `OptionMain` absolute priority in
+`drain_effect_queue_inner`, so the prompt is no longer parked. Citation:
+`general_rule.pdf` 15-8-3-2 (p.25) — "Trigger-type effects can't activate during the
+processing for a rule or effect".
+
+**Measured, not inferred** (2026-09-21, close-out job `three-musketeers-2`): the
+standing witness for this finding was the `sim_only` TriggerOrder row in
+`qa/dcgo-exams/EX7/EX7-073-effect1.yaml`. That row now fails to lower — our engine
+asks nothing there — so it was REMOVED, and the line re-diffs **CLEAN (16 of 21 ours /
+18 dcgo steps)** against its preserved sidecar
+`20260918T105217Z_0a6e7c8a4d68471c8a19033c282ef94e.state.jsonl`. `EX7-073#effect#1`
+keeps its `confirmed` verdict, now re-earned on the current engine.
+
+**Still OPEN — the second half, untouched:** `play_from_hand_free` silently
+accepts an Option/Dual hand card and plays it to the battle area as a permanent —
+it should refuse non-permanent kinds (or route to the Option-use pipeline). A pool
+sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted. Nothing in
+`b77d1b288` touches that call site, and no driver clause measures it yet.
+
+## G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND — RESOLVED 2026-09-19 (found 2026-09-18, Three Musketeers exam stage, BT24-030#effect#3)
+
+**RESOLVED (ENGINE FIX, commit: see `git log --grep G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND`).**
+`suspend_with_cause` is split into `suspend_state_only` (gate + flip + aura
+re-tick, returns the event card) and `enqueue_on_suspend`; the attack
+declaration (`suspend_and_count_attack`) now flips state through the former and
+`fire_on_attack` enqueues `OnSuspend` in the SAME batch as `[When Attacking]`
+(both trigger on the declaration — general_rule.pdf 11-2-1 / 11-1-4), so the
+turn player orders them together. Test:
+`bt24_030_attack_declaration_suspension_triggers_may_unsuspend` (fails before,
+passes after); full `cards_behavioral` 8177/0. Exam BT24-030#effect#3 re-diff
+CLEAN 18/18 → confirmed. Blockers already went through `Game::suspend`.
+**Residual (not fixed, pre-existing class):** `fire_on_attack` drains its
+batches in sequence and returns on the first park, so if an OnAttack /
+`[When Attacking]` / OnSuspend prompt parks, the later OnAllyAttack /
+OnOpponentAttack fan-outs are never enqueued (`advance_pending_attack` resumes
+at RaidOpen). Also, an OnAttack-batch park would drop the attack's OnSuspend
+event (only 1 YAML uses `on_attack`).
+
+
+Declaring an attack suspends the attacker by writing `perm.is_suspended = true`
+directly (`Game::commit_attack_declaration` → `suspend_and_count_attack`,
+`code/digimon-engine/src/combat/mod.rs` ~3792). The only site that enqueues
+`EffectTiming::OnSuspend` is `Game::suspend` / `suspend_with_cause`
+(`game/suspend.rs` ~96), so **a Digimon that suspends by attacking never
+triggers "when this Digimon suspends" / "when your Digimon suspend"**. DCGO
+suspends the attacker through `SuspendPermanentsClass(…).Tap()`
+(`AttackProcess.cs:166`), which stacks `EffectTiming.OnTappedAnyone`
+(`CardController.cs` ~5952); the rules carve nothing out — declaring an attack
+IS suspending the attacker. Pool-wide: every `when: on_suspend` clause that
+should see an attack declaration. Surfaced on Neptunemon (BT24-030) "[All
+Turns] [Once Per Turn] When this Digimon suspends, it may unsuspend" — the
+card's attack-unsuspend-attack-again loop never opens. Measured at lowering:
+`qa/dcgo-exams/BT24/BT24-030-effect3.yaml` step 15, "select answered no live
+prompt". Expected fix: route the attack suspension through `suspend_with_cause(
+attacker, /*effect_initiated*/ false)` inside the declaration's deferred-drain
+scope (the Alliance path in the same file already does this for the ally), with
+a failing-then-passing test that attacks with an `on_suspend` carrier. Blockers
+(`AttackProcess.cs:557` suspends the defender the same way) deserve the same
+check. `qa/dcgo-exams/BT24/NOTES-BT24-030.md`.
+
+## G-ENGINE-PLAY-PENDING-SECURITY-IGNORES-CANNOT-PLAY-BY-EFFECT — RESOLVED 2026-09-19 (52579f0a8) (found 2026-09-18, same stage, BT20-020#effect#3)
+
+**RESOLVED (52579f0a8, ENGINE FIX):** `EffectContext::play_pending_security`
+(`effect_context/selections.rs`) now gates a Tamer on `CannotPlayTamerByEffect`
+exactly as it already gated a Digimon on `CannotPlayDigimonByEffect`; the
+blocked card falls through combat.rs's "didn't stick" path to the trash. Test
+`bt20_020_gate_blocks_security_played_tamer`; oracle re-diff of
+`BT20-020-effect3.yaml` CLEAN, verdict confirmed. The live-security helpers
+`play_from_security*` route through the hand `ByEffect` pipeline and were
+already gated.
+
+
+`CannotPlayTamerByEffect` / `CannotPlayDigimonByEffect` are enforced only on the
+from-hand and from-trash `PlaySource::ByEffect` paths
+(`game_actions/mod.rs` ~440, `game_actions/play.rs` ~140). A security-flipped
+"[Security] Play this card without paying the cost" resolves through
+`CompiledStep::PlayFromSecurity` → `ctx.play_pending_security()`
+(`dsl_cards/step/play_digivolve.rs` ~805), which marks the parked
+`pending_security` card as played without consulting either modifier — so
+Imperialdramon: Fighter Mode (BT20-020)'s "[When Digivolving] Your opponent
+can't play Digimon or Tamers by effects until the end of their turn" does not
+stop a checked Tai Kamiya (ST1-12) from being played. Measured sim-side:
+`qa/dcgo-exams/BT20/BT20-020-effect3.yaml`, `p1.field` = [ST1-12] after the
+check. DCGO: `CanNotPutFieldClass` makes `CanPlayAsNewPermanent` false, so
+`PlaySelfTamerSecurityEffect`'s `CanActivateCondition` fails
+(`CardEffectFactory.cs` 165-169) and the card is trashed. Every "can't play by
+effects" gate (BT20-020, BT23-014, …) against every security-play card is
+affected; the live-security helpers `play_from_security*`
+(`effect_context/action/play.rs` ~584-690) should be checked for the same hole.
+`qa/dcgo-exams/BT20/NOTES-BT20-020.md`.
+
+## G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED — RESOLVED 2026-09-20 (e01f319ec, ENGINE FIX) (measured 2026-09-18, same stage, BT16-077#effect#2 / #inherited#0)
+
+**RESOLVED (ENGINE FIX).** `<Partition>` now enforces the printed parenthetical.
+
+**What was wrong.** `lower_partition.rs` accepted per-slot `sources:` specs and
+documented them as deferred ("`_sources` are deferred to a future phase"), and the
+synthesized `Keyword::Partition` body parked ONE slot-blind
+`CountCappedMultiSelect { min: 1, max: 2 }` "select 2 cards to play" over ALL the
+digivolution cards. Two negative probes on Dinobeemon (BT16-077)
+`<Partition (purple Lv.4 & red Lv.4)>`: (a) with Dinobeemon itself in the stack
+under a Lv.6, answering `[BT16-077, ST6-07]` PLAYED the Lv.5 Dinobeemon — a card no
+slot admits; (b) answering one card alone played ONE card.
+
+**Citations.** `general_rule.pdf` (Ver.3.6) **§16-28-5** (p.38) — "the 'specified
+cards' refers to the cards that meet the conditions shown in parentheses in the
+<Partition> icon text"; **§16-28-6** — "When <Partition> is activated, 1 of each of
+the specified cards is played from digivolution cards without paying their costs.
+**A player can't choose to only play one or some of the specified cards**";
+**§16-28-1** (p.37) — the trigger itself needs "a Digimon with this effect **and 1
+of each of the specified cards** in its digivolution cards"; §16-28-2 — immediate
+type, so the departure still happens (not preventive). DCGO builds one filtered
+candidate list per `PartitionCondition`
+(`DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/Partition.cs:66-119`),
+refuses to activate when any list is empty (`:145-159`), and opens a
+`SelectCardEffect` for a slot ONLY when it has more than one candidate
+(`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Partition.cs:89,117`).
+
+**Resolution.**
+- **`CardEffect::partition_slots(inherited)`** (`src/effect.rs`) — a defaulted trait
+  method publishing a card's printed slot predicates; `DslCardEffect`
+  (`src/dsl_cards/mod.rs`) answers it from its own `kind: partition` → `sources:`
+  clause, picking the face or inherited copy by scope. A card that publishes no
+  slots (a printed `<Partition>` with no registered script) keeps the pre-slot
+  behaviour, so nothing silently changes shape.
+- **`keyword_effects.rs`** — the `Keyword::Partition` body now (1) gates the trigger
+  on a complete slot assignment existing in the LIVE stack (§16-28-1 / DCGO
+  `:145-159`), and (2) drives the picks through `drive_partition_picks`: each pick
+  must keep a perfect slot→card matching reachable, a single remaining candidate is
+  taken WITHOUT a prompt (DCGO `:89,117` — there is no choice to expose), and the
+  picks are mandatory with no PASS (§16-28-6). Slot ORDER is deliberately not
+  imposed on the pick sequence: §16-28-6 plays the specified cards as one
+  simultaneous action (judge-quiz Q30 — "played out simultaneously"), which our
+  sequential play linearizes in the controller's chosen order, so the constraint is
+  a matching, not a sequence. This is the same shape as the hand-written substrate's
+  `partition_can_extend` (`effect_context/selections.rs`).
+- Clone-safe (rule 28): the chain runs on the resumable data VM — a new
+  `NonDslCountCappedTerminal::KeywordPartitionSlots { subject, slots, picked_so_far }`
+  frame, modelled on the existing `Assembly` per-element chain. No closure-based
+  `pending_selection` was added.
+- The extract-then-play body is now one shared `partition_extract_and_play`, called
+  by both the resume terminal and the legacy closure path (they had drifted — only
+  the resume copy ticked declarative effects).
+
+**Gate / coverage.** `tests/cards_behavioral/bt16/bt16_077.rs` —
+`bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest`
+(only the specified cards are offered; the green Lv.3 source never is; the forced
+second card is auto-taken; both are played),
+`bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set`
+(two purple + two red Lv.4: after a purple, the other purple is masked out),
+`bt16_077_inherited_partition_never_plays_a_source_no_slot_admits`
+(the gap's probe (a): the Lv.5 Dinobeemon source is never offered). All three FAIL
+before and pass after. Judge-quiz Q30 stays green (its driver now takes ONE source
+pick instead of two, because BanchoLeomon becomes the only card that can fill the
+Green/Black Lv.6 parenthetical once MedievalGallantmon is taken).
+
+**Re-measured at the oracle** (preserved sidecars, zero Unity time):
+`BT16-077#effect#2` (`20260918T122337Z_b8de4fb338d148ecad2f76ae78cf95d5`) and
+`BT16-077#inherited#0` (`20260918T122424Z_f9d55e3232d64f2b95621146b9efe6b8`) both
+re-diffed **CLEAN** (24 of 26 compared; 2 sim-only rows) and both verdicts stay
+`confirmed`. The scenarios' sim-only row is now a one-card pick, and the pick can no
+longer name a card no slot admits.
+
+**Suites.** full `cards_behavioral` 8209 passed / 0 failed / 37 ignored; `--lib`
+329/0; `--test dsl` 926/0; `--test judge_quiz` 43/0; `--test keyword_phase_d` 44/0;
+`--test replacements` 125/0; `--test selection` 79/0. `--test archetypes` keeps its
+8 failures that reproduce on unmodified main.
+
+**Follow-up (logged, not fixed here).** Our `<Partition>` plays the specified cards
+SEQUENTIALLY (`play_from_trash_free_unsuspended` then
+`queue_partition_second_play`), so a later card's would-play interrupt can see an
+earlier one already on the field — §16-28-6 / judge-quiz Q30 call the plays
+simultaneous, and DCGO batches them through one `PlayCardClass` over the whole list
+(`CardEffectCommons.cs:23-53`). The order is the controller's, which is why Q30 is
+still observable, but a true batch play that runs every would-play window before any
+card lands is a separate engine change: `G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS`.
+
+## G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS — OPEN (found 2026-09-20, three-musketeers-2 close-out)
+
+`<Partition>` plays its specified cards one after another
+(`cards/keyword_effects.rs::partition_extract_and_play` → the first card via
+`play_from_trash_free_unsuspended`, the rest via
+`Game::queue_partition_second_play`). Every pick is extracted from the stack first,
+so no pick is in the battle area while ANOTHER PICK'S would-play interrupt resolves
+— but once the first card LANDS, the second card's would-play window sees it.
+general_rule.pdf §16-28-6 plays "1 of each of the specified cards" as one action and
+judge-quiz Q30 (PDF p69) is explicit that BanchoLeomon and MedievalGallantmon "are
+played out simultaneously", which is why BanchoLeomon is NOT a legal target for
+Medieval's "by suspending 2 Digimon" would-play cost reduction. DCGO gets this by
+batching: `CardEffectCommons.PlayPermanentCards` hands the whole `selectedCards`
+list to one `PlayCardClass.PlayCard()` (`CardEffectCommons.cs:23-53`). Today the
+judge pin holds only because the controller chooses the play order (Q30's driver
+takes MedievalGallantmon first). `Game::play_source_refs_from_effect_without_cost`
+already batch-PLACES sources, but it runs no would-play window, so it is not a
+drop-in. Fix: a batch free-play that resolves every card's would-play window before
+any of them enters the battle area.
+
+## G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER — RESOLVED `b77d1b288` (found 2026-09-21, three-musketeers-2 close-out)
+
+**Measured against the DCGO oracle, not predicted.** When an effect *uses* an
+Option card ("use 1 Option card from your hand without paying the cost") while a
+SIBLING effect of the same card is still pending activation, our engine does not
+carry the used Option's `[Main]` body to completion before that sibling activates.
+**Mechanism (corrected 2026-09-21 by tracing the drain; the first triage read the
+park as the 9-1-5 disposal order, which it is not).** `play_option_core` enqueues
+the body as an ordinary `EffectTiming::OptionMain` entry on the SHARED
+`effect_queue` and then drains. Two separate interleaves followed, both in
+`Game::drain_effect_queue_inner`:
+
+1. With a sibling trigger still queued, the drain saw TWO items for one chooser
+   and installed a two-entry `SelectionKind::TriggerOrder` — [the pending sibling,
+   the Option's `[Main]` BODY] — offering an ordering choice the rules do not
+   grant. Neither branch reproduced DCGO: run the sibling first and its cost is
+   unpayable; run the disposal-first alternative and the Option is trashed before
+   its own `[Main]` placement lands.
+2. Even once the body was given priority, its FIRST step (`trash_top_security`)
+   reaches `Game::fire_effect_security_removal`, which calls `drain_effect_queue`
+   DIRECTLY (not `maybe_drain_effect_queue`) — a NESTED drain that ran the sibling
+   from inside the body. Traced:
+   `DRAIN depth=2 deferred=2 obp=true q=[(EX7-073, WhenDigivolving)]`.
+
+**Reproducer:** `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` (oracle-`completed`,
+sidecar `20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3.state.jsonl`,
+verdict `EX7-073#effect#2` = `diverged`). BeelStarmon (X Antibody) (EX7-073) has
+two `[When Digivolving]` clauses: #effect#1 uses Bind Red Trigger (P-180) for
+free, #effect#2 pays "2 cards with the [Three Musketeers] trait from this
+Digimon's digivolution cards" to delete the opponent's highest-level Digimon and
+trash their top security card. P-180's own `[Main]` places it as a digivolution
+card — the SECOND trait source #effect#2 needs.
+
+- **DCGO** (raw sidecar): step 24 P-180's security trash lands, **step 27 P-180
+  becomes a digivolution card**, step 29 both trait sources are trashed as the
+  cost, step 31 Vermilimon BT4-014 is deleted and the top security card trashed.
+  Clause 1 finishes entirely first; `EX7_073.cs:172-182` (`CanActivateCondition`,
+  `>= 1` trait source) and the coroutine's `DigivolutionCards.Count >= 2` gate
+  (`EX7_073.cs:~199`) then both pass.
+- **Ours:** the sibling runs against the LONE source BT25-085, the two-card cost
+  is unpayable, the pick auto-resolves with no prompt, and the clause's printed
+  delete + security trash never happen (`p1.security` 4 vs DCGO 3,
+  `p1.field [BT4-014]` vs DCGO `[]`). The alternative TriggerOrder branch is
+  worse: disposing first trashes P-180 before its own `[Main]`'s placement runs,
+  so the placement silently no-ops and the card is lost.
+
+**Rules (general_rule.pdf p.23, read directly this stage — all three favour DCGO):**
+
+- **15-4-3-4** — "The activation order is determined for effects that trigger
+  simultaneously by choosing the next pending activation effect **after each
+  effect has been resolved**."
+- **15-4-4-2** — "Effects that are pending activation must be activated 1 at a
+  time. Multiple triggered effects can't be activated at the same time."
+- **15-4-5-2** — "A derived triggering effect will activate **before** previously
+  triggered effects that are pending activation."
+
+Whether the used Option's `[Main]` counts as part of the using clause's resolution
+(15-4-3-4 / 15-4-4-2) or as a derived activation raised during it (15-4-5-2), it
+belongs ahead of the still-pending sibling. The `TriggerOrder` we offer here is a
+choice the rules do not grant at this timing.
+
+**Not a duplicate of `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`** (RESOLVED
+`5aef07fa8`). That gap is about the 9-1-5 pending *trash* being orderable against
+the user's own pending triggers, which 9-1-5 + 18-1-2 + 15-4-3-5-1 DO grant. This
+one is about the Option's `[Main]` **body** being interruptible by a sibling
+trigger before it completes — a different item at an earlier timing. A fix must
+keep the resolved trash-order choice intact while making the body's continuation
+(including any selection it parks, e.g. P-180's mandatory
+`select_own_permanent` placement pick) strictly precede both the disposal and any
+queued sibling trigger.
+
+**RESOLVED `b77d1b288`.** The load-bearing citation is **`general_rule.pdf` 15-8-3-2**
+(p.25, read directly this stage): *"Trigger-type effects can't activate during the
+processing for a rule or effect."* The pending sibling `[When Digivolving]` is a
+trigger-type effect (15-8-3), and clause 1's processing includes the `[Main]` of the
+Option it used — 9-1-5 puts the Option's disposal at the timing that `[Main]`
+**resolves**, so the body is inside the use. p.23's 15-4-3-4 and 15-4-4-2 agree from
+the other side. DCGO is structurally the same (`CardController.cs`
+`UseOptionClass.UseOption` runs the `OptionSkill` INLINE inside the using coroutine).
+
+Fix, in `drain_effect_queue_inner` (one block plus a `queued_option_main_index`
+helper): while `option_body_pending` is set, a queued `OptionMain` of the in-flight
+`pending_option` has **absolute priority** — run alone, in its own
+`enter_deferred_drain` scope, with no chooser / bundle / `TriggerOrder` involvement;
+and once it has been popped but not yet released by `complete_option_body_if_done`,
+a drain re-entered with `draining_deferred > 0` (i.e. nested inside the body) returns
+without running anything. The window is exactly the `[Main]`'s resolution, so the
+RESOLVED 9-1-5 trash-order choice (`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`,
+`5aef07fa8`) is untouched — that one is offered by `complete_option_body_if_done` at
+`draining_deferred == 0`, after this window closes.
+
+Guard test: `ex7_073_used_options_main_completes_before_pending_sibling_clause`
+(`code/digimon-engine/tests/cards_behavioral/ex7/ex7_073.rs`) — fails before
+(`trash=[] stack=[P-180, TM-A, BASE, EX7-073]`: the clause never fired), green after.
+`EX7-073-effect2.yaml` re-diffed against the preserved sidecar and its `assert:`
+block rewritten from our old reading to the DCGO/rules one; verdict
+`EX7-073#effect#2` flipped `diverged` → `confirmed`. Closing this ALSO required the
+exam-tooling fix below (`G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`) — with the
+engine right, the harness was declining the clause's own cost prompt.
+
+**Adjacent exposure left OPEN as a finding, not fixed here:**
+`fire_effect_security_removal` calls `drain_effect_queue` (not
+`maybe_drain_effect_queue`), so ANY effect body that removes a security card
+re-enters the drain mid-body, which 15-8-3-2 also forbids. Only the Option-`[Main]`
+window is closed above; the general case needs its own driver clause, citation and
+blast-radius measurement before that call site is changed.
+
+
+## F-CARD-BT16-077-WD-WHOLE-CLAUSE-DNA-GATED / F-CARD-BT24-091-LINK-EFFECT-MISSING — OPEN (2026-09-18, same stage)
+
+- **Dinobeemon (BT16-077)** — `BT16-077.yaml` puts `condition: { dna_origin:
+  true }` on the WHOLE [When Digivolving]. The print scopes "If DNA
+  digivolving" to the trash play only; the official Q&A
+  (`data/card_bundles/BT16-077.md`: "Even if this Digimon didn't DNA digivolve
+  … can give 1 of your Digimon <Rush> and that Digimon can attack") and
+  `BT16_077.cs` (`IsJogress` guards the trash play alone) agree. Move the gate
+  onto the two trash-play steps. Exam line:
+  `qa/dcgo-exams/BT16/BT16-077-effect3.yaml` (predicted `diverged`). The YAML's
+  `alt_paths` also omit the printed `Red Lv.4 / 4` circle.
+- **Tidal Stream (BT24-091)** — beyond the Link DP already listed under
+  `F-DATA-LINK-OPTION-PRINTED-LINK-BOX-NOT-AUTHORED`, the YAML has NO linked
+  "[When Attacking] [Once Per Turn] Return 1 of your opponent's lowest level
+  Digimon to the hand" clause at all (DCGO `BT24_091.cs` region "Link ESS":
+  mandatory, `SetIsLinkedEffect(true)`, one `SelectPermanentEffect`
+  `Mode.Bounce` over `IsMinLevel`). The other OPEN cards on that finding's list
+  (BT25-101, BT24-095, ST22-08) should be checked for a missing Link EFFECT as
+  well as the Link DP. Exam lines: `qa/dcgo-exams/BT24/BT24-091-effect3.yaml`,
+  `-effect5.yaml` (predicted `diverged`).
+  **RESOLVED 2026-09-19** (BT24-091#effect#5 triage, commit "fix(BT24-091):
+  author linked [When Attacking][OPT] bounce"): linked ESS added to
+  `BT24-091.yaml` (BT25-093 idiom: `scope: inherited`, `when: when_attacking`,
+  `once_per_turn`, mandatory `select_opponent_permanent` over `lowest_level`,
+  `return_to_hand`). Citation: bundle "### Link Effect"; `BT24_091.cs` region
+  "Link ESS". Guard test
+  `bt24_091_linked_host_when_attacking_bounces_lowest_level_mandatory_once_per_turn`
+  (fails before, green after). Exam `BT24-091-effect5.yaml` re-diffed CLEAN 14/14
+  against the preserved sidecar `20260918T125059Z_d0b72e2c`; verdict CONFIRMED.
+- **Neptunemon (BT24-030)** — YAML header `color: [blue, purple]` and a single
+  `Blue Lv.5 / 4` circle; the official DB prints Blue/Black with `Blue Lv.5 / 4`
+  and `Black Lv.5 / 4`.
+
+## G-TOOLING-EXAM-NO-DNA-VERB / G-TOOLING-EXAM-OPTION-HAND-LINK — RESOLVED 2026-09-20 (found 2026-09-18)
+
+Two clause families the exam format could not declare, each recorded
+`unreachable` with this reason. **Both are closed** (close-out job
+`three-musketeers-2`); the reachable clauses now need an oracle pass, not a
+tooling change.
+
+- **DNA digivolution — RESOLVED.** Was: `scenario::STEP_VERBS` had no DNA verb,
+  `lower::matches_intent` no `DnaDigivolve` arm, and DCGO's
+  `InputDriver.BuildMainPhaseAction` (~277) aborted on the DNA range. Blocked
+  every `[DNA Digivolve]` condition clause and every "if DNA digivolving" rider
+  (BT16-077#effect#0 and the first sentence of #effect#3; BT20-076's rider;
+  BT8-084#effect#0). `<Partition>` itself was never blocked — see
+  NOTES-BT16-077.md for the tuck route.
+
+  Closed by the `dna:` verb: `do: { dna: { card: <ID>, materials: [field.N,
+  field.M] } }` (`exam/scenario.rs` + `exam/lower.rs`), a
+  `LoweredStep::DnaDeclaration` carrying the action id AND both materials'
+  identities on ONE wire row, and DCGO `fc67f9ae6`, which dispatches the range
+  to a jogress `PlayCardAction`. The materials ride the verb rather than a
+  following `select:` because the wires disagree on the decision count — ours
+  is three (bit + two `Material` prompts), DCGO's is one — so there is no DCGO
+  row for a follow-on step to answer. Engine half: a raw own-battle-area index
+  is now resolvable by a `targets:` payload on the two DNA material prompts
+  (`selection::is_dna_material_prompt` + the `targets:` arm in
+  `runners/selection_resolve.rs`). Needs a player at or after
+  `D:/dcgo-build/scripted-v16`.
+
+- **A declared hand `<Link>` of a Plug-In OPTION — RESOLVED.** Was:
+  `link: { from: hand }` lowered to the `HAND_EFFECT` bit, which our mask
+  emitted for Appmon Link DIGIMON only; for a Plug-In Option the hand link was
+  branch 1 of the mode-select `EffectChoice` behind the ordinary PLAY bit,
+  while DCGO's is a separate `ActivateCardAction`. One wire row could not mean
+  both. Blocked the "Cost N" half of every Plug-In Option's Link Condition
+  clause (BT24-091#effect#4; BT25-093#effect#4 / BT25-100#effect#5 / BT25-101 /
+  BT24-095 / ST22-08 by the same shape).
+
+  Closed on the ENGINE side (`G-ENGINE-OPTION-LINK-FROM-HAND`, below), which is
+  the option the notes preferred: the from-hand link is now its own main-phase
+  action on the `HAND_EFFECT` bit, exactly where the Link Digimon's already
+  was, so `link: { card: <ID>, from: hand }` lowers on both wires with no DCGO
+  change at all. `qa/dcgo-exams/BT24/NOTES-BT24-091.md`,
+  `qa/dcgo-exams/BT25/NOTES-BT25-100.md`.
+
+## G-ENGINE-OPTION-LINK-FROM-HAND — RESOLVED 2026-09-20 (found 2026-09-18)
+
+A Plug-In Option plugged in from hand was modelled as a PLAY-MODE of the
+§6-5-1-3 "use an Option card from the hand" action (an `EffectChoice`
+mode-select branch behind the PLAY bit), not as its own declaration.
+
+**Why that is wrong.** `general_rule.pdf` (Ver.3.6) §6-5-1 lists the main-phase
+actions, and **§6-5-1-3 "Use an Option Card From the Hand"** and **§6-5-1-4
+"Linking a Card in the Hand or Battle Area"** are two SEPARATE entries; §10-1-1
+says "A card from the hand or battle area can be linked to a Digimon in the
+battle area by paying the cost **as part of the main phase actions**". DCGO
+draws the same line: `CardEffectFactory.LinkEffect` (`Link.cs:19-24`) accepts
+any `CardSource` with a `linkCondition` that `IsExistOnHand`, so the
+declaration sits in the card's `CanDeclareSkillList` and is reached as an
+`ActivateCardAction` — never a `PlayCardAction`. The Digimon-side (Shape-B)
+hand link already held that contract (`G-ENGINE-DIGIMON-LINK-FROM-HAND`,
+`cf8e2519f`); this was the Option-side half.
+
+**What changed** (`game_actions/link.rs`, `game_actions/mod.rs`,
+`action/mask.rs`, `action/decode.rs`):
+
+- `hand_option_link_condition_targets` / `hand_option_link_available` — the
+  Option half of the from-hand link, gated on a link condition, a legal host
+  and an affordable (post-`ChangeLinkCost`) cost. No Option use-requirement or
+  colour check: those gate §9-1 "Using Cards", and `LinkEffect`'s own
+  `CanUseCondition` (`Link.cs:49`) checks only the origin zone and the host set.
+- `hand_link_available` = either half; `hand_effect_slot_is_link` now reads it,
+  so the mask lights the `HAND_EFFECT` bit for a Plug-In Option too.
+- `activate_hand_link` branches on card kind: a Digimon keeps
+  `begin_digimon_link`, an Option routes through `play_option_core` in
+  `OptionPlayMode::Link` (link cost, `OnUseOption` without the `[Main]` body,
+  disposal by plugging into the chosen host).
+- `option_legal_play_modes` takes the `OptionSource` and drops the Link mode for
+  a HAND source, so the PLAY bit means only §6-5-1-3 and the declaration is not
+  exposed twice. Every other source keeps it — a `[Security]`-flipped Option has
+  no main-phase declaration to make, so its link stays a mode of that resolution
+  (`G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON`, `35958972b`).
+- `decode.rs` now dispatches the `HAND_EFFECT` bit on `hand_effect_slot_is_link`
+  instead of "did `activate_hand_main` happen to fire". That difference is
+  load-bearing: `activate_hand_main` matches `EffectTiming::OptionMain` on an
+  Option/Dual hand card and would have run its `[Main]` body OUTSIDE the Option
+  lifecycle — no use cost paid, no `pending_option`, no disposal.
+
+Tests: `bt25_100_hand_link_declaration_lives_on_the_hand_effect_bit`,
+`bt25_100_play_bit_is_the_use_action_only_no_link_mode_select`,
+`bt25_100_no_hand_link_bit_without_a_legal_host`,
+`bt25_100_play_and_link_bits_are_both_offered`, plus the four rewritten ST22-08
+cases (`st22_08_dual_mode_offers_two_separate_main_phase_actions`,
+`st22_08_hand_link_host_pick_clones_faithfully`,
+`st22_08_link_action_stays_affordable_when_the_use_action_is_not`,
+`st22_08_link_mode_not_offered_without_an_eligible_host`).
+
+**Flagged for human review**: this moves a declaration between action bits, so
+an RL policy trained before it will address the from-hand plug-in on the wrong
+bit. The 2192 action space itself is unchanged.
+
+## G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK — RESOLVED 2026-09-20 (found 2026-09-18)
+
+`runners/selection_resolve.rs` resolved identity picks (`cards:`) only for
+`Hand / Trash / Reveal / Material / CountCappedMultiSelect / Security`;
+`SelectionKind::SourceMulti` — the cross-permanent source multi-pick behind the
+DSL's `select_own_sources` / `select_opponent_sources` — fell through the
+`_ => None` arm, so a cost paid by trashing N of a Digimon's own digivolution
+cards could not be ANSWERED by a scenario at all. Measured on
+`EX7-073#effect#2` ("by trashing 2 cards with the [Three Musketeers] trait from
+this Digimon's digivolution cards"): the clause is reachable, the line lowered
+up to the payment step, and the pick failed with
+`card pick 'BT25-085' not found in SourceMulti {…} (valid [2000, 2004, 62])`.
+The single-accept `yes:` shortcut that answers one-candidate source picks does
+not help — the payment is exactly two cards, so the first pick always has two
+accept ids.
+
+Closed by a `SourceMulti` arm that reads the prompt's own candidate snapshot off
+the parked `ResumeFrame::SourceMultiStep` (`candidates:
+Vec<(u16, SourceSelectionRef)>`, which `install_source_multi_resume_step`
+derives `valid_action_ids` from) and resolves each `SourceSelectionRef`'s
+`CardHandle` against the live carrier, mirroring `run_source_multi_step`'s
+DCGO-parity revalidation. Unlike `Material` the accepted ids are a SPARSE,
+predicate-filtered set that can span several field slots, so the arm matches
+explicit `(id, card)` pairs rather than the contiguous `(ids, range_start)`
+shape the other arms use. A prompt with no data frame still fails loudly rather
+than guessing. Tests: `source_multi_*` in `runners/selection_resolve.rs`
+(five fail before, all pass after).
+
+
+## F-ENGINE-FREE-OPTION-USE-IS-AFFORDABILITY-GATED — OPEN (found 2026-09-18, Three Musketeers exam stage, EX7-013#effect#1)
+
+An effect-driven "use 1 … Option card **without paying the cost**" is refused when the
+controller's memory could not have PAID the Option's printed cost, and the refusal
+silently drops the rest of the using effect.
+
+- **Measured** (exam sim-only, real game start): hard-play MagnaKidmon EX7-013 at
+  memory 3 (12: 3 → -9); its mandatory `[On Play]` offers Bind Red Trigger P-180
+  (use cost 6) and the pick is accepted. Result: P-180 stays in hand, P1's security
+  stays 5, **and the mandatory "Then, draw … until you have 6" does not run** (hand
+  stays 5). Declining the same pick on the same board draws to 6 correctly. The same
+  clause through the `[When Digivolving]` arm at memory -1 works (-1 − 6 = -7).
+- **Root cause (read, not yet test-pinned):** `Game::option_legal_play_modes`
+  (`src/game_actions/mod.rs`) filters every mode by
+  `(self.memory - use_cost) >= memory_min` and takes no `OptionCostPolicy`; at -9 a
+  6-cost Option has no legal mode, so `play_option_core` (`src/game_actions/options.rs`,
+  step 3) returns `OptionPlayResult::Invalid` even under `OptionCostPolicy::Free`
+  (step 4 would have charged 0). `run_use_option_from_hand_step`
+  (`src/dsl_cards/step/selections.rs`) then returns early on `Invalid` — "no tail, no
+  outer_conts" — which is what swallows the draw. The pick prompt's candidate filter
+  does not consult legality either, so the prompt OFFERS a card the use will refuse.
+- **Why it is wrong:** a use "without paying the cost" pays nothing, so there is no
+  memory test to fail; DCGO's `CardEffectCommons.PlayOptionCards(payCost: false)` has
+  none (`EX7_013.cs`). `Reduce(n)` / `Fixed(n)` policies have the same shape of bug
+  against the REDUCED cost (the filter uses the printed cost).
+- **Blast radius (not swept):** any effect-driven Option use that routes through
+  `play_option_core` while memory is deep-negative -- typically the `[On Play]` of an
+  expensive Digimon that was just hard-played. Only EX7-013 was measured. Per-card
+  `DebugRunner` tests miss it because they stage memory near 0.
+- **Fix sketch:** thread the cost policy into `option_legal_play_modes` (Free → skip
+  the affordability filter; Reduce/Fixed → test the effective cost), and make an
+  `Invalid` use fall through to the tail instead of aborting it (the printed text is
+  "you may use …. **Then,** draw" — the draw does not depend on the use). Regression
+  test: EX7-013 `[On Play]` at memory -9 with a 6-cost trait Option in hand.
+- **Exam impact:** `qa/dcgo-exams/EX7/EX7-013-effect1.yaml` / `-effect2.yaml` reach the
+  clause through the `[When Digivolving]` arm instead; see
+  `qa/dcgo-exams/EX7/NOTES-EX7-013.md`.
+
+## G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER — RESOLVED 2026-09-20 (closed by 5108e58ee; re-measured, regression test added) (found 2026-09-19)
+
+**RESOLVED.** Both drivers were logged from exam runs taken BEFORE
+`5108e58ee` ("used Option is trashed before the triggers its [Main] caused")
+landed, and were never re-measured against it. Re-diffed 2026-09-20 against the
+PRESERVED sidecars (no Unity time):
+
+- `BT25-091#effect#2` (Monica Simmons, sidecar
+  `20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`) — CLEAN,
+  12/12 compared → verdict `confirmed`.
+- `BT24-030#effect#4` (Neptunemon, sidecar
+  `20260918T123854Z_b6852992350c46659e14b00b3c32657a.state.jsonl`) — CLEAN,
+  18/18 compared → verdict `confirmed`.
+
+**What was wrong (driver 2, the real defect).** `BT24-030#effect#4`: P1 (turn
+player) uses Gaia Force ST1-16 on P0's Neptunemon; P0 pays Neptunemon's
+would-leave replacement by suspending it, which raises P0's own `[All Turns]
+[OPT] When this Digimon suspends` while the Option's `[Main]` is still
+resolving. We asked that trigger before disposing the used Option, so at the
+prompt `p1.trash` was empty where DCGO had `ST1-16`. Citations (verified in the
+PDF this stage): **9-1-5** (p.19) — "A used Option card is trashed if it isn't
+in an area at the timing when its 1st [Main] effect has been resolved as
+pending processing"; **18-1-2** (p.40) — other processing coinciding with
+pending processing is performed like simultaneously triggering effects
+(→ 15-4-3); **15-4-3-5-1/-2** (p.23) — ALL of the turn player's simultaneous
+items are chosen and resolved first, and only then the non-turn player's. The
+Option's trash is the turn player's item and the OnSuspend trigger the non-turn
+player's, so the trash strictly precedes that prompt: this sub-case was never
+order-ambiguous, our order was illegal. DCGO agrees (`CardController.cs`
+`UseOptionClass.UseOption` → `AddTrashCard` before the stacked skills resolve).
+`5108e58ee`'s `Game::option_body_pending` + `complete_option_body_if_done`
+(driven from the top of `drain_effect_queue_inner`, `effect_queue.rs`) already
+disposes the Option the moment the `OptionMain` body resolves and before any
+queued trigger runs, which is exactly this ordering — the finding was stale, not
+unfixed.
+
+**Driver 1 (`BT25-091#effect#2`) was the rules-ambiguous half** (Option trash vs
+the turn player's OWN `OnUseOption` observer). Post-`5108e58ee` our order equals
+DCGO's (trash, then observers) and the clause re-measures clean. The residual —
+that 18-1-2/15-4-3-5 lets the turn player ORDER the trash among their own
+pending items, and neither engine surfaces that choice — is tracked separately
+in **G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER** (RESOLVED 2026-09-20,
+`5aef07fa8` — the ordering pick is now surfaced; see that entry).
+
+**Regression test (this stage):**
+`bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt`
+(`tests/cards_behavioral/bt24/bt24_030.rs`) pins driver 2 — P1 uses ST1-16 on
+P0's Neptunemon, P0 accepts the protection, and `p1.trash == ["ST1-16"]` at
+P0's on-suspend prompt. Verified to FAIL when the `option_body_pending` hook in
+`drain_effect_queue_inner` is disabled (alongside
+`p_170_opponent_option_is_trashed_before_on_deletion_resolves`) and to pass
+with it. Full `cards_behavioral` green.
+
+## G-ENGINE-ACE-OVERFLOW-TURN-PLAYER-RELATIVE — RESOLVED 2026-09-19 (701fad56a) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#4)
+
+**RESOLVED (701fad56a, ENGINE FIX):** `Game::apply_ace_overflow_for_sources`
+(`game/mod.rs`) did `self.memory += penalty` on the turn-player-relative
+seesaw, so an ACE leaving the field on its OPPONENT's turn made its owner GAIN
+the overflow amount (exam: `p0.memory` 9 vs DCGO 1). general_rule.pdf 4-17-1 +
+4-1-4 ("lose X memory" is relative to the losing player) and DCGO
+`AceOverflowClass.Overflow()` (`cardSource.Owner.AddMemory(-OverflowMemory)`,
+`CardController.cs:6151`) make it owner-relative. Now each leaving ACE goes
+through `gain_memory_for_player(owner, value)` (clamped, emits `MemoryChange`),
+turn player's instances first (4-17-5). Affects every ACE in the pool. Test
+`ex7_059_overflow_is_owner_relative_on_opponents_turn`; oracle re-diff of
+`EX7-059-effect4.yaml` CLEAN, verdict confirmed.
+
+## G-ENGINE-BLAST-DIGIVOLVE-NO-DRAW — RESOLVED 2026-09-19 (edbb740c0) (found 2026-09-18, Three Musketeers exam stage, EX7-059#effect#1)
+
+**RESOLVED (edbb740c0, ENGINE FIX):** `combat/mod.rs::execute_blast_digivolve`
+moved the Blast card onto the stack and fired `WhenDigivolving` but skipped
+the digivolution draw. general_rule.pdf 8-1-3-3 ("... draws 1 card") is part
+of the digivolution procedure and 16-25-4 says `<Blast Digivolve>` "is an
+effect that digivolves the chosen Digimon"; DCGO's `PlayCardClass` draws for
+any digivolution (`CardController.cs` ~1762). Now draws after the stack
+mutation, before the `WhenDigivolving` fan-out (same ordering as
+`effect_initiated_digivolve`). Test `ex7_059_blast_digivolve_draws_one_card`;
+oracle re-diff of `EX7-059-effect1.yaml` CLEAN, verdict confirmed.
+
+Follow-up (OPEN, unmeasured): the blast path still does not enqueue the global
+`OnDigivolve` observer that `effect_initiated_digivolve` fires, so a "when a
+Digimon digivolves" watcher misses a Blast Digivolve. Needs its own citation +
+test.
+
+## G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS — RESOLVED 2026-09-19 (5108e58ee) (found 2026-09-19, exam P-170#effect#5)
+
+**RESOLVED (5108e58ee, ENGINE FIX):** a used Option stayed out of the trash until
+every trigger its `[Main]` body caused had resolved (`play_option_core` drained
+the whole queue, then disposed). Exam `qa/dcgo-exams/P/P-170-effect5.yaml`: P1's
+Gaia Force (ST1-16) deletes P0's AvengeKidmon; while P0's `[On Deletion]` prompt
+was pending, DCGO had ST1-16 in P1's trash and we did not. Rules: general_rule.pdf
+9-1-5 (the Option is trashed at the timing its 1st `[Main]` has resolved, as
+pending processing) + 18-1-2 (pending processing at the same timing as other
+processing is ordered like simultaneous triggering) + 15-4-3-5 (turn player's
+first). DCGO: `CardController.cs` `UseOptionClass.UseOption` calls
+`AddTrashCard` straight after the `OptionSkill` process. Fix:
+`Game::option_body_pending` + `complete_option_body_if_done` (effect_queue.rs)
+dispose the Option (arts / trash / Delay / Link / Training) the moment the
+`OptionMain` body resolves, before the queued triggers; the `OnUseOption`
+observers are enqueued (not drained) so they resolve after disposal, as in DCGO.
+Test `p_170_opponent_option_is_trashed_before_on_deletion_resolves`; oracle
+re-diff CLEAN, verdict confirmed.
+
+## G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER — RESOLVED 2026-09-20 (5aef07fa8, ENGINE FIX) (found 2026-09-19)
+
+**RESOLVED (ENGINE FIX).** Residual of G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS,
+and the surviving half of G-ENGINE-OPTION-TRASH-VS-ON-USE-TRIGGER-ORDER (whose two
+measured drivers both re-diffed CLEAN on 2026-09-20). The choice IS real — the PDF
+was re-read this stage, clause by clause, and it grants it:
+
+- **9-1-5** (p.19): "A used Option card is trashed if it isn't in an area at the
+  timing when its 1st [Main] effect has been resolved **as pending processing**."
+- **18-1-1 / 18-1-2** (p.40): pending processing is processed at its predetermined
+  timing "similar to triggered effects", and "**if other processing will be
+  performed at the same time as pending processing, it is performed similar to
+  effects that trigger simultaneously**" → 15-4-3.
+- **15-4-3-2** (p.22): effects triggered before a single rule or effect is resolved
+  all trigger **simultaneously** — so the triggers the `[Main]` body raised are due
+  at exactly the timing 9-1-5 names for the trash.
+- **15-4-3-5-1** (p.23): "**1 effect is chosen to activate from among the turn
+  player's effects that triggered simultaneously. This step is repeated** until
+  there are no more pending activation effects for the turn player."
+
+Nothing in the manual privileges the pending trash inside that bucket, so hard-coding
+trash-first (DCGO `CardController.cs` `UseOptionClass.UseOption` → `AddTrashCard`
+before the stacked skills, which we copied) picks ONE legal order and denies the
+player a choice rule 17 requires in the action space. DCGO's order remains legal —
+it is now what the player picks, not what the engine assumes.
+
+**Fix.** `Game::install_option_trash_order_selection` (`effect_queue.rs`) parks a
+two-entry `SelectionKind::TriggerOrder` for the Option's user — "Trash the used
+Option (`<id>`)" vs "Resolve your triggered effect first" — at the 9-1-5 timing,
+whenever `option_orderable_trigger_indices` finds at least one of THEIR queued
+triggers that would fire now (and they are the next chooser, so a non-turn player's
+Option trash still resolves after the turn player's bucket — 15-4-3-5-2). A lone
+pending trash is not a choice and prompts nothing. Picking the trigger sets
+`Game::option_trash_order_deferred`, which defers the disposal by exactly ONE item:
+the drain then runs that trigger through the ordinary single-entry path, so its
+outer-optional prompt and `activation_cost` decline gate (15-7-1) survive — the
+`TriggerOrder` callback's documented gate-bypass would otherwise have FORCED
+BT3-096 Mimi's "you may suspend this Tamer" cost. `run_queued_effect` clears the
+flag, so the pick is re-offered before each remaining item (15-4-3-5-1 "repeated").
+Clone-safe: the park carries `ResumeFrame::OptionTrashOrder` (data), no bespoke
+closure park.
+
+**Observability (measured, this stage).** An instrumented full `cards_behavioral`
+run (8199 tests) hit the 9-1-5 timing with a pending own-trigger in only **8**
+places, from two real cards — BT3-096 Mimi Tachikawa (`[All Turns]` on-use-Option)
+and BT25-091 Monica Simmons (`[Your Turn]` on-use `[TS]` Option) — plus one
+synthetic observer. None of the 14 on-use-Option cards in `cards.json` reads the
+trash in its body, so no existing card distinguishes the two orders today; the pick
+is surfaced because the rules give it, not because a card has been shown to exploit
+it. Ordering matters as soon as one does (trash count, "Option card in your trash"):
+under 9-1-4/9-1-5 a deferred Option is in NO area, not in the trash.
+
+**Oracle adapters.** DCGO makes no decision here, so no recording or scripted
+line can answer the prompt. The exam takes it on a `sim_only` `choice:` row
+(`BT25-091-effect2.yaml`, `BT3-096-effect0.yaml` — the only two lines in the
+369-scenario corpus that reach it, confirmed 2026-09-21 by an instrumented sweep
+of every scenario, not by grep). The replay core
+(`ReplayDriver::auto_answer_option_trash_order`, `runners/replay.rs`, shared by
+`dcgo-replay` and the engine MCP) answers it with entry 0 (trash first) before
+consuming each recorded row, so a DCGO corpus replay cannot manufacture a
+divergence out of a prompt the corpus cannot contain.
+
+> **Amended 2026-09-21 — the two exam lines above were NOT clean, and the "verdicts
+> unchanged" claim was wrong.** Both the auto-answer AND the scenario's own
+> `sim_only` row fired, so each row landed one decision late and ate the NEXT
+> prompt — on both lines, the cost-bearing trigger's own §15-7-4 decline gate.
+> `BT25-091#effect#2` re-diffed `DIVERGED` (`p0.field[0].suspended: ours=true
+> dcgo=false`) and `BT3-096#effect#0` `DIVERGED` (`memory: ours=2 dcgo=1`), so
+> from `5aef07fa8` until the tooling fix BOTH stored `confirmed` verdicts stood on
+> evidence the engine could no longer produce. The engine change in THIS entry is
+> vindicated, not implicated — the gate it was built to preserve is exactly what
+> the harness was spending. `RecordingSource::answers_engine_only_prompts()` now
+> suppresses the auto-answer for `ScenarioAdapter`; both lines re-measure CLEAN
+> (12/13 and 8/9 compared, 1 sim-only row each) and both verdicts are re-recorded
+> `confirmed` on current evidence. Full write-up:
+> `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in `qa/resolved-gaps.md`.
+
+**Tests.** `bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed`
+(trigger first — the Option is still in no area while the optional cost gate is
+answered), `bt3_096_option_user_may_trash_the_option_before_their_trigger` (DCGO's
+order), `bt3_096_no_order_prompt_when_the_user_has_no_pending_trigger` (a lone
+pending processing prompts nothing) — all three fail before the fix. The four
+pre-existing BT3-096 / three BT25-091 lines that pinned the old hard-coded order now
+make the trash-first pick explicitly. Exam scenario
+`qa/dcgo-exams/BT25/BT25-091-effect2.yaml` gained a `sim_only` `choice:` row for the
+engine-only prompt (DCGO asks nothing here).
+
+## G-ENGINE-ADDITIVE-COLOR-TREATMENT — "treated as also having the colors of its digivolution cards" (BT8-084) — RESOLVED 2026-09-19 (fb5517067)
+
+- Printed: BT8-084 Kimeramon "[Your Turn] This Digimon is treated as also having the colors of its digivolution cards." Official Q&A: additive (white + red + green sources = a 3-color card). DCGO `BT8_084.cs` ChangeCardColorClass appends every non-flipped digivolution card's colors to `TopCard.CardColors`.
+- Gap (first logged 2026-08-22 in qa/dsl-vocab-gaps.md): `ModifierType::AddColor` existed with no reader; `synth_identity` honored only the replace-style `ChangeBaseCardColor`.
+- Fix: `Permanent::synth_identity` reads `AddColor` additively after `ChangeBaseCardColor` — payload `None` = colors of the non-flipped sources, read live at synth time; `Colors { value }` = the listed colors. DSL: self-aura `modifier: AddColor`. Companion DSL leaves: `per: source_rules_color_count`; permanent-subject `self_color_count_gte` checks only synthesized colors.
+- Evidence: 11 new bt8_084 behavioral tests (failing before, passing after); full cards_behavioral green; BT8-084#effect#1 oracle re-diff vs the preserved sidecar CLEAN 17/17 → confirmed.
+
+## G-EXAM-REVEAL-BUCKET-ADD-TIMING — DCGO quirk (finding, 2026-09-19, not an engine gap)
+
+**Drivers:** exam `BT6-060#effect#0` (Deputymon, `qa/dcgo-exams/BT6/BT6-060-effect0.yaml`,
+preserved sidecar `20260921T042614Z_c72aa5cc9eb34b2f97c8fc448ff47a36.state.jsonl` —
+re-measured `--all-diffs` at the 2026-09-21 close-out; the earlier
+`20260918T131517Z_c0b8af78…` sidecar is the job-1 pass and is superseded), the
+ORIGINAL driver `BT7-056#effect#0` (Dorumon, `qa/dcgo-exams/BT7/BT7-056-effect0.yaml`,
+preserved sidecar `20260921T042630Z_14e62ea8938a4382a0882a38468c46a7.state.jsonl`, triaged in
+`qa/dcgo-exams/BT7/NOTES-BT7-056.md` — re-triaged from scratch and independently
+re-measured at the 2026-09-21 close-out; it had been dropped from this list by an editing
+slip that left a dangling "the / and" here),
+and — both added 2026-09-21, three-musketeers-2 close-out —
+`EX7-008#effect#1` (ToyAgumon, `qa/dcgo-exams/EX7/EX7-008-effect1.yaml`, preserved sidecar
+`20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl`) and `BT25-064#effect#1`
+(the other ToyAgumon, `qa/dcgo-exams/BT25/BT25-064-effect1.yaml`, preserved sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl`, triaged in
+`qa/dcgo-exams/BT25/NOTES-BT25-064.md`) — which is now MEASURED, not merely "the same
+shape". `--all-diffs` re-run against
+the preserved sidecar shows exactly ONE diff: the second bucket pick's row —
+BT6-060 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067] dcgo=[...,P-170]`;
+EX7-008 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-051]`;
+BT25-064 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT8-061] dcgo=[..., EX7-070]`;
+BT7-056 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-073]`
+(4 differently-shaped scenarios across 4 cards, all one row). The next row
+(after resolution: hand, trash, field, memory) matches in both, and `--all-diffs` prints
+nothing else — so the divergence is exactly one intermediate observation, never an outcome.
+
+**What differs:** DCGO `Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:291-329`
+(`RevealDeckTopCardsAndSelect`) runs `foreach (SelectCardConditionClass selectCondition in
+selectCardConditions)` → `selectCardEffect.SetUp(..., mode: selectCondition.Mode)` →
+`yield return … selectCardEffect.Activate()`, one `SelectCardEffect` per condition with the
+condition's `Mode` (AddHand), so each pick is moved to hand as soon as its prompt closes,
+before the next bucket is asked. The move itself is `SelectCardEffect.cs:813-815`
+(`if (handCards.Count >= 1) yield return … CardObjectController.AddHandCards(handCards, …)`),
+which runs at the END of each prompt's own `Activate()` coroutine — i.e. inside the loop
+body, which is precisely why the hand is already updated when the next bucket is asked. The card scripts just hand it the bucket list — e.g.
+`Assets/Scripts/CardEffect/EX7/Red/EX7_008.cs` passes two
+`SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1)` entries
+to `SimplifiedRevealDeckTopCardsAndSelect` — so this is shared-helper behaviour, not per-card.
+Ours (`select_reveal_buckets` → `add_to_hand_from_reveal` ×2) chooses every bucket first, then
+adds the picks.
+
+**Rules (re-verified against the PDF 2026-09-21):** general_rule.pdf **15-15-10-1** (p.31) is
+the on-point rule — "If a single effect allows you to select multiple targets with different
+conditions, resolve the target conditions in accordance with the following rules" — and
+15-15-10-2..5 then govern only WHICH condition applies to which target, never when a chosen
+target moves. 15-1-4 (p.22, "In some cases, multiple processes will be performed in a single
+effect. Once all of the processes for such an effect have ended, the effect will be resolved"),
+15-1-2 (processed in the order shown in the text) and 15-1-6 (the processing to execute is
+chosen, then executed) complete the picture. "Add 1 card with [Three Musketeers] in its text
+and 1 Option card with a use cost of 6 … to the hand" (EX7-008) / "Add 1 Digimon card … and/or
+1 Option card … to your hand" (BT6-060) is ONE process with a compound target choice, so
+choose-all-then-add is the literal reading; DCGO's per-pick add is an implementation artifact
+of its per-condition select loop. Revealed cards are in no area while revealed (15-15-3-2, p.29),
+so nothing reads the intermediate hand.
+
+**Why not fixed:** our order is the rules-faithful one and final state is identical. Observable
+only if a "when a card is added to your hand" trigger could fire between picks — and even then
+15-5-2 fires it once for a single add. Clause stays `diverged` in the verdict store (the exam
+compares every step); treat it as adjudicated, no further action.
+
+## G-ENGINE-OPTION-HAND-LINK-COST-TIMING — RESOLVED 2026-09-21 (`9af21698c`)
+
+**Drivers:** exam `BT25-093#effect#4` (Ignition Flare, `<Link> [TS] trait: Cost 3`),
+`BT25-100#effect#5` (Iron Slash, `<Link> [TS] trait: Cost 2`) and — added 2026-09-21,
+three-musketeers-2 close-out — `BT24-091#effect#4` (Tidal Stream, `<Link> [TS] trait:
+Cost 3`, sidecar `20260921T042039Z_c3e0a78e`, `memory: ours=0 dcgo=3` /
+`p0.hand: ours` has already removed BT24-091 while `dcgo` still holds it, LEAD-only, later
+rows agree). Three independent Plug-In Options now show the same single row, which makes
+this a property of the from-hand Option link path rather than of any one card — the Plug-In
+Option
+`<Link>` declared **from the hand**. Both oracle diffs (`--all-diffs`, sidecars
+`20260921T042530Z_8f13b83c…` / `20260921T042552Z_0bad16abd…`) report exactly ONE
+divergence row, at the host-pick prompt:
+
+- BT25-093: `memory: ours=0 dcgo=3`; `p0.hand: ours=[BT1-028,BT1-028,BT2-024,BT3-020]
+  dcgo=[BT1-028,BT1-028,BT2-024,BT25-093,BT3-020]`
+- BT25-100: `memory: ours=1 dcgo=3`; same hand shape with BT25-100.
+
+Every later row matches and the link lands identically on both engines (host 1000 →
+3000 DP, the Option not in trash, the printed cost paid) — so the clause's substance
+(cost 3 / cost 2, from hand, into a `[TS]` host) is right on our side; only the ORDER
+of the payment differs.
+
+**What differs:** our engine routes the from-hand Plug-In Option link through the
+OPTION lifecycle — `Game::activate_hand_link` → `play_option_core(…,
+OptionPlayMode::Link { cost }, OptionCostPolicy::Pay)`
+(`code/digimon-engine/src/game_actions/link.rs:197-217`) — which pays the link cost and
+removes the card from the hand **at declaration**, and only then installs the host
+selection. DCGO runs `LinkEffect.ActivateCoroutine` (`Link.cs:70-88`): the
+`SelectPermanentEffect` host pick comes first, payment after.
+
+**Rules — the PDF backs DCGO.** `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the
+link procedure: **10-1-3-1** "The player declares a link and reveals 1 card to link. 1
+link requirement is chosen on the revealed card, then the player chooses 1 of their
+Digimon that meets the requirement." → **10-1-3-2** "The specified link cost is paid."
+→ **10-1-3-3** "The card to link is plugged in sideways into the chosen Digimon."
+Payment is step 2 of 3, after the host. Compare §9-1-8: a card that can't be used after
+being revealed goes back and "the memory doesn't move" — revealing is not paying.
+
+**Our Digimon-link path is already correct**: `activate_hand_link`'s second branch and
+`activate_field_link` install the host selection first and pay inside
+`begin_digimon_link`. Only the Plug-In **Option** branch pays up front.
+
+**Observability:** the end state converges, so neither exam line is wrong at rest. It
+becomes observable whenever something reads memory or the hand between the declaration
+and the host pick (a trigger/replacement raised on the link, a cost modifier reading the
+gauge, any prompt that lists hand cards).
+
+**RESOLVED — `9af21698c` (three-musketeers-2 close-out, 2026-09-21).** The from-hand
+Plug-In Option link now asks §10-1-3-1's host question BEFORE anything is paid:
+`activate_hand_link`'s Option branch installs
+`install_option_hand_link_host_selection` (a clone-safe
+`ResumeFrame::OptionHandLinkHostSelection` data frame, rule 28) whose prompt is
+byte-identical to `install_link_host_selection`'s, so the wire meaning of the pick is
+unchanged — only its position in the procedure moved. The resolved pick runs
+`finish_option_hand_link`, which re-validates the hand slot (§9-1-8: a card that can't
+be used moves no memory), pins the host on `Game::pending_option_link_host`, and
+re-enters `play_option_core`; `dispose_option`'s `Link` arm consumes the pin (re-checked
+against the live candidate set, falling back to the ordinary prompt if the link-mode body
+moved the board) instead of asking a second time.
+
+- **Gate / coverage:** `bt25_093_hand_link_pays_after_the_host_is_chosen_not_at_declaration`
+  (`tests/cards_behavioral/bt25/bt25_093.rs`) fails on the parent commit, passes after;
+  the BT25-100 analogue lands with that clause's own stage. Two ST22-08 cases
+  (`st22_08_link_mode_charges_link_cost_2`,
+  `st22_08_link_action_stays_affordable_when_the_use_action_is_not`) encoded the old
+  pay-at-declaration contract and now assert the §10-1-3 order. Suites:
+  `cards_behavioral` **8223 passed / 0 failed / 37 ignored**; `--lib` 338/0;
+  `option_color_requirements` 6/0, `live_game_action_validation` 7/0, `policies_greedy`
+  5/0, `policies_headless` 1/0, `debug_runner_dsl` 7/0, `alt_path_reachability` 1/0.
+- **Oracle — all three drivers now re-diffed CLEAN, no `diverged` row left on this path.**
+  `BT25-093#effect#4` against the preserved sidecar `20260921T042530Z_8f13b83c…` — CLEAN
+  (compared 9 of 10 ours / 10 dcgo), verdict re-recorded `confirmed`.
+  `BT25-100#effect#5` against `20260921T042552Z_0bad16abd…` — CLEAN, `confirmed`.
+  `BT24-091#effect#4` (Tidal Stream, three-musketeers-2 close-out, 2026-09-21) against
+  `20260921T042039Z_c3e0a78e6c254e31b2ae6721e408f494.state.jsonl` — **CLEAN (compared 13
+  of 14 ours / 14 dcgo steps; 1 sim-only row + 1 DCGO intermediate row not comparable)**,
+  verdict flipped `diverged` → `confirmed` (clause text unchanged, sha
+  `9d4716573dac…`, so the flip is a real re-measure and not text drift). The whole card
+  is now **6/6 confirmed**. No engine change was needed for this driver — `9af21698c`
+  already fixed the shared path; this stage only re-measured it.
+
+
+## G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER — RESOLVED `4c609b5e2` (found 2026-09-21, three-musketeers-2 close-out)
+
+**The gap ID is a misnomer, kept only because the verdict and notes cite it.** The defect
+had nothing to do with replacements, or with replacement-cost deletions, or with the
+deferred-drain scope. It is a **pool-wide dangling-handle alias** on every deletion
+observer. Read the mechanism below, not the title.
+
+**Driver:** exam `BT19-075#effect#2` (MoonMillenniummon, `[All Turns] When this Digimon
+would leave the battle area, by deleting 1 of your [Composite] trait Digimon, it doesn't
+leave`), scenario `qa/dcgo-exams/BT19/BT19-075-effect2.yaml`, oracle sidecar
+`20260921T041928Z_40f7887a`. The diff was fully accounted (compared 22 of 22 ours / 22
+dcgo, nothing truncated) and reported ONE divergence at step 21:
+
+- `p1.security: ours=4 dcgo=3`
+- `p1.trash: ours=[P-180, ST1-10] dcgo=[P-180, ST1-04, ST1-10]`
+
+**Symptom.** The leave replacement paid its cost by deleting Deltamon BT6-012. That
+deletion should be observed by the SAME card's third clause — `[All Turns] [Once Per
+Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card`
+— which was live on the board. DCGO fired it and trashed p1's top security (Dracomon
+ST1-04); ours did not.
+
+**The original hypothesis was WRONG.** Two resumes of `NOTES-BT19-075.md` blamed "a
+`kind: replacement` cost `delete_permanent` takes a path with no `on_any_deletion`
+dispatch", and this section previously guessed that the queued `OnAnyDeletion` entries
+were never drained once `cancel_replacement` ended the outer batch. Instrumenting the
+actual line disproves both ends: the cost deletion DOES reach
+`drain_batch_on_any_deletion`, it DOES enqueue an `OnAnyDeletion` entry for BT19-075
+slot 3, and the deferred scope's `exit_deferred_drain_and_flush` DOES flush it. The entry
+was then **dropped by the queue's own condition filter**
+(`effect_queue.rs::non_firing_queued_effect_indices_for`, which removes a bundle whose
+every clause condition currently fails) because the clause's `event_permanent_is_source:
+false` gate evaluated FALSE.
+
+**Root cause — battle-area compaction aliases a dead handle onto a survivor.**
+`PermanentHandle` is `(player, battle-area INDEX)` and the battle area COMPACTS when a
+permanent is removed. `drain_batch_on_any_deletion` enqueues the deleted permanent's
+**pre-trash** handle (stage 6 runs after stage 4b's trash), so by evaluation time every
+survivor that sat ABOVE the deleted one answers to a lower index — and the one that
+inherits the dead permanent's index compares EQUAL to it. Here p0 fielded
+`[0]=Monodramon, [1]=Deltamon, [2]=MoonMillenniummon`; deleting Deltamon at index 1 slid
+MoonMillenniummon into index 1, so the trigger's `event_permanent` `{0,1}` and the
+observer's `source_permanent` `{0,1}` matched and the carrier looked like the thing that
+had just been deleted. Trace from the instrumented run:
+
+    non_firing? card=BT19-075 slot=3 passes=false
+      src_perm=Some(PermanentHandle { player: 0, index: 1 })
+      subject=Some(Permanent(PermanentHandle { player: 0, index: 1 }))
+
+**Scope — pool-wide, not card-local.** Every DSL clause using
+`event_permanent_is_source: false` on a deletion timing (`on_any_deletion`,
+`on_leave_field`) lost any deletion that happened at a LOWER battle-area index than its
+own carrier. The minimal reproducer needs no replacement, no security check and no
+attack: ally at index 0, carrier at index 1, delete the ally. This also explains why the
+sibling clauses stayed `confirmed` throughout — `#effect#1`'s Tamer deletion and
+`#effect#3`'s battle deletion both delete from a HIGHER index or from the opponent's
+side, where no alias is possible — and why three of the four new tests pass on the
+parent commit: they seat the carrier at index 0.
+
+**Resolution** (`code/digimon-engine/src/dsl_cards/predicate.rs`, `event_permanent_is_source`).
+Handle equality alone is not identity once the event permanent is gone. When the trigger
+carries a `deleted_object` snapshot AND this effect's own carrier is still standing at
+`source_permanent` (`permanent_for_handle(..).card_sources` still holds
+`rctx.source_card` — the existing `source_deleted_battle_opponent` idiom), the equality
+is the compaction alias and `is_source` is false. Every other case keeps the plain
+comparison, so an observer whose carrier IS the deleted permanent finds no live carrier
+at that slot and still reads `is_source == true`. Non-deletion timings carry no snapshot
+and are untouched.
+
+**Citations.** `general_rule.pdf` (Ver.3.6) **15-8-3-1** — a trigger-type effect "will
+always trigger as soon as its trigger conditions are met, then the effect will activate";
+**15-8-3-2** — it merely "can't activate during the processing for a rule or effect";
+**15-8-3-5** — it is then "pending activation"; **15-8-3-6** — "Once an effect triggers,
+it will remain triggered". Deferring the activation is licensed; discarding it is not.
+**15-8-5-4** documents this card's exact replacement shape ("[Main] Delete 1 of your
+opponent's Digimon" causing "[All Turns] When this Digimon would be deleted, by deleting
+1 other Digimon with [Sukamon] in its name, it isn't deleted") as ordinary immediate-type
+processing the cause resolves out of. DCGO agrees: every deletion runs through
+`CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which raises
+`OnDestroyedAnyone` regardless of seating order.
+
+**Gate / coverage.** Four new tests in `tests/cards_behavioral/bt19/bt19_075.rs`:
+`bt19_075_observer_fires_when_deleted_ally_sits_below_the_carrier` (the minimal
+index-order reproducer — RED on the parent commit), plus three shapes of the exam line
+(`..._replacement_cost_deletion_fires_the_opt_observer` top-level,
+`..._nested_replacement_cost_deletion_fires_the_opt_observer` inside an opponent Option's
+`[Main]`, `..._security_flip_replacement_cost_deletion_fires_the_opt_observer` the full
+attack -> security-check -> P-180 `[Security]` line). Suites: full `cards_behavioral`
+**8227 passed / 0 failed / 37 ignored**; `--lib` 338/0; `judge_quiz` 43/0; `selection`
+79/0. The 8 `archetypes` failures, the `timing_dispatch` trash-observer failure and
+`dsl::link::linked_scope_only_fires_from_linked_card_scan` all reproduce on unmodified
+HEAD (the `dsl` one re-verified by reverting the tree and re-running).
+
+**Oracle.** `BT19-075#effect#2` re-diffed against its **preserved** sidecar (zero Unity
+time) — **CLEAN (compared 22 of 22 ours / 22 dcgo steps)**; verdict re-recorded
+`confirmed`. BT19-075 is now **4/4 confirmed**.
+
+**Commit:** `4c609b5e2`.
+
+**Follow-up (open, not a blocker).** `event_permanent` is dangling for EVERY deletion
+observer, so any other predicate that dereferences it against the live battle area is
+exposed to the same alias — `event_host_permanent_is_source` and `event_host_is_own_tamer`
+both index `battle_area` by a handle that may have compacted. Neither has a measured
+divergence today; they should be re-derived from the `deleted_object` snapshot the next
+time one of them is driven by a deletion timing.
+
+
+## G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT — RESOLVED `b77d1b288` (found 2026-09-21, three-musketeers-2 close-out)
+
+**Symptom.** `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` stayed `diverged` even after the
+engine half was fixed and an equivalent `DebugRunner` test was green. The harness kept
+reporting `note: step 23 select answered no live prompt -- our engine auto-resolved it`
+for the clause's own two-card cost row, and our end state showed the cost unpaid.
+
+**Cause — the harness, not the engine.** After a row's picks are exhausted,
+`runners/selection_resolve.rs::resolve_next` is called once more so a still-open
+multi-pick can be stopped with a trailing `PASS`, and it decided "still open" from the
+pending selection's KIND alone (`SourceMulti` / `CountCappedMultiSelect` / `RevealBucket`
+/ `DpBudget` / `PlayCostBudget`). A kind cannot distinguish *this row's prompt awaiting
+its stop* from *a brand-new prompt the row's LAST pick caused to install* — and
+resolving one effect is exactly what lets the next queued one activate and park its own
+cost selection. Traced:
+
+```
+RESOLVE action=100 kind=OwnField    'Place this card as the bottom digivolution card…'   <- the row's pick
+RUNQ    EX7-073 slot=1 WhenDigivolving                                                    <- sibling clause activates
+RESOLVE action=62  kind=SourceMulti { min: 0, max: 2, picked: 0 }  'Trash 2 cards…'       <- 62 = PASS, the trailing PASS
+```
+
+`min: 0` makes PASS legal on that fresh prompt, so the clause's printed cost was
+DECLINED before the row written to pay it was ever reached; that row then found no
+prompt and the harness noted it as "auto-resolved".
+
+**Fix.** The `SourceMulti` arm now requires `picked > 0` — a prompt that has accepted a
+pick is genuinely this row's own "up to N" awaiting its stop, one that has not is a fresh
+selection the row never addressed. Regression tests (both in
+`runners/selection_resolve.rs`): `trailing_pass_does_not_decline_a_freshly_parked_source_multi`
+(fails before: returns `Ok(Some(PASS))`) and
+`trailing_pass_still_stops_a_source_multi_that_took_a_pick` (the `canEndNotMax` half, must
+keep returning `Ok(Some(PASS))`).
+
+**Scope note.** The same reasoning applies to the other four `multiselectish` kinds, but
+none of them carries a pick count in its `SelectionKind`, and no scenario in
+`qa/dcgo-exams/` currently drives one into this shape — so they are deliberately left on
+the kind-only test rather than widened speculatively.
+
+**Second witness, found after the fix landed — `BT25-028#effect#3` (2026-09-21).** The
+same bug, one prompt earlier in the chain and with a different-looking symptom, which is
+why it was misdiagnosed as an ENGINE defect and logged as
+`F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED` ("our engine never offers the
+opponent-source pick"). On Dianamon's `[All Turns]` clause the row that exhausted its
+picks was our `optional: true` gate's `yes:`; the trailing `PASS` then landed on the
+`SourceMulti { min: 0, max: 4, picked: 0 }` that accepting the gate had just installed,
+so the clause's trash pick was declined and the next prompt the line saw was the DNA
+anchor — exactly the shape "the engine never asks" produces. Three `DebugRunner`
+characterization tests had already shown the engine parking the prompt, and the
+contradiction was read as "something specific to the exam board". It was not; it was
+this. With `b77d1b288` in, the scenario re-authored with the shared identity row
+(`cards: [ST2-01, ST2-02]`, `G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK`) diffs **CLEAN**
+against the preserved sidecar `20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59` and the
+clause is `confirmed`. **Triage lesson:** a `min: 0` optional pick that "is never
+offered" in an exam line, with a green DebugRunner for the same shape, should be checked
+against this gap before the engine is suspected.
+
+## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (4df70706f) (found 2026-09-21, three-musketeers-2 close-out)
+
+**Symptom.** Every exam scenario containing an EXPANDING step (`dna:` or `materials:` —
+one scenario step our engine splits into several decisions) was recorded `diverged`, with
+a lead that was pure index offset:
+
+- `BT16-077#effect#0`: `DIVERGED at step 12 … turn: ours=6 dcgo=5, phase: ours=Breeding
+  dcgo=Main, memory: ours=-3 dcgo=3` — a whole scenario step of skew.
+- `BT8-084#effect#0`: `TRUNCATED, no divergence found (compared 14 of 15 ours / 15 dcgo
+  steps)` — only the tail row fell off, so nothing mismatched, but a truncated run is
+  (correctly) never clean.
+
+**Cause.** `ScenarioAdapter::dcgo_wire_rows_per_step` / `ours_present_per_step` mapped 1:1
+over `self.lowered`, while the differ indexes `ours_for_diff` — `projections.take(s.steps.len())`,
+one pre-step snapshot per SCENARIO step — with the same index
+(`code/tools/dcgo-harness/src/main.rs:983-997`). The two index spaces agree only while
+every step lowers to exactly one entry. A `dna:` step lowers to
+`DnaDeclaration` + `SimOnlySelect`, so from that step onward every later row was compared
+against the projection one step late, and the last row's index ran off the end of
+`ours_for_diff` and was silently dropped. The adapter's own doc comment already said "How
+many DCGO wire rows each SCENARIO step consumes" — the implementation simply did not.
+
+**Fix.** `fold_wire_rows_by_owner` / `fold_ours_present_by_owner`
+(`code/tools/dcgo-harness/src/exam/adapter.rs`) collapse the per-lowered-entry counts onto
+scenario steps via `lowered_owners()`; `dcgo_wire_rows_per_step(total_steps)` /
+`ours_present_per_step(total_steps)` now take the line length, mirroring the existing
+`specs_per_scenario_step(total_steps)`. Regression tests:
+`a_dna_step_folds_to_one_row_count_not_one_per_lowered_entry` and
+`ours_present_is_false_only_for_a_wholly_dcgo_only_step` (both fail against the 1:1
+mapping — it returns a 4-long vector for a 3-step line).
+
+**Measured after the fix**, against the same oracle sidecars: `BT8-084#effect#0`
+`CLEAN (compared 15 of 15 ours / 15 dcgo steps)` and `BT16-077#effect#0`
+`CLEAN (compared 13 of 13 ours / 13 dcgo steps)` — both now `confirmed`. Blast radius is
+exactly those two clauses: `dna:` / `materials:` appear in only two scenarios in
+`qa/dcgo-exams/` (`BT8-084-effect0.yaml`, `BT16-077-effect0.yaml`), so no other card's
+stored verdict was affected.

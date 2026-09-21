@@ -1,0 +1,212 @@
+# Exam scenario: BeelStarmon (X Antibody) (EX7-073), clause EX7-073#effect#1 --
+# "[When Digivolving] You may use 1 Option card with [Three Musketeers] in its
+#  text from your hand without paying the cost."
+#
+# THE LINE is the BT25-082-effect2.yaml prefix with three deliberate changes
+# (the third -- no BeelStarmon BT25-085 in the stack -- is explained at `decks:`):
+#   * stack[13] -- the card BlackGatomon's OWN digivolve draws on T5 -- is
+#     Bind Red Trigger (P-180), a Red Option whose text names
+#     [Three Musketeers]. Drawn by the digivolve, it enters the hand AFTER the
+#     T5 main phase has started, so Sparrowmon's [Start of Your Main Phase]
+#     gate stays vacuous on DCGO's side and silent on ours (same DCGO-only
+#     decline row as the base prefix), and it is in hand by the time the
+#     grant digivolve fires EX7-073's [When Digivolving].
+#   * the grant digivolve aims at EX7-073 instead of BT25-085.
+#
+# WHAT THE DIGIVOLVE TRIGGERS. EX7_073.cs registers two [When Digivolving]
+# ActivateClasses (see EX7-073-effect0.yaml). Here the stack under EX7-073 is
+# Pagumon / Sparrowmon / BlackGatomon -- NO [Three Musketeers]-trait card --
+# so the trash-2 effect's CanActivateCondition is false AT THAT MOMENT and DCGO
+# offers only THE CLAUSE: one active trigger, no MultipleSkills row. Our engine
+# queues both clauses regardless and parks a TriggerOrder, so that row is
+# SIM-ONLY. (The trash-2 effect comes back once P-180 is a digivolution card --
+# see the DCGO-ONLY OptionalSkill row near the end.)
+#
+# THE CLAUSE's prompt: SelectHandEffect (canNoSelect: true) over Options that
+# have [Three Musketeers] in text, a use cost, and are not blocked from play.
+# P-180 is Red and P0 controls no Red permanent, but its own text lets the
+# colour requirement be ignored while a [Three Musketeers]-trait Digimon is
+# on the field -- EX7-073 is one. Picked by identity; DCGO then runs
+# PlayOptionCards(payCost: false):
+#   [Main] Trash your opponent's top security card (no prompt), then place
+#   this card as the bottom digivolution card of 1 of your [Three Musketeers]
+#   trait Digimon. EX7-073 is the ONLY candidate; DCGO's forced
+#   single-candidate short-circuit (canSelectCount == _maxCount ->
+#   EndSelect_RPC) is inside SelectPermanentEffect's human-UI branch, which
+#   the harness never takes, so the AI branch's SetTargetFrames hook consumes
+#   a wire row here like any other pick: the `targets:` row is SHARED.
+#
+# The witness: P1's security falls 5 -> 4 and P-180 is EX7-073's bottom
+# digivolution card, while P0's memory is exactly the -3 that the two paid
+# digivolutions left (2 + 4 from 3) -- P-180's cost of 6 was never paid.
+card: EX7-073
+clause: EX7-073#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 grant-digivolve draw, T7 turn draw, ...
+    # NO BeelStarmon BT25-085 anywhere in this stack (the prefix's stack[3] and
+    # stack[14] are Scopemon BT21-071 / LadyDevimon BT25-083 here): BT25-085
+    # is a DUAL card (Digimon face / "Fly Bullet" Option face, [Three
+    # Musketeers] in text), this line digivolves into EX7-073 instead, and an
+    # unused copy left in hand would be a second candidate of THE CLAUSE's own
+    # `IsOption && HasText("Three Musketeers")` hand scan on whichever engine
+    # counts a dual card as an Option -- not a question this line should have
+    # to answer. P-180 is the ONLY Option-faced card P0 ever holds.
+    stack: [EX7-051, BT25-082, BT25-092, BT21-071, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, P-180, BT25-083,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (see the header). Declined; our engine has no prompt here.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE's carrier: with Asuna on the field, BlackGatomon's [All Turns]
+  # grant digivolves it (Lv.4) into a [Three Musketeers] trait Digimon card
+  # for 4, ignoring digivolution requirements -- aimed at EX7-073 here.
+  # Memory 1 -> -3; the turn hands over after the trigger resolves.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-073 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our TriggerOrder over EX7-073's two queued clauses. DCGO has ONE
+  # active trigger here (see header) and asks nothing.
+  - actor: 0
+    do: { select: { cards: [EX7-073], ordinal: 0, sim_only: true } }
+  # THE CLAUSE: pick Bind Red Trigger to use it for free.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # (A sim-only TriggerOrder row used to sit HERE, answering an ordering prompt
+  # our engine parked between the used Option's [Main] and the still-queued
+  # clause 2 -- a choice the rules do not grant. REMOVED 2026-09-21, close-out
+  # job three-musketeers-2: `b77d1b288` gives the in-flight Option's queued
+  # [Main] absolute priority in `drain_effect_queue_inner`, so no such prompt is
+  # parked any more and our engine goes straight to P-180's placement below,
+  # matching DCGO's inline `PlayOptionCards`. Citation: general_rule.pdf
+  # 15-8-3-2 -- "Trigger-type effects can't activate during the processing for a
+  # rule or effect". Gap G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER,
+  # RESOLVED; it also supersedes the first half of the older OPEN finding
+  # F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, which this row was the
+  # standing witness for.)
+  # SHARED: P-180's "place this card under 1 of your [Three Musketeers]
+  # trait Digimon" -- EX7-073 is the lone candidate. DCGO's forced
+  # single-candidate short-circuit (`canSelectCount == _maxCount ->
+  # EndSelect_RPC`) lives INSIDE SelectPermanentEffect's human-UI branch
+  # (`_selectPlayer.isYou && !HarnessAuto.DrivesLocalSeat`); under the
+  # harness the AI branch runs instead and calls SetTargetFrames, whose
+  # InputDriver hook consumes a step -- so the row is on the wire, exactly
+  # as the committed P-180-effect1 line documents.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: EX7-073's OTHER [When Digivolving] effect (trash 2 [Three
+  # Musketeers] sources). It was stacked by the digivolve (CanUseCondition is
+  # timing-only) and its CanActivateCondition -- `DigivolutionCards.Count(TM
+  # trait) >= 1`, EX7_073.cs:171-182 -- is evaluated when it comes up, i.e.
+  # AFTER P-180 (trait [Three Musketeers]) became a digivolution card. So DCGO
+  # asks its OptionalSkill (built `isOptional: true`, EX7_073.cs:138) although
+  # the two-card cost cannot be paid with one eligible source. Declined. Our
+  # engine now PARKS the unpayable cost pick instead of silently resolving it
+  # (`b77d1b288` + `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`), so this
+  # takes one row per wire -- same repair as EX7-073-effect0.yaml, 2026-09-21,
+  # close-out job three-musketeers-2. Ours: `SourceMulti { min: 0, max: 2,
+  # picked: 0 }`, whose `min: 0` IS the decline path. DCGO: the OptionalSkill.
+  # Both decline; the asserted end state is unchanged. The FIRST oracle run
+  # (2026-09-18) aborted right here -- "step 16 expected actor 1 but DCGO asked
+  # actor 0" -- because the DCGO row was missing.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass (P1's turn 6). P-180 is EX7-073's
+  # bottom digivolution card and P1's security is one card shorter; P0's
+  # memory shows P-180 cost nothing.
+  - at: 20
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - card_id: EX7-073
+          dp: 12000
+          suspended: false
+          sources: [BT25-082, EX7-051, P-180, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p0.trash: []
+      p1.security: 4
+      p1.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: false
+          sources: []

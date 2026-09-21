@@ -179,6 +179,19 @@ pub struct TriggerContext {
     /// `CardEffectCommons.CanTriggerWhenWinBattle` reading the battle
     /// hashtable's `WinnerPermanents` while `WasTie == false`.
     pub battle_winner: Option<PermanentHandle>,
+    /// TOP CARD of the Digimon the deleted carrier was battling, captured when
+    /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
+    /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still
+    /// live). general_rule.pdf 16-12: <Retaliation> "delete[s] the Digimon it
+    /// battled" -- who that is, is a fact of the TRIGGER. Reading it from the
+    /// live `pending_attack` at RESOLUTION time is wrong whenever resolution is
+    /// deferred: a second [On Deletion] trigger on the same stack opens a
+    /// TriggerOrder prompt (15-4), the battle unwinds while the prompt is
+    /// parked, and the keyword then found no opponent and deleted nothing.
+    /// A card identity rather than a `PermanentHandle` because handles are
+    /// battle-area POSITIONS and shift when the loser's slot is compacted.
+    /// `None` for every non-battle deletion and for direct player attacks.
+    pub battle_opponent_card: Option<CardHandle>,
     /// The player whose HAND lost one or more cards to trash during an
     /// effect-caused discard batch — the "your hand is trashed from" subject.
     /// Set on the `OnDiscardHand` firing (G-ENGINE-ON-DISCARD-HAND). Mirrors
@@ -189,6 +202,32 @@ pub struct TriggerContext {
     /// card in your hand" (ST16-14 Matt Ishida) vs the opponent's effect.
     /// Mirrors DCGO `CanTriggerOnTrashHand`'s `cardEffect.EffectSourceCard.Owner`.
     pub discard_cause_controller: Option<PlayerId>,
+    /// The EFFECT that caused this event, for event timings that only exist
+    /// because an effect did something (today: `OnAddDigivolutionCards`).
+    /// Distinct from `source_effect`, which is auto-filled from whatever
+    /// effect happens to be executing when the trigger is enqueued: this one
+    /// is captured explicitly at the mutation site by the placing facade and
+    /// survives the deferred batch flush. Mirrors the `CardEffect` DCGO puts
+    /// in the `OnAddDigivolutionCards` hashtable (Permanent.cs:1124 / 1228),
+    /// read by `CanTriggerOnAddDigivolutionCard`'s `cardEffectCondition`
+    /// (BT7-056 "one of YOUR effects": `EffectSourceCard.Owner == card.Owner`).
+    /// `event_caused_by_own_effect` reads it. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub event_cause_effect: Option<EffectAttribution>,
+}
+
+impl TriggerContext {
+    /// The cards an effect just placed into the event host's digivolution
+    /// cards (`OnAddDigivolutionCards` only). Empty on every other timing.
+    pub fn added_source_cards(&self) -> &[CardHandle] {
+        if self.event_cause_effect.is_none() {
+            return &[];
+        }
+        self.moved_card_sets
+            .iter()
+            .find(|set| set.from.is_none() && set.to == Some(Zone::BattleArea))
+            .map(|set| set.cards.as_slice())
+            .unwrap_or(&[])
+    }
 }
 
 impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {

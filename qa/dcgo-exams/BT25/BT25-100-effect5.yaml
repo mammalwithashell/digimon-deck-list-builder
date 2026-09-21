@@ -1,0 +1,161 @@
+# Exam scenario: Iron Slash (BT25-100), clause BT25-100#effect#5 --
+# the Link Condition box "<Link> [TS] trait: Cost 2
+#  (Plug this card from the hand or battle area sideways into the specified
+#   Digimon in the battle area.)"
+#
+# THE WITNESS is the DECLARATION itself plus its price: P0 declares the
+# from-hand <Link> as a main-phase action, pays exactly 2 (memory 3 -> 1, so
+# the turn stays P0's), the card leaves the hand WITHOUT entering the trash,
+# and the chosen [TS] host carries it. The host is Kamemon BT24-019, the only
+# Digimon on either board, and the ONLY reason the declaration is legal at all
+# (Kamemon is the pool's [TS] Digimon; `AddSelfLinkConditionStaticEffect
+# (permanentCondition: TopCard.HasTSTraits, linkCost: 2)`, BT25_100.cs:17-27).
+#
+# REACHABLE ONLY SINCE 2026-09-20. This clause was `unreachable` for
+# `G-TOOLING-EXAM-OPTION-HAND-LINK`: our engine hung the Plug-In Option's
+# from-hand plug-in off the PLAY bit behind a mode-select, while DCGO's is a
+# separate `ActivateCardAction`, so one wire integer meant two declarations.
+# `7e30343d4` (G-ENGINE-OPTION-LINK-FROM-HAND) moved ours onto the
+# `HAND_EFFECT` bit -- general_rule.pdf (Ver.3.6) §6-5-1-3 "Use an Option Card
+# From the Hand" and §6-5-1-4 "Linking a Card in the Hand or Battle Area" are
+# two SEPARATE main-phase actions, and §10-1-1 links from hand "by paying the
+# cost as part of the main phase actions". Same bit on both wires now.
+#
+# NO COLOUR QUESTION. Iron Slash is BLACK and P0's board is BLUE, but the
+# Option use-requirement / colour gate belongs to §9-1 "Using Cards"; a link
+# declaration is not a use. DCGO agrees: `LinkEffect.CanUseCondition`
+# (Link.cs:49-62) checks only the origin zone and the host set.
+#
+# PROMPT SHAPE (CardEffectFactory/KeyWordEffects/Link.cs):
+#  - declaration: ONE main_phase row. Iron Slash has no [Hand] [Main], so its
+#    HAND_EFFECT bit IS the link (`Game::hand_effect_slot_is_link`); DCGO
+#    reaches the same declaration through `InputDriver
+#    .FindHandDeclarableSkillIndex` -> `ActivateCardAction`.
+#  - `SetUpActivateClass(null, ActivateCoroutine, -1, TRUE, ...)` (Link.cs:29)
+#    -> DCGO confirms the declared <Link> with an `OptionalSkill` yes/no
+#    BEFORE the host pick. Our engine treats the declaration itself as that
+#    decision and parks nothing, so the accept is a `dcgo_only` row (the
+#    ../BT21/BT21-074-inherited0.yaml reading, measured at the oracle there).
+#  - `SelectPermanentEffect` "Select 1 Digimon to link.", maxCount 1,
+#    canNoSelect: false -- a single candidate is still asked on both wires.
+#  - BT25-100 has NO [When Linking] effect (BT25_100.cs regions are Link
+#    Condition / Link / Use Requirement / Link Inherit / Main / Security), so
+#    nothing else fires: the line ends at the host pick.
+#
+# SLOT HYGIENE: exactly one Digimon on P0's board and none on P1's for the
+# whole line, so no `field.N` is order-sensitive.
+#
+# Memory ledger:
+#   T1 P0 plays Kamemon (3): 0 -> -3            -> P1 3
+#   T2 P1 passes out                            -> P0 3
+#   T3 P0 DECLARES the link (2): 3 -> 1, passes -> P1 3
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_100_pool.json (--decks), the same pair the
+# card's other seven lines use.
+card: BT25-100
+clause: BT25-100#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Kamemon (the [TS] host), Iron Slash, inert blue filler
+      - BT24-019
+      - BT25-100
+      - BT1-028
+      - BT1-028
+      - BT2-024
+      # security (5-9): never flipped -- nobody attacks
+      - BT4-024
+      - BT4-024
+      - BT1-038
+      - BT1-038
+      - BT2-027
+      # (10+): P0's T3 turn draw
+      - BT3-020
+      - BT3-020
+    rest: tm-blue-defender
+  p1:
+    stack:
+      # hand (0-4): inert -- P1 plays nothing all line
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      - ST1-08
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - BT4-010
+      - BT4-010
+      - BT1-014
+      # (10+): P1's T2 / T4 turn draws
+      - BT1-009
+      - ST1-08
+    rest: tm-red-attacker
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Kamemon for 3 (0 -> -3).
+  # Kamemon prints only a passive cost reducer and inherited <Jamming>.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-019, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): pass out untouched.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE -- declare the from-hand <Link> for 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT25-100, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Link.cs SetUpActivateClass(..., isOptional: true) confirms the
+  # declaration before the host pick; our engine parks nothing here.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # The host: Kamemon, the board's only [TS] Digimon (still asked at one
+  # candidate on both wires).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Memory 1: P0 still holds the turn; pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the declaration: the Option is in hand, memory 3, Kamemon bare.
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.trash: []
+      p0.field:
+        - { card_id: BT24-019, dp: 1000, suspended: false, sources: [] }
+      p1.field: []
+  # After the host pick: 2 memory paid, the card is neither in hand nor in
+  # trash (it is plugged in sideways), and the host reads its printed Link DP
+  # +2000 (1000 -> 3000) -- the #effect#4 box, pinned here as the proof the
+  # link actually landed.
+  - at: 8
+    that:
+      turn: 3
+      phase: Main
+      p0.memory: 1
+      p0.trash: []
+      p0.hand: [BT1-028, BT1-028, BT2-024, BT3-020]
+      p0.field:
+        - { card_id: BT24-019, dp: 3000, suspended: false, sources: [] }
+      p1.field: []
+      p0.security: 5
+      p1.security: 5

@@ -172,6 +172,29 @@ pub(crate) struct PendingHandDiscard {
     pub(crate) trashed_players: Vec<PlayerId>,
 }
 
+/// One host's share of an open `OnAddDigivolutionCards` batch window
+/// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Accumulates every card an effect
+/// placed into that host's digivolution cards within a single effect body so
+/// the trigger fires ONCE per host per batch (rule 15-5-2; DCGO
+/// `AddDigivolutionCardsBottom(list, cardEffect)` fires once per list —
+/// `<Material Save N>` moves N cards in one call, and this engine's
+/// per-card `place_card_under_permanent_bottom` loop must coalesce to match).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PendingAddedSources {
+    /// The host's STABLE identity — its top card at note time. Re-resolved to
+    /// a positional handle at flush time (battle-area indices shift when a
+    /// sibling leaves play mid-body, e.g. the Tamer that `<Mind Link>` folds
+    /// under a Digimon); a host that has left play by then fires nothing
+    /// (DCGO `Permanent.TopCard != null` gate in `CanTriggerOnAddDigivolutionCard`).
+    pub(crate) host_card: crate::card_source::CardHandle,
+    /// The placing effect (controller + source card) — DCGO's non-null
+    /// hashtable `CardEffect`. A window already open for the same host under
+    /// a DIFFERENT controller is flushed first so two effects never merge.
+    pub(crate) cause: crate::trigger_context::EffectAttribution,
+    /// Added cards in placement order.
+    pub(crate) cards: Vec<crate::card_source::CardHandle>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PendingWouldPlayOrigin {
     Hand,
@@ -196,14 +219,31 @@ pub(crate) struct PendingWouldLinkResume {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
+/// Where a player-declared DigiLink Shape-B Digimon-link comes from — the two
+/// origins the printed keyword names ("Plug this card from the hand or battle
+/// area sideways into the specified Digimon"). Mirrors the `root` DCGO's
+/// `ILinkCard.LinkCard` derives from the linking card's zone: `None` (a whole
+/// standing permanent, absorbed via `IPlacePermanentToLinkCards`) or `Hand`
+/// (a single card attached via `Permanent.AddLinkCard`). The trash /
+/// under-stack / re-link roots stay effect-driven (`link_chosen_card_into_host`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DigimonLinkOrigin {
+    /// An un-linked standing Digimon in the battle area — the whole permanent
+    /// is absorbed (under-sources trashed, top card becomes the linked card).
+    Standing(PermanentHandle),
+    /// A Digimon card in `player`'s hand — it is lifted out of the hand and
+    /// attached as-is; nothing is absorbed and no `[On Play]` fires.
+    Hand(PlayerId),
+}
+
 /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
 /// `WhenWouldLink` replacement parked an interactive selection. Carries the
-/// linking standing Digimon, the chosen host, the link cost, and the linking
+/// linking card's origin, the chosen host, the link cost, and the linking
 /// card's handle (the `WhenWouldLink` replacement subject) so the resume can
-/// re-validate the source before committing the absorb.
+/// re-validate the source before committing the attach.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingDigimonLink {
-    pub(crate) source: PermanentHandle,
+    pub(crate) origin: DigimonLinkOrigin,
     pub(crate) host: PermanentHandle,
     pub(crate) cost: u16,
     pub(crate) card: crate::card_source::CardHandle,
@@ -573,6 +613,14 @@ pub struct Game {
     /// subject is the pending Link Option card.
     #[doc(hidden)]
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
+    /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
+    /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
+    /// asking a second time. Set by
+    /// `run_option_hand_link_host_selection_step`, consumed by
+    /// `dispose_option`. `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
+    #[doc(hidden)]
+    pub(crate) pending_option_link_host: Option<PermanentHandle>,
     /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
     /// `WhenWouldLink` replacement parked an interactive selection.
     #[doc(hidden)]
@@ -640,6 +688,43 @@ pub struct Game {
     /// path's `player_reducer_resolved` flag. Reset once consumed.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub(crate) interactive_option_use_reducer_prompted: bool,
+
+    /// Armed by `use_option_from` once an Option's use cost is paid; consumed
+    /// by `fire_on_use_option_observers` AFTER the Option's own body has
+    /// fully resolved. Lives on `Game` (not on `PendingOption`) because a body
+    /// may CLAIM `pending_option` mid-resolution (`place_self_under_permanent`,
+    /// `add_this_option_to_hand`, link plug-ins) — the board-wide "when a
+    /// player uses an Option card" observers (BT3-096, BT25-091) must still
+    /// fire once the claimed body finishes.
+    /// Carries the using player and the used card so the observers'
+    /// trigger context can expose them (`event_card` / `source_player`):
+    /// "When YOU use [TS] trait Option cards" (BT25-091) needs both.
+    /// G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+    pub(crate) on_use_option_armed: Option<(PlayerId, crate::card_source::CardHandle)>,
+
+    /// Set by `play_option_core` just before the used Option's `[Main]`
+    /// (`OptionMain`) body is enqueued; cleared by
+    /// `complete_option_body_if_done` once the body has fully resolved and the
+    /// Option has been disposed. While set, triggered effects the body caused
+    /// (e.g. an opponent's `[On Deletion]`) are held back so the used Option is
+    /// trashed FIRST: rules 9-1-5 (the Option is trashed "at the timing when
+    /// its 1st [Main] effect has been resolved as pending processing") +
+    /// 18-1-2 (pending processing at the same time as triggered effects is
+    /// ordered like simultaneous triggering) + 15-4-3-5 (turn player's first).
+    /// DCGO: `UseOptionClass.UseOption` calls `AddTrashCard` right after the
+    /// `OptionSkill` process, before the stacked triggers resolve.
+    /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
+    pub(crate) option_body_pending: bool,
+
+    /// The used Option's pending trash (9-1-5) is being ORDERED by its user
+    /// against their own simultaneously-pending triggered effects: set when
+    /// that player answered the `install_option_trash_order_selection` prompt
+    /// with "resolve my triggered effect first". Cleared as soon as one queued
+    /// entry actually resolves (`run_queued_effect`), so the choice is
+    /// re-offered before each remaining item — 15-4-3-5-1 repeats the pick
+    /// until the turn player has no pending items left.
+    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    pub(crate) option_trash_order_deferred: bool,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
@@ -1003,6 +1088,24 @@ pub struct Game {
     /// the whole discard list before firing the trigger once.
     pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
 
+    /// Open coalescing windows for the `OnAddDigivolutionCards` batch trigger
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS), one per host permanent that an
+    /// effect placed sources under during the current effect body. Flushed
+    /// (fires the trigger once per host) at the outermost drain, alongside
+    /// `pending_hand_discard`. Empty outside a placement window. Plain data,
+    /// so it clones with the `Game` (rule 28 clone-safety).
+    pub(crate) pending_added_sources: Vec<PendingAddedSources>,
+
+    /// The placing effect's carrier for an in-flight effect-driven
+    /// security→digivolution-source placement (`place_as_source_observed`'s
+    /// Security branch hands the card to `fire_effect_security_removal`,
+    /// whose completion in `complete_effect_security_removal` is where the
+    /// card actually enters the stack and the `OnAddDigivolutionCards` batch
+    /// is noted). Set just before the removal is fired, consumed (taken) when
+    /// the `BottomSource` / `TopSource` destination is seated. `None`
+    /// otherwise. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) pending_security_source_cause_card: Option<crate::card_source::CardHandle>,
+
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
     until_condition_total_evaluations: u64,
@@ -1332,14 +1435,27 @@ impl Game {
         &mut self,
         sources: &[crate::card_source::CardSource],
     ) {
-        let penalty: i16 = sources
+        // <Overflow> is OWNER-relative: "lose X memory" (4-1-4) is applied to
+        // the card's owner (4-17-1; DCGO `AceOverflowClass.Overflow()` ->
+        // `cardSource.Owner.AddMemory(-OverflowMemory)`, CardController.cs
+        // ~6151). The raw `self.memory` seesaw is turn-player relative, so
+        // adding the signed value directly made a non-turn-player owner GAIN
+        // memory. Simultaneous instances resolve turn player's first (4-17-5).
+        let turn_player = self.turn_player();
+        let mut penalties: Vec<(PlayerId, i16)> = sources
             .iter()
             .filter(|source| !source.is_token)
-            .filter_map(|source| self.card_data.get(source.data_index)?.ace_overflow)
-            .map(|value| value as i16)
-            .sum();
-        if penalty != 0 {
-            self.memory += penalty;
+            .filter_map(|source| {
+                let value = self.card_data.get(source.data_index)?.ace_overflow?;
+                Some((source.owner, value as i16))
+            })
+            .filter(|(_, value)| *value != 0)
+            .collect();
+        penalties.sort_by_key(|(owner, _)| if *owner == turn_player { 0 } else { 1 });
+        for (owner, value) in penalties {
+            // `ace_overflow` is stored signed (e.g. -4): a gain of -4 for the
+            // owner is "lose 4 memory".
+            self.gain_memory_for_player(owner, value);
         }
     }
 
@@ -1818,6 +1934,139 @@ impl Game {
                 },
             );
         }
+    }
+
+    /// Record that an EFFECT (`cause`) just placed `cards` into `host`'s
+    /// digivolution cards, opening or extending that host's
+    /// `OnAddDigivolutionCards` batch window
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Call this from EVERY
+    /// effect-driven source-placement facade AFTER the `card_sources`
+    /// mutation — and from NO rule-driven one: normal / DNA digivolution,
+    /// DigiXros + Assembly material consumption and App Fusion place sources
+    /// with a `null` `cardEffect` in DCGO (`CardController.cs:1736`,
+    /// `SelectDigiXrosClass.cs:910`, `SelectAssemblyClass.cs:302`,
+    /// `SelectAppFusionEffect.cs:234`) and `CanTriggerOnAddDigivolutionCard`
+    /// requires a non-null one, so they never trigger it.
+    ///
+    /// The trigger is NOT fired here; it fires once per host when the window
+    /// is flushed (`flush_pending_added_sources`) after the placing effect
+    /// body completes — DCGO `AddDigivolutionCards*` stacks the skill once
+    /// per added LIST (Permanent.cs:1133 / 1237), and rule 15-5-2 makes one
+    /// condition met several times at once a single triggering. Tokens
+    /// never enter a stack (DCGO skips `IsToken` cards and token hosts), so a
+    /// caller that placed nothing simply passes an empty `cards`.
+    ///
+    /// `host` may be a battle-area or breeding handle; it is re-resolved by
+    /// top-card identity at flush time.
+    pub(crate) fn note_effect_added_sources(
+        &mut self,
+        host: crate::permanent::PermanentHandle,
+        cards: Vec<crate::card_source::CardHandle>,
+        cause: crate::trigger_context::EffectAttribution,
+    ) {
+        if cards.is_empty() {
+            return;
+        }
+        let Some(host_card) = self.stable_top_card_of(host) else {
+            return;
+        };
+        if let Some(window) = self
+            .pending_added_sources
+            .iter_mut()
+            .find(|w| w.host_card == host_card)
+        {
+            if window.cause.controller == cause.controller {
+                window.cards.extend(cards);
+                return;
+            }
+            // A different controller's effect is now placing under the same
+            // host: fire the earlier batch on its own.
+            let earlier = window.clone();
+            self.pending_added_sources
+                .retain(|w| w.host_card != host_card);
+            self.fire_added_sources_batch(earlier);
+        }
+        self.pending_added_sources.push(PendingAddedSources {
+            host_card,
+            cause,
+            cards,
+        });
+    }
+
+    /// Fire the `OnAddDigivolutionCards` batch trigger once per host for every
+    /// open placement window, then close them all. No-op when nothing is
+    /// pending. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
+    pub(crate) fn flush_pending_added_sources(&mut self) {
+        let windows = std::mem::take(&mut self.pending_added_sources);
+        for window in windows {
+            self.fire_added_sources_batch(window);
+        }
+    }
+
+    fn fire_added_sources_batch(&mut self, window: PendingAddedSources) {
+        // Re-resolve the host by its stable top card; a host that has left
+        // play since the placement fires nothing (DCGO `TopCard != null`).
+        let Some(host) = self.permanent_handle_by_top_card(window.host_card) else {
+            return;
+        };
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAddDigivolutionCards,
+            crate::selection::TriggerSource::SourcesAddedToStack {
+                host,
+                host_card: window.host_card,
+                cards: window.cards,
+                cause: window.cause,
+            },
+        );
+    }
+
+    /// The top card of a battle-area or breeding permanent, or `None` when
+    /// the slot is empty / missing.
+    pub(crate) fn stable_top_card_of(
+        &self,
+        handle: crate::permanent::PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        let player = self.players.get(handle.player as usize)?;
+        let perm = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+            player.breeding_area.as_ref()?
+        } else {
+            player.battle_area.get(handle.index as usize)?
+        };
+        perm.card_sources.last().map(|card| card.handle())
+    }
+
+    /// Locate the battle-area or breeding permanent whose TOP card is
+    /// `top_card` (stable-identity → positional handle). `None` when no such
+    /// permanent is in play.
+    pub(crate) fn permanent_handle_by_top_card(
+        &self,
+        top_card: crate::card_source::CardHandle,
+    ) -> Option<crate::permanent::PermanentHandle> {
+        for (pid, player) in self.players.iter().enumerate() {
+            if let Some(index) = player
+                .battle_area
+                .iter()
+                .position(|perm| perm.card_sources.last().map(|c| c.handle()) == Some(top_card))
+            {
+                return Some(crate::permanent::PermanentHandle {
+                    player: pid as PlayerId,
+                    index: index as u8,
+                });
+            }
+            if player
+                .breeding_area
+                .as_ref()
+                .and_then(|perm| perm.card_sources.last())
+                .map(|c| c.handle())
+                == Some(top_card)
+            {
+                return Some(crate::permanent::PermanentHandle {
+                    player: pid as PlayerId,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                });
+            }
+        }
+        None
     }
 
     /// Trash an entire permanent stack (top card + digi_sources + linked
@@ -2951,19 +3200,64 @@ impl Game {
         // linear scans for the same card — the per-step hot path: ~793
         // effects_for_card calls/step, 94% of step time).
         let cd_opt = self.card_data_by_id(card_id);
-        let native_keywords = cd_opt.map(|cd| cd.keywords.clone()).unwrap_or_default();
+        // FACE keywords only. `CardData::keywords` is parsed from ALL THREE
+        // printed text fields (`CardData::load`), so reading it here put a
+        // card's INHERITED keyword on its face: Gazimon (BT25-078) as the top
+        // card carried a live <Retaliation> it does not print (DCGO registers
+        // it `isInheritedEffect: true` only). `face_keywords` is the same
+        // split `has_keyword` already uses; for a DSL-pack card with empty
+        // text it returns `keywords` unchanged.
+        let native_keywords = cd_opt.map(face_keywords).unwrap_or_default();
         let mut auto_effects: Vec<crate::effect::Effect> = cd_opt
             .map(|cd| {
-                let mut effects: Vec<crate::effect::Effect> = cd
-                    .keywords
+                let mut effects: Vec<crate::effect::Effect> = native_keywords
                     .iter()
                     .flat_map(|kw| {
                         crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
                     })
                     .collect();
 
-                if under_top {
+                // NOT gated on `under_top`. Every consumer already filters on
+                // `Effect::inherited` (registry `scope: inherited` clauses and
+                // grant-synthesized bodies are in the list unconditionally), so
+                // the gate bought nothing -- and it made the list's SLOT LAYOUT
+                // depend on where the card is. An [On Deletion] entry is queued
+                // by `effect_slot` while the card is under the top and resolved
+                // after the stack is in the trash (rule 25), where `under_top`
+                // is false: the printed inherited keyword's slot fell off the
+                // end of the shorter list and the trigger silently resolved to
+                // nothing. A printed inherited <Retaliation> on a card with no
+                // grant clause never deleted anything in a live game.
+                let _ = under_top;
+                {
                     for kw in inherited_keywords(cd) {
+                        // De-dup against an unconditional `scope: inherited`
+                        // `kind: grant_keyword` clause for the SAME keyword.
+                        // The real game loads `inherited_text` from
+                        // `cards.json`, so a DSL card whose inherited keyword
+                        // is authored as a grant clause (BT25-078 Gazimon's
+                        // inherited <Retaliation>) had the keyword's trigger
+                        // body synthesized TWICE -- once here, once by the
+                        // grant loop below. Both queued at the deletion, the
+                        // pair opened a phantom TriggerOrder prompt, and the
+                        // park outlived the battle the keyword needed. DCGO
+                        // registers exactly one `RetaliationSelfEffect`
+                        // (BT25_078.cs); 16-12-4 treats instances per
+                        // printed keyword, and this card prints one. The
+                        // embedded DSL pack leaves the text fields empty, which
+                        // is why only live games / the exam ever saw this.
+                        let covered_by_inherited_grant =
+                            registry_effects.as_ref().is_some_and(|es| {
+                                es.iter().any(|e| {
+                                    e.declarative
+                                        && e.inherited
+                                        && e.condition.is_none()
+                                        && e.granted_keyword == Some(kw)
+                                })
+                            });
+                        if covered_by_inherited_grant {
+                            continue;
+                        }
                         effects.extend(
                             crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
                                 .into_iter()

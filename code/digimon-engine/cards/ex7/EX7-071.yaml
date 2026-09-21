@@ -45,10 +45,14 @@
 #   but each arm independently no-ops if no legal target exists"). All three
 #   picks accumulate into one `selectedPermanents` list, destroyed together
 #   via a single `DestroyPermanentsClass(...).Destroy()` call AFTER all three
-#   selects resolve — modelled here as three back-to-back
-#   {select_opponent_permanent, delete_permanent} pairs (functionally
-#   equivalent: no OnDeletion timing in this card's text depends on
-#   simultaneity, and each `delete_permanent` call resolves immediately).
+#   selects resolve (EX7_071.cs:170-252; [Security] 312-394) — modelled as
+#   three back-to-back `select_opponent_permanent` picks followed by ONE
+#   `delete_permanents` batch step (G-DSL-DELETE-PERMANENTS-BATCH). The
+#   printed text is one sentence with no "Then": one simultaneous deletion,
+#   so the targets' [On Deletion] triggers are simultaneous (general_rule
+#   15-4-3-2). An earlier per-arm {select, delete_permanent} authoring was
+#   measured DIVERGED by the DCGO exam (EX7-071#effect#1, step 21: our engine
+#   had trashed the Lv.3 pick before the Lv.4 pick was asked).
 #
 # ─── [Main] tail — "Then, place this card as the bottom digivolution card of
 #     1 of your [Three Musketeers] Digimon" (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL,
@@ -108,24 +112,23 @@ effects:
   - when: main_from_hand
     summary: "[Main] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
     process:
-      # Arm 1: delete 1 opponent level 3 Digimon. Self-skips if none exist.
+      # Arm 1: pick 1 opponent level 3 Digimon. Self-skips if none exist.
       - select_opponent_permanent:
           bind_as: lv3_target
           filter: { kind: digimon, level_eq: 3 }
           prompt: "Delete 1 of your opponent's level 3 Digimon"
-      - delete_permanent: { target: lv3_target }
-      # Arm 2: delete 1 opponent level 4 Digimon. Self-skips if none exist.
+      # Arm 2: pick 1 opponent level 4 Digimon. Self-skips if none exist.
       - select_opponent_permanent:
           bind_as: lv4_target
           filter: { kind: digimon, level_eq: 4 }
           prompt: "Delete 1 of your opponent's level 4 Digimon"
-      - delete_permanent: { target: lv4_target }
-      # Arm 3: delete 1 opponent level 5 Digimon. Self-skips if none exist.
+      # Arm 3: pick 1 opponent level 5 Digimon. Self-skips if none exist.
       - select_opponent_permanent:
           bind_as: lv5_target
           filter: { kind: digimon, level_eq: 5 }
           prompt: "Delete 1 of your opponent's level 5 Digimon"
-      - delete_permanent: { target: lv5_target }
+      # ONE simultaneous deletion of every pick made above (unset arms skip).
+      - delete_permanents: { targets: [lv3_target, lv4_target, lv5_target] }
       # Tail: "Then, place this card as the bottom digivolution card of 1 of
       # your [Three Musketeers] trait Digimon." Mandatory IF a candidate
       # exists (DCGO canNoSelect: false), silently self-skips when none;
@@ -156,14 +159,13 @@ effects:
           bind_as: sec_lv3_target
           filter: { kind: digimon, level_eq: 3 }
           prompt: "Delete 1 of your opponent's level 3 Digimon"
-      - delete_permanent: { target: sec_lv3_target }
       - select_opponent_permanent:
           bind_as: sec_lv4_target
           filter: { kind: digimon, level_eq: 4 }
           prompt: "Delete 1 of your opponent's level 4 Digimon"
-      - delete_permanent: { target: sec_lv4_target }
       - select_opponent_permanent:
           bind_as: sec_lv5_target
           filter: { kind: digimon, level_eq: 5 }
           prompt: "Delete 1 of your opponent's level 5 Digimon"
-      - delete_permanent: { target: sec_lv5_target }
+      # ONE simultaneous deletion of every pick made above (unset arms skip).
+      - delete_permanents: { targets: [sec_lv3_target, sec_lv4_target, sec_lv5_target] }

@@ -323,6 +323,9 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
                 collect_step_raw_rust_fns(step, names);
             }
         }
+        CompiledStep::DeleteAllPermanents { over } => {
+            collect_predicate_raw_rust_fns(over, names);
+        }
         CompiledStep::PerSelected { body, .. }
         | CompiledStep::ScheduleDelayed { body, .. }
         | CompiledStep::AsSelectingPlayer { body, .. } => {
@@ -399,6 +402,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         collect_predicate_raw_rust_fns(has_inherited, names);
     }
     if let Some((filter, _)) = &predicate.source_count {
+        collect_predicate_raw_rust_fns(filter, names);
+    }
+    if let Some((filter, _)) = &predicate.link_card_count {
         collect_predicate_raw_rust_fns(filter, names);
     }
     if let Some(ssc) = &predicate.self_source_count {
@@ -486,6 +492,10 @@ fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTre
             collect_predicate_raw_rust_fns(filter, names);
         }
         CompiledPerSelector::DistinctColorsCountScoped {
+            filter: Some(filter),
+            ..
+        }
+        | CompiledPerSelector::DistinctNamesCountScoped {
             filter: Some(filter),
             ..
         } => {

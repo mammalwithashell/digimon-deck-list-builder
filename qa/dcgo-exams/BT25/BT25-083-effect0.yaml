@@ -1,0 +1,169 @@
+# Exam scenario: LadyDevimon (BT25-083), clause BT25-083#effect#0 --
+# "[Digivolve] Lv.4 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+#
+# The printed purple circle is ALSO "Lv.4 / cost 3", so a purple base cannot
+# tell the two apart -- BOTH routes would be open at the same cost, no prompt
+# would separate them, and the line would measure nothing about this clause.
+# The base must be a NON-purple Lv.4 carrying the [TS] trait (or the text):
+# Aegiomon P-194 (YELLOW Lv.4, traits Shaman/TS, cost 4; its only effects are
+# <Blocker> and <Barrier>, so it prompts nothing on play and nothing as a
+# base). The purple circle FAILS on colour, and the ONLY legal route is the
+# clause under exam. DCGO registers it colour-blind (BT25_083.cs
+# AddSelfDigivolutionRequirementStaticEffect(..., level: 4) with the default
+# cardColor: None -> no colour check in AddDigivolutionRequirement.cs
+# GetEvoCost); our alt_path `from:` carries no colour either.
+#
+# Aegiomon is yellow, so this file needs its own deck book
+# (qa/dcgo-exams/BT25/tm_bt25_083_pool.json, deck `tm-aegiomon`: the shared
+# three-musketeers 50 with BT24-081 and one EX7-070 swapped for P-194 x2).
+#
+# WHY NOTHING PROMPTS AFTER THE DIGIVOLVE. LadyDevimon's two [When
+# Digivolving] effects both need material this line withholds:
+#   - the tuck -> <Draw 1> ("OP/WD Shared"): DCGO's AdditionalActivateCondition
+#     needs a [Three Musketeers] TRAIT card in hand or trash. P0's hand is
+#     three BT24-088 + three BT25-092 (both [TS], not [Three Musketeers]),
+#     trash empty -> not activated. Ours: the union pick self-skips on zero
+#     candidates.
+#   - the trash-an-Option -> reduced-cost use ("WD/WA Shared"): DCGO's
+#     AdditionalActivateCondition2 needs an Option card under an own Digimon;
+#     Aegiomon carries none -> not activated. Ours: no Option source, nothing
+#     to pick.
+#   OUR engine still TRIGGERS both (the YAML has no `condition:` mirroring
+#   those gates): it asks which vacuous effect resolves first and then parks
+#   the WD/WA clause's optional gate -- two sim-only rows after the
+#   digivolve, see the step comments.
+#
+# MEMORY NEVER RELIES ON A START-OF-TURN RESET -- there is none. The rules
+# manual's own example at 6-2-1-1 ("[Start of Your Turn] If you have 2 or
+# less memory, set it to 3") is a CARD effect, and DCGO sets 3 only on a pass
+# (AutoProcessing.cs EndTurnProcess, `Passed && Main`); our engine agrees
+# (measured at lowering: an overshoot to -1 leaves P1 at exactly 1). So
+# playing Aegiomon from the default 3 (-> -1) would hand P1 a one-memory turn
+# and the overspend that follows could not be lowered. Instead every turn
+# boundary is either a PASS (which sets the opponent to 3 on both engines) or
+# an overshoot to 3+ on the other side: P1 overspends on T2 (Biyomon ST1-02
+# for 2, Garudamon ST1-08 for 6: 3 -> 1 -> -5), P0 plays Aegiomon from 5
+# (-> 1) and PASSES, P1 overspends again on T4 (Dracomon ST1-04 for 3, then
+# Birdramon ST1-05 for 4: 3 -> 0 -> -4), so P0 opens T5 with FOUR and the
+# cost-3 digivolve lands on 1 with the turn still P0's. Garudamon has only a
+# [When Digivolving] effect and Dracomon / Birdramon are vanilla, so nothing
+# prompts. (A second Garudamon would have been an ambiguous `play:` -- two
+# copies in hand -- so the cards differ on purpose.)
+#
+#   T1 (P0): pass.
+#   T2 (P1, 3): Biyomon (3 -> 1), Garudamon (1 -> -5).
+#   T3 (P0, 5): play Aegiomon P-194 (5 -> 1), pass.
+#   T4 (P1, 3): Dracomon (3 -> 0), Birdramon (0 -> -4).
+#   T5 (P0, 4): THE CLAUSE -- digivolve Aegiomon into LadyDevimon for 3
+#            (4 -> 1, draw 1). Pass (turn over).
+#   T6 (P1): the trailing step.
+card: BT25-083
+clause: BT25-083#effect#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw, stack[11] = T5 draw, stack[12] = the digivolve draw.
+    stack: [P-194, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-092]
+    rest: tm-aegiomon
+  p1:
+    # stack[10] = T2 draw, stack[11] = T4 draw -- both vanilla and distinct
+    # from every card the line plays, so no `play:` is ambiguous.
+    stack: [ST1-02, ST1-08, ST1-04, ST1-05, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-03, ST1-03,
+            BT3-007, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): Aegiomon -- the yellow Lv.4 [TS] base -- then pass at 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-194, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): overspend to 4 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 4): THE CLAUSE. Only the alt path is open (yellow base), so no
+  # cost-choice prompt on either side; both [When Digivolving] effects stay
+  # silent (see the header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-083 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine triggers BOTH of LadyDevimon's [When Digivolving]
+  # clauses unconditionally (BT25-083.yaml carries neither of DCGO's
+  # AdditionalActivateCondition gates) and parks a TriggerOrder between two
+  # effects that have no material here; DCGO activates neither and asks
+  # nothing. The order is outcome-void, so the fold hides no finding -- the
+  # over-exposure itself is recorded in NOTES-BT25-083.md.
+  - actor: 0
+    do: { select: { cards: [BT25-083], ordinal: 0, sim_only: true } }
+    expect: { prompt: MultipleSkills }
+  # SIM-ONLY: branch 0 is the WD/WA clause, whose `optional: true` gate our
+  # engine parks even with no Option under any own Digimon. Declined; the
+  # other clause's union pick then self-skips on zero candidates. DCGO asks
+  # nothing for either.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The witness for "Cost 3" is the T5 arithmetic (4 -> 1), read at P0's
+  # trailing pass; the board is read on P1's turn.
+  - at: 15
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 1
+  - at: 16
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.trash: []
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, BT25-092, BT25-092]
+      p0.field:
+        - { card_id: BT25-083, dp: 7000, suspended: false, sources: [P-194] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+        - { card_id: ST1-04, dp: 4000, suspended: false, sources: [] }
+        - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
+      p1.security: 5

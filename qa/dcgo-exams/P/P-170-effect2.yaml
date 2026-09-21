@@ -1,0 +1,123 @@
+# Exam scenario: AvengeKidmon (P-170), clause P-170#effect#2 -- <Raid>.
+#
+# "When this Digimon attacks, you may switch the target of attack to 1 of
+#  your opponent's unsuspended Digimon with the highest DP." (16-22,
+#  Optional -- docs/digimon-rules/keyword-semantics.md.)
+#
+# THE LINE reuses P-170-effect0.yaml's entry (Megadramon T3, AvengeKidmon for
+# 4 on T5) with one change: P1 plays Biyomon (ST1-02) on T2 and never attacks
+# with it, so on T7 it is UNSUSPENDED -- and therefore cannot be attacked
+# directly. AvengeKidmon attacks the player and takes the <Raid> switch onto
+# Biyomon: Biyomon leaving the board off an attack declared at the player is
+# the proof the switch happened. The battle (13000 vs 3000) deletes Biyomon;
+# Megadramon's INHERITED <Piercing> then checks one security card (Biyomon
+# #2 at 3000, silently lost), so P1's security also drops 5 -> 4 -- that is
+# expected and asserted, not the clause.
+#
+# PROMPT SHAPE: P_170.cs registers CardEffectFactory.RaidSelfEffect at
+# OnAllyAttack. DCGO gates the optional switch behind an OptionalSkill yes/no
+# and then asks the SelectPermanentEffect target; our engine surfaces one
+# declinable pick. The pick row is authored with `expect: {prompt:
+# OptionalSkill}` -- the OptionalSkill+pick FOLD (docs/DCGO_EXAM.md, "Surface
+# mappings" item 2; BT16-077-effect1 idiom): the emitter writes
+# OptionalSkill(yes) + the SelectPermanentEffect answer. Nothing else stacks
+# on the attack: AvengeKidmon has no [When Attacking], and Megadramon's
+# inherited text is <Piercing> only.
+#
+#   T1 (P0): pass.        T2 (P1, 3): play Biyomon (3 -> 1), pass.
+#   T3 (P0, 3): Megadramon (7 -> -4).      T4 (P1, 4): pass.
+#   T5 (P0, 3): AvengeKidmon for 4 (3 -> -1).   T6 (P1, 3): pass.
+#   T7 (P0, 3): THE CLAUSE -- attack the player, <Raid> onto Biyomon.
+#               Attacking costs nothing, so the trailing step is P0's pass.
+card: P-170
+clause: P-170#effect#2
+seed: 424242
+decks:
+  p0:
+    # Draws: T3, T5, the digivolution draw, T7.
+    stack: [EX7-011, P-170, ST1-02, EX7-008, BT25-082,
+            BT25-078, BT25-078, EX7-008, EX7-051, EX7-051,
+            BT25-083, BT25-083, BT25-082, EX7-010]
+    rest: tm-avengekidmon
+  p1:
+    # stack[9] = Biyomon: the card <Piercing> checks after the Raid battle.
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-03, ST1-04, BT1-009, ST1-02, ST1-02,
+            ST1-05, ST1-05, ST1-08]
+    rest: tm-red-opponent
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future <Raid> target. It never attacks.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Megadramon (7 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 4)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): AvengeKidmon over Megadramon for 4 (3 -> -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T6 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): THE CLAUSE -- attack the player, then the <Raid> switch.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # OptionalSkill+pick fold: take the switch onto Biyomon (the only
+  # unsuspended opponent Digimon, so also the highest DP).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause (attacking spent no memory).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.security: 5
+      p0.field:
+        - { card_id: P-170, dp: 13000, suspended: true, sources: [EX7-011] }
+      p1.field: []
+      p1.trash: [ST1-02, ST1-02]
+      p1.security: 4

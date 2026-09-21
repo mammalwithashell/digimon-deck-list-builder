@@ -1,0 +1,132 @@
+# Exam scenario: KaiserLeomon (BT7-073), clause BT7-073#effect#1 --
+# "[When Digivolving] If a card with [Hybrid] in its traits or [Koichi Kimura]
+#  is in this Digimon's digivolution cards, this Digimon gains <Retaliation>
+#  until the end of your opponent's next turn. (When this Digimon is deleted
+#  after losing a battle, delete the Digimon it was battling.)"
+#
+# DECK NOTE. `tm-mimi-purple` (qa/dcgo-exams/BT7/tm_bt7_073_pool.json): see
+# BT7-071-effect0.yaml. P1 is the shared quiet ST-1 opponent, which here
+# fields one vanilla body, Vermilimon BT4-014 (8000).
+#
+# THE LINE builds the condition and then forces the keyword to show itself:
+#   T1 (P0): Mimi BT3-096 (0 -> -2).
+#   T2 (P1, 2): Vermilimon (2 -> -3).
+#   T3 (P0, 3): Loweemon BT7-071 onto Mimi via its Tamer route (3 -> 1); pass.
+#            Loweemon carries the [Hybrid] trait.
+#   T4 (P1): nothing.
+#   T5 (P0, 3): THE CLAUSE -- KaiserLeomon over Loweemon through its printed
+#            Purple Lv.4 / cost 1 circle (3 -> 2). Loweemon [Hybrid] is now a
+#            digivolution card, so KaiserLeomon gains <Retaliation> until the
+#            end of P1's T6. Then KaiserLeomon attacks the player (the
+#            permanent has stood since T1 -- Mimi's frame -- so it can
+#            attack): P1's top security card Biyomon ST1-02 (3000) loses to
+#            6000 with no prompt; KaiserLeomon is left suspended. Pass.
+#   T6 (P1, 3): Vermilimon attacks the SUSPENDED KaiserLeomon: 8000 vs 6000,
+#            KaiserLeomon loses the battle and is deleted -- and <Retaliation>
+#            (MANDATORY, keyword-semantics.md 16-12, no prompt) deletes
+#            Vermilimon. Pass.
+#   T7 (P0): trailing breeding decision.
+#
+# WHY THE T5 DIGIVOLVE IS SINGLE-ROUTE. Loweemon is a purple Lv.4, so only
+# the Lv.4 / cost 1 circle fits; the Lv.3 / cost 3 circle does not, and the
+# Tamer route (BT7-073#effect#0) needs the base's TOP card to be a Tamer.
+# No cost prompt on either side.
+#
+# PROMPT SHAPE. BT7_073.cs OnEnterFieldAnyone: SetUpActivateClass(..., -1,
+# false, ...) with CanActivateCondition = >= 1 digivolution card with the
+# [Hybrid] trait or the name [Koichi Kimura] -> GainRetaliation(self,
+# UntilOpponentTurnEnd). Mandatory, no prompt. Ours: `when: when_digivolving`
+# with the same `condition:` and `grant_keyword: Retaliation` expiring
+# `end_of_opponents_next_turn`. No blocker anywhere, no other trigger: Mimi's
+# needs an Option use and Loweemon has no inherited text.
+#
+# WITNESS at P0's T7 breeding decision: BOTH battle areas are empty. P0's
+# trash holds the whole KaiserLeomon stack (KaiserLeomon, Loweemon, Mimi);
+# P1's trash holds the flipped Biyomon AND Vermilimon -- the second card is
+# the clause. Without <Retaliation>, Vermilimon would still be standing.
+card: BT7-073
+clause: BT7-073#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT3-096, BT7-071, BT7-073, ST6-02, ST1-02,
+            ST6-03, ST6-05, ST6-07, ST6-09, ST6-02,
+            ST1-02, ST1-04, ST6-03, ST1-04, ST6-05]
+    rest: tm-mimi-purple
+  p1:
+    stack: [BT4-014, ST1-02, ST1-03, BT1-009, BT3-007,
+            ST1-05, BT1-014, BT4-010, ST1-04, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; Mimi (0 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-096, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): Vermilimon (2 -> -3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Loweemon onto Mimi (3 -> 1); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT7-071 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): THE CLAUSE -- KaiserLeomon over Loweemon (3 -> 2);
+  # <Retaliation> granted with no prompt. Attack the player; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT7-073 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): Vermilimon attacks the suspended KaiserLeomon and
+  # wins the battle; <Retaliation> takes Vermilimon with it.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): trailing breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.field: []
+      p0.trash: [BT7-073, BT7-071, BT3-096]
+      p0.security: 5
+      p1.field: []
+      p1.trash: [ST1-02, BT4-014]
+      p1.security: 4

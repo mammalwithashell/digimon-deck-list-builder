@@ -1,0 +1,127 @@
+# Exam scenario: Digimon Emperor (BT8-094), clause BT8-094#effect#0 --
+# "[All Turns] When any of your opponent's level 5 or lower Digimon are
+#  deleted, by suspending this Tamer, <Draw 1>."
+#
+# THE LINE. p1's Biyomon (ST1-02, Lv.3) attacks p0's security on T4 and flips
+# Phoenixmon (ST1-10, 12000 DP) as a Security Digimon; 3000 loses the battle
+# and Biyomon is deleted ON p1's TURN -- which is what [All Turns] buys. The
+# Tamer, hard-played on T3, sees the deletion and offers its cost.
+#
+# PROMPT SHAPE. BT8_094.cs: `SetUpActivateClass(..., -1, true, ...)` -- an
+# OptionalSkill yes/no, then the coroutine suspends the Tamer and draws with
+# no further pick. Ours: `optional: true` on a single-trigger bundle installs
+# the decline gate (TriggerOrder at length 1 -> OptionalSkill), then
+# `activation_cost: suspend_self` + `draw`. 1:1. Answered by p0 -- actor 0 --
+# while it is p1's turn.
+#
+# THE WITNESS. Digimon Emperor is suspended and p0 holds one more card;
+# Phoenixmon (the security Digimon) goes to p0's trash after the battle
+# whatever the result, so p0's security is 4.
+#
+# Memory: T1 p0 passes -> p1 3; T2 p1 plays Biyomon (2): 3 -> 1, passes ->
+# p0 3; T3 p0 plays the Tamer (3): 3 -> 0, passes -> p1 3; T4 the attack is
+# free.
+#
+# Book: qa/dcgo-exams/BT8/tm_bt8_094_pool.json (--decks). p0's deck is Digimon
+# Emperor x4 over the quiet ST-1 filler; p1 is the quiet ST-1 opponent.
+card: BT8-094
+clause: BT8-094#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Tamer, inert filler. stack[9] = Phoenixmon, the 12000 DP security Digimon
+      - BT8-094
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-emperor
+  p1:
+    stack:
+      # hand (0-4): the Biyomon that attacks and dies, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Digimon Emperor for 3 (3 -> 0), pass out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT8-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Biyomon attacks p0's security and loses to Phoenixmon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: p0 accepts the suspend-to-draw.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause; attacking spent no memory, p1 keeps the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 4
+      p0.security: 4
+      p0.trash: [ST1-10]
+      p1.field: []
+      p1.trash: [ST1-02]
+      p0.hand: [ST1-04, ST1-04, BT1-009, ST1-05, BT4-010, BT4-010]
+      p0.field:
+        - card_id: BT8-094
+          dp: -1
+          suspended: true
+          sources: []

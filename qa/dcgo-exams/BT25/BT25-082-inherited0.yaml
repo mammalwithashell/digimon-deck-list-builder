@@ -1,0 +1,191 @@
+# STATUS 2026-09-18 (BT25-082#inherited#0 triage): re-authored. The first oracle
+# run aborted on the shared prefix (BT25-085 dual-card data gap, fixed in
+# 20df249e6). With that fix a second BeelStarmon in hand is an Option, which makes
+# BeelStarmon's own [When Attacking] clauses live and turns the first post-attack
+# prompt into a trigger-order row. This line isolates THE CLAUSE instead: stack[14]
+# is a Digimon (BT21-071), so no Option is in hand/under at the attack, and the
+# cost paid is BeelStarmon (X Antibody) EX7-073.
+# Exam scenario: BlackGatomon (BT25-082), clause BT25-082#inherited#0 --
+# "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card
+#  from your hand or trash as this Digimon's bottom digivolution card, <Draw 1>."
+#
+# THE LINE reuses BT25-082-effect2.yaml (BlackGatomon -> BeelStarmon BT25-085
+# via the grant on T5, BlackGatomon now a digivolution card), idles P1's turn
+# 6, and on T7 attacks the player with BeelStarmon so the inherited effect
+# triggers with BlackGatomon underneath.
+#
+# PROMPT SHAPE (BT25_082.cs "Inherited When Attacking"):
+#   SetUpActivateClass(..., 1, TRUE, ...) -> DCGO asks an OptionalSkill yes/no;
+#   our `optional: true` outer gate lines up 1:1 (`select: { yes: true }`).
+#   Then the hand-or-trash choice: DCGO asks a generic_bool ONLY when both
+#   areas hold a [Three Musketeers] trait card; P0's trash is EMPTY here, so
+#   DCGO's `SetBool(canSelectHand)` auto-picks the hand with no row and opens
+#   a SelectHandEffect (canNoSelect: false). Our engine's single union-zone
+#   pick spans the same hand-only candidate set. Two TM-trait cards are in
+#   hand is scanned for them; the pick names BeelStarmon (X Antibody)
+#   EX7-073 by identity. Then <Draw 1> (Mandatory, 16-7).
+#
+# NOTHING ELSE TRIGGERS ON THE ATTACK: BeelStarmon's own two [When Attacking]
+# effects are gated on an Option card existing in hand / under a Digimon
+# (none anywhere), Sparrowmon's inherited <Retaliation> and Pagumon's inherited
+# [On Deletion] are dormant, and P1 has no <Blocker>. The security check that
+# follows is a battle against P1's top security card, the vanilla Biyomon
+# ST1-02 (3000 DP), which the 12000 DP attacker wins.
+#
+# T7 also opens with Asuna's [Start of Your Main Phase] (every card in this
+# deck carries [Three Musketeers] text or the [TS] trait, so it fires whenever
+# the hand is non-empty). DCGO asks ONE cancellable SelectHandEffect
+# (`optional: false`); our engine parks its outer gate. `decline:` lowers to
+# select_bool=false AND select_cancel on the wire, so one row answers both.
+card: BT25-082
+clause: BT25-082#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
+    # stack[14] -- drawn BY the grant digivolve -- is a plain Digimon, so no
+    # Option card (a second DUAL BeelStarmon) is ever in hand on this line.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT21-071,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (see the header). Declined; our engine has no prompt here.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: with Asuna on the field, BlackGatomon (Lv.4) digivolves into
+  # BeelStarmon (Lv.6) for 4, ignoring digivolution requirements. Memory
+  # 1 -> -3, which hands the turn over.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # BeelStarmon's own [When Digivolving] use-an-Option clause is DORMANT on this
+  # line: stack[14] (the card the grant digivolve draws) is a vanilla-in-hand
+  # Digimon (BT21-071), NOT a second BeelStarmon, so no Option card is in hand or
+  # under the Digimon (BT25_085.cs CanActivateUseOption). No prompt either side.
+  # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): breeding area is empty (an egg could be hatched), so
+  # the breeding prompt appears -- pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase] -- a different card's clause, declined.
+  # TWO rows for one decision: BT25_092.cs builds it `optional: false` and
+  # asks ONE cancellable SelectHandEffect, while our engine installs an outer
+  # accept/decline gate (kind `Replacement`) before its hand pick. The first
+  # row declines OUR gate and emits nothing; the second is DCGO's cancel.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE fires as BeelStarmon (BlackGatomon underneath) attacks the player.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # "[Once Per Turn] By placing ..." -- the optional trigger gate, taken.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # The cost: BeelStarmon (X Antibody) EX7-073 from hand goes under the attacker as its bottom
+  # digivolution card. Then <Draw 1>.
+  - actor: 0
+    do: { select: { cards: [EX7-073] } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause (the attack has resolved: one security check).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. BeelStarmon is suspended from the
+  # attack and now carries FOUR digivolution cards -- EX7-073 placed
+  # underneath is the cost paid. P1's security fell 5 -> 4 (one check) and
+  # its trash holds the Biyomon that lost the security battle.
+  - at: 22
+    that:
+      turn: 7
+      phase: Main
+      p0.memory: 3
+      p0.field:
+        - card_id: BT25-085
+          dp: 12000
+          suspended: true
+          sources: [BT25-082, EX7-051, EX7-073, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p1.security: 4
+      p1.trash: [ST1-02]

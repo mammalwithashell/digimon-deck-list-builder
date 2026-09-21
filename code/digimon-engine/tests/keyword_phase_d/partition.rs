@@ -38,14 +38,17 @@
 //!   - Own effect (`ReplacementCause::OwnEffect`)
 //!   - Battle (`ReplacementCause::Battle`)
 //!
-//! ## Color grouping (out of scope)
+//! ## Color grouping
 //!
 //! Per-card-text color groupings (`firstSources` / `secondSources`) come
 //! from `partitionConditions: List<PartitionCondition>` injected by the
-//! card factory in DCGO. The auto-install can't know color groups from
-//! `Keyword::Partition` alone — Phase D offers ANY same-stack source for
-//! each pick. Per-card overrides apply color grouping via hand-rolled
-//! `CardEffect`.
+//! card factory in DCGO. Since the 2026-09-20 close of
+//! `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` the auto-install reads the
+//! card's own slot specs through `CardEffect::partition_slots` and enforces
+//! them (see `tests/cards_behavioral/bt16/bt16_077.rs`). The cards in THIS
+//! file are printed-keyword-only fixtures with no registered script, so they
+//! publish no slots and exercise the slot-blind fallback — which is exactly
+//! what a printed `<Partition>` with no parenthetical would need.
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;

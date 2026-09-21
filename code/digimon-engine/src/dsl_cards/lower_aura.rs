@@ -61,6 +61,7 @@ pub fn lower_all(
     security_attack: Option<i32>,
     security_attack_fn: Option<CompiledFormula>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
+    grant_traits: Vec<String>,
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
@@ -98,8 +99,12 @@ pub fn lower_all(
     }
     if let Some(predicate) = while_condition.clone() {
         let is_self_aura = target == CompiledPredicate::default();
+        // `grant_traits` is not wired on the `while_condition` path (no card
+        // needs it yet) — fall through to the declarative-tick path below,
+        // which re-evaluates `active_when` every tick.
         let supports = is_self_aura
             && target_player.is_none()
+            && grant_traits.is_empty()
             && (dp_modifier.is_some()
                 || security_attack.is_some()
                 || modifier.is_some()
@@ -132,6 +137,7 @@ pub fn lower_all(
         security_attack,
         security_attack_fn,
         grant_keyword,
+        grant_traits,
         modifier,
         modifier_value,
         modifier_name,
@@ -261,6 +267,7 @@ pub fn lower(
     security_attack: Option<i32>,
     security_attack_fn: Option<CompiledFormula>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
+    grant_traits: Vec<String>,
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
@@ -268,6 +275,13 @@ pub fn lower(
     effect_immunity: Option<CompiledAuraEffectImmunity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
+    // G-DSL-AURA-GRANT-TRAITS: shared `Arc` so both the self-aura and the
+    // filtered-target closures can install the same trait overlay.
+    let grant_traits: Option<Arc<Vec<String>>> = if grant_traits.is_empty() {
+        None
+    } else {
+        Some(Arc::new(grant_traits))
+    };
     // Scalar `value` for the named `modifier` grant (e.g. ChangeLinkMax
     // "Link +N"); `0` for boolean/flag modifiers (G-ENGINE-AURA-GRANT-LINK-MAX).
     let modifier_value = modifier_value.unwrap_or(0);
@@ -295,6 +309,7 @@ pub fn lower(
         && modifier.is_none()
         && security_attack.is_none()
         && effect_immunity.is_none()
+        && grant_traits.is_none()
     {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
@@ -346,6 +361,7 @@ pub fn lower(
 
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
+        let self_grant_traits = grant_traits.clone();
         // task_69f10a66 Family 1: a SELF-aura keyword grant is semantically a
         // (possibly conditional) `grant_keyword` clause — advertise the
         // granted keyword on the Effect exactly like `lower_grant_keyword`
@@ -380,6 +396,20 @@ pub fn lower(
                 }
                 if let Some(kw) = gk {
                     ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
+                }
+                if let Some(traits) = &self_grant_traits {
+                    // G-DSL-AURA-GRANT-TRAITS — append the listed traits to
+                    // the carrier's rules identity for this tick.
+                    ctx.add_declarative_modifier_with_payload(
+                        handle,
+                        ModifierType::ChangeTraits,
+                        0,
+                        Expiry::Permanent,
+                        crate::modifiers::ModifierPayload::Traits {
+                            add: traits.as_ref().clone(),
+                            replace: false,
+                        },
+                    );
                 }
                 if let Some(modifier) = modifier {
                     if let Some(name) = &self_modifier_name {
@@ -485,6 +515,19 @@ pub fn lower(
                 }
                 if let Some(kw) = gk {
                     ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
+                }
+                if let Some(traits) = &grant_traits {
+                    // G-DSL-AURA-GRANT-TRAITS (filtered-target form).
+                    ctx.add_declarative_modifier_with_payload(
+                        h,
+                        ModifierType::ChangeTraits,
+                        0,
+                        Expiry::Permanent,
+                        crate::modifiers::ModifierPayload::Traits {
+                            add: traits.as_ref().clone(),
+                            replace: false,
+                        },
+                    );
                 }
                 if let Some(modifier) = modifier {
                     if let Some(synth) = &synth_payload {

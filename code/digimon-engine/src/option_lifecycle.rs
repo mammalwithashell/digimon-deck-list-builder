@@ -337,11 +337,18 @@ impl Game {
     /// Option, or when `target` is not a battle-area permanent. Any
     /// digivolution sources beneath the Option's top card (not expected for an
     /// ordinary single-card Option) route to their owners' trash.
+    ///
+    /// `cause` is the placing effect (the Option's own "place this card as the
+    /// bottom digivolution card" tail) — DCGO scripts call
+    /// `AddDigivolutionCardsBottom(new List { card }, this)`, which fires
+    /// `OnAddDigivolutionCards` for the receiving Digimon.
+    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub fn move_field_option_under_permanent(
         &mut self,
         option_handle: PermanentHandle,
         target: PermanentHandle,
         face_down: bool,
+        cause: crate::trigger_context::EffectAttribution,
     ) -> bool {
         // Validate the Option carrier.
         if self.option_field_state(option_handle).is_none() {
@@ -394,7 +401,7 @@ impl Game {
         // Seat the moved card under the target (re-resolved by stable identity;
         // the Option removal above may have shifted battle-area indices). On
         // failure the helper routes the card to its owner's trash.
-        self.seat_card_source_under_permanent(top, target, face_down)
+        self.seat_card_source_under_permanent(top, target, face_down, cause)
     }
 
     /// Seat a raw `CardSource` (`card`) as the bottom-most digivolution source
@@ -417,6 +424,7 @@ impl Game {
         mut card: CardSource,
         target: PermanentHandle,
         face_down: bool,
+        cause: crate::trigger_context::EffectAttribution,
     ) -> bool {
         // Resolve the target by its top-card identity (its index may have
         // shifted from a prior removal in the caller).
@@ -444,7 +452,11 @@ impl Game {
             return false;
         };
         card.face_down = face_down;
+        let placed = card.handle();
         self.player_mut(target_now.player).battle_area[target_now.index as usize].push_under(card);
+        // Effect-driven placement -> the receiving Digimon's
+        // OnAddDigivolutionCards batch (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS).
+        self.note_effect_added_sources(target_now, vec![placed], cause);
         true
     }
 

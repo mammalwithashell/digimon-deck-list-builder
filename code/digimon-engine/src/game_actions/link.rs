@@ -61,6 +61,320 @@ impl Game {
         Some((cost, hosts))
     }
 
+    /// DigiLink Shape-B, hand origin: if the card at `player`'s hand slot
+    /// `hand_index` is a Digimon carrying a `LinkCondition` self-effect, return
+    /// its link cost and the legal hosts it may link onto right now. `None`
+    /// when the card has no self link-condition (or is not a Digimon — the
+    /// Plug-In *Option* hand link is `OptionPlayMode::Link`, a play mode).
+    ///
+    /// Mirrors DCGO `LinkEffect`'s `CanUseCondition` for the
+    /// `IsExistOnHand(card)` branch: every standing Digimon of the owner that
+    /// passes the printed link filter and `link_host_candidates`' shared
+    /// eligibility (Digimon, Standard state, link-max). No self-exclusion is
+    /// needed — the card is not on the field. Cost is the printed cost before
+    /// `ChangeLinkCost` modifiers, applied at pay time like the field origin.
+    pub fn hand_digimon_link_condition_targets(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<(u16, Vec<PermanentHandle>)> {
+        let card = self.player(player).hand.get(hand_index)?;
+        if card.card_kind(&self.card_data) != CardKind::Digimon {
+            return None;
+        }
+        let source_card = card.handle();
+        let effects = self.effects_for_card(card.card_id(&self.card_data), source_card)?;
+        let cost = effects
+            .iter()
+            .find(|e| e.timing == EffectTiming::LinkCondition && e.link_cost.is_some())
+            .and_then(|e| e.link_cost)?;
+        let hosts = self.link_host_candidates(player, source_card, &effects);
+        Some((cost, hosts))
+    }
+
+    /// Whether the `HAND_EFFECT` bit for `hand_index` should carry a hand
+    /// link: a self link-condition with at least one legal host and an
+    /// affordable cost. Shared by the mask and the decoder so the bit is never
+    /// offered for a link the decoder would then refuse.
+    pub fn hand_digimon_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
+        match self.hand_digimon_link_condition_targets(player, hand_index) {
+            Some((cost, hosts)) => !hosts.is_empty() && self.can_afford_link_cost(cost),
+            None => false,
+        }
+    }
+
+    /// The Plug-In **Option** half of the from-hand link declaration: if the
+    /// card at `player`'s hand slot `hand_index` is an Option (or a Dual card
+    /// read as one) carrying a `LinkCondition` effect, return its link cost
+    /// and the legal hosts it may plug into right now.
+    ///
+    /// `general_rule.pdf` (Ver.3.6) §10-1-1: "A card from the hand or battle
+    /// area can be linked to a Digimon in the battle area by paying the cost
+    /// **as part of the main phase actions**" — and §6-5-1 lists "use an
+    /// Option card from the hand" (§6-5-1-3) and "link a card from the hand or
+    /// battle area" (§6-5-1-4) as two SEPARATE main-phase actions. So plugging
+    /// a Plug-In Option in from hand is its own declaration, not a mode of
+    /// using it; the `HAND_EFFECT` bit is where that declaration lives, exactly
+    /// as it does for a Link Digimon (`hand_digimon_link_available`).
+    ///
+    /// DCGO agrees and needs no special case for it: `CardEffectFactory
+    /// .LinkEffect` (`Link.cs:19-24`) accepts ANY `CardSource` with a
+    /// `linkCondition` that `IsExistOnHand`, so the Option's link declaration
+    /// sits in its `CanDeclareSkillList` beside a Digimon's and the harness's
+    /// `InputDriver.FindHandDeclarableSkillIndex` finds it the same way.
+    ///
+    /// No Option use-requirement / colour check is applied: those gate §9-1
+    /// "Using Cards", and `LinkEffect`'s own `CanUseCondition` (`Link.cs:49`)
+    /// checks only the origin zone and the host set. Cost is the printed link
+    /// cost; the `ChangeLinkCost` delta is applied by the availability check
+    /// and again at pay time inside `play_option_core`.
+    pub fn hand_option_link_condition_targets(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<(u16, Vec<PermanentHandle>)> {
+        let card = self.player(player).hand.get(hand_index)?;
+        if !matches!(
+            card.card_kind(&self.card_data),
+            CardKind::Option | CardKind::Dual
+        ) {
+            return None;
+        }
+        let source_card = card.handle();
+        let effects = self.effects_for_card(card.card_id(&self.card_data), source_card)?;
+        let cost = effects.iter().find_map(|e| e.link_cost)?;
+        let hosts = self.link_host_candidates(player, source_card, &effects);
+        Some((cost, hosts))
+    }
+
+    /// Whether the `HAND_EFFECT` bit for `hand_index` should carry a Plug-In
+    /// Option's from-hand link: a link condition with at least one legal host
+    /// and an affordable cost. The affordability mirrors
+    /// `option_legal_play_modes`' Link arm (the `ChangeLinkCost` player delta
+    /// applies), so the bit is never offered for a link the decoder's
+    /// `play_option_core` re-entry would then refuse.
+    pub fn hand_option_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
+        match self.hand_option_link_condition_targets(player, hand_index) {
+            Some((cost, hosts)) => {
+                !hosts.is_empty() && self.can_afford_link_cost(self.effective_link_cost(player, cost))
+            }
+            None => false,
+        }
+    }
+
+    /// The printed link cost after this player's `ChangeLinkCost` modifiers —
+    /// the number `play_option_core`'s Link arm actually pays.
+    pub(crate) fn effective_link_cost(&self, player: PlayerId, cost: u16) -> u16 {
+        (cost as i32 + self.modifiers.link_cost_delta_for_player(player)).max(0) as u16
+    }
+
+    /// Either half of the §6-5-1-4 from-hand link declaration: the Shape-B
+    /// Link **Digimon** or the Plug-In **Option**. One card is never both (the
+    /// two helpers gate on disjoint `CardKind`s).
+    pub fn hand_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
+        self.hand_digimon_link_available(player, hand_index)
+            || self.hand_option_link_available(player, hand_index)
+    }
+
+    /// What the `HAND_EFFECT` bit for `hand_index` MEANS right now: `true`
+    /// when it is the from-hand `<Link>` declaration, `false` when it is a
+    /// `[Hand] [Main]` activation (or nothing). The decoder's order is `[Main]`
+    /// first, link second, so a card carrying both exposes only its `[Main]`
+    /// on this bit — the one-declarable-per-hand-slot limit DCGO's recorder
+    /// shares. Published so `explain_action` and the exam's lowering agree
+    /// with the decoder on which decision the bit is.
+    pub fn hand_effect_slot_is_link(&self, player: PlayerId, hand_index: usize) -> bool {
+        crate::action::main_effect_select::hand_main_match(self, player, hand_index).is_none()
+            && self.hand_link_available(player, hand_index)
+    }
+
+    /// Decode entry for a `HAND_EFFECT` bit that carries a hand link (no
+    /// `[Hand] [Main]` effect fired for the slot): the Digimon card at
+    /// `hand_index` declares its `<Link>` from hand. Installs the same
+    /// host-selection prompt the field origin uses; the pick drives
+    /// `begin_digimon_link` with a `Hand` origin. Returns `false` when the
+    /// slot carries no legal hand link (the mask already guards this).
+    pub(crate) fn activate_hand_link(&mut self, player: PlayerId, hand_index: usize) -> bool {
+        // A Plug-In OPTION takes the Option lifecycle, not `begin_digimon_link`:
+        // the card is used out of the hand through `play_option_core` in
+        // `OptionPlayMode::Link`, which pays the link cost, fires
+        // `OnUseOption` without the `[Main]` body, and disposes by plugging the
+        // card into the chosen host. Same §6-5-1-4 declaration, different
+        // resolution machinery — see `hand_option_link_condition_targets`.
+        //
+        // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: the HOST PICK COMES FIRST.
+        // `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the link
+        // procedure 10-1-3-1 "the player chooses 1 of their Digimon that meets
+        // the requirement" -> 10-1-3-2 "The specified link cost is paid." ->
+        // 10-1-3-3 "The card to link is plugged in sideways into the chosen
+        // Digimon" -- payment is step 2 of 3. §9-1-8 adds that revealing a card
+        // as part of a use procedure "isn't considered removal from an area",
+        // so the declared card is still in hand while the host is picked.
+        // DCGO matches (`LinkEffect.ActivateCoroutine`, `Link.cs:70-88`: the
+        // `SelectPermanentEffect` host pick runs before the payment). So the
+        // declaration installs the host prompt and pays NOTHING; the resolved
+        // pick pins the host and re-enters `play_option_core`, whose `Link`
+        // arm pays (§10-1-3-2) and whose `dispose_option` plugs the card into
+        // the pinned host (§10-1-3-3) without asking again.
+        if self.hand_option_link_available(player, hand_index) {
+            let Some((cost, hosts)) = self.hand_option_link_condition_targets(player, hand_index)
+            else {
+                return false;
+            };
+            if hosts.is_empty() {
+                return false;
+            }
+            let Some(card) = self.player(player).hand.get(hand_index).map(|c| c.handle()) else {
+                return false;
+            };
+            self.install_option_hand_link_host_selection(player, hand_index, card, cost, hosts);
+            return true;
+        }
+        let Some((cost, hosts)) = self.hand_digimon_link_condition_targets(player, hand_index)
+        else {
+            return false;
+        };
+        if hosts.is_empty() || !self.can_afford_link_cost(cost) {
+            return false;
+        }
+        let Some(card) = self.player(player).hand.get(hand_index).map(|c| c.handle()) else {
+            return false;
+        };
+        self.install_digimon_link_host_selection(
+            player,
+            crate::game::DigimonLinkOrigin::Hand(player),
+            card,
+            cost,
+            hosts,
+        );
+        true
+    }
+
+    /// Install the §6-5-1-4 host prompt for a from-hand Plug-In **Option**
+    /// link, BEFORE any cost is paid and before the card leaves the hand
+    /// (`general_rule.pdf` §10-1-3-1/-2, §9-1-8 — see `activate_hand_link`).
+    /// Prompt shape is identical to `install_link_host_selection`'s (same
+    /// `OwnField` kind, same attack-id encoding, same wording) so the wire
+    /// meaning of the pick is unchanged; only its position in the procedure
+    /// moved.
+    pub(crate) fn install_option_hand_link_host_selection(
+        &mut self,
+        owner: PlayerId,
+        hand_index: usize,
+        card: crate::card_source::CardHandle,
+        cost: u16,
+        candidates: Vec<PermanentHandle>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::selection::SelectionKind;
+
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|h| encode_attack(0, h.index as u16))
+            .collect();
+        let candidate_snapshot = candidates.clone();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::OwnField,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose a Digimon to link this Option to".to_string(),
+            effect_choices: None,
+            source_card: card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let picked = candidate_snapshot
+                    .iter()
+                    .copied()
+                    .find(|h| h.index == target_index)
+                    .unwrap_or(PermanentHandle {
+                        player: owner,
+                        index: target_index,
+                    });
+                game.finish_option_hand_link(owner, hand_index, card, cost, picked);
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OptionHandLinkHostSelection(
+                OptionHandLinkHostSelectionState {
+                    owner,
+                    hand_index,
+                    card,
+                    cost,
+                    candidates,
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_option_hand_link_host_selection_step(
+        &mut self,
+        state: OptionHandLinkHostSelectionState,
+        action_id: u16,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let picked = state
+            .candidates
+            .iter()
+            .copied()
+            .find(|h| h.index == target_index)
+            .unwrap_or(PermanentHandle {
+                player: state.owner,
+                index: target_index,
+            });
+        self.finish_option_hand_link(state.owner, state.hand_index, state.card, state.cost, picked);
+    }
+
+    /// §10-1-3-2 + §10-1-3-3 for a from-hand Plug-In Option link: pin the
+    /// chosen host and run the Option lifecycle, which pays the link cost,
+    /// fires the link-mode body, and disposes by plugging the card into the
+    /// pinned host. The hand slot is re-validated first (an interposing effect
+    /// could have moved the card while the prompt was parked); a stale slot
+    /// aborts without paying, which §9-1-8 explicitly allows ("the memory
+    /// doesn't move when a card can't be used because its cost can't be
+    /// paid").
+    fn finish_option_hand_link(
+        &mut self,
+        owner: PlayerId,
+        hand_index: usize,
+        card: crate::card_source::CardHandle,
+        cost: u16,
+        host: PermanentHandle,
+    ) {
+        let still_there = self
+            .player(owner)
+            .hand
+            .get(hand_index)
+            .map(|c| c.handle() == card)
+            .unwrap_or(false);
+        if !still_there {
+            return;
+        }
+        self.pending_option_link_host = Some(host);
+        let result = self.play_option_core(
+            owner,
+            OptionSource::Hand(hand_index),
+            Some(OptionPlayMode::Link { cost }),
+            OptionCostPolicy::Pay,
+        );
+        if matches!(result, OptionPlayResult::Invalid) {
+            // Never leave a stale pin behind for the next link.
+            self.pending_option_link_host = None;
+        }
+    }
+
     // ───────────────────── DigiLink Shape-B (Digimon-link) ─────────────────
     //
     // An un-linked standing Appmon Link Digimon (e.g. BT21-009 Gatchmon)
@@ -101,21 +415,29 @@ impl Game {
         else {
             return;
         };
-        self.install_digimon_link_host_selection(player, source, source_card, cost, hosts);
+        self.install_digimon_link_host_selection(
+            player,
+            crate::game::DigimonLinkOrigin::Standing(source),
+            source_card,
+            cost,
+            hosts,
+        );
     }
 
-    /// Install the host-selection prompt for a Digimon-link. Reuses the
-    /// attack-id encoding convention shared with `install_link_host_selection`;
-    /// the resolved pick drives `begin_digimon_link`.
+    /// Install the host-selection prompt for a Digimon-link from either
+    /// origin. Reuses the attack-id encoding convention shared with
+    /// `install_link_host_selection`; the resolved pick drives
+    /// `begin_digimon_link`.
     pub(crate) fn install_digimon_link_host_selection(
         &mut self,
         owner: PlayerId,
-        source: PermanentHandle,
+        origin: crate::game::DigimonLinkOrigin,
         source_card: crate::card_source::CardHandle,
         cost: u16,
         candidates: Vec<PermanentHandle>,
     ) {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::game::DigimonLinkOrigin;
         use crate::selection::SelectionKind;
 
         let valid_action_ids: Vec<u16> = candidates
@@ -123,6 +445,10 @@ impl Game {
             .map(|h| encode_attack(0, h.index as u16))
             .collect();
         let candidate_snapshot = candidates.clone();
+        let source_permanent = match origin {
+            DigimonLinkOrigin::Standing(handle) => Some(handle),
+            DigimonLinkOrigin::Hand(_) => None,
+        };
 
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
@@ -136,7 +462,7 @@ impl Game {
             prompt: "Choose a Digimon to link this Digimon to".to_string(),
             effect_choices: None,
             source_card,
-            source_permanent: Some(source),
+            source_permanent,
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let offset = action_id.saturating_sub(ATTACK_START);
@@ -149,7 +475,7 @@ impl Game {
                         player: owner,
                         index: target_index,
                     });
-                game.begin_digimon_link(source, picked, cost);
+                game.begin_digimon_link(origin, source_card, picked, cost);
             }),
             on_decline: None,
         });
@@ -157,7 +483,8 @@ impl Game {
             frames: vec![crate::resume::ResumeFrame::DigimonLinkHostSelection(
                 DigimonLinkHostSelectionState {
                     owner,
-                    source,
+                    origin,
+                    card: source_card,
                     cost,
                     candidates,
                 },
@@ -183,35 +510,67 @@ impl Game {
                 player: state.owner,
                 index: target_index,
             });
-        self.begin_digimon_link(state.source, picked, state.cost);
+        self.begin_digimon_link(state.origin, state.card, picked, state.cost);
+    }
+
+    /// Whether the linking card is still where its origin says it is: a
+    /// standing, un-linked permanent whose top card is `card`, or a card in
+    /// the owner's hand. Checked before the `WhenWouldLink` window opens and
+    /// again before the cost is paid (an interactive replacement may have
+    /// moved things mid-window).
+    fn digimon_link_source_live(
+        &self,
+        origin: crate::game::DigimonLinkOrigin,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        use crate::game::DigimonLinkOrigin;
+        use crate::permanent::OptionState;
+        match origin {
+            DigimonLinkOrigin::Standing(source) => self
+                .player(source.player)
+                .battle_area
+                .get(source.index as usize)
+                .map(|perm| {
+                    perm.top_card().handle() == card
+                        && matches!(perm.option_state, OptionState::Standard)
+                })
+                .unwrap_or(false),
+            DigimonLinkOrigin::Hand(owner) => self
+                .player(owner)
+                .hand
+                .iter()
+                .any(|c| c.handle() == card),
+        }
     }
 
     /// Begin the link attach: fire the `WhenWouldLink` replacement window on the
     /// linking card, then commit (or park if the replacement installs an
     /// interactive selection, resumed via `commit_digimon_link`).
+    ///
+    /// `card` is the linking card — for a `Standing` origin the top card of
+    /// the source permanent, for a `Hand` origin the hand card. Mirrors DCGO
+    /// `ILinkCard.LinkCard`: `WhenWouldLink` → pay `GetChangedLinkCost` →
+    /// `IPlacePermanentToLinkCards` (root `None`) / `Permanent.AddLinkCard`
+    /// (root `Hand`).
     pub(crate) fn begin_digimon_link(
         &mut self,
-        source: PermanentHandle,
+        origin: crate::game::DigimonLinkOrigin,
+        card: crate::card_source::CardHandle,
         host: PermanentHandle,
         cost: u16,
     ) {
         use crate::enums::Zone;
+        use crate::game::DigimonLinkOrigin;
         use crate::replacement::{ReplacementCause, ReplacementSubject};
 
-        let Some(src_perm) = self
-            .player(source.player)
-            .battle_area
-            .get(source.index as usize)
-        else {
-            return;
-        };
-        if !matches!(
-            src_perm.option_state,
-            crate::permanent::OptionState::Standard
-        ) {
+        if !self.digimon_link_source_live(origin, card) {
             return;
         }
-        let source_card = src_perm.top_card().handle();
+        let source_card = card;
+        let subject_zone = match origin {
+            DigimonLinkOrigin::Standing(_) => Zone::BattleArea,
+            DigimonLinkOrigin::Hand(_) => Zone::Hand,
+        };
         let host_live = self
             .player(host.player)
             .battle_area
@@ -226,7 +585,7 @@ impl Game {
         }
 
         self.pending_digimon_link = Some(crate::game::PendingDigimonLink {
-            source,
+            origin,
             host,
             cost,
             card: source_card,
@@ -238,7 +597,7 @@ impl Game {
         self.pending_link_host = Some(host);
         let outcome = self.try_replace(
             EffectTiming::WhenWouldLink,
-            ReplacementSubject::Card(source_card, Zone::BattleArea),
+            ReplacementSubject::Card(source_card, subject_zone),
             ReplacementCause::OwnEffect,
             Some(Zone::BattleArea),
         );
@@ -253,6 +612,7 @@ impl Game {
     /// Commit (or abort) a parked Digimon-link after its `WhenWouldLink`
     /// replacement resolves. Pays the cost and absorbs the linking permanent.
     pub(crate) fn commit_digimon_link(&mut self, outcome: crate::replacement::ReplacementOutcome) {
+        use crate::game::DigimonLinkOrigin;
         use crate::permanent::OptionState;
         use crate::replacement::ReplacementOutcome;
 
@@ -268,17 +628,9 @@ impl Game {
             self.check_turn_end();
             return;
         }
-        // Re-validate both permanents are still live (an interactive
+        // Re-validate the source and the host are still live (an interactive
         // replacement may have moved things mid-window).
-        let source_live = self
-            .player(p.source.player)
-            .battle_area
-            .get(p.source.index as usize)
-            .map(|perm| {
-                perm.top_card().handle() == p.card
-                    && matches!(perm.option_state, OptionState::Standard)
-            })
-            .unwrap_or(false);
+        let source_live = self.digimon_link_source_live(p.origin, p.card);
         let host_live = self
             .player(p.host.player)
             .battle_area
@@ -292,13 +644,30 @@ impl Game {
             self.check_turn_end();
             return;
         }
-        let effective = (p.cost as i32 + self.modifiers.link_cost_delta_for_player(p.source.player))
-            .max(0) as u16;
+        let owner = match p.origin {
+            DigimonLinkOrigin::Standing(source) => source.player,
+            DigimonLinkOrigin::Hand(owner) => owner,
+        };
+        let effective =
+            (p.cost as i32 + self.modifiers.link_cost_delta_for_player(owner)).max(0) as u16;
         if !self.pay_memory(effective) {
             self.check_turn_end();
             return;
         }
-        self.absorb_standing_digimon_as_link(p.source, p.host);
+        match p.origin {
+            DigimonLinkOrigin::Standing(source) => {
+                self.absorb_standing_digimon_as_link(source, p.host);
+            }
+            // Hand origin — DCGO `Permanent.AddLinkCard`: the card is lifted
+            // out of the hand and attached; `OnLink` fires inside.
+            DigimonLinkOrigin::Hand(owner) => {
+                let _ = self.link_chosen_card_into_host(
+                    p.host,
+                    p.card,
+                    crate::enums::LinkCardSource::Hand(owner),
+                );
+            }
+        }
         self.check_turn_end();
     }
 
@@ -615,10 +984,16 @@ impl Game {
     /// cards as its bottom digivolution card, it doesn't leave"). The host
     /// itself stays — only the single chosen link card relocates.
     /// DCGO ref: `EX11_027.cs` Link-Effect region (`AddDigivolutionCardsBottom`).
+    ///
+    /// `cause` is the placing effect (the replacement-cost body): DCGO
+    /// `AddDigivolutionCardsBottom(..., cardEffect)` on a linked card unlinks
+    /// it and fires `OnAddDigivolutionCards` for the host, so the host's batch
+    /// window is noted here. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub fn place_specific_link_card_as_bottom_source(
         &mut self,
         host: PermanentHandle,
         card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EffectAttribution,
     ) -> bool {
         let Some(perm) = self
             .player_mut(host.player)
@@ -633,6 +1008,7 @@ impl Game {
         let moved = perm.linked_cards.remove(pos);
         // Place it as the carrier's bottom digivolution source (under the stack).
         perm.push_under(moved);
+        self.note_effect_added_sources(host, vec![card], cause);
         true
     }
 }

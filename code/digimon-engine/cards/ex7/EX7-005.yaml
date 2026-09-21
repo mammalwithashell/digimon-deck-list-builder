@@ -1,0 +1,69 @@
+# EX7-005 Kapurimon — DIGI-EGG, Lv.2, Black, Cost 0.
+# Traits: Lesser. Form: In-Training.
+#
+# Printed card text (data/card_bundles/EX7-005.md — official Bandai DB,
+# verbatim; cross-checked against the card image EX7-005.webp):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When effects place Option
+#   cards with the [Three Musketeers] trait in this Digimon's digivolution
+#   cards, gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_005.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAddDigivolutionCards` ActivateClass, `SetIsInheritedEffect
+# (true)`, `SetUpActivateClass(..., 1 /* OPT */, false /* mandatory */)`.
+#   CanUse  = IsExistOnBattleAreaDigimon(card) && IsOwnerTurn(card) &&
+#             CanTriggerOnAddDigivolutionCard(
+#               permanentCondition: permanent == card.PermanentOfThisCard(),
+#               cardEffectCondition: cardEffect.EffectSourceCard != null,
+#               cardCondition: IsOption && ContainsTraits("Three Musketeers"))
+#   Body    = card.Owner.AddMemory(1)
+#
+#   → `scope: inherited`, `when: on_add_digivolution_cards` (the engine's
+#     per-host batch window fires ONCE per placing effect — rule 15-5-2 — and
+#     carries the host, the added batch and the placing effect),
+#     `active_when: { your_turn: true }` (IsOwnerTurn), `once_per_turn: true`,
+#     condition `event_host_permanent_is_source` ("this Digimon's
+#     digivolution cards" = the carrier Kapurimon sits under) AND
+#     `event_added_card_any: { kind: option, trait_has: Three Musketeers }`
+#     (DCGO `cardCondition` — ANY card of the added batch qualifies).
+#   • NOT owner-gated: the printed "effects" / DCGO `EffectSourceCard != null`
+#     admit the opponent's effects too (every effect-driven placement has a
+#     source card), unlike BT7-056 Dorumon's "one of YOUR effects". So no
+#     `event_caused_by_own_effect` leaf.
+#   • Normal / DNA digivolution, DigiXros / Assembly materials and App Fusion
+#     are not "effects placing" (DCGO passes cardEffect: null) — the timing
+#     itself never fires for them.
+#   • Mandatory (no "you may") → no `optional`.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |------------------------------------------------------------------|-------------|
+# | Inherited [Your Turn][OPT] when effects place a [Three Musketeers]|             |
+# |   Option under this Digimon → gain 1 memory                      | IMPLEMENTED |
+
+card: EX7-005
+name: Kapurimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  # ─── Inherited [Your Turn][OPT] TM Option placed under this Digimon → +1 memory
+  - scope: inherited
+    when: on_add_digivolution_cards
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_added_card_any: { kind: option, trait_has: Three Musketeers }
+    summary: "[Your Turn][Once Per Turn] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory"
+    process:
+      - gain_memory: 1

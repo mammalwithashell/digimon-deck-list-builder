@@ -1,0 +1,145 @@
+# Exam scenario: Scopemon (BT21-071), clause BT21-071#inherited#0 --
+# "<Link> [Appmon] trait: Cost 2 (Plug this card from the hand or battle area
+#  sideways into the specified Digimon in the battle area.) [When Linking]"
+#
+# This file measures the DECLARATION from the HAND origin: a second Scopemon
+# is plugged from hand into the Scopemon already on the field (Scopemon's own
+# traits are Sup. / Appmon / Tool / Monitoring, so it is a legal [Appmon] host
+# and the shared book needs no extra card). Witnesses: the link is offered
+# (mask bit / DCGO LinkEffect declarable), it costs 2 (3 -> 1), the card
+# leaves the hand, and no [On Play] fires for it. The from-FIELD origin is
+# measured by BT21-071-inherited1.yaml; the link-box DP by
+# BT21-071-effect2.yaml.
+#
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): Biyomon (2) + Garudamon ST1-08 (6): 3 -> 1 -> -5. Hands P0
+#            FIVE memory (the BT21-071-effect1.yaml convention; there is no
+#            start-of-turn memory reset, see NOTES-BT21-074.md).
+#   T3 (P0, 5): play Scopemon A (5 -> 1). The hand then holds only [TS]-trait
+#            Tamers (BT24-088 x4, BT25-092) -- no [Appmon] / [Three
+#            Musketeers] TRAIT card -- so A's [On Play] is vacuous: our engine
+#            parks nothing, DCGO still asks its OptionalSkill
+#            (CanActivateConditionShared only needs a non-empty hand) ->
+#            `dcgo_only` decline, the BT21-071-effect0.yaml shape. Pass.
+#   T4 (P1, 3): pass.
+#   T5 (P0, 3): draws Scopemon B. THE CLAUSE: link B from hand (3 -> 1), host
+#            = Scopemon A. The mandatory [When Linking] then draws 2 (P-180,
+#            EX7-051) and trashes 2 (BT24-088, P-180). Memory 1: still P0's
+#            turn for the trailing pass.
+#
+# PROMPT SHAPE (Link.cs CardEffectFactory.LinkEffect + BT21_071.cs):
+#  - the declaration is ONE main_phase row (InputDriver: HAND_EFFECT bit ->
+#    ActivateCardAction over CanDeclareSkillList; Scopemon has no [Hand]
+#    [Main], so the link is the only declarable). Declared effects ask no
+#    OptionalSkill.
+#  - SelectPermanentEffect "Select 1 Digimon to link." maxCount 1,
+#    canNoSelect: false -- asked even with the single candidate (A); ours
+#    parks the OwnField host pick the same way.
+#  - ILinkCard.LinkCard(payCost: true): WhenWouldLink stack (empty here),
+#    AddMemory(-2), Permanent.AddLinkCard (root Hand).
+#  - WhenLinked ActivateClass isOptional: FALSE -> no OptionalSkill; one
+#    trigger -> no MultipleSkills. DrawClass(2), then ONE SelectHandEffect
+#    (Mode.Discard, maxCount min(2, hand) = 2, canNoSelect: false,
+#    canEndNotMax: false). Our engine parks two sequential single picks; the
+#    one two-card `cards:` answer feeds both (one prompt, two picks -- the
+#    BT19-075-effect1.yaml convention), one wire row.
+card: BT21-071
+clause: BT21-071#inherited#0
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] hand; [5..9] security (never flipped); [10] T3 draw;
+    # [11] T5 draw (the linked Scopemon); [12],[13] the <Draw 2>.
+    stack: [BT21-071, BT24-088, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-071, P-180, EX7-051]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): Scopemon A, the host.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY vacuous OptionalSkill (no eligible trait card in hand/trash).
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE -- link Scopemon B from hand (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: LinkEffect is SetUpActivateClass(..., isOptional: true)
+  # (CardEffectFactory/KeyWordEffects/Link.cs), so DCGO confirms the declared
+  # <Link> with an OptionalSkill yes/no BEFORE the host pick. Our engine treats
+  # the declaration itself as the decision and parks nothing. Measured
+  # 2026-09-18: the first oracle run aborted here ("expected prompt
+  # 'SelectPermanentEffect' but DCGO asked 'OptionalSkill'").
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # The host: Scopemon A (the only [Appmon] Digimon; still asked).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Mandatory [When Linking]: <Draw 2>, then trash 2 (one DCGO prompt).
+  - actor: 0
+    do: { select: { cards: [BT24-088, P-180] } }
+    expect: { prompt: SelectHandEffect, count: 2 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT24-088, BT25-092, BT21-071]
+      p0.field:
+        - { card_id: BT21-071, dp: 4000, suspended: false, sources: [] }
+  # Everything resolved: cost 2 paid, B gone from hand, link box on A.
+  - at: 16
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 1
+      p0.trash: [BT24-088, P-180]
+      p0.hand: [BT24-088, BT24-088, BT24-088, BT25-092, EX7-051]
+      p0.field:
+        - { card_id: BT21-071, dp: 7000, suspended: false, sources: [] }

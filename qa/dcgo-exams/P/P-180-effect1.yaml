@@ -1,0 +1,185 @@
+# Exam scenario: Bind Red Trigger (P-180), clause P-180#effect#1 --
+# "[Main] Trash your opponent's top security card. Then, place this card as
+#  the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon."
+#
+# THE LINE. P-180 is a RED Option in a PURPLE deck: its use is only legal
+# because P0 controls a [Three Musketeers] TRAIT Digimon (clause #effect#0's
+# ignore-colour half, exercised implicitly here). In this pool only the two
+# BeelStarmon (BT25-085 / EX7-073) print that trait.
+#
+# THE PREFIX (T1-T6) IS qa/dcgo-exams/BT25/BT25-082-effect2.yaml, the only way
+# this pool puts a [Three Musketeers] TRAIT Digimon on the field by T5:
+# BeelStarmon BT25-085 is a DUAL card whose Digimon face "can't play to the
+# field" (it is reached only by digivolving or Arts Digivolve), so the
+# earlier revision of this line -- `play: BT25-085 from hand` at T3 -- now
+# lowers as the OPTION face ("Fly Bullet", [Main] delete the highest-level
+# Digimon) and never fields a Digimon at all. The prefix instead hatches
+# Pagumon, breeding-digivolves Sparrowmon, and on T5 digivolves BlackGatomon
+# (alt-circle, cost 2), free-plays Asuna Shiroki BT25-092 off BlackGatomon's
+# [When Digivolving], and rides BlackGatomon's [All Turns] grant straight
+# into BeelStarmon for 4 (memory 1 -> -3, turn over). Every prompt on that
+# prefix is a documented DCGO C# fact -- see that file's header.
+#
+# stack[13..14] (the T5 BlackGatomon draw and the grant-digivolve draw) are
+# Gazimon BT25-078 and Asuna Shiroki BT24-088 here, NOT the prefix's
+# LadyDevimon / BeelStarmon #2: a second dual card in hand would put an
+# Option-faced [Three Musketeers]-trait card in P0's hand, and whether
+# DCGO's `IsOption && EqualsTraits` hand scans (BeelStarmon's [WD]
+# use-Option gate, LadyDevimon's [On Play] tuck) count a dual card in hand
+# is not a question this line should have to answer; and `play:` needs
+# exactly ONE copy of LadyDevimon in hand when she is played (a duplicate
+# lowers as ambiguous). Neither card carries the [Three Musketeers] TRAIT.
+#
+#   T7 (P0, memory 3): skip breeding; decline Asuna's [Start of Your Main
+#            Phase]; use P-180 (3 -> -3). THE CLAUSE: P1's top security card
+#            is trashed (no prompt on either engine), then P0 picks the
+#            [Three Musketeers] Digimon that receives P-180 as its bottom
+#            digivolution card -- BeelStarmon, the only candidate.
+#
+# PROMPT SHAPE (P_180.cs, region "Main"): SetUpActivateClass(..., isOptional:
+# false) -- mandatory, no OptionalSkill. IDestroySecurity(fromTop) asks
+# nothing. The tuck target is ONE SelectPermanentEffect(canNoSelect: false,
+# maxCount 1). Under the harness every SelectPermanentEffect.Activate() takes
+# the AI branch (the forced single-candidate short-circuit lives in the
+# human-UI branch only) and routes through SetTargetFrames -> TryAnswerStep,
+# so the row is consumed even with a single candidate.
+#
+# P1's security is stacked so the trashed card is known: stack[9] = ST1-02.
+card: P-180
+clause: P-180#effect#1
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order: T3 turn draw, T3
+    # Sparrowmon draw, T5 turn draw, T5 BlackGatomon draw, T5 grant draw,
+    # T7 turn draw = P-180 (so it is in hand exactly when it is used).
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, BT21-071,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-078, BT24-088,
+            P-180]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007, BT3-007, ST1-05]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (EX7_051.cs: isOptional TRUE, CanActivate = hand-or-trash non-empty and a
+  # Digimon on the battle area; no [Three Musketeers] Option to pay with).
+  # Declined; our engine gates the trigger on a payable Option and parks
+  # nothing.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick: Asuna for free.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # With Asuna on the field, BlackGatomon (Lv.4) digivolves into BeelStarmon
+  # (Lv.6) for 4, ignoring digivolution requirements. Memory 1 -> -3, turn
+  # over. BeelStarmon's two [When Digivolving] effects are gated on an Option
+  # card in hand / under a Digimon (DCGO CanActivateUseOption /
+  # CanActivateUnsuspend; our `condition:`) -- none exists, so neither engine
+  # prompts.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # T6 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): empty breeding area -> breeding prompt; pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase] -- a different card's clause, declined.
+  # TWO rows for one decision: BT25_092.cs builds it `optional: false` and
+  # asks ONE cancellable SelectHandEffect, while our engine installs an outer
+  # accept/decline gate (kind `Replacement`) before its hand pick. The first
+  # row declines OUR gate and emits nothing; the second is DCGO's cancel.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: use P-180 (red) under BeelStarmon's ignore-colour grant.
+  - actor: 0
+    do: { play: { card: P-180, from: hand } }
+    expect: { prompt: main_phase }
+  # Security trashed with no prompt; now the tuck target (BeelStarmon is
+  # P0's field.0, Asuna field.1).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: memory -3, so the seat is P1 (T8; Koromon still
+  # sits in the breeding area, so no breeding prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 21
+    that:
+      turn: 8
+      p0.memory: -3
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-085, dp: 12000, suspended: false, sources: [BT25-082, EX7-051, P-180, ST6-01] }
+        - { card_id: BT25-092, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }

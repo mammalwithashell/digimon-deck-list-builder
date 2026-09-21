@@ -1,0 +1,139 @@
+# Exam scenario: MoonMillenniummon (BT19-075), clause BT19-075#effect#0 --
+# the special digivolution condition "[Digivolve] [Millenniummon]: Cost 2".
+#
+# THE WITNESS. MoonMillenniummon digivolves onto a hard-played Millenniummon
+# (BT18-019) for 2: memory 3 -> 1, and p0 keeps the turn. The memory ledger
+# below is the whole line -- a 14-cost hard play needs p0 to open a turn on 7,
+# which only p1's overshoot can provide.
+#
+# MILLENNIUMMON'S OWN TEXT ALONG THE WAY. Its [On Play] "delete 1 of your
+# opponent's Digimon" is mandatory on both sides (BT18_019.cs shared effect
+# `optional: false`, one SelectPermanentEffect with canNoSelect: false; ours
+# `if: any_permanent` + a plain pick) and deletes the Phoenixmon p1 hard-played
+# to fund the line; the "if DNA digivolving" rider is off for a hard play. Its
+# [On Deletion] never fires (it is never deleted). It is a Lv.7 red/black
+# [Composite], so MoonMillenniummon's printed Purple Lv.6 circle cannot apply
+# and "[Digivolve] [Millenniummon]: Cost 2" is the only legal path -- one cost,
+# no cost-choice prompt.
+#
+# THE [When Digivolving] on the way (#effect#1, "your opponent trashes cards in
+# their hand until they have 5 left") finds p1 on exactly 5 -- p1 drew on T2
+# and T4 and played a card on each -- so DCGO's `HandCards.Count > 5` guard
+# and our `trash_opponent_hand_to_count` both do nothing and ask nothing. That
+# clause is measured in BT19-075-effect1.yaml.
+#
+# Memory: T1 p0 -> p1 3; T2 Phoenixmon (10): 3 -> -7 -> p0 7; T3 Millenniummon
+# (14): 7 -> -7 -> p1 7; T4 p1 plays Biyomon (2): 7 -> 5, passes -> p0 3; T5
+# MoonMillenniummon (2): 3 -> 1.
+#
+# Book: qa/dcgo-exams/BT19/tm_bt19_075_pool.json (--decks). p0's deck is
+# MoonMillenniummon x4 + Millenniummon BT18-019 x4 + Deltamon BT6-012 x4 over
+# the quiet ST-1 filler; p1 (`quiet-opponent-mm`) is the quiet ST-1 opponent
+# with 2x Bind Red Trigger (P-180) and 2x Tai Kamiya (ST1-12) in for the
+# Options.
+card: BT19-075
+clause: BT19-075#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Millenniummon, MoonMillenniummon, inert filler
+      - BT18-019
+      - BT19-075
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): p0's turn draws, in order
+      - BT4-010
+      - BT4-010
+      - BT3-007
+      - BT3-007
+      - ST1-05
+    rest: tm-moonmillenniummon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot), Biyomon, inert filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - BT3-007
+      - BT1-014
+    rest: quiet-opponent-mm
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): hard-play Phoenixmon ST1-10 for 10 (3 -> -7). p0 opens
+  # T3 on 7 -- the only way a 14-cost play fits under the -10 floor.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 7): hard-play Millenniummon BT18-019 for 14 (7 -> -7). Its
+  # [On Play] deletes Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT18-019, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1, memory 7): play Biyomon for 2 (7 -> 5) -- keeping p1's hand on 5 --
+  # then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): THE CLAUSE -- digivolve MoonMillenniummon onto
+  # Millenniummon for 2 (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT19-075 } }
+    expect: { prompt: main_phase }
+  # One step past the clause; p0 keeps the turn on 1 and passes out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 1
+      p1.trash: [ST1-10]
+      p0.field:
+        - card_id: BT19-075
+          dp: 15000
+          suspended: false
+          sources: [BT18-019]

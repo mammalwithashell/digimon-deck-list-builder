@@ -1,0 +1,193 @@
+# Exam scenario: BlackGatomon (BT25-082), clause BT25-082#effect#2 --
+# "[All Turns] While you have a Tamer with [Three Musketeers] in its text, this
+#  Digimon may digivolve into a [Three Musketeers] trait Digimon card for a
+#  digivolution cost of 4, ignoring digivolution requirements."
+#
+# THE LINE (P0 = three-musketeers, P1 = quiet-opponent). BlackGatomon is a
+# Lv.4, so the prefix is short: hatch, digivolve Sparrowmon in the breeding
+# area, move it out, digivolve BlackGatomon onto it in the BATTLE area (DCGO's
+# [All Turns] grant is gated on `IsExistOnBattleArea(card)`, so a breeding-area
+# BlackGatomon would never offer the route), let its [When Digivolving] free-play
+# Asuna Shiroki (BT25-092, the "[Three Musketeers] in its text" Tamer), and then
+# THE CLAUSE: a Lv.4 digivolving straight into the Lv.6 BeelStarmon (BT25-085)
+# for 4, a jump the printed evo box forbids.
+#
+#   T1 (P0): hatch Pagumon ST6-01.
+#   T2 (P1): hatch Koromon ST1-01; play Agumon ST1-03 (memory 3 -> 0). Agumon
+#            is a vanilla body that gives the EX7-073 lines built on this
+#            prefix an opponent's Digimon to delete; here it is inert.
+#   T3 (P0): breeding-digivolve Sparrowmon EX7-051 (Purple Lv.3 / cost 0).
+#            Sparrowmon carries "[Three Musketeers]" in its printed text, which
+#            is what opens BlackGatomon's cost-2 alt-circle at T5.
+#   T4 (P1): pass.
+#   T5 (P0, memory 3): move Sparrowmon out; digivolve BlackGatomon for 2
+#            (memory 1); [When Digivolving] plays Asuna for free; digivolve
+#            BeelStarmon via the grant for 4 (memory -3, turn hands over).
+#
+# WHY BEELSTARMON (BT25-085) AND NOT BEELSTARMON X (EX7-073) AS THE GRANT
+# TARGET. Both carry the [Three Musketeers] trait and both are reachable only
+# through this grant from a Lv.4. EX7-073's own [When Digivolving] trigger is
+# measured in the EX7-073 files instead.
+#
+# BT25-085 IS A DUAL CARD, AND THAT SHAPES TWO ROWS OF THIS LINE. The first
+# oracle run of this file ABORTED ("step 14 expected actor 1 but DCGO asked
+# actor 0"): the grant digivolve draws BeelStarmon #2 (stack[14]), a DUAL card
+# and therefore a [Three Musketeers] trait OPTION in hand (official Bandai DB
+# "DUAL Effect"; BT25_085.cs `IsTraitedOption` => `cardSource.IsOption`), so
+# BeelStarmon's [When Digivolving] use-an-Option clause is LIVE in DCGO. Our
+# engine asked nothing because data/cards.json carried BT25-085 as a plain
+# Digimon (card_kind 0, no `dual` block). Triage classed that OUR BUG (card
+# data), fixed it in data/cards.json + data/card_overrides.json (test
+# `bt25_085_data_cards_json_is_a_dual_card`), and re-authored the two rows the
+# fix makes live on our side: Sparrowmon's start-of-main cost gate (BeelStarmon
+# #1 in hand is a payable Option) and the use-an-Option pick after the grant.
+# Both are declined, so the clause still resolves to the grant's own board.
+#
+# PROMPT CONVENTIONS ON THIS PREFIX (each one is a DCGO C# fact, not a guess):
+#   * Sparrowmon's [Start of Your Main Phase] (EX7_051.cs) is
+#     `SetUpActivateClass(..., -1, true, ...)` -- an OptionalSkill gate, then
+#     the pick. With BeelStarmon (a DUAL card => an Option) in hand the cost is
+#     payable on both sides; ours surfaces ONE declinable cost pick, so the row
+#     is authored as the OptionalSkill fold (`expect: OptionalSkill` over our
+#     live pick; `decline:` emits one OptionalSkill(no)).
+#   * BlackGatomon's own [On Play]/[When Digivolving] is
+#     `ActivateClassesForSharedEffects(..., optional: false, ...)` whose body is
+#     `PlayByEffect(root: Hand)` -> ONE cancellable SelectHandEffect. Our
+#     engine installs an outer accept/decline gate (kind `Replacement`) AND
+#     the hand pick, so the gate row is SIM-ONLY (the BT24-017 / EX11-012
+#     shape).
+#   * The digivolve onto Sparrowmon opens two routes with DIFFERENT costs
+#     (printed Purple Lv.3 / 3 and the alt-circle "Lv.3 w/[Three Musketeers] in
+#     text or w/[TS] trait: Cost 2"), so both engines ask which cost to pay --
+#     answered as the VALUE, 2 (the EX12-015 idiom). That cost row is clause
+#     BT25-082#effect#0, measured in its own file.
+card: BT25-082
+clause: BT25-082#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
+    # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
+    # exactly one copy is in hand when `using: BT25-085` is lowered, and the
+    # drawn copy is what makes BeelStarmon's use-an-Option clause live.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # SHARED (fold): Sparrowmon's [Start of Your Main Phase]. BeelStarmon
+  # (BT25-085) in hand is a DUAL card -- a [Three Musketeers] trait Option -- so
+  # the cost is payable on BOTH sides (see the header). DCGO asks an
+  # OptionalSkill, ours the declinable cost pick itself; `expect: OptionalSkill`
+  # over our live pick is the fold marker, and `decline:` emits one
+  # OptionalSkill(no) row.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
+  # park -- DCGO builds this effect non-optional and carries the "may" on the
+  # pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: with Asuna on the field, BlackGatomon (Lv.4) digivolves into
+  # BeelStarmon (Lv.6) for 4, ignoring digivolution requirements. Memory
+  # 1 -> -3, which hands the turn over.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # BeelStarmon's own [When Digivolving] use-an-Option clause IS live: the
+  # grant digivolve drew BeelStarmon #2 (stack[14]), a DUAL card and therefore a
+  # [Three Musketeers] trait Option in hand (BT25_085.cs `IsTraitedOption` =>
+  # `cardSource.IsOption`). DCGO-ONLY: the zone menu (SetIntSelection), 1 =
+  # "Use from Hand"; our engine has no menu -- its one union pick IS the zone
+  # choice. SHARED: the hand pick, declined on both sides (canNoSelect: true /
+  # our `optional: true`), so the clause's board stays exactly the grant's.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # One step past the clause: P1's turn 6 (a single main-phase pass, as at T4).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pre-step state of the trailing pass. BeelStarmon caps the stack
+  # Pagumon -> Sparrowmon -> BlackGatomon; Asuna stands beside it; P0 paid
+  # 2 + 4 from 3 memory.
+  - at: 17
+    that:
+      turn: 6
+      p0.memory: -3
+      p0.field:
+        - card_id: BT25-085
+          dp: 12000
+          suspended: false
+          sources: [BT25-082, EX7-051, ST6-01]
+        - card_id: BT25-092
+          dp: -1
+          suspended: false
+          sources: []
+      p1.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: false
+          sources: []
+      p1.security: 5

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T04:44:49.123002200+00:00",
+  "clauses": {
+    "BT25-085#effect#0": {
+      "clause_id": "BT25-085#effect#0",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "b80800dde68e83090387a0c21d805a19eef3ab63c1862c186a3a4f7266c179e6",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:26.301482100+00:00"
+    },
+    "BT25-085#effect#1": {
+      "clause_id": "BT25-085#effect#1",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect1.yaml",
+      "recorded_at": "2026-09-18T07:55:26.755080900+00:00"
+    },
+    "BT25-085#effect#2": {
+      "clause_id": "BT25-085#effect#2",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "3ef0bab26915a520aa245f40c27bffeb7bb9fb2bfc396fac5197ad8784953c95",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect2.yaml",
+      "recorded_at": "2026-09-18T07:55:27.178069100+00:00"
+    },
+    "BT25-085#effect#3": {
+      "clause_id": "BT25-085#effect#3",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "daf58d3c7c90190f0c48e1dd258ac9ae98e27ea25d43100a6ca5e85fa2d5a306",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect3.yaml",
+      "recorded_at": "2026-09-18T07:55:27.653771800+00:00"
+    },
+    "BT25-085#effect#4": {
+      "clause_id": "BT25-085#effect#4",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "DUAL Effect",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect4.yaml",
+      "recorded_at": "2026-09-21T04:44:36.362072400+00:00"
+    },
+    "BT25-085#effect#5": {
+      "clause_id": "BT25-085#effect#5",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "DUAL Effect",
+      "text_sha256": "43b95e137a1a96b5fe79ced2e11ee7b720800d3b4f3b11425d8256005c5c70c4",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect5.yaml",
+      "recorded_at": "2026-09-21T04:44:43.112514500+00:00"
+    },
+    "BT25-085#effect#6": {
+      "clause_id": "BT25-085#effect#6",
+      "card_id": "BT25-085",
+      "verdict": "confirmed",
+      "label": "DUAL Rule",
+      "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect6.yaml",
+      "recorded_at": "2026-09-21T04:44:49.123002200+00:00"
+    }
+  }
+}

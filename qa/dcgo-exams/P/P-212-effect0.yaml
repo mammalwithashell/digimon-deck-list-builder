@@ -1,0 +1,128 @@
+# Exam scenario: Asuna Shiroki (P-212), clause P-212#effect#0 --
+# "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+#
+# THE LINE. Asuna is hard-played on T3 and p1 fields Biyomon (ST1-02) from T2,
+# so p0's T5 main phase opens with an opponent Digimon in play and the Tamer
+# adds 1: p0 opens T5 on 3 and reads 4 at its first main-phase prompt.
+# Mandatory on both sides (DCGO `Gain1MemoryTamerOpponentDigimonEffect`,
+# `SetUpActivateClass(..., -1, false, ...)`, gated on
+# `Owner.Enemy.GetBattleAreaDigimons().Count >= 1`; ours `gain_memory: 1`
+# behind `any_permanent { of: opponent, zone: [battle_area], kind: digimon }`)
+# -- no prompt. The witness is p0.memory at the T5 main-phase pass.
+#
+# ASUNA'S OWN [On Play] ALONG THE WAY (#effect#1/#effect#2, measured in their
+# own files): playing her on T3 draws 1 and asks ONE mandatory SelectHandEffect
+# (DCGO `DrawAndDiscardCards`, canNoSelect: false; ours `draw` + a plain
+# `select_hand`). Dracomon ST1-04 is trashed -- it has neither the [Three
+# Musketeers] nor the [TS] trait, so the delete rider stays silent on both
+# sides (p0's hand holds no other [TS] card: the second Asuna is NOT in this
+# hand).
+#
+# Memory: T1 p0 -> p1 3; T2 Biyomon (2): 3 -> 1, pass -> p0 3; T3 Asuna (3):
+# 3 -> 0 -- the turn does NOT end at 0 (6-1-4-1 needs >= 1 on the opponent's
+# side), so p0 passes it out -> p1 3; T4 pass -> p0 3; T5 the clause: 4.
+#
+# Book: qa/dcgo-exams/P/tm_p_212_pool.json (--decks). p0's deck is Asuna P-212
+# x4 over the quiet ST-1 filler; p1 is the quiet ST-1 opponent.
+card: P-212
+clause: P-212#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Asuna, inert filler (no [TS] / [Three Musketeers] cards)
+      - P-212
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - ST1-05
+      # security (5-9): stack[9] is the TOP
+      - BT1-014
+      - BT1-014
+      - BT4-014
+      - BT4-014
+      - ST1-10
+      # (10+): T3 turn draw, Asuna's [On Play] draw, T5 turn draw
+      - BT4-010
+      - BT4-010
+      - BT3-007
+    rest: tm-asuna-p212
+  p1:
+    stack:
+      # hand (0-4): the Biyomon, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): play Asuna for 3 (3 -> 0). [On Play]: draw 1, trash 1
+  # (Dracomon -- no [TS]/[Three Musketeers] trait, so no delete follows).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-212, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory 0 keeps the turn; pass it out.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): breeding step (empty area, hatch declined), then THE
+  # CLAUSE fires as the main phase opens: 3 -> 4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE WITNESS: the pre-step state of this main-phase pass reads memory 4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 4
+      p0.trash: [ST1-04]
+      p0.field:
+        - { card_id: P-212, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

@@ -1,0 +1,124 @@
+# Exam scenario: Deputymon (BT6-060), clause BT6-060#effect#1 --
+# "[Your Turn] This Digimon can digivolve into a Digimon card with [Three
+#  Musketeers] in its type from your hand for a memory cost of 6, ignoring its
+#  digivolution requirements."
+#
+# DECK NOTE. `tm-deputy-black` (qa/dcgo-exams/BT6/tm_bt6_060_pool.json): see
+# BT6-060-effect0.yaml. P1 is the shared quiet ST-1 opponent and does nothing.
+#
+# THE LINE puts Deputymon on the field WITHOUT hard-playing it (its [On Play]
+# would open two reveal picks that are BT6-060-effect0.yaml's business):
+#   T1 (P0): hatch Tsunomon BT24-007 (purple Lv.2, [TS] trait).
+#   T3 (P0): breeding-digivolve ToyAgumon BT25-064 through its "Lv.2 w/[TS]
+#            trait: Cost 0" route (the same route BT25-064-effect0.yaml
+#            measures; breeding-area effects are inert, so no [On Play]).
+#   T5 (P0, 3): promote; digivolve Deputymon over ToyAgumon through its
+#            printed Black Lv.3 / cost 2 circle (3 -> 1). No [On Play] on a
+#            digivolve. Pass.
+#   T7 (P0, 3): THE CLAUSE -- digivolve Deputymon into AvengeKidmon P-170
+#            (red/purple Lv.6, [Three Musketeers] trait) for 6 (3 -> -3).
+#
+# WHY THE DIGIVOLVE IS SINGLE-ROUTE. P-170's printed circles are Red Lv.5 /
+# cost 5 and Purple Lv.5 / cost 5, and its own alt route (P_170.cs) wants a
+# Lv.5 with [Three Musketeers] in its text; Deputymon is a black Lv.4 and
+# matches none of them, so the digivolve is legal ONLY through Deputymon's
+# own grant (BT6_060.cs: AddSelfDigivolutionRequirementStaticEffect(this
+# permanent, digivolutionCost: 6, ignoreDigivolutionRequirement: true,
+# condition: IsOwnerTurn && on battle area, cardCondition: own HAND Digimon
+# with the trait); ours: the `direction: into` alt-path with
+# `ignore_requirements: true` and `condition: { your_turn: true }`). One
+# route => no SelectCountEffect / EffectChoice cost prompt on either side.
+#
+# WHY P-170. It is the only [Three Musketeers]-trait Digimon in both engines
+# with NO [When Digivolving] text (its cost reduction is a play-time effect;
+# <Raid> / <Blocker> / <Retaliation> are passive; its [On Deletion] never
+# fires here), so the digivolve opens no prompt and the measurement is the
+# cost paid and the resulting stack. Every card under it is silent on a
+# digivolve (ToyAgumon's inherited <Reboot> is passive; Tsunomon's inherited
+# trigger needs a Lv.4+ [Demon]/[Titan] hand trash, which never happens).
+#
+# WITNESS: at P1's T8 breeding decision, P-170 stands over the three-card
+# stack and P0 is on -3 -- exactly 6 paid from 3.
+card: BT6-060
+clause: BT6-060#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-064, BT6-060, P-170, BT2-052, BT3-059,
+            BT2-056, BT3-067, BT5-066, BT2-064, BT4-065,
+            ST5-02, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066]
+    rest: tm-deputy-black
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch Tsunomon; pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve ToyAgumon (special [TS] route, free). A Lv.2
+  # in an occupied breeding area offers no breeding action, so the turn opens
+  # on the main phase.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-064 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote; Deputymon over ToyAgumon (Black Lv.3 / 2); pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT6-060 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): THE CLAUSE -- Deputymon into AvengeKidmon for 6 (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-170 } }
+    expect: { prompt: main_phase }
+  # Memory -3 handed the turn over: P1's T8 breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 15
+    that:
+      turn: 8
+      p0.memory: -3
+      p0.field:
+        - card_id: P-170
+          dp: 13000
+          suspended: false
+          sources: [BT24-007, BT25-064, BT6-060]

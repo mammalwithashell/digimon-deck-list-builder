@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T11:14:10.281301500+00:00",
+  "clauses": {
+    "P-180#effect#0": {
+      "clause_id": "P-180#effect#0",
+      "card_id": "P-180",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "57fb53f11553c546416437151642d8f90d3c5fa09b7404880742254ac1012d2a",
+      "scenario_path": "qa/dcgo-exams/P/P-180-effect0.yaml",
+      "recorded_at": "2026-09-18T11:14:03.190643400+00:00"
+    },
+    "P-180#effect#1": {
+      "clause_id": "P-180#effect#1",
+      "card_id": "P-180",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "1e4e84dae332c0ad7ee35e6baa68c5b8e9ddc3c37fbe81d7178b8feb2b303179",
+      "scenario_path": "qa/dcgo-exams/P/P-180-effect1.yaml",
+      "recorded_at": "2026-09-18T07:55:21.211863300+00:00"
+    },
+    "P-180#effect#2": {
+      "clause_id": "P-180#effect#2",
+      "card_id": "P-180",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "75743ad016f816a6844d265e863d7016494ed0b54110e5a107baafeda38dba12",
+      "scenario_path": "qa/dcgo-exams/P/P-180-effect2.yaml",
+      "recorded_at": "2026-09-18T11:14:10.281301500+00:00"
+    }
+  }
+}

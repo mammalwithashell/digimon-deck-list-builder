@@ -93,6 +93,29 @@ pub struct BreedingPermanentSelectionRef {
     pub card: CardHandle,
 }
 
+/// Prompt text of the FIRST DNA-digivolution material pick.
+///
+/// The two DNA material prompts are the one `SelectionKind::Material` family
+/// whose `valid_action_ids` are RAW battle-area indices of the selecting
+/// player's own field (`Game::initiate_dna_digivolve` and its stage-1
+/// continuation in `game_actions/digivolve.rs`), rather than the
+/// `SOURCE_SELECT` band `EffectContext::select_material` uses. Nothing else on
+/// the prompt distinguishes them — same kind, `zone_owner: None`, no resume
+/// frame — so the text IS the discriminator, and it is a constant here so the
+/// install sites and every reader (notably
+/// `runners::selection_resolve::resolve_next`) cannot drift apart.
+pub const DNA_FIRST_MATERIAL_PROMPT: &str = "Select first DNA material";
+
+/// Prompt text of the SECOND DNA-digivolution material pick. See
+/// [`DNA_FIRST_MATERIAL_PROMPT`].
+pub const DNA_SECOND_MATERIAL_PROMPT: &str = "Select second DNA material";
+
+/// Whether `prompt` is one of the two DNA material picks, whose action ids are
+/// raw own-battle-area indices.
+pub fn is_dna_material_prompt(prompt: &str) -> bool {
+    prompt == DNA_FIRST_MATERIAL_PROMPT || prompt == DNA_SECOND_MATERIAL_PROMPT
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 
@@ -475,7 +498,11 @@ pub struct PendingPayCostEffect {
 
 /// Describes where a trigger is firing from. Consumed by
 /// `Game::enqueue_triggered` to decide which zones/permanents to scan.
-#[derive(Debug, Clone, Copy)]
+///
+/// `Clone` but deliberately NOT `Copy`: `SourcesAddedToStack` carries the
+/// added-card batch as a `Vec` (an effect can place several cards under one
+/// host in one go, and the trigger fires once for the whole list).
+#[derive(Debug, Clone)]
 pub enum TriggerSource {
     /// A single permanent fires the trigger (OnPlay, OnAttack, OnDeletion).
     /// Only that permanent's own effects at the given timing are collected.
@@ -593,6 +620,16 @@ pub enum TriggerSource {
         cause: crate::option_lifecycle::OptionTrashCause,
         last_state: crate::option_lifecycle::OptionFieldState,
     },
+    /// Observer timing fired AFTER an Option's own body has resolved (the
+    /// board-wide "when a player uses an Option card" window,
+    /// `EffectTiming::OnUseOption`). Scans every player's battle area while
+    /// carrying the using player (`source_player`) and the used card
+    /// (`event_card`) so an observer can gate on WHO used WHAT — "[Your Turn]
+    /// When you use [TS] trait Option cards" (BT25-091 Monica Simmons; DCGO
+    /// `CanTriggerWhenOwnerUseOption(hashtable, OptionTrigger, ..)`). The
+    /// card is the in-flight `pending_option` (or already linked / placed);
+    /// `card_data_for_handle` resolves it. G-ENGINE-ON-USE-OPTION-EVENT-CARD.
+    OptionUsed { player: PlayerId, card: CardHandle },
     /// Generic observer timing carrying the permanent/card that caused the
     /// event. Used by event-gated delayed Options such as suspend watchers.
     ///
@@ -706,6 +743,22 @@ pub enum TriggerSource {
     HandDiscarded {
         player: PlayerId,
         cause_controller: PlayerId,
+    },
+    /// `OnAddDigivolutionCards` observer fan-out fired after an EFFECT placed
+    /// one or more cards into `host`'s digivolution cards
+    /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Scans EVERY battle-area and
+    /// breeding permanent of both players — the host itself (whose stack now
+    /// includes the added cards, so a placed card's own inherited observer
+    /// fires per rule 15-5-3), its siblings, and the opponent's board — with
+    /// the scope gate living in each observer's `active_when:`. `cards` is the
+    /// whole added batch (fires ONCE per host per batch — rule 15-5-2 / DCGO
+    /// `AddDigivolutionCards*` once per list); `cause` is the placing effect
+    /// (DCGO's non-null hashtable `CardEffect`). Mirrors `HandDiscarded`.
+    SourcesAddedToStack {
+        host: PermanentHandle,
+        host_card: CardHandle,
+        cards: Vec<CardHandle>,
+        cause: crate::trigger_context::EffectAttribution,
     },
 }
 
@@ -837,11 +890,18 @@ pub enum OptionPlayResult {
 /// Variants appear in typical execution order: Link Options begin with
 /// `LinkSelectHost` (pay cost → select host → fire `OptionMain` → attach →
 /// fire `OnLink` → `Done`); Standard / Delay / Training Options begin with
-/// `MainEffectDrain`; all Options terminate at `Done`.
+/// `MainEffectDrain`, then `OnUseOptionDrain` (the board-wide "when a player
+/// uses an Option card" observers fire AFTER the body — DCGO stacks
+/// `OnUseOption` and runs `OptionSkill` inline; official BT3-096 Q&A); all
+/// Options terminate at `Done`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionResolutionPhase {
     LinkSelectHost,
     MainEffectDrain,
+    /// The Option's own body has fully resolved; the `OnUseOption` observers
+    /// (BT3-096 Mimi Tachikawa, BT25-091 Monica Simmons) are draining. A
+    /// selection parked here resumes straight into arts / disposal.
+    OnUseOptionDrain,
     ArtsSelectTarget,
     Disposing,
     Done,

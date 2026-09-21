@@ -1,0 +1,85 @@
+# Exam scenario: KaiserLeomon (BT7-073), clause BT7-073#effect#0 --
+# "You may digivolve this card from your hand onto one of your purple Tamers
+#  as if the Tamer is a level 3 purple Digimon for a memory cost of 2."
+#
+# DECK NOTE. `tm-mimi-purple` (qa/dcgo-exams/BT7/tm_bt7_073_pool.json): see
+# BT7-071-effect0.yaml. P1 is the shared quiet ST-1 opponent and does nothing.
+#
+# THE LINE is BT7-071-effect0.yaml with KaiserLeomon in Loweemon's place. T1:
+# P0 hard-plays Mimi (0 -> -2). T3 (memory 3): THE CLAUSE -- KaiserLeomon
+# digivolves from hand ONTO MIMI for the clause's own cost of 2 (3 -> 1), and
+# P0 passes.
+#
+# WHY THE DIGIVOLVE IS SINGLE-ROUTE AND WHY THE COST IS THE MEASUREMENT.
+# KaiserLeomon's printed circles are Purple Lv.3 / cost 3 and Purple Lv.4 /
+# cost 1; Mimi is a Tamer with no level, so neither applies and the digivolve
+# is legal ONLY through the clause (BT7_073.cs: AddSelfDigivolutionRequirement
+# StaticEffect(TopCard purple && IsTamer, digivolutionCost: 2, ...); ours: the
+# `from: { kind: tamer, color_is: purple }` + `source_treated_as:
+# level_3_purple_digimon` alt-path at cost 2). One route => no cost prompt.
+# The clause prints its own cost (2), which differs from the Lv.3 circle's 3
+# -- so memory 3 -> 1 is the clause, not the circle.
+#
+# KaiserLeomon's [When Digivolving] (BT7-073#effect#1) needs a [Hybrid]-trait
+# card or [Koichi Kimura] among its digivolution cards; the only card under
+# it is Mimi, so it does not activate (DCGO CanActivateCondition false; ours
+# `condition:` false) and opens no prompt either way. That clause is measured
+# on its own in BT7-073-effect1.yaml.
+#
+# WITNESS at P1's T4 breeding decision: KaiserLeomon (6000) over Mimi, P0 on
+# -3.
+card: BT7-073
+clause: BT7-073#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT3-096, BT7-073, ST6-02, ST1-02, ST1-04,
+            ST6-03, ST6-05, ST6-07, ST6-09, ST6-02,
+            ST1-02, ST1-04, ST6-03]
+    rest: tm-mimi-purple
+  p1:
+    stack: [ST1-03, ST1-02, ST1-04, BT1-009, BT3-007,
+            ST1-05, BT1-014, BT4-010, ST1-04, ST1-02,
+            BT4-014, ST1-08, ST1-10, BT1-014]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0): decline breeding; Mimi (0 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-096, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 2): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE -- KaiserLeomon onto Mimi for 2 (3 -> 1); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT7-073 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.hand: [ST6-02, ST1-02, ST1-04, ST1-02, ST1-04]
+      p0.trash: []
+      p0.field:
+        - card_id: BT7-073
+          dp: 6000
+          suspended: false
+          sources: [BT3-096]

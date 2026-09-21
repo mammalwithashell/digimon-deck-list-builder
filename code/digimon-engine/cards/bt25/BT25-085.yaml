@@ -1,0 +1,286 @@
+# BT25-085 BeelStarmon / Fly Bullet — DUAL card.
+#   Digimon face: Lv.6, Purple/Black, DP 12000. Traits: Wizard / Three
+#   Musketeers / Iliad / TS. Attribute: Virus. "Can't play to the field"
+#   (the Digimon face is only reached by digivolving or Arts Digivolve).
+#   Option face: "Fly Bullet", Use cost 6.
+#
+# Printed card text (data/card_bundles/BT25-085.md — official Bandai DB,
+# confirmed against the card image BT25-085.webp):
+#
+#   ＜Blocker＞ [When Digivolving] [When Attacking] [Once Per Turn] You may
+#   use 1 [Three Musketeers] or [TS] trait Option card from your hand or this
+#   Digimon's digivolution cards without paying the cost. [When Digivolving]
+#   [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from
+#   any of your Digimon's digivolution cards or link cards, this Digimon
+#   unsuspends.
+#
+#   DUAL Effect: ＜Use Req. ([Three Musketeers] in text)＞ (Specified cards
+#   let you ignore color requirements.) [Main] Delete 1 of your opponent's
+#   highest level Digimon. Then, you may place 1 [Three Musketeers] trait
+#   card from your hand or trash as any of your Digimon's bottom digivolution
+#   card.
+#   DUAL Rule: ＜Arts Digivolve＞ (Instead of trashing after use, your cards
+#   may digivolve into this card without paying the cost.)
+#
+# Digivolution requirements (official Bandai DB):
+#   Standard circles: Purple Lv.5 / cost 4; Black Lv.5 / cost 4.
+#   [Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_085.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt Digivolution: AddSelfDigivolutionRequirementStaticEffect(
+#   TopCard.HasText("Three Musketeers") || EqualsTraits("TS"), cost 3,
+#   ignoreDigivolutionRequirement: TRUE, level: 5) → `level_eq: 5` +
+#   `any_of: [in_text_contains, trait_has TS]`, cost 3, `ignore_requirements:
+#   true` (DCGO passes true here — unlike EX7-013 / BT25-083's false).
+#
+# Blocker: BlockerSelfStaticEffect → `grant_keyword: Blocker`.
+#
+# Shared WD/WA use-Option (ActivateClassesForSharedEffects, maxCountPerTurn
+#   1, optional: false + isSkippable: true, hash "BT25_085_WD_WA";
+#   additionalActivateCondition: a TM/TS Option in hand OR in THIS permanent's
+#   DigivolutionCards): SetIntSelection {Use from Hand / Use from Digivolution
+#   Cards / Don't use}, then SelectHandEffect or SelectCardEffect
+#   (Root.DigivolutionCards, customRootCardList: this permanent's
+#   DigivolutionCards), both canNoSelect: true, over IsOption && (TM || TS
+#   trait) && !CanNotPlayThisOption → PlayOptionCards(payCost: false);
+#   `activateClass.RemoveUse()` when nothing was used.
+#   → ONE `select_union_zone { zones: [hand, material], material_of: source }`
+#     pick (the union encodes DCGO's zone-branch + card pick; hand cards and
+#     this Digimon's digivolution cards are disjoint action ranges) +
+#     `use_option_bound` — its Material origin was widened for this card
+#     (`OptionSource::Source { host, card }`, G-DSL-USE-OPTION-FROM-SOURCES).
+#     The clause is NOT clause-optional (DCGO optional: false) — the union
+#     pick's own `optional: true` models the "Don't use an Option" branch and
+#     `refund_opt` on `binding_absent` mirrors DCGO's `RemoveUse` (the OPT is
+#     not spent by declining); the `condition` mirrors
+#     additionalActivateCondition so nothing is offered without a candidate.
+#     NOTE: printed text says "this Digimon's digivolution cards" (not link
+#     cards) → `zones: [material]` only.
+#
+# Shared WD/WA/Counter unsuspend (maxCountPerTurn 1, isSkippable, hash
+#   "BT25_085_WD_WA_Counter"; additionalActivateCondition: some own Digimon's
+#   DigivolutionOrLinkCards contain an Option): SelectPermanentEffect
+#   (canNoSelect: true) over own Digimon with such a card → SelectCardEffect
+#   (Mode.Discard, canNoSelect: true) over that Digimon's
+#   DigivolutionOrLinkCards filtered IsOption → IUnsuspendPermanents(this);
+#   RemoveUse when nothing trashed.
+#   → `when: [when_digivolving, when_attacking, counter]`, `once_per_turn:
+#     true`, `optional: true` (the outer accept/decline gate is DCGO's
+#     skippable + RemoveUse surface: declining refunds the OPT); cost =
+#     `trash_option_from_own_stacks { of: you }` (mandatory once accepted);
+#     `condition` = DCGO additionalActivateCondition via `source_count` /
+#     `link_card_count`;
+#     (G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST — two RL-visible picks: which
+#     Digimon, then which Option across its digivolution AND link cards; the
+#     tail runs only if a card was trashed) → `unsuspend { target: source }`.
+#
+# Option face — UseRequirements(HasText("Three Musketeers")): CanUse = an own
+#   battle-area Digimon/Tamer OR breeding permanent whose top card
+#   HasText("Three Musketeers") → `use_requirement: any_permanent { of: you,
+#   zone: [battle_area, breeding], in_text_contains }` (in_text_contains scans
+#   name + traits + text, so a [Three Musketeers]-trait permanent qualifies —
+#   the official "[X] in its text" Q&A).
+#   OptionSkill [Main]: mandatory Destroy select over opponent Digimon at
+#   IsMaxLevel; then `if (own Digimon exists)`: SetIntSelection {From hand /
+#   From trash / Do not place} → SelectHandEffect / SelectCardEffect(Root.Trash)
+#   (canNoSelect: true) over EqualsTraits("Three Musketeers") →
+#   SelectPermanentEffect (canNoSelect: true) over own Digimon →
+#   AddDigivolutionCardsBottom.
+#   → `select_opponent_permanent { kind: digimon, level_matches_aggregate:
+#     highest_level }` → `delete_permanent`; then `select_union_zone { zones:
+#     [hand, trash], trait_has TM, optional: true, then: [select_own_permanent
+#     { kind: digimon, optional: true }, place_as_bottom_source] }`
+#     (BT25-083 clause-1 idiom).
+#   ArtsDigivolveEffect → `arts_digivolve: true` (BT25-043 idiom).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                        | Status      |
+# |----------------------------------------------------------------------------|-----------|
+# | Alt-sources: Purple/Black Lv.5 / 4; Lv.5 w/TM in text or [TS] / 3 (ignore req.) | IMPLEMENTED |
+# | <Blocker>                                                                  | IMPLEMENTED |
+# | [WD][WA][OPT] may use 1 TM/TS Option from hand OR this Digimon's sources free | IMPLEMENTED |
+# | [WD][WA][Counter][OPT] trash 1 Option from any own Digimon's sources/link cards → unsuspend | IMPLEMENTED |
+# | Option: <Use Req. ([Three Musketeers] in text)>                            | IMPLEMENTED |
+# | Option [Main] delete 1 opp highest-level Digimon                           | IMPLEMENTED |
+# | Option [Main] then may place 1 TM card from hand/trash as any own Digimon's bottom source | IMPLEMENTED |
+# | <Arts Digivolve>                                                           | IMPLEMENTED |
+
+card: BT25-085
+name: BeelStarmon
+kind: dual
+level: 6
+color: [purple, black]
+cost: 6
+dp: 12000
+traits: [Wizard, Three Musketeers, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  # [Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3
+  # (DCGO ignoreDigivolutionRequirement: true).
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_of:
+        - in_text_contains: "Three Musketeers"
+        - trait_has: TS
+    cost: 3
+    ignore_requirements: true
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [purple, black]
+    traits: [Wizard, Three Musketeers, Iliad, TS]
+    effect_text: |
+      <Blocker> [When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost. [When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.
+    effects:
+      - kind: grant_keyword
+        keyword: Blocker
+        summary: "<Blocker>"
+
+      # ─── [WD][WA][OPT] use 1 TM/TS Option from hand or this Digimon's sources ─
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        # DCGO additionalActivateCondition: a [Three Musketeers]/[TS] Option in
+        # hand OR in THIS Digimon's digivolution cards — otherwise the trigger
+        # is not queued at all (no spurious TriggerOrder / prompt).
+        condition:
+          any_of:
+            - count_gte:
+                filter:
+                  zone: [hand]
+                  owner: you
+                  kind: option
+                  any_of:
+                    - trait_has: "Three Musketeers"
+                    - trait_has: TS
+                n: 1
+            - self_source_count:
+                filter:
+                  kind: option
+                  any_of:
+                    - trait_has: "Three Musketeers"
+                    - trait_has: TS
+                op: gte
+                value: 1
+        summary: "[WD][WA][OPT] You may use 1 [Three Musketeers] or [TS] Option from your hand or this Digimon's digivolution cards without paying the cost"
+        process:
+          # DCGO `optional: false` + isSkippable + "Don't use an Option" branch:
+          # no outer yes/no gate; the union pick's PASS is the decline, and
+          # with no eligible card the pick self-skips (nothing is offered).
+          - select_union_zone:
+              of: you
+              zones: [hand, material]
+              material_of: source
+              optional: true
+              filter:
+                all_of:
+                  - kind: option
+                  - any_of:
+                      - trait_has: "Three Musketeers"
+                      - trait_has: TS
+              bind_as: picked_option
+              prompt: "Use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost"
+          - use_option_bound:
+              binding: picked_option
+          # DCGO `if (!executed) activateClass.RemoveUse()`: declining ("Don't
+          # use an Option") does not spend the [Once Per Turn] (BT25-060 idiom).
+          - if:
+              condition: { binding_absent: picked_option }
+              then:
+                - refund_opt: {}
+
+      # ─── [WD][WA][Counter][OPT] trash 1 Option from any own stack/link → unsuspend ─
+      - when: [when_digivolving, when_attacking, counter]
+        once_per_turn: true
+        optional: true
+        # DCGO additionalActivateCondition: some own Digimon's digivolution
+        # cards OR link cards hold an Option (`DigivolutionOrLinkCards.Any(
+        # IsOption)`) — `source_count` + the `link_card_count` sibling leaf
+        # (G-DSL-LINK-CARD-COUNT-FILTERED, widened for this card).
+        condition:
+          any_of:
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+                source_count:
+                  filter: { kind: option }
+                  at_least: 1
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+                link_card_count:
+                  filter: { kind: option }
+                  at_least: 1
+        summary: "[WD][WA][Counter][OPT] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends"
+        process:
+          # DCGO isSkippable + canNoSelect on both picks with `RemoveUse` when
+          # nothing was trashed: modelled as the clause-level optional gate
+          # (declining it refunds the OPT — G-OPT-REFUND-ON-DECLINE) followed
+          # by the mandatory two-pick cost; with no Option anywhere the
+          # `condition` above keeps the trigger from queuing at all.
+          - trash_option_from_own_stacks:
+              of: you
+          - unsuspend: { target: source }
+
+  option:
+    use_cost: 6
+    colors: [purple]
+    effect_text: |
+      <Use Req. ([Three Musketeers] in text)> [Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.
+    use_requirement:
+      any_permanent:
+        of: you
+        zone: [battle_area, breeding]
+        in_text_contains: "Three Musketeers"
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] card from your hand or trash as any of your Digimon's bottom digivolution card"
+        process:
+          - select_opponent_permanent:
+              bind_as: delete_target
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_matches_aggregate: { selector: highest_level, of: opponent }
+              prompt: "Delete 1 of your opponent's highest level Digimon"
+          - delete_permanent: { target: delete_target }
+          - if:
+              condition:
+                any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+              then:
+                - select_union_zone:
+                    of: you
+                    zones: [hand, trash]
+                    optional: true
+                    bind_as: tm_card
+                    filter:
+                      trait_has: "Three Musketeers"
+                    prompt: "You may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card"
+                    then:
+                      - select_own_permanent:
+                          bind_as: bottom_target
+                          optional: true
+                          filter: { kind: digimon }
+                          prompt: "Choose 1 of your Digimon to receive the [Three Musketeers] card as its bottom digivolution card"
+                      - place_as_bottom_source:
+                          source: tm_card
+                          target: bottom_target

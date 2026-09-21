@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-19T15:13:56.976375500+00:00",
+  "clauses": {
+    "BT6-105#effect#0": {
+      "clause_id": "BT6-105#effect#0",
+      "card_id": "BT6-105",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e6988d685f93d2fcadf77967518c8b26363a684296605fefc9860453c05b9ae8",
+      "scenario_path": "qa/dcgo-exams/BT6/BT6-105-effect0.yaml",
+      "recorded_at": "2026-09-19T15:13:56.414742700+00:00"
+    },
+    "BT6-105#effect#1": {
+      "clause_id": "BT6-105#effect#1",
+      "card_id": "BT6-105",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "1d38ed0643702225a27b86f096228f5626fac89fdd540a833a84f9d96c831eb2",
+      "scenario_path": "qa/dcgo-exams/BT6/BT6-105-effect1.yaml",
+      "recorded_at": "2026-09-19T15:13:56.976375500+00:00"
+    },
+    "BT6-105#effect#2": {
+      "clause_id": "BT6-105#effect#2",
+      "card_id": "BT6-105",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "a1479f4fed443183c653e9a6f4bde20c1398eb88075718cdd9fe09df23fba6e4",
+      "scenario_path": "qa/dcgo-exams/BT6/BT6-105-effect2.yaml",
+      "recorded_at": "2026-09-18T13:58:53.523328900+00:00"
+    }
+  }
+}

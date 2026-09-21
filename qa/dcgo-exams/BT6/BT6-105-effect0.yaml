@@ -1,0 +1,129 @@
+# Exam scenario: Gewalt Schwaermer (BT6-105), clause BT6-105#effect#0 --
+# "If you have a Digimon with [Three Musketeers] in its type in play, you may
+#  use this Option card without meeting its color requirements."
+#
+# THE WITNESS is the use itself being LEGAL. BT6-105 is a BLACK Option and p0
+# never owns a black permanent: the only card p0 has in play is Deputymon
+# EX7-010 (RED Lv.4, printed trait [Mutant]), whose "[Your Turn] This Digimon
+# gains the [Three Musketeers] trait" is what satisfies the clause. So the
+# colour requirement is NOT met and the Option can only be offered through
+# this clause -- on both sides: DCGO's IgnoreColorConditionClass.CanUseCondition
+# counts own battle-area Digimon whose `TopCard.CardTraits` contains "Three
+# Musketeers", and `CardSource.CardTraits` folds in the card's own
+# IChangeTraitsEffect (EX7_010.cs ChangeTraitsClass, gated on the owner's turn
+# and TopCard == card); ours is `use_requirement: any_permanent { trait_has }`
+# over Deputymon's `kind: aura` trait grant. If either engine refused the use,
+# lowering (ours) or the DCGO job (theirs) aborts on the `play:` step.
+#
+# The granted-trait route is deliberate: it is the cheapest [Three Musketeers]
+# Digimon a legal line reaches (every printed-trait carrier is a Lv.6), and
+# it makes the clause read the LIVE trait list rather than the printed one.
+#
+# The line then runs the [Main] (clause #effect#1, measured with a fuller
+# board in BT6-105-effect1.yaml): Deputymon (play cost 6) is deleted by its
+# owner's own Option, Phoenixmon ST1-10 (play cost 10) survives.
+#
+# PROMPT SHAPE. Deputymon is HARD-PLAYED: its [When Digivolving] / [When
+# Attacking] never fires (NOTES-EX7-010.md -- no vacuous OptionalSkill on a
+# play), and it has no [On Play]. BT6_105.cs [Main] is SetUpActivateClass(null,
+# ..., -1, false, ...) -- mandatory, no pick (DestroyPermanentsClass over every
+# battle-area Digimon with HasPlayCost && GetCostItself <= 7); ours
+# `delete_all_permanents`. No prompt anywhere after the `play:`. Deputymon and
+# Phoenixmon carry no [On Deletion].
+#
+# Memory: T1 p0 -> p1 3; T2 Phoenixmon (10): 3 -> -7 -> p0 7; T3 Deputymon
+# (6): 7 -> 1; Gewalt Schwaermer (7): 1 -> -6 -> p1 opens T4 on 6.
+#
+# Book: qa/dcgo-exams/BT6/tm_bt6_105_pool.json (--decks). p0 (`tm-gewalt`) is
+# the quiet ST-1 list with BT6-105 x4 + Deputymon EX7-010 x4 in for its eight
+# Options -- NO black card besides the Option itself, red Koromon eggs; p1 is
+# the quiet ST-1 opponent.
+card: BT6-105
+clause: BT6-105#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Deputymon, the Option, inert filler
+      - EX7-010
+      - BT6-105
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): the T3 turn draw
+      - BT4-014
+    rest: tm-gewalt
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot and the survivor), filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): the T2 / T4 turn draws
+      - BT4-014
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass (no hatch -- p0 must own nothing but Deputymon).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): hard-play Phoenixmon for 10 (3 -> -7). p0 opens T3 on 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 7): hard-play Deputymon for 6 (7 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: a black Option used off a red [Three Musketeers]-by-effect
+  # Digimon (1 -> -6).
+  - actor: 0
+    do: { play: { card: BT6-105, from: hand } }
+    expect: { prompt: main_phase }
+  # One step past the clause: the overshoot handed the turn over; p1 opens T4
+  # on 6 (empty breeding area -> breeding prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: []
+      p0.field:
+        - { card_id: EX7-010, dp: 6000, suspended: false, sources: [] }
+  - at: 7
+    that:
+      turn: 4
+      p0.memory: -6
+      p0.hand: [ST1-04, ST1-04, BT1-009, BT4-014]
+      p0.trash: [EX7-010, BT6-105]
+      p0.field: []
+      p1.trash: []
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }

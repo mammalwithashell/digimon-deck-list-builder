@@ -383,6 +383,35 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Move a single SELECTED card out of `player`'s hand to the top
+    /// (`to_bottom == false`, drawn first) or bottom of its OWNER's deck.
+    /// `player` identifies whose hand currently holds the card; the card
+    /// always returns to its owner's deck (a Digi-Egg routes to the digitama
+    /// deck via `move_card_to_deck`). A return, not a trash — fires no
+    /// `OnDiscardHand`. Returns true if the card was found and moved; a handle
+    /// not present in `player`'s hand is a silent no-op.
+    /// G-DSL-RETURN-UNION-BOUND-TO-DECK (EX7-043 Tankmon "By returning 3
+    /// cards ... from your hand or trash to the top of the deck").
+    pub fn return_hand_card_to_deck(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        to_bottom: bool,
+    ) -> bool {
+        let Some(pos) = self
+            .game
+            .player(player)
+            .hand
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        let removed = self.game.player_mut(player).hand.remove(pos);
+        self.move_card_to_deck(removed, to_bottom);
+        true
+    }
+
     /// Recover up to `count` cards from `player`'s deck to the top of security.
     pub fn recover_from_deck(&mut self, player: PlayerId, count: u8) -> u8 {
         let mut recovered = 0;

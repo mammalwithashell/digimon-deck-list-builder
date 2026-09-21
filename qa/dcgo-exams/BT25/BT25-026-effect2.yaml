@@ -1,0 +1,238 @@
+# Exam scenario: Crescemon (BT25-026), clause BT25-026#effect#2 --
+# "[Your Turn] When your Digimon are played or digivolve, if any of them are
+#  red, this Digimon may digivolve into [Dianamon] in the trash with the cost
+#  reduced by 2."
+#
+# HOW DIANAMON REACHES THE TRASH LEGALLY. It is pinned at p0's stack[9] -- the
+# TOP of the security stack -- and p1's Biyomon ST1-02 attacks into it on T4.
+# Dianamon has no [Security] text, so it is a Security Digimon: Biyomon (3000)
+# loses the battle to 12000 and is deleted, and Dianamon is trashed after the
+# check. No prompt on either side.
+#
+# THE TRIGGER. Crescemon is HARD-PLAYED on T5 (cost 6; p1's Agumon ST1-03,
+# played on T4 AFTER Biyomon's attack (slot safety), is the [On Play] body's target so DCGO's
+# unguarded first pick has a candidate -- both picks take Agumon, a bare
+# Lv.3). On T7 p0 plays a RED Digimon, Agumon ST1-03 (cost 3), and THE CLAUSE
+# fires.
+#
+# PROMPT SHAPE (BT25_026.cs, region "Your Turn"): SetUpActivateClass(...,
+# -1, false, ...) + SetIsSkippable(true) -- NO OptionalSkill; CanActivate
+# gates on a [Dianamon] in the trash AND a red permanent in the event.
+# DigivolveIntoHandOrTrashCard(isHand: false, reduceCost 2) asks ONE
+# SelectCardEffect over the trash (canNoSelect: () => isOptional, default
+# true). Ours: a yes/no gate for the `optional: true` trigger (sim_only
+# row) and then the `select_trash` pick (Trash <-> SelectCardEffect). Then
+# the COST: Crescemon is Blue AND [TS], so Dianamon offers two routes -- the
+# printed Blue Lv.5 circle (4) and the [TS] Lv.5 path (3). DCGO asks
+# SelectCountEffect over the BASE costs {3, 4}; our engine auto-mins on an
+# effect-initiated digivolve and asks nothing (a logged rule-17 follow-up --
+# NOTES-BT25-026.md), so the row is `dcgo_only` and names the min route both
+# sides then pay: 3 - 2 = 1. Memory 0 -> -1: the turn hands over once the
+# triggers resolve.
+#
+# DIANAMON'S OWN TRIGGERS then fire (its [When Digivolving] body and its
+# "[All Turns] When any Digimon ... digivolve" body): DCGO's MultipleSkills
+# over two same-id candidates (`dcgo_only`; ours bundles nothing on a
+# digivolve), answered by ordinal 0 = the [When Digivolving] body
+# (predicted from registration order; NOTES-BT25-028.md). That body locks
+# p1's bare Agumon silently and deletes it through one mandatory
+# SelectPermanentEffect (its only candidate). The [All Turns] body then runs
+# alone and is silent: no opponent Digimon remains, and p0 holds no
+# [GraceNovamon] for the DNA half.
+#
+# WITNESS at T8: Dianamon sits on Crescemon (sources [BT25-026]), p0's trash
+# no longer holds it, p1's board is empty and its trash holds Biyomon and
+# Agumon.
+#
+# Memory ledger:
+#   T1 p0 passes                                     -> p1 3
+#   T2 p1 plays Biyomon (2): 3 -> 1, passes          -> p0 3
+#   T3 p0 passes                                     -> p1 3
+#   T4 p1 attacks (free), plays Agumon (3): 3 -> 0, passes -> p0 3
+#   T5 p0 plays Crescemon (6): 3 -> -3               -> p1 3
+#   T6 p1 passes                                     -> p0 3
+#   T7 p0 plays Agumon (3): 3 -> 0; Dianamon for 3 - 2 = 1: 0 -> -1 -> p1 1
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_026_pool.json (--decks).
+card: BT25-026
+clause: BT25-026#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Crescemon, the red Agumon, inert filler
+      - BT25-026
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP -- Dianamon, flipped on T4
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - BT25-028
+      # (10+): p0's T3 / T5 / T7 turn draws
+      - BT4-010
+      - BT3-007
+      - BT3-007
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): Biyomon (the attacker), Agumon (the target), inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1's T2 / T4 / T6 / T8 turn draws
+      - BT1-009
+      - ST1-08
+      - ST1-10
+      - ST1-05
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): Biyomon ONLY (3 -> 1), pass out. Agumon waits until
+  # after the T4 attack: on a TWO-Digimon board `attack: field.0` names the
+  # second-played Digimon on DCGO's centre-out frames (NOTES-BT25-083.md).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 3): Biyomon attacks p0's security into Dianamon and dies.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Biyomon is gone; NOW Agumon (3 -> 0), the [On Play] / delete target.
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): hard-play Crescemon for 6 (3 -> -3). [On Play]: both
+  # picks take p1's bare Agumon (nothing to trash; the lock).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-026, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (p1, memory 3): all-pass (Agumon is locked this turn anyway).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): play the red Agumon (3 -> 0) -- THE CLAUSE fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine parks a yes/no gate for Crescemon's `optional: true`
+  # trigger (SelectionKind::Replacement) BEFORE the trash pick; DCGO's
+  # ActivateClass is `isOptional: false` and its SelectCardEffect is the
+  # declinable thing. A prompt-EXISTENCE difference (equivalent decision
+  # spaces, the EX7-070 / P-180 shape): answered sim-side, zero wire rows.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Dianamon from the trash (DCGO's declinable SelectCardEffect; on our side
+  # the single-candidate pick may auto-resolve, in which case the row rides
+  # the wire alone).
+  - actor: 0
+    do: { select: { cards: [BT25-028] } }
+    expect: { prompt: SelectCardEffect }
+  # DCGO-ONLY: which digivolution cost. PlayCardClass.SelectCost builds the
+  # CostList from the BASE costs ({3, 4}: the [TS] Lv.5 path and the printed
+  # Blue Lv.5 circle) -- the -2 rides a separate ChangeDigivolutionCost effect
+  # applied afterwards -- and asks SelectCountEffect over ["3", "4"]. Our
+  # engine auto-mins the route on an effect-initiated digivolve
+  # (digivolve.rs `effect_initiated_digivolve_from_source_inner`: "Costs
+  # auto-min (rule-17 cost CHOICE for effect digivolves is a known
+  # follow-up)") and parks nothing, so the row is wire-only and names the
+  # SAME route ours takes: 3 - 2 = 1 (memory 1 -> 0).
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: SelectCountEffect }
+  # DCGO-ONLY: Dianamon's two same-card triggers ([When Digivolving] and the
+  # [All Turns] "when any Digimon ... digivolve") stack into MultipleSkills; on
+  # a digivolve our engine bundles nothing and parks the [When Digivolving]
+  # delete pick directly (the BT25-028-effect0.yaml shape; NOTES-BT25-028.md).
+  # `count:` on a MultipleSkills row is the PICKS THE PROMPT ASKS FOR (always 1 --
+  # MultipleSkills.cs:597-599 passes the literal 1 to TryAnswerStep), NOT the number
+  # of stacked bodies. The stack size is asserted by `candidates:` below. Authored as
+  # `count: 2` until 2026-09-21, which aborted this line before the candidate multiset
+  # was ever compared ('expected count 2 but DCGO asked for count 1').
+  - actor: 0
+    do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-028, BT25-028] }
+  # Its mandatory delete: p1's Agumon, the only candidate.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # SIM-ONLY: our yes/no gate for Dianamon's [All Turns] body (`optional:
+  # true` in BT25-028.yaml); DCGO's ActivateClass is isOptional: false and the
+  # body is silent here (no opponent Digimon left, no [GraceNovamon] in hand).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T8 (p1, memory 1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 25
+    that:
+      turn: 8
+      p0.memory: -1
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-028
+          dp: 12000
+          suspended: false
+          sources: [BT25-026]
+        - card_id: ST1-03
+          dp: 2000
+          suspended: false
+          sources: []
+      p1.field: []
+      p1.trash: [ST1-02, ST1-03]

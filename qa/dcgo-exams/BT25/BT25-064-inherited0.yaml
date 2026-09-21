@@ -1,0 +1,105 @@
+# Exam scenario: ToyAgumon (BT25-064), clause BT25-064#inherited#0 -- the inherited
+# <Reboot> ("This Digimon also unsuspends in your opponent's unsuspend phase.").
+# 
+# DECK NOTE. `tm-toy-black` is a black vanilla shell (Hagurumon/Commandramon/
+# Numemon/Tankmon/WaruMonzaemon/HiAndromon/Gotsumon -- no printed text) carrying
+# 4x ToyAgumon BT25-064, 4x Thundermon BT8-061 (black Lv.4 vanilla), 4x Cyclonemon
+# BT24-011, 4x Vermilimon BT4-014, 4x EX7-070 and 2x BT25-100 (the Options the
+# [On Play] reveal needs); eggs 4x Tsunomon BT24-007 -- a PURPLE Lv.2 with the [TS]
+# trait whose only text is an inherited trigger on Demon/Titan hand-trashes,
+# which never fires here. `tm-quiet-red` is the shared quiet ST1 shell plus Tai /
+# Gaia Force for the Neptunemon lines; in these lines P1 does nothing but hold
+# security.
+# 
+# THE LINE. ToyAgumon goes UNDER a vanilla: hatch Tsunomon (T1), breeding-digivolve
+# ToyAgumon (T3), promote and digivolve Thundermon BT8-061 (T5, 2 -> 1), attack the
+# player on T7 (P1 has no Digimon: no block; stack[9] is Biyomon 3000 vs 6000, a
+# plain lost security battle). Thundermon is suspended at the end of P0's T7.
+# 
+# <Reboot> is MANDATORY (16-10): it unsuspends during P1's T8 unsuspend phase with
+# no prompt on either side.
+# 
+# WITNESS: at P1's T8 breeding decision -- BEFORE P0's own unsuspend phase could
+# touch it -- Thundermon reads suspended: false.
+card: BT25-064
+clause: BT25-064#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-064, BT8-061, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064, BT4-065, BT2-052, BT3-059, BT2-056, BT3-067, BT5-066, BT2-064]
+    rest: tm-toy-black
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): hatch; pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve ToyAgumon (special Lv.2 [TS] route, free).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-064 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote, digivolve Thundermon BT8-061 (2 -> 1); pass.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT8-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): attack the player; Thundermon suspends.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): THE CLAUSE has fired in P1's unsuspend phase by the time this
+  # breeding decision is asked.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 8
+      p0.field:
+        - card_id: BT8-061
+          dp: 6000
+          suspended: false
+          sources: [BT24-007, BT25-064]
+      p1.security: 4
+      p1.trash: [ST1-02]

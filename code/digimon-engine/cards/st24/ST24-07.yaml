@@ -130,7 +130,7 @@ dual:
               expiry: end_of_turn
   option:
     use_cost: 5
-    colors: [yellow]
+    colors: [yellow, red]
     effect_text: |
       [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, delete 1 of your opponent's Digimon with 7000 DP or less.
     # Use Req. [DATA SQUAD] trait — a DATA SQUAD Digimon/Tamer on the field

@@ -1,0 +1,131 @@
+# BT7-056 Dorumon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Beast / X Antibody. Form: Rookie. Attribute: Data.
+#
+# Printed card text (card image BT7-056.webp — verbatim; the official Bandai
+# DB bundle data/card_bundles/BT7-056.md carries the reprint wording with
+# identical semantics):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with
+#   [X-Antibody] in its traits and 1 [Kota Domoto] among them to your hand.
+#   Place the remaining cards at the bottom of your deck in any order.
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When one of your effects
+#   places a digivolution card under this Digimon, gain 1 memory.
+#
+# Official Q&A: "Yes. Even if you revealed only a card with [X Antibody] in
+# its traits or [Kota Domoto], you still add that card to your hand."
+#
+# Digivolution requirements (official Bandai DB): Black Lv.2 / cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT7/Black/BT7_056.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# [On Play] — OnEnterFieldAnyone ActivateClass(isOptional: false);
+#   CanActivate = on battle area && deck >= 1.
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount 3) with TWO conditions,
+#   each maxCount 1, Mode.AddHand:
+#     1. `HasXAntibodyTraits` (trait scan; any card kind).
+#     2. `CardNames.Contains("Kota Domoto")` (name scan; any card kind).
+#   remainingCardsPlace: DeckBottom.
+#   → `reveal_top_deck 3` + `select_reveal_buckets` (min 1 / max 1 per
+#     bucket — mandatory when a candidate exists, per the official Q&A; a
+#     bucket with no candidate is skipped), `no_duplicate_cards: true` (one
+#     physical card cannot fill both slots — EX7-008 / BT12-021 idiom),
+#     `add_to_hand_from_reveal` ×2, `place_remainder_on_deck { position:
+#     bottom }` ("in any order": the owner orders the returned cards, rule
+#     15-15-3-5).
+#
+# Inherited — OnAddDigivolutionCards ActivateClass, SetIsInheritedEffect(true),
+#   `SetUpActivateClass(..., 1 /* OPT */, false /* mandatory */)`.
+#   CanUse = IsExistOnBattleArea && IsOwnerTurn &&
+#     CanTriggerOnAddDigivolutionCard(
+#       permanentCondition: permanent == card.PermanentOfThisCard(),
+#       cardEffectCondition: EffectSourceCard != null &&
+#                            EffectSourceCard.Owner == card.Owner,
+#       cardCondition: null)
+#   Body = AddMemory(1).
+#   → `scope: inherited`, `when: on_add_digivolution_cards` (per-host batch
+#     window: one firing per placing effect — rule 15-5-2), `active_when:
+#     { your_turn: true }`, `once_per_turn: true`, condition
+#     `event_host_permanent_is_source` ("under THIS Digimon") AND
+#     `event_caused_by_own_effect` ("one of YOUR effects" — the placing
+#     effect's controller is the observer's controller). Any card kind
+#     qualifies (cardCondition: null) → no `event_added_card_any`.
+#   • Rule 15-5-3's worked example IS this text: Dorumon itself being placed
+#     under one of your Digimon by your effect meets the trigger (the
+#     engine's board-wide fan-out reaches the placed card's own inherited
+#     observer).
+#   • Normal / DNA digivolution, DigiXros / Assembly materials and App Fusion
+#     never fire the timing (DCGO cardEffect: null).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status      |
+# |----------------------------------------------------------------|-------------|
+# | Std digivolve Black Lv.2 / 0                                   | IMPLEMENTED |
+# | [On Play] reveal 3, add 1 [X Antibody] + 1 [Kota Domoto], rest |             |
+# |   to bottom                                                    | IMPLEMENTED |
+# | Inherited [Your Turn][OPT] your effect places a digivolution   |             |
+# |   card under this Digimon → gain 1 memory                      | IMPLEMENTED |
+
+card: BT7-056
+name: Dorumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Beast, X Antibody]
+attribute: Data
+form: Rookie
+
+alt_paths:
+  # Standard printed circle: Black Lv.2 / cost 0.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: black
+    cost: 0
+
+effects:
+  # ─── [On Play] reveal 3; add 1 [X Antibody] card + 1 [Kota Domoto]; bottom rest
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 card with the [X Antibody] trait and 1 [Kota Domoto] among them to hand; place the rest at the bottom of the deck in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            # Bucket 1: "1 card with [X Antibody] in its traits" — DCGO
+            # HasXAntibodyTraits, any card kind.
+            - bind_as: x_antibody_pick
+              min: 1
+              max: 1
+              filter:
+                trait_has: "X Antibody"
+            # Bucket 2: "1 [Kota Domoto]" — DCGO CardNames.Contains.
+            - bind_as: kota_pick
+              min: 1
+              max: 1
+              filter:
+                name_contains: "Kota Domoto"
+          no_duplicate_cards: true
+          prompt: "Add 1 card with the [X Antibody] trait and 1 [Kota Domoto] to your hand"
+      - add_to_hand_from_reveal: { of: you, card: x_antibody_pick }
+      - add_to_hand_from_reveal: { of: you, card: kota_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [Your Turn][OPT] your effect places a card under this Digimon → +1 memory
+  - scope: inherited
+    when: on_add_digivolution_cards
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_caused_by_own_effect: true
+    summary: "[Your Turn][Once Per Turn] When one of your effects places a digivolution card under this Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

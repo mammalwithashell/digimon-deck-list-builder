@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T07:55:23.435514800+00:00",
+  "clauses": {
+    "BT24-088#effect#0": {
+      "clause_id": "BT24-088#effect#0",
+      "card_id": "BT24-088",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "60b061328c4d5ced012b8de13b8fde1da250cdf85f2dbc6844cc371ddc44aea0",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:22.603422900+00:00"
+    },
+    "BT24-088#effect#1": {
+      "clause_id": "BT24-088#effect#1",
+      "card_id": "BT24-088",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c24e0b9001a5a7ec666ec5ba14749bc4fb45afecb684dad9ab989475f84b4182",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect1.yaml",
+      "recorded_at": "2026-09-18T07:55:23.045198200+00:00"
+    },
+    "BT24-088#effect#2": {
+      "clause_id": "BT24-088#effect#2",
+      "card_id": "BT24-088",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect2.yaml",
+      "recorded_at": "2026-09-18T07:55:23.435514800+00:00"
+    }
+  }
+}

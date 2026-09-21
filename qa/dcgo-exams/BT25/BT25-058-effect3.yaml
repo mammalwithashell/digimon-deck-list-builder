@@ -1,0 +1,161 @@
+# Exam scenario: Callismon (BT25-058), clause BT25-058#effect#3 -- <Fortitude>.
+#
+# "When this Digimon with digivolution cards is deleted, play this card without
+# paying the cost" (16-26, Mandatory: DCGO's FortitudeEffect is
+# `SetUpActivateClass(..., -1, false, ...)`, so no OptionalSkill; ours replays
+# the keyword with no gate). Measured by the deletion itself: Callismon attacks
+# p1's security on T7 and flips Titamon + SkullBaluchimon (BT24-081, 14000 DP)
+# as a Security Digimon; 13000 loses the battle, Callismon is deleted, and
+# <Fortitude> plays it back as a FRESH permanent -- unsuspended, with no
+# digivolution cards -- while Aegiochusmon (BT24-014) lands in p0's trash.
+#
+# WHY THIS IS THE ONLY TRIGGER IN THE BUNDLE. Aegiochusmon's inherited
+# <Decode ([Aegiomon])> fires only on a leave OTHER THAN in battle, and this
+# leave IS a battle, so neither engine offers it (DCGO: DecodeSelfEffect's
+# battle exclusion; ours: `replacement_cause: battle` excluded). That is why
+# the book carries Aegiochusmon and not the shared pool's LadyDevimon, whose
+# inherited [On Deletion] is an unconditional `isOptional: true` gate in
+# BT25_083.cs and would stack a MultipleSkills order prompt on top.
+#
+# The replayed Callismon's [On Play] (#effect#4) finds no p1 permanent -- p1's
+# board is empty all line -- and opens nothing; the [All Turns] observer
+# (#effect#5) likewise has no opponent Digimon to <De-Digivolve>. BT24-081 has
+# no [Security] text; as a security Digimon it just battles and is trashed.
+#
+# THE LINE reuses BT25-058-effect0.yaml's prefix, then idles a round and
+# attacks on T7 (memory 3, Callismon unsuspended and off summoning sickness).
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_058_pool.json (--decks). p1's `rest` is the
+# quiet ST-1 list with 4x BT24-081 swapped in for the Options.
+card: BT25-058
+clause: BT25-058#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 to hard-play, the Callismon, inert filler
+      - BT24-014
+      - BT25-058
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's turn draws, in order
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+    rest: tm-callismon
+  p1:
+    stack:
+      # hand (0-4): inert; p1 never plays a card here. stack[9] = the 14000 DP security Digimon
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - BT24-081
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent-tm
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Callismon onto the [TS] Lv.5 for 4 (3 -> -1,
+  # the turn hands over). p1's board is empty, so #effect#4 opens no prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-058 } }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): Callismon attacks the player and loses the security
+  # battle to BT24-081 -- THE CLAUSE plays it back from the trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY (predicted from BT25_058.cs + MultipleSkills.cs, 2026-09-18
+  # pre-Unity review): <Fortitude> replays Callismon BY AN EFFECT, so the
+  # fresh permanent's [On Play] (#effect#4) AND its own "[All Turns] When
+  # effects play ... any Digimon" (#effect#5: CanTriggerOnPermanentPlay +
+  # IsByEffect, and CanActivate is only IsExistOnBattleArea) are both active
+  # in one window. Two active skills => DCGO asks MultipleSkills (the
+  # IsSkippable flag only makes that panel DECLINABLE, it never suppresses
+  # it). Both bodies are silent here (p1's board is empty: each guards its
+  # picks behind HasMatchCondition), so the order cannot change the state.
+  # Our engine parks nothing at this point. If DCGO stacks only ONE skill
+  # the run aborts on this row and says so -- drop the row then
+  # (NOTES-BT25-058.md).
+  # `count:` on a MultipleSkills row is the PICKS THE PROMPT ASKS FOR (always 1 --
+  # MultipleSkills.cs:597-599 passes the literal 1 to TryAnswerStep), NOT the number
+  # of stacked bodies. The stack size is asserted by `candidates:` below. Authored as
+  # `count: 2` until 2026-09-21, which aborted this line before the candidate multiset
+  # was ever compared ('expected count 2 but DCGO asked for count 1').
+  - actor: 0
+    do: { select: { cards: [BT25-058], ordinal: 0, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-058, BT25-058] }
+  # One step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 15
+    that:
+      turn: 7
+      p1.security: 4
+      p1.trash: [BT24-081]
+      p0.trash: [BT24-014]
+      p0.field:
+        - card_id: BT25-058
+          dp: 13000
+          suspended: false
+          sources: []

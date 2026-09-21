@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-18T09:25:55.298991600+00:00",
+  "clauses": {
+    "BT25-083#effect#0": {
+      "clause_id": "BT25-083#effect#0",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "665f775a510f64b0cd212c796e2a0670e538d56e770286b79069a5913cec9286",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect0.yaml",
+      "recorded_at": "2026-09-18T07:55:18.955811200+00:00"
+    },
+    "BT25-083#effect#1": {
+      "clause_id": "BT25-083#effect#1",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "feca9cdc9c219b484c493e11cc759e7f5896ba3f2e0b88ba5a715f73e4b80767",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect1.yaml",
+      "recorded_at": "2026-09-18T08:01:48.465768100+00:00"
+    },
+    "BT25-083#effect#2": {
+      "clause_id": "BT25-083#effect#2",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c35ee12375a2833ef91e56d528f3990098f5d6d2fa77625bb2142706b7409abf",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-effect2.yaml",
+      "recorded_at": "2026-09-18T09:17:20.344483600+00:00"
+    },
+    "BT25-083#inherited#0": {
+      "clause_id": "BT25-083#inherited#0",
+      "card_id": "BT25-083",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "6b5dac5bc4bc278d90e2f042df9a8fd9100a053c4a7340d08723636d192b55d3",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-083-inherited0.yaml",
+      "recorded_at": "2026-09-18T09:25:55.298991600+00:00"
+    }
+  }
+}

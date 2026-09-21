@@ -1,0 +1,120 @@
+# Exam scenario: Gewalt Schwaermer (BT6-105), clause BT6-105#effect#1 --
+# "[Main] Delete all Digimon with play costs of 7 or less."
+#
+# THE BOARD at the use names every part of the sentence:
+#   * "all Digimon" -- BOTH players': p0's own Deputymon EX7-010 (play cost 6)
+#     and p1's Biyomon ST1-02 (play cost 2) are deleted together;
+#   * "7 or less"   -- p1's Phoenixmon ST1-10 (play cost 10) survives;
+#   * "Digimon"     -- nothing else is in play.
+# No pick on either side: BT6_105.cs builds the list itself
+# (`Players_ForTurnPlayer.Map(GetBattleAreaDigimons().Filter(HasPlayCost &&
+# GetCostItself <= 7))`) and hands it to ONE DestroyPermanentsClass --
+# simultaneous deletion, mandatory (`SetUpActivateClass(null, ..., -1, false,
+# ...)`), no OptionalSkill, no SelectPermanentEffect. Ours:
+# `delete_all_permanents { play_cost_lte: 7 }`. None of the three Digimon has
+# an [On Deletion], so nothing stacks behind the deletion.
+#
+# The use is legal only through clause #effect#0 (p0 owns no black card; see
+# BT6-105-effect0.yaml for that reading) -- Deputymon carries the [Three
+# Musketeers] trait during p0's turn. It is hard-played, so its [When
+# Digivolving] never fires and no vacuous DCGO OptionalSkill opens
+# (NOTES-EX7-010.md).
+#
+# Memory: T1 p0 -> p1 3; T2 Biyomon (2): 3 -> 1, Phoenixmon (10): 1 -> -9 ->
+# p0 9; T3 Deputymon (6): 9 -> 3; Gewalt Schwaermer (7): 3 -> -4 -> p1 opens
+# T4 on 4.
+#
+# Book: qa/dcgo-exams/BT6/tm_bt6_105_pool.json (--decks).
+card: BT6-105
+clause: BT6-105#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Deputymon, the Option, inert filler
+      - EX7-010
+      - BT6-105
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): the T3 turn draw
+      - BT4-014
+    rest: tm-gewalt
+  p1:
+    stack:
+      # hand (0-4): Biyomon (deleted), Phoenixmon (survives), filler
+      - ST1-02
+      - ST1-10
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): the T2 / T4 turn draws
+      - BT4-014
+      - ST1-08
+    rest: quiet-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): Biyomon (3 -> 1), Phoenixmon (1 -> -9). p0 opens T3 on 9.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 9): hard-play Deputymon for 6 (9 -> 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX7-010, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE (3 -> -4): Deputymon and Biyomon die, Phoenixmon stays.
+  - actor: 0
+    do: { play: { card: BT6-105, from: hand } }
+    expect: { prompt: main_phase }
+  # One step past the clause: p1 opens T4 on 4.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - { card_id: EX7-010, dp: 6000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  - at: 8
+    that:
+      turn: 4
+      p0.memory: -4
+      p0.trash: [EX7-010, BT6-105]
+      p0.field: []
+      p1.trash: [ST1-02]
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      p0.security: 5
+      p1.security: 5
