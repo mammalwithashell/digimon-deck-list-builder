@@ -1,0 +1,166 @@
+# Exam scenario: BeelStarmon / Fly Bullet (BT25-085), clause
+# BT25-085#effect#5 -- the OPTION face's
+#   "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may
+#    place 1 [Three Musketeers] trait card from your hand or trash as any of
+#    your Digimon's bottom digivolution card."
+#
+# Both halves are measured on one line:
+#
+#   HIGHEST LEVEL is discriminating, not decorative. P1's board is Biyomon
+#   ST1-02 (Lv.3, 3000 DP) entered FIRST and Kokatorimon BT1-014 (Lv.4, 4000
+#   DP) entered SECOND. Only Kokatorimon is a legal target, and the assertion
+#   below reads Biyomon still standing -- so a filter that deleted "any
+#   Digimon", or one keyed on DP instead of level, would fail here.
+#   Distinct card ids on both Digimon are deliberate: `targets:` lowers to a
+#   card IDENTITY on the wire (`SelectWire { card_ids: [...] }`), so the pick
+#   survives DCGO's centre-out battle-area seating (NOTES-P-180.md) instead of
+#   depending on a slot index the two engines number differently.
+#
+#   THE PLACE HALF is genuinely offered: P0 holds Der Blitz EX7-070 -- a
+#   [Three Musketeers] TRAIT Option -- and controls ToyAgumon EX7-008, so
+#   DCGO's `canSelectHand` is true and its `CanSelectPermamentCondition` has a
+#   candidate. Note the printed filter is the TRAIT, not "in text": ToyAgumon
+#   itself has [Three Musketeers] in its TEXT and is still not a legal card to
+#   place (it is not in hand or trash anyway), while Der Blitz carries the
+#   trait. Der Blitz ends up among ToyAgumon's digivolution cards beside the
+#   hatched Koromon -- `sources: [EX7-070, ST1-01]`.
+#
+#   HONESTY NOTE about that assertion: the exam projection SORTS `sources`
+#   (projection.rs:14-17, `self.sources.sort()`), so the row above witnesses
+#   MEMBERSHIP, not the bottom POSITION. "as any of your Digimon's BOTTOM
+#   digivolution card" is therefore asserted here only as far as the artifact
+#   can express it; the position itself rests on the two code paths agreeing
+#   (DCGO `permanent.AddDigivolutionCardsBottom(...)`; ours
+#   `place_as_bottom_source`) and would need a positional check the projection
+#   does not currently offer. Do not read this line as having measured it.
+#
+# The ToyAgumon prefix (hatch -> breeding-digivolve -> move) is the one from
+# BT25-085-effect4.yaml and is explained there: it puts a Red Lv.3 with
+# "Three Musketeers" in its text on the battle area without firing its
+# [On Play], which both satisfies the Option's <Use Req.> and keeps P0 free of
+# any Lv.5 that would add an <Arts Digivolve> prompt to this line.
+#
+#   T1 (P0, 0): hatch; pass.
+#   T2 (P1, 3): pass breeding; play Biyomon ST1-02 (3 -> 1); pass.
+#   T3 (P0, 3): breeding-digivolve into ToyAgumon for 0; pass.
+#   T4 (P1, 3): pass breeding; play Kokatorimon BT1-014 (3 -> 0); pass.
+#   T5 (P0, 3): move ToyAgumon out; use Fly Bullet for 6 (3 -> -3). THE CLAUSE.
+#
+# PROMPT SHAPE, re-derived from BT25_085.cs "#region Option Effects /
+# #region Main" (the [Main] is built `SetUpActivateClass(..., isOptional:
+# FALSE, ...)`, so there is NO OptionalSkill yes/no anywhere on this line):
+#   1. SelectPermanentEffect(Mode.Destroy, canNoSelect: FALSE) over
+#      IsMaxLevel(opponent) -> SHARED. Answered with Kokatorimon.
+#   2. SetIntSelection { 1 "From hand", [2 "From trash"], 3 "Do not place" }
+#      via UserSelectionManager -> a `generic_int` row. P0's trash is EMPTY at
+#      this point, so DCGO offers only elements 1 and 3. Our engine has no zone
+#      menu -- ONE `select_union_zone { zones: [hand, trash] }` spans both
+#      origins -- so the row is `dcgo_only`, answered 1 ("From hand").
+#   3. SelectHandEffect(EqualsTraits("Three Musketeers"), maxCount 1,
+#      canNoSelect: true) -> SHARED with our union pick: Der Blitz EX7-070.
+#   4. SelectPermanentEffect(own battle-area Digimon, canNoSelect: true) ->
+#      SHARED: ToyAgumon, P0's only Digimon (a single candidate still consumes
+#      a row). Then AddDigivolutionCardsBottom.
+#   5. NO <Arts Digivolve> row: ArtsDigivolveEffect.CanResolveCondition needs
+#      an own Digimon Fly Bullet could digivolve into, and ToyAgumon is Lv.3
+#      while every BeelStarmon route needs Lv.5 (the breeding area is empty
+#      after the T5 move). The Option is therefore disposed normally --
+#      `p0.trash: [BT25-085]`.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_085_pool.json (see effect4's header).
+card: BT25-085
+clause: BT25-085#effect#5
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand (Der Blitz EX7-070 is the [Three Musketeers]
+    # TRAIT card the place half consumes); stack[5..9] = security (never
+    # flipped); stack[10] = T3 turn draw, stack[11] = the breeding digivolve
+    # draw, stack[12] = T5 turn draw -- none of them TM-trait, so Der Blitz is
+    # the ONLY candidate the place pick can offer.
+    stack: [EX7-008, BT25-085, EX7-070, ST1-03, ST1-03,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-02, ST1-04]
+    rest: tm-dual-085
+  p1:
+    stack: [ST1-02, BT1-014, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-05, ST1-08]
+    rest: quiet-red-085
+steps:
+  # T1 (P0, memory 0): hatch Koromon, then pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon (Lv.3) -- the Digimon that must SURVIVE.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): breeding-digivolve into ToyAgumon for 0. No breeding prompt.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): Kokatorimon (Lv.4) -- the highest level, the delete target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): promote ToyAgumon, then THE CLAUSE.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-085, from: hand } }
+    expect: { prompt: main_phase }
+  # "Delete 1 of your opponent's highest level Digimon": Kokatorimon (Lv.4),
+  # not Biyomon (Lv.3).
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: the { From hand / Do not place } zone menu. 1 = From hand.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the [Three Musketeers] TRAIT card -- Der Blitz.
+  - actor: 0
+    do: { select: { cards: [EX7-070] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: whose bottom it becomes -- ToyAgumon, P0's only Digimon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1): one step past the clause, for the reading below.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 6
+      p0.memory: -3
+      # Der Blitz went UNDER the hatched Koromon: it is the BOTTOM source.
+      p0.field:
+        - { card_id: EX7-008, dp: 1000, suspended: false, sources: [EX7-070, ST1-01] }
+      p0.trash: [BT25-085]
+      # Only the HIGHEST LEVEL Digimon died; the Lv.3 is untouched.
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [BT1-014]
+      p1.security: 5

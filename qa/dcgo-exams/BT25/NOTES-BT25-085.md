@@ -12,9 +12,17 @@ Book for every authored line: `qa/dcgo-exams/EX7/three_musketeers_pool.json`
 | `BT25-085#effect#1` | `<Blocker>` | `BT25-085-effect1.yaml` | lowers, asserts pass |
 | `BT25-085#effect#2` | `[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.` | `BT25-085-effect2.yaml` ([When Digivolving] arm, from hand) | lowers, asserts pass — **carries a DCGO-only row that is a finding** (below) |
 | `BT25-085#effect#3` | `[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card … this Digimon unsuspends.` | `BT25-085-effect3.yaml` ([When Attacking] arm) | lowers, asserts pass |
-| `BT25-085#effect#4` | `<Use Req. ([Three Musketeers] in text)>` (Option face) | — | **unreachable** (card-data gap, below) |
-| `BT25-085#effect#5` | `[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card …` (Option face) | — | **unreachable** (card-data gap, below) |
-| `BT25-085#effect#6` | `<Arts Digivolve>` (DUAL rule) | — | **unreachable** (card-data gap, below) |
+| `BT25-085#effect#4` | `<Use Req. ([Three Musketeers] in text)>` (Option face) | `BT25-085-effect4.yaml` | lowers, asserts pass — **awaiting the oracle** |
+| `BT25-085#effect#5` | `[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card …` (Option face) | `BT25-085-effect5.yaml` | lowers, asserts pass — **awaiting the oracle** |
+| `BT25-085#effect#6` | `<Arts Digivolve>` (DUAL rule) | `BT25-085-effect6.yaml` | lowers, asserts pass — **awaiting the oracle** |
+
+The three Option-face lines use a **per-card** book,
+`qa/dcgo-exams/BT25/tm_bt25_085_pool.json` (decks `tm-dual-085` /
+`quiet-red-085`), not the shared `three_musketeers_pool.json`: `ordered_deck`
+refuses to stack a card the named deck does not contain, and these lines need a
+RED Digi-Egg (ST1-01), a Red Lv.3 with "Three Musketeers" in its text
+(EX7-008), a vanilla Purple Lv.5 (BT3-085) and a vanilla Black Lv.3
+(BT2-052) — none of which the shared book carries.
 
 > **UPDATE 2026-09-18 (BT25-082#effect#2 triage): the card-data gap below is FIXED for
 > BT25-085** — `data/cards.json` / `data/card_overrides.json` now carry `card_kind: 4` +
@@ -23,8 +31,14 @@ Book for every authored line: `qa/dcgo-exams/EX7/three_musketeers_pool.json`
 > should be re-authored from the prompt shapes at the end of this section. The
 > `play: { card: BT25-085, from: hand }` collateral lines no longer lower (correct:
 > the card cannot be played). The section is kept as the record of what was measured.
+>
+> **DONE 2026-09-20** — all three are authored (see the closing section). The stale
+> `unreachable` verdicts have been RETRACTED in
+> `qa/qa-reports/exam-verdicts/BT25-085.json` and now read `unmeasured`, because a
+> scenario that lowers is not a measurement: only the oracle pass can move them to
+> `confirmed` or `diverged`. **Nothing below this line describes the current engine.**
 
-## `effect#4` / `effect#5` / `effect#6` — unreachable: `data/cards.json` does not know BT25-085 is a DUAL card
+## HISTORICAL (superseded 2026-09-19 by `20df249e6`, closed out 2026-09-20) — `effect#4` / `effect#5` / `effect#6` were unreachable because `data/cards.json` did not know BT25-085 is a DUAL card
 
 **Measured, not inferred.** `data/cards.json` carries BT25-085 as
 `card_kind: 0` (Digimon), `play_cost: 6`, with **no `dual` block**
@@ -151,9 +165,9 @@ measurement (if DCGO does not ask it, the job aborts on a prompt mismatch).
   an own Digimon (a Plug-In Option via `link:`) and is a second line, not a
   second clause — not authored.
 
-## The three `unreachable` DUAL clauses: the cause was FIXED mid-campaign (2026-09-19)
+## The three DUAL clauses: stale reason RETRACTED, scenarios authored (2026-09-20)
 
-`BT25-085#effect#4` / `#effect#5` / `#effect#6` are recorded `unreachable` with
+`BT25-085#effect#4` / `#effect#5` / `#effect#6` were recorded `unreachable` with
 the reason "card-data gap: `data/cards.json` carries BT25-085 as `card_kind 0`
 (Digimon) with no `dual` block, so the engine never sees the Option face". That
 cause **no longer holds**: commit `20df249e6` (taken during the
@@ -162,8 +176,78 @@ cause **no longer holds**: commit `20df249e6` (taken during the
 `card_kind 4` **with** a `dual` block, and BT25-082/-083 lines then measured
 CLEAN through the Option face.
 
-So the three DUAL clauses are **authorable now** and were simply not re-authored
-before the campaign closed — the recorded reason is stale, not wrong at the time
-it was written. A next dispatch should author `play: { card: BT25-085, from:
-hand }` for the `<Use Req.>` / `[Main]` faces and the `<Arts Digivolve>` DUAL
-rule, and re-measure rather than trusting the stored class.
+Re-measured 2026-09-20: `play: { card: BT25-085, from: hand }` now lowers as an
+**Option USE** in our engine, which is what DCGO does too — `PlayCardClass`
+routes a dual card played with no target permanent through
+`isDualCardAsOption(cardSource) => cardSource.IsDigimon && cardSource.IsOption
+&& !isEvolution` into `UseOptionClass.UseOption()`
+(`CardController.cs:1223-1265`), with **no face-selection prompt on either
+side**. So all three clauses are authored:
+
+| Clause | Scenario | What the line makes load-bearing |
+|---|---|---|
+| `#effect#4` | `BT25-085-effect4.yaml` | P0's only permanent is ToyAgumon EX7-008 — a **RED** Lv.3 with "Three Musketeers" in its text. The Option is Purple/Black, so the ordinary colour requirement FAILS and the use is admitted solely by `<Use Req.>`. |
+| `#effect#5` | `BT25-085-effect5.yaml` | P1 holds Biyomon ST1-02 (Lv.3) **and** Kokatorimon BT1-014 (Lv.4); only the Lv.4 is deleted and the assertion reads the Lv.3 still standing. The place half is genuinely offered (Der Blitz EX7-070 in hand is a [Three Musketeers] **trait** card). |
+| `#effect#6` | `BT25-085-effect6.yaml` | The same use ends with `p0.trash: []` and BeelStarmon standing on SkullMeramon at `sources: [BT3-085]`, memory −3 = 3 − 6 for the use alone: the Option became the Digimon, free. |
+
+**Three things this stage learned that the next author should not re-derive.**
+
+1. **An Option's colour requirement is ALL of its colours, not any** —
+   `colorsToCheck.Every(...)` in `CardSource.MatchColorRequirement`
+   (`CardSource.cs:305-310`), mirrored by `option_color_match_available`
+   (`mask.rs:764-799`, citing `general_rule.pdf` 4-19-3). A first draft of
+   `effect6` put a lone PURPLE Lv.5 on the board and the use was **not offered
+   at all** — our engine's mask emitted only "Digivolve hand 0 onto slot 0" for
+   the card. Hagurumon BT2-052 (Black Lv.3, vanilla) exists on that line purely
+   to cover the Black half.
+2. **`targets:` lowers to a card IDENTITY**, not a slot — the lowered wire row
+   is `SelectWire { card_ids: ["BT1-014"] }`. Distinct card names on every
+   permanent therefore neutralise DCGO's centre-out battle-area seating
+   (`NOTES-P-180.md`), which is what aborted two r1 lines in job 1. All three
+   scenarios use distinct names for that reason.
+3. **The exam projection SORTS `sources`, `hand` and `trash`, and sorts `field`
+   by `(card_id, dp, suspended, sources)`** (`projection.rs:14-17`). An
+   assertion over them witnesses MEMBERSHIP, never position — so
+   `effect5`'s `sources: [EX7-070, ST1-01]` does **not** prove the placed card
+   went to the BOTTOM, and its header says so explicitly. Do not read a sorted
+   list as a positional claim.
+
+**Prompt shapes, re-derived from `BT25_085.cs` `#region Option Effects` before
+each scenario was written** (the [Main] is
+`SetUpActivateClass(null, ActivateCoroutine, -1, FALSE, …)` → `isOptional`
+false → **no `OptionalSkill` yes/no anywhere on any of the three lines**; an
+`expect:` row there would desynchronise everything after it):
+
+* `<Use Req.>` = `UseRequirements(card, HasText("Three Musketeers"))` →
+  `IgnoreColorConditionClass` whose `CanUse` is "an own **battle-area or
+  breeding** permanent that `IsDigimon || IsTamer` and whose `TopCard`
+  `HasText(...)`" (`CardEffectFactory.cs:722-748`), consulted from
+  `MatchColorRequirement`'s "effects of itself" branch
+  (`CardSource.cs:292-300`). It is an OR beside the colour check on both sides,
+  never an extra requirement.
+* `[Main]` = mandatory `SelectPermanentEffect(Mode.Destroy, canNoSelect:
+  false)` over `IsMaxLevel(opponent)` — skipped entirely when the opponent has
+  no Digimon; then, only if an own battle-area Digimon exists AND a [Three
+  Musketeers] **trait** card is in hand or trash, a `generic_int` menu
+  {1 hand, 2 trash, 3 "Do not place"} → `SelectHandEffect` /
+  `SelectCardEffect(Root.Trash)` (both `canNoSelect`) → `SelectPermanentEffect`
+  (`canNoSelect`) → `AddDigivolutionCardsBottom`. Our engine has no zone menu
+  (one `select_union_zone { zones: [hand, trash] }`), so the menu row is
+  `dcgo_only`; the card pick and the placement pick are SHARED.
+* `<Arts Digivolve>` = `ArtsDigivolveEffect(card)`
+  (`KeyWordEffects/ArtsDigivolve.cs:7-58`), an `OptionResolutionClass` that runs
+  at DISPOSAL in place of the trash: `CanResolveCondition` needs an own Digimon
+  `CanPlayCardTargetFrame` accepts, then
+  `SelectPermanentEffect("Select 1 Digimon to Arts Digivolve.", canNoSelect:
+  true)` → `PlayCardClass(payCost: false, targetPermanent: …, root: Execution,
+  activateETB: true)`. Ours: `dual.option.arts_digivolve: true` →
+  `install_arts_digivolve_selection` (`game_actions/mod.rs:986-1110`), an
+  optional `OwnField` selection whose decline path is `dispose_option()`.
+  **It is offered on EVERY use with a legal target** — which is why `effect4`
+  and `effect5` deliberately keep P0's board free of any Lv.5.
+
+**Status.** `--sim-only` is green on all three (13 / 17 / 19 lowered steps,
+7 assertion checks each, 0 failed) against
+`qa/dcgo-exams/BT25/tm_bt25_085_pool.json`. That is the regression half and
+**cannot** find a divergence; the verdicts stay `unmeasured` until an oracle
+pass against `D:/dcgo-build/scripted-v16` runs them.

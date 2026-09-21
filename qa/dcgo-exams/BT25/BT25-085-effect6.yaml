@@ -1,0 +1,185 @@
+# Exam scenario: BeelStarmon / Fly Bullet (BT25-085), clause
+# BT25-085#effect#6 -- the DUAL RULE
+#   "<Arts Digivolve> (Instead of trashing after use, your cards may digivolve
+#    into this card without paying the cost.)"
+#
+# THE WITNESS IS `p0.trash: []`. Every other use of Fly Bullet in this corpus
+# ends with the Option in the trash (BT25-085-effect4 / -effect5 both assert
+# `p0.trash: [BT25-085]`). Here the very same use ends with NOTHING in P0's
+# trash and BeelStarmon standing where SkullMeramon stood, 12000 DP,
+# `sources: [BT3-085]` -- the Option card itself became the Digimon, which is
+# exactly what "instead of trashing after use ... digivolve into this card"
+# prints. Memory reads -3, i.e. 3 - 6 for the USE and nothing more: neither the
+# printed Purple Lv.5 circle (4) nor the clause-0 alt route (3) was paid.
+#
+#   DCGO: CardEffectFactory.ArtsDigivolveEffect(card) (KeyWordEffects/
+#         ArtsDigivolve.cs:7-58) is an OptionResolutionClass -- it runs at
+#         DISPOSAL, in place of the trash. CanResolveCondition = some own
+#         Digimon permanent `card.CanPlayCardTargetFrame(...)` accepts;
+#         ResolutionCoroutine asks SelectPermanentEffect("Select 1 Digimon to
+#         Arts Digivolve.", canNoSelect: true) and then
+#         `new PlayCardClass(payCost: FALSE, targetPermanent: permanent,
+#         root: Execution, activateETB: true).PlayCard()`.
+#   Ours: `dual.option.arts_digivolve: true` in BT25-085.yaml feeds
+#         `Game::pending_option_can_arts_digivolve` /
+#         `install_arts_digivolve_selection` (game_actions/mod.rs:986-1110):
+#         an optional OwnField selection over `arts_digivolve_battle_targets`
+#         whose decline path is `dispose_option()` -- the same "instead of".
+#
+# WHY THE BOARD IS TWO DIGIMON AND NOT ONE. Fly Bullet is a PURPLE/BLACK
+# Option, and the colour requirement is ALL of an Option's colours, not any
+# (general_rule.pdf 4-19-3; `option_color_match_available`, mask.rs:764-799).
+# A lone Purple base leaves Black uncovered and the use is not even offered --
+# measured: with SkullMeramon alone our engine's mask emitted only
+# "Digivolve hand 0 onto slot 0" for the card, never a use. So Hagurumon
+# BT2-052 (BLACK Lv.3, vanilla) is played first purely as the Black half of the
+# colour requirement. Both Digimon are deliberately vanilla -- no printed
+# effect, no inherited effect, no security effect -- so nothing interleaves.
+#
+# SkullMeramon BT3-085 is the Arts Digivolve base on purpose: a PURPLE Lv.5
+# with no text at all, so (a) it is a legal BeelStarmon target through the
+# printed Purple Lv.5 circle and ONLY that route -- the clause-0 alt route
+# needs TM-in-text or [TS] on the BASE -- which matters because Arts Digivolve
+# pays no cost and must not raise a cost question, and (b) Hagurumon at Lv.3 is
+# NOT a legal target, so the Arts pick has exactly one candidate. `targets:`
+# lowers to a card IDENTITY on the wire (`SelectWire { card_ids: ["BT3-085"] }`),
+# so neither pick depends on DCGO's centre-out battle-area seating
+# (NOTES-P-180.md).
+#
+# NEITHER [When Digivolving] CLAUSE FIRES after the Arts Digivolve, and that is
+# arranged, not luck. BeelStarmon's WD/WA pair is gated on
+# `CanActivateUseOption` (a [Three Musketeers]/[TS] Option in hand or in THIS
+# Digimon's digivolution cards) and `CanActivateUnsuspend` (an Option among any
+# own Digimon's digivolution or link cards). After the digivolve BeelStarmon's
+# only source is SkullMeramon -- a Digimon -- Hagurumon has no sources at all,
+# and P0's hand is Agumon / Biyomon / Dracomon fillers, so both gates are false
+# on DCGO and the mirrored `condition:` blocks keep our engine from queuing
+# either trigger. P0 never hatches, so the breeding area stays empty and
+# `arts_digivolve_has_breeding_target` is false too.
+#
+#   T1 (P0, 0): pass breeding; pass.
+#   T2 (P1, 3): pass breeding; play Biyomon ST1-02 (3 -> 1); pass.
+#   T3 (P0, 3): pass breeding; play Hagurumon BT2-052 (3 -> 1); pass.
+#   T4 (P1, 3): pass breeding; pass.
+#   T5 (P0, 3): pass breeding; play SkullMeramon BT3-085 (3 -> -2). Turn ends.
+#   T6 (P1, 2): pass breeding; pass.
+#   T7 (P0, 3): use Fly Bullet for 6 (3 -> -3). THE CLAUSE.
+#
+# PROMPT SHAPE on T7, in DCGO's order (BT25_085.cs "#region Option Effects";
+# the [Main] is `SetUpActivateClass(..., isOptional: FALSE, ...)`, so there is
+# no OptionalSkill yes/no anywhere on this line):
+#   1. the [Main] mandatory SelectPermanentEffect(Mode.Destroy) over
+#      IsMaxLevel(opponent) -- Biyomon, P1's only Digimon. SHARED.
+#   2. the [Main] place block is SKIPPED: `canSelectHand || canSelectTrash`
+#      over EqualsTraits("Three Musketeers") is false (P0's trash is empty and
+#      its hand is all fillers), so no generic_int zone menu and no card pick
+#      on either side.
+#   3. THE CLAUSE: SelectPermanentEffect("Select 1 Digimon to Arts Digivolve.",
+#      canNoSelect: true) -- SkullMeramon. SHARED.
+#   4. the digivolution itself, `payCost: false`, `activateETB: true` -- hence
+#      the draw at stack[13] and the (silent) [When Digivolving] window above.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_085_pool.json (see effect4's header).
+card: BT25-085
+clause: BT25-085#effect#6
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped -- P1
+    # never attacks); stack[10] = T3 turn draw, stack[11] = T5 turn draw,
+    # stack[12] = T7 turn draw, stack[13] = the Arts Digivolve digivolution
+    # draw. None of the four is an Option, so none of them can wake
+    # BeelStarmon's [When Digivolving] use-an-Option clause on the way in.
+    stack: [BT2-052, BT3-085, BT25-085, ST1-03, ST1-03,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-02, ST1-04, ST1-05]
+    rest: tm-dual-085
+  p1:
+    stack: [ST1-02, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-05, BT1-014, ST1-08]
+    rest: quiet-red-085
+steps:
+  # T1 (P0, memory 0): never hatch -- the breeding area must stay empty so it
+  # cannot become an Arts Digivolve target of its own.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the [Main] delete target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Hagurumon -- the BLACK half of the colour requirement.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT2-052, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): a quiet turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): the vanilla Purple Lv.5 Arts base (3 -> -2 ends the turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-085, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 2): a quiet turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): use Fly Bullet for 6.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-085, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Main] mandatory delete (a different clause's body, shared here).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: instead of being trashed, Fly Bullet digivolves into
+  # BeelStarmon on top of SkullMeramon, paying nothing.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T8 (P1): one step past the clause, for the reading below.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 18
+    that:
+      turn: 8
+      # 3 - 6 for the USE and nothing else: the digivolution was free.
+      p0.memory: -3
+      p0.field:
+        - { card_id: BT2-052, dp: 3000, suspended: false, sources: [] }
+        - { card_id: BT25-085, dp: 12000, suspended: false, sources: [BT3-085] }
+      # THE WITNESS: the used Option is NOT in the trash -- it is the Digimon.
+      p0.trash: []
+      p1.field: []
+      p1.trash: [ST1-02]
+      p1.security: 5
