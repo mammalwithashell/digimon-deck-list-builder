@@ -1897,7 +1897,46 @@ fn eval_event_fields(
         let Some(source_permanent) = rctx.source_permanent else {
             return false;
         };
-        if (event_permanent == source_permanent) != want {
+        // `PermanentHandle` is (player, battle-area INDEX), and the battle
+        // area COMPACTS when a permanent is removed. A deletion trigger's
+        // `event_permanent` is therefore a DANGLING handle by the time the
+        // observer is evaluated: `drain_batch_on_any_deletion` enqueues the
+        // pre-trash handle, but the surviving permanents have already slid
+        // down. Every survivor that sat ABOVE the deleted one now answers to
+        // a lower index — and the one that inherits the dead permanent's
+        // index compares EQUAL to it.
+        //
+        // That alias is how `[All Turns] When other Digimon or Tamers are
+        // deleted` observers silently lost a deletion: an ally deleted from a
+        // LOWER index than the carrier made `event_permanent ==
+        // source_permanent` true, so the clause's `event_permanent_is_source:
+        // false` gate rejected the carrier's own trigger. Measured on exam
+        // `BT19-075#effect#2` (MoonMillenniummon, oracle sidecar
+        // `20260921T041928Z_40f7887a`: `p1.security ours=4 dcgo=3`).
+        //
+        // `general_rule.pdf` 15-8-3-1 / 15-8-3-2 / 15-8-3-5 / 15-8-3-6: the
+        // trigger fires as soon as its conditions are met and waits as a
+        // pending activation for the current processing to resolve; nothing
+        // licenses discarding it. DCGO agrees — every deletion goes through
+        // `CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`,
+        // which raises `OnDestroyedAnyone` regardless of seating order.
+        //
+        // So: handle equality alone is not identity once the event permanent
+        // is gone. When the trigger carries a `deleted_object` snapshot and
+        // THIS effect's own carrier is still standing at `source_permanent`
+        // (it still holds `rctx.source_card`), the equality is the compaction
+        // alias, not the observer watching itself — the deleted permanent was
+        // someone else. Every other case keeps the plain handle comparison:
+        // an observer whose carrier is itself the deleted permanent finds no
+        // live carrier at that slot and still reads `is_source == true`.
+        let is_source = event_permanent == source_permanent
+            && !(trigger.deleted_object.is_some()
+                && permanent_for_handle(rctx, source_permanent).is_some_and(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .any(|card| card.handle() == rctx.source_card)
+                }));
+        if is_source != want {
             return false;
         }
     }

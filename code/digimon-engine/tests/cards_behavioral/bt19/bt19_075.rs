@@ -130,6 +130,18 @@ fn runner() -> DebugRunner {
     base_builder().start()
 }
 
+/// `observer_runner()` plus the inline `TEST-DEL-OPT` Option in the database,
+/// for the nested-resolution variant of the replacement-cost observer test.
+fn observer_runner_with_delete_option() -> DebugRunner {
+    base_builder()
+        .deck(0, &["HAND-D", "HAND-E", "HAND-F"])
+        .deck(1, &["HAND-D", "HAND-E", "HAND-F"])
+        .security(1, &["HAND-G", "HAND-H", "HAND-I"])
+        .from_dsl_yaml(DELETE_OPT)
+        .expect("TEST-DEL-OPT compiles")
+        .start()
+}
+
 /// Observer fixture: opponent (P1) security seeded with 3 cards, plus small
 /// filler decks on BOTH sides so `end_turn()` turn-start draws don't deck
 /// anyone out (needed by the OPT re-arm test).
@@ -1001,5 +1013,257 @@ fn bt19_075_zero_opp_security_clean_noop() {
     assert!(
         runner.pending_selection().is_none(),
         "no lingering selection after the 0-security no-op"
+    );
+}
+
+// ── Cross-clause: the replacement COST deletion must reach the observer ─────
+
+/// Exam `BT19-075#effect#2` (oracle sidecar `20260921T041928Z_40f7887a`,
+/// DIVERGED at step 21: `p1.security ours=4 dcgo=3`).
+///
+/// The `[All Turns]` leave replacement pays its cost by deleting one of the
+/// controller's `[Composite]` Digimon. That Composite Digimon IS an "other
+/// Digimon" and it WAS deleted, so this same card's `[All Turns][Once Per
+/// Turn] When other Digimon or Tamers are deleted, trash your opponent's top
+/// security card` observer must fire.
+///
+/// `general_rule.pdf` 15-8-3-1 / 15-8-3-2: a trigger-type effect triggers as
+/// soon as its trigger conditions are met, and merely cannot *activate*
+/// during the processing for a rule or effect — it waits as a pending
+/// activation (15-8-3-5) and stays triggered (15-8-3-6). 15-8-5-4 documents
+/// this exact card shape (a "when this Digimon would be deleted, by deleting
+/// 1 other Digimon ..., it isn't deleted" replacement) as immediate-type
+/// processing that the cause resolves out of. Nothing licenses DROPPING the
+/// pending trigger. DCGO agrees: the cost is deleted through
+/// `CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which
+/// raises `OnDestroyedAnyone` like any other deletion.
+#[test]
+fn bt19_075_replacement_cost_deletion_fires_the_opt_observer() {
+    let mut runner = observer_runner();
+    let moon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "OWN-COMPOSITE-1", Some(0));
+    assert_eq!(runner.security_count(1), 3, "precondition: 3 opp security");
+
+    runner
+        .game
+        .delete_permanent_with_cause(moon, ReplacementCause::OpponentEffect);
+
+    accept_leave_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("Composite cost prompt");
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete own Composite Digimon");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        permanent_exists(&runner, 0, CARD_ID),
+        "MoonMillenniummon stays after the Composite cost is paid"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "OWN-COMPOSITE-1"),
+        "the Composite Digimon paid as the cost is deleted"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "the replacement's COST deletion is an 'other Digimon ... deleted' \
+         event and must fire the [All Turns][OPT] security-trash observer"
+    );
+}
+
+/// Inline fixture for the NESTED shape: an opponent Option whose `[Main]`
+/// resolution deletes one of your Digimon. This is verbatim the cause in
+/// `general_rule.pdf` 15-8-5-4's worked example ("[Main] Delete 1 of your
+/// opponent's Digimon" causing a "when this Digimon would be deleted, by
+/// deleting 1 other Digimon ..., it isn't deleted" replacement), and it is
+/// the shape the exam line uses (P-180's `[Security]` "Delete 1 of your
+/// opponent's Digimon with the highest DP").
+const DELETE_OPT: &str = r#"
+card: TEST-DEL-OPT
+name: Test Delete Option
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }
+"#;
+
+/// Exam `BT19-075#effect#2` — the NESTED shape that actually diverged.
+///
+/// Same claim as `bt19_075_replacement_cost_deletion_fires_the_opt_observer`,
+/// but the outer deletion happens INSIDE another effect's resolution window
+/// (an opponent Option's `[Main]`), exactly like the oracle line's P-180
+/// `[Security]`. The replacement's cost deletion of the `[Composite]` Digimon
+/// must still reach the `[All Turns][Once Per Turn]` observer.
+///
+/// `general_rule.pdf` 15-8-3-2 says a trigger-type effect merely cannot
+/// *activate* during the processing for a rule or effect — 15-8-3-1 /
+/// 15-8-3-5 / 15-8-3-6 keep it triggered and pending, to activate once that
+/// processing resolves. Deferring the drain is correct; DROPPING it is not.
+#[test]
+fn bt19_075_nested_replacement_cost_deletion_fires_the_opt_observer() {
+    let mut runner = observer_runner_with_delete_option();
+    let _moon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "OWN-COMPOSITE-1", Some(0));
+    assert_eq!(runner.security_count(1), 3, "precondition: 3 opp security");
+
+    // P1 resolves an Option that deletes P0's MoonMillenniummon.
+    let idx = runner.add_to_hand(1, "TEST-DEL-OPT");
+    runner.play(1, idx).expect("play the delete Option");
+
+    // P1 picks MoonMillenniummon as the Option's victim.
+    let victim = runner
+        .pending_selection_view()
+        .expect("Option victim prompt");
+    runner
+        .execute_action(1, victim.valid_action_ids[0])
+        .expect("pick MoonMillenniummon");
+
+    // P0 takes the leave replacement and pays the Composite cost.
+    accept_leave_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("Composite cost prompt");
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete own Composite Digimon");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        permanent_exists(&runner, 0, CARD_ID),
+        "MoonMillenniummon stays after the Composite cost is paid"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "OWN-COMPOSITE-1"),
+        "the Composite Digimon paid as the cost is deleted"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "the replacement's COST deletion fires the [All Turns][OPT] observer          even when the outer deletion is nested inside an effect's resolution"
+    );
+}
+
+/// `observer_runner()` but with P-180 (Bind Red Trigger) on TOP of P1's
+/// security stack, so a security check flips it and resolves its inherited
+/// `[Security]` "Delete 1 of your opponent's Digimon with the highest DP".
+fn security_flip_runner() -> DebugRunner {
+    base_builder()
+        .dsl_card("P-180")
+        .expect("P-180 YAML loads")
+        .deck(0, &["HAND-D", "HAND-E", "HAND-F"])
+        .deck(1, &["HAND-D", "HAND-E", "HAND-F"])
+        // `security.pop()` takes the LAST element, so P-180 is the top card.
+        .security(1, &["HAND-G", "HAND-H", "P-180"])
+        .start()
+}
+
+/// Exam `BT19-075#effect#2`, the FULL oracle shape: MoonMillenniummon attacks
+/// the player, the security check flips P-180, and P-180's `[Security]`
+/// "Delete 1 of your opponent's Digimon with the highest DP" deletes
+/// MoonMillenniummon (15000, the strict highest). The leave replacement pays
+/// its cost by deleting the `[Composite]` Digimon — and THAT deletion must
+/// fire this same card's `[All Turns][Once Per Turn]` security-trash observer.
+///
+/// Oracle sidecar `20260921T041928Z_40f7887a`, DIVERGED at step 21:
+/// `p1.security ours=4 dcgo=3`, `p1.trash` missing the observer's trashed
+/// card. `general_rule.pdf` 15-8-3-1 / 15-8-3-2 / 15-8-3-5 / 15-8-3-6: the
+/// trigger fires immediately, waits as a pending activation for the current
+/// processing to resolve, and stays triggered — it is never discarded.
+#[test]
+fn bt19_075_security_flip_replacement_cost_deletion_fires_the_opt_observer() {
+    let mut runner = security_flip_runner();
+    let moon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "OWN-COMPOSITE-1", Some(0));
+    assert_eq!(runner.security_count(1), 3, "precondition: 3 opp security");
+
+    runner.attack_player(moon, 1, false);
+
+    // P-180's [Security]: P1 deletes P0's highest-DP Digimon. MoonMillenniummon
+    // (15000) is the only candidate — the `dp_gte: highest_dp` filter excludes
+    // the 2000 DP Composite — but the pick is still surfaced, not auto-taken.
+    let victim = runner
+        .pending_selection_view()
+        .expect("P-180 [Security] victim prompt");
+    assert_eq!(victim.kind, SelectionKind::OppField);
+    assert_eq!(
+        victim.valid_action_ids.len(),
+        1,
+        "only the highest-DP Digimon is a legal [Security] target"
+    );
+    runner
+        .execute_action(1, victim.valid_action_ids[0])
+        .expect("P-180 [Security] deletes MoonMillenniummon");
+
+    accept_leave_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("Composite cost prompt");
+    assert_eq!(cost.kind, SelectionKind::OwnField);
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete own Composite Digimon");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        permanent_exists(&runner, 0, CARD_ID),
+        "MoonMillenniummon stays after the Composite cost is paid"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "OWN-COMPOSITE-1"),
+        "the Composite Digimon paid as the cost is deleted"
+    );
+    // 3 security - 1 flipped by the check - 1 trashed by the observer = 1.
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "the replacement's COST deletion must fire the [All Turns][OPT]          security-trash observer even inside a security check's processing"
+    );
+}
+
+/// MINIMAL reproducer for the dangling-handle alias behind exam
+/// `BT19-075#effect#2`.
+///
+/// `bt19_075_own_other_digimon_deleted_also_trashes_opp_security` places
+/// MoonMillenniummon FIRST, so the deleted ally sits at a HIGHER battle-area
+/// index. Reverse that: put the ally at index 0 and MoonMillenniummon at
+/// index 1. The battle area COMPACTS when index 0 is removed, so the deleted
+/// permanent's handle `{0,0}` goes dangling AND MoonMillenniummon slides down
+/// into `{0,0}` — making `event_permanent == source_permanent` compare equal,
+/// so the observer's `event_permanent_is_source: false` gate rejects its own
+/// trigger.
+///
+/// Nothing about this is replacement-specific; the replacement line is just
+/// how the exam surfaced it.
+#[test]
+fn bt19_075_observer_fires_when_deleted_ally_sits_below_the_carrier() {
+    let mut runner = observer_runner();
+    // Order matters: the ally is entered FIRST (index 0), the carrier second.
+    let ally = runner.place_on_field(0, "HAND-A", Some(0));
+    let _moon = runner.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(runner.security_count(1), 3, "precondition: 3 opp security");
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OwnEffect);
+    let _ = runner.auto_resolve();
+
+    assert!(!permanent_exists(&runner, 0, "HAND-A"));
+    assert!(permanent_exists(&runner, 0, CARD_ID));
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "an ally deleted from a LOWER battle-area index than the carrier is \
+         still an 'other Digimon ... deleted' — the compacted index must not \
+         alias the carrier onto the deleted permanent"
     );
 }
