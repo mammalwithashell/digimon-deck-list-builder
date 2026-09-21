@@ -174,3 +174,76 @@ so paying the cost WITH P-180 fires a second delete that races this clause's
 own. Either author the ordering explicitly on both wires, or keep P-180 out of
 the payment and find the second trait source elsewhere. That is a rules
 question for the next pass, not a tooling one.
+
+### Scenario authored 2026-09-20 (close-out job `three-musketeers-2`) -- PREDICTED DIVERGENCE
+
+`EX7-073-effect2.yaml` is on disk and lowers sim-only clean (27 steps, 13
+assertions green). It reads the **[When Digivolving]** half (DCGO registers
+the two timings as two independent ActivateClasses -- `#region When
+Digivolving` / `#region When Attacking` -- and our YAML mirrors that with
+clause 2 / clause 3), and it is the SHORT route this file predicted, not the
+T9 attack line.
+
+**The line** is `EX7-073-effect0.yaml`'s with three changes:
+
+1. `stack[15]` -- P0's T7 TURN draw -- is P-180. NOT `stack[13]`/`[14]` (the
+   two T5 digivolution draws): P-180 in hand during the T5 grant digivolve
+   would give BeelStarmon BT25-085's own "[When Digivolving] ... use 1 [Three
+   Musketeers] or [TS] trait Option card from your hand" a candidate and open
+   a prompt pair that measures nothing here.
+2. P1 hard-plays **Vermilimon BT4-014** (Lv.5, **8000 DP**, printed vanilla)
+   on T4 instead of Agumon on T2. This is what disarms the race this file
+   flagged as "the one thing to check first": paying the cost trashes P-180,
+   whose own "When effects trash this card from digivolution cards, delete 1
+   of your opponent's 7000 DP or lower Digimon" would otherwise fire. Its
+   `CanActivateCondition` (`P_180.cs:60-66`) needs an opponent Digimon with
+   `DP <= 7000`; 8000 > 7000, so the condition is false whether it is checked
+   before or after this clause's delete and DCGO opens no widget. The clause's
+   own delete is unaffected -- it selects on LEVEL, and Vermilimon is P1's
+   only Digimon. Memory: T4 P1 3 -> -2 hands P0 2, the T5 digivolutions run
+   2 -> 0 -> -4, and P0 still opens T7 on 3 and pays 1.
+3. The T7 rows after the digivolve carry the clause instead of declining it.
+
+The second trait source arrives at the SAME timing from this card's OTHER
+clause: `#effect#1` uses P-180 for free, and P-180's `[Main]` tucks it under
+EX7-073. `ordinal: 0` on the `MultipleSkills` row runs `#effect#1` first --
+the ordinal `EX7-073-effect0.yaml` already carried through a clean oracle run.
+
+**ENGINE FINDING (predicted divergence, measured sim-side before any Unity
+time).** DCGO resolves clause 1 to COMPLETION, the used Option's whole
+lifecycle included, before clause 2 comes up; clause 2's
+`CanActivateCondition` (`EX7_073.cs:179-186`) then counts TWO trait sources
+and the cost is payable. OUR engine queues the used Option's DISPOSAL as a
+sibling of clause 2 and parks a two-entry `TriggerOrder [EX7-073, P-180]`
+(`5aef07fa8`, G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER). Neither branch
+reproduces DCGO, and both were measured:
+
+| branch | what our engine does |
+|---|---|
+| `EX7-073` (authored) | clause 2 runs FIRST against the lone source BT25-085 -> the two-card cost is unpayable, the pick auto-resolves with no prompt, no delete and no security trash. P-180 is then placed by clause 1 and stays a source. |
+| `P-180` | the disposal is processed first, so P-180 is already in the trash when its own `[Main]`'s "place this card as the bottom digivolution card" runs -- the placement silently no-ops and the card is LOST (`p0.trash: [P-180]`, never a source). Clause 2 is unpayable just the same. |
+
+The authored branch is the one that keeps clause 1's printed outcome intact,
+so the oracle diff isolates clause 2. Expected reading: ours `p0.trash: []`,
+`p1.field: [BT4-014]`, `p1.security: 4`; DCGO `p0.trash: [BT25-085, P-180]`,
+`p1.field: []`, `p1.security: 3`.
+
+**Triage lead for whoever runs the oracle** (do NOT pre-judge it here): the
+question is whether an effect created DURING the resolution of one trigger --
+the used Option's `[Main]` and its disposal -- may be ordered against a
+trigger that was already queued. `general_rule.pdf` 15-4-3 orders
+SIMULTANEOUS items, and these are not simultaneous; that reading favours DCGO
+and makes this our bug rather than a DCGO quirk. It is a sibling of, but not
+the same as, the two Option-trash-order gaps closed earlier in this job.
+
+**The wire is coherent on DCGO regardless**, which is what makes the line
+worth running: `MultipleSkills` -> `SelectHandEffect(P-180)` ->
+`SelectPermanentEffect(place)` -> `OptionalSkill(accept)` ->
+`SelectCardEffect([BT25-085, P-180])` -> `SelectPermanentEffect(delete)`. The
+last three rows answer no live prompt on our side and the harness keeps them
+for the wire; the clause-2 gate is authored as its own `dcgo_only` accept row
+rather than as an `expect: {prompt: OptionalSkill}` fold, because the fold
+only splits a LIVE sim prompt and ours has already auto-resolved.
+
+**`effect#2` moves `unreachable` -> `unmeasured`.** Denominator now
+**3 clauses: 2 confirmed + 1 authored-unmeasured, 0 unreachable.**

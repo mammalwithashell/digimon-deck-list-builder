@@ -237,3 +237,27 @@ re-diffed CLEAN by the engine-gap stage that closed
 verdicts; this file touches neither.
 
 **5 clauses: `effect#0` now authored and `unmeasured`, 0 unreachable.**
+
+## 2026-09-21 — two leftovers the `effect#0` section above does not cover
+
+**The `#effect#3` DNA RIDER is reachable now, and is still `unmeasured`.** The
+first sentence of `#effect#3` ("If DNA digivolving, you may play 1 level 5 or
+lower [Free] Digimon from your trash") was `unreachable` for the same
+`G-TOOLING-EXAM-NO-DNA-VERB` reason as `#effect#0` and is not any more. It is a
+SUB-BRANCH inside a clause id that already carries a scenario
+(`BT16-077-effect3.yaml`, which rides the ORDINARY purple circle and reads the
+ungated Rush/attack half), and the exam's file naming is one scenario per
+clause id, so no second file was authored for it here. Reaching it needs the
+`dna:` line of `BT16-077-effect0.yaml` PLUS a `[Free]`-attribute Lv.5-or-lower
+Digimon in p0's TRASH at the declaration — `tm-purple-line` cannot produce one
+without a new deck, and `BT16-077-effect0.yaml` deliberately declines the
+`[When Digivolving]` so its own reading stays the DNA clause alone. Recorded
+so the next dispatch does not re-derive it.
+
+**`BT20-076-dna-rider` is not a thing.** The close-out's exam-verb stage
+reported that string in its `newly_reachable` list. There is no BT20-076 exam
+scenario, no `NOTES-BT20-076.md`, and BT20-076 is not in the Three Musketeers
+clause denominator at all — `grep -rn BT20-076 qa/dcgo-exams/` matches only
+`BT20-020-*.yaml`, where Imperialdramon: Dragon Mode is deck ballast and a
+name-match target, never an exam subject. Read as the DNA rider that actually
+exists in this pool, it is the `#effect#3` rider documented immediately above.

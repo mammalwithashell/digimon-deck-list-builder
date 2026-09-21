@@ -110,3 +110,38 @@ integer on both engines. It needs no new DCGO build (`scripted-v15` already
 dispatches a `HAND_EFFECT` bit to the hand card's link declaration); the
 scenario itself has not been written yet, so the clause is `unmeasured`, not
 `unreachable`.
+
+### Scenario authored 2026-09-20 (close-out job `three-musketeers-2`)
+
+`BT25-093-effect4.yaml` is on disk and lowers sim-only clean (10 steps,
+`Action(30)` = the `HAND_EFFECT` bit, 14 assertions green). It is deliberately
+the SAME line as the sister clause `../BT25/BT25-100-effect5.yaml`, so the only
+reading that differs between the two files is the printed price:
+
+  T1 P0 hard-plays Kamemon BT24-019, the pool's [TS] Digimon (3: 0 -> -3);
+  T2 P1 passes out; T3 P0 declares the from-hand `<Link>` for **3**
+  (3 -> 0, still P0's turn), host = Kamemon, then passes.
+
+Witness: memory 0 (the printed cost 3 paid), `p0.hand` without BT25-093,
+`p0.trash: []` and the host at 3000 DP (1000 + the #effect#3 Link DP box).
+
+Wire rows (re-derived from the C#): ONE `main_phase` row for the declaration
+(`CanDeclareSkillList` holds only `LinkEffect` — the `[Main]` is an
+`EffectTiming.OptionSkill` effect reached by `PlayCardAction`); a `dcgo_only`
+`OptionalSkill` accept (`Link.cs:29` `SetUpActivateClass(..., isOptional:
+true, ...)`); the SHARED `SelectPermanentEffect` host pick (`Link.cs:70-88`,
+maxCount 1, `canNoSelect: false`). BT25-093 has NO `[When Linking]` effect —
+its Link ESS is `[When Attacking]` — so the line ends at the host pick.
+
+No colour question: Ignition Flare is RED and P0's board is BLUE, but the
+Option use-requirement / colour gate is general_rule.pdf §9-1 "Using Cards"
+and a link declaration is not a use (`Link.cs:49-62` checks only origin zone
+and host set). The card's own `<Use Req. ([TS] trait)>` (#effect#0) is
+measured from hand by `BT25-093-effect0.yaml` and is NOT what makes this line
+legal.
+
+Slot hygiene: one Digimon on P0's board, none on P1's, for the whole line.
+
+**`effect#4` moves `unreachable` -> `unmeasured`**: it needs an oracle pass
+against `D:/dcgo-build/scripted-v16`. Denominator now **6 clauses: 5 + 1
+authored-unmeasured, 0 unreachable.**

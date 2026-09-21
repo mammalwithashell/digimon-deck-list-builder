@@ -127,3 +127,48 @@ integer on both engines. It needs no new DCGO build (`scripted-v15` already
 dispatches a `HAND_EFFECT` bit to the hand card's link declaration); the
 scenario itself has not been written yet, so the clause is `unmeasured`, not
 `unreachable`.
+
+### Scenario authored 2026-09-20 (close-out job `three-musketeers-2`)
+
+`BT25-100-effect5.yaml` is on disk and lowers sim-only clean (10 steps,
+`Action(30)` = the `HAND_EFFECT` bit, 14 assertions green). The line is
+deliberately minimal so the only thing it reads is the Link Condition box:
+
+  T1 P0 hard-plays Kamemon BT24-019, the pool's [TS] Digimon (3: 0 -> -3);
+  T2 P1 passes out; T3 P0 declares the from-hand `<Link>` for **2**
+  (3 -> 1, so the turn stays P0's), host = Kamemon, then passes.
+
+Witness: memory 1 (the printed cost 2 paid), `p0.hand` without BT25-100,
+`p0.trash: []` (a linked Option is not trashed) and the host at 3000 DP
+(1000 + the #effect#4 Link DP box, pinned as proof the link landed).
+
+Wire rows, adversarially re-derived from the C# before commit:
+1. ONE `main_phase` row. `CardSource.CanDeclareSkillList` is
+   `EffectList(EffectTiming.OnDeclaration)` filtered to `ActivateICardEffect`
+   — for Iron Slash that is ONLY `LinkEffect` (its `[Main]` is registered at
+   `EffectTiming.OptionSkill` and is reached by `PlayCardAction`), so
+   `InputDriver.FindHandDeclarableSkillIndex` returns the link and the bit
+   becomes `ActivateCardAction(card, 0)`. Our side: no `[Hand] [Main]`, so
+   `Game::hand_effect_slot_is_link` is true and the same bit is the link.
+2. `dcgo_only` accept — `Link.cs:29` builds the declaration
+   `SetUpActivateClass(null, ActivateCoroutine, -1, TRUE, ...)`, so DCGO asks
+   an `OptionalSkill` yes/no BEFORE the host pick; our engine treats the
+   declaration itself as that decision. Same row `../BT21/BT21-074-inherited0.yaml`
+   needed after its first oracle run aborted on it.
+3. SHARED `SelectPermanentEffect` "Select 1 Digimon to link." (`Link.cs:70-88`,
+   maxCount 1, `canNoSelect: false`) — asked on both wires even at one
+   candidate.
+4. Nothing else: BT25-100 has NO `[When Linking]` effect (its regions are Link
+   Condition / Link / Use Requirement / Link Inherit / Main / Security).
+
+No colour question: Iron Slash is BLACK and P0's board is BLUE, but the Option
+use-requirement / colour gate belongs to general_rule.pdf §9-1 "Using Cards"
+and a link declaration is not a use — `LinkEffect.CanUseCondition`
+(`Link.cs:49-62`) checks only the origin zone and the host set, and
+`hand_option_link_condition_targets` documents the same reading on our side.
+
+Slot hygiene: one Digimon on P0's board, none on P1's, for the whole line.
+
+**`effect#5` moves `unreachable` -> `unmeasured`**: it needs an oracle pass
+against `D:/dcgo-build/scripted-v16`, not a tooling change. Denominator now
+**8 clauses: 7 + 1 authored-unmeasured, 0 unreachable.**
