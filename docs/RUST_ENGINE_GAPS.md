@@ -3265,15 +3265,29 @@ already batch-PLACES sources, but it runs no would-play window, so it is not a
 drop-in. Fix: a batch free-play that resolves every card's would-play window before
 any of them enters the battle area.
 
-## G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER — OPEN (found 2026-09-21, three-musketeers-2 close-out)
+## G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER — RESOLVED `b77d1b288` (found 2026-09-21, three-musketeers-2 close-out)
 
 **Measured against the DCGO oracle, not predicted.** When an effect *uses* an
 Option card ("use 1 Option card from your hand without paying the cost") while a
 SIBLING effect of the same card is still pending activation, our engine does not
 carry the used Option's `[Main]` body to completion before that sibling activates.
-It instead reaches the 9-1-5 disposal timing mid-body and parks a two-entry
-`SelectionKind::TriggerOrder` — [the pending sibling trigger, the Option's pending
-disposal] — so the sibling can run while the Option's own `[Main]` has not finished.
+**Mechanism (corrected 2026-09-21 by tracing the drain; the first triage read the
+park as the 9-1-5 disposal order, which it is not).** `play_option_core` enqueues
+the body as an ordinary `EffectTiming::OptionMain` entry on the SHARED
+`effect_queue` and then drains. Two separate interleaves followed, both in
+`Game::drain_effect_queue_inner`:
+
+1. With a sibling trigger still queued, the drain saw TWO items for one chooser
+   and installed a two-entry `SelectionKind::TriggerOrder` — [the pending sibling,
+   the Option's `[Main]` BODY] — offering an ordering choice the rules do not
+   grant. Neither branch reproduced DCGO: run the sibling first and its cost is
+   unpayable; run the disposal-first alternative and the Option is trashed before
+   its own `[Main]` placement lands.
+2. Even once the body was given priority, its FIRST step (`trash_top_security`)
+   reaches `Game::fire_effect_security_removal`, which calls `drain_effect_queue`
+   DIRECTLY (not `maybe_drain_effect_queue`) — a NESTED drain that ran the sibling
+   from inside the body. Traced:
+   `DRAIN depth=2 deferred=2 obp=true q=[(EX7-073, WhenDigivolving)]`.
 
 **Reproducer:** `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` (oracle-`completed`,
 sidecar `20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3.state.jsonl`,
@@ -3322,13 +3336,41 @@ keep the resolved trash-order choice intact while making the body's continuation
 `select_own_permanent` placement pick) strictly precede both the disposal and any
 queued sibling trigger.
 
-**Scope note.** Found and triaged by the verdict-recording stage of
-`three-musketeers-2`, which does not change engine code; logged here with its
-reproducer rather than fixed. Any fix needs a failing→passing behavioral test on
-the EX7-073 + P-180 shape plus a full `cards_behavioral` run, and should re-diff
-`EX7-073-effect2.yaml` against the preserved sidecar above (expected: CLEAN, and
-the scenario's own `assert:` block — which currently pins OUR reading — must be
-rewritten to the DCGO/rules reading at the same time).
+**RESOLVED `b77d1b288`.** The load-bearing citation is **`general_rule.pdf` 15-8-3-2**
+(p.25, read directly this stage): *"Trigger-type effects can't activate during the
+processing for a rule or effect."* The pending sibling `[When Digivolving]` is a
+trigger-type effect (15-8-3), and clause 1's processing includes the `[Main]` of the
+Option it used — 9-1-5 puts the Option's disposal at the timing that `[Main]`
+**resolves**, so the body is inside the use. p.23's 15-4-3-4 and 15-4-4-2 agree from
+the other side. DCGO is structurally the same (`CardController.cs`
+`UseOptionClass.UseOption` runs the `OptionSkill` INLINE inside the using coroutine).
+
+Fix, in `drain_effect_queue_inner` (one block plus a `queued_option_main_index`
+helper): while `option_body_pending` is set, a queued `OptionMain` of the in-flight
+`pending_option` has **absolute priority** — run alone, in its own
+`enter_deferred_drain` scope, with no chooser / bundle / `TriggerOrder` involvement;
+and once it has been popped but not yet released by `complete_option_body_if_done`,
+a drain re-entered with `draining_deferred > 0` (i.e. nested inside the body) returns
+without running anything. The window is exactly the `[Main]`'s resolution, so the
+RESOLVED 9-1-5 trash-order choice (`G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`,
+`5aef07fa8`) is untouched — that one is offered by `complete_option_body_if_done` at
+`draining_deferred == 0`, after this window closes.
+
+Guard test: `ex7_073_used_options_main_completes_before_pending_sibling_clause`
+(`code/digimon-engine/tests/cards_behavioral/ex7/ex7_073.rs`) — fails before
+(`trash=[] stack=[P-180, TM-A, BASE, EX7-073]`: the clause never fired), green after.
+`EX7-073-effect2.yaml` re-diffed against the preserved sidecar and its `assert:`
+block rewritten from our old reading to the DCGO/rules one; verdict
+`EX7-073#effect#2` flipped `diverged` → `confirmed`. Closing this ALSO required the
+exam-tooling fix below (`G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`) — with the
+engine right, the harness was declining the clause's own cost prompt.
+
+**Adjacent exposure left OPEN as a finding, not fixed here:**
+`fire_effect_security_removal` calls `drain_effect_queue` (not
+`maybe_drain_effect_queue`), so ANY effect body that removes a security card
+re-enters the drain mid-body, which 15-8-3-2 also forbids. Only the Option-`[Main]`
+window is closed above; the general case needs its own driver clause, citation and
+blast-radius measurement before that call site is changed.
 
 
 ## F-CARD-BT16-077-WD-WHOLE-CLAUSE-DNA-GATED / F-CARD-BT24-091-LINK-EFFECT-MISSING — OPEN (2026-09-18, same stage)
@@ -3854,6 +3896,45 @@ Confirm this before fixing — the symptom is measured, the cause is not.
 with this section as its triage. A fix needs a behavioral test in
 `tests/cards_behavioral/bt19/` that deletes a permanent as a replacement cost with an
 `on_any_deletion` observer on the board, plus the full `cards_behavioral` gate.
+
+## G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT — RESOLVED `b77d1b288` (found 2026-09-21, three-musketeers-2 close-out)
+
+**Symptom.** `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` stayed `diverged` even after the
+engine half was fixed and an equivalent `DebugRunner` test was green. The harness kept
+reporting `note: step 23 select answered no live prompt -- our engine auto-resolved it`
+for the clause's own two-card cost row, and our end state showed the cost unpaid.
+
+**Cause — the harness, not the engine.** After a row's picks are exhausted,
+`runners/selection_resolve.rs::resolve_next` is called once more so a still-open
+multi-pick can be stopped with a trailing `PASS`, and it decided "still open" from the
+pending selection's KIND alone (`SourceMulti` / `CountCappedMultiSelect` / `RevealBucket`
+/ `DpBudget` / `PlayCostBudget`). A kind cannot distinguish *this row's prompt awaiting
+its stop* from *a brand-new prompt the row's LAST pick caused to install* — and
+resolving one effect is exactly what lets the next queued one activate and park its own
+cost selection. Traced:
+
+```
+RESOLVE action=100 kind=OwnField    'Place this card as the bottom digivolution card…'   <- the row's pick
+RUNQ    EX7-073 slot=1 WhenDigivolving                                                    <- sibling clause activates
+RESOLVE action=62  kind=SourceMulti { min: 0, max: 2, picked: 0 }  'Trash 2 cards…'       <- 62 = PASS, the trailing PASS
+```
+
+`min: 0` makes PASS legal on that fresh prompt, so the clause's printed cost was
+DECLINED before the row written to pay it was ever reached; that row then found no
+prompt and the harness noted it as "auto-resolved".
+
+**Fix.** The `SourceMulti` arm now requires `picked > 0` — a prompt that has accepted a
+pick is genuinely this row's own "up to N" awaiting its stop, one that has not is a fresh
+selection the row never addressed. Regression tests (both in
+`runners/selection_resolve.rs`): `trailing_pass_does_not_decline_a_freshly_parked_source_multi`
+(fails before: returns `Ok(Some(PASS))`) and
+`trailing_pass_still_stops_a_source_multi_that_took_a_pick` (the `canEndNotMax` half, must
+keep returning `Ok(Some(PASS))`).
+
+**Scope note.** The same reasoning applies to the other four `multiselectish` kinds, but
+none of them carries a pick count in its `SelectionKind`, and no scenario in
+`qa/dcgo-exams/` currently drives one into this shape — so they are deliberately left on
+the kind-only test rather than widened speculatively.
 
 ## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (4df70706f) (found 2026-09-21, three-musketeers-2 close-out)
 
