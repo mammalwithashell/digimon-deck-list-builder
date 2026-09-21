@@ -3942,6 +3942,24 @@ none of them carries a pick count in its `SelectionKind`, and no scenario in
 `qa/dcgo-exams/` currently drives one into this shape — so they are deliberately left on
 the kind-only test rather than widened speculatively.
 
+**Second witness, found after the fix landed — `BT25-028#effect#3` (2026-09-21).** The
+same bug, one prompt earlier in the chain and with a different-looking symptom, which is
+why it was misdiagnosed as an ENGINE defect and logged as
+`F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED` ("our engine never offers the
+opponent-source pick"). On Dianamon's `[All Turns]` clause the row that exhausted its
+picks was our `optional: true` gate's `yes:`; the trailing `PASS` then landed on the
+`SourceMulti { min: 0, max: 4, picked: 0 }` that accepting the gate had just installed,
+so the clause's trash pick was declined and the next prompt the line saw was the DNA
+anchor — exactly the shape "the engine never asks" produces. Three `DebugRunner`
+characterization tests had already shown the engine parking the prompt, and the
+contradiction was read as "something specific to the exam board". It was not; it was
+this. With `b77d1b288` in, the scenario re-authored with the shared identity row
+(`cards: [ST2-01, ST2-02]`, `G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK`) diffs **CLEAN**
+against the preserved sidecar `20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59` and the
+clause is `confirmed`. **Triage lesson:** a `min: 0` optional pick that "is never
+offered" in an exam line, with a green DebugRunner for the same shape, should be checked
+against this gap before the engine is suspected.
+
 ## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (4df70706f) (found 2026-09-21, three-musketeers-2 close-out)
 
 **Symptom.** Every exam scenario containing an EXPANDING step (`dna:` or `materials:` —

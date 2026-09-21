@@ -65,7 +65,15 @@ at least one `sim_only` row for it. Not fixed here (exam stage).
 `owner.HandCards.Some(canSelectDNACardCondition)`. Two independent gates, both
 easy to keep shut — which is what makes the trash half separately measurable.
 
-## `effect#3` — F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED (open finding)
+## `effect#3` — F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED (**RETRACTED** 2026-09-21)
+
+> **Read the retraction at the end of this file before anything below.** This
+> section is the ORIGINAL 2026-09-21 write-up, kept because its reasoning is
+> what a reader will otherwise re-derive. Its conclusion is WRONG: the engine
+> does offer the pick. The cause was the exam harness spending a trailing
+> `PASS` on the freshly parked `SourceMulti`
+> (`G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`, RESOLVED `b77d1b288`), and
+> the clause now diffs CLEAN against the same sidecar.
 
 **Our engine never offers the opponent-source pick, so the clause's whole first
 half is a no-op.** Reproduced twice on 2026-09-21 with the committed
@@ -225,40 +233,62 @@ re-derived" above is CONFIRMED, not falsified.**
 | `effect#0` | **confirmed** | CLEAN, 14/16 rows (sidecar `20260921T045136Z_0f07954d…`). DCGO's `action_detail` independently shows the alt-path cost: `cost_paid 3`, memory 3 → 0 |
 | `effect#1` | **confirmed** | CLEAN, 13/14 rows (`20260921T045153Z_05752781…`). The cost −5 witness reproduces on DCGO: `cost_paid 7`, memory 5 → −2 |
 | `effect#2` | **confirmed** | CLEAN, 14/16 rows (`20260921T045210Z_19e5b7ae…`) |
-| `effect#3` | **diverged** | see below (`20260921T045227Z_15e1e879…`) |
+| `effect#3` | **confirmed** | CLEAN, 21/26 rows (`20260921T045227Z_15e1e879…`), re-diffed 2026-09-21 against the SAME preserved sidecar after the harness fix `b77d1b288` and a re-authored source-pick row. See the retraction below |
 | `inherited#0` | **confirmed** | CLEAN, 18/24 rows (`20260921T045251Z_1d972901…`) |
 
-### `effect#3` — the open finding is now MEASURED against the oracle
+### `effect#3` — F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED is **RETRACTED**
+
+**There is no engine bug here.** The finding was a HARNESS artefact:
+`G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT` (docs/RUST_ENGINE_GAPS.md,
+RESOLVED `b77d1b288`), the same tooling bug EX7-073#effect#2 surfaced 16 minutes
+after this sidecar was recorded.
+
+What the oracle run reported, from the sidecar
+`20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59`:
 
 ```
 DIVERGED at step 24 (20 of 26 ours / 23 dcgo)
   p1.trash:             ours=[]                dcgo=[ST2-01, ST2-02]
   p1.field[0].sources:  ours=[ST2-01, ST2-02]  dcgo=[]
-  (same two fields again at step 25 — one cause, one consequence)
 ```
 
-DCGO trashes the opponent's two digivolution cards; we trash nothing. This is
-exactly what `F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED` predicted, and it
-is now oracle-backed rather than self-observed.
+**Mechanism.** `runners/selection_resolve.rs::resolve_next` emitted ONE trailing
+`PASS` after a row's picks were exhausted whenever the parked prompt's KIND looked
+like an open multi-pick. Here the exhausted row was the `sim_only` `yes:` that
+accepts our `optional: true` gate; accepting the gate runs the clause body, whose
+first step installs `SourceMulti { min: 0, max: 4, picked: 0 }` — and `min: 0`
+makes `PASS` legal. So the trash pick was **declined by the harness** before any
+scenario row reached it, `trash_selected_sources` ran over an empty pick list, and
+the next prompt the line saw was the DNA anchor. That is indistinguishable, from
+the scenario's side, from "the engine never offers the pick" — which is exactly how
+it was read.
 
-**What this stage ruled OUT (three new characterization tests in
-`tests/cards_behavioral/bt25/bt25_028.rs`, all GREEN):** the clause's prompt
-machinery is not broken in general —
-`bt25_028_all_turns_offers_opponent_source_pick` (trigger = p0's own play),
-`…_on_opponent_entry` (trigger = an opponent Digimon entering) and
-`…_on_opponent_digivolve` (trigger = the opponent DIGIVOLVING, on the
-OPPONENT's turn — the exam's own shape) each park a `SourceMulti` prompt over the
-opponent's below-top sources after the `optional: true` gate is accepted. So the
-cause is NOT `min: 0`, not the empty `filter:`, not `install_source_multi_selection`
-returning early on an empty candidate scan, not the controller/turn-player pairing,
-and not the resume-after-gate path per se. It is something specific to the exam
-board that these fixtures do not yet reproduce. The finding stays OPEN and stays
-`diverged`; the next author should replay `BT25-028-effect3.yaml` under the engine
-MCP and watch the candidate scan on that exact board rather than re-deriving from
-the installer.
+**Why the contradiction went unresolved last stage.** The three characterization
+tests in `tests/cards_behavioral/bt25/bt25_028.rs`
+(`bt25_028_all_turns_offers_opponent_source_pick`, `…_on_opponent_entry`,
+`…_on_opponent_digivolve`) were GREEN and each parks the `SourceMulti`. They were
+right; the exam line was measuring the harness, not the board. They are kept — they
+now double as the regression witnesses for the engine half.
+
+**Re-measurement (zero Unity time).** With `b77d1b288` in and one row added to the
+scenario — the shared identity pick
+`select: { cards: [ST2-01, ST2-02] }` at DCGO's `SelectCardEffect`
+(`G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK`, 8cb317bb4) — the SAME preserved
+sidecar diffs:
+
+```
+CLEAN (compared 21 of 26 ours / 23 dcgo steps
+       (5 sim-only rows with no DCGO prompt + 2 DCGO intermediate rows not comparable))
+```
+
+`p1.field[0].sources: []` and `p1.trash: [ST2-01, ST2-02]` — previously left
+unpinned so the CI half would not freeze the supposed bug — are now **pinned** in
+the `assert:` block, to the DCGO-confirmed values. Sim-only: 8/8 checks pass.
 
 Unchanged caveat: `effect#3` is a PARTIAL measurement even on a clean diff — the
-DNA half needs `[GraceNovamon]` (BT25-103 / EX5-073), which has no YAML spec.
+DNA half needs `[GraceNovamon]` (BT25-103 / EX5-073), which has no YAML spec, and
+the cap of 4 is not pinned (only two opponent digivolution cards exist at the
+trigger, so `maxCount` clamps to 2 on both sides).
 
-**Denominator: 5 clauses — 4 confirmed, 1 diverged, 0 unreachable, 0 unavailable,
-0 unmeasured.**
+**Denominator: 5 clauses — 5 confirmed, 0 diverged, 0 unreachable, 0 unavailable,
+0 unmeasured.** (`effect#3` is a partial measurement — see its caveat above.)

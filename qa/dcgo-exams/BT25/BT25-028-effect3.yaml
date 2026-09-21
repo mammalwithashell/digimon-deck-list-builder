@@ -215,21 +215,26 @@ steps:
   - actor: 0
     do: { select: { cards: [ST2-06], dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }
-  # DCGO-ONLY: DCGO's own card row over Garurumon's DigivolutionCards.
+  # SHARED. DCGO's card row over Garurumon's DigivolutionCards, and OUR flat
+  # SourceMulti answered by card identity on the same row
+  # (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK, 8cb317bb4). Both sources are
+  # taken, so `maxCount 4` clamps to 2 on both sides.
+  #
+  # This row did not exist until 2026-09-21 and its absence was the whole of
+  # the retracted finding F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED: the
+  # `yes:` gate row above exhausted its picks with our SourceMulti freshly
+  # parked at `picked: 0`, and `resolve_next` spent a trailing PASS on it --
+  # legal because `min: 0` -- so the clause's own trash pick was DECLINED
+  # before any row reached it, and the next prompt the line saw was the DNA
+  # anchor. That is G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT, fixed in
+  # b77d1b288 (the `SourceMulti { picked, .. } => picked > 0` arm), the same
+  # tooling bug EX7-073#effect#2 surfaced. The engine offers the pick.
   - actor: 0
-    do: { select: { cards: [ST2-01, ST2-02], dcgo_only: true } }
+    do: { select: { cards: [ST2-01, ST2-02] } }
     expect: { prompt: SelectCardEffect }
-  # SIM-ONLY, AND THE FINDING. There is NO row here for our own source pick,
-  # because OUR ENGINE NEVER OFFERS ONE: after the gate above is accepted the
-  # very next prompt our engine parks is the DNA anchor below. Measured twice
-  # (2026-09-21, this line and a p0-turn variant that plays BT3-007 instead):
-  # with Garurumon holding [ST2-01, ST2-02] our `select_opponent_sources`
-  # yields zero candidates, so `trash_selected_sources` runs over an empty
-  # pick list and the clause's whole first half is a no-op. Logged as
-  # F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED in NOTES-BT25-028.md.
-  # This is the row our engine DOES park: the DNA anchor (select_own_permanent,
-  # optional: true) although p0 has ONE Digimon and no [GraceNovamon] in hand;
-  # DCGO's helper returns before asking anything. Declined.
+  # SIM-ONLY: the DNA anchor (select_own_permanent, optional: true) although p0
+  # has ONE Digimon and no [GraceNovamon] in hand; DCGO's helper returns before
+  # asking anything (DNADigivolveEffects.cs:456). Declined.
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
   - actor: 1
@@ -240,13 +245,14 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  # p1.field[0].sources and p1.trash are DELIBERATELY UNPINNED: they are the
-  # exact fields the finding above predicts will diverge (ours: Garurumon still
-  # holds [ST2-01, ST2-02] and p1.trash is empty; DCGO: sources [] and p1.trash
-  # [ST2-01, ST2-02]). Pinning our side would freeze the bug into the Unity-free
-  # CI half. The differ compares every state field regardless, so the oracle run
-  # still reports it -- see NOTES-BT25-028.md. The same convention is used by
-  # BT25-026-inherited0.yaml for its card-data finding.
+  # p1.field[0].sources and p1.trash were DELIBERATELY UNPINNED while
+  # F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED was open, so the Unity-free
+  # CI half would not freeze a bug. That finding is RETRACTED (2026-09-21): it
+  # was G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT in the harness, not the
+  # engine, and the line now diffs CLEAN against the preserved sidecar
+  # 20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59. Both fields are pinned
+  # here, to the DCGO-confirmed values, because they ARE the clause's outcome:
+  # Garurumon keeps no digivolution cards and both are in p1's trash.
   - at: 23
     that:
       p1.memory: 1
@@ -255,6 +261,12 @@ assert:
           dp: 12000
           suspended: false
           sources: [BT24-014]
+      p1.field:
+        - card_id: ST2-06
+          dp: 4000
+          suspended: false
+          sources: []
+      p1.trash: [ST2-01, ST2-02]
   - at: 25
     that:
       turn: 9
@@ -263,3 +275,9 @@ assert:
           dp: 12000
           suspended: false
           sources: [BT24-014]
+      p1.field:
+        - card_id: ST2-06
+          dp: 4000
+          suspended: false
+          sources: []
+      p1.trash: [ST2-01, ST2-02]

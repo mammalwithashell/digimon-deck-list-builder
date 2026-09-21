@@ -307,6 +307,18 @@ fn bt25_028_all_turns_offers_opponent_source_pick_on_opponent_entry() {
 /// The exam's exact trigger: the opponent DIGIVOLVES (their stack grows to two
 /// below-top sources as part of the same action) rather than playing. This is
 /// the shape `BT25-028-effect3.yaml` drives on DCGO.
+///
+/// This test and its two siblings above were written to RULE OUT an engine bug
+/// (`F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED`, "our engine never offers
+/// the opponent-source pick"). They were green, the exam line still diverged,
+/// and the contradiction was written up as "something specific to the exam
+/// board". It was not — the finding is RETRACTED: the exam HARNESS was spending
+/// a trailing `PASS` on the `SourceMulti { min: 0, .. }` that accepting the
+/// clause's `optional: true` gate had just installed
+/// (`G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`, RESOLVED `b77d1b288`), so
+/// the pick was declined before any scenario row reached it. These three tests
+/// were right, and they stay as the engine-side regression witnesses.
+/// `BT25-028#effect#3` now diffs CLEAN against its preserved oracle sidecar.
 #[test]
 fn bt25_028_all_turns_offers_opponent_source_pick_on_opponent_digivolve() {
     use digimon_engine::card_source::CardSource;

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-21T04:57:53.707858600+00:00",
+  "last_updated": "2026-09-21T06:16:26.969452100+00:00",
   "clauses": {
     "BT25-028#effect#0": {
       "clause_id": "BT25-028#effect#0",
@@ -32,12 +32,12 @@
     "BT25-028#effect#3": {
       "clause_id": "BT25-028#effect#3",
       "card_id": "BT25-028",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "bc59f7e362654f3f82734ef35229d71e36b30b99bf7194cf985db4b59148d0b7",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-028-effect3.yaml",
-      "reason": "DIVERGED at step 24 (compared 20 of 26 ours / 23 dcgo steps (6 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
-      "recorded_at": "2026-09-21T04:57:53.059500+00:00"
+      "reason": "CLEAN (compared 21 of 26 ours / 23 dcgo steps) against the preserved sidecar 20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59.state.jsonl -- zero new Unity time. This RETRACTS the `diverged` recorded earlier on 2026-09-21 and the engine finding it carried, F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED. THE DIVERGENCE WAS NOT OURS: it was the exam harness, G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT (RESOLVED b77d1b288, the same tooling bug EX7-073#effect#2 surfaced 16 minutes after this sidecar was recorded). runners/selection_resolve.rs::resolve_next emitted one trailing PASS after a row's picks were exhausted whenever the parked prompt's KIND looked like an open multi-pick; here the exhausted row was the sim_only `yes:` accepting our `optional: true` gate, and accepting that gate runs the clause body, whose first step installs SourceMulti { min: 0, max: 4, picked: 0 } -- min: 0 makes PASS legal, so the clause's trash pick was DECLINED by the harness before any scenario row reached it, trash_selected_sources ran over an empty pick list, and the next prompt the line saw was the DNA anchor. From the scenario's side that is indistinguishable from 'the engine never offers the pick', which is how it was read. The engine was already correct: the three characterization tests bt25_028_all_turns_offers_opponent_source_pick{,_on_opponent_entry,_on_opponent_digivolve} (cards_behavioral/bt25) were green before and after and each parks the SourceMulti -- they are kept as the engine-side regression witnesses. Re-measurement: one row added to the scenario, the SHARED identity pick `select: { cards: [ST2-01, ST2-02] }` at DCGO's SelectCardEffect (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK, 8cb317bb4), and the same sidecar diffs CLEAN. p1.field[0].sources: [] and p1.trash: [ST2-01, ST2-02] -- left unpinned while the finding was open so CI would not freeze a bug -- are now pinned to the DCGO-confirmed values; sim-only 8/8 asserts pass. NO ENGINE OR CARD CHANGE WAS MADE. PARTIAL MEASUREMENT CAVEAT (unchanged): the cap of 4 is not pinned (only two opponent digivolution cards exist at the trigger, so maxCount clamps to 2 on both sides) and the DNA half is structurally silent on DCGO -- [GraceNovamon] (BT25-103 / EX5-073) has no YAML spec, and DNADigivolvePermanentsIntoHandOrTrashCard (DNADigivolveEffects.cs:456) returns before asking anything with p0 on one permanent.",
+      "recorded_at": "2026-09-21T06:16:26.969452100+00:00"
     },
     "BT25-028#inherited#0": {
       "clause_id": "BT25-028#inherited#0",
