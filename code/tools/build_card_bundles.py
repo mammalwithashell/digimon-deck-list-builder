@@ -104,6 +104,13 @@ def parse_official(card_id: str, html: str) -> dict:
             out["attribute"] = data
         elif low == "type":
             out["type"] = data
+        elif low == "dual color":
+            # DUAL cards print a separate Option-face colour (often a single
+            # colour even on a two-colour Digimon face) — the digimoncard.io
+            # API carries no equivalent field.
+            out["dual_colors"] = data
+        elif low == "dual cost":
+            out["dual_cost"] = data
         elif low.startswith("card text"):
             # tit carries the sub-label, e.g. "Card Text 1 [Special Digivolution Condition]"
             label = re.search(r"\[(.*?)\]\s*$", tit)
@@ -156,6 +163,13 @@ def write_bundle(card_id: str, official: dict, meta: dict, outdir: str):
         f"- Play cost: {official.get('play_cost', meta.get('play_cost'))}",
         f"- Type/Traits: {official.get('type', '')}",
         f"- Form: {official.get('form', '')}   Attribute: {official.get('attribute', '')}",
+    ]
+    if official.get("dual_colors") or official.get("dual_cost"):
+        lines += [
+            f"- DUAL (Option face) Colors: {official.get('dual_colors', '')}",
+            f"- DUAL (Option face) Use cost: {official.get('dual_cost', '')}",
+        ]
+    lines += [
         "",
         "## Digivolution requirements (AUTHORITATIVE — official Bandai DB)",
         "### Standard digivolve cost circles",
