@@ -230,6 +230,24 @@ pub(crate) struct LinkOptionHostSelectionState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+/// The from-hand Plug-In **Option** link host prompt (`§6-5-1-4` declaration).
+/// Unlike [`LinkOptionHostSelectionState`] — which is installed while the
+/// Option is already mid-resolution, after its use cost was paid — this one is
+/// installed BEFORE anything is paid or removed from the hand, because
+/// `general_rule.pdf` (Ver.3.6) §10-1-3 pays the link cost only after the host
+/// is chosen. The resolved pick re-enters `play_option_core` with the host
+/// pinned on `Game::pending_option_link_host`.
+#[derive(Debug, Clone)]
+pub(crate) struct OptionHandLinkHostSelectionState {
+    pub(crate) owner: PlayerId,
+    pub(crate) hand_index: usize,
+    /// The declared Option, addressed by handle so the re-entry can verify the
+    /// hand slot still holds the same card.
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) cost: u16,
+    pub(crate) candidates: Vec<PermanentHandle>,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct DigimonLinkHostSelectionState {
     pub(crate) owner: PlayerId,
@@ -1481,6 +1499,20 @@ impl Game {
                     return;
                 }
 
+                // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: a from-hand §6-5-1-4
+                // declaration already asked §10-1-3-1's host question BEFORE
+                // anything was paid (`install_option_hand_link_host_selection`),
+                // and pinned the answer here. Plug straight into it — asking
+                // again would be a second prompt for one choice. The pin is
+                // re-checked against the live candidate set because the
+                // link-mode body could have moved the board between the pick
+                // and the disposal; a pin that no longer qualifies falls back
+                // to the ordinary prompt rather than forcing an illegal host.
+                let pinned = self
+                    .pending_option_link_host
+                    .take()
+                    .filter(|h| candidates.contains(h));
+
                 // Re-install pending_option in LinkSelectHost and park a
                 // field-selection prompt. The selection callback threads
                 // straight into `attach_linked_card`.
@@ -1491,7 +1523,10 @@ impl Game {
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
                     subtype: pending.subtype,
                 });
-                self.install_link_host_selection(owner, source_card, candidates, false);
+                match pinned {
+                    Some(host) => self.attach_linked_card(host),
+                    None => self.install_link_host_selection(owner, source_card, candidates, false),
+                }
             }
             OptionSubtype::Training => {
                 // Phase 8 Task 5: park as an `OptionState::Training` permanent on

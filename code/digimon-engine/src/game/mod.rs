@@ -613,6 +613,14 @@ pub struct Game {
     /// subject is the pending Link Option card.
     #[doc(hidden)]
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
+    /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
+    /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
+    /// asking a second time. Set by
+    /// `run_option_hand_link_host_selection_step`, consumed by
+    /// `dispose_option`. `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
+    #[doc(hidden)]
+    pub(crate) pending_option_link_host: Option<PermanentHandle>,
     /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
     /// `WhenWouldLink` replacement parked an interactive selection.
     #[doc(hidden)]

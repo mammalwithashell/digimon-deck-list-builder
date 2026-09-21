@@ -1180,6 +1180,9 @@ pub(crate) fn run_resume(
             game.run_link_option_host_selection_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
+        ResumeFrame::OptionHandLinkHostSelection(state) => {
+            game.run_option_hand_link_host_selection_step(state, action_id);
+        }
         ResumeFrame::DigimonLinkHostSelection(state) => {
             game.run_digimon_link_host_selection_step(state, action_id);
         }

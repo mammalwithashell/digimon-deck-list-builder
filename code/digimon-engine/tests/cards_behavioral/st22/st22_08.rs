@@ -1103,7 +1103,10 @@ fn st22_08_standard_mode_charges_use_cost_4() {
     );
 }
 
-/// Choosing the Link mode charges exactly the Link Requirements cost (2).
+/// Choosing the Link mode charges exactly the Link Requirements cost (2) —
+/// and charges it at `general_rule.pdf` (Ver.3.6) §10-1-3-2, i.e. AFTER
+/// §10-1-3-1's host pick, never at the declaration
+/// (`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`).
 #[test]
 fn st22_08_link_mode_charges_link_cost_2() {
     let mut runner = DebugRunner::builder()
@@ -1121,6 +1124,22 @@ fn st22_08_link_mode_charges_link_cost_2() {
 
     let before = runner.memory();
     let _ = play_st22_08(&mut runner, true);
+    assert_eq!(
+        runner.memory(),
+        before,
+        "§10-1-3-2: the link cost is paid after the host is chosen, so the \
+         declaration alone moves no memory"
+    );
+    let host_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("§10-1-3-1: the declaration parks the host pick")
+        .valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, host_action)
+        .expect("choose the Lv.3 host");
     assert_eq!(
         runner.memory(),
         before - 2,
@@ -1290,10 +1309,25 @@ fn st22_08_link_action_stays_affordable_when_the_use_action_is_not() {
         matches!(pending.kind, SelectionKind::OwnField),
         "the link declaration goes straight to the host pick"
     );
+    let host_action = pending.valid_action_ids[0];
     assert_eq!(
         runner.memory(),
-        -9,
-        "the link declaration charges exactly the Cost-2 link cost"
+        -7,
+        "§10-1-3-2: the declaration itself pays nothing — the cost lands once \
+         the host is chosen"
+    );
+    runner
+        .game
+        .resolve_selection(0, host_action)
+        .expect("choose the Lv.3 host");
+    // -7 - 2 = -9 is already the opponent's side of the gauge (the test set it
+    // there deliberately), so completing the link ends the turn and the gauge
+    // flips to the new turn player's perspective: |memory| still moved by
+    // exactly the Cost-2 link cost.
+    assert_eq!(
+        runner.memory(),
+        9,
+        "the link charges exactly the Cost-2 link cost (-7 -> -9, then the          turn ends and the gauge flips)"
     );
 }
 

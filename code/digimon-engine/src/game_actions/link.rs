@@ -201,20 +201,34 @@ impl Game {
         // `OnUseOption` without the `[Main]` body, and disposes by plugging the
         // card into the chosen host. Same §6-5-1-4 declaration, different
         // resolution machinery — see `hand_option_link_condition_targets`.
+        //
+        // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: the HOST PICK COMES FIRST.
+        // `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the link
+        // procedure 10-1-3-1 "the player chooses 1 of their Digimon that meets
+        // the requirement" -> 10-1-3-2 "The specified link cost is paid." ->
+        // 10-1-3-3 "The card to link is plugged in sideways into the chosen
+        // Digimon" -- payment is step 2 of 3. §9-1-8 adds that revealing a card
+        // as part of a use procedure "isn't considered removal from an area",
+        // so the declared card is still in hand while the host is picked.
+        // DCGO matches (`LinkEffect.ActivateCoroutine`, `Link.cs:70-88`: the
+        // `SelectPermanentEffect` host pick runs before the payment). So the
+        // declaration installs the host prompt and pays NOTHING; the resolved
+        // pick pins the host and re-enters `play_option_core`, whose `Link`
+        // arm pays (§10-1-3-2) and whose `dispose_option` plugs the card into
+        // the pinned host (§10-1-3-3) without asking again.
         if self.hand_option_link_available(player, hand_index) {
-            let Some((cost, _)) = self.hand_option_link_condition_targets(player, hand_index)
+            let Some((cost, hosts)) = self.hand_option_link_condition_targets(player, hand_index)
             else {
                 return false;
             };
-            return !matches!(
-                self.play_option_core(
-                    player,
-                    OptionSource::Hand(hand_index),
-                    Some(OptionPlayMode::Link { cost }),
-                    OptionCostPolicy::Pay,
-                ),
-                OptionPlayResult::Invalid
-            );
+            if hosts.is_empty() {
+                return false;
+            }
+            let Some(card) = self.player(player).hand.get(hand_index).map(|c| c.handle()) else {
+                return false;
+            };
+            self.install_option_hand_link_host_selection(player, hand_index, card, cost, hosts);
+            return true;
         }
         let Some((cost, hosts)) = self.hand_digimon_link_condition_targets(player, hand_index)
         else {
@@ -234,6 +248,131 @@ impl Game {
             hosts,
         );
         true
+    }
+
+    /// Install the §6-5-1-4 host prompt for a from-hand Plug-In **Option**
+    /// link, BEFORE any cost is paid and before the card leaves the hand
+    /// (`general_rule.pdf` §10-1-3-1/-2, §9-1-8 — see `activate_hand_link`).
+    /// Prompt shape is identical to `install_link_host_selection`'s (same
+    /// `OwnField` kind, same attack-id encoding, same wording) so the wire
+    /// meaning of the pick is unchanged; only its position in the procedure
+    /// moved.
+    pub(crate) fn install_option_hand_link_host_selection(
+        &mut self,
+        owner: PlayerId,
+        hand_index: usize,
+        card: crate::card_source::CardHandle,
+        cost: u16,
+        candidates: Vec<PermanentHandle>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::selection::SelectionKind;
+
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|h| encode_attack(0, h.index as u16))
+            .collect();
+        let candidate_snapshot = candidates.clone();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::OwnField,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose a Digimon to link this Option to".to_string(),
+            effect_choices: None,
+            source_card: card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let picked = candidate_snapshot
+                    .iter()
+                    .copied()
+                    .find(|h| h.index == target_index)
+                    .unwrap_or(PermanentHandle {
+                        player: owner,
+                        index: target_index,
+                    });
+                game.finish_option_hand_link(owner, hand_index, card, cost, picked);
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OptionHandLinkHostSelection(
+                OptionHandLinkHostSelectionState {
+                    owner,
+                    hand_index,
+                    card,
+                    cost,
+                    candidates,
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_option_hand_link_host_selection_step(
+        &mut self,
+        state: OptionHandLinkHostSelectionState,
+        action_id: u16,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let picked = state
+            .candidates
+            .iter()
+            .copied()
+            .find(|h| h.index == target_index)
+            .unwrap_or(PermanentHandle {
+                player: state.owner,
+                index: target_index,
+            });
+        self.finish_option_hand_link(state.owner, state.hand_index, state.card, state.cost, picked);
+    }
+
+    /// §10-1-3-2 + §10-1-3-3 for a from-hand Plug-In Option link: pin the
+    /// chosen host and run the Option lifecycle, which pays the link cost,
+    /// fires the link-mode body, and disposes by plugging the card into the
+    /// pinned host. The hand slot is re-validated first (an interposing effect
+    /// could have moved the card while the prompt was parked); a stale slot
+    /// aborts without paying, which §9-1-8 explicitly allows ("the memory
+    /// doesn't move when a card can't be used because its cost can't be
+    /// paid").
+    fn finish_option_hand_link(
+        &mut self,
+        owner: PlayerId,
+        hand_index: usize,
+        card: crate::card_source::CardHandle,
+        cost: u16,
+        host: PermanentHandle,
+    ) {
+        let still_there = self
+            .player(owner)
+            .hand
+            .get(hand_index)
+            .map(|c| c.handle() == card)
+            .unwrap_or(false);
+        if !still_there {
+            return;
+        }
+        self.pending_option_link_host = Some(host);
+        let result = self.play_option_core(
+            owner,
+            OptionSource::Hand(hand_index),
+            Some(OptionPlayMode::Link { cost }),
+            OptionCostPolicy::Pay,
+        );
+        if matches!(result, OptionPlayResult::Invalid) {
+            // Never leave a stale pin behind for the next link.
+            self.pending_option_link_host = None;
+        }
     }
 
     // ───────────────────── DigiLink Shape-B (Digimon-link) ─────────────────

@@ -311,8 +311,9 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::DigimonLinkHostSelection(_)) => unreachable!(
-                "Digimon Link prompts are top-level player actions, never nested in a DSL clause"
+            Some(ResumeFrame::DigimonLinkHostSelection(_))
+            | Some(ResumeFrame::OptionHandLinkHostSelection(_)) => unreachable!(
+                "Link declaration prompts are top-level player actions, never nested in a DSL clause"
             ),
             Some(ResumeFrame::PlayFromHandCostReductionPrompt(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::InteractiveDigivolveCostReductionPrompt(s)) => {

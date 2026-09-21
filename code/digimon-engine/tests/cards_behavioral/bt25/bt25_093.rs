@@ -279,6 +279,85 @@ fn bt25_093_security_flip_links_then_host_when_attacking_deletes_dp_bounded_mand
     assert_eq!(runner.battle_area_size(0), field0_before - 1);
 }
 
+// ── Section 4: the §10-1-3 link procedure ORDER (from-hand declaration) ──
+//
+// general_rule.pdf (Ver.3.6) §10-1-3, p.19, fixes the order of the link
+// procedure and our from-hand Plug-In Option declaration must follow it:
+//   10-1-3-1  "The player declares a link and reveals 1 card to link. 1 link
+//              requirement is chosen on the revealed card, then the player
+//              chooses 1 of their Digimon that meets the requirement."
+//   10-1-3-2  "The specified link cost is paid."
+//   10-1-3-3  "The card to link is plugged in sideways into the chosen
+//              Digimon, and the link procedure is resolved."
+// Payment is step 2 of 3 — AFTER the host is chosen — and §9-1-8 says
+// revealing a card as part of a use procedure "isn't considered removal from
+// an area", so the revealed card is still in the hand while the host is being
+// picked. DCGO matches the PDF (`LinkEffect.ActivateCoroutine`,
+// `Link.cs:70-88`: the `SelectPermanentEffect` host pick runs first, payment
+// after), and the exam clause BT25-093#effect#4 measures exactly this row.
+// `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
+#[test]
+fn bt25_093_hand_link_pays_after_the_host_is_chosen_not_at_declaration() {
+    use digimon_engine::action::space::HAND_EFFECT_START;
+
+    let mut runner = flare_runner()
+        .hand(0, &["BT25-093"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    runner.game.decode_action(HAND_EFFECT_START, 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("§10-1-3-1: declaring the link parks the host pick");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+
+    // §10-1-3-2 has NOT happened yet.
+    assert_eq!(
+        runner.memory(),
+        before,
+        "§10-1-3-2: the link cost is paid AFTER the host is chosen, not at the          declaration"
+    );
+    // §9-1-8: revealing the card to link is not removal from an area.
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "§9-1-8: the revealed card to link is still in the hand until §10-1-3-3          plugs it in"
+    );
+    assert!(
+        runner.game.player(0).hand[0].card_id(&runner.game.card_data) == "BT25-093",
+        "the card still in hand is the declared Option"
+    );
+
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, host.index as u16))
+        .expect("§10-1-3-1: choose the [TS] host");
+
+    // §10-1-3-2 then §10-1-3-3.
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "the printed <Link> [TS] trait: Cost 3 is paid once the host is chosen"
+    );
+    assert_eq!(runner.hand_size(0), 0, "§10-1-3-3: the card leaves the hand");
+    let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "plugged in sideways");
+    assert_eq!(linked[0].card_id(&runner.game.card_data), "BT25-093");
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT25-093"),
+        "a linked Option is not trashed"
+    );
+}
+
 // ── fixtures ─────────────────────────────────────────────────────────────
 
 fn make_ts_digimon(id: &str, level: u8) -> digimon_engine::CardData {

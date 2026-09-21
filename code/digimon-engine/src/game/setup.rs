@@ -233,6 +233,7 @@ impl Game {
             pending_would_play_resume: None,
             pending_assembly_materials: None,
             pending_would_link_resume: None,
+            pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
             pending_would_digivolve_resume: None,
@@ -380,6 +381,7 @@ impl Game {
         self.last_play_order_choice = None;
         self.pending_would_play_resume = None;
         self.pending_would_link_resume = None;
+        self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;
         self.pending_would_digivolve_resume = None;

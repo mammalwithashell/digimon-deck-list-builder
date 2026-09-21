@@ -610,6 +610,11 @@ pub enum ResumeFrame {
     /// Link Option host prompt installed while an Option is resolving. Accept
     /// attaches the pending Option as a link; optional PASS trashes it.
     LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    /// From-hand Plug-In **Option** link host prompt (the §6-5-1-4
+    /// declaration). Top-level player action installed BEFORE any payment:
+    /// accept pins the chosen host and re-enters `play_option_core`, which then
+    /// pays the link cost (§10-1-3-2) and plugs the card in (§10-1-3-3).
+    OptionHandLinkHostSelection(crate::game_actions::OptionHandLinkHostSelectionState),
     /// Field Digimon Link host prompt. Top-level player action; accept begins
     /// the WhenWouldLink window and then commits/resumes the Digimon link.
     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
