@@ -501,14 +501,29 @@ pub fn resolve_next(
                 })
             });
         let multiselectish = open_field_multi_pick
-            || matches!(
-                pending.kind,
+            || match pending.kind {
+                // A `SourceMulti` that has accepted NO pick yet is NOT this
+                // row's prompt still awaiting its stop — it is a FRESH prompt
+                // that the row's LAST pick caused to install, because resolving
+                // one effect lets the next queued one activate and park its own
+                // cost selection. Spending the trailing PASS there silently
+                // DECLINES an unrelated selection, and the later row that was
+                // written to answer it then reports "no live prompt".
+                //
+                // Driver: `qa/dcgo-exams/EX7/EX7-073-effect2.yaml`. The Option
+                // placement row (`targets: [own.field.0]`, 1 pick) completes
+                // Clause 1; Clause 2 then activates and parks
+                // `SourceMulti { min: 0, max: 2, picked: 0 }` — whose `min: 0`
+                // makes PASS legal — and the trailing PASS declined the card's
+                // printed cost before its own row was reached.
+                // `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`.
+                SelectionKind::SourceMulti { picked, .. } => picked > 0,
                 SelectionKind::CountCappedMultiSelect { .. }
-                    | SelectionKind::SourceMulti { .. }
-                    | SelectionKind::RevealBucket { .. }
-                    | SelectionKind::DpBudget { .. }
-                    | SelectionKind::PlayCostBudget { .. }
-            );
+                | SelectionKind::RevealBucket { .. }
+                | SelectionKind::DpBudget { .. }
+                | SelectionKind::PlayCostBudget { .. } => true,
+                _ => false,
+            };
         let pass_legal = pending.is_optional;
         if picks_done > n_picks {
             // Trailing PASS already sent once; never loop.
@@ -1373,6 +1388,58 @@ mod tests {
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-B"), 0),
             Ok(Some(c1.0))
+        );
+    }
+
+    /// `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`. A row whose picks are
+    /// exhausted asks `resolve_next` once more so a still-open multi-pick can
+    /// be stopped with a trailing PASS. When the pick RESOLVED the prompt and
+    /// the engine then parked a BRAND-NEW `SourceMulti` (0 picks taken), that
+    /// PASS would decline a selection the row never addressed.
+    ///
+    /// Driver: `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` — the Option-placement
+    /// row finishes BeelStarmon (X Antibody) (EX7-073) Clause 1, Clause 2 then
+    /// activates and parks its `min: 0` "trash 2 [Three Musketeers] sources"
+    /// cost, and the trailing PASS declined the card's printed cost before the
+    /// row written to pay it was reached.
+    #[test]
+    fn trailing_pass_does_not_decline_a_freshly_parked_source_multi() {
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-B", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        let c1 = source_candidate(&runner.game, carrier, 1);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0, c1], 0, 2);
+
+        // `picks_done == n_picks`: the row's single pick already went to an
+        // EARLIER prompt, and this 0-picked `SourceMulti` is what resolving it
+        // installed. The row is done.
+        assert_eq!(resolve_next(&runner.game, &card_row("SRC-A"), 1), Ok(None));
+    }
+
+    /// The other half of the same branch: once the prompt HAS taken a pick it
+    /// really is this row's own "up to N" still awaiting its stop, so the
+    /// trailing PASS must still be spent (`canEndNotMax` — a row that picks 1
+    /// of 2 and stops).
+    #[test]
+    fn trailing_pass_still_stops_a_source_multi_that_took_a_pick() {
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-B", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        let c1 = source_candidate(&runner.game, carrier, 1);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0, c1], 0, 2);
+        runner.game.decode_action(c0.0, 0);
+        assert!(
+            matches!(
+                runner.game.pending_selection.as_ref().map(|s| s.kind),
+                Some(SelectionKind::SourceMulti { picked: 1, .. })
+            ),
+            "the prompt re-parks with 1 pick taken; kind={:?}",
+            runner.game.pending_selection.as_ref().map(|s| s.kind)
+        );
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-A"), 1),
+            Ok(Some(PASS))
         );
     }
 

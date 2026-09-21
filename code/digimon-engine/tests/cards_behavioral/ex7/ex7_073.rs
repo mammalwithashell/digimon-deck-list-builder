@@ -1020,3 +1020,90 @@ fn ex7_073_wd_no_tm_sources_silently_skips_trash_clause() {
         "no sources to trash → the security trash never fires"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 5 — Clause 1's used Option must resolve to COMPLETION before the
+//             still-pending sibling Clause 2 activates
+//             (G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// FAITHFULNESS (exam `EX7-073#effect#2`, oracle sidecar
+/// `20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3`): both `[When
+/// Digivolving]` clauses queue simultaneously. Picking Clause 1 first must run
+/// it — INCLUDING the whole `[Main]` body of the Option it uses — before
+/// Clause 2 activates. `general_rule.pdf` 15-4-3-4 ("the next pending
+/// activation effect is chosen AFTER each effect has been resolved"),
+/// 15-4-4-2 ("effects pending activation must be activated 1 at a time") and
+/// 15-8-3-2 ("trigger-type effects can't activate during the processing for a
+/// rule or effect") all forbid interleaving them. DCGO agrees: `EX7_073.cs`
+/// Clause 1's coroutine calls `PlayOptionCards(payCost: false)` INLINE, so the
+/// Option's `[Main]` finishes before the second `ActivateClass` is reached
+/// (raw sidecar: P-180 becomes a digivolution card at step 27, both trait
+/// sources are trashed at step 29, the opponent's Digimon is deleted and their
+/// top security trashed at step 31).
+///
+/// The witness: Bind Red Trigger (P-180) tucks itself under BeelStarmon as the
+/// SECOND `[Three Musketeers]`-trait digivolution card, which is exactly what
+/// makes Clause 2's two-card cost payable. If Clause 2 activates mid-Clause-1
+/// it sees only ONE trait source, the cost is unpayable and the printed delete
+/// + security trash never happen.
+#[test]
+fn ex7_073_used_options_main_completes_before_pending_sibling_clause() {
+    let mut runner = base_builder()
+        .dsl_card("P-180")
+        .expect("P-180 YAML loads from the embedded pack")
+        .add_card(purple_lv5("BASE"))
+        .add_card(tm_source("TM-A"))
+        .add_card(opp_digimon("OPP-D", 5, 9000))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &[CARD_ID, "P-180"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    // A DSL-registered card has EMPTY printed text under DebugRunner; restore
+    // P-180's so Clause 1's `[Three Musketeers] in its text` filter runs on
+    // the surface live games do.
+    std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+        .iter_mut()
+        .find(|c| c.card_id == "P-180")
+        .expect("P-180 registered")
+        .effect_text = "While you have a [Three Musketeers] trait Digimon, you can ignore this card's color requirements. [Main] Trash your opponent's top security card. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.".to_string();
+    push_to_security_top(&mut runner, 1, "FILL");
+    push_to_security_top(&mut runner, 1, "FILL");
+    push_to_security_top(&mut runner, 1, "FILL");
+    let security_before = runner.security_count(1);
+
+    // ONE TM-trait digivolution card under the base — Clause 2's cost needs
+    // TWO, and the second only arrives from Clause 1's used Option.
+    let base = runner.place_stack(0, &["TM-A", "BASE"]);
+    runner.place_on_field(1, "OPP-D", Some(0));
+
+    digivolve_ex7_073(&mut runner, base);
+    // Order the two simultaneous [When Digivolving] triggers: Clause 1 first.
+    resolve_trigger_order_if_pending(&mut runner, true);
+    accept_all_prompts(&mut runner);
+
+    let card_data = runner.game.card_data.clone();
+    let p0_trash = zone_ids(&runner.game.players[0].trash, &card_data);
+    let stack = zone_ids(&runner.game.players[0].battle_area[0].card_sources, &card_data);
+
+    assert!(
+        p0_trash.contains(&"P-180".to_string()) && p0_trash.contains(&"TM-A".to_string()),
+        "Clause 1's Option must be a digivolution card by the time Clause 2 \
+         activates, so BOTH trait sources pay Clause 2's cost; \
+         trash={p0_trash:?} stack={stack:?}"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "Clause 2's cost is payable → the opponent's highest-level Digimon is \
+         deleted; trash={p0_trash:?} stack={stack:?}"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        security_before - 2,
+        "one security card from P-180's own [Main], one from Clause 2's \
+         printed 'trash their top security card'"
+    );
+}

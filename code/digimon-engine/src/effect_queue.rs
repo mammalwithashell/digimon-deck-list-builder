@@ -1176,6 +1176,58 @@ impl Game {
                 return;
             }
 
+            // 9-1-4 / 15-8-3-2: the `[Main]` body of an Option that an effect
+            // USED is part of the RESOLUTION of the effect that used it. It is
+            // not itself an effect "pending activation", so it may neither be
+            // deferred behind a sibling trigger that was already queued nor be
+            // offered as one of that player's simultaneous items in a
+            // `TriggerOrder` bundle: "trigger-type effects can't activate
+            // during the processing for a rule or effect" (15-8-3-2), "effects
+            // that are pending activation must be activated 1 at a time"
+            // (15-4-4-2), and "the activation order is determined ... by
+            // choosing the next pending activation effect AFTER each effect
+            // has been resolved" (15-4-3-4). While that body is still queued it
+            // is therefore the ONLY entry this drain may run — every other
+            // queued trigger stays put until the using effect has finished.
+            //
+            // DCGO agrees structurally: `CardController.cs`
+            // `UseOptionClass.UseOption` runs the `OptionSkill` INLINE inside
+            // the using coroutine, so the stacked triggers only resolve once
+            // that coroutine returns.
+            //
+            // G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER
+            // (reproducer: BeelStarmon (X Antibody) (EX7-073) Clause 1 uses
+            // Bind Red Trigger (P-180), whose `[Main]` tucks itself under the
+            // Digimon as the second `[Three Musketeers]`-trait digivolution
+            // card that the still-pending Clause 2 needs to pay its cost).
+            if self.option_body_pending {
+                if let Some(idx) = self.queued_option_main_index() {
+                    let qe = self
+                        .effect_queue
+                        .remove(idx)
+                        .expect("index from queued_option_main_index is in-bounds");
+                    // Same deferred-drain scope the ordinary single-entry path
+                    // uses, so triggers the body causes stay queued until it
+                    // has resolved.
+                    self.enter_deferred_drain();
+                    self.run_queued_effect(qe);
+                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                    self.rules_check_between_queued_effects();
+                    continue;
+                }
+                if self.draining_deferred > 0 {
+                    // The body has been popped but `complete_option_body_if_done`
+                    // has not released it yet: we are INSIDE the `[Main]`'s
+                    // resolution, reached through a nested `drain_effect_queue`
+                    // that one of its steps performed (the security-removal
+                    // observer dispatch in `fire_effect_security_removal` is the
+                    // driver). 15-8-3-2 again: nothing pending may activate here.
+                    // Hold the queue for the outer drain, which re-enters once
+                    // the body has finished and the Option has been disposed.
+                    return;
+                }
+            }
+
             let Some(chooser) = self.next_chooser() else {
                 self.effect_chain_depth = 0;
                 return;
@@ -4718,6 +4770,20 @@ impl Game {
         }
         self.option_body_pending = false;
         self.dispose_option();
+    }
+
+    /// Index of the queued `OptionMain` body of the Option currently being
+    /// used (`pending_option`), while it has not run yet. `None` once the body
+    /// has been popped, or when no Option use is in flight.
+    ///
+    /// The drain gives that entry absolute priority — see the call site in
+    /// `drain_effect_queue_inner` for the rules citation
+    /// (G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER).
+    fn queued_option_main_index(&self) -> Option<usize> {
+        let card = self.pending_option.as_ref()?.card.handle();
+        self.effect_queue
+            .iter()
+            .position(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
     }
 
     /// Queue indices of the Option user's OWN pending triggered effects that
