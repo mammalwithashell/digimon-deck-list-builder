@@ -39,7 +39,7 @@ not carry. The line shows Monica `suspended: true` and Iron Slash in the trash;
 the lock itself would only be visible as a missing attack bit on p1's turn, and
 a scripted illegal attack cannot lower.
 
-## F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST (our bug — measured, not fixed)
+## F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST — FIXED 2026-09-20 (`f24b986d0`)
 Found while authoring `effect#2`. With **no Digimon at all** on p0's board
 (only the Tamer Monica), playing Iron Slash BT25-100 from hand still parks our
 `[Main]`/`[Link]` mode-select ("Play as a [Main] Option" / "Plug in via Link
@@ -53,10 +53,25 @@ executes a link declaration with zero legal hosts — an illegal action in the
 RL action space. Likely site: the mode-select's "is a link legal" check in
 `Game::play_option_core` (it should require at least one host satisfying the
 card's link condition, and the branch should fizzle-free refuse otherwise).
-The committed line takes the `[Main]` branch through a `sim_only` `choice:` row,
-so the finding does not contaminate the clause. Same behaviour is expected for
-every dual-mode Plug-In Option (BT25-093, BT24-091, …). Needs the card-fix gate
-(failing-then-passing test); not applied in this stage.
+Same behaviour applied to every dual-mode Plug-In Option (BT25-093, BT24-091, …).
+
+**Fixed at close-out (`f24b986d0`, three-musketeers-2).** `Game::option_legal_
+play_modes` filtered only AFFORDABILITY; it now also drops `OptionPlayMode::Link`
+when `link_host_candidates` is empty, so the mask and the mode-select offer agree
+and a single surviving mode plays directly with no prompt.
+`general_rule.pdf` §10-1-3-1 (p.19) makes "then the player chooses 1 of their
+Digimon that meets the requirement" part of the link procedure, and §6-5-1-4
+(p.12) is the main-phase action it implements — with no such Digimon the action
+cannot be declared. DCGO agrees: `CardEffectFactory.LinkEffect` returns `null`
+when `!HasMatchConditionPermanent(CanSelectPermanentCondition)` (`Link.cs:24`,
+re-checked at `Link.cs:53`). Tests
+`bt25_100_no_mode_select_when_no_link_host_exists` /
+`…_when_only_non_ts_digimon_on_board` fail before and pass after; full entry in
+`qa/resolved-gaps.md`.
+
+Consequence for THIS scenario: `BT25-091-effect2.yaml` no longer needs (and can
+no longer lower) its `sim_only` `choice: "[Main]"` row — our Play bit IS the
+`[Main]` use here, exactly like DCGO's. The row was removed in the same commit.
 
 ## `effect#2` — RE-MEASURED 2026-09-20: CLEAN, verdict `confirmed`
 
@@ -106,3 +121,40 @@ even after a successful return. Card-level fix: gate on
 `bt25_091_on_play_declined_return_draws`. The oracle diff against the
 preserved sidecar `20260918T130047Z_8f408f4b…` is now CLEAN; the scenario now
 asserts the DCGO-observed `p0.hand`. No engine change.
+
+## OPEN finding — `effect#2` re-diff is NOT clean (pre-existing, 2026-09-20)
+
+Re-diffing `BT25-091-effect2.yaml` against the preserved sidecar
+(`20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`) after the
+mode-select row was dropped gives **DIVERGED at the `select: { yes: true }`
+row** (12 of 13 ours compared / 12 DCGO, 1 sim-only):
+
+```
+p0.field[0].suspended: ours=true dcgo=false
+```
+
+It is a ONE-FIELD, ONE-ROW transient: every later compared row agrees, so both
+engines have Monica suspended by the next prompt. Ours applies the
+"by suspending this Tamer" cost as part of resolving the OptionalSkill accept;
+DCGO's state row for that accept is snapshotted before its coroutine pays it.
+
+**This is NOT caused by `f24b986d0`.** Reproduced on the UNMODIFIED engine
+(`git show HEAD:code/digimon-engine/src/game_actions/mod.rs` restored, harness
+rebuilt) against the pre-fix scenario: identical lead,
+`DIVERGED at step 10 … p0.field[0].suspended: ours=true dcgo=false`. It is the
+same logical row in both shapes — the row indices differ only because the
+sim-only mode-select row is gone.
+
+It appeared with the `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` close-out
+(`5aef07fa8`), which inserted our `TriggerOrder` prompt ahead of Monica's
+OptionalSkill: the pre-`5aef07fa8` shape of this line cannot be re-run (the
+scenario without the trash-order row now fails to lower — "our engine's parked
+TriggerOrder prompt maps to DCGO `MultipleSkills`"), so the CLEAN re-measure
+recorded above was taken on the older shape.
+
+The stored verdict for `BT25-091#effect#2` is still `confirmed` (recorded
+2026-09-20T20:42). It is **left untouched here** — flipping it needs the
+triage this note asks for, not a drive-by edit. Next dispatch should decide
+whether the snapshot boundary is a harness property (in which case the exam
+differ should tolerate it for activation-cost rows) or a real ordering
+divergence, and re-record the verdict either way.

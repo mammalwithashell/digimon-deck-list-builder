@@ -76,5 +76,10 @@ GATE half of the condition ([TS] Digimon) is exercised indirectly by every
 line that links to Kamemon. Same clause, same reason: `BT25-093#effect#4`.
 
 See also `NOTES-BT25-091.md`, F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST — our
-mode-select is offered (and its "Plug in" branch executes, paying 2 and
-trashing the card) with NO legal Digimon host. Found with this card.
+mode-select was offered (and its "Plug in" branch executed, paying 2 and
+trashing the card) with NO legal Digimon host. Found with this card, **FIXED
+2026-09-20 (`f24b986d0`)**: `option_legal_play_modes` now drops the Link mode
+when `link_host_candidates` is empty (general_rule.pdf §10-1-3-1; DCGO
+`Link.cs:24`). That closes the OFFERING half only — this clause's
+`unreachable` reason above (no shared wire action means "plug this Option in
+from hand") is unchanged.
