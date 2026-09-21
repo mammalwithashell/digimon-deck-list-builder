@@ -141,9 +141,23 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # DCGO-ONLY, and a FINDING (see the header): #effect#3 triggered on the same
-  # digivolve and becomes activatable now that an Option sits under BeelStarmon.
-  # Declined (cancel -> RemoveUse). Our engine never queued it.
+  # #effect#3 triggered on the same digivolve and becomes activatable now that
+  # an Option sits under BeelStarmon. Declined on both wires.
+  #
+  # REPAIRED 2026-09-21 (close-out job three-musketeers-2). This used to be a
+  # single `dcgo_only` row carrying the FINDING "our engine never queued it".
+  # That finding is CLOSED: `b77d1b288` made a used Option's [Main] run to
+  # completion before any pending sibling trigger (general_rule.pdf 15-8-3-2),
+  # so the sibling is now queued and offered HERE, after P-180's body -- which
+  # is what DCGO always did. The two wires ask it in different SHAPES, so it
+  # takes one row each rather than one shared row: ours parks the clause's
+  # `optional:` accept/decline gate (`Replacement`, "You may activate
+  # BT25-085's triggered effect"), DCGO opens its target picker directly and
+  # takes the decline as a cancel -> RemoveUse. Both decline; the asserted
+  # end state below is unchanged.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }

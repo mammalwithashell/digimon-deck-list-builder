@@ -139,12 +139,18 @@ steps:
   - actor: 0
     do: { select: { cards: [P-180] } }
     expect: { prompt: SelectHandEffect }
-  # SIM-ONLY: our engine queues the used Option's [Main] as a trigger beside
-  # the still-queued clause 2 and asks which resolves first; DCGO runs the
-  # Option inline inside the clause's own coroutine (PlayOptionCards) and asks
-  # nothing. Resolve P-180 first, as DCGO does.
-  - actor: 0
-    do: { select: { cards: [P-180], sim_only: true } }
+  # (A sim-only TriggerOrder row used to sit HERE, answering an ordering prompt
+  # our engine parked between the used Option's [Main] and the still-queued
+  # clause 2 -- a choice the rules do not grant. REMOVED 2026-09-21, close-out
+  # job three-musketeers-2: `b77d1b288` gives the in-flight Option's queued
+  # [Main] absolute priority in `drain_effect_queue_inner`, so no such prompt is
+  # parked any more and our engine goes straight to P-180's placement below,
+  # matching DCGO's inline `PlayOptionCards`. Citation: general_rule.pdf
+  # 15-8-3-2 -- "Trigger-type effects can't activate during the processing for a
+  # rule or effect". Gap G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER,
+  # RESOLVED; it also supersedes the first half of the older OPEN finding
+  # F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, which this row was the
+  # standing witness for.)
   # SHARED: P-180's "place this card under 1 of your [Three Musketeers]
   # trait Digimon" -- EX7-073 is the lone candidate. DCGO's forced
   # single-candidate short-circuit (`canSelectCount == _maxCount ->
@@ -163,10 +169,17 @@ steps:
   # AFTER P-180 (trait [Three Musketeers]) became a digivolution card. So DCGO
   # asks its OptionalSkill (built `isOptional: true`, EX7_073.cs:138) although
   # the two-card cost cannot be paid with one eligible source. Declined. Our
-  # engine resolves the unpayable pick with no prompt (same DCGO-only row as
-  # EX7-073-effect0.yaml). The FIRST oracle run (2026-09-18) aborted right here
-  # -- "step 16 expected actor 1 but DCGO asked actor 0" -- because this row
-  # was missing.
+  # engine now PARKS the unpayable cost pick instead of silently resolving it
+  # (`b77d1b288` + `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`), so this
+  # takes one row per wire -- same repair as EX7-073-effect0.yaml, 2026-09-21,
+  # close-out job three-musketeers-2. Ours: `SourceMulti { min: 0, max: 2,
+  # picked: 0 }`, whose `min: 0` IS the decline path. DCGO: the OptionalSkill.
+  # Both decline; the asserted end state is unchanged. The FIRST oracle run
+  # (2026-09-18) aborted right here -- "step 16 expected actor 1 but DCGO asked
+  # actor 0" -- because the DCGO row was missing.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }

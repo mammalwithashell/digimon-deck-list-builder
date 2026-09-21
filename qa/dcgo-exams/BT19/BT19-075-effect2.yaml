@@ -242,14 +242,27 @@ assert:
         - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
         - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
   # THE WITNESS: the replacement paid Deltamon and MoonMillenniummon did NOT
-  # leave. p1.security is deliberately NOT asserted -- see the predicted
-  # divergence in the header.
+  # leave.
+  #
+  # p1.trash UPDATED 2026-09-21 (close-out job three-musketeers-2). It used to
+  # read [ST1-10, P-180], written while the card's own [All Turns][Once Per
+  # Turn] deletion observer was NOT firing for the deletion its own
+  # leave-replacement paid as a cost (G-ENGINE-REPLACEMENT-COST-DELETION-NO-
+  # OBSERVER, fixed 4c609b5e2: a PermanentHandle is a battle-area INDEX and the
+  # area compacts on removal, so the trigger's event_permanent aliased onto the
+  # survivor that slid into the dead slot). With the observer firing, the clause
+  # trashes p1's top security (ST1-04) as printed. The value below is the
+  # ORACLE's, read from the preserved sidecar
+  # 20260921T041928Z_40f7887a9e644e60aa37adeb21c9bbb4.state.jsonl final row
+  # (p1.trash ['P-180', 'ST1-04', 'ST1-10'], p1.security 4 -> 3); the whole line
+  # re-diffs CLEAN 22 of 22 against it, so this is DCGO's state, not ours.
   - at: 21
     that:
       turn: 7
       p0.memory: 1
       p0.trash: [BT6-012]
-      p1.trash: [ST1-10, P-180]
+      p1.trash: [P-180, ST1-04, ST1-10]
+      p1.security: 3
       p0.field:
         - { card_id: BT1-009, dp: 3000, suspended: false, sources: [] }
         - { card_id: BT19-075, dp: 15000, suspended: true, sources: [BT18-019] }

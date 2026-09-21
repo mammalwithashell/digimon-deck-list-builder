@@ -3071,21 +3071,34 @@ the battle area as a dp-less permanent — the exam's lead divergence) onto
 `*_wd_delete_targets_highest_level_opponent_only` is the regression witness for the
 vacuous outer prompt). Full `cards_behavioral` 8172 green.
 
-## F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE — OPEN (found 2026-09-18, exam triage EX7-073#effect#1)
+## F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE — HALF RESOLVED `b77d1b288`, half still OPEN (found 2026-09-18, exam triage EX7-073#effect#1)
 
-When an effect USES an Option (`use_option_from_hand`, free) while another of the
-controller's triggers is still queued (EX7-073's second [When Digivolving]), our
-engine queues the used Option's [Main] as a trigger BESIDE the still-queued one and
-parks a `TriggerOrder` ([EX7-073, P-180]). DCGO resolves the Option inline inside the
-using effect's own coroutine (`PlayOptionCards(payCost: false)`, `EX7_073.cs:112-130`)
-and asks nothing. Outcome-visible only when the ordering matters: for EX7-073, choosing
-the trash-2 clause BEFORE P-180's self-placement means it cannot count P-180 as a
-[Three Musketeers] source, whereas DCGO always sees it. The exam line answers the
-extra row `sim_only` and picks P-180 first, so the clause is CONFIRMED; the extra
-ordering freedom is logged here, not fixed. **Also:** `play_from_hand_free` silently
+**The ordering half is CLOSED** (superseded by
+`G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER`, RESOLVED `b77d1b288`).
+As found: when an effect USED an Option (`use_option_from_hand`, free) while another
+of the controller's triggers was still queued (EX7-073's second [When Digivolving]),
+our engine queued the used Option's [Main] as a trigger BESIDE the still-queued one
+and parked a `TriggerOrder` ([EX7-073, P-180]) — a choice the rules do not grant.
+DCGO resolves the Option inline inside the using effect's own coroutine
+(`PlayOptionCards(payCost: false)`, `EX7_073.cs:112-130`) and asks nothing.
+`b77d1b288` gives the in-flight Option's queued `OptionMain` absolute priority in
+`drain_effect_queue_inner`, so the prompt is no longer parked. Citation:
+`general_rule.pdf` 15-8-3-2 (p.25) — "Trigger-type effects can't activate during the
+processing for a rule or effect".
+
+**Measured, not inferred** (2026-09-21, close-out job `three-musketeers-2`): the
+standing witness for this finding was the `sim_only` TriggerOrder row in
+`qa/dcgo-exams/EX7/EX7-073-effect1.yaml`. That row now fails to lower — our engine
+asks nothing there — so it was REMOVED, and the line re-diffs **CLEAN (16 of 21 ours /
+18 dcgo steps)** against its preserved sidecar
+`20260918T105217Z_0a6e7c8a4d68471c8a19033c282ef94e.state.jsonl`. `EX7-073#effect#1`
+keeps its `confirmed` verdict, now re-earned on the current engine.
+
+**Still OPEN — the second half, untouched:** `play_from_hand_free` silently
 accepts an Option/Dual hand card and plays it to the battle area as a permanent —
 it should refuse non-permanent kinds (or route to the Option-use pipeline). A pool
-sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted.
+sweep for `play_from_hand_free` fed by a `kind: option` pick is warranted. Nothing in
+`b77d1b288` touches that call site, and no driver clause measures it yet.
 
 ## G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND — RESOLVED 2026-09-19 (found 2026-09-18, Three Musketeers exam stage, BT24-030#effect#3)
 

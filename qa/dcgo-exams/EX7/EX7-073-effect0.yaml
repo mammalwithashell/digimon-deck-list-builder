@@ -164,11 +164,24 @@ steps:
     # stacked triggers -- the first oracle run aborted on `count: 2` for exactly
     # that reason (triage 2026-09-18). The two-trigger claim is `candidates:`.
     expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
-  # DCGO-ONLY: effect (b)'s gate. Only one [Three Musketeers]-trait source
-  # exists, so the two-card cost cannot be paid: DCGO still asks the
-  # OptionalSkill (its CanActivateCondition is >= 1, not >= 2) and it is
-  # declined; our engine resolves the unpayable pick with no prompt at all
-  # (verified by lowering: "select answered no live prompt").
+  # Effect (b)'s gate. Only one [Three Musketeers]-trait source exists, so the
+  # two-card cost cannot be paid, and BOTH wires decline -- but in different
+  # SHAPES, so it takes one row each.
+  #
+  # REPAIRED 2026-09-21 (close-out job three-musketeers-2). This used to be a
+  # lone `dcgo_only` row, because our engine "resolved the unpayable pick with
+  # no prompt at all". It no longer does: `b77d1b288` (which also fixed
+  # `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT` -- the exam resolver's
+  # trailing PASS used to silently eat a freshly parked `min: 0` SourceMulti)
+  # leaves the cost pick PARKED and visible, as the no-approximations rule
+  # requires: `SourceMulti { min: 0, max: 2, picked: 0 }`, "Trash 2 cards with
+  # the [Three Musketeers] trait in this Digimon's digivolution cards". `min: 0`
+  # IS the decline path (the same authored shape EX7-073-effect2.yaml uses), so
+  # the row below declines it explicitly instead of relying on a trailing PASS.
+  # End state is unchanged and still CLEAN against the preserved sidecar.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
