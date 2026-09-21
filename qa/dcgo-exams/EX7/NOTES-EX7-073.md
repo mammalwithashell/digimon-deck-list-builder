@@ -247,3 +247,82 @@ only splits a LIVE sim prompt and ours has already auto-resolved.
 
 **`effect#2` moves `unreachable` -> `unmeasured`.** Denominator now
 **3 clauses: 2 confirmed + 1 authored-unmeasured, 0 unreachable.**
+
+## 2026-09-21 — ORACLE PASS: the predicted divergence is MEASURED, and it is OURS
+
+Close-out job `three-musketeers-2`, DCGO `scripted-v16` (`fc67f9ae6`), job
+`exam-EX7-073-effect2` `completed` (full scripted line, 27 rows), sidecar
+`20260921T043458Z_18bd…33d3.state.jsonl`, book `three_musketeers_pool.json`.
+The diff lands exactly where the section above predicted, with the exact
+expected readings on both sides:
+
+```
+DIVERGED at step 25 (compared 22 of 27 ours / 24 dcgo steps)
+  LEAD step 25:
+    p0.trash:              ours=[]                                          dcgo=[BT25-085, P-180]
+    p0.field[1].sources:   ours=[BT25-082, BT25-085, EX7-051, P-180, ST6-01] dcgo=[BT25-082, EX7-051, ST6-01]
+  downstream step 26:
+    p1.security: ours=4 dcgo=3
+    p1.field:    ours=[BT4-014(dp=8000)] dcgo=[]
+    p1.trash:    ours=[ST1-02] dcgo=[BT4-014, ST1-02, ST1-02]
+```
+
+**Read from the raw `.state.jsonl`, DCGO's own order is unambiguous** (and
+shows no stacked second defect):
+
+| recording step | DCGO state |
+|---|---|
+| 24 | P-180's `[Main]` security trash landed: `p1.security 5 -> 4`, `p1.trash [ST1-02]` |
+| 27 | **P-180 is now a digivolution card**: `p0.field[0].sources [BT25-085, BT25-082, EX7-051, ST6-01, P-180]` |
+| 29 | the clause's cost is PAID: `p0.trash [P-180, BT25-085]`, sources back to 3 |
+| 31 | the clause resolves: `p1.field []`, `p1.security 3`, `p1.trash [ST1-02, BT4-014, ST1-02]` |
+
+So DCGO finishes clause 1 — the used Option's whole lifecycle, placement
+included — BEFORE clause 2 activates, and clause 2 then counts TWO
+`[Three Musketeers]`-trait sources: `CanActivateCondition` (`EX7_073.cs:172-182`,
+`>= 1`) passes and the coroutine's `DigivolutionCards.Count >= 2` gate
+(`EX7_073.cs:~199`) opens the payment. Our engine interleaves clause 2 into the
+middle of clause 1's resolution, sees one trait source, auto-resolves the
+unpayable pick with no prompt, and the printed effect never happens.
+
+### The rules say DCGO is right (so this is our bug)
+
+`general_rule.pdf` p.23, read directly this stage:
+
+- **15-4-3-4** — "The activation order is determined for effects that trigger
+  simultaneously by choosing the next pending activation effect **after each
+  effect has been resolved**."
+- **15-4-4-2** — "Effects that are pending activation must be activated 1 at a
+  time. Multiple triggered effects can't be activated at the same time."
+- **15-4-5-2** — "A derived triggering effect will activate **before**
+  previously triggered effects that are pending activation."
+
+Whether the used Option's `[Main]` is read as part of clause 1's resolution
+(15-4-3-4 / 15-4-4-2) or as a derived activation raised during it (15-4-5-2),
+every reading puts it ahead of the still-pending sibling clause 2. Our engine
+instead offers the controller a `TriggerOrder [EX7-073, P-180]` — a choice the
+rules do not grant at this timing — and BOTH of its branches lose clause 1's
+printed outcome or clause 2's, as this file measured sim-side on 2026-09-20.
+
+This is a **sibling of, not a duplicate of**, `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`
+(RESOLVED `5aef07fa8`). That gap is about the 9-1-5 pending *trash* being
+orderable against the user's own pending triggers, which 18-1-2 + 15-4-3-5-1 do
+grant. This one is about the Option's `[Main]` **body** not being carried to
+completion before the sibling trigger activates — a different item at a
+different timing.
+
+**Not a second defect:** P-180's own "When effects trash this card from
+digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon" is
+correctly silent on both sides — `P_180.cs:60-66` needs `DP <= 7000` and
+Vermilimon BT4-014 is 8000. That is exactly what change (2) of the authored
+line was for, and it held.
+
+**Logged, not fixed** (this stage's remit is verdict recording):
+`G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER` — OPEN, in
+`docs/RUST_ENGINE_GAPS.md`, with this line as its reproducer.
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (OURS, open engine gap),
+0 unreachable, 0 unavailable, 0 unmeasured.** The stale `unreachable` on
+`#effect#2` (the `SourceMulti` identity-pick tooling reason, closed 2026-09-20)
+is RETRACTED in the verdict store — it has been replaced by the measured
+outcome, not left standing.

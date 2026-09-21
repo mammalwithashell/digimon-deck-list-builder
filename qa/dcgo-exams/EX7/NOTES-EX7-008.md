@@ -52,3 +52,30 @@ All three were complete and lowered; the only edits were stale header text
   that puts ToyAgumon underneath carries the vacuous `[When Digivolving]`
   OptionalSkill of Scopemon as a `dcgo_only` decline (the
   `BT21-071-effect0.yaml` shape).
+
+## 2026-09-21 — ORACLE RE-PASS: the `#effect#1` divergence reproduces exactly
+
+Close-out job `three-musketeers-2` re-ran `EX7-008-effect1.yaml` against a
+FRESH oracle pass on DCGO `scripted-v16` (`fc67f9ae6`), sidecar
+`20260921T043432Z_d70c…2d99.state.jsonl`, book `three_musketeers_pool.json`.
+`--all-diffs` prints ONE field and nothing else:
+
+```
+DIVERGED at step 7 (compared 9 of 10 ours / 9 dcgo steps)
+  p0.hand: ours=[BT24-088 x3, BT25-092 x2]  dcgo=[BT24-088 x3, BT25-092 x2, EX7-051]
+```
+
+Same step, same field, same direction as the 2026-09-18 reading — DCGO moves
+the FIRST reveal pick to hand before asking the second pick; ours adds both
+after the last pick. No downstream rows: the end states agree.
+
+**Triage unchanged — DCGO quirk, no engine fix.** The printed text is ONE
+"Add" with two differently-conditioned targets (`general_rule.pdf` 15-15-10-1);
+DCGO's per-condition `SelectCardEffect(Mode.AddHand)` loop
+(`RevealLibrary.cs` `RevealDeckTopCardsAndSelect`) moves each pick as its
+prompt closes, which is an implementation artifact and outcome-neutral. Tracked
+as `G-EXAM-REVEAL-BUCKET-ADD-TIMING` in `docs/RUST_ENGINE_GAPS.md`; see
+`docs/DCGO_EXAM.md` §"Rows where one side looks rules-wrong".
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (triaged DCGO quirk),
+0 unreachable, 0 unavailable, 0 unmeasured.**

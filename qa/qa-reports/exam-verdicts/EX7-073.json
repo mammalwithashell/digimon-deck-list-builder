@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18T10:53:01.063130900+00:00",
+  "last_updated": "2026-09-21T04:45:09.350231500+00:00",
   "clauses": {
     "EX7-073#effect#0": {
       "clause_id": "EX7-073#effect#0",
@@ -23,11 +23,12 @@
     "EX7-073#effect#2": {
       "clause_id": "EX7-073#effect#2",
       "card_id": "EX7-073",
-      "verdict": "unreachable",
+      "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "5d6725898412b79a1bad66a2440219430af785d70545343bb74bce2b0a2f0893",
-      "reason": "cost prompt is a SourceMulti selection the exam resolver cannot answer by identity (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK): selection_resolve.rs has no identity arm for SelectionKind::SourceMulti, and the payment is exactly two sources so the single-accept-id `yes:` path does not apply. Full line drafted in qa/dcgo-exams/EX7/NOTES-EX7-073.md.",
-      "recorded_at": "2026-09-18T07:59:27.824845+00:00"
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-073-effect2.yaml",
+      "reason": "DIVERGED at step 25 (compared 22 of 27 ours / 24 dcgo steps). LEAD: p0.trash ours=[] dcgo=[BT25-085, P-180]; p0.field[1].sources ours=[BT25-082, BT25-085, EX7-051, P-180, ST6-01] dcgo=[BT25-082, EX7-051, ST6-01]. Downstream step 26: p1.security ours=4 dcgo=3; p1.field ours=[BT4-014(dp=8000)] dcgo=[]; p1.trash ours=[ST1-02] dcgo=[BT4-014, ST1-02, ST1-02]. This RETRACTS the prior `unreachable` verdict (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK, RESOLVED 2026-09-20) -- the clause is both authorable and measured now. TRIAGED 2026-09-21 (close-out job three-musketeers-2): OURS IS WRONG, one root cause, no stacked defects. The clause never fires on our side: its two-card cost is unpayable because EX7-073's OTHER [When Digivolving] clause (#effect#1, 'use 1 [Three Musketeers] Option from hand for free') has not finished placing Bind Red Trigger P-180 as a digivolution card when this clause activates, so only ONE trait source (BT25-085) exists and our engine auto-resolves the pick with no prompt -- no delete, no security trash. DCGO resolves the Option use to COMPLETION first (raw sidecar: P-180 becomes a source at recording step 27, the two sources are trashed at step 29, Vermilimon BT4-014 is deleted and the top security card trashed at step 31), so its CanActivateCondition (EX7_073.cs:172-182, >=1 trait source) and the coroutine's DigivolutionCards.Count >= 2 gate (EX7_073.cs:~199) both pass. RULES: general_rule.pdf p.23 -- 15-4-3-4 (the next pending activation effect is chosen only AFTER each effect has been resolved), 15-4-4-2 (pending effects activate 1 at a time; multiple triggered effects can't be activated at the same time) and 15-4-5-2 (a derived triggering effect activates BEFORE previously triggered effects that are pending activation). Under every one of those readings the used Option's [Main] belongs before the still-pending sibling clause; our engine instead interleaves the sibling into the middle of clause 1's resolution and offers the controller a TriggerOrder [EX7-073, P-180] that the rules do not grant here. P-180's own 'when effects trash this card from digivolution cards' clause is correctly silent on both sides (P_180.cs:60-66 needs DP<=7000; Vermilimon is 8000), so it is not a second defect. Logged as G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER (OPEN) in docs/RUST_ENGINE_GAPS.md; not fixed in this verdict-recording stage. Sidecar: 20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3.state.jsonl.",
+      "recorded_at": "2026-09-21T04:45:09.350231500+00:00"
     }
   }
 }

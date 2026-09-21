@@ -3265,6 +3265,72 @@ already batch-PLACES sources, but it runs no would-play window, so it is not a
 drop-in. Fix: a batch free-play that resolves every card's would-play window before
 any of them enters the battle area.
 
+## G-ENGINE-USED-OPTION-BODY-VS-PENDING-SIBLING-TRIGGER — OPEN (found 2026-09-21, three-musketeers-2 close-out)
+
+**Measured against the DCGO oracle, not predicted.** When an effect *uses* an
+Option card ("use 1 Option card from your hand without paying the cost") while a
+SIBLING effect of the same card is still pending activation, our engine does not
+carry the used Option's `[Main]` body to completion before that sibling activates.
+It instead reaches the 9-1-5 disposal timing mid-body and parks a two-entry
+`SelectionKind::TriggerOrder` — [the pending sibling trigger, the Option's pending
+disposal] — so the sibling can run while the Option's own `[Main]` has not finished.
+
+**Reproducer:** `qa/dcgo-exams/EX7/EX7-073-effect2.yaml` (oracle-`completed`,
+sidecar `20260921T043458Z_18bd8d2042994dd3b029ea81278e33d3.state.jsonl`,
+verdict `EX7-073#effect#2` = `diverged`). BeelStarmon (X Antibody) (EX7-073) has
+two `[When Digivolving]` clauses: #effect#1 uses Bind Red Trigger (P-180) for
+free, #effect#2 pays "2 cards with the [Three Musketeers] trait from this
+Digimon's digivolution cards" to delete the opponent's highest-level Digimon and
+trash their top security card. P-180's own `[Main]` places it as a digivolution
+card — the SECOND trait source #effect#2 needs.
+
+- **DCGO** (raw sidecar): step 24 P-180's security trash lands, **step 27 P-180
+  becomes a digivolution card**, step 29 both trait sources are trashed as the
+  cost, step 31 Vermilimon BT4-014 is deleted and the top security card trashed.
+  Clause 1 finishes entirely first; `EX7_073.cs:172-182` (`CanActivateCondition`,
+  `>= 1` trait source) and the coroutine's `DigivolutionCards.Count >= 2` gate
+  (`EX7_073.cs:~199`) then both pass.
+- **Ours:** the sibling runs against the LONE source BT25-085, the two-card cost
+  is unpayable, the pick auto-resolves with no prompt, and the clause's printed
+  delete + security trash never happen (`p1.security` 4 vs DCGO 3,
+  `p1.field [BT4-014]` vs DCGO `[]`). The alternative TriggerOrder branch is
+  worse: disposing first trashes P-180 before its own `[Main]`'s placement runs,
+  so the placement silently no-ops and the card is lost.
+
+**Rules (general_rule.pdf p.23, read directly this stage — all three favour DCGO):**
+
+- **15-4-3-4** — "The activation order is determined for effects that trigger
+  simultaneously by choosing the next pending activation effect **after each
+  effect has been resolved**."
+- **15-4-4-2** — "Effects that are pending activation must be activated 1 at a
+  time. Multiple triggered effects can't be activated at the same time."
+- **15-4-5-2** — "A derived triggering effect will activate **before** previously
+  triggered effects that are pending activation."
+
+Whether the used Option's `[Main]` counts as part of the using clause's resolution
+(15-4-3-4 / 15-4-4-2) or as a derived activation raised during it (15-4-5-2), it
+belongs ahead of the still-pending sibling. The `TriggerOrder` we offer here is a
+choice the rules do not grant at this timing.
+
+**Not a duplicate of `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`** (RESOLVED
+`5aef07fa8`). That gap is about the 9-1-5 pending *trash* being orderable against
+the user's own pending triggers, which 9-1-5 + 18-1-2 + 15-4-3-5-1 DO grant. This
+one is about the Option's `[Main]` **body** being interruptible by a sibling
+trigger before it completes — a different item at an earlier timing. A fix must
+keep the resolved trash-order choice intact while making the body's continuation
+(including any selection it parks, e.g. P-180's mandatory
+`select_own_permanent` placement pick) strictly precede both the disposal and any
+queued sibling trigger.
+
+**Scope note.** Found and triaged by the verdict-recording stage of
+`three-musketeers-2`, which does not change engine code; logged here with its
+reproducer rather than fixed. Any fix needs a failing→passing behavioral test on
+the EX7-073 + P-180 shape plus a full `cards_behavioral` run, and should re-diff
+`EX7-073-effect2.yaml` against the preserved sidecar above (expected: CLEAN, and
+the scenario's own `assert:` block — which currently pins OUR reading — must be
+rewritten to the DCGO/rules reading at the same time).
+
+
 ## F-CARD-BT16-077-WD-WHOLE-CLAUSE-DNA-GATED / F-CARD-BT24-091-LINK-EFFECT-MISSING — OPEN (2026-09-18, same stage)
 
 - **Dinobeemon (BT16-077)** — `BT16-077.yaml` puts `condition: { dna_origin:

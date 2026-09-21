@@ -251,3 +251,29 @@ false → **no `OptionalSkill` yes/no anywhere on any of the three lines**; an
 `qa/dcgo-exams/BT25/tm_bt25_085_pool.json`. That is the regression half and
 **cannot** find a divergence; the verdicts stay `unmeasured` until an oracle
 pass against `D:/dcgo-build/scripted-v16` runs them.
+
+## 2026-09-21 — ORACLE PASS: all three Option-face clauses CONFIRMED
+
+Close-out job `three-musketeers-2`, DCGO `scripted-v16` (`fc67f9ae6`,
+action-space digest `711d23bf12`), book
+`qa/dcgo-exams/BT25/tm_bt25_085_pool.json`. All three jobs came back
+`completed` (full scripted line) and every diff is CLEAN:
+
+| Clause | Sidecar | Diff |
+|---|---|---|
+| `#effect#4` | `20260921T042353Z_6b34…6cc1` | CLEAN, 13 of 13 ours / 13 dcgo |
+| `#effect#5` | `20260921T042419Z_0949…0631` | CLEAN, 16 of 17 ours / 17 dcgo (1 sim-only row + 1 DCGO intermediate row) |
+| `#effect#6` | `20260921T042450Z_fed9…b687` | CLEAN, 19 of 19 ours / 19 dcgo |
+
+`#effect#5`'s one uncompared pair is the predicted zone-menu asymmetry this
+file already documents: DCGO's `generic_int` {1 hand, 2 trash, 3 do-not-place}
+row (`dcgo_only`) against our single `select_union_zone { zones: [hand, trash] }`
+prompt, which the harness reports as "kind `UnionZone` has no unambiguous DCGO
+prompt mapping". Both wires then take the SAME card pick and the SAME placement
+pick, and the end states agree — the asymmetry is the prompt shape, not the
+outcome.
+
+**Denominator: 7 clauses — 7 confirmed, 0 diverged, 0 unreachable, 0
+unavailable, 0 unmeasured.** The `unmeasured` trio (retracted from a stale
+`unreachable` on 2026-09-20 when `20df249e6` restored BT25-085's `card_kind 4`
++ `dual` block in `data/cards.json`) is now measured. The card is closed out.

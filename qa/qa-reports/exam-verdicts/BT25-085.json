@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-21T03:30:09.240594+00:00",
+  "last_updated": "2026-09-21T04:44:49.123002200+00:00",
   "clauses": {
     "BT25-085#effect#0": {
       "clause_id": "BT25-085#effect#0",
@@ -41,32 +41,29 @@
     "BT25-085#effect#4": {
       "clause_id": "BT25-085#effect#4",
       "card_id": "BT25-085",
-      "verdict": "unmeasured",
+      "verdict": "confirmed",
       "label": "DUAL Effect",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect4.yaml",
-      "reason": "RETRACTED 2026-09-20: the `unreachable` reason on record (data/cards.json carrying BT25-085 as card_kind 0 with no `dual` block) was fixed by commit 20df249e6 -- the entry is card_kind 4 WITH a dual block, and `play: {card: BT25-085, from: hand}` now lowers as an Option USE. A scenario for this clause is authored and lowers clean under --sim-only: qa/dcgo-exams/BT25/BT25-085-effect4.yaml. No oracle pass has been run against it yet, so the honest class is `unmeasured` -- not `unreachable`, and not `confirmed`. See qa/dcgo-exams/BT25/NOTES-BT25-085.md.",
-      "recorded_at": "2026-09-21T03:30:09.240594+00:00"
+      "recorded_at": "2026-09-21T04:44:36.362072400+00:00"
     },
     "BT25-085#effect#5": {
       "clause_id": "BT25-085#effect#5",
       "card_id": "BT25-085",
-      "verdict": "unmeasured",
+      "verdict": "confirmed",
       "label": "DUAL Effect",
       "text_sha256": "43b95e137a1a96b5fe79ced2e11ee7b720800d3b4f3b11425d8256005c5c70c4",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect5.yaml",
-      "reason": "RETRACTED 2026-09-20: the `unreachable` reason on record (data/cards.json carrying BT25-085 as card_kind 0 with no `dual` block) was fixed by commit 20df249e6 -- the entry is card_kind 4 WITH a dual block, and `play: {card: BT25-085, from: hand}` now lowers as an Option USE. A scenario for this clause is authored and lowers clean under --sim-only: qa/dcgo-exams/BT25/BT25-085-effect5.yaml. No oracle pass has been run against it yet, so the honest class is `unmeasured` -- not `unreachable`, and not `confirmed`. See qa/dcgo-exams/BT25/NOTES-BT25-085.md.",
-      "recorded_at": "2026-09-21T03:30:09.240594+00:00"
+      "recorded_at": "2026-09-21T04:44:43.112514500+00:00"
     },
     "BT25-085#effect#6": {
       "clause_id": "BT25-085#effect#6",
       "card_id": "BT25-085",
-      "verdict": "unmeasured",
+      "verdict": "confirmed",
       "label": "DUAL Rule",
       "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect6.yaml",
-      "reason": "RETRACTED 2026-09-20: the `unreachable` reason on record (data/cards.json carrying BT25-085 as card_kind 0 with no `dual` block) was fixed by commit 20df249e6 -- the entry is card_kind 4 WITH a dual block, and `play: {card: BT25-085, from: hand}` now lowers as an Option USE. A scenario for this clause is authored and lowers clean under --sim-only: qa/dcgo-exams/BT25/BT25-085-effect6.yaml. No oracle pass has been run against it yet, so the honest class is `unmeasured` -- not `unreachable`, and not `confirmed`. See qa/dcgo-exams/BT25/NOTES-BT25-085.md.",
-      "recorded_at": "2026-09-21T03:30:09.240594+00:00"
+      "recorded_at": "2026-09-21T04:44:49.123002200+00:00"
     }
   }
 }
