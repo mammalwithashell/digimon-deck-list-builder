@@ -104,9 +104,6 @@ steps:
   - actor: 0
     do: { play: { card: BT25-093, from: hand } }
     expect: { prompt: main_phase }
-  # Our mode-select (sim-only; DCGO's Play bit IS the [Main] use).
-  - actor: 0
-    do: { select: { choice: "[Main]", sim_only: true } }
   # The lowest-DP delete is prompt-free. "you may link this card": declined --
   # Ignition Flare goes to the trash.
   - actor: 0
@@ -117,7 +114,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 9
+  - at: 8
     that:
       turn: 4
       p0.memory: -2

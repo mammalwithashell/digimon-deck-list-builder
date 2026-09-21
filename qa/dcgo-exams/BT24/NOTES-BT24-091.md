@@ -126,3 +126,47 @@ moment the two clauses are authored.
 - Slot hygiene: every `select:` on a two-Digimon board here is an identity
   pick (`targets:` ride the wire as top-card ids); no `attack:` / `digivolve:`
   addresses a slot on a two-Digimon board.
+
+## 2026-09-20 — the Option hand plug-in is now its OWN main-phase action
+
+`G-TOOLING-EXAM-OPTION-HAND-LINK` is **closed**, and it was closed on the
+ENGINE side — the option these notes preferred — so no DCGO change was needed
+(close-out job `three-musketeers-2`).
+
+**The rules reading.** `general_rule.pdf` (Ver.3.6) §6-5-1 lists the main-phase
+actions, and **§6-5-1-3 "Use an Option Card From the Hand"** and **§6-5-1-4
+"Linking a Card in the Hand or Battle Area"** are two SEPARATE entries; §10-1-1
+says a card is linked from the hand "by paying the cost **as part of the main
+phase actions**". So plugging a Plug-In Option in from hand is its own
+declaration, not a mode of using the card. DCGO already drew that line:
+`CardEffectFactory.LinkEffect` (`Link.cs:19-24`) accepts ANY `CardSource` with
+a `linkCondition` that `IsExistOnHand`, so the declaration sits in the card's
+`CanDeclareSkillList` and `InputDriver.FindHandDeclarableSkillIndex` reaches it
+as an `ActivateCardAction` — never a `PlayCardAction`.
+
+**What changed in the engine** (`G-ENGINE-OPTION-LINK-FROM-HAND`,
+`docs/RUST_ENGINE_GAPS.md`): `hand_option_link_condition_targets` /
+`hand_option_link_available` put the Plug-In Option's from-hand link on the
+`HAND_EFFECT` bit, exactly where the Link DIGIMON's already lived
+(`G-ENGINE-DIGIMON-LINK-FROM-HAND`, `cf8e2519f`); `activate_hand_link` routes
+an Option through `play_option_core` in `OptionPlayMode::Link`; and
+`option_legal_play_modes` drops the Link mode for a HAND source so the PLAY bit
+means only §6-5-1-3 and the declaration is not exposed twice. A
+`[Security]`-flipped Option keeps its Link mode — it has no main-phase
+declaration to make.
+
+**For this file**: the clause is reachable now. Author it as
+
+```yaml
+- actor: 0
+  do: { link: { card: <THIS CARD>, from: hand } }
+- actor: 0
+  do: { select: { targets: [own.field.N] } }
+  expect: { prompt: SelectPermanentEffect, count: 1 }
+```
+
+— the same two-step shape every other `link:` line uses, on the same wire
+integer on both engines. It needs no new DCGO build (`scripted-v15` already
+dispatches a `HAND_EFFECT` bit to the hand card's link declaration); the
+scenario itself has not been written yet, so the clause is `unmeasured`, not
+`unreachable`.

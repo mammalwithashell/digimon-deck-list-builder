@@ -115,3 +115,62 @@ exam resolver cannot answer by identity (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PIC
   and the wire row sequence `MultipleSkills` → `OptionalSkill` is the same in
   both orders), so an abort there would be a harness index message to read
   DCGO's order from, not a rules finding.
+
+## 2026-09-20 — `effect#2`: the cost prompt IS answerable now
+
+`G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK` is **closed** (close-out job
+`three-musketeers-2`). `runners/selection_resolve.rs` gains a
+`SelectionKind::SourceMulti` arm: it reads the prompt's own candidate snapshot
+off the parked `ResumeFrame::SourceMultiStep` (`candidates:
+Vec<(u16, SourceSelectionRef)>` — the very vector
+`install_source_multi_resume_step` derives `valid_action_ids` from) and
+resolves each `SourceSelectionRef`'s `CardHandle` against the live carrier,
+mirroring `run_source_multi_step`'s DCGO-parity revalidation.
+
+Unlike the `Material` arm this one cannot use the `(ids, range_start)` shape:
+`select_own_sources` sweeps EVERY permanent of the owner and keeps only the
+sources its predicate passes, so the accepted ids are SPARSE and may span
+several field slots. The arm therefore matches explicit `(action id, card id)`
+pairs. Duplicate ids resolve in candidate order, and the installer drops a
+picked card from the recomputed candidates, so `cards: [X, X]` takes two
+different sources. A prompt with no data frame still fails loudly rather than
+guessing. Tests: `source_multi_*` in `runners/selection_resolve.rs` — five of
+the seven fail before the arm with exactly the error this file recorded
+(`card pick 'SRC-B' not found in SourceMulti { min: 0, max: 2, picked: 0 }
+prompt … (zone owner 0, valid [2000, 2001, 62])`).
+
+So `select: { cards: [<trait source>, <trait source>] }` now answers the
+payment. The clause is **authorable**; this stage did not author it, so it
+stays `unreachable` only until a line is written — and the reason is no longer
+"the format cannot express it".
+
+### A SHORTER route than the T9 attack line above
+
+The printed timing is `[When Digivolving] [When Attacking]`, and the
+**digivolving** half needs no extra turn. Measured facts that make it work off
+the `EX7-073-effect0.yaml` prefix:
+
+- The two `[Three Musketeers]`-TRAIT cards this pool can get under EX7-073 are
+  **BeelStarmon BT25-085** (`Wizard/Three Musketeers/Iliad/TS`) and
+  **Bind Red Trigger P-180** (`Three Musketeers`) — checked against
+  `data/card_bundles/`. BT25-082 / BT25-078 / BT25-083 carry `TS` and `Iliad`,
+  which are different traits; EX7-051 carries none.
+- `effect0`'s line already puts BT25-085 under EX7-073. Putting **P-180 in P0's
+  hand** (the `effect1` line does it at `stack[13]`, the card BlackGatomon's own
+  T5 digivolve draws — after the T5 main phase has started, so Sparrowmon's
+  `[Start of Your Main Phase]` gate stays vacuous) makes EX7-073's OTHER
+  `[When Digivolving]` clause (#effect#1, "use 1 Option card with [Three
+  Musketeers] in its text from your hand without paying the cost") place P-180
+  as EX7-073's BOTTOM digivolution card — a SECOND trait source, at the same
+  timing, before this clause resolves if the `MultipleSkills` / `TriggerOrder`
+  ordinal runs #effect#1 first.
+- P1 already has Agumon ST1-03 on the field from T2 and 5 security, so
+  "delete 1 … with the highest level, and trash their top security card" has a
+  target and a witness without another turn.
+
+**The one thing to check first**: P-180 prints *"When effects trash this card
+from digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon"*,
+so paying the cost WITH P-180 fires a second delete that races this clause's
+own. Either author the ordering explicitly on both wires, or keep P-180 out of
+the payment and find the second trait source elsewhere. That is a rules
+question for the next pass, not a tooling one.

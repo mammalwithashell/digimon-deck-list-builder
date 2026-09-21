@@ -129,3 +129,48 @@ ChangeSelfDPStaticEffect(4000) on `CardColors.Count >= 4`) agree.
 - Both scenarios' DP pick is now a shared `targets: [opp.field.1]` step
   (same DCGO wire, ST1-10). Oracle re-diff vs the preserved sidecar
   `20260918T131946Z_6b61efab...state.jsonl`: CLEAN 17/17.
+
+## 2026-09-20 — `effect#0` is REACHABLE: the `dna:` verb landed
+
+`G-TOOLING-EXAM-NO-DNA-VERB` is **closed** (close-out job
+`three-musketeers-2`). Both halves of the block are gone:
+
+- **Our wire.** `code/tools/dcgo-harness/src/exam/scenario.rs` gains a `dna:`
+  step kind (`STEP_VERBS` now reads `hatch, pass, move, play, digivolve, dna,
+  attack, main, link, select`) and `lower::matches_intent` a `DnaDigivolve`
+  arm. `do: { dna: { card: <ID>, materials: [field.N, field.M] } }`.
+- **DCGO.** `InputDriver.BuildMainPhaseAction` gains a `DNA_DIGIVOLVE` arm that
+  resolves the two material identities to `fieldCardFrames` ids and returns a
+  jogress `PlayCardAction` (base-repo commit `fc67f9ae6`; player
+  `D:/dcgo-build/scripted-v16`, preflight GO, action-space digest unchanged at
+  `711d23bf`). The pair rides a new `dna_materials` field — deliberately NOT
+  `select_card_ids`, which would make the step read as a selection answer and
+  abort at an action-id prompt.
+
+The materials ride the VERB rather than a following `select:` step (the one
+place this departs from the `link:` precedent) because the two wires disagree
+about how many decisions the declaration contains: ours is three (the
+`DNA_DIGIVOLVE` bit, then two `SelectionKind::Material` prompts over raw
+own-battle-area indices), DCGO's is one `PlayCardAction`. So the step lowers to
+ONE wire row carrying the action id plus both identities, and a `SimOnlySelect`
+row that answers our two prompts. The engine half of that is a `targets:`
+resolution for the two DNA material prompts
+(`selection::is_dna_material_prompt` gating a raw-slot candidate in
+`runners/selection_resolve.rs` — those ids are raw field indices, unlike every
+other `Material` prompt).
+
+**Scenario authored: `BT8-084-effect0.yaml`.** Both materials are Flamedramon
+P-137 (red/blue Lv.4, cost 5) rather than the deck's other Lv.4, Hudiemon
+BT23-101, whose `[On Play]` would add a prompt pair that measures nothing about
+this clause. The line plays one Flamedramon per turn (T3, T5: 3 - 5 = -2 hands
+the turn back each time) and declares the DNA on T7 for 0, so the turn stays
+p0's and "digivolve UNSUSPENDED" is readable. The `[When Digivolving]` fires on
+this route like any other and is deliberately SILENT: p0's trash is empty (no
+trash candidate) and p1 has no Digimon (no DP pick), so the file reads the DNA
+clause alone. Sim-only 2026-09-20: lowers 15 steps
+(`DnaDeclaration { action_id: 63, material_ids: ["P-137", "P-137"] }` +
+`SimOnlySelect`), 14 hand-authored assertions green.
+
+`effect#0` therefore moves `unreachable` -> `unmeasured`: it needs an oracle
+pass against `scripted-v16`, not a tooling change. The card's denominator is
+now **3 clauses: 2 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**

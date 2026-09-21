@@ -329,6 +329,53 @@ the same action bit once `turn_count > placed_on_turn`
 `CanDeclareOptionDelayEffect` on the same not-the-placing-turn rule. So the line
 is "flip/place it on turn N, `main:` it on turn N+1".
 
+### `dna:` — DNA digivolution (added 2026-09-20)
+
+`[DNA Digivolve]` digivolves TWO of your own battle-area Digimon into one hand
+card (`general_rule.pdf` §6-5-1-2-2, §8-2). Until this verb existed the clause
+was unreachable on both wires — `STEP_VERBS` had no DNA entry, `matches_intent`
+had no `DnaDigivolve` arm, and DCGO's `InputDriver.BuildMainPhaseAction` refused
+the whole `DNA_DIGIVOLVE` range with "has no MainPhaseAction shape"
+(`G-TOOLING-EXAM-NO-DNA-VERB`; `qa/dcgo-exams/BT8/NOTES-BT8-084.md`,
+`qa/dcgo-exams/BT16/NOTES-BT16-077.md` are the measured record).
+
+```yaml
+- actor: 0
+  do: { dna: { card: BT8-084, materials: [field.0, field.1] } }
+```
+
+`card:` is the hand card (the DNA result) and `from:` is `hand[.N]` with the
+same pin grammar as `play:`'s. `materials:` is **required** and must name
+exactly two of the actor's own field slots, in declaration order; an `opp.`
+reference, a shorter list or a longer one is refused, because the requirement is
+a fixed pair and a defaulted list would digivolve Digimon the scenario never
+named.
+
+**The materials ride the VERB, not a following `select:` step** — the one place
+this format departs from the `link:` precedent, and the reason is that the two
+wires disagree about how many decisions the declaration contains:
+
+- OURS is three. The `DNA_DIGIVOLVE` bit names only the hand slot, then
+  `Game::initiate_dna_digivolve` parks two `SelectionKind::Material` prompts
+  whose action ids are RAW own-battle-area indices (not the `SOURCE_SELECT` band
+  the other `Material` prompts use).
+- DCGO's is ONE. A single `PlayCardAction` carries both materials in
+  `JogressEvoRootsFrameIDs` (`MainPhaseAction/PlayCardAction.cs`,
+  `CardController` "#region Set target(s)") and no prompt is opened at all.
+
+So the step lowers to one wire row carrying the action id **and** both
+materials' top-card identities (`dna_materials` on `HarnessJobStep`), plus a
+sim-only row that answers our two prompts — the same one-row/N-picks shape
+`select: { materials: [...] }` already uses for `[Assembly]` / `[DigiXros]`.
+`dna_materials` is a field of its own rather than `select_card_ids` because
+DCGO's `HarnessJobStep.IsSelection` is true whenever the latter is non-empty,
+and a step that reads as a selection answer arriving at an action-id prompt
+aborts the job as a prompt mismatch.
+
+Requires a DCGO build at or after `fc67f9ae6` (`D:/dcgo-build/scripted-v16`);
+earlier players abort the line on "action id N has no MainPhaseAction shape".
+The 2192 action space is unchanged, so `ActionSpace.cs` needed no regeneration.
+
 ### `link:` — DigiLink declaration from the battle area (added 2026-09-17)
 
 `<Link>` on an Appmon Link *Digimon* ("Plug this card from the hand or battle

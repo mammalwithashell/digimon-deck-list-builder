@@ -29,6 +29,14 @@
 # d5f23792f added; the crashed draft predates it and had declared the whole
 # from-hand surface unreachable.
 #
+# `G-ENGINE-OPTION-LINK-FROM-HAND` (2026-09-20) retired that mode-select. The
+# from-hand plug-in is now its OWN main-phase action on the `HAND_EFFECT` bit
+# -- general_rule.pdf (Ver.3.6) §6-5-1 lists "use an Option card from the hand"
+# (§6-5-1-3) and "link a card from the hand or battle area" (§6-5-1-4) as two
+# SEPARATE actions, which is the split DCGO always had -- so the PLAY bit runs
+# the [Main] body directly and the sim-only `choice:` row is GONE. The two
+# wires now agree on this step with nothing to pad.
+#
 #   T1..T4 as BT24-091-effect0.yaml.
 #   T5 (P0, 2): Cyclonemon attacks the player. Its printed <Raid> window opens
 #            (Birdramon 5000 is P1's highest-DP unsuspended Digimon) and is
@@ -124,9 +132,6 @@ steps:
   - actor: 0
     do: { play: { card: BT24-091, from: hand } }
     expect: { prompt: main_phase }
-  # Our mode-select (sim-only; DCGO's Play bit IS the [Main] use).
-  - actor: 0
-    do: { select: { choice: "[Main]", sim_only: true } }
   # Agumon returned -> unsuspend Cyclonemon.
   - actor: 0
     do: { select: { targets: [own.field.0] } }
@@ -152,7 +157,7 @@ assert:
         - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
         - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
   # At the link pick: only Agumon went back; Cyclonemon is unsuspended.
-  - at: 15
+  - at: 14
     that:
       turn: 5
       p0.memory: -3
@@ -162,7 +167,7 @@ assert:
         - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
   # After: the Option is LINKED (not in the trash, not in hand), the link
   # cost nothing (memory still -3), and the host carries Link DP +2000.
-  - at: 16
+  - at: 15
     that:
       turn: 6
       p0.memory: -3

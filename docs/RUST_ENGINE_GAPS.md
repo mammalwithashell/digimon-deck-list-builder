@@ -3298,30 +3298,133 @@ any of them enters the battle area.
   `Blue Lv.5 / 4` circle; the official DB prints Blue/Black with `Blue Lv.5 / 4`
   and `Black Lv.5 / 4`.
 
-## G-TOOLING-EXAM-NO-DNA-VERB / G-TOOLING-EXAM-OPTION-HAND-LINK — OPEN (2026-09-18, same stage)
+## G-TOOLING-EXAM-NO-DNA-VERB / G-TOOLING-EXAM-OPTION-HAND-LINK — RESOLVED 2026-09-20 (found 2026-09-18)
 
-Two clause families the exam format cannot declare, each recorded `unreachable`
-with this reason:
+Two clause families the exam format could not declare, each recorded
+`unreachable` with this reason. **Both are closed** (close-out job
+`three-musketeers-2`); the reachable clauses now need an oracle pass, not a
+tooling change.
 
-- **DNA digivolution.** `scenario::STEP_VERBS` has no DNA verb,
+- **DNA digivolution — RESOLVED.** Was: `scenario::STEP_VERBS` had no DNA verb,
   `lower::matches_intent` no `DnaDigivolve` arm, and DCGO's
-  `InputDriver.BuildMainPhaseAction` (~277) aborts on the DNA range. Blocks
-  every `[DNA Digivolve]` condition clause and every "if DNA digivolving"
-  rider (BT16-077#effect#0 and the first sentence of #effect#3; BT20-076's
-  rider). `<Partition>` itself is NOT blocked — see NOTES-BT16-077.md for the
-  tuck route.
-- **A declared hand `<Link>` of a Plug-In OPTION.** `link: { from: hand }`
-  lowers to the `HAND_EFFECT` bit, which our mask emits for Appmon Link
-  DIGIMON only; for a Plug-In Option the hand link is branch 1 of the
-  mode-select `EffectChoice` behind the ordinary PLAY bit, while DCGO's is a
-  separate `ActivateCardAction`. One wire row cannot mean both, and there is no
-  `dcgo_only` form for a main-phase action. Blocks the "Cost N" half of every
-  Plug-In Option's Link Condition clause (BT24-091#effect#4; BT25-093 /
-  BT25-100 / BT25-101 / BT24-095 / ST22-08 by the same shape). Either give
-  Plug-In Options a `HAND_EFFECT` link bit (mirroring
-  `Game::hand_effect_slot_is_link`) or teach `link:` to lower to PLAY + the
-  link branch on our side while emitting DCGO's `ActivateCardAction`.
-  `qa/dcgo-exams/BT24/NOTES-BT24-091.md`.
+  `InputDriver.BuildMainPhaseAction` (~277) aborted on the DNA range. Blocked
+  every `[DNA Digivolve]` condition clause and every "if DNA digivolving" rider
+  (BT16-077#effect#0 and the first sentence of #effect#3; BT20-076's rider;
+  BT8-084#effect#0). `<Partition>` itself was never blocked — see
+  NOTES-BT16-077.md for the tuck route.
+
+  Closed by the `dna:` verb: `do: { dna: { card: <ID>, materials: [field.N,
+  field.M] } }` (`exam/scenario.rs` + `exam/lower.rs`), a
+  `LoweredStep::DnaDeclaration` carrying the action id AND both materials'
+  identities on ONE wire row, and DCGO `fc67f9ae6`, which dispatches the range
+  to a jogress `PlayCardAction`. The materials ride the verb rather than a
+  following `select:` because the wires disagree on the decision count — ours
+  is three (bit + two `Material` prompts), DCGO's is one — so there is no DCGO
+  row for a follow-on step to answer. Engine half: a raw own-battle-area index
+  is now resolvable by a `targets:` payload on the two DNA material prompts
+  (`selection::is_dna_material_prompt` + the `targets:` arm in
+  `runners/selection_resolve.rs`). Needs a player at or after
+  `D:/dcgo-build/scripted-v16`.
+
+- **A declared hand `<Link>` of a Plug-In OPTION — RESOLVED.** Was:
+  `link: { from: hand }` lowered to the `HAND_EFFECT` bit, which our mask
+  emitted for Appmon Link DIGIMON only; for a Plug-In Option the hand link was
+  branch 1 of the mode-select `EffectChoice` behind the ordinary PLAY bit,
+  while DCGO's is a separate `ActivateCardAction`. One wire row could not mean
+  both. Blocked the "Cost N" half of every Plug-In Option's Link Condition
+  clause (BT24-091#effect#4; BT25-093#effect#4 / BT25-100#effect#5 / BT25-101 /
+  BT24-095 / ST22-08 by the same shape).
+
+  Closed on the ENGINE side (`G-ENGINE-OPTION-LINK-FROM-HAND`, below), which is
+  the option the notes preferred: the from-hand link is now its own main-phase
+  action on the `HAND_EFFECT` bit, exactly where the Link Digimon's already
+  was, so `link: { card: <ID>, from: hand }` lowers on both wires with no DCGO
+  change at all. `qa/dcgo-exams/BT24/NOTES-BT24-091.md`,
+  `qa/dcgo-exams/BT25/NOTES-BT25-100.md`.
+
+## G-ENGINE-OPTION-LINK-FROM-HAND — RESOLVED 2026-09-20 (found 2026-09-18)
+
+A Plug-In Option plugged in from hand was modelled as a PLAY-MODE of the
+§6-5-1-3 "use an Option card from the hand" action (an `EffectChoice`
+mode-select branch behind the PLAY bit), not as its own declaration.
+
+**Why that is wrong.** `general_rule.pdf` (Ver.3.6) §6-5-1 lists the main-phase
+actions, and **§6-5-1-3 "Use an Option Card From the Hand"** and **§6-5-1-4
+"Linking a Card in the Hand or Battle Area"** are two SEPARATE entries; §10-1-1
+says "A card from the hand or battle area can be linked to a Digimon in the
+battle area by paying the cost **as part of the main phase actions**". DCGO
+draws the same line: `CardEffectFactory.LinkEffect` (`Link.cs:19-24`) accepts
+any `CardSource` with a `linkCondition` that `IsExistOnHand`, so the
+declaration sits in the card's `CanDeclareSkillList` and is reached as an
+`ActivateCardAction` — never a `PlayCardAction`. The Digimon-side (Shape-B)
+hand link already held that contract (`G-ENGINE-DIGIMON-LINK-FROM-HAND`,
+`cf8e2519f`); this was the Option-side half.
+
+**What changed** (`game_actions/link.rs`, `game_actions/mod.rs`,
+`action/mask.rs`, `action/decode.rs`):
+
+- `hand_option_link_condition_targets` / `hand_option_link_available` — the
+  Option half of the from-hand link, gated on a link condition, a legal host
+  and an affordable (post-`ChangeLinkCost`) cost. No Option use-requirement or
+  colour check: those gate §9-1 "Using Cards", and `LinkEffect`'s own
+  `CanUseCondition` (`Link.cs:49`) checks only the origin zone and the host set.
+- `hand_link_available` = either half; `hand_effect_slot_is_link` now reads it,
+  so the mask lights the `HAND_EFFECT` bit for a Plug-In Option too.
+- `activate_hand_link` branches on card kind: a Digimon keeps
+  `begin_digimon_link`, an Option routes through `play_option_core` in
+  `OptionPlayMode::Link` (link cost, `OnUseOption` without the `[Main]` body,
+  disposal by plugging into the chosen host).
+- `option_legal_play_modes` takes the `OptionSource` and drops the Link mode for
+  a HAND source, so the PLAY bit means only §6-5-1-3 and the declaration is not
+  exposed twice. Every other source keeps it — a `[Security]`-flipped Option has
+  no main-phase declaration to make, so its link stays a mode of that resolution
+  (`G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON`, `35958972b`).
+- `decode.rs` now dispatches the `HAND_EFFECT` bit on `hand_effect_slot_is_link`
+  instead of "did `activate_hand_main` happen to fire". That difference is
+  load-bearing: `activate_hand_main` matches `EffectTiming::OptionMain` on an
+  Option/Dual hand card and would have run its `[Main]` body OUTSIDE the Option
+  lifecycle — no use cost paid, no `pending_option`, no disposal.
+
+Tests: `bt25_100_hand_link_declaration_lives_on_the_hand_effect_bit`,
+`bt25_100_play_bit_is_the_use_action_only_no_link_mode_select`,
+`bt25_100_no_hand_link_bit_without_a_legal_host`,
+`bt25_100_play_and_link_bits_are_both_offered`, plus the four rewritten ST22-08
+cases (`st22_08_dual_mode_offers_two_separate_main_phase_actions`,
+`st22_08_hand_link_host_pick_clones_faithfully`,
+`st22_08_link_action_stays_affordable_when_the_use_action_is_not`,
+`st22_08_link_mode_not_offered_without_an_eligible_host`).
+
+**Flagged for human review**: this moves a declaration between action bits, so
+an RL policy trained before it will address the from-hand plug-in on the wrong
+bit. The 2192 action space itself is unchanged.
+
+## G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK — RESOLVED 2026-09-20 (found 2026-09-18)
+
+`runners/selection_resolve.rs` resolved identity picks (`cards:`) only for
+`Hand / Trash / Reveal / Material / CountCappedMultiSelect / Security`;
+`SelectionKind::SourceMulti` — the cross-permanent source multi-pick behind the
+DSL's `select_own_sources` / `select_opponent_sources` — fell through the
+`_ => None` arm, so a cost paid by trashing N of a Digimon's own digivolution
+cards could not be ANSWERED by a scenario at all. Measured on
+`EX7-073#effect#2` ("by trashing 2 cards with the [Three Musketeers] trait from
+this Digimon's digivolution cards"): the clause is reachable, the line lowered
+up to the payment step, and the pick failed with
+`card pick 'BT25-085' not found in SourceMulti {…} (valid [2000, 2004, 62])`.
+The single-accept `yes:` shortcut that answers one-candidate source picks does
+not help — the payment is exactly two cards, so the first pick always has two
+accept ids.
+
+Closed by a `SourceMulti` arm that reads the prompt's own candidate snapshot off
+the parked `ResumeFrame::SourceMultiStep` (`candidates:
+Vec<(u16, SourceSelectionRef)>`, which `install_source_multi_resume_step`
+derives `valid_action_ids` from) and resolves each `SourceSelectionRef`'s
+`CardHandle` against the live carrier, mirroring `run_source_multi_step`'s
+DCGO-parity revalidation. Unlike `Material` the accepted ids are a SPARSE,
+predicate-filtered set that can span several field slots, so the arm matches
+explicit `(id, card)` pairs rather than the contiguous `(ids, range_start)`
+shape the other arms use. A prompt with no data frame still fails loudly rather
+than guessing. Tests: `source_multi_*` in `runners/selection_resolve.rs`
+(five fail before, all pass after).
 
 
 ## F-ENGINE-FREE-OPTION-USE-IS-AFFORDABILITY-GATED — OPEN (found 2026-09-18, Three Musketeers exam stage, EX7-013#effect#1)

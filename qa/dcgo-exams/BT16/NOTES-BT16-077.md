@@ -161,3 +161,19 @@ circle is un-probed.
   `SelectCountEffect`.
 - Slot hygiene: one Digimon per seat in effect1/effect3; see above for
   effect2/inherited0.
+
+## 2026-09-20 — the DNA block is gone (`G-TOOLING-EXAM-NO-DNA-VERB` RESOLVED)
+
+The measured limit this file cites — no DNA verb on our wire, and DCGO's
+`InputDriver.BuildMainPhaseAction` refusing the `DNA_DIGIVOLVE` range — was
+closed by the close-out job `three-musketeers-2`:
+`do: { dna: { card: <ID>, materials: [field.N, field.M] } }`
+(`exam/scenario.rs` + `exam/lower.rs`), a `LoweredStep::DnaDeclaration` that
+carries both materials' identities on ONE wire row, and DCGO `fc67f9ae6`
+(player `D:/dcgo-build/scripted-v16`, preflight GO). See
+`qa/dcgo-exams/BT8/NOTES-BT8-084.md` for the full shape and
+`BT8-084-effect0.yaml` for a worked line.
+
+So `BT16-077#effect#0` and the "if DNA digivolving" rider in `#effect#3` are no
+longer `unreachable` for a tooling reason — they are `unmeasured` until a line
+is authored and run. This note's `<Partition>` tuck route is unaffected.

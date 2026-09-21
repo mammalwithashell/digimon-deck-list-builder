@@ -124,9 +124,9 @@ and a lowering pass resolves each against our engine's live action mask, failing
 loudly on illegal or ambiguous intent — in milliseconds, before any Unity time
 is spent.
 
-The verbs are `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`,
-`link`, `select` (`scenario::STEP_VERBS`; `exam_validate` lints against the same
-list). Two that are easy to confuse:
+The verbs are `hatch`, `pass`, `move`, `play`, `digivolve`, `dna`, `attack`,
+`main`, `link`, `select` (`scenario::STEP_VERBS`; `exam_validate` lints against
+the same list). Three that are easy to confuse:
 
 - `main: { on: field.N | breeding }` — a `[Main]` / `<Delay>` / `<Training>`
   activation on a permanent already in play. Matches the `[Main]` sub-slot only.
@@ -140,6 +140,14 @@ list). Two that are easy to confuse:
   single bit goes to the `[Main]` first, on both sides). Needs a DCGO build at
   or after `scripted-v15`; older builds abort a field link on "field-effect
   sub-slot 3 is not the [Main] slot".
+- `dna: { card: <ID>, materials: [field.N, field.M] }` — a `[DNA Digivolve]`
+  declaration (added 2026-09-20; this is what makes the clause reachable at
+  all). Unlike `link:`, the two materials ride the VERB: ours is three decisions
+  (the action bit, then two `Material` prompts) while DCGO's is ONE
+  `PlayCardAction` carrying both frames, so there is no DCGO row for a following
+  `select:` to answer. Exactly two own-field slots, in declaration order; an
+  `opp.` reference is refused. Needs a DCGO build at or after `scripted-v16`;
+  earlier players abort on "action id N has no MainPhaseAction shape".
 
 ### `assert` is backfilled, not hand-guessed
 

@@ -26,6 +26,14 @@
 # d5f23792f added; the crashed draft predates it and had declared the whole
 # from-hand surface unreachable.
 #
+# `G-ENGINE-OPTION-LINK-FROM-HAND` (2026-09-20) retired that mode-select. The
+# from-hand plug-in is now its OWN main-phase action on the `HAND_EFFECT` bit
+# -- general_rule.pdf (Ver.3.6) §6-5-1 lists "use an Option card from the hand"
+# (§6-5-1-3) and "link a card from the hand or battle area" (§6-5-1-4) as two
+# SEPARATE actions, which is the split DCGO always had -- so the PLAY bit runs
+# the [Main] body directly and the sim-only `choice:` row is GONE. The two
+# wires now agree on this step with nothing to pad.
+#
 #   T1 (P0, 0): pass.                 T2 (P1, 3): Agumon (3 -> 0); pass.
 #   T3 (P0, 3): Cyclonemon (3 -> -2). T4 (P1, 2): Birdramon (2 -> -2).
 #   T5 (P0, 2): THE CLAUSE -- use Tidal Stream (5: 2 -> -3). Its [Main]
@@ -107,9 +115,6 @@ steps:
   - actor: 0
     do: { play: { card: BT24-091, from: hand } }
     expect: { prompt: main_phase }
-  # Our mode-select (sim-only; DCGO's Play bit IS the [Main] use).
-  - actor: 0
-    do: { select: { choice: "[Main]", sim_only: true } }
   # "1 of your [TS] trait Digimon unsuspends": Cyclonemon (single candidate,
   # still asked on both).
   - actor: 0
@@ -133,7 +138,7 @@ assert:
       p1.field:
         - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
         - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
-  - at: 14
+  - at: 13
     that:
       turn: 6
       p0.memory: -3
