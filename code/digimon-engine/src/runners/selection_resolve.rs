@@ -350,6 +350,81 @@ fn count_capped_zone_ids(game: &Game, valid: &[u16]) -> Option<(Vec<String>, u16
     Some((ids, range_start))
 }
 
+/// The selectable digivolution sources of an in-flight
+/// `SelectionKind::SourceMulti` prompt, as `(action id, card ID)` pairs in the
+/// prompt's own candidate order.
+///
+/// `SourceMulti` is the cross-permanent source multi-pick behind the DSL's
+/// `select_own_sources` / `select_opponent_sources` (EX7-073's "by trashing 2
+/// cards with the [Three Musketeers] trait from this Digimon's digivolution
+/// cards" is the measured blocker — `qa/dcgo-exams/EX7/NOTES-EX7-073.md`).
+/// Like `Material`, its action ids are `SOURCE_SELECT` slots that encode a
+/// FIELD index and a SOURCE index but NOT the owning player, and the variant
+/// (`{ min, max, picked }`) names no zone while every installer leaves
+/// `zone_owner` unset. Unlike `Material`, the candidate set is not one
+/// carrier's contiguous band at all: the prompt sweeps EVERY permanent of
+/// `of_player` and keeps only the sources its `CompiledPredicate` passes, so
+/// the accepted ids are SPARSE and may span several field slots. That is why
+/// this arm returns explicit `(id, card)` pairs rather than the
+/// `(ids, range_start)` shape the contiguous-band arms use — there is no base
+/// to count from.
+///
+/// So the mapping comes from the engine, not from arithmetic — the same shape
+/// as `material_source_ids` / `count_capped_zone_ids` above. The data-VM
+/// installer parks a `ResumeFrame::SourceMultiStep` whose `candidates` field
+/// IS the `(action_id, SourceSelectionRef)` snapshot the prompt was built from
+/// (`install_source_multi_resume_step` in `dsl_cards/step/selections.rs`
+/// derives `valid_action_ids` from exactly that vector), and each
+/// `SourceSelectionRef` carries the `CardHandle` of the offered source.
+///
+/// Each pair is then resolved against LIVE state — the handle is looked up
+/// under its own carrier, mirroring `run_source_multi_step`'s DCGO-parity
+/// revalidation — so a source an intervening observer removed drops out
+/// instead of lending its id to a card that is no longer there. The frame is
+/// also cross-checked against the live prompt: every non-PASS id the prompt
+/// accepts must be one of the frame's candidates. A prompt with no data frame
+/// (a legacy closure-only installer, `effect_context/selections.rs`) returns
+/// `None` here and surfaces as an honest resolution error rather than a wrong
+/// pick.
+fn source_multi_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
+    use crate::resume::ResumeFrame;
+
+    let stack = game.pending_selection_resume.as_ref()?;
+    // Frames run inner-to-outer, so the live prompt is the innermost one —
+    // same traversal as `material_source_ids` / `count_capped_zone_ids`.
+    let state = stack.frames.iter().rev().find_map(|f| match f {
+        ResumeFrame::SourceMultiStep(s) => Some(s),
+        _ => None,
+    })?;
+
+    let non_pass: Vec<u16> = valid.iter().copied().filter(|id| *id != PASS).collect();
+    if non_pass.is_empty()
+        || !non_pass
+            .iter()
+            .all(|id| state.candidates.iter().any(|(c, _)| c == id))
+    {
+        return None;
+    }
+
+    Some(
+        state
+            .candidates
+            .iter()
+            .filter_map(|(action, source_ref)| {
+                let perm = game
+                    .player(source_ref.permanent.player)
+                    .battle_area
+                    .get(source_ref.permanent.index as usize)?;
+                let card = perm
+                    .card_sources
+                    .iter()
+                    .find(|c| c.handle() == source_ref.card)?;
+                Some((*action, card.card_id(&game.card_data).to_string()))
+            })
+            .collect(),
+    )
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -502,7 +577,24 @@ pub fn resolve_next(
         //   AnyField:          100 + player*15 + slot
         let side_implicit = ATTACK_START + slot;
         let absolute = ATTACK_START + (t.player as u16) * TARGETS_PER_ATTACKER + slot;
-        for cand in [side_implicit, absolute] {
+        // DNA digivolution's two material picks are the one battle-area prompt
+        // whose ids are RAW field indices rather than the `ATTACK_START` band:
+        // `initiate_dna_digivolve` fills `valid_action_ids` straight from
+        // `valid_dna_first_targets_for_hand_card` (`game_actions/digivolve.rs`),
+        // and the stage-1 continuation does the same for the second material.
+        // Both are always the SELECTING player's own Digimon (§8-2 "digivolve
+        // multiple Digimon in your battle area into 1 Digimon card with [DNA
+        // Digivolution] in the hand", general_rule.pdf §6-5-1-2-2), so a target
+        // naming the other seat is refused rather than silently read as a slot
+        // on this one. Gated on the engine's own prompt text — the only thing
+        // that distinguishes this family from the `SOURCE_SELECT`-banded
+        // `Material` prompts, which share the kind (see
+        // `selection::is_dna_material_prompt`).
+        let dna_material_slot = (pending.kind == SelectionKind::Material
+            && crate::selection::is_dna_material_prompt(&pending.prompt)
+            && t.player == pending.selecting_player)
+            .then_some(slot);
+        for cand in [side_implicit, absolute].into_iter().chain(dna_material_slot) {
             if accepts(cand) {
                 return Ok(Some(cand));
             }
@@ -567,6 +659,24 @@ pub fn resolve_next(
             // and the scan continues to the next occurrence.
             SelectionKind::CountCappedMultiSelect { .. } => {
                 count_capped_zone_ids(game, valid).and_then(|(ids, base)| find_id(&ids, base))
+            }
+            // Cross-permanent source multi-pick (`select_own_sources` /
+            // `select_opponent_sources`). The accepted ids are a SPARSE,
+            // predicate-filtered set that can span several field slots, so
+            // unlike the contiguous-band arms above this one matches against
+            // explicit `(id, card)` pairs read off the parked frame — see
+            // `source_multi_candidate_ids`. Duplicate ids are interchangeable
+            // copies and resolve by candidate order: the FIRST matching pair
+            // the prompt still accepts wins, exactly as the Hand / Trash /
+            // Reveal / Material arms do, so a copy already taken on an earlier
+            // pick (the installer drops it from the recomputed candidates) is
+            // skipped and the scan continues to the next occurrence.
+            SelectionKind::SourceMulti { .. } => {
+                source_multi_candidate_ids(game, valid).and_then(|pairs| {
+                    pairs
+                        .iter()
+                        .find_map(|(id, cid)| (cid == want && accepts(*id)).then_some(*id))
+                })
             }
             SelectionKind::Security => {
                 let base = if zone_owner == pending.selecting_player {
@@ -1146,6 +1256,211 @@ mod tests {
         assert!(
             resolve_next(&runner.game, &card_row("MAT-A"), 0).is_err(),
             "a DNA-style Material prompt must not be decoded as a source band"
+        );
+    }
+
+    // -- SourceMulti picks answered by CARD IDENTITY ---------------------
+    //
+    // The cross-permanent source multi-pick behind `select_own_sources` /
+    // `select_opponent_sources`. Before this arm `resolve_next` dropped the
+    // kind through `_ => None`, so EX7-073#effect#2's cost -- "by trashing 2
+    // cards with the [Three Musketeers] trait from this Digimon's
+    // digivolution cards" -- could not be ANSWERED by a scenario at all
+    // (`qa/dcgo-exams/EX7/NOTES-EX7-073.md`,
+    // G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK): the payment is exactly two
+    // cards, so the single-accept `yes:` shortcut that answers one-candidate
+    // source picks never applies.
+
+    /// Park a `SourceMulti` prompt through the engine's OWN installer
+    /// (`install_source_multi_resume_step`), so the prompt and the data frame
+    /// beside it are exactly what a live `select_own_sources` produces.
+    fn park_source_multi_selection(
+        game: &mut Game,
+        of_player: crate::enums::PlayerId,
+        selecting_player: crate::enums::PlayerId,
+        candidates: Vec<(u16, crate::selection::SourceSelectionRef)>,
+        min: u8,
+        max: u8,
+    ) {
+        let state = crate::resume::SourceMultiState {
+            prov: ResumeProvenance {
+                source_card: CardHandle(0),
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                controller: selecting_player,
+                override_pin: None,
+            },
+            of_player,
+            selecting_player,
+            previous_phase: GamePhase::Main,
+            min,
+            max,
+            picked: Vec::new(),
+            candidates,
+            filter: digimon_dsl::compiled::CompiledPredicate::default(),
+            filter_bindings: Bindings::new(),
+            target_permanent: None,
+            target_resolution_failed: false,
+            eval_on_card: false,
+            prompt: "Choose sources to trash".to_string(),
+            bind_as: None,
+            inner_tail: Arc::new(vec![CompiledStep::GainMemory(0)]),
+            bindings: Bindings::new(),
+            runtime: StepRuntime::default(),
+            trigger_context: None,
+            outer_conts: Vec::new(),
+        };
+        crate::dsl_cards::step::selections::install_source_multi_resume_step(game, state);
+    }
+
+    /// `(action id, SourceSelectionRef)` for one live source slot, exactly as
+    /// `source_multi_candidates_data` encodes it.
+    fn source_candidate(
+        game: &Game,
+        carrier: PermanentHandle,
+        source_index: u8,
+    ) -> (u16, crate::selection::SourceSelectionRef) {
+        let card = game.player(carrier.player).battle_area[carrier.index as usize].card_sources
+            [source_index as usize]
+            .handle();
+        (
+            crate::action::space::encode_source_select(carrier.index as u16, source_index as u16)
+                .expect("source slot is addressable"),
+            crate::selection::SourceSelectionRef {
+                permanent: carrier,
+                field_index: carrier.index,
+                source_index,
+                card,
+            },
+        )
+    }
+
+    #[test]
+    fn source_multi_pick_resolves_by_card_identity() {
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-B", "SRC-TOP"]);
+        // Bottom-up: source 0 = SRC-A, source 1 = SRC-B, top = SRC-TOP.
+        let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        let c1 = source_candidate(&runner.game, carrier, 1);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0, c1], 0, 2);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-A"), 0),
+            Ok(Some(c0.0))
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-B"), 0),
+            Ok(Some(c1.0))
+        );
+    }
+
+    #[test]
+    fn source_multi_reads_the_carrier_side_from_the_data_frame() {
+        // The load-bearing case: a `SOURCE_SELECT` id encodes a FIELD index
+        // and a SOURCE index but not the owning player, and the prompt leaves
+        // `zone_owner` unset -- so a resolver that fell back to the SELECTING
+        // player would read the wrong stack. Both seats hold a slot-0 stack
+        // containing SRC-B at DIFFERENT source indices.
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-B", "SRC-TOP"]);
+        let _p0_decoy = runner.place_stack(0, &["SRC-B", "SRC-A", "SRC-TOP"]);
+        let carrier = runner.place_stack(1, &["SRC-A", "SRC-B", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        let c1 = source_candidate(&runner.game, carrier, 1);
+        // Selecting player stays 0 while the sources belong to player 1.
+        park_source_multi_selection(&mut runner.game, 1, 0, vec![c0, c1], 0, 2);
+
+        // On the carrier SRC-B is source 1; on player 0's decoy it is source 0.
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-B"), 0),
+            Ok(Some(c1.0))
+        );
+    }
+
+    #[test]
+    fn source_multi_candidates_may_span_several_field_slots() {
+        // Unlike `Material`, the candidate set is not one carrier's contiguous
+        // band: the prompt sweeps every permanent of `of_player`. A resolver
+        // that counted from a single base would mis-address slot 1.
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-B", "SRC-TOP"]);
+        let first = runner.place_stack(0, &["SRC-A", "SRC-TOP"]);
+        let second = runner.place_stack(0, &["SRC-B", "SRC-TOP"]);
+        assert_ne!(first.index, second.index, "two distinct field slots");
+        let c_first = source_candidate(&runner.game, first, 0);
+        let c_second = source_candidate(&runner.game, second, 0);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c_first, c_second], 0, 2);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-B"), 0),
+            Ok(Some(c_second.0))
+        );
+    }
+
+    #[test]
+    fn source_multi_duplicate_ids_resolve_by_occurrence_order() {
+        // EX7-073's own shape: the payment is two copies of the SAME card id
+        // (`select: { cards: [BT25-085, BT25-085] }`). Interchangeable copies
+        // resolve by candidate order -- the first accepted occurrence wins,
+        // and the second pick is answered after the installer has recomputed
+        // the candidates without it.
+        let mut runner = runner_with_cards(&["SRC-DUP", "SRC-X", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-DUP", "SRC-X", "SRC-DUP", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        let c2 = source_candidate(&runner.game, carrier, 2);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0, c2], 0, 2);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-DUP"), 0),
+            Ok(Some(c0.0))
+        );
+    }
+
+    #[test]
+    fn source_multi_duplicate_skips_a_copy_the_prompt_does_not_accept() {
+        // Same stack, but the predicate excluded the bottom copy -- the scan
+        // must continue rather than return an id the engine would reject.
+        let mut runner = runner_with_cards(&["SRC-DUP", "SRC-X", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-DUP", "SRC-X", "SRC-DUP", "SRC-TOP"]);
+        let c2 = source_candidate(&runner.game, carrier, 2);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c2], 0, 1);
+
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("SRC-DUP"), 0),
+            Ok(Some(c2.0))
+        );
+    }
+
+    #[test]
+    fn source_multi_top_card_is_never_a_candidate() {
+        // Only digivolution sources are on offer, so naming the active Digimon
+        // must be an honest Err rather than a guess.
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-A", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0], 0, 1);
+
+        let err = resolve_next(&runner.game, &card_row("SRC-TOP"), 0)
+            .expect_err("the top card is not a selectable source");
+        assert!(err.contains("SRC-TOP"), "error must name the pick: {err}");
+        assert!(
+            err.contains("SourceMulti"),
+            "error must name the kind: {err}"
+        );
+    }
+
+    #[test]
+    fn source_multi_without_a_data_frame_is_an_honest_err_not_a_guess() {
+        // A legacy closure-only installer (`effect_context/selections.rs`)
+        // parks no `SourceMultiStep`, so the candidate mapping is unknowable
+        // and guessing a side would take a source out of the wrong stack.
+        let mut runner = runner_with_cards(&["SRC-A", "SRC-TOP"]);
+        let carrier = runner.place_stack(0, &["SRC-A", "SRC-TOP"]);
+        let c0 = source_candidate(&runner.game, carrier, 0);
+        park_source_multi_selection(&mut runner.game, 0, 0, vec![c0], 0, 1);
+        runner.game.pending_selection_resume = None;
+
+        assert!(
+            resolve_next(&runner.game, &card_row("SRC-A"), 0).is_err(),
+            "a frame-less SourceMulti prompt must not resolve to an action id"
         );
     }
 
