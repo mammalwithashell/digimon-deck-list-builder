@@ -9,6 +9,17 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## `<Partition>` ignored its printed per-slot source specs (G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED) — RESOLVED 2026-09-20
+
+- **Severity (at close):** 🔴 faithfulness bug on an implemented keyword — the controller could play a card no printed slot admits, or play only ONE of the specified cards.
+- **Discovered in:** Three Musketeers exam stage, 2026-09-18 (BT16-077#effect#2 / #inherited#0). Closed by the three-musketeers-2 close-out (2026-09-20).
+- **Root cause:** `dsl_cards/lower_partition.rs` accepted `sources:` and documented it as deferred; the synthesized `Keyword::Partition` body parked one slot-blind `CountCappedMultiSelect { min: 1, max: 2 }` over every digivolution card.
+- **Resolution:** a defaulted `CardEffect::partition_slots(inherited)` publishes the card's printed slot predicates (`DslCardEffect` answers from the same `kind: partition` clause); the keyword body gates the trigger on a complete slot assignment and drives matching-constrained, mandatory picks on the resumable data VM (`NonDslCountCappedTerminal::KeywordPartitionSlots`), auto-taking a forced last card. Cards publishing no slots keep the old behaviour.
+- **Citations:** `general_rule.pdf` (Ver.3.6) §16-28-1 / §16-28-5 / §16-28-6 (pp.37-38); DCGO `CardEffectFactory/KeyWordEffects/Partition.cs:66-119,145-159` and `CardEffectCommons/KeyWordEffects/Partition.cs:89,117`.
+- **Gate / coverage:** 3 new `tests/cards_behavioral/bt16/bt16_077.rs` cases (fail before, pass after); judge-quiz Q30 green; `cards_behavioral` 8209/0; exam clauses BT16-077#effect#2 and #inherited#0 re-diffed CLEAN against preserved sidecars.
+- **Commit:** `e01f319ec`.
+- **Follow-up:** `G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS` (OPEN, `docs/RUST_ENGINE_GAPS.md`) — the specified cards are still played sequentially, so a later card's would-play window can see an earlier one already on the field; §16-28-6 / judge-quiz Q30 call the plays simultaneous and DCGO batches them through one `PlayCardClass`.
+
 ## `activation_cost` on a `main_on_field` clause is never paid on the `[Main]` action path, and the mask does not gate on it (G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID) — RESOLVED 2026-09-20
 
 - **Severity (at close):** 🔴 was a faithfulness bug on an existing primitive — a printed "By suspending this Tamer" / "By returning this Tamer to the bottom of the deck" cost was skipped whenever the ability was activated through the ACTION SPACE, and the action mask offered the bit even when the cost could never be paid (an RL-correctness bug on top of the faithfulness one — the `CannotAttack` mask precedent: an action that can only ever no-op is a loop the policy pays for to the step limit).

@@ -3159,24 +3159,111 @@ affected; the live-security helpers `play_from_security*`
 (`effect_context/action/play.rs` ~584-690) should be checked for the same hole.
 `qa/dcgo-exams/BT20/NOTES-BT20-020.md`.
 
-## G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED — OPEN (measured 2026-09-18, same stage, BT16-077#effect#2 / #inherited#0)
+## G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED — RESOLVED 2026-09-20 (e01f319ec, ENGINE FIX) (measured 2026-09-18, same stage, BT16-077#effect#2 / #inherited#0)
 
-`lower_partition.rs` accepts per-slot `sources:` specs and defers enforcing
-them ("`_sources` are deferred to a future phase"). Measured, that is a
-rules-visible gap: after the `<Partition>` accept our engine parks ONE generic
-`CountCappedMultiSelect { min: 1, max: 2 }` "select 2 cards to play" over ALL
-the digivolution cards. Negative probes on Dinobeemon (BT16-077) `<Partition
-(purple Lv.4 & red Lv.4)>`: (a) with Dinobeemon itself in the stack under a
-Lv.6, answering `[BT16-077, ST6-07]` PLAYS the Lv.5 Dinobeemon — a card no slot
-admits — and trashes the red Lv.4; (b) answering one card alone plays ONE card.
-The printed keyword is "play 1 EACH of the specified cards" (general_rule 16-28: optional, all-or-nothing across the specified set;
-DCGO `CardEffectFactory/KeyWordEffects/Partition.cs` builds one filtered list
-per `PartitionCondition` and `PartitionClass.Partition` prompts per slot ONLY
-when a slot has more than one candidate). Fix: per-slot candidate lists, one
-pick per slot, parked only at >1 candidate (which also removes the sim-only row
-the exam lines carry today). The committed lines pick the two legal cards and
-are expected clean; the finding is the over-wide pick.
-`qa/dcgo-exams/BT16/NOTES-BT16-077.md`.
+**RESOLVED (ENGINE FIX).** `<Partition>` now enforces the printed parenthetical.
+
+**What was wrong.** `lower_partition.rs` accepted per-slot `sources:` specs and
+documented them as deferred ("`_sources` are deferred to a future phase"), and the
+synthesized `Keyword::Partition` body parked ONE slot-blind
+`CountCappedMultiSelect { min: 1, max: 2 }` "select 2 cards to play" over ALL the
+digivolution cards. Two negative probes on Dinobeemon (BT16-077)
+`<Partition (purple Lv.4 & red Lv.4)>`: (a) with Dinobeemon itself in the stack
+under a Lv.6, answering `[BT16-077, ST6-07]` PLAYED the Lv.5 Dinobeemon — a card no
+slot admits; (b) answering one card alone played ONE card.
+
+**Citations.** `general_rule.pdf` (Ver.3.6) **§16-28-5** (p.38) — "the 'specified
+cards' refers to the cards that meet the conditions shown in parentheses in the
+<Partition> icon text"; **§16-28-6** — "When <Partition> is activated, 1 of each of
+the specified cards is played from digivolution cards without paying their costs.
+**A player can't choose to only play one or some of the specified cards**";
+**§16-28-1** (p.37) — the trigger itself needs "a Digimon with this effect **and 1
+of each of the specified cards** in its digivolution cards"; §16-28-2 — immediate
+type, so the departure still happens (not preventive). DCGO builds one filtered
+candidate list per `PartitionCondition`
+(`DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/Partition.cs:66-119`),
+refuses to activate when any list is empty (`:145-159`), and opens a
+`SelectCardEffect` for a slot ONLY when it has more than one candidate
+(`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Partition.cs:89,117`).
+
+**Resolution.**
+- **`CardEffect::partition_slots(inherited)`** (`src/effect.rs`) — a defaulted trait
+  method publishing a card's printed slot predicates; `DslCardEffect`
+  (`src/dsl_cards/mod.rs`) answers it from its own `kind: partition` → `sources:`
+  clause, picking the face or inherited copy by scope. A card that publishes no
+  slots (a printed `<Partition>` with no registered script) keeps the pre-slot
+  behaviour, so nothing silently changes shape.
+- **`keyword_effects.rs`** — the `Keyword::Partition` body now (1) gates the trigger
+  on a complete slot assignment existing in the LIVE stack (§16-28-1 / DCGO
+  `:145-159`), and (2) drives the picks through `drive_partition_picks`: each pick
+  must keep a perfect slot→card matching reachable, a single remaining candidate is
+  taken WITHOUT a prompt (DCGO `:89,117` — there is no choice to expose), and the
+  picks are mandatory with no PASS (§16-28-6). Slot ORDER is deliberately not
+  imposed on the pick sequence: §16-28-6 plays the specified cards as one
+  simultaneous action (judge-quiz Q30 — "played out simultaneously"), which our
+  sequential play linearizes in the controller's chosen order, so the constraint is
+  a matching, not a sequence. This is the same shape as the hand-written substrate's
+  `partition_can_extend` (`effect_context/selections.rs`).
+- Clone-safe (rule 28): the chain runs on the resumable data VM — a new
+  `NonDslCountCappedTerminal::KeywordPartitionSlots { subject, slots, picked_so_far }`
+  frame, modelled on the existing `Assembly` per-element chain. No closure-based
+  `pending_selection` was added.
+- The extract-then-play body is now one shared `partition_extract_and_play`, called
+  by both the resume terminal and the legacy closure path (they had drifted — only
+  the resume copy ticked declarative effects).
+
+**Gate / coverage.** `tests/cards_behavioral/bt16/bt16_077.rs` —
+`bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest`
+(only the specified cards are offered; the green Lv.3 source never is; the forced
+second card is auto-taken; both are played),
+`bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set`
+(two purple + two red Lv.4: after a purple, the other purple is masked out),
+`bt16_077_inherited_partition_never_plays_a_source_no_slot_admits`
+(the gap's probe (a): the Lv.5 Dinobeemon source is never offered). All three FAIL
+before and pass after. Judge-quiz Q30 stays green (its driver now takes ONE source
+pick instead of two, because BanchoLeomon becomes the only card that can fill the
+Green/Black Lv.6 parenthetical once MedievalGallantmon is taken).
+
+**Re-measured at the oracle** (preserved sidecars, zero Unity time):
+`BT16-077#effect#2` (`20260918T122337Z_b8de4fb338d148ecad2f76ae78cf95d5`) and
+`BT16-077#inherited#0` (`20260918T122424Z_f9d55e3232d64f2b95621146b9efe6b8`) both
+re-diffed **CLEAN** (24 of 26 compared; 2 sim-only rows) and both verdicts stay
+`confirmed`. The scenarios' sim-only row is now a one-card pick, and the pick can no
+longer name a card no slot admits.
+
+**Suites.** full `cards_behavioral` 8209 passed / 0 failed / 37 ignored; `--lib`
+329/0; `--test dsl` 926/0; `--test judge_quiz` 43/0; `--test keyword_phase_d` 44/0;
+`--test replacements` 125/0; `--test selection` 79/0. `--test archetypes` keeps its
+8 failures that reproduce on unmodified main.
+
+**Follow-up (logged, not fixed here).** Our `<Partition>` plays the specified cards
+SEQUENTIALLY (`play_from_trash_free_unsuspended` then
+`queue_partition_second_play`), so a later card's would-play interrupt can see an
+earlier one already on the field — §16-28-6 / judge-quiz Q30 call the plays
+simultaneous, and DCGO batches them through one `PlayCardClass` over the whole list
+(`CardEffectCommons.cs:23-53`). The order is the controller's, which is why Q30 is
+still observable, but a true batch play that runs every would-play window before any
+card lands is a separate engine change: `G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS`.
+
+## G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS — OPEN (found 2026-09-20, three-musketeers-2 close-out)
+
+`<Partition>` plays its specified cards one after another
+(`cards/keyword_effects.rs::partition_extract_and_play` → the first card via
+`play_from_trash_free_unsuspended`, the rest via
+`Game::queue_partition_second_play`). Every pick is extracted from the stack first,
+so no pick is in the battle area while ANOTHER PICK'S would-play interrupt resolves
+— but once the first card LANDS, the second card's would-play window sees it.
+general_rule.pdf §16-28-6 plays "1 of each of the specified cards" as one action and
+judge-quiz Q30 (PDF p69) is explicit that BanchoLeomon and MedievalGallantmon "are
+played out simultaneously", which is why BanchoLeomon is NOT a legal target for
+Medieval's "by suspending 2 Digimon" would-play cost reduction. DCGO gets this by
+batching: `CardEffectCommons.PlayPermanentCards` hands the whole `selectedCards`
+list to one `PlayCardClass.PlayCard()` (`CardEffectCommons.cs:23-53`). Today the
+judge pin holds only because the controller chooses the play order (Q30's driver
+takes MedievalGallantmon first). `Game::play_source_refs_from_effect_without_cost`
+already batch-PLACES sources, but it runs no would-play window, so it is not a
+drop-in. Fix: a batch free-play that resolves every card's would-play window before
+any of them enters the battle area.
 
 ## F-CARD-BT16-077-WD-WHOLE-CLAUSE-DNA-GATED / F-CARD-BT24-091-LINK-EFFECT-MISSING — OPEN (2026-09-18, same stage)
 
