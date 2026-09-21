@@ -264,3 +264,40 @@ OptionCostPolicy::Pay)` (`code/digimon-engine/src/game_actions/link.rs:197-217`)
 than of any one card. Our **Digimon**-link path is already correct.
 
 **6 clauses: 5 confirmed, 1 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**
+
+## 2026-09-21 (close-out `three-musketeers-2`, triage stage) — `effect#4` RE-MEASURED: **confirmed**
+
+The divergence above was a genuine engine finding and it has been FIXED — not by this
+stage, but by `9af21698c` (`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`), landed for the
+sibling driver `BT25-093#effect#4` while this clause's verdict was still being written.
+That commit moves the from-hand Plug-In **Option** link onto the §10-1-3 order: the host
+question (`install_option_hand_link_host_selection`, a clone-safe
+`ResumeFrame::OptionHandLinkHostSelection` data frame) is asked BEFORE anything is paid,
+and `finish_option_hand_link` re-enters `play_option_core` with the host pinned. The
+prompt is byte-identical to `install_link_host_selection`'s, so the wire meaning of the
+host pick did not change — only its position in the procedure — which is why this
+scenario needed no re-authoring.
+
+Re-diffed against the SAME preserved sidecar, zero Unity time:
+
+| clause | sidecar | result | verdict |
+|---|---|---|---|
+| `BT24-091#effect#4` | `20260921T042039Z_c3e0a78e` | **CLEAN** — compared 13 of 14 ours / 14 dcgo (1 sim-only row + 1 DCGO intermediate row not comparable) | **confirmed** |
+
+The clause text is unchanged (sha `9d4716573dac469c1419dcbf9269cd84ee848a841a854e159fbc7d67eb6af6fa`,
+byte-identical to the one hashed into the `diverged` verdict), so this is a real
+re-measure of the same clause and not a drift-driven reset. Both the earlier
+`unreachable` call and the `diverged` call are now superseded; neither the scenario nor
+the YAML spec was touched.
+
+Checked first, and ruled out: this was **not** the `field.N` centre-out slot-addressing
+artefact that accounted for most of job 1's apparent divergences. The only two-Digimon
+reference on this line is the host `select:`, which rides the wire as the target's card
+identity (`BT25-024`), not as a slot index — see SLOT HYGIENE in the scenario header.
+The divergence was a real procedure-order bug on the shared path.
+
+Trackers updated: `docs/RUST_ENGINE_GAPS.md`
+(`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`, already RESOLVED — its Oracle bullet now
+records all three drivers CLEAN) and `qa/resolved-gaps.md` (its Follow-up is now DONE).
+
+**6 clauses: 6 confirmed, 0 diverged, 0 unreachable, 0 unavailable, 0 unmeasured.**

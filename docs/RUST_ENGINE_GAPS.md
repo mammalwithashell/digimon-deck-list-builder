@@ -3875,10 +3875,17 @@ moved the board) instead of asking a second time.
   `cards_behavioral` **8223 passed / 0 failed / 37 ignored**; `--lib` 338/0;
   `option_color_requirements` 6/0, `live_game_action_validation` 7/0, `policies_greedy`
   5/0, `policies_headless` 1/0, `debug_runner_dsl` 7/0, `alt_path_reachability` 1/0.
-- **Oracle:** `BT25-093#effect#4` re-diffed against the preserved sidecar
-  `20260921T042530Z_8f13b83c…` — CLEAN (compared 9 of 10 ours / 10 dcgo), verdict
-  re-recorded `confirmed`. `BT25-100#effect#5` and `BT24-091#effect#4` are the same single
-  row and are fixed by the same change; re-record them from their own sidecars.
+- **Oracle — all three drivers now re-diffed CLEAN, no `diverged` row left on this path.**
+  `BT25-093#effect#4` against the preserved sidecar `20260921T042530Z_8f13b83c…` — CLEAN
+  (compared 9 of 10 ours / 10 dcgo), verdict re-recorded `confirmed`.
+  `BT25-100#effect#5` against `20260921T042552Z_0bad16abd…` — CLEAN, `confirmed`.
+  `BT24-091#effect#4` (Tidal Stream, three-musketeers-2 close-out, 2026-09-21) against
+  `20260921T042039Z_c3e0a78e6c254e31b2ae6721e408f494.state.jsonl` — **CLEAN (compared 13
+  of 14 ours / 14 dcgo steps; 1 sim-only row + 1 DCGO intermediate row not comparable)**,
+  verdict flipped `diverged` → `confirmed` (clause text unchanged, sha
+  `9d4716573dac…`, so the flip is a real re-measure and not text drift). The whole card
+  is now **6/6 confirmed**. No engine change was needed for this driver — `9af21698c`
+  already fixed the shared path; this stage only re-measured it.
 
 
 ## G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER — OPEN (found 2026-09-21, three-musketeers-2 close-out)

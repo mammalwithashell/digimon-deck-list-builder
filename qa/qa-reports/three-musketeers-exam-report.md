@@ -91,7 +91,7 @@ RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.to
 | BT7-073 | KaiserLeomon | 13/102 | 2 | 2 |  |  |  |  |
 | EX7-043 | Tankmon | 11/102 | 3 | 3 |  |  |  |  |
 | EX7-059 | BeelStarmon | 11/102 | 5 | 5 |  |  |  |  |
-| BT24-091 | Tidal Stream | 10/102 | 6 | 5 |  |  |  | 1 |
+| BT24-091 | Tidal Stream | 10/102 | 6 | 6 |  |  |  |  |
 | EX7-066 | Chaos Triangular | 10/102 | 3 | 3 |  |  |  |  |
 | EX7-005 | Kapurimon | 7/102 | 1 | 1 |  |  |  |  |
 | BT8-084 | Kimeramon | 6/102 | 3 | 2 |  | 1 |  |  |
@@ -272,7 +272,8 @@ RUST_MIN_STACK=268435456 cargo test --manifest-path code/digimon-engine/Cargo.to
 | LM-056#effect#2, #effect#3 | Scenarios authored and lowering (effect#2 repaired at close, see above); no oracle run. |
 | P-108#effect#0, #effect#1 | Same (effect#1 repaired at close). |
 | BT25-058#effect#3, BT19-075#effect#2 | Scenario authored and lowering; no oracle run. |
-| BT16-077#effect#0 (Special Digivolution Condition), BT24-091#effect#4 (Link Condition) | No scenario authored. |
+| BT16-077#effect#0 (Special Digivolution Condition) | No scenario authored. |
+| ~~BT24-091#effect#4 (Link Condition)~~ | **CLOSED in three-musketeers-2.** Scenario `qa/dcgo-exams/BT24/BT24-091-effect4.yaml` authored 2026-09-21, run on the oracle, and measured `diverged` on a single LEAD row (the host pick: `memory ours=0 dcgo=3`, the Option already out of our hand). That was a real engine finding — the from-hand Plug-In **Option** link ran §10-1-3-2 (pay) before §10-1-3-1 (choose the host) — and is fixed by `9af21698c` (`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`, now RESOLVED). Re-diffed against the same preserved sidecar: **CLEAN**, verdict `confirmed`. **BT24-091 is 6/6 confirmed.** |
 | BT26-078#security#0, BT26-083#security#0 | Unimplementable — no BT26 card data (above). |
 
 Nothing in this list is blocked on a technical impossibility except the BT26 pair;
