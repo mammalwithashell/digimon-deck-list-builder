@@ -73,3 +73,46 @@ BT21-054-effect0.yaml, oracle-CLEAN; the sim side does not assert phase-prompt
 labels, which is why sim-only was green). The `expect.prompt` on those
 `digivolve: { from: breeding }` steps is now `main_phase`; sim-only re-lowered
 green. Those clauses stay `unmeasured` until re-drained.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#1` re-authored SLOT-SAFE
+
+Both outstanding clauses (`effect#0`, `effect#1`) were re-audited against
+`P/Purple/P_108.cs` before any Unity time. `effect#0` needed no change (its
+only multi-permanent moment carries no slot-addressed action). `effect#1` did,
+and the defect was **latent, not measured** — the 2026-09-18 oracle run aborted
+earlier, on the breeding label, so it never reached the step.
+
+**What was wrong.** `main: { on: field.N }` is a MAIN-PHASE ACTION, so its
+slot is NOT identity-resolved: DCGO builds `ActivatePermanentAction(slot, ...)`
+and reads `actor.GetFieldPermanents()[slot]`
+(`Script/Harness/InputDriver.cs:425-463`). `GetFieldPermanents()` walks
+`FieldPermanents[0..15]` in FRAME-ID order (`Script/Player.cs:669`), and
+`CardSource.PreferredFrame()` (`Script/CardSource.cs:2290-2364`) puts Digimon
+and Tamers/Options on DIFFERENT rows — Digimon sorted by y descending (the
+centre-out 4, 3, 5, 2, 6, ... row), Tamers/Options by y ascending (11, 10, 12,
+9, ...), which the enemy seat's explicit `correctOrder`
+`{4,3,5,2,6,1,7,0,8, 11,10,12,9,13,14,15}` spells out. **So in DCGO's compact
+list every Digimon precedes every placed Option**, while ours is plain entry
+order. The old line played P-108 on T3 and promoted Elecmon on T5, making the
+Option our index 0 and DCGO's index 1; `main: { on: field.0 }` would have
+named ELECMON on the oracle and aborted with "[Main] sub-slot on field slot 0
+(ST6-05) names no activatable [Main] effect".
+
+**The repair** (no clause content changed): Elecmon is promoted FIRST and
+P-108 played SECOND, both on T5, so the Option is index 1 on both wires and
+the step is `main: { on: field.1 }`; the `<Delay>` then fires on T7. A
+pre-clause `assert:` block now pins the ordering itself
+(`p0.field: [ST6-05, P-108]`) so a future re-order cannot go unnoticed. The
+rule is written up for the next author in `../README.md` §"Slot safety".
+
+Sim-only after the repair: `effect#0` 12 checks / 0 failed, `effect#1` 11
+checks / 0 failed (book `tm_p_108_pool.json`). Both clauses remain
+**`unmeasured`** — only an oracle diff can move them.
+
+**Re-derived prompt shapes are unchanged** from the audit above: the `[Main]`
+is `SetUpActivateClass(null, …, -1, false, …)` (no `OptionalSkill`), one
+`SelectCardEffect` over the revealed pair, no ordering prompt at N=1; the
+`<Delay>` deletes the Option with no prompt, then `SelectPermanentEffect`
+(`canNoSelect: true`) then `SelectHandEffect` (`canNoSelect: true`, via
+`CardEffectCommons.DigivolveIntoHandOrTrashCard` :1006-1031). Youkomon's single
+Purple Lv.3 / 2 circle goes to 0 under the -2, so no `SelectCountEffect`.

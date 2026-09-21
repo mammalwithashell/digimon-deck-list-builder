@@ -85,3 +85,47 @@ recording shows that digivolve RESOLVED (`action_detail` cost_paid 0,
 which looks like InputDriver applying the [Millenniummon] alt path to the wrong
 frame; worth checking before trusting any slot-mismatched line.
 **4 clauses: 3 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#2` re-authored against the measured slot defect
+
+The r1 triage above ("`effect2` is NOT slot-safe") is now acted on. The line
+held TWO p0 Digimon when it addressed `field.1` for the T5 digivolve and the
+attack; DCGO seats Digimon CENTRE-OUT (`CardSource.PreferredFrame`: frames 4,
+3, 5, …) and a main-phase `field.N` reaches it as a COMPACT frame-order index
+(`InputDriver.FieldSlotToFrameId`), so at N=2 the two engines disagree about
+every index and DCGO digivolved onto Deltamon.
+
+**The repair.** p0 now fields a THIRD Digimon, and the one under exam is the
+third-entered — the only index (2) the two orderings agree on, the
+`../P/P-180-effect0.yaml` / `-effect2.yaml` r2 pattern that went oracle-CLEAN:
+
+| entry | card | why |
+|---|---|---|
+| 0 | Monodramon BT1-009 (vanilla Lv.3, [Mini Dragon]) | slot ballast; NOT [Composite], so the replacement's cost pick stays single-candidate |
+| 1 | Deltamon BT6-012 | the [Composite] the replacement pays |
+| 2 | Millenniummon BT18-019 → MoonMillenniummon | every `field.N` in the file |
+
+Only `digivolve: { from: field.2 }` and `attack: { attacker: field.2 }` carry
+an index; the three `select:` rows travel by card identity. The turn structure
+grew to T7 to fit the extra play without clamping memory (T1 Monodramon 2, T3
+Deltamon 5, T4 p1 Phoenixmon 10, T5 Millenniummon 14, T6 p1 two plays, T7
+digivolve + attack), and p1 makes two T6 plays so its hand is exactly 5 at the
+digivolve and `#effect#1`'s hand trash stays silent. Millenniummon's [On Play]
+still fires with p1 holding exactly one Digimon, so that pick is unambiguous
+too.
+
+**The predicted divergence was re-measured on the new line and still holds.**
+A scratch copy asserting `p1.security: 4` at the witness row passes on our
+engine: after the leave-replacement deletes Deltamon as its cost, our
+`[All Turns] [Once Per Turn]` observer (`#effect#3`) does NOT fire, so p1's
+security stays at 4 and ST1-04 is not in p1's trash. DCGO deletes the cost
+through `CardEffectCommons.DeletePeremanentAndProcessAccordingToResult`, which
+raises `OnDestroyedAnyone` like any deletion, so it is expected to read 3. The
+committed `assert:` deliberately names only the fields both engines should
+agree on and leaves `p1.security` to the oracle differ. Still **not fixed**
+(exam stage) — recorded for triage after the oracle pass.
+
+Sim-only after the repair: 10 checks / 0 failed. `effect#2` stays
+**`unmeasured`**; `effect0` / `effect1` / `effect3` keep their `confirmed`
+verdicts (untouched).
+**4 clauses: 3 confirmed, 0 diverged, 0 unreachable, 1 unmeasured.**

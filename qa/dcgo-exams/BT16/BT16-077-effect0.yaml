@@ -1,0 +1,160 @@
+# Exam scenario: Dinobeemon (BT16-077), clause BT16-077#effect#0 --
+# "[DNA Digivolve] Purple Lv.4 + red Lv.4: Cost 0".
+#
+# THE WITNESS both engines share: after the declaration P0 holds ONE permanent
+# whose top card is Dinobeemon over BOTH materials, UNSUSPENDED, for 0 memory
+# -- and the second field slot is gone, because the two Lv.4s became one
+# stack. The printed condition is read by the MATERIALS: Youkomon ST6-07 is a
+# PURPLE Lv.4 and Birdramon ST1-05 a RED Lv.4, one of each, which is the only
+# pairing the condition admits.
+#
+# REACHABLE ONLY SINCE 2026-09-20. This clause was `unreachable` for
+# `G-TOOLING-EXAM-NO-DNA-VERB`: `exam::scenario::STEP_VERBS` had no DNA verb,
+# `exam::lower::matches_intent` no `DnaDigivolve` arm, and DCGO's
+# `InputDriver.BuildMainPhaseAction` refused the DNA action range outright.
+# The close-out job `three-musketeers-2` closed both halves --
+# `do: { dna: { card: <ID>, materials: [field.N, field.M] } }` on our wire
+# (dec94c05c) and a `DNA_DIGIVOLVE` arm on DCGO's (base-repo fc67f9ae6, player
+# D:/dcgo-build/scripted-v16). The materials ride the VERB, not a following
+# `select:`, because the wires disagree about how many decisions the
+# declaration is: ours is three (the action bit plus two
+# `SelectionKind::Material` prompts over raw own-battle-area indices), DCGO's
+# is ONE `PlayCardAction` carrying `JogressEvoRootsFrameIDs`. See
+# ../BT8/NOTES-BT8-084.md for the full shape and BT8-084-effect0.yaml for the
+# first worked line.
+#
+# WHY HARD-PLAYED MATERIALS. Both Lv.4s are hard-played rather than grown out
+# of breeding: the DNA condition only cares that the two Digimon in the battle
+# area are a purple Lv.4 and a red Lv.4, and a bare pair keeps the resulting
+# stack's `sources` list to exactly the two materials -- the clause's own
+# reading ("the 2 specified Digimon stacked on top of each other") instead of
+# a reading blurred by four inherited breeding cards.
+#
+# BOTH MATERIALS ARE VANILLA. Youkomon ST6-07 and Birdramon ST1-05 print no
+# effect, inherited or security text at all, so nothing fires when they are
+# played, and nothing fires when they are consumed.
+#
+# THE [When Digivolving] IS DECLINED, not silent: it fires on the DNA route
+# like any other and `SetUpActivateClass(CanActivateCondition, ..., -1, TRUE,
+# ...)` (BT16_077.cs) makes DCGO ask an `OptionalSkill` yes/no whose only
+# CanActivateCondition is `IsExistOnBattleArea`. Our engine opens the same
+# optional window (`when_digivolving` / `optional: true` in
+# cards/bt16/BT16-077.yaml). The line declines it on BOTH wires -- the same
+# shared row BT16-077-effect1.yaml uses -- so this file reads the DNA clause
+# alone; #effect#3 is where that body is measured. (Declining also keeps the
+# DNA-gated trash play out of the picture: P0's trash is empty here anyway.)
+#
+# SLOT SAFETY. The two materials have DISTINCT card ids and the `dna:` step
+# puts BOTH identities on the wire row (`material_ids`), so DCGO resolves them
+# by identity and the centre-out frame order it seats Digimon in cannot make
+# `field.0` mean a different Digimon there. No `attack:` / `digivolve:` /
+# `main:` in this line addresses a slot on a two-Digimon board.
+#
+# Memory ledger (P0 is the first player, so no T1 draw):
+#   T1 (P0, 0): Youkomon ST6-07 (5): 0 -> -5; the turn ends on the play.
+#   T2 (P1, 5): all-pass                                    -> P0 on 3.
+#   T3 (P0, 3): Birdramon ST1-05 (4): 3 -> -1; turn ends.
+#   T4 (P1, 1): all-pass                                    -> P0 on 3.
+#   T5 (P0, 3): THE CLAUSE -- DNA digivolve for 0, so memory is UNCHANGED and
+#               P0 keeps the turn, which is what makes "digivolve UNSUSPENDED"
+#               readable on a Digimon that has just digivolved.
+#
+# Book: qa/dcgo-exams/BT16/tm_bt16_077_pool.json (--decks), decks
+# `tm-purple-line` / `tm-quiet-red` -- the pair #effect#1 and #effect#3 use.
+# No new deck was needed: `tm-purple-line` already holds Youkomon ST6-07 (the
+# purple Lv.4) AND Birdramon ST1-05 (the red Lv.4).
+card: BT16-077
+clause: BT16-077#effect#0
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand: the two materials, the DNA result, inert purple filler;
+    # [5..9] security (never flipped -- nobody attacks);
+    # [10] the T3 turn draw; [11] the T5 turn draw.
+    stack: [ST6-07, ST1-05, BT16-077, ST6-02, ST6-09,
+            ST6-02, ST6-03, ST6-09, ST1-03, ST1-05,
+            ST1-02, ST1-04]
+    rest: tm-purple-line
+  p1:
+    # inert all line: P1 hatches nothing and plays nothing.
+    # [10] T2 draw, [11] T4 draw, [12] T6 draw.
+    stack: [ST1-03, ST1-02, ST1-04, ST1-05, ST1-08,
+            ST1-02, ST1-04, ST1-05, ST1-08, ST1-03,
+            ST1-13, ST1-14, ST1-10]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play Youkomon (5 -> memory -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST6-07, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): hard-play Birdramon (4 -> memory -1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): THE CLAUSE. Purple Lv.4 + red Lv.4, cost 0 -- memory is
+  # unchanged and P0 keeps the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { dna: { card: BT16-077, materials: [field.0, field.1] } }
+    expect: { prompt: main_phase }
+  # [When Digivolving] OptionalSkill gate (isOptional: true) in both engines:
+  # decline, so this file reads the DNA clause alone.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause -- memory 3, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): the trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-declaration: two separate bare Lv.4 permanents, memory 3.
+  - at: 9
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.field:
+        - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
+        - { card_id: ST6-07, dp: 6000, suspended: false, sources: [] }
+      p1.field: []
+      p0.trash: []
+  # After the declaration and the declined trigger: ONE permanent, Dinobeemon
+  # over BOTH materials, UNSUSPENDED, for 0 memory. Nothing was trashed, no
+  # security moved, and P1's board is still empty.
+  - at: 11
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT16-077, dp: 8000, suspended: false, sources: [ST1-05, ST6-07] }
+      p1.field: []
+      p0.trash: []
+      p1.trash: []
+      p0.security: 5
+      p1.security: 5

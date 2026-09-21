@@ -149,6 +149,41 @@ the same list). Three that are easy to confuse:
   `opp.` reference is refused. Needs a DCGO build at or after `scripted-v16`;
   earlier players abort on "action id N has no MainPhaseAction shape".
 
+### Slot safety: which `field.N` means the same thing on both wires
+
+A `select:` row travels by the target's card IDENTITY, so its `own.field.N` /
+`opp.field.N` is resolved in OUR engine and is never slot-fragile. A
+MAIN-PHASE ACTION is different: `attack:`, `digivolve: { from: field.N }` and
+`main: { on: field.N }` put an INDEX on the wire, and DCGO resolves it against
+its own seating. Two independent rules decide whether the two engines mean the
+same permanent.
+
+1. **Digimon are seated CENTRE-OUT, we seat them in entry order.**
+   `CardSource.PreferredFrame()` fills the Digimon row 4, 3, 5, 2, 6, 1, 7, 0,
+   8, and `InputDriver.FieldSlotToFrameId` / `GetFieldPermanents()` then hand
+   the harness a COMPACT index over that frame order. So the 1st-entered
+   Digimon is index 0 on both wires, the 2nd is index 0 on DCGO but 1 on ours,
+   and the **3rd-entered is index 2 on both**. Address a third-entered Digimon,
+   or keep the seat at one Digimon. Worked examples: `P/NOTES-P-180.md`
+   (`effect#0` / `effect#2` r2), `BT19/BT19-075-effect2.yaml`.
+
+2. **Every Digimon precedes every Tamer/Option in DCGO's compact list.**
+   Tamers and Options are seated on a SEPARATE row (`PreferredFrame()` sorts
+   them by the opposite y, frames 11, 10, 12, 9, 13, 14, 15; the enemy seat's
+   `correctOrder` array spells both rows out), and `GetFieldPermanents()`
+   (`Player.cs:669`) scans `FieldPermanents[0..15]` in frame-id order. Ours is
+   one flat entry-ordered list with Options interleaved. So a `main:` on a
+   placed `<Delay>` Option, or on a Tamer, only agrees if the Option/Tamer
+   entered LAST on our side too: promote or play the Digimon FIRST and place
+   the Option AFTER it. Measured 2026-09-21 on `P/P-108-effect1.yaml` and
+   `LM/LM-056-effect2.yaml`, both of which used to place the Option first and
+   would have aborted the oracle job on "[Main] sub-slot on field slot 0 (...)
+   names no activatable [Main] effect".
+
+The `dna:` verb is the exception that proves the rule: its `materials:` are
+resolved to top-card ids before the action is applied and ride the wire as
+identities, so its `field.N` pair is index-safe.
+
 ### `assert` is backfilled, not hand-guessed
 
 You author the line; the oracle records what happened; on a `confirmed` verdict

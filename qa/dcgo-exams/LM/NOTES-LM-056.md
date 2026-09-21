@@ -58,3 +58,57 @@ BT21-054-effect0.yaml, oracle-CLEAN; the sim side does not assert phase-prompt
 labels, which is why sim-only was green). The `expect.prompt` on those
 `digivolve: { from: breeding }` steps is now `main_phase`; sim-only re-lowered
 green. Those clauses stay `unmeasured` until re-drained.
+
+## 2026-09-21 (close-out `three-musketeers-2`) — `effect#2` re-authored SLOT-SAFE; `effect#3` re-audited unchanged
+
+Both outstanding clauses were re-read against `LM/Purple/LM_056.cs` before any
+Unity time.
+
+### `effect#2` — the placed Option was at a DIFFERENT index on the two wires
+
+Same latent defect as the sister line `../P/P-108-effect1.yaml`, and the same
+repair. `main: { on: field.N }` is a MAIN-PHASE ACTION, so DCGO resolves the
+slot itself: `ActivatePermanentAction(slot, …)` reads
+`actor.GetFieldPermanents()[slot]` (`Script/Harness/InputDriver.cs:425-463`),
+which walks `FieldPermanents[0..15]` in FRAME-ID order
+(`Script/Player.cs:669`). `CardSource.PreferredFrame()`
+(`Script/CardSource.cs:2290-2364`) seats Digimon on one row (y descending;
+centre-out 4, 3, 5, 2, 6, …) and Tamers/Options on another (y ascending; 11,
+10, 12, 9, …) — the enemy seat's `correctOrder`
+`{4,3,5,2,6,1,7,0,8, 11,10,12,9,13,14,15}` spells both rows out — so **every
+Digimon precedes every placed Option** in DCGO's compact list, while ours is
+plain entry order. The old line played LM-056 on T1 and promoted Patamon on
+T5, so `main: { on: field.0 }` named LM-056 for us and PATAMON for DCGO: the
+oracle job would have aborted on "[Main] sub-slot on field slot 0 (BT25-031)
+names no activatable [Main] effect". Never measured — the 2026-09-18 run
+aborted earlier on the breeding label.
+
+Repaired by promoting Patamon FIRST and playing LM-056 SECOND (both on T5), so
+the Option is index 1 on both wires and the step is `main: { on: field.1 }`;
+the `<Delay>` fires on T7. A pre-clause `assert:` now pins the ordering
+(`p0.field: [BT25-031, LM-056]`). The line still plays LM-056 with only a
+YELLOW Digimon on the board, so `effect#0`'s ignore-colour precondition is
+unchanged. P1 no longer hatches (it declines breeding and passes every turn),
+which removes its Agumon and keeps every seat at one permanent. The reusable
+rule is in `../README.md` §"Slot safety".
+
+### `effect#3` — the [Security] line was re-read and kept
+
+`LM-056` sits at P0's `stack[9]` (the TOP security card) and P1's promoted
+Agumon flips it on T6, so the clause is measured on the card actually being
+checked, for the DEFENDER, on the attacker's turn. Re-derived from the C#:
+`AddActivateMainOptionSecurityEffect` → `CardEffectFactory
+.ActivateMainOptionSecurityEffect` (`Script/CardEffectFactory.cs:551-592`) is
+`SetUpActivateClass(null, ActivateCoroutine, -1, FALSE, …)` and simply runs the
+same `[Main]` `ActivateClass` — **no `OptionalSkill` on either the outer
+security wrapper or the inner body**, so the whole clause is ONE
+`SelectCardEffect` (the single blue card among the revealed pair) plus our
+sim-only `OrderedPermutation` at N=1. Every `attack:` / `move:` step in the
+file happens while P1 holds exactly one Digimon, and P0 holds none until
+LM-056 is placed, so no slot is ambiguous. Unchanged; sim-only 8 checks / 0
+failed.
+
+Sim-only at close: all four LM-056 lines lower with `tm_lm_056_pool.json`
+(`effect#0` 6/0, `effect#1` 6/0, `effect#2` 11/0, `effect#3` 8/0).
+`effect#2` and `effect#3` stay **`unmeasured`** — only an oracle diff moves
+them.

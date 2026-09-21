@@ -1,0 +1,202 @@
+# Exam scenario: Tidal Stream (BT24-091), clause BT24-091#effect#4 -- the
+# Link Condition "<Link> [TS] trait: Cost 3 (Plug this card from the hand or
+# battle area sideways into the specified Digimon in the battle area.)"
+#
+# Reachable at all only since 2026-09-20. NOTES-BT24-091.md carried this
+# clause as `unreachable` under `G-TOOLING-EXAM-OPTION-HAND-LINK`: our mask
+# hid a Plug-In OPTION's from-hand link behind the PLAY bit's mode-select
+# `EffectChoice`, so no wire row could mean "declare the link" on both
+# engines. That gap was closed on the ENGINE side
+# (`G-ENGINE-OPTION-LINK-FROM-HAND`, 7e30343d4): general_rule.pdf 6-5-1-3
+# ("Use an Option Card From the Hand") and 6-5-1-4 ("Linking a Card in the
+# Hand or Battle Area") are two SEPARATE main-phase actions, and 10-1-1 has
+# the hand link paid "as part of the main phase actions" -- which is exactly
+# how DCGO already models it (`CardEffectFactory.LinkEffect`, Link.cs:19-24,
+# accepts any `CardSource` that `IsExistOnHand`, reached as an
+# `ActivateCardAction`, never a `PlayCardAction`). So the declaration is now
+# its own `HAND_EFFECT` bit on our side too and `link: { from: hand }` lowers.
+#
+# WHAT THE CLAUSE SAYS, and what this line pins, sentence by sentence:
+#  - "[TS] trait" -- the HOST GATE. p0's board holds TWO Digimon when the link
+#    is declared: Agumon ST1-03 (red, no [TS]) and Lekismon BT25-024 (blue,
+#    [Beastkin]/[Iliad]/[TS]). The host pick's `candidates:` is therefore
+#    asserted as EXACTLY [BT25-024] -- Agumon is on the board and is not
+#    offered. DCGO gates it in `Link.cs`'s `CanSelectPermanentCondition`
+#    (`card.linkCondition.digimonCondition(permanent)`, fed by
+#    `AddSelfLinkConditionStaticEffect(PermanentCondition, linkCost: 3, ...)`
+#    in BT24_091.cs's "Link Condition" region, whose PermanentCondition is
+#    `targetPermanent.IsDigimon && targetPermanent.TopCard.HasTSTraits`);
+#    ours by the `kind: link_requirement` filter `{kind: digimon,
+#    trait_has: TS}` in code/digimon-engine/cards/bt24/BT24-091.yaml.
+#  - "Cost 3" -- the PAYMENT. p0 declares the link on memory 3 and is left on
+#    0, so the turn does NOT hand over and the trailing pass is still p0's.
+#    This is the half `BT24-091-effect3.yaml` cannot see: that line reaches
+#    the link through the [Main]/[Security] "without paying the cost" branch.
+#  - "from the hand ... into the specified Digimon in the battle area" -- the
+#    Option leaves p0's HAND (asserted: it is in neither hand nor trash after
+#    the declaration) and rides Lekismon as a link card, which is why the host
+#    reads 7000 (5000 + the printed Link DP +2000, clause #effect#3).
+#
+# PROMPT SHAPE. `CardEffectFactory.LinkEffect` is
+# `SetUpActivateClass(null, ActivateCoroutine, -1, TRUE, ...)` -- isOptional
+# TRUE -- so DCGO confirms the DECLARED <Link> with an `OptionalSkill` yes/no
+# BEFORE the host pick; our engine treats the declaration itself as the
+# decision and parks nothing, so that row is `dcgo_only` (the same fold
+# ../BT21/BT21-071-effect2.yaml, BT21-074-effect3.yaml and BT21-054-effect2.yaml
+# carry, where it was first measured against the oracle). The host pick that
+# follows is a real prompt on both wires: `SelectPermanentEffect`
+# (`Mode.Custom`, `maxCount 1`, `canNoSelect: FALSE`), asked even with a
+# single candidate.
+#
+# NOTHING ELSE FIRES. Tidal Stream's [Main]/[Security] body is not on this
+# route (a declared <Link> is not a use of the Option), its Link ESS is
+# `[When Attacking]` and nobody attacks, and its ignore-colour clause is not
+# load-bearing here (it would be satisfied anyway: Lekismon is blue).
+# Lekismon's own texts stay quiet: its `[On Play] <Draw 1>` is mandatory and
+# prompt-free, and its `[Your Turn] ... if any of them are red ... digivolve
+# into [Crescemon]` needs a Crescemon in hand (there is none) and a red card
+# among the played Digimon (Lekismon is blue). Agumon ST1-03's only text is an
+# INHERITED `[Your Turn] +1000 DP`, dormant while it is a top card.
+#
+# SLOT HYGIENE. No main-phase action addresses a `field.N` on a multi-Digimon
+# board: the two plays come from hand and the link declaration names a HAND
+# card. The one two-Digimon reference is the host `select:`, which rides the
+# wire as the target's card identity.
+#
+# Deck accounting for p0 (first player, no T1 draw): hand [0..4], security
+# [5..9]; turn draws T3 = stack[10] and T5 = stack[12], with Lekismon's
+# [On Play] <Draw 1> taking stack[11] in between.
+#
+# BOOK: qa/dcgo-exams/BT24/tm_bt24_091_pool.json -- ONE deck, `tm-ts-line`,
+# used by BOTH seats, exactly as the other five BT24-091 lines do.
+card: BT24-091
+clause: BT24-091#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Option under exam, the [TS] host, the non-[TS] foil,
+      # inert filler
+      - BT24-091
+      - BT25-024
+      - ST1-03
+      - ST1-08
+      - ST1-08
+      # security (5-9): stack[9] is the TOP. Never flipped -- nobody attacks.
+      - ST1-02
+      - ST1-02
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): T3 turn draw, Lekismon's [On Play] <Draw 1>, T5 turn draw
+      - ST1-08
+      - ST1-10
+      - ST1-05
+      - ST1-05
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): inert; p1 passes every turn and never fields a Digimon.
+      - ST1-04
+      - ST1-04
+      - ST1-08
+      - ST1-08
+      - ST1-02
+      # security (5-9)
+      - ST1-02
+      - ST1-02
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): the T2 / T4 turn draws
+      - ST1-08
+      - ST1-10
+      - ST1-05
+    rest: tm-ts-line
+steps:
+  # T1 (p0, memory 0): decline breeding; Agumon, the NON-[TS] foil (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Lekismon, the [TS] host (4 -> -1); its [On Play]
+  # <Draw 1> is mandatory and asks nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-024, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): THE CLAUSE. Declare the <Link> of Tidal Stream FROM
+  # HAND -- its own main-phase action (general_rule.pdf 6-5-1-4), not a use of
+  # the Option -- and pay Cost 3 (3 -> 0, so p0 keeps the turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT24-091, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: LinkEffect is SetUpActivateClass(..., isOptional: true)
+  # (CardEffectFactory/KeyWordEffects/Link.cs), so DCGO confirms the declared
+  # <Link> with an OptionalSkill yes/no BEFORE the host pick. Our engine
+  # treats the declaration itself as the decision and parks nothing.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # THE HOST GATE: only the [TS] Digimon is offered, although Agumon is on the
+  # same board.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1, candidates: [BT25-024] }
+  # One step past the clause -- p0 still holds the turn on 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): the trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the host pick: both Digimon on the board, the Option still in hand,
+  # Lekismon still unlinked at its printed 5000.
+  - at: 11
+    that:
+      turn: 5
+      p0.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT25-024, dp: 5000, suspended: false, sources: [] }
+      p1.field: []
+      p0.trash: []
+  # After the declaration resolves: the Option left the HAND for the link slot
+  # (it is in neither hand nor trash), the host carries Link DP +2000, and
+  # Cost 3 came off memory (3 -> 0) -- the half the free effect-link in
+  # BT24-091-effect3.yaml cannot show.
+  - at: 12
+    that:
+      turn: 5
+      phase: Main
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [ST1-08, ST1-08, ST1-08, ST1-10, ST1-05]
+      p0.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT25-024, dp: 7000, suspended: false, sources: [] }
+      p1.field: []
+      p0.security: 5
+      p1.security: 5

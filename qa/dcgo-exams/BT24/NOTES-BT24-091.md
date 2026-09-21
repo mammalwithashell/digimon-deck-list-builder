@@ -170,3 +170,53 @@ integer on both engines. It needs no new DCGO build (`scripted-v15` already
 dispatches a `HAND_EFFECT` bit to the hand card's link declaration); the
 scenario itself has not been written yet, so the clause is `unmeasured`, not
 `unreachable`.
+
+## 2026-09-21 — `effect#4` AUTHORED; the `unreachable` above is RETRACTED
+
+`BT24-091-effect4.yaml` now exists, lowers and asserts clean (13 checks / 0
+failed, book `tm_bt24_091_pool.json`). The clause's status is **`unmeasured`**,
+not `unreachable`: the tooling reason recorded in the `G-TOOLING-EXAM-OPTION-HAND-LINK`
+section above was closed on the engine side (`G-ENGINE-OPTION-LINK-FROM-HAND`,
+commit `7e30343d4`) and the section immediately preceding this one already
+retracted it — this entry is the line that reason was blocking.
+
+**Status table correction.** The table near the top of this file still reads
+`effect#4 | — | — | unreachable`; the live status is:
+
+| Clause | Scenario | Sim-only | Status |
+|---|---|---|---|
+| `effect#4` | `BT24-091-effect4.yaml` (NEW, 2026-09-21) | lowers, asserts pass | `unmeasured` — awaiting the oracle |
+
+**What the line pins, and why it is not a duplicate of `effect#3`.**
+`effect#3`'s line reaches the link through the card's own [Main]/[Security]
+"…link this card … **without paying the cost**" branch, so it can witness the
+host gate but never the cost. This line makes the DECLARATION instead — its own
+main-phase action per `general_rule.pdf` 6-5-1-4 (distinct from 6-5-1-3 "Use an
+Option Card From the Hand") with 10-1-1's "paying the cost as part of the main
+phase actions" — from memory 3 down to 0, and asserts that the Option left the
+HAND (in neither hand nor trash afterwards) for Lekismon's link slot.
+
+**Host gate witness.** p0 fields Agumon ST1-03 (red, no [TS]) BEFORE Lekismon
+BT25-024, so the host pick asserts `candidates: [BT25-024]` with a non-[TS]
+Digimon sitting on the same board — DCGO gates it in `Link.cs`'s
+`CanSelectPermanentCondition` via the `linkCondition.digimonCondition` that
+`AddSelfLinkConditionStaticEffect(PermanentCondition, linkCost: 3, …)` installs
+in BT24_091.cs's "Link Condition" region (`IsDigimon && TopCard.HasTSTraits`);
+ours by the `kind: link_requirement` filter in `cards/bt24/BT24-091.yaml`.
+
+**Prompt shape.** `CardEffectFactory.LinkEffect` is
+`SetUpActivateClass(null, ActivateCoroutine, -1, TRUE, …)` (`Link.cs:27`), so
+DCGO asks an `OptionalSkill` yes/no BEFORE the host pick while our engine treats
+the declaration itself as the decision — that row is `dcgo_only`, the same fold
+`../BT21/BT21-071-effect2.yaml` carries and which was measured against the
+oracle there. The suggested two-step shape written into the previous section
+(`link:` then `select:`) was therefore **one row short**; the committed file has
+all three.
+
+**Slot hygiene.** No main-phase action addresses a `field.N` on a
+multi-Digimon board (both plays come from hand; the link declaration names a
+HAND card). The one two-Digimon reference is the host `select:`, which rides
+the wire as the target's card identity.
+
+**6 clauses: 5 with an oracle verdict, `effect#4` now authored and
+`unmeasured` — 0 unreachable.**

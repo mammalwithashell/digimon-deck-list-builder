@@ -177,3 +177,63 @@ carries both materials' identities on ONE wire row, and DCGO `fc67f9ae6`
 So `BT16-077#effect#0` and the "if DNA digivolving" rider in `#effect#3` are no
 longer `unreachable` for a tooling reason — they are `unmeasured` until a line
 is authored and run. This note's `<Partition>` tuck route is unaffected.
+
+## 2026-09-21 — `effect#0` AUTHORED; the `unreachable` above is RETRACTED
+
+`BT16-077-effect0.yaml` now exists, lowers and asserts clean (14 checks / 0
+failed, decks `tm-purple-line` / `tm-quiet-red` from the existing
+`tm_bt16_077_pool.json` — no new book). The clause is **`unmeasured`**, not
+`unreachable`: the `G-TOOLING-EXAM-NO-DNA-VERB` reason recorded in the
+`effect#0` section above was closed on 2026-09-20 (the `dna:` verb plus DCGO
+`fc67f9ae6`, player build `D:/dcgo-build/scripted-v16`) and the section
+immediately preceding this one already said so. The table near the top of this
+file still prints the stale `effect#0 | — | — | unreachable` row; the live
+status is:
+
+| Clause | Scenario | Sim-only | Status |
+|---|---|---|---|
+| `effect#0` | `BT16-077-effect0.yaml` (NEW, 2026-09-21) | lowers, asserts pass | `unmeasured` — awaiting the oracle |
+
+**The line.** Youkomon ST6-07 (purple Lv.4, DP 6000, cost 5) is hard-played on
+T3 and Birdramon ST1-05 (red Lv.4, DP 5000, cost 4) on T5 — both VANILLA, so
+the declaration measures nothing but itself — and T7 declares
+`dna: { card: BT16-077, materials: [field.0, field.1] }` for Cost 0. p0 stays
+on memory 3 and keeps the turn, which is what makes "digivolve unsuspended"
+readable on a Lv.5 that has just digivolved.
+
+**STACKING ORDER is asserted, and the rule fixes it.** `general_rule.pdf`
+**8-2-2-2** (p.17): the cards "are placed in order from top to bottom so that
+the Digimon shown on the LEFT side of [DNA Digivolution] goes on top", and the
+player chooses the order ONLY when the requirement names numbers or multiples
+of a card. "Purple Lv.4 + red Lv.4" names neither, so the purple material goes
+on top and there is no choice to expose (no no-approximations exposure gap
+here). Measured: our engine produces `sources: [ST1-05, ST6-07]` — bottom-first,
+i.e. red under purple — which is exactly 8-2-2-2. (The first draft of the file
+asserted the opposite order and failed; the rule, not the draft, is right.)
+DCGO agrees by construction — `JogressEvoRootsFrameIDs` is built from the
+declaration's element order and `BT16_077.cs`'s `elements[0]` is
+`PermanentCondition1` = purple Lv.4.
+
+**Prompt shape.** The DNA condition is an `AddJogressConditionClass` with
+`SetNotShowUI(true)` and `JogressCondition(elements, 0)`: DCGO asks NOTHING for
+it, the whole declaration being one `PlayCardAction`. Ours parks a
+`SelectionKind::Material` prompt per material, which rides one `SimOnlySelect`
+row (zero wire rows). The [When Digivolving] then fires as on any digivolution
+(`SetUpActivateClass(CanActivateCondition, …, -1, TRUE, …)` → one
+`OptionalSkill`); this line **declines** it, so neither the `IsJogress`-gated
+trash play nor the Rush/attack half opens on either wire — both belong to
+`BT16-077-effect3.yaml`. The trash-play branch could not open on an accept
+either: p0's trash is empty all line and DCGO skips the `SelectCardEffect`
+when `HasMatchConditionOwnersCardInTrash` is false.
+
+**Slot hygiene.** The only multi-Digimon main-phase action is the DNA
+declaration, and `materials:` is resolved to top-card ids before the action is
+applied, so it rides the wire as identities (`exam/adapter.rs` ~470-500;
+`InputDriver.FindFrameByTopCardId`) — not as slots.
+
+**Not duplicated here:** `effect#2` / `inherited#0` (`<Partition>`) were
+re-diffed CLEAN by the engine-gap stage that closed
+`G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` and keep their `confirmed`
+verdicts; this file touches neither.
+
+**5 clauses: `effect#0` now authored and `unmeasured`, 0 unreachable.**
