@@ -103,6 +103,43 @@ pub enum StepAction {
     /// Plug-In *Option* play mode. It closed in the same change that added
     /// this verb.)
     Link { card: String, from: String },
+    /// Declare a **DNA digivolution** (§8-2 / general_rule.pdf §6-5-1-2-2):
+    /// two of the controller's own Digimon in the battle area are digivolved
+    /// into one `[DNA Digivolve]` card in hand, which lands unsuspended with
+    /// the two specified Digimon stacked on top of each other.
+    ///
+    /// `card` is the HAND card (the DNA result); `from` is `hand[.N]`, with the
+    /// same pinned / unpinned semantics as `play`. `materials` names the two
+    /// battle-area Digimon, in DECLARATION order, in the slot grammar the rest
+    /// of the format uses (`field.N`, or the explicit `own.field.N`) — they are
+    /// always the actor's own (§8-2), so an `opp.` reference is refused.
+    ///
+    /// Unlike `link:`, the materials ride the VERB rather than a following
+    /// `select:` step, because the two wires disagree about how many decisions
+    /// this declaration contains and neither answer is authorable on the other:
+    ///
+    ///   * ours is THREE decisions — the `DNA_DIGIVOLVE` action bit (which
+    ///     names only the hand slot), then two `SelectionKind::Material`
+    ///     prompts over raw own-battle-area indices
+    ///     (`Game::initiate_dna_digivolve`);
+    ///   * DCGO's is ONE — a single `PlayCardAction` whose
+    ///     `JogressEvoRootsFrameIDs` carries both materials
+    ///     (`MainPhaseAction/PlayCardAction.cs`), with no prompt at all.
+    ///
+    /// So the step lowers to one wire row carrying the action id AND the two
+    /// materials' top-card identities, plus a sim-only row that answers our two
+    /// prompts — the same one-row/N-picks shape `SelectPayload::Materials`
+    /// already uses for `[Assembly]` / `[DigiXros]`.
+    ///
+    /// (Before this verb existed the clause was unreachable on both wires:
+    /// `G-TOOLING-EXAM-NO-DNA-VERB`, `qa/dcgo-exams/BT8/NOTES-BT8-084.md`,
+    /// `qa/dcgo-exams/BT16/NOTES-BT16-077.md`.)
+    Dna {
+        card: String,
+        from: String,
+        materials: Vec<String>,
+    },
+
     Select(SelectPayload),
     /// A selection DCGO asks that OUR engine never parks -- authored
     /// `select: { ..., dcgo_only: true }`.
@@ -269,7 +306,7 @@ pub enum SelectPayload {
 /// list this parser enforces, rather than keeping a second copy that could
 /// drift from it.
 pub const STEP_VERBS: &[&str] = &[
-    "hatch", "pass", "move", "play", "digivolve", "attack", "main", "link", "select",
+    "hatch", "pass", "move", "play", "digivolve", "dna", "attack", "main", "link", "select",
 ];
 
 fn hand() -> String {
@@ -341,6 +378,28 @@ struct LinkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     into: Option<String>,
 }
+
+/// `do: { dna: { card: BT8-084, materials: [field.0, field.1] } }`.
+///
+/// `from` is `hand[.N]` and defaults to the bare `hand`, exactly like `play`'s.
+/// `materials` is REQUIRED and must name exactly two own-field slots: the
+/// [DNA Digivolve] requirement is a fixed pair, and a defaulted or partial list
+/// would silently pick materials the scenario never asked for.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DnaArgs {
+    card: String,
+    #[serde(default = "hand")]
+    from: String,
+    materials: Vec<String>,
+}
+
+/// Rendered when a `dna:` step's `materials:` list is not a pair of own-field
+/// slots.
+const DNA_MATERIALS_RULE: &str = "step `do: dna`: `materials:` must name exactly TWO of your own \
+battle-area slots, in declaration order -- e.g. `materials: [field.0, field.1]`. DNA digivolution \
+digivolves 2 of YOUR Digimon into the hand card (general_rule.pdf 6-5-1-2-2 / 8-2), so an \
+`opp.` reference, a shorter list or a longer one names materials the rule cannot use";
 
 /// Rendered when a `link:` step names its host inline.
 const LINK_INTO_RULE: &str = "step `do: link`: `into:` is not a field of the link verb. The \
@@ -714,6 +773,22 @@ impl<'de> Deserialize<'de> for StepAction {
                     using: a.using,
                 }
             }
+            "dna" => {
+                let a: DnaArgs = args_of::<DnaArgs, D::Error>(verb, args)?;
+                if a.materials.len() != 2
+                    || a.materials.iter().any(|m| {
+                        let m = m.trim();
+                        m.starts_with("opp.") || m.starts_with("opponent.")
+                    })
+                {
+                    return Err(D::Error::custom(DNA_MATERIALS_RULE));
+                }
+                StepAction::Dna {
+                    card: a.card,
+                    from: a.from,
+                    materials: a.materials,
+                }
+            }
             "attack" => {
                 let a: AttackArgs = args_of::<AttackArgs, D::Error>(verb, args)?;
                 StepAction::Attack {
@@ -791,6 +866,18 @@ impl Serialize for StepAction {
                 &DigivolveArgs {
                     from: from.clone(),
                     using: using.clone(),
+                },
+            )?,
+            StepAction::Dna {
+                card,
+                from,
+                materials,
+            } => map.serialize_entry(
+                "dna",
+                &DnaArgs {
+                    card: card.clone(),
+                    from: from.clone(),
+                    materials: materials.clone(),
                 },
             )?,
             StepAction::Attack { attacker, target } => map.serialize_entry(
@@ -1125,6 +1212,113 @@ assert:
         let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
         let err = Scenario::from_yaml(&bad).unwrap_err();
         assert!(err.contains("main"), "the verb list must name `main`: {err}");
+    }
+
+    // -- dna: DNA digivolution declaration ------------------------------
+    //
+    // G-TOOLING-EXAM-NO-DNA-VERB (qa/dcgo-exams/BT8/NOTES-BT8-084.md,
+    // qa/dcgo-exams/BT16/NOTES-BT16-077.md): before this verb the
+    // `[DNA Digivolve]` clause was unreachable on both wires -- `STEP_VERBS`
+    // had no DNA entry, `matches_intent` had no `DnaDigivolve` arm, and DCGO's
+    // `InputDriver.BuildMainPhaseAction` refused the range outright.
+
+    #[test]
+    fn dna_verb_parses_with_its_two_materials() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1] } }",
+        ))
+        .expect("dna step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Dna {
+                card: "BT8-084".to_string(),
+                from: "hand".to_string(),
+                materials: vec!["field.0".to_string(), "field.1".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn dna_verb_accepts_a_pinned_hand_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, from: hand.3, materials: [field.0, field.1] } }",
+        ))
+        .expect("dna step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Dna {
+                card: "BT8-084".to_string(),
+                from: "hand.3".to_string(),
+                materials: vec!["field.0".to_string(), "field.1".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn dna_verb_requires_materials() {
+        // A defaulted or missing pair would silently digivolve Digimon the
+        // scenario never named.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("dna"), "got: {err}");
+        assert!(err.contains("materials"), "must name the field: {err}");
+    }
+
+    #[test]
+    fn dna_verb_refuses_a_list_that_is_not_a_pair() {
+        for bad in [
+            "do: { dna: { card: BT8-084, materials: [field.0] } }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1, field.2] } }",
+        ] {
+            let err = Scenario::from_yaml(&GOOD.replace("do: { hatch: {} }", bad)).unwrap_err();
+            assert!(err.contains("exactly TWO"), "got: {err}");
+        }
+    }
+
+    #[test]
+    fn dna_verb_refuses_an_opponent_material() {
+        // general_rule.pdf 6-5-1-2-2 / 8-2: the materials are YOUR Digimon.
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, opp.field.0] } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("exactly TWO"), "got: {err}");
+    }
+
+    #[test]
+    fn dna_verb_rejects_an_unknown_argument() {
+        let err = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { dna: { card: BT8-084, materials: [field.0, field.1], cost: 0 } }",
+        ))
+        .unwrap_err();
+        assert!(err.contains("cost"), "got: {err}");
+    }
+
+    #[test]
+    fn dna_verb_round_trips_through_yaml() {
+        let act = StepAction::Dna {
+            card: "BT8-084".to_string(),
+            from: "hand.2".to_string(),
+            materials: vec!["field.0".to_string(), "field.1".to_string()],
+        };
+        let yaml = serde_yml::to_string(&act).expect("serializes");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, act, "round trip of {yaml}");
+    }
+
+    #[test]
+    fn dna_is_listed_among_the_verbs_an_author_is_offered() {
+        let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
+        let err = Scenario::from_yaml(&bad).unwrap_err();
+        assert!(err.contains("dna"), "the verb list must name `dna`: {err}");
+        assert!(STEP_VERBS.contains(&"dna"));
     }
 
     // ── link: DigiLink declaration from the battle area ─────────────────

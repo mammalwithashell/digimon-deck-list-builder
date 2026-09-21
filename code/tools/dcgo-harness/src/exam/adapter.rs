@@ -188,6 +188,29 @@ pub enum LoweredStep {
     /// These contribute a comparable state row on our side and ZERO wire rows,
     /// keeping the two traces aligned across the cardinality mismatch.
     SimOnlySelect,
+    /// A DNA-digivolution declaration (`do: { dna: ... }`).
+    ///
+    /// The two wires disagree about how many decisions this is. OURS is three:
+    /// the `DNA_DIGIVOLVE` action bit, which names only the hand slot, then two
+    /// `SelectionKind::Material` prompts over raw own-battle-area indices
+    /// (`Game::initiate_dna_digivolve`). DCGO's is ONE: a single
+    /// `PlayCardAction` whose `JogressEvoRootsFrameIDs` carries both materials
+    /// (`MainPhaseAction/PlayCardAction.cs`), with no prompt at all — so there
+    /// is no DCGO row for the material picks to answer.
+    ///
+    /// This variant is the one wire row, and it carries BOTH: the action id and
+    /// the materials' top-card identities, which `InputDriver
+    /// .BuildMainPhaseAction` resolves against the actor's live field to build
+    /// the frame-id array. Our two extra picks ride the following
+    /// `SimOnlySelect` row (zero wire rows), the same one-row/N-picks shape
+    /// `SelectPayload::Materials` uses for `[Assembly]` / `[DigiXros]`.
+    ///
+    /// `G-TOOLING-EXAM-NO-DNA-VERB` (`qa/dcgo-exams/BT8/NOTES-BT8-084.md`).
+    DnaDeclaration {
+        action_id: u16,
+        /// The two materials' TOP-CARD ids, in declaration order.
+        material_ids: Vec<String>,
+    },
 }
 
 impl LoweredStep {
@@ -214,6 +237,9 @@ impl LoweredStep {
             // `ActivatePermanentAction`). The host pick both engines then
             // park is the NEXT scenario step's row, not this one's.
             LoweredStep::Action(_) => 1,
+            // One `main_phase` row carrying the action id AND both material
+            // identities; DCGO asks no material prompt.
+            LoweredStep::DnaDeclaration { .. } => 1,
             // A folded DECLINE is one row (DCGO never opens the pick after a
             // declined gate); a folded PICK is the gate row plus the pick row.
             LoweredStep::Select(w) if w.optional_gate_fold => {
@@ -235,7 +261,9 @@ impl LoweredStep {
 #[derive(Debug)]
 pub struct ScenarioAdapter {
     steps: Vec<StepSpec>,
+    spec_owner: Vec<usize>,
     lowered: Vec<LoweredStep>,
+    lowered_owner: Vec<usize>,
     deck_p0: Vec<String>,
     deck_p1: Vec<String>,
     seed: u64,
@@ -262,7 +290,19 @@ impl ScenarioAdapter {
             .map_err(|e| format!("scenario game setup failed: {e}"))?;
 
         let mut steps = Vec::with_capacity(s.steps.len());
+        // Scenario-step index of each StepSpec. A step is usually one spec,
+        // but a `materials:` / `dna:` declaration our engine splits into
+        // several decisions pushes several, and a `dcgo_only` row pushes NONE
+        // -- so the replay driver cannot assume 1:1 (it used to, and a `dna:`
+        // line then stalled one spec short of its own last step).
+        let mut spec_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
         let mut lowered = Vec::with_capacity(s.steps.len());
+        // Which SCENARIO step each lowered entry came from. Usually 1:1, but a
+        // step whose declaration our engine splits into several decisions
+        // contributes several entries (`materials:`, `dna:`), so the job
+        // emitter cannot pair the wire with `s.steps` positionally — it pairs
+        // through this. See `ScenarioAdapter::lowered_owners`.
+        let mut lowered_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
 
         for (i, step) in s.steps.iter().enumerate() {
             let actor = step.actor as PlayerId;
@@ -318,11 +358,13 @@ impl ScenarioAdapter {
                             board_p0: None,
                             board_p1: None,
                         });
+                        spec_owner.push(i);
                         lowered.push(if n == 0 {
                             LoweredStep::Select(wire)
                         } else {
                             LoweredStep::SimOnlySelect
                         });
+                        lowered_owner.push(i);
                         advance_through_selection(&mut game, i, actor, &row)?;
                     }
                 }
@@ -357,7 +399,9 @@ impl ScenarioAdapter {
                         board_p0: None,
                         board_p1: None,
                     });
+                    spec_owner.push(i);
                     lowered.push(LoweredStep::Select(wire));
+                    lowered_owner.push(i);
                     advance_through_selection(&mut game, i, actor, &row)?;
                 }
                 // A SIM-ONLY row: answer OUR prompt, emit NO wire row.
@@ -398,7 +442,96 @@ impl ScenarioAdapter {
                         board_p0: None,
                         board_p1: None,
                     });
+                    spec_owner.push(i);
                     lowered.push(LoweredStep::SimOnlySelect);
+                    lowered_owner.push(i);
+                    advance_through_selection(&mut game, i, actor, &row)?;
+                }
+                // DNA DIGIVOLUTION. One scenario step, one wire row, THREE
+                // decisions on our side -- see `LoweredStep::DnaDeclaration`.
+                //
+                // The materials are read off the live board BEFORE the
+                // declaration is applied (the action stacks them, so afterwards
+                // the slots no longer hold what the author named), and the same
+                // two slot references then answer our chained `Material`
+                // prompts as one two-pick sim-only row.
+                StepAction::Dna { materials, .. } => {
+                    let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
+                        LowerError::NoMatch { intent, legal } => format!(
+                            "step {i}: no legal action matches {intent}\n  legal here:\n    {}",
+                            legal.join("\n    ")
+                        ),
+                        LowerError::Ambiguous { intent, matches } => format!(
+                            "step {i}: {intent} is ambiguous -- {matches:?} all match. \
+                             Narrow the step; picking arbitrarily would silently answer \
+                             a different question than the scenario asks."
+                        ),
+                    })?;
+
+                    let refs: Vec<String> = materials.iter().map(|m| own_field_ref(m)).collect();
+                    let mut material_ids = Vec::with_capacity(refs.len());
+                    for r in &refs {
+                        let (_, top) = resolve_target_ref(&game, actor, r)
+                            .map_err(|e| format!("step {i}: dna material {e}"))?;
+                        material_ids.push(top);
+                    }
+
+                    steps.push(StepSpec {
+                        actor,
+                        action_id,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: None,
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    spec_owner.push(i);
+                    lowered.push(LoweredStep::DnaDeclaration {
+                        action_id,
+                        material_ids,
+                    });
+                    lowered_owner.push(i);
+
+                    let mask = digimon_engine::action::mask::build_action_mask(&game, actor);
+                    if mask[action_id as usize] != 1.0 {
+                        return Err(format!(
+                            "step {i}: lowered action {action_id} is not in the mask"
+                        ));
+                    }
+                    game.decode_action(action_id, actor);
+
+                    if game.pending_selection.is_none() {
+                        return Err(format!(
+                            "step {i}: the DNA declaration parked no material prompt. Our \
+                             engine asks for both materials (`initiate_dna_digivolve`), so \
+                             either the pair the step names is not a legal one or the \
+                             declaration was refused outright."
+                        ));
+                    }
+                    let payload = SelectPayload::Targets(refs);
+                    let (row, _wire) = build_selection_row(&game, i, actor, &payload, None)?;
+                    steps.push(StepSpec {
+                        actor,
+                        action_id: 0,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: Some(row.clone()),
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    spec_owner.push(i);
+                    lowered.push(LoweredStep::SimOnlySelect);
+                    lowered_owner.push(i);
                     advance_through_selection(&mut game, i, actor, &row)?;
                 }
                 StepAction::SelectDcgoOnly(payload) => {
@@ -419,6 +552,7 @@ impl ScenarioAdapter {
                     // well only made interleaved orders unauthorable.
                     let wire = build_dcgo_only_wire(payload)?;
                     lowered.push(LoweredStep::DcgoOnlySelect(wire));
+                    lowered_owner.push(i);
                 }
                 _ => {
                     let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
@@ -447,7 +581,9 @@ impl ScenarioAdapter {
                         board_p0: None,
                         board_p1: None,
                     });
+                    spec_owner.push(i);
                     lowered.push(classify_lowered_action(&game, actor, action_id)?);
+                    lowered_owner.push(i);
 
                     // `Game::decode_action` returns unit and SILENTLY IGNORES an
                     // illegal or out-of-range id, so there is no error to propagate
@@ -514,7 +650,9 @@ impl ScenarioAdapter {
 
         Ok(ScenarioAdapter {
             steps,
+            spec_owner,
             lowered,
+            lowered_owner,
             deck_p0,
             deck_p1,
             seed: s.seed,
@@ -531,6 +669,7 @@ impl ScenarioAdapter {
             .iter()
             .filter_map(|l| match l {
                 LoweredStep::Action(id) => Some(*id),
+                LoweredStep::DnaDeclaration { action_id, .. } => Some(*action_id),
                 LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
                 LoweredStep::SimOnlyAction(id) => Some(*id),
                 LoweredStep::Select(_)
@@ -541,6 +680,39 @@ impl ScenarioAdapter {
     }
 
     /// One carrier per scenario step: `Action(id)` or `Select(wire)`.
+    /// How many `StepSpec`s -- i.e. how many `ReplaySession::step()` calls --
+    /// each SCENARIO step contributes, in scenario order.
+    ///
+    /// Usually 1. A `dcgo_only` row contributes 0 (it answers a prompt only
+    /// DCGO has, so our game does not move). A `materials:` declaration
+    /// contributes one per recipe element, and a `dna:` step contributes 2
+    /// (the declaration plus the material picks our engine parks after it).
+    /// The replay driver must consume exactly this many per step or every
+    /// later projection describes a game at the wrong position.
+    pub fn specs_per_scenario_step(&self, total_steps: usize) -> Vec<usize> {
+        let mut out = vec![0usize; total_steps];
+        for owner in &self.spec_owner {
+            if let Some(slot) = out.get_mut(*owner) {
+                *slot += 1;
+            }
+        }
+        out
+    }
+
+    /// The SCENARIO-step index each entry of [`Self::lowered_steps`] came from,
+    /// same length and order.
+    ///
+    /// A scenario step is usually one lowered entry, but not always: a
+    /// `materials:` declaration answers one prompt per recipe element and a
+    /// `dna:` step answers the two material picks our engine parks after the
+    /// declaration, so both expand. The job emitter reads each row's `actor`
+    /// and `expect:` through this rather than zipping with `s.steps`, which
+    /// would silently shift every row after the first expansion onto the wrong
+    /// scenario step.
+    pub fn lowered_owners(&self) -> &[usize] {
+        &self.lowered_owner
+    }
+
     pub fn lowered_steps(&self) -> &[LoweredStep] {
         &self.lowered
     }
@@ -1297,6 +1469,25 @@ fn describe_candidates(candidates: &[TriggerCandidate]) -> String {
         .map(TriggerCandidate::describe)
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+/// Normalize a `dna:` material reference to the `own.field.N` form
+/// `resolve_target_ref` / `SelectPayload::Targets` consume.
+///
+/// The verb's own grammar is the one the rest of the format uses for a board
+/// slot (`field.N`), and DNA materials are always the actor's own Digimon
+/// (general_rule.pdf §6-5-1-2-2 "digivolve multiple Digimon in YOUR battle
+/// area"), so a bare `field.N` means `own.field.N`. The parser has already
+/// refused an `opp.` reference (`DNA_MATERIALS_RULE`), so an explicit
+/// `own.field.N` passes through untouched and anything else is left alone to
+/// fail loudly in `resolve_target_ref` with its own message.
+fn own_field_ref(reference: &str) -> String {
+    let r = reference.trim();
+    if let Some(rest) = r.strip_prefix("field.") {
+        format!("own.field.{rest}")
+    } else {
+        r.to_string()
+    }
 }
 
 /// Resolve one `own.field.N` / `opp.field.N` slot reference against the live

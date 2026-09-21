@@ -93,6 +93,29 @@ pub struct BreedingPermanentSelectionRef {
     pub card: CardHandle,
 }
 
+/// Prompt text of the FIRST DNA-digivolution material pick.
+///
+/// The two DNA material prompts are the one `SelectionKind::Material` family
+/// whose `valid_action_ids` are RAW battle-area indices of the selecting
+/// player's own field (`Game::initiate_dna_digivolve` and its stage-1
+/// continuation in `game_actions/digivolve.rs`), rather than the
+/// `SOURCE_SELECT` band `EffectContext::select_material` uses. Nothing else on
+/// the prompt distinguishes them — same kind, `zone_owner: None`, no resume
+/// frame — so the text IS the discriminator, and it is a constant here so the
+/// install sites and every reader (notably
+/// `runners::selection_resolve::resolve_next`) cannot drift apart.
+pub const DNA_FIRST_MATERIAL_PROMPT: &str = "Select first DNA material";
+
+/// Prompt text of the SECOND DNA-digivolution material pick. See
+/// [`DNA_FIRST_MATERIAL_PROMPT`].
+pub const DNA_SECOND_MATERIAL_PROMPT: &str = "Select second DNA material";
+
+/// Whether `prompt` is one of the two DNA material picks, whose action ids are
+/// raw own-battle-area indices.
+pub fn is_dna_material_prompt(prompt: &str) -> bool {
+    prompt == DNA_FIRST_MATERIAL_PROMPT || prompt == DNA_SECOND_MATERIAL_PROMPT
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 

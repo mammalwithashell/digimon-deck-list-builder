@@ -105,6 +105,18 @@ fn matches_intent(game: &Game, actor: PlayerId, e: &ActionExplanation, act: &Ste
                 && e.card_id.as_deref() == Some(using.as_str())
                 && slot_matches(e.target_zone, e.target_index, from)
         }
+        // A DNA digivolution declaration. The 2192-space `DNA_DIGIVOLVE` bit
+        // names ONLY the hand slot (`explain_action` reports
+        // `ActionKind::DnaDigivolve` with `source_zone = Hand`); the two
+        // materials are separate `SelectionKind::Material` picks our engine
+        // parks afterwards, so they are deliberately NOT matched here. The
+        // adapter answers them from the verb's `materials:` list, and DCGO
+        // takes them on the same wire row -- see `StepAction::Dna`.
+        StepAction::Dna { card, from, .. } => {
+            e.kind == ActionKind::DnaDigivolve
+                && e.card_id.as_deref() == Some(card.as_str())
+                && zone_ref_matches(e.source_zone, e.source_index, from)
+        }
         StepAction::Attack { attacker, target } => {
             e.kind == ActionKind::Attack
                 && slot_matches(e.source_zone, e.source_index, attacker)

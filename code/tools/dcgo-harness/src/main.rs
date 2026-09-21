@@ -897,7 +897,7 @@ fn exam_one(
             .ok_or_else(|| format!("unnamed scenario {}", path.display()))?;
         let e0 = book.resolve(&s.decks.p0.rest)?;
         let e1 = book.resolve(&s.decks.p1.rest)?;
-        let job = build_exam_job(stem, &s, e0, e1, &run.lowered_steps)?;
+        let job = build_exam_job(stem, &s, e0, e1, &run.lowered_steps, &run.lowered_owners)?;
         std::fs::create_dir_all(dir)
             .map_err(|e| format!("creating {}: {e}", dir.display()))?;
         let out = dir.join(format!("{}.json", job.job_id));
@@ -912,8 +912,16 @@ fn exam_one(
     if !run.complete {
         return Ok((
             fail(format!(
-                "the line did not run to completion: {} of {} steps",
-                run.steps_run, run.steps_total
+                "the line did not run to completion: {} of {} steps{}",
+                run.steps_run,
+                run.steps_total,
+                if run.stall_reasons.is_empty() {
+                    String::new()
+                } else {
+                    format!("
+    {}", run.stall_reasons.join("
+    "))
+                }
             )),
             None,
         ));
@@ -1252,6 +1260,20 @@ struct ScriptedInput {
     select_bool: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     select_cancel: bool,
+    /// The two materials of a DNA digivolution, as their permanents' TOP-CARD
+    /// ids in declaration order. Only set on a `main_phase` row whose
+    /// `action_id` is in the DNA_DIGIVOLVE range.
+    ///
+    /// Deliberately NOT `select_card_ids`: DCGO's `HarnessJobStep.IsSelection`
+    /// is true whenever that field is non-empty, and a step that reads as a
+    /// selection answer arriving at an action-id prompt aborts the job as a
+    /// prompt mismatch (`InputDriver.TryAnswer`) -- correctly, for every other
+    /// row. A DNA digivolution is ONE action carrying both materials on that
+    /// side (`PlayCardAction.JogressEvoRootsFrameIDs`) while our engine asks
+    /// for them as two `Material` prompts, so the pair needs a channel of its
+    /// own. `HarnessJob.cs`'s `dna_materials` is that channel.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    dna_materials: Vec<String>,
 }
 
 /// One seat's flat job deck in DCGO's top-first convention: full main deck
@@ -1299,12 +1321,40 @@ fn build_exam_job(
     entry_p0: &DeckEntry,
     entry_p1: &DeckEntry,
     lowered: &[dcgo_harness::exam::adapter::LoweredStep],
+    owners: &[usize],
 ) -> Result<ExamJobSpec, String> {
-    if lowered.len() != s.steps.len() {
+    // Rows are paired to scenario steps through `owners`, not positionally: a
+    // step whose declaration our engine splits into several decisions
+    // (`materials:`, `dna:`) contributes several lowered entries, and a
+    // positional zip would silently shift every later row onto the wrong step.
+    if owners.len() != lowered.len() {
         return Err(format!(
-            "lowered {} action id(s) for a {}-step line -- refusing to emit a \
+            "lowered {} row(s) but {} owner(s) -- refusing to emit a \
              desynchronized job",
             lowered.len(),
+            owners.len()
+        ));
+    }
+    if let Some(bad) = owners.iter().find(|o| **o >= s.steps.len()) {
+        return Err(format!(
+            "lowered row claims scenario step {bad}, but the line has {} step(s)",
+            s.steps.len()
+        ));
+    }
+    if owners.windows(2).any(|w| w[1] < w[0]) {
+        return Err("lowered rows are not in scenario order -- refusing to emit a \
+                    desynchronized job"
+            .to_string());
+    }
+    if owners.first().copied().unwrap_or(0) != 0 || owners.last().copied().map(|o| o + 1) != Some(s.steps.len())
+    {
+        // Every step must have produced at least one row up to the last one;
+        // a gap means a step lowered to nothing and the wire is short.
+        return Err(format!(
+            "lowered rows cover scenario steps {:?}..={:?} of {} -- refusing to \
+             emit a desynchronized job",
+            owners.first(),
+            owners.last(),
             s.steps.len()
         ));
     }
@@ -1322,22 +1372,39 @@ fn build_exam_job(
         }
     }
 
-    let inputs = s
-        .steps
+    let inputs = lowered
         .iter()
-        .zip(lowered)
-        .flat_map(|(step, l)| {
+        .zip(owners)
+        .enumerate()
+        .flat_map(|(row, (l, owner))| {
             use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep};
-            let expect_prompt = step.expect.as_ref().and_then(|e| e.prompt.clone());
+            let step = &s.steps[*owner];
+            // `expect:` describes the step's FIRST decision. On a step the
+            // adapter split into several rows the later ones are follow-on
+            // picks with prompts of their own, so asserting the authored
+            // `expect` against them would fail on a line that is correct.
+            let first_of_step = row == 0 || owners[row - 1] != *owner;
+            let expect_prompt = if first_of_step {
+                step.expect.as_ref().and_then(|e| e.prompt.clone())
+            } else {
+                None
+            };
             // `expect.count` / `expect.candidates` describe the PICK, so on a
             // step the emitter splits they ride the pick row, never the
             // OptionalSkill gate that precedes it.
-            let expect_count = step.expect.as_ref().and_then(|e| e.count);
-            let expect_candidates = step
-                .expect
-                .as_ref()
-                .map(|e| e.candidates.clone())
-                .unwrap_or_default();
+            let expect_count = if first_of_step {
+                step.expect.as_ref().and_then(|e| e.count)
+            } else {
+                None
+            };
+            let expect_candidates = if first_of_step {
+                step.expect
+                    .as_ref()
+                    .map(|e| e.candidates.clone())
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
             match l {
                 LoweredStep::Action(id) => vec![ScriptedInput {
                     actor: step.actor,
@@ -1345,6 +1412,24 @@ fn build_exam_job(
                     expect_prompt,
                     expect_count,
                     expect_candidates,
+                    ..ScriptedInput::default()
+                }],
+                // A DNA digivolution is ONE `main_phase` row on DCGO's side --
+                // a single `PlayCardAction` carrying `JogressEvoRootsFrameIDs`
+                // -- so the action id rides it together with both materials'
+                // identities, which `InputDriver.BuildMainPhaseAction` resolves
+                // against the actor's live field. Our own two material prompts
+                // ride the following `SimOnlySelect` row (zero wire rows).
+                LoweredStep::DnaDeclaration {
+                    action_id,
+                    material_ids,
+                } => vec![ScriptedInput {
+                    actor: step.actor,
+                    action_id: Some(*action_id),
+                    expect_prompt,
+                    expect_count,
+                    expect_candidates,
+                    dna_materials: material_ids.clone(),
                     ..ScriptedInput::default()
                 }],
                 // task_69f10a66 (ruling item 5) — the OptionalSkill+pick
@@ -1414,6 +1499,7 @@ fn build_exam_job(
                     select_has_bool: w.bool_answer.is_some(),
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,
+                    dna_materials: Vec::new(),
                 }],
                 // task_69f10a66 Family 1 surface mapping: our EndOfTurnAction
                 // phase park (the §16-37-3 "may attack at end of turn" for
@@ -1536,6 +1622,20 @@ steps:
         }
     }
 
+    /// `build_exam_job` for the ordinary 1-row-per-step case: owners are the
+    /// identity mapping. The expanding steps (`materials:`, `dna:`) are the
+    /// exception and carry their own owner vectors.
+    fn build_job_1to1(
+        stem: &str,
+        s: &dcgo_harness::exam::scenario::Scenario,
+        e0: &DeckEntry,
+        e1: &DeckEntry,
+        lowered: &[dcgo_harness::exam::adapter::LoweredStep],
+    ) -> Result<ExamJobSpec, String> {
+        let owners: Vec<usize> = (0..lowered.len()).collect();
+        build_exam_job(stem, s, e0, e1, lowered, &owners)
+    }
+
     #[test]
     fn deck_is_reversed_back_to_top_first_with_eggs_appended() {
         // Our draw-from-back vector for this seat would be
@@ -1543,7 +1643,7 @@ steps:
         // top-first job deck must be [B, D, C, A] -- stack first, remainder
         // reversed -- with the egg deck appended after the main deck.
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
+        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         assert_eq!(job.decks.p0, vec!["B", "D", "C", "A", "E1"]);
         // No stack: the whole main deck reversed, then eggs.
         assert_eq!(job.decks.p1, vec!["D", "C", "B", "A", "E1"]);
@@ -1554,7 +1654,7 @@ steps:
     #[test]
     fn inputs_carry_actor_action_id_and_expect_prompt() {
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 63, 64])).unwrap();
+        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 63, 64])).unwrap();
         assert_eq!(job.inputs.len(), 3);
         assert_eq!(job.inputs[0].actor, 0);
         assert_eq!(job.inputs[0].action_id, Some(62));
@@ -1567,7 +1667,7 @@ steps:
     #[test]
     fn job_identity_fields_come_from_the_scenario() {
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
+        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         assert_eq!(job.job_id, "exam-ST1-12");
         assert_eq!(job.policy, "scripted");
         assert_eq!(job.seed, 424242);
@@ -1581,7 +1681,7 @@ steps:
             main: entry().main,
             eggs: vec![],
         };
-        let err = build_exam_job("ST1-12", &s, &eggless, &entry(), &actions(&[62, 62, 62])).unwrap_err();
+        let err = build_job_1to1("ST1-12", &s, &eggless, &entry(), &actions(&[62, 62, 62])).unwrap_err();
         assert!(err.contains("no egg cards"), "got: {err}");
         assert!(err.contains("tiny"), "must name the deck: {err}");
     }
@@ -1591,7 +1691,7 @@ steps:
         // 3 steps but only 2 lowered ids: emitting would hand DCGO a line that
         // answers the wrong prompts from the first mismatch onward.
         let s = Scenario::from_yaml(LINE).unwrap();
-        let err = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62])).unwrap_err();
+        let err = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62])).unwrap_err();
         assert!(err.contains("desynchronized"), "got: {err}");
     }
 
@@ -1600,7 +1700,7 @@ steps:
         // The DCGO reader is the consumer; these exact key names are the
         // contract (see qa/dcgo-harness/golden-scripted-job.json).
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
+        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         let v: serde_json::Value =
             serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
         for key in [
@@ -1657,7 +1757,7 @@ steps:
     }
 
     fn job_json(s: &Scenario, lowered: &[LoweredStep]) -> serde_json::Value {
-        let job = build_exam_job("ST1-12", s, &entry(), &entry(), lowered).unwrap();
+        let job = build_job_1to1("ST1-12", s, &entry(), &entry(), lowered).unwrap();
         serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap()
     }
 
@@ -1808,7 +1908,7 @@ steps:
         let s = Scenario::from_yaml(LINE).unwrap();
         let v: serde_json::Value = serde_json::from_str(
             &serde_json::to_string(
-                &build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap(),
+                &build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap(),
             )
             .unwrap(),
         )
@@ -1847,7 +1947,7 @@ steps:
         // new string[0]`) ARE the "do not assert" defaults, so writing 0 / []
         // would turn "no opinion" into a live assertion.
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
+        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         let v: serde_json::Value =
             serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
         assert!(v["inputs"][0].get("expect_count").is_none());
@@ -1953,6 +2053,14 @@ steps:
                     + digimon_engine::action::space::FIELD_EFFECT_SLOT_FOR_LINK,
             ),
             LoweredStep::SimOnlyAction(62),
+            // A `dna:` step: ONE main_phase row carrying the DNA_DIGIVOLVE
+            // action id AND both materials' identities (DCGO takes them in the
+            // same `PlayCardAction`), never a second row for the material
+            // picks -- those are ours alone and ride a `SimOnlySelect`.
+            LoweredStep::DnaDeclaration {
+                action_id: digimon_engine::action::space::DNA_DIGIVOLVE_START,
+                material_ids: vec!["ST1-03".to_string(), "ST1-07".to_string()],
+            },
             // The mirror of SimOnlyAction: one wire row, no sim-side row.
             LoweredStep::DcgoOnlySelect(SelectWire {
                 card_ids: vec!["ST1-03".to_string()],
@@ -2005,7 +2113,7 @@ steps:
             // baseline is fixed and the delta is the variant's own count.
             let mut lowered = actions(&[62, 62]);
             lowered.push(v.clone());
-            let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &lowered).unwrap();
+            let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &lowered).unwrap();
             assert_eq!(
                 job.inputs.len() - 2,
                 v.dcgo_wire_rows(),

@@ -72,6 +72,9 @@ pub struct LoweredRun {
     /// Every step's lowered form, in scenario order -- what `--emit-job`
     /// turns into a DCGO scripted job.
     pub lowered_steps: Vec<LoweredStep>,
+    /// Scenario-step index of each `lowered_steps` entry — see
+    /// `ScenarioAdapter::lowered_owners`.
+    pub lowered_owners: Vec<usize>,
     /// How many DCGO wire rows each scenario step consumes, in step order --
     /// what the differ uses to pair our per-step trace against DCGO's
     /// per-decision one (see `projection::pair_by_wire_rows`).
@@ -88,6 +91,10 @@ pub struct LoweredRun {
     pub steps_run: u32,
     /// Steps the scenario asked for.
     pub steps_total: u32,
+    /// Why the session stalled, when `complete` is false. Empty otherwise.
+    /// Printed with the "did not run to completion" failure, because "15 of
+    /// 16 steps" on its own tells an author nothing about WHICH step refused.
+    pub stall_reasons: Vec<String>,
 }
 
 /// Lower `s` against a freshly-built game for the two given decks, then step
@@ -104,9 +111,14 @@ pub fn lower_and_run(
 ) -> Result<LoweredRun, String> {
     let adapter = ScenarioAdapter::from_scenario(s, deck_p0, deck_p1, card_data)?;
     let lowered_steps = adapter.lowered_steps().to_vec();
+    let lowered_owners = adapter.lowered_owners().to_vec();
     // Captured BEFORE the adapter moves into the replay session below.
     let wire_rows_per_step = adapter.dcgo_wire_rows_per_step();
     let ours_present_per_step = adapter.ours_present_per_step();
+    // How many `StepSpec`s each SCENARIO step contributes. Not always 1: a
+    // `dcgo_only` row contributes none, a `materials:` / `dna:` declaration
+    // several. See `ScenarioAdapter::specs_per_scenario_step`.
+    let specs_per_step = adapter.specs_per_scenario_step(s.steps.len());
 
     let mut session = ReplaySession::with_source(Box::new(adapter), card_data, false)
         .map_err(|e| format!("building the replay session: {e:?}"))?;
@@ -123,8 +135,8 @@ pub fn lower_and_run(
     // row. Our state genuinely does not move at such a step, so the previous
     // projection is repeated.
     let mut projections = vec![StateProjection::from_game(&session.game, 0)];
-    for (i, step) in s.steps.iter().enumerate() {
-        if !matches!(step.act, StepAction::SelectDcgoOnly(_)) {
+    for i in 0..s.steps.len() {
+        for _ in 0..specs_per_step[i] {
             session.step();
         }
         projections.push(StateProjection::from_game(&session.game, i as u32 + 1));
@@ -132,10 +144,16 @@ pub fn lower_and_run(
 
     Ok(LoweredRun {
         lowered_steps,
+        lowered_owners,
         wire_rows_per_step,
         complete: session.is_complete(),
         steps_run: session.current_step(),
         steps_total: session.total_steps(),
+        stall_reasons: session
+            .divergences()
+            .iter()
+            .map(|d| format!("step {} action {} actor {}: {:?}", d.step, d.action_id, d.actor, d.kind))
+            .collect(),
         projections,
         ours_present_per_step,
     })
