@@ -3837,7 +3837,7 @@ with this section as its triage. A fix needs a behavioral test in
 `tests/cards_behavioral/bt19/` that deletes a permanent as a replacement cost with an
 `on_any_deletion` observer on the board, plus the full `cards_behavioral` gate.
 
-## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (7fb705734) (found 2026-09-21, three-musketeers-2 close-out)
+## G-TOOLING-EXAM-PAIRING-INDEXED-BY-LOWERED-ENTRY — RESOLVED 2026-09-21 (4df70706f) (found 2026-09-21, three-musketeers-2 close-out)
 
 **Symptom.** Every exam scenario containing an EXPANDING step (`dna:` or `materials:` —
 one scenario step our engine splits into several decisions) was recorded `diverged`, with
