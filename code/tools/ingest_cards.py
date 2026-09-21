@@ -55,6 +55,27 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     "EX12-018": ["Red", "Yellow"],
     "EX12-033": ["Blue", "Yellow"],
     "EX12-052": ["Green", "Black"],
+    # BT26 (2026-09-21) — read off the printed card face
+    # (DCGO_Application/Assets/Textures/Card/<ID>.webp): the Option band's
+    # name-bar colour AND its 7-slot colour-indicator stripe block (slot order
+    # Red/Blue/Yellow/Green/Black/Purple/White). The "Option face = the card's
+    # own colours" hypothesis above does NOT hold for BT26: 7 of 8 print a
+    # single-colour Option face (one lit slot); only Jupitermon lights two
+    # (and prints a split Yellow|Red bar). Card colours shown for contrast.
+    # Independently confirmed 8/8 by the official Bandai DB's "DUAL Color"
+    # field (world.digimoncard.com; now captured as `dual_colors` in
+    # data/card_official.json). NOTE: that same field CONTRADICTS the five
+    # entries above (official: ST23-09 Green, ST24-07 Yellow+Red, EX12-018
+    # Red, EX12-033 Blue, EX12-052 Green) — left untouched here, tracked
+    # separately.
+    "BT26-031": ["Yellow"],          # Murasamemon (card Yellow/Blue)
+    "BT26-032": ["Green"],           # Ceresmon (card Yellow/Green)
+    "BT26-033": ["Yellow", "Red"],   # Jupitermon (card Yellow/Red)
+    "BT26-050": ["Green"],           # Rosemon: Burst Mode (card Green/Red)
+    "BT26-056": ["Black"],           # Cerberusmon: Werewolf Mode (card Black/Purple)
+    "BT26-057": ["Black"],           # Bearcatmon (card Black/Red)
+    "BT26-075": ["Purple"],          # ScourgeChiropmon (card Purple/Yellow)
+    "BT26-080": ["Purple"],          # Bacchusmon (card Purple/Green)
 }
 
 RARITY_MAP = {
