@@ -3716,23 +3716,41 @@ engine-only prompt (DCGO asks nothing here).
 ## G-EXAM-REVEAL-BUCKET-ADD-TIMING — DCGO quirk (finding, 2026-09-19, not an engine gap)
 
 **Drivers:** exam `BT6-060#effect#0` (Deputymon, `qa/dcgo-exams/BT6/BT6-060-effect0.yaml`,
-preserved sidecar `20260918T131517Z_c0b8af78828f466a97394c011f63a37b.state.jsonl`) and the
-same shape on `BT25-064#effect#1`. `--all-diffs` re-run against the preserved sidecar shows
-exactly ONE diff: step 3 (the second bucket pick) `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067]
-dcgo=[...,P-170]`. Step 4 (after resolution: hand, trash, field, memory) matches.
+preserved sidecar `20260918T131517Z_c0b8af78828f466a97394c011f63a37b.state.jsonl`), the
+same shape on `BT25-064#effect#1`, and — added 2026-09-21, three-musketeers-2 close-out —
+`EX7-008#effect#1` (ToyAgumon, `qa/dcgo-exams/EX7/EX7-008-effect1.yaml`, preserved sidecar
+`20260921T043432Z_d70ca900532d47afb2dcf32d1be72d99.state.jsonl`). `--all-diffs` re-run against
+the preserved sidecar shows exactly ONE diff: the second bucket pick's row —
+BT6-060 step 3 `p0.hand ours=[BT2-052,BT2-056,BT3-059,BT3-067] dcgo=[...,P-170]`;
+EX7-008 step 7 `p0.hand ours=[BT24-088 x3, BT25-092 x2] dcgo=[..., EX7-051]`. The next row
+(after resolution: hand, trash, field, memory) matches in both, and `--all-diffs` prints
+nothing else — so the divergence is exactly one intermediate observation, never an outcome.
 
-**What differs:** DCGO `CardEffectCommons/RevealLibrary.cs:291-328`
-(`RevealDeckTopCardsAndSelect`) runs one `SelectCardEffect` per condition with the
-condition's `Mode` (AddHand), so each pick is moved to hand as soon as it is chosen, before the
-next bucket is asked. Ours (`select_reveal_buckets` → `add_to_hand_from_reveal` ×2) chooses
-every bucket first, then adds the picks.
+**What differs:** DCGO `Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:291-329`
+(`RevealDeckTopCardsAndSelect`) runs `foreach (SelectCardConditionClass selectCondition in
+selectCardConditions)` → `selectCardEffect.SetUp(..., mode: selectCondition.Mode)` →
+`yield return … selectCardEffect.Activate()`, one `SelectCardEffect` per condition with the
+condition's `Mode` (AddHand), so each pick is moved to hand as soon as its prompt closes,
+before the next bucket is asked. The card scripts just hand it the bucket list — e.g.
+`Assets/Scripts/CardEffect/EX7/Red/EX7_008.cs` passes two
+`SimplifiedSelectCardConditionClass(mode: SelectCardEffect.Mode.AddHand, maxCount: 1)` entries
+to `SimplifiedRevealDeckTopCardsAndSelect` — so this is shared-helper behaviour, not per-card.
+Ours (`select_reveal_buckets` → `add_to_hand_from_reveal` ×2) chooses every bucket first, then
+adds the picks.
 
-**Rules:** general_rule.pdf 15-1-2 (a single effect is processed in the order shown in its text)
-and 15-1-6 (the processing to execute is chosen, then executed). "Add 1 Digimon card … and/or 1
-Option card … to your hand" is ONE process with a compound target choice, so choose-all-then-add
-is the literal reading; DCGO's per-pick add is an implementation artifact of its per-condition
-select loop. Revealed cards are in no area while revealed (15-15-3-2), so nothing reads the
-intermediate hand.
+**Rules (re-verified against the PDF 2026-09-21):** general_rule.pdf **15-15-10-1** (p.31) is
+the on-point rule — "If a single effect allows you to select multiple targets with different
+conditions, resolve the target conditions in accordance with the following rules" — and
+15-15-10-2..5 then govern only WHICH condition applies to which target, never when a chosen
+target moves. 15-1-4 (p.22, "In some cases, multiple processes will be performed in a single
+effect. Once all of the processes for such an effect have ended, the effect will be resolved"),
+15-1-2 (processed in the order shown in the text) and 15-1-6 (the processing to execute is
+chosen, then executed) complete the picture. "Add 1 card with [Three Musketeers] in its text
+and 1 Option card with a use cost of 6 … to the hand" (EX7-008) / "Add 1 Digimon card … and/or
+1 Option card … to your hand" (BT6-060) is ONE process with a compound target choice, so
+choose-all-then-add is the literal reading; DCGO's per-pick add is an implementation artifact
+of its per-condition select loop. Revealed cards are in no area while revealed (15-15-3-2, p.29),
+so nothing reads the intermediate hand.
 
 **Why not fixed:** our order is the rules-faithful one and final state is identical. Observable
 only if a "when a card is added to your hand" trigger could fire between picks — and even then
