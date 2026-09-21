@@ -1,0 +1,233 @@
+# Exam scenario: Dianamon (BT25-028), clause BT25-028#inherited#0 --
+# "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon or Tamers
+#  can't suspend until their turn ends."
+#
+# THE WITNESS IS THE PROMPT, AND ITS SHAPE IS THE POINT. The "can't suspend"
+# modifier is not carried by the exam's state projection (card_id / dp /
+# suspended / sources), the same limitation BT25-028-effect2.yaml states for
+# the [On Play] half of the lock. What this line pins is that BOTH engines
+# raise exactly ONE mandatory pick over the opponent's Digimon AND Tamers when
+# the Digimon CARRYING Dianamon as a digivolution card declares an attack --
+# and that the rest of the board agrees afterwards.
+#   Negative control, run by hand at authoring time (2026-09-21) and NOT
+#   committable as a step: with the lock applied, `attack: { from: field.0 }`
+#   for p1's Biyomon on T8 is refused by our engine's own mask at lowering
+#   ("no legal action"), which is the behavioural half. A scenario step can
+#   only assert what IS legal, so the refusal lives here rather than in the
+#   line. See NOTES-BT25-028.md.
+#
+# HOW DIANAMON GETS UNDER AN ATTACKER.
+# Dianamon is Lv.6, so the carrier has to be a Lv.7. The archetype's own host,
+# [GraceNovamon] (BT25-103 / EX5-073), has NO card spec in our engine, so the
+# line borrows Omnimon Alter-S EX9-021 -- blue Lv.6 circle, cost 5 (its OTHER
+# printed route, "[Digivolve] Lv.6 w/[DM] trait: Cost 5", does not apply:
+# Dianamon's traits are Shaman / Olympos XII / Iliad / TS). ONE applicable
+# route at ONE cost, so no cost-choice prompt opens on either side.
+# EX9-021 is the quietest implemented + DCGO-scripted Lv.7 that accepts a blue
+# Lv.6, and quiet is load-bearing here: its own [When Attacking] does not
+# exist, so the attack window holds exactly ONE trigger -- the clause.
+#
+# EX9-021'S OWN [When Digivolving] IS NOT SILENT, AND THE LINE IS BUILT AROUND
+# IT. EX9_021.cs: the "unaffected by opponent's effects" half is gated on
+# `IsJogress(_hashtable)` (false on a normal digivolve), but the delete is
+# OUTSIDE that gate --
+#   `List<Permanent> destroyTargetPermanents = card.Owner.Enemy
+#        .GetBattleAreaDigimons().Filter(PermanentCondition);`
+#   `if (card.Owner.Enemy.GetBattleAreaDigimons().Count > 0) ... Destroy()`
+# with `PermanentCondition = IsMaxLevel(permanent, Enemy)`. So digivolving
+# EX9-021 deletes every one of p1's HIGHEST-LEVEL Digimon, with no selection
+# on either side (ours: "delete all opp Digimon with highest level",
+# EX9-021.yaml). p1 therefore fields TWO Digimon on T6: Phoenixmon ST1-10
+# (Lv.6, the overshoot that funds p0's T7, and the one EX9-021 eats) and
+# Biyomon ST1-02 (Lv.3, which survives and is the clause's pick).
+#
+# WHY DIANAMON'S OWN [On Play] / [When Digivolving] NEVER FIRES AT A TARGET.
+# On T5 p1 has no permanent at all, so the shared body's mandatory delete is
+# guarded away (HasMatchConditionOpponentsPermanent) and its lock has nothing
+# to match. DCGO still stacks that body with the [All Turns] body and asks
+# MultipleSkills; our engine bundles nothing on a digivolve, so that row is
+# dcgo_only (NOTES-BT25-028.md).
+#
+# Memory ledger:
+#   T1 p0 passes                                    -> p1 3
+#   T2 p1 passes                                    -> p0 3
+#   T3 p0 hard-plays Aegiochusmon (8): 3 -> -5      -> p1 5
+#   T4 p1 passes                                    -> p0 3
+#   T5 p0 digivolves Dianamon (3): 3 -> 0, passes   -> p1 3
+#   T6 p1 plays Biyomon (2): 3 -> 1, then
+#          Phoenixmon (10): 1 -> -9                 -> p0 9
+#   T7 p0 digivolves Omnimon Alter-S (5): 9 -> 4,
+#          then ATTACKS. THE CLAUSE.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_028_pool.json (--decks); p0 rides the
+# tm-ts-ess-line deck, which is tm-ts-line with its two BT4-010 swapped for
+# the two EX9-021 this line needs.
+card: BT25-028
+clause: BT25-028#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Aegiochusmon, Dianamon, the Lv.7 host, inert filler
+      - BT24-014
+      - BT25-028
+      - EX9-021
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped by p0; p1 checks these only if it attacks
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - ST1-02
+      # (10+): p0's turn draws. FIVE slots, not three: the line runs to T7 and
+      # an under-length stack lets a draw fall through to the seeded `rest`,
+      # which put a SECOND EX9-021 in hand and made the T7 digivolve step
+      # ambiguous (two hand indices, one field slot).
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      - BT1-009
+      - ST1-02
+    rest: tm-ts-ess-line
+  p1:
+    stack:
+      # hand (0-4): the Lv.3 the clause picks, the Lv.6 overshoot, inert filler
+      - ST1-02
+      - ST1-10
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): the top one is checked by p0's T7 attack
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1's T2 / T4 / T6 / T8 turn draws. Deliberately NO second
+      # ST1-10: two Phoenixmon in hand make the T6 play step ambiguous, and
+      # lowering refuses an ambiguous intent rather than picking one.
+      - BT1-009
+      - ST1-08
+      - BT3-007
+      - ST1-02
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Dianamon onto the [TS] Lv.5 for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-028 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 2, candidates: [BT25-028, BT25-028] }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): Biyomon for 2 (3 -> 1), then Phoenixmon for 10
+  # (1 -> -9). Both plays wake Dianamon's [All Turns] body; p1 holds no
+  # digivolution cards at all, so DCGO's SelectTrashDigivolutionCards breaks
+  # out before prompting and the DNA half needs two own Digimon p0 does not
+  # have -- silent on DCGO, a declined gate on ours.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # And again on the second play: declining does not burn the once-per-turn on
+  # our side, which is the same accounting DCGO does explicitly
+  # (`if (!executed) activateClass.RemoveUse();`, BT25_028.cs:181).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T7 (p0, memory 9): digivolve Omnimon Alter-S onto Dianamon for 5 (9 -> 4).
+  # Its [When Digivolving] deletes p1's highest-level Digimon (Phoenixmon)
+  # with no selection on either side; Biyomon survives.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX9-021 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: Omnimon Alter-S attacks p1's security, and Dianamon -- now a
+  # digivolution card under the attacker -- raises its inherited
+  # [When Attacking]. BT25_028.cs region "When Attacking ESS":
+  # SetUpActivateClass(..., 1, false, ...) -- MANDATORY, no OptionalSkill --
+  # then ONE SelectPermanentEffect (canNoSelect: false, Mode.Custom) over
+  # `IsPermanentExistsOnOpponentBattleArea && (IsDigimon || IsTamer)`,
+  # guarded by HasMatchConditionOpponentsPermanent. Biyomon is the only
+  # candidate left.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # EX9-021's OWN [End of Attack], declined. It is optional on both sides --
+  # EX9_021.cs `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1,
+  # TRUE, ...)` opens an OptionalSkill, and ours parks an EffectChoice gate --
+  # and nothing it could play is there anyway (its digivolution cards are
+  # Aegiochusmon and Dianamon, neither a [Greymon]/[Ver.1] nor a
+  # [Garurumon]/[Ver.2]). Declining keeps the borrowed host from writing its
+  # own state into the witness.
+  # SIM-ONLY: ours renders that gate as a two-branch EffectChoice
+  # ["Play sources" | "Decline"], which has no DCGO prompt class.
+  - actor: 0
+    do: { select: { choice: "Decline", sim_only: true } }
+  # DCGO-ONLY: DCGO's own OptionalSkill for the same window.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+assert:
+  - at: 23
+    that:
+      p0.field:
+        - card_id: EX9-021
+          dp: 15000
+          suspended: true
+          sources: [BT24-014, BT25-028]
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []

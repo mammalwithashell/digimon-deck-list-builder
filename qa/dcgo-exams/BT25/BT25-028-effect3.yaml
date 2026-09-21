@@ -1,0 +1,260 @@
+# Exam scenario: Dianamon (BT25-028), clause BT25-028#effect#3 --
+# "[All Turns] [Once Per Turn] When any Digimon are played or digivolve, you
+#  may trash any 4 digivolution cards from your opponent's Digimon. Then, 2 of
+#  your Digimon may DNA digivolve into [GraceNovamon] in the hand."
+#
+# WHAT THIS LINE MEASURES, AND WHAT IT DOES NOT.
+# It measures the half of the clause that has an oracle: the [All Turns]
+# trigger firing on the OPPONENT's digivolve during the OPPONENT's turn (the
+# "all turns / any Digimon" core, and the only wording that separates this
+# clause from a [Your Turn] one), the "you may trash" pick, and the trash
+# resolution. Two of p1's digivolution cards are on the board at that moment,
+# so maxCount 4 clamps to 2 on both sides (DCGO TrashDigivolutionCards.cs:
+# maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum, maxCount);
+# ours: the clamp_to_available min(N, available) clamp). THE CAP OF 4 IS
+# THEREFORE NOT PINNED by this line -- a 4-source witness needs an opposing
+# Lv.6 stack the deck book cannot build (its blue line tops out at Garurumon
+# ST2-06, Lv.4). Stated here rather than hidden; see NOTES-BT25-028.md.
+#
+# THE DNA HALF IS STRUCTURALLY SILENT ON DCGO, BY CONSTRUCTION.
+# DNADigivolvePermanentsIntoHandOrTrashCard (DNADigivolveEffects.cs:456) opens
+# with `if (owner.GetBattleAreaDigimons().Count < DnaPermanentCount) yield
+# break` -- p0's whole board is ONE permanent (Dianamon stacked on
+# Aegiochusmon), so DCGO asks nothing and nothing happens. That is deliberate:
+# [GraceNovamon] (BT25-103 / EX5-073) has NO card spec in our engine
+# (code/digimon-engine/cards/ carries only the ingested EX5-073.json card
+# DATA, no YAML), so a line that actually completed the DNA digivolve would
+# measure the missing card -- EX5-073 prints its own [When Digivolving] "if
+# DNA digivolving, trash any 8 ..." which DCGO would run and we would not.
+# The DNA half stays unmeasured and is called out in NOTES-BT25-028.md.
+#
+# PROMPT SHAPE, read off BT25_028.cs region "All Turns" (lines 109-183):
+#   SetUpActivateClass(CanActivateCondition, ActivateCoroutine, 1, false, ...)
+#   -- isOptional FALSE, so DCGO asks NO OptionalSkill gate. SetIsSkippable(true)
+#   only makes a MultipleSkills panel declinable (MultipleSkills.cs:17,
+#   IsOnlyOptionalEffectStacked); it is not an optional gate, and
+#   Activate_Optional_Effect_Execute (ICardEffect.cs:1203) keys the gate off
+#   IsOptional alone. With ONE active skill DCGO skips MultipleSkills outright
+#   (`if (skillInfos_active.Count == 1) { _skillIndex = 0; Activate(true); }`,
+#   MultipleSkills.cs:267-273), so on T8 there is no order prompt either.
+#   Our engine authors the body optional: true (BT25-028.yaml), so OUR side
+#   parks a yes/no gate DCGO never asks -- a sim_only row in every Dianamon
+#   line, logged as the "vacuous optional gate" finding in NOTES-BT25-028.md.
+#   Then SelectTrashDigivolutionCards(..., maxCount: 4, canNoTrash: true,
+#   isFromOnly1Permanent: false): one loop round of SelectPermanentEffect (the
+#   CARRIER, canNoSelect: true) then SelectCardEffect over that carrier's
+#   DigivolutionCards (maxCount 2 here, canEndNotMax true). Our engine asks ONE
+#   flat SourceMulti prompt that picks carrier and source together, so the
+#   carrier row is dcgo_only, our picks are sim_only, and DCGO's card row rides
+#   the wire alone -- the same split BT21-054-effect1.yaml documents, answerable
+#   by identity since 8cb317bb4 (G-TOOLING-EXAM-SOURCEMULTI-IDENTITY-PICK).
+#
+# WHY p1's STACK IS BUILT IN THE BREEDING AREA.
+# CanUseCondition gates on IsPermanentExistsOnBattleAreaDigimon, whose
+# IsPermanentExistsOnBattleArea (GameContextDeterminarion.cs:448) tests
+# GetBattleAreaPermanents() -- the breeding frame is NOT in it. So p1's T6
+# breeding digivolve (Tsunomon -> Gomamon) does not trigger Dianamon at all,
+# and neither does the T8 move out of breeding (a move is not a play). The
+# ONLY activation in the whole line is the T8 battle-area digivolve, which is
+# exactly the event under exam.
+#
+# WHY DIANAMON'S OWN ENTRY IS QUIET.
+# On T5 p1 has NO permanent anywhere (the hatch is T6), so Dianamon's shared
+# [When Digivolving] body finds no CanDeleteCondition match
+# (HasMatchConditionOpponentsPermanent guards the SelectPermanentEffect) and
+# its [All Turns] body finds no IsOpponentsDigimon match -- both run silent.
+# DCGO still stacks the two same-card triggers and asks MultipleSkills (two
+# active skills); our engine bundles nothing on a digivolve, so that row is
+# dcgo_only with ordinal: 0 (see NOTES-BT25-028.md for the order prediction
+# and what a wrong guess looks like).
+#
+# Memory ledger:
+#   T1 p0 passes                                   -> p1 3
+#   T2 p1 passes                                   -> p0 3
+#   T3 p0 hard-plays Aegiochusmon (8): 3 -> -5     -> p1 5
+#   T4 p1 passes                                   -> p0 3
+#   T5 p0 digivolves Dianamon (3): 3 -> 0, passes  -> p1 3
+#   T6 p1 hatches, breeding-digivolves Gomamon (0) -> p0 3
+#   T7 p0 passes                                   -> p1 3
+#   T8 p1 promotes, digivolves Garurumon (2): 3 -> 1. THE CLAUSE.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_028_pool.json (--decks).
+card: BT25-028
+clause: BT25-028#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Aegiochusmon, Dianamon, inert filler
+      - BT24-014
+      - BT25-028
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT3-007
+      - BT3-007
+      - ST1-02
+      # (10+): p0's T3 / T5 / T7 / T9 turn draws
+      - BT4-010
+      - BT3-007
+      - ST1-04
+      - BT1-009
+    rest: tm-ts-line
+  p1:
+    stack:
+      # hand (0-4): the blue breeding line (Gomamon, Garurumon), inert filler
+      - ST2-02
+      - ST2-06
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-08
+      - ST1-04
+      - ST1-04
+      - ST1-02
+      # (10+): p1's T2 / T4 / T6 / T8 turn draws
+      - BT1-009
+      - ST1-08
+      - ST1-10
+      - ST1-02
+    rest: tm-ts-opponent
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): all-pass -- nothing in breeding yet.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5). Quiet: no
+  # [On Play]; <Decode> needs a non-battle leave.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Dianamon onto the [TS] Lv.5 for 3 (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-028 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: two same-card triggers stacked on the digivolve. Both bodies
+  # are silent against p1's empty board; our engine bundles nothing here.
+  - actor: 0
+    do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 2, candidates: [BT25-028, BT25-028] }
+  # SIM-ONLY: our vacuous [All Turns] yes/no gate, declined (nothing to trash).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1, memory 3): hatch, then digivolve Gomamon IN BREEDING for 0.
+  # Neither event is on the battle area, so Dianamon stays silent.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST2-02 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1, memory 3): promote Gomamon (1 digivolution card: Tsunomon), then
+  # digivolve Garurumon onto it for 2 (3 -> 1). THE CLAUSE: p0's Dianamon
+  # triggers on the OPPONENT's digivolve, on the OPPONENT's turn, against a
+  # stack that now holds 2 digivolution cards.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST2-06 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our engine's optional: true gate. ACCEPTED -- this is the one
+  # activation the line is for. DCGO has no gate (isOptional: false).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  # DCGO-ONLY: which Digimon trashes digivolution cards (Garurumon, p1's only
+  # Digimon). Our flat SourceMulti prompt names carrier and source together.
+  - actor: 0
+    do: { select: { cards: [ST2-06], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-ONLY: DCGO's own card row over Garurumon's DigivolutionCards.
+  - actor: 0
+    do: { select: { cards: [ST2-01, ST2-02], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY, AND THE FINDING. There is NO row here for our own source pick,
+  # because OUR ENGINE NEVER OFFERS ONE: after the gate above is accepted the
+  # very next prompt our engine parks is the DNA anchor below. Measured twice
+  # (2026-09-21, this line and a p0-turn variant that plays BT3-007 instead):
+  # with Garurumon holding [ST2-01, ST2-02] our `select_opponent_sources`
+  # yields zero candidates, so `trash_selected_sources` runs over an empty
+  # pick list and the clause's whole first half is a no-op. Logged as
+  # F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED in NOTES-BT25-028.md.
+  # This is the row our engine DOES park: the DNA anchor (select_own_permanent,
+  # optional: true) although p0 has ONE Digimon and no [GraceNovamon] in hand;
+  # DCGO's helper returns before asking anything. Declined.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0): one step past the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # p1.field[0].sources and p1.trash are DELIBERATELY UNPINNED: they are the
+  # exact fields the finding above predicts will diverge (ours: Garurumon still
+  # holds [ST2-01, ST2-02] and p1.trash is empty; DCGO: sources [] and p1.trash
+  # [ST2-01, ST2-02]). Pinning our side would freeze the bug into the Unity-free
+  # CI half. The differ compares every state field regardless, so the oracle run
+  # still reports it -- see NOTES-BT25-028.md. The same convention is used by
+  # BT25-026-inherited0.yaml for its card-data finding.
+  - at: 23
+    that:
+      p1.memory: 1
+      p0.field:
+        - card_id: BT25-028
+          dp: 12000
+          suspended: false
+          sources: [BT24-014]
+  - at: 25
+    that:
+      turn: 9
+      p0.field:
+        - card_id: BT25-028
+          dp: 12000
+          suspended: false
+          sources: [BT24-014]

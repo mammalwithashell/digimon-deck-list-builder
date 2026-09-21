@@ -66,3 +66,37 @@ park DemiDevimon's start-of-main digivolve pick before the breeding step;
 `P_198.cs` gates it on `IsExistOnBattleAreaDigimon` (breeding-area effects do
 not activate, 3-4-6). The re-authored line no longer passes through that
 position, so it neither confirms nor refutes it. Worth a DebugRunner test.
+
+---
+
+## Re-verification, 2026-09-21 (job three-musketeers-2, close-out)
+
+Stored verdicts at the start of this stage: `effect#0`, `#1`, `#2`, `#4`, `#5`
+**confirmed** (`qa/qa-reports/exam-verdicts/BT25-058.json`); `effect#3`
+(`<Fortitude>`) still has NO stored row — the oracle pass never reached it.
+The scenario was re-run and re-audited rather than re-authored:
+
+| Clause | Scenario | Sim-only (2026-09-21) |
+|---|---|---|
+| `BT25-058#effect#3` `<Fortitude>` | `BT25-058-effect3.yaml` | lowers 16 steps, 5/5 asserts pass — unchanged |
+
+**The one row this file rests on — the predicted `dcgo_only` MultipleSkills over
+`[BT25-058, BT25-058]` — is now verified against the C#, not predicted.**
+`MultipleSkills.cs:267-273` short-circuits only at ONE active skill:
+
+```csharp
+if (skillInfos_active.Count == 1) { _skillIndex = 0; yield return ... Activate(true); }
+```
+
+`<Fortitude>` replays Callismon **by an effect**, so both of the fresh
+permanent's bodies are active in that one window — `effect#4`'s `[On Play]`,
+and `effect#5`, whose `CanUseCondition` is `CanTriggerOnPermanentPlay` AND
+`IsByEffect` with `CanActivate` only `IsExistOnBattleAreaActivate`. Two active
+skills ⇒ the panel opens with two candidates, exactly as authored. The earlier
+"if DCGO stacks only one skill the run aborts on this row — drop the row"
+caveat can be retired: the short-circuit condition is now read, and it does not
+apply here.
+
+Both bodies are silent in that window (p1's board is empty and each body guards
+its own picks), so whichever ordinal DCGO resolves, the end state is the same —
+the row cannot change the measurement, only abort it.

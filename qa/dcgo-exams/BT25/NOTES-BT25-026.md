@@ -66,3 +66,43 @@ The scenario therefore leaves `p1.security` / `p1.trash` unpinned. **Expected
 oracle outcome until the data is fixed:** a one-field `p1.security` divergence
 on the final row (ours 3, DCGO 4) — triage as OUR BUG (card data), not a clause
 finding; the no-block-window witness is unaffected.
+
+---
+
+## Re-verification, 2026-09-21 (job three-musketeers-2, close-out)
+
+Stored verdicts at the start of this stage: `effect#0` and `effect#1`
+**confirmed** (`qa/qa-reports/exam-verdicts/BT25-026.json`); `effect#2` and
+`inherited#0` still have NO stored row — the oracle pass never reached them.
+Both scenarios were re-run and re-audited rather than re-authored:
+
+| Clause | Scenario | Sim-only (2026-09-21) |
+|---|---|---|
+| `BT25-026#effect#2` | `BT25-026-effect2.yaml` | lowers 26 steps, 7/7 asserts pass — unchanged |
+| `BT25-026#inherited#0` | `BT25-026-inherited0.yaml` | lowers 22 steps, 4/4 asserts pass — unchanged |
+
+**Adversarial C# re-read of the rows both files rest on** — all three claims
+hold, so neither file needed a repair:
+
+1. *The `dcgo_only` MultipleSkills row over `[BT25-028, BT25-028]` is real.*
+   `MultipleSkills.cs:267-273` short-circuits (`if (skillInfos_active.Count == 1)
+   { _skillIndex = 0; Activate(true); }`) only at ONE active skill. Dianamon's
+   own digivolve makes BOTH its shared `[On Play]/[When Digivolving]` body and
+   its `[All Turns]` body active, so the panel does open with two candidates.
+2. *Our `sim_only` gate row before the trash-digivolve pick is correct.*
+   `BT25_026.cs:126` registers the `[Your Turn]` body
+   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, false, ...)`
+   — **isOptional FALSE**, and `SetIsSkippable(true)` on line 127 is not an
+   optional gate (`ICardEffect.cs:1203` keys `Activate_Optional` off `IsOptional`
+   alone). DCGO asks no yes/no here; the printed "may" is `canNoSelect: isOptional`
+   on the card pick inside `DigivolveIntoHandOrTrashCard`.
+3. *The prompt ORDER is card-then-cost, as the file has it.*
+   `CardEffectCommons.cs` `DigivolveIntoHandOrTrashCard` installs the
+   `ChangeDigivolutionCostPlayerEffect` reducer first (no prompt), then raises the
+   `SelectCardEffect` over `Root.Trash` (`canNoSelect: isOptional`), and only
+   then pays — so DCGO's `SelectCountEffect` cost row follows the card row.
+   The file's `dcgo_only` `value: 3` sits in exactly that slot.
+
+`F-DATA-BT25-026-INHERITED-TEXT` (above) is unchanged and still unfixed, so the
+expected oracle outcome for `inherited0` is still a one-field `p1.security`
+divergence to triage as OUR card-data bug.
