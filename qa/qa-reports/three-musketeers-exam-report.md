@@ -284,7 +284,7 @@ campaign gate deliberately does not hold the line for (core first).
 | Gap | Where |
 |---|---|
 | ~~`G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`~~ **RESOLVED 2026-09-20** (three-musketeers-2) | `activate_field_main` now pays `activation_cost_fn`, and `field_main_match` gates the `[Main]` bit on a new data-twin `ActivationCostKind::is_payable` probe. general_rule.pdf §15-7-1/2; DCGO `BT25_089.cs:36` → `CanSuspend.cs:17-25`. 4 tests (BT25-089 / EX11-071); entry in `qa/resolved-gaps.md`. |
-| `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` | BT16-077#effect#2 / #inherited#0 |
+| ~~`G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED`~~ **RESOLVED 2026-09-20** (three-musketeers-2) | `<Partition>` now reads the card's printed parenthetical (`CardEffect::partition_slots`), gates the trigger on a complete slot assignment and plays exactly 1 of each specified card. general_rule.pdf §16-28-1/-5/-6; DCGO `Partition.cs:66-119,145-159` + `:89,117`. 3 tests (BT16-077); BT16-077#effect#2 and #inherited#0 re-diffed CLEAN against their preserved sidecars. Follow-up `G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS` logged. |
 | `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST` | `qa/dcgo-exams/BT25/NOTES-BT25-091.md` |
 | Condition-false scheduled-`<Delay>` carrier trash | `6c4be5885`, logged alongside `G-ENGINE-DELAY-BODY-BEFORE-TRASH` |
 | `G-EXAM-REVEAL-BUCKET-ADD-TIMING` | DCGO quirk, explicitly **not** an engine gap |

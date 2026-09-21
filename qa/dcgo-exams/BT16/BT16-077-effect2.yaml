@@ -167,9 +167,12 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # Our generic source pick (sim-only; DCGO auto-takes the lone card per slot).
+  # Our per-slot source pick (sim-only; DCGO auto-takes the lone card per
+  # slot). Since the slot-enforcement fix our engine offers ONLY the two
+  # specified cards and needs one answer: the other is then the only card that
+  # can fill the remaining parenthetical, so it is taken without a prompt.
   - actor: 0
-    do: { select: { cards: [ST6-07, BT22-009], sim_only: true } }
+    do: { select: { cards: [BT22-009], sim_only: true } }
   # Memory -5 -> P0's turn-9 breeding decision.
   - actor: 0
     do: { pass: {} }

@@ -1381,6 +1381,27 @@ impl EffectBuilder {
 /// One struct per card_id; returns the card's effects parameterized by handle.
 pub trait CardEffect: Send + Sync {
     fn effects(&self, card: CardHandle) -> Vec<Effect>;
+
+    /// The per-slot `<Partition (A & B)>` source specs this card prints, in
+    /// printed order — general_rule.pdf §16-28-5: "the 'specified cards'
+    /// refers to the cards that meet the conditions shown in parentheses in
+    /// the <Partition> icon text".
+    ///
+    /// The synthesized `Keyword::Partition` body
+    /// ([`crate::cards::keyword_effects::keyword_to_auto_effect`]) consults
+    /// this at fire time so it can enforce §16-28-1 (the trigger needs 1 of
+    /// EACH specified card in the stack) and §16-28-6 (exactly 1 of each is
+    /// played — "a player can't choose to only play one or some"). DCGO's
+    /// analogue is `CardEffectFactory/KeyWordEffects/Partition.cs`'s
+    /// `List<PartitionCondition>`, which filters the digivolution cards into
+    /// one candidate list PER SLOT.
+    ///
+    /// `None` — the card does not author slot specs (a printed `<Partition>`
+    /// with no registered script, or a raw_rust script that owns its own
+    /// body); the keyword body then falls back to its slot-blind pick.
+    fn partition_slots(&self, _inherited: bool) -> Option<Arc<Vec<CompiledPredicate>>> {
+        None
+    }
 }
 
 /// Foreign-card variant of [`enumerate_refireable_effects`] (BT15-102

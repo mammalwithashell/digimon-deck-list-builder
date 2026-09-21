@@ -22,9 +22,10 @@
 # Modeling notes:
 # - "[Free] trait" is the printed ATTRIBUTE on these cards (cards.json
 #   attribute_eng) — `attribute_is: Free`.
-# - Per-slot Partition source specs are accepted by the DSL but slot
-#   enforcement is engine-deferred (see lower_partition.rs); the keyword's
-#   generic source picks govern.
+# - The per-slot Partition `sources:` below ARE enforced: the keyword body
+#   reads them through `CardEffect::partition_slots` and plays exactly 1 card
+#   per printed parenthetical (general_rule.pdf 16-28-5/-6). The pre-2026-09-20
+#   slot-blind pick was G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED.
 # - The DNA gate covers only the trash play (official Q&A + DCGO :182);
 #   the Rush/attack half fires on any digivolve.
 # Verdict: IMPLEMENTED.

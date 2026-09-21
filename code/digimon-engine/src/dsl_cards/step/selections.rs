@@ -1564,47 +1564,28 @@ fn finish_non_dsl_count_capped(
             ctx.cancel_leave();
         }
         crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
-            let mut extracted: Vec<crate::card_source::CardHandle> = Vec::new();
-            for handle in &state.accum {
-                let removed = {
-                    let Some(permanent) = ctx
-                        .game
-                        .player_mut(subject.player)
-                        .battle_area
-                        .get_mut(subject.index as usize)
-                    else {
-                        continue;
-                    };
-                    let Some(pos) = permanent
-                        .card_sources
-                        .iter()
-                        .position(|c| c.handle() == *handle)
-                    else {
-                        continue;
-                    };
-                    permanent.card_sources.remove(pos)
-                };
-                let owner = removed.owner;
-                ctx.game.player_mut(owner).trash.push(removed);
-                extracted.push(*handle);
-            }
-            // Sources left the stack without the trash observer (partition
-            // trashes are intentionally observer-silent) — still refresh
-            // materialized declaratives so grants sourced from the departed
-            // cards stop applying before the follow-up plays below (same
-            // contract as `fire_digivolution_card_trashed`).
-            ctx.game.tick_declarative_effects();
-            let mut iter = extracted.into_iter();
-            if let Some(first) = iter.next() {
-                let second = iter.next();
-                let source_card = ctx.source_card;
-                let player = ctx.player;
-                let _ = ctx.play_from_trash_free_unsuspended(first);
-                if let Some(second) = second {
-                    ctx.game
-                        .queue_partition_second_play(player, source_card, second);
-                }
-            }
+            crate::cards::keyword_effects::partition_extract_and_play(
+                &mut ctx,
+                subject,
+                &state.accum,
+            );
+        }
+        // Slot-enforced <Partition>: chain to the next pick (or play, once
+        // one card is held for every printed slot).
+        crate::resume::NonDslCountCappedTerminal::KeywordPartitionSlots {
+            subject,
+            slots,
+            picked_so_far,
+        } => {
+            let mut picked = picked_so_far;
+            picked.extend(state.accum.iter().copied());
+            crate::cards::keyword_effects::drive_partition_picks(
+                ctx.game,
+                state.prov,
+                subject,
+                slots,
+                picked,
+            );
         }
         crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave { tamer } => {
             for source in &state.accum {

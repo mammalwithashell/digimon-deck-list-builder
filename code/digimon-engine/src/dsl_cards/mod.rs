@@ -512,6 +512,47 @@ impl CardEffect for DslCardEffect {
         }
         out
     }
+
+    /// Publish this card's `<Partition (A & B)>` per-slot source specs to the
+    /// synthesized `Keyword::Partition` body. See
+    /// [`crate::effect::CardEffect::partition_slots`]; the YAML authors them
+    /// under `kind: partition` → `sources:`, one predicate per printed
+    /// parenthetical slot (general_rule.pdf §16-28-5).
+    ///
+    /// A card prints the SAME parenthetical on its face and inherited copies
+    /// (BT16-025, BT16-077, BT23-102, …), so an exact-scope miss falls back to
+    /// any Partition clause on the card rather than silently dropping to the
+    /// slot-blind pick.
+    fn partition_slots(&self, inherited: bool) -> Option<Arc<Vec<CompiledPredicate>>> {
+        use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+
+        let mut fallback: Option<Arc<Vec<CompiledPredicate>>> = None;
+        for clause in &self.compiled.effects {
+            let CompiledClause::Declarative(CompiledDeclarativeClause::Partition {
+                scope,
+                sources,
+                ..
+            }) = clause
+            else {
+                continue;
+            };
+            if sources.is_empty() {
+                continue;
+            }
+            let scope_matches = match scope {
+                CompiledScope::Both => true,
+                CompiledScope::Inherited => inherited,
+                _ => !inherited,
+            };
+            if scope_matches {
+                return Some(Arc::new(sources.clone()));
+            }
+            if fallback.is_none() {
+                fallback = Some(Arc::new(sources.clone()));
+            }
+        }
+        fallback
+    }
 }
 
 fn option_use_requirement_for_card(card: &CompiledCard) -> Option<Arc<CompiledPredicate>> {

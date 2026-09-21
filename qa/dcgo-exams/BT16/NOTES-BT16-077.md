@@ -66,9 +66,19 @@ that condition has more than one matching digivolution card — here one each,
 so none; both cards are played free, Effecmon's [On Play] delete finds no
 target (P1 fields a Tamer only) and asks nothing.
 
-### ENGINE FINDING — our Partition does not enforce its slots
+### ENGINE FINDING — our Partition did not enforce its slots (RESOLVED 2026-09-20)
 
-`G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` (`docs/RUST_ENGINE_GAPS.md`).
+`G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED` (`docs/RUST_ENGINE_GAPS.md`) —
+**RESOLVED 2026-09-20** in the three-musketeers-2 close-out. The keyword body now
+reads the card's printed slot specs (`CardEffect::partition_slots`, answered by the
+YAML's `kind: partition` → `sources:`), gates the trigger on a complete slot
+assignment (general_rule.pdf §16-28-1; DCGO `CardEffectFactory/.../Partition.cs:145-159`),
+masks every pick that would strand a slot, refuses a partial answer (§16-28-6) and
+takes a forced last card without a prompt (DCGO `KeyWordEffects/Partition.cs:89,117`).
+Both lines here re-diffed CLEAN against their preserved sidecars afterwards and stay
+`confirmed`; their sim-only row is now a ONE-card pick over the two specified cards
+only. The original measurement is kept below as the record of what was wrong.
+
 `lower_partition.rs` documents `_sources` as deferred; measured here it is a
 rules-visible gap, not a cosmetic one. After the `Replacement` accept our
 engine parks a generic `CountCappedMultiSelect { min: 1, max: 2 }` "select 2
