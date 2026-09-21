@@ -75,6 +75,11 @@ no longer lower) its `sim_only` `choice: "[Main]"` row — our Play bit IS the
 
 ## `effect#2` — RE-MEASURED 2026-09-20: CLEAN, verdict `confirmed`
 
+> **Read the 2026-09-21 "ANSWERED" section at the end of this file before
+> trusting this one.** The CLEAN run recorded here was taken on an older shape
+> of the line; the current shape needed a harness fix before it re-measured
+> clean. The verdict is the same, but the evidence under it was replaced.
+
 The divergence below was measured BEFORE engine fix `5108e58ee` ("a used Option is
 trashed before the triggers its `[Main]` caused"; `general_rule.pdf` 9-1-5 + 18-1-2 +
 15-4-3-5) landed, and was never re-diffed against it. Re-run against the same
@@ -122,7 +127,71 @@ even after a successful return. Card-level fix: gate on
 preserved sidecar `20260918T130047Z_8f408f4b…` is now CLEAN; the scenario now
 asserts the DCGO-observed `p0.hand`. No engine change.
 
-## OPEN finding — `effect#2` re-diff is NOT clean (pre-existing, 2026-09-20)
+## ANSWERED 2026-09-21 — the `suspended` diff was a HARNESS double-answer, not an ordering divergence. Verdict `confirmed` re-earned.
+
+The 2026-09-20 note below left one question open: is
+`p0.field[0].suspended: ours=true dcgo=false` at the `select: { yes: true }` row a
+harness SNAPSHOT-BOUNDARY property (our trace snapshots after the activation cost
+is paid, DCGO's before) or a REAL ordering divergence? **Neither.** It was a
+harness bug one level up — a decision our engine asked and the harness spent
+twice — and `suspended` was only its symptom. The prescribed "teach the differ to
+tolerate `suspended` on activation-cost rows" fix would have been actively
+harmful: it papers over a row shift that leaves the clause unmeasured.
+
+**What was happening.** `ReplayDriver::auto_answer_option_trash_order`
+(`code/digimon-engine/src/runners/replay.rs`) runs at the top of EVERY step and
+answers our engine-only 9-1-5 trash-order prompt with entry 0 ("trash now"). That
+is right for the DCGO corpus — DCGO makes no such decision, so no recording can
+carry an answer. It is wrong here, because this scenario writes that decision
+itself as the `sim_only` `choice: "Trash the used Option"` row. Both fired, so:
+
+| scenario row | prompt it was written for | prompt it actually answered |
+|---|---|---|
+| step 8 `choice: "Trash the used Option"` (sim-only) | our TriggerOrder trash-order pick | **Monica's §15-7-4 decline gate** |
+| step 9 `select: { yes: true }` | Monica's §15-7-4 decline gate | the mandatory opponent-Digimon pick |
+| step 10 `select: { targets: [opp.field.0] }` | the opponent-Digimon pick | nothing (no live prompt) |
+
+So by step 9 the suspend cost had already auto-paid — hence `suspended: ours=true`
+— and the clause's own "you may pay" decision was never exercised at all. The
+lowering pass never auto-answered, so it assigned the rows CORRECTLY; only the
+replay pass shifted, which is why the line lowered, validated
+`expect: { prompt: OptionalSkill }`, and still diffed dirty.
+
+**Our engine was right the whole time.** "by suspending this Tamer" is a §15-7
+optional processing condition — `general_rule.pdf` (Ver.3.6) **§15-7-1** (p.24),
+"conditions ... include text such as 'by X, Y'", and **§15-7-4** (p.24), "A player
+can choose whether or not to execute the content of optional processing
+conditions." Our engine parks that decline gate (the `bundle.len() == 1`
+`needs_pre_cost_prompt` branch in `effect_queue.rs`) before paying. DCGO parks the
+same decision: `BT25_091.cs:104`
+`SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, **true**, …)` —
+the `isOptional` arm — and only then does `ActivateCoroutine` run
+`SuspendPermanentsClass` followed by `SelectPermanentEffect`
+(`BT25_091.cs:136-144`). The preserved sidecar has exactly that two-row shape:
+step 12 `suspended: false` (the yes/no) then step 13 `suspended: true` (the pick).
+Two prompts, same order, both engines.
+
+**Fix + re-measure.** `RecordingSource::answers_engine_only_prompts()` (default
+`false`, `ScenarioAdapter` → `true`) suppresses the auto-answer for exam
+scenarios; the DCGO-corpus path is untouched. Regression test:
+`code/tools/dcgo-harness/tests/exam_engine_only_prompt_not_auto_answered.rs`
+(fails before with this exact symptom, passes after). Re-diffed against the same
+preserved sidecar `20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`
+(zero Unity time): **CLEAN**, compared 12 of 13 ours / 12 dcgo steps (1 sim-only
+row with no DCGO prompt). Verdict re-recorded `confirmed` 2026-09-21 — now on
+evidence the CURRENT engine and the preserved oracle trace both produce. Full
+`cards_behavioral`: 8227 passed / 0 failed / 37 ignored.
+
+**The silent second instance existed.** An instrumented sweep of all 369 exam
+scenarios found exactly two that reach the engine-only trash-order prompt: this
+one and `qa/dcgo-exams/BT3/BT3-096-effect0.yaml`. BT3-096#effect#0 was stored
+`confirmed` too, and pre-fix it re-diffs `DIVERGED` with `memory: ours=2 dcgo=1` —
+Mimi's memory gain already applied because her "you may suspend this Tamer" gate
+had been eaten the same way. It is CLEAN post-fix and its verdict is re-recorded.
+Full write-up: `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in
+`qa/resolved-gaps.md`.
+
+### Original open finding, 2026-09-20 (superseded — kept for the record)
 
 Re-diffing `BT25-091-effect2.yaml` against the preserved sidecar
 (`20260918T130112Z_6a17348e0757476cbf19bd6e8b1a8090.state.jsonl`) after the

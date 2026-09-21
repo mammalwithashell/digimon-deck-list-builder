@@ -638,6 +638,22 @@ Three of the eight — `optional_gate_fold`, `SimOnlySelect`, `DcgoOnlySelect` �
 exist purely because the engines disagree about whether a decision EXISTS, not
 about what it is. Those are the rows worth re-reading before adding a ninth.
 
+**A scenario owns every one of OUR prompts — nothing is auto-answered for it.**
+The shared replay core carries one helper that answers an engine-only prompt on
+the oracle's behalf (`ReplayDriver::auto_answer_option_trash_order`, for the
+9-1-5 Option-trash order that no DCGO recording can contain). That helper exists
+for the `dcgo-replay` corpus, where the alternative is a stall. It is switched
+OFF for the exam by `RecordingSource::answers_engine_only_prompts()`, which
+`ScenarioAdapter` returns `true` from, because in a scenario the author writes
+that decision as a `sim_only:` row. When both fired, the scenario's row landed on
+whatever our engine parked NEXT and spent it — and every later row was one
+decision ahead of where its author put it, which is invisible in the lowering
+(the lowering pass never auto-answered) and shows up only as a one-field diff in
+the oracle run. Two `confirmed` verdicts stood on that for a day. If you add
+another engine-only prompt, author a `sim_only:` row for it; do NOT add a second
+auto-answer. See `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in
+`qa/resolved-gaps.md`.
+
 ### Rows where one side looks rules-wrong
 
 Recorded here, **not** fixed here; they are engine findings, not mapping

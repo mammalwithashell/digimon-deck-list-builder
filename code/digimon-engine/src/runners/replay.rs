@@ -727,6 +727,33 @@ pub trait RecordingSource: Send {
     fn skipped_incomplete_plays(&self) -> u32 {
         0
     }
+
+    /// True when this source's own steps answer ENGINE-ONLY prompts —
+    /// decisions our engine parks that DCGO never makes.
+    ///
+    /// `false` for every recording-backed source: a DCGO JSONL can only carry
+    /// answers to decisions DCGO asked, so an engine-only prompt has to be
+    /// auto-answered on the oracle's behalf (see
+    /// [`ReplayDriver::auto_answer_option_trash_order`]).
+    ///
+    /// The exam's `ScenarioAdapter` is the exception and overrides this to
+    /// `true`: a scenario author writes such a decision explicitly as a
+    /// `sim_only:` row. Auto-answering it there consumes the prompt the row
+    /// was written for, the row then lands on whatever the engine parks NEXT,
+    /// and every later row is shifted one decision forward — silently eating a
+    /// real choice and measuring the wrong state.
+    ///
+    /// Measured witness: `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`. The
+    /// auto-answer took the 9-1-5 trash-order pick, so the scenario's own
+    /// `choice: "Trash the used Option"` row landed on Monica Simmons'
+    /// §15-7-4 "by suspending this Tamer" decline gate and spent it. The
+    /// `select: { yes: true }` row that was written for that gate then
+    /// answered the target pick, and the oracle diff reported
+    /// `p0.field[0].suspended: ours=true dcgo=false` — a divergence
+    /// manufactured entirely by the double answer.
+    fn answers_engine_only_prompts(&self) -> bool {
+        false
+    }
 }
 
 /// The single shared decision point for whether mulligan-phase actions
@@ -1713,6 +1740,12 @@ impl ReplayDriver {
     /// Answer our engine-only 9-1-5 trash-ordering prompt the way DCGO
     /// behaves (trash first). See the call site in `step`.
     fn auto_answer_option_trash_order(&mut self, game: &mut Game) {
+        // A source that authors engine-only prompts itself already has an
+        // answer for this one; answering it here too would spend the NEXT
+        // prompt on that row. See `RecordingSource::answers_engine_only_prompts`.
+        if self.source.answers_engine_only_prompts() {
+            return;
+        }
         for _ in 0..8 {
             let is_ours = matches!(
                 game.pending_selection_resume

@@ -2016,6 +2016,14 @@ fn construct(
 }
 
 impl RecordingSource for ScenarioAdapter {
+    /// A scenario writes every one of OUR prompts, including the ones DCGO
+    /// never asks (`sim_only:` rows). The replay driver must therefore not
+    /// auto-answer any of them -- see
+    /// `RecordingSource::answers_engine_only_prompts`.
+    fn answers_engine_only_prompts(&self) -> bool {
+        true
+    }
+
     fn build_initial_game(
         &self,
         _card_data: &HashMap<String, CardData>,

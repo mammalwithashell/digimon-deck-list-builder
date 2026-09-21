@@ -3744,12 +3744,27 @@ under 9-1-4/9-1-5 a deferred Option is in NO area, not in the trash.
 **Oracle adapters.** DCGO makes no decision here, so no recording or scripted
 line can answer the prompt. The exam takes it on a `sim_only` `choice:` row
 (`BT25-091-effect2.yaml`, `BT3-096-effect0.yaml` — the only two lines in the
-358-scenario corpus that reach it; both re-diffed CLEAN against their preserved
-sidecars, 12/14 and 8/9 rows compared, verdicts unchanged). The replay core
-(`ReplaySession::auto_answer_option_trash_order`, `runners/replay.rs`, shared by
+369-scenario corpus that reach it, confirmed 2026-09-21 by an instrumented sweep
+of every scenario, not by grep). The replay core
+(`ReplayDriver::auto_answer_option_trash_order`, `runners/replay.rs`, shared by
 `dcgo-replay` and the engine MCP) answers it with entry 0 (trash first) before
 consuming each recorded row, so a DCGO corpus replay cannot manufacture a
 divergence out of a prompt the corpus cannot contain.
+
+> **Amended 2026-09-21 — the two exam lines above were NOT clean, and the "verdicts
+> unchanged" claim was wrong.** Both the auto-answer AND the scenario's own
+> `sim_only` row fired, so each row landed one decision late and ate the NEXT
+> prompt — on both lines, the cost-bearing trigger's own §15-7-4 decline gate.
+> `BT25-091#effect#2` re-diffed `DIVERGED` (`p0.field[0].suspended: ours=true
+> dcgo=false`) and `BT3-096#effect#0` `DIVERGED` (`memory: ours=2 dcgo=1`), so
+> from `5aef07fa8` until the tooling fix BOTH stored `confirmed` verdicts stood on
+> evidence the engine could no longer produce. The engine change in THIS entry is
+> vindicated, not implicated — the gate it was built to preserve is exactly what
+> the harness was spending. `RecordingSource::answers_engine_only_prompts()` now
+> suppresses the auto-answer for `ScenarioAdapter`; both lines re-measure CLEAN
+> (12/13 and 8/9 compared, 1 sim-only row each) and both verdicts are re-recorded
+> `confirmed` on current evidence. Full write-up:
+> `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in `qa/resolved-gaps.md`.
 
 **Tests.** `bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed`
 (trigger first — the Option is still in no area while the optional cost gate is
