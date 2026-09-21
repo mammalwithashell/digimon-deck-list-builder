@@ -743,3 +743,60 @@ fn bt25_100_play_and_link_bits_are_both_offered() {
     assert_eq!(mask[PLAY_HAND_START as usize], 1.0, "§6-5-1-3 use action");
     assert_eq!(mask[HAND_EFFECT_START as usize], 1.0, "§6-5-1-4 link action");
 }
+
+/// §10-1-3 ORDER. The link procedure is `10-1-3-1` declare + reveal + **choose
+/// the host**, THEN `10-1-3-2` "The specified link cost is paid", THEN
+/// `10-1-3-3` plug in. So at the host-pick prompt nothing has been paid yet and
+/// the revealed card is still in the hand — a reveal "isn't considered removal
+/// from an area" (§9-1-8, the parallel wording on the use procedure).
+///
+/// Measured against the DCGO oracle by exam clause `BT25-100#effect#5`
+/// (`qa/dcgo-exams/BT25/BT25-100-effect5.yaml`): DCGO's state at the
+/// `SelectPermanentEffect` host prompt is memory 3 with `BT25-100` still in
+/// hand, and only the row AFTER the pick reads memory 1 / hand-minus-card.
+/// Ours paid at declaration — `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
+#[test]
+fn bt25_100_hand_link_pays_the_cost_after_the_host_pick_not_at_declaration() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    runner.game.decode_action(HAND_EFFECT_START, 0);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("declaring the link parks the §10-1-3-1 host pick");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    assert_eq!(
+        runner.memory(),
+        before,
+        "§10-1-3-2 pays the link cost AFTER §10-1-3-1 chooses the host — not at \
+         the declaration"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "§9-1-8: the revealed card is still in the hand until §10-1-3-3 plugs \
+         it in"
+    );
+
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, host.index as u16))
+        .expect("choose the [TS] host");
+
+    assert_eq!(
+        runner.memory(),
+        before - 2,
+        "§10-1-3-2: the printed link cost 2 is paid once the host is chosen"
+    );
+    assert_eq!(runner.hand_size(0), 0, "§10-1-3-3 plugged the card in");
+    let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1);
+    assert_eq!(linked[0].card_id(&runner.game.card_data), "BT25-100");
+}

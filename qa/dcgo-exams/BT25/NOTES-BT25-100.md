@@ -201,5 +201,45 @@ backs DCGO — `general_rule.pdf` §10-1-3-1..3 (p.19) pays the link cost AFTER 
 host is chosen, while our Plug-In Option branch pays at declaration. Logged as
 `G-ENGINE-OPTION-HAND-LINK-COST-TIMING` in `docs/RUST_ENGINE_GAPS.md`.
 
-**Denominator: 8 clauses — 7 confirmed, 1 diverged, 0 unreachable, 0
+## RESOLVED 2026-09-21 — our bug, ENGINE FIX, clause now `confirmed`
+
+Classified **our_bug**, and fixed. `general_rule.pdf` (Ver.3.6) §10-1-3, p.19,
+prints the link procedure as three ordered steps and payment is the SECOND:
+
+> 10-1-3-1. The player declares a link and reveals 1 card to link. 1 link
+> requirement is chosen on the revealed card, then the player chooses 1 of
+> their Digimon that meets the requirement.
+> 10-1-3-2. The specified link cost is paid.
+> 10-1-3-3. The card to link is plugged in sideways into the chosen Digimon,
+> and the link procedure is resolved.
+
+§9-1-8 supplies the other half of the witness — revealing a card as part of a
+procedure "isn't considered removal from an area" — which is why the declared
+Option is still in DCGO's `p0.hand` at the host prompt. The PDF outranks DCGO
+here and they agree, so there was nothing to weigh: our `activate_hand_link`
+Option branch entered `play_option_core` immediately, which ran `pay_memory`
+and `remove_option_from_source` and only THEN installed the host prompt from
+`dispose_option` — §10-1-3-2 and the front half of §10-1-3-3 executing before
+§10-1-3-1's question was asked. Both diverging fields are that one inversion.
+
+The fix (`9af21698c`, shared with the same-family clauses `BT25-093#effect#4`
+and `BT24-091#effect#4`, authored by the BT25-093 agent in this same worktree;
+gap stamped RESOLVED in `docs/RUST_ENGINE_GAPS.md`) installs the §10-1-3-1 host prompt in `activate_hand_link` FIRST,
+paying nothing and leaving the card in hand; the resolved pick pins the host on
+`Game::pending_option_link_host` and re-enters `play_option_core`, whose `Link`
+arm pays (§10-1-3-2) and whose `dispose_option` plugs into the pinned host
+(§10-1-3-3) instead of asking a second time. Clone-safe per rule 28: the prompt
+is driven by a new data `ResumeFrame::OptionHandLinkHostSelection`, not a
+bespoke closure. The wire is unchanged — same `HAND_EFFECT` declaration bit,
+same `OwnField` pick — so only the procedure's internal order moved.
+
+Test: `bt25_100_hand_link_pays_the_cost_after_the_host_pick_not_at_declaration`
+(`code/digimon-engine/tests/cards_behavioral/bt25/bt25_100.rs`) pins memory
+unchanged and `hand_size == 1` AT the parked host prompt, then the cost paid and
+the card plugged in after the pick. Re-measured against the PRESERVED sidecar
+`20260921T042552Z_0bad16abd58e4f80bf7cb98eb9f1ae40.state.jsonl` (zero Unity
+time): **CLEAN**, 9 of 10 ours / 10 dcgo. Full `cards_behavioral` on the
+post-fix tree: **8223 passed / 0 failed / 37 ignored**.
+
+**Denominator: 8 clauses — 8 confirmed, 0 diverged, 0 unreachable, 0
 unavailable, 0 unmeasured.**

@@ -3805,7 +3805,7 @@ only if a "when a card is added to your hand" trigger could fire between picks �
 15-5-2 fires it once for a single add. Clause stays `diverged` in the verdict store (the exam
 compares every step); treat it as adjudicated, no further action.
 
-## G-ENGINE-OPTION-HAND-LINK-COST-TIMING — open finding (2026-09-21)
+## G-ENGINE-OPTION-HAND-LINK-COST-TIMING — RESOLVED 2026-09-21 (`9af21698c`)
 
 **Drivers:** exam `BT25-093#effect#4` (Ignition Flare, `<Link> [TS] trait: Cost 3`),
 `BT25-100#effect#5` (Iron Slash, `<Link> [TS] trait: Cost 2`) and — added 2026-09-21,
@@ -3853,10 +3853,32 @@ becomes observable whenever something reads memory or the hand between the decla
 and the host pick (a trigger/replacement raised on the link, a cost modifier reading the
 gauge, any prompt that lists hand cards).
 
-**Not fixed here.** A fix defers the Option's cost payment + hand removal into the
-host-selection resolution of `play_option_core`'s `Link` mode — engine surgery outside a
-verdict-recording stage, and it must keep the park on the clone-safe resumable VM
-(rule 28). Both clauses are recorded `diverged` with this section as their triage.
+**RESOLVED — `9af21698c` (three-musketeers-2 close-out, 2026-09-21).** The from-hand
+Plug-In Option link now asks §10-1-3-1's host question BEFORE anything is paid:
+`activate_hand_link`'s Option branch installs
+`install_option_hand_link_host_selection` (a clone-safe
+`ResumeFrame::OptionHandLinkHostSelection` data frame, rule 28) whose prompt is
+byte-identical to `install_link_host_selection`'s, so the wire meaning of the pick is
+unchanged — only its position in the procedure moved. The resolved pick runs
+`finish_option_hand_link`, which re-validates the hand slot (§9-1-8: a card that can't
+be used moves no memory), pins the host on `Game::pending_option_link_host`, and
+re-enters `play_option_core`; `dispose_option`'s `Link` arm consumes the pin (re-checked
+against the live candidate set, falling back to the ordinary prompt if the link-mode body
+moved the board) instead of asking a second time.
+
+- **Gate / coverage:** `bt25_093_hand_link_pays_after_the_host_is_chosen_not_at_declaration`
+  (`tests/cards_behavioral/bt25/bt25_093.rs`) fails on the parent commit, passes after;
+  the BT25-100 analogue lands with that clause's own stage. Two ST22-08 cases
+  (`st22_08_link_mode_charges_link_cost_2`,
+  `st22_08_link_action_stays_affordable_when_the_use_action_is_not`) encoded the old
+  pay-at-declaration contract and now assert the §10-1-3 order. Suites:
+  `cards_behavioral` **8223 passed / 0 failed / 37 ignored**; `--lib` 338/0;
+  `option_color_requirements` 6/0, `live_game_action_validation` 7/0, `policies_greedy`
+  5/0, `policies_headless` 1/0, `debug_runner_dsl` 7/0, `alt_path_reachability` 1/0.
+- **Oracle:** `BT25-093#effect#4` re-diffed against the preserved sidecar
+  `20260921T042530Z_8f13b83c…` — CLEAN (compared 9 of 10 ours / 10 dcgo), verdict
+  re-recorded `confirmed`. `BT25-100#effect#5` and `BT24-091#effect#4` are the same single
+  row and are fixed by the same change; re-record them from their own sidecars.
 
 
 ## G-ENGINE-REPLACEMENT-COST-DELETION-NO-OBSERVER — OPEN (found 2026-09-21, three-musketeers-2 close-out)
