@@ -565,6 +565,106 @@ fn lm_032_delay_does_not_fire_when_opponent_has_no_digimon() {
     );
 }
 
+/// §16-16-1 / DCGO `LM_032.cs` `CanUseCondition`
+/// (`card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1`): when the printed
+/// gate ("If your opponent has a Digimon") is FALSE at the scheduled window,
+/// the `<Delay>` is simply not activatable this turn. The trash of this card
+/// is the Delay's ACTIVATION COST (§16-16-1), so an un-activated Delay must
+/// not pay it: LM-032 stays in the battle area and is offered again at the
+/// controller's next [Start of Your Turn].
+///
+/// Before the fix the turn scan enqueued a body the condition filter then
+/// dropped, and trashed the carrier anyway — a free loss of the card.
+#[test]
+fn lm_032_condition_false_leaves_the_delay_carrier_in_the_battle_area() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(make_purple_digimon("LM032-TRASH-PURPLE", 3, 2000, 3))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    place_lm_032_as_start_delay(&mut runner);
+    push_trash(&mut runner, 0, "LM032-TRASH-PURPLE");
+    // No opponent Digimon on the field -> `active_when` is FALSE.
+
+    advance_to_next_p0_turn(&mut runner);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Delay must not fire when opponent has no Digimon"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "LM-032"),
+        "the un-activated <Delay> must NOT pay its trash-this-card cost: \
+         LM-032 stays in the battle area"
+    );
+    assert!(
+        !runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM-032"),
+        "LM-032 must not be in the trash after a condition-false window"
+    );
+}
+
+/// The carrier that survived a condition-false window must be RE-OFFERED at
+/// the next [Start of Your Turn] once the gate is satisfiable — the scan
+/// matches on `trash_on_turn == turn`, so a carrier left at its spent turn
+/// number would sit on the field forever, never offered again.
+#[test]
+fn lm_032_condition_false_reschedules_the_delay_to_the_next_window() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(make_purple_digimon("LM032-TRASH-PURPLE", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_032_as_start_delay(&mut runner);
+    push_trash(&mut runner, 0, "LM032-TRASH-PURPLE");
+
+    // Window 1: opponent has no Digimon -> gate false, carrier survives.
+    advance_to_next_p0_turn(&mut runner);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "window 1 must not open"
+    );
+
+    // The opponent commits a Digimon; window 2 must open.
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    advance_to_next_p0_turn(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the rescheduled <Delay> must offer its §16-16-2 cost confirm at the next window");
+    assert!(
+        view.valid_action_ids.iter().any(|a| *a != PASS),
+        "the accept branch must be offered at the rescheduled window"
+    );
+}
+
 /// Delay body step 1: selected purple Digimon moves from trash to deck top;
 /// the turn-start draw then pulls it into hand, proving deck-top placement.
 /// The Delay cost trashes LM-032 itself.

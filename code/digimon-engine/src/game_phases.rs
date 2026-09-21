@@ -1088,6 +1088,26 @@ impl Game {
                 (handle.player, perm.card_sources[0].card_index)
             };
 
+            // DCGO gates a scheduled `<Delay>` on `CanUseCondition` BEFORE the
+            // window opens at all — LM_032.cs:137-143 requires
+            // `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1` for the
+            // printed "If your opponent has a Digimon, <Delay>". When that
+            // printed gate is FALSE the Delay is simply not activatable this
+            // turn, and §16-16-1 makes the trash of the carrier the
+            // ACTIVATION ("by trashing that card, the effect specified in
+            // <Delay> will activate") — so an un-activated Delay must not pay
+            // it. The carrier STAYS in the battle area, where §16-16-1 keeps
+            // the Delay available, and its window moves to the next one.
+            //
+            // Before this guard the scan enqueued a body that the queue's
+            // clause-condition filter then dropped, and deleted the carrier
+            // anyway: a free loss of the card and of every later window.
+            if !self.scheduled_delay_is_activatable(handle, triggers) {
+                self.reschedule_delayed_option(key);
+                cancelled_keys.insert(key);
+                continue;
+            }
+
             // Scope the decline flag to THIS resolution: a key left over from a
             // previous Option would otherwise be read as a decline here.
             self.declined_delay_option = None;
@@ -1162,7 +1182,21 @@ impl Game {
             return false;
         }
         self.declined_delay_option = None;
+        self.reschedule_delayed_option(key);
+        true
+    }
 
+    /// Move a surviving turn-scheduled `<Delay>` carrier's window forward to
+    /// its next printed occurrence.
+    ///
+    /// Shared by the two ways a scheduled window can close without the Delay
+    /// activating: the controller DECLINED its §16-16-2 cost, or the clause's
+    /// printed condition was FALSE so the window never opened
+    /// (DCGO `CanUseCondition`). Both leave the carrier in the battle area,
+    /// and the scan matches on `trash_on_turn == turn`, so a carrier left at
+    /// its spent turn number would sit on the field forever, never offered
+    /// again. A no-op when the key names no live permanent.
+    fn reschedule_delayed_option(&mut self, key: (PlayerId, u16)) {
         let owner = key.0;
         let slot = self
             .player(owner)
@@ -1184,7 +1218,84 @@ impl Game {
                 }
             }
         }
-        true
+    }
+
+    /// DCGO `CanUseCondition` for a turn-scheduled `<Delay>`: does the carrier
+    /// at `handle` carry a `DelayEffect` clause whose clause-level condition
+    /// currently PASSES?
+    ///
+    /// Returns `false` only when every `DelayEffect` clause matching this
+    /// scan's `triggers` is gated by a condition that is currently false —
+    /// i.e. the window does not open, so the §16-16-1 activation (and with it
+    /// the trash of the carrier) must not happen.
+    ///
+    /// Conservative in every ambiguous case (carrier gone, effects missing, no
+    /// clause condition, an unconditional sibling clause): returns `true` and
+    /// lets the existing enqueue/drain path decide, so this guard can only
+    /// SUPPRESS a trash the rules do not license, never introduce one. A
+    /// marker-only `<Delay>` (empty process, ST23-15 / ST24-15) has no
+    /// condition and is therefore unaffected.
+    fn scheduled_delay_is_activatable(
+        &mut self,
+        handle: PermanentHandle,
+        triggers: &[DelayTrigger],
+    ) -> bool {
+        let Some(perm) = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+        else {
+            return true;
+        };
+        if perm.card_sources.is_empty() {
+            return true;
+        }
+        let top = perm.top_card();
+        let card_id = top.card_id(&self.card_data).to_string();
+        let source_card = top.handle();
+        let source_kind = match top.card_kind(&self.card_data) {
+            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => {
+                crate::enums::EffectSourceKind::Digimon
+            }
+            CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
+            CardKind::Option => crate::enums::EffectSourceKind::Option,
+            CardKind::Token => crate::enums::EffectSourceKind::Rule,
+        };
+        let controller = handle.player;
+
+        // Owned clone, so the condition closures can be evaluated against
+        // `&mut self` — same idiom as `non_firing_queued_effect_indices_for`.
+        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+            return true;
+        };
+
+        let mut saw_matching_delay = false;
+        for effect in effects.iter() {
+            if effect.timing != EffectTiming::DelayEffect {
+                continue;
+            }
+            if let Some(trigger) = effect.delay_trigger {
+                if !triggers.contains(&trigger) {
+                    continue;
+                }
+            }
+            saw_matching_delay = true;
+            let Some(condition) = &effect.condition else {
+                return true; // unconditional clause — always activatable
+            };
+            let ctx = crate::effect_context::EffectContext::new_with_source_kind(
+                self,
+                source_card,
+                Some(handle),
+                source_kind,
+                controller,
+            );
+            if condition(&ctx.as_read()) {
+                return true;
+            }
+        }
+        // No `DelayEffect` clause matched at all: leave the legacy path alone.
+        !saw_matching_delay
     }
 
     pub(crate) fn park_delayed_option_lifecycle(&mut self, resume: DelayedOptionLifecycleResume) {
