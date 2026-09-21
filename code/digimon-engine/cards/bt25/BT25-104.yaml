@@ -90,7 +90,7 @@ dual:
     inherited_text: ""
   option:
     use_cost: 6
-    colors: [yellow]
+    colors: [red, yellow]
     use_requirement:
       any_field_permanent:
         of: you

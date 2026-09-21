@@ -239,7 +239,7 @@ dual:
 
   option:
     use_cost: 6
-    colors: [purple, black]
+    colors: [purple]
     effect_text: |
       <Use Req. ([Three Musketeers] in text)> [Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.
     use_requirement:

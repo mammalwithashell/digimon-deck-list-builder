@@ -43,18 +43,31 @@ KIND_MAP = {
 }
 
 # Option-face colors for DUAL cards (the digimoncard.io API carries no
-# option_color fields). Ground truth = the printed card face; every shipped
-# DUAL so far prints the Option face in the card's own colors (verified against
-# the image-authored YAMLs: ST23-09 dual.option.colors [green, black],
-# ST24-07 [yellow], BT25-043/057/085 likewise). The former ST23-09 entry
-# ["Purple"] was an unexercised guess contradicting both the card face and the
-# shipped YAML — corrected 2026-07-05.
+# option_color fields). Ground truth = the official Bandai DB "DUAL Color" field
+# (world.digimoncard.com; mirrored as `dual_colors` in data/card_official.json),
+# which agrees with the printed card face: the Option band's 7-slot colour
+# stripe block (slot order Red/Blue/Yellow/Green/Black/Purple/White) lights only
+# the Option face's colour(s). Colours are listed in the official DB's order.
+#
+# The Option face is NOT, in general, the card's own colours. An earlier version
+# of this table assumed it was and "verified" that against YAMLs authored under
+# the same assumption, so the check was circular; the official field
+# contradicted five entries (corrected 2026-09-21): ST23-09 Green (was
+# Green+Black), ST24-07 Yellow+Red (was Yellow), EX12-018 Red (was Red+Yellow),
+# EX12-033 Blue (was Blue+Yellow), EX12-052 Green (was Green+Black).
+# Option colour drives option-use colour legality
+# (action/mask.rs option_color_match_available), so a wrong entry makes a legal
+# Option use illegal or an illegal one legal.
 DUAL_OPTION_COLOR_OVERRIDES = {
-    "ST23-09": ["Green", "Black"],
-    "ST24-07": ["Yellow"],
-    "EX12-018": ["Red", "Yellow"],
-    "EX12-033": ["Blue", "Yellow"],
-    "EX12-052": ["Green", "Black"],
+    "ST23-09": ["Green"],            # card Green/Black
+    "ST24-07": ["Yellow", "Red"],    # card Yellow/Red
+    "EX12-018": ["Red"],             # Siriusmon (card Red/Yellow)
+    "EX12-033": ["Blue"],            # card Blue/Yellow
+    "EX12-052": ["Green"],           # card Green/Black
+    "BT25-043": ["Yellow"],          # card Yellow
+    "BT25-057": ["Green"],           # card Green/Black
+    "BT25-085": ["Purple"],          # BeelStarmon / Fly Bullet (card Purple/Black)
+    "BT25-104": ["Red", "Yellow"],   # card Red/Yellow
     # BT26 (2026-09-21) — read off the printed card face
     # (DCGO_Application/Assets/Textures/Card/<ID>.webp): the Option band's
     # name-bar colour AND its 7-slot colour-indicator stripe block (slot order
@@ -64,10 +77,7 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     # (and prints a split Yellow|Red bar). Card colours shown for contrast.
     # Independently confirmed 8/8 by the official Bandai DB's "DUAL Color"
     # field (world.digimoncard.com; now captured as `dual_colors` in
-    # data/card_official.json). NOTE: that same field CONTRADICTS the five
-    # entries above (official: ST23-09 Green, ST24-07 Yellow+Red, EX12-018
-    # Red, EX12-033 Blue, EX12-052 Green) — left untouched here, tracked
-    # separately.
+    # data/card_official.json).
     "BT26-031": ["Yellow"],          # Murasamemon (card Yellow/Blue)
     "BT26-032": ["Green"],           # Ceresmon (card Yellow/Green)
     "BT26-033": ["Yellow", "Red"],   # Jupitermon (card Yellow/Red)

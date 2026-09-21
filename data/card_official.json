@@ -1,5 +1,5 @@
 {
-  "count": 4324,
+  "count": 4326,
   "failed": [],
   "cards": {
     "AD1-001": {
@@ -50391,6 +50391,8 @@
       "form": "Mega",
       "attribute": "Virus",
       "type": "Shaman/Glowing Dawn/BEATBREAK",
+      "dual_colors": "Yellow",
+      "dual_cost": "6",
       "qa": [
         "The player that activated the effect choses 1 player."
       ],
@@ -50919,6 +50921,8 @@
       "form": "Ultimate",
       "attribute": "Data",
       "type": "Cyborg/Glowing Dawn/BEATBREAK",
+      "dual_colors": "Green",
+      "dual_cost": "4",
       "qa": [
         "The effects trigger simultaneously, so the player can choose the activation order."
       ],
@@ -51897,6 +51901,8 @@
       "form": "Mega",
       "attribute": "Virus",
       "type": "Wizard/Three Musketeers/Iliad/TS",
+      "dual_colors": "Purple",
+      "dual_cost": "6",
       "qa": [
         "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
       ],
@@ -52339,6 +52345,8 @@
       "form": "Mega",
       "attribute": "Vaccine",
       "type": "Light Dragon/DATA SQUAD",
+      "dual_colors": "Red Yellow",
+      "dual_cost": "6",
       "qa": [
         "Yes, you trash it. The standard rules apply even when notes aren't shown."
       ],
@@ -76328,6 +76336,8 @@
       "form": "Mega",
       "attribute": "Vaccine",
       "type": "Light Dragon/VB",
+      "dual_colors": "Red",
+      "dual_cost": "5",
       "qa": [
         "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
       ],
@@ -106998,6 +107008,8 @@
       "form": "Mega",
       "attribute": "Data",
       "type": "Mutant/Glowing Dawn/BEATBREAK",
+      "dual_colors": "Green",
+      "dual_cost": "5",
       "qa": [
         "Yes, it is. This card is treated as an Option card with traits such as Glowing Dawn and BEATBREAK."
       ],
@@ -107395,6 +107407,8 @@
       "form": "Mega",
       "attribute": "Vaccine",
       "type": "Light Dragon/DATA SQUAD",
+      "dual_colors": "Yellow Red",
+      "dual_cost": "5",
       "qa": [
         "Yes, it is. This card is treated as an Option card with the DATA SQUAD trait."
       ],
@@ -113317,6 +113331,96 @@
           "text": "[Security] Play this card without paying the cost."
         }
       ]
+    },
+    "EX12-033": {
+      "card_id": "EX12-033",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Yellow",
+      "play_cost": "D",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Cyborg/DS",
+      "dual_colors": "Blue",
+      "dual_cost": "5",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Jellymon] in text or w/[DS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] [When Attacking] [Counter] You may trash up to 3 cards in your hand. Then, to 1 of your opponent's Digimon, give -4000 DP until your turn ends for each card this effect trashed. [All Turns] [Once Per Turn] When any of your Digimon with [Jellymon] in their texts or the [DS] trait would leave the battle area, by returning 3 cards from your trash to the bottom of the deck, they don't leave."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([DS] trait)＞ (Specified cards let you ignore color requirements.) [Main] Trash any 4 cards under your opponent's Digimon or Tamers. Then, you may return 1 of your opponent's Digimon or Tamers without cards under it to the hand."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Jellymon] in text or w/[DS] trait: Cost 3"
+    },
+    "EX12-052": {
+      "card_id": "EX12-052",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Green Black",
+      "play_cost": "D",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Beast Knight/NSp",
+      "dual_colors": "Green",
+      "dual_cost": "5",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Angoramon] in text or w/[NSp] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Vortex＞ [When Digivolving] Your opponent's Digimon effects don't affect 1 of your Digimon until their turn ends. [When Digivolving] [When Attacking] [Counter] [Once Per Turn] 1 of your Digimon may get +3000 DP until your opponent's turn ends and battle 1 of their Digimon."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([NSp] trait)＞ (Specified cards let you ignore color requirements.) [Main] 1 of your Digimon may unsuspend. Then, suspend 2 of your opponent's Digimon. 2 of their Digimon or Tamers can't unsuspend until their turn ends."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Angoramon] in text or w/[NSp] trait: Cost 3"
     }
   }
 }

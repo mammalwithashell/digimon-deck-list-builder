@@ -162,7 +162,7 @@ dual:
                     expiry: end_of_opponents_turn
   option:
     use_cost: 5
-    colors: [red, yellow]
+    colors: [red]
     use_requirement:
       any_field_permanent:
         of: you
