@@ -199,3 +199,66 @@ right.
 - **`assert: { at: N }` is 0-based over the STEP LIST** (dcgo-only and sim-only
   rows included) and reads the state at which step N was taken — a probe assert
   at the digivolve step shows the board BEFORE it.
+
+---
+
+## Oracle run 2026-09-21 (close-out job `three-musketeers-2`) — all 5 clauses MEASURED
+
+### First, the authoring defect that hid every one of them
+
+The 2026-09-20 pass aborted all five lines with
+`prompt mismatch: step N expected count 2 but DCGO asked for count 1`. That is
+**not** DCGO refusing to stack two bodies. `count:` is the number of PICKS the
+prompt asks for, and the MultipleSkills hook passes the literal `1`
+(`DCGO/Assets/Scripts/Script/MultipleSkills.cs:597-599`); the stack size is what
+`candidates:` asserts, and `ScriptedLine.TryTakeStep` (`ScriptedLine.cs:127-140`)
+compares `expect_prompt` first — so the panel DID open. All eight BT25-026/028/058
+rows were the only ones in the corpus authored `count: 2`; fixed, re-emitted,
+re-drained on `D:/dcgo-build/scripted-v16`, all five lines then `completed` with
+the `[BT25-028, BT25-028]` multiset matching. **Claim 2 of "Prompt shapes,
+re-derived" above is CONFIRMED, not falsified.**
+
+### Verdicts
+
+| Clause | Verdict | Evidence |
+|---|---|---|
+| `effect#0` | **confirmed** | CLEAN, 14/16 rows (sidecar `20260921T045136Z_0f07954d…`). DCGO's `action_detail` independently shows the alt-path cost: `cost_paid 3`, memory 3 → 0 |
+| `effect#1` | **confirmed** | CLEAN, 13/14 rows (`20260921T045153Z_05752781…`). The cost −5 witness reproduces on DCGO: `cost_paid 7`, memory 5 → −2 |
+| `effect#2` | **confirmed** | CLEAN, 14/16 rows (`20260921T045210Z_19e5b7ae…`) |
+| `effect#3` | **diverged** | see below (`20260921T045227Z_15e1e879…`) |
+| `inherited#0` | **confirmed** | CLEAN, 18/24 rows (`20260921T045251Z_1d972901…`) |
+
+### `effect#3` — the open finding is now MEASURED against the oracle
+
+```
+DIVERGED at step 24 (20 of 26 ours / 23 dcgo)
+  p1.trash:             ours=[]                dcgo=[ST2-01, ST2-02]
+  p1.field[0].sources:  ours=[ST2-01, ST2-02]  dcgo=[]
+  (same two fields again at step 25 — one cause, one consequence)
+```
+
+DCGO trashes the opponent's two digivolution cards; we trash nothing. This is
+exactly what `F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED` predicted, and it
+is now oracle-backed rather than self-observed.
+
+**What this stage ruled OUT (three new characterization tests in
+`tests/cards_behavioral/bt25/bt25_028.rs`, all GREEN):** the clause's prompt
+machinery is not broken in general —
+`bt25_028_all_turns_offers_opponent_source_pick` (trigger = p0's own play),
+`…_on_opponent_entry` (trigger = an opponent Digimon entering) and
+`…_on_opponent_digivolve` (trigger = the opponent DIGIVOLVING, on the
+OPPONENT's turn — the exam's own shape) each park a `SourceMulti` prompt over the
+opponent's below-top sources after the `optional: true` gate is accepted. So the
+cause is NOT `min: 0`, not the empty `filter:`, not `install_source_multi_selection`
+returning early on an empty candidate scan, not the controller/turn-player pairing,
+and not the resume-after-gate path per se. It is something specific to the exam
+board that these fixtures do not yet reproduce. The finding stays OPEN and stays
+`diverged`; the next author should replay `BT25-028-effect3.yaml` under the engine
+MCP and watch the candidate scan on that exact board rather than re-deriving from
+the installer.
+
+Unchanged caveat: `effect#3` is a PARTIAL measurement even on a clean diff — the
+DNA half needs `[GraceNovamon]` (BT25-103 / EX5-073), which has no YAML spec.
+
+**Denominator: 5 clauses — 4 confirmed, 1 diverged, 0 unreachable, 0 unavailable,
+0 unmeasured.**

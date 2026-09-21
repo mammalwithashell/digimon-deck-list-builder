@@ -172,3 +172,34 @@ Slot hygiene: one Digimon on P0's board, none on P1's, for the whole line.
 **`effect#5` moves `unreachable` -> `unmeasured`**: it needs an oracle pass
 against `D:/dcgo-build/scripted-v16`, not a tooling change. Denominator now
 **8 clauses: 7 + 1 authored-unmeasured, 0 unreachable.**
+
+## Oracle run 2026-09-21 — `effect#5` MEASURED: `unreachable` retired, now `diverged`
+
+The stored `unreachable` reason ("no shared wire action means 'plug this Option
+in from hand'") **no longer holds** and has been overwritten in
+`qa/qa-reports/exam-verdicts/BT25-100.json`. `BT25-100-effect5.yaml` ran
+`completed` (sidecar
+`20260921T042552Z_0bad16abd58e4f80bf7cb98eb9f1ae40.state.jsonl`).
+
+`--all-diffs` reports ONE row, at the host pick — the same shape as the sister
+clause `BT25-093#effect#4`, with the price the only difference:
+
+```
+DIVERGED at step 7 (9 of 10 ours / 10 dcgo steps)
+  memory:  ours=1 dcgo=3
+  p0.hand: ours=[BT1-028,BT1-028,BT2-024,BT3-020]
+           dcgo=[BT1-028,BT1-028,BT2-024,BT25-100,BT3-020]
+```
+
+`ours=1` is the printed **Cost 2** paid (3 → 1) — the witness this file was
+built to read — against BT25-093's `ours=0` for its Cost 3. Every later row
+matches: host at 3000 DP, the Option in neither hand nor trash, P0 still holding
+the turn.
+
+**Triage:** not a cost-value divergence but a payment-ORDER one, and the PDF
+backs DCGO — `general_rule.pdf` §10-1-3-1..3 (p.19) pays the link cost AFTER the
+host is chosen, while our Plug-In Option branch pays at declaration. Logged as
+`G-ENGINE-OPTION-HAND-LINK-COST-TIMING` in `docs/RUST_ENGINE_GAPS.md`.
+
+**Denominator: 8 clauses — 7 confirmed, 1 diverged, 0 unreachable, 0
+unavailable, 0 unmeasured.**

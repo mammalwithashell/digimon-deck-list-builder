@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:13:46.564323800+00:00",
+  "last_updated": "2026-09-21T04:57:54.266041+00:00",
   "clauses": {
     "BT25-058#effect#0": {
       "clause_id": "BT25-058#effect#0",
@@ -28,6 +28,15 @@
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect2.yaml",
       "recorded_at": "2026-09-19T15:13:18.746250300+00:00"
+    },
+    "BT25-058#effect#3": {
+      "clause_id": "BT25-058#effect#3",
+      "card_id": "BT25-058",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect3.yaml",
+      "recorded_at": "2026-09-21T04:57:54.266041+00:00"
     },
     "BT25-058#effect#4": {
       "clause_id": "BT25-058#effect#4",

@@ -16,6 +16,15 @@
 #
 # ─── SOURCE PRIORITY NOTE — inherited effect ─────────────────────────────────
 #
+# FIXED 2026-09-21: cards.json carried a DIFFERENT card's inherited text here
+# ("<Security A. +1>"), and card_data.rs parses printed keywords out of that
+# field, so every Digimon inheriting from Crescemon silently gained an extra
+# security check ON TOP of the aura authored below. Measured by the DCGO exam
+# (BT25-026-inherited0: p1.security ours=3 dcgo=4) and corrected in
+# data/card_overrides.json + data/cards.json, guarded by
+# tests/data_official_parity.rs::official_db_inherited_text_matches_cards_json.
+# The original note follows.
+#
 # cards.json inherited_effect_description_eng = "<Security A. +1>". The printed
 # card FACE (image BT25-026.webp) and DCGO C# BOTH say "[Your Turn] This
 # Digimon's attack target can't change" (CanNotSwitchAttackTargetClass with

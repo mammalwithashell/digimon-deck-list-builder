@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:22:43.966620100+00:00",
+  "last_updated": "2026-09-21T04:46:13.975776+00:00",
   "clauses": {
     "BT25-100#effect#0": {
       "clause_id": "BT25-100#effect#0",
@@ -50,11 +50,12 @@
     "BT25-100#effect#5": {
       "clause_id": "BT25-100#effect#5",
       "card_id": "BT25-100",
-      "verdict": "unreachable",
+      "verdict": "diverged",
       "label": "Link Condition",
       "text_sha256": "fb7c072566404d8212577c1be50293174766e3c6d54d5884d2c616c9eaa6b036",
-      "reason": "Link Condition hand plug-in: no shared wire action means 'plug this Option in from hand' (NOTES-BT25-100.md). The Cost-2 link is only paid by a hand declaration (the [Main]'s link is free; an Option has no battle-area origin). Ours: `link: {from: hand}` finds no legal action -- the Option plug-in lives on the PLAY bit behind the [Main]/[Link] mode-select; DCGO: a separate ActivateCardAction over the LinkEffect, which the harness emits only from a HAND_EFFECT bit. One wire integer, two meanings. Reachable once the engine exposes the Option hand-link on HAND_EFFECT (as for Link Digimon) or the emitter maps Play+branch 1 to ActivateCardAction.",
-      "recorded_at": "2026-09-19T15:16:31.157405+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-100-effect5.yaml",
+      "reason": "DIVERGED at step 7 (compared 9 of 10 ours / 10 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-21T04:46:13.975776+00:00"
     },
     "BT25-100#effect#6": {
       "clause_id": "BT25-100#effect#6",

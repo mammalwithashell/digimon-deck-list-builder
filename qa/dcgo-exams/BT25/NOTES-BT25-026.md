@@ -106,3 +106,65 @@ hold, so neither file needed a repair:
 `F-DATA-BT25-026-INHERITED-TEXT` (above) is unchanged and still unfixed, so the
 expected oracle outcome for `inherited0` is still a one-field `p1.security`
 divergence to triage as OUR card-data bug.
+
+---
+
+## Oracle run 2026-09-21 (close-out job `three-musketeers-2`) — both clauses CLOSED
+
+### The 2026-09-20 pass never measured either clause — an AUTHORING defect, not a DCGO one
+
+Both lines aborted with `prompt mismatch: step N expected count 2 but DCGO asked
+for count 1` on the `dcgo_only` MultipleSkills row, which the drain stage read as
+"DCGO stacks only ONE body on Dianamon's own digivolve". **That reading was
+wrong.** `count:` on a scripted row is the number of PICKS THE PROMPT ASKS FOR,
+and DCGO's MultipleSkills hook passes the literal `1`:
+
+```csharp
+// DCGO/Assets/Scripts/Script/MultipleSkills.cs:597-599
+if (!Digimon.Harness.InputDriver.TryAnswerStep(
+        playerID, Digimon.Harness.InputDriver.KindMultipleSkills,
+        1, __candidateIds, out __step))
+```
+
+The stack SIZE is asserted by `candidates:`, and `ScriptedLine.TryTakeStep`
+(`ScriptedLine.cs:127-140`) checks `expect_prompt` BEFORE `expect_count` — so the
+kind matched, i.e. DCGO really did open a MultipleSkills panel. Every other card's
+confirmed scenario (EX12-036, EX12-047, EX7-073, ST19-14, BT25-085) already used
+`count: 1` with a two-element candidate list; only the eight BT25-026/028/058
+rows were authored `count: 2`. Fixed in all eight, re-emitted, re-drained against
+`D:/dcgo-build/scripted-v16`, and **both BT25-026 lines then ran `completed`** —
+with the two-candidate `[BT25-028, BT25-028]` multiset passing, which CONFIRMS
+claim 1 of the 2026-09-21 adversarial re-read rather than retiring it.
+
+### `effect#2` — **confirmed**
+CLEAN diff over 22 of 26 rows (4 sim-only, 2 DCGO intermediate), sidecar
+`20260921T045051Z_3ed6c0e1f5b3484fbc00e2890918759f.state.jsonl`. The
+`dcgo_only` `value: 3` cost row and the trash-digivolve card row both hold.
+
+### `inherited#0` — **confirmed**, after `F-DATA-BT25-026-INHERITED-TEXT` was FIXED
+The first diff reported exactly the predicted one-field divergence:
+
+```
+DIVERGED at step 21
+  p1.security: ours=3 dcgo=4
+  p1.trash:    ours=[ST1-02, ST1-03, ST1-04] dcgo=[ST1-02, ST1-03]
+```
+
+— our extra security check, caused by `data/cards.json` carrying a DIFFERENT
+card's inherited text (`<Security A. +1>`). The card face, the official Bandai DB
+(`data/card_bundles/BT25-026.md`) and `BT25_026.cs`
+(`CanNotSwitchAttackTargetClass`, `isInheritedEffect`) all print "[Your Turn]
+This Digimon's attack target can't change." **Fixed this stage** in
+`data/card_overrides.json` (durable) + `data/cards.json` (live), guarded by
+`code/digimon-engine/tests/data_official_parity.rs::official_db_inherited_text_matches_cards_json`
+(fails before / passes after). Re-diffing the SAME sidecar
+(`20260921T045115Z_bd44ae610bab41afb025096fde1239cc.state.jsonl`) is then CLEAN.
+
+A pool-wide sweep found 15 more gross inherited-text mismatches against the
+official mirror (an "Ace Overflow" family: BT19-011/037/050, EX9-013, EX9-020,
+LM-025, LM-026, LM-043, P-191; plus wording drift on BT1-060, BT3-027, BT21-059,
+EX4-032/033/034). They are listed in the guard's doc comment and left for a
+follow-up — only ids whose face has been read belong in its allowlist.
+
+**Denominator: 4 clauses — 4 confirmed, 0 diverged, 0 unreachable, 0 unavailable,
+0 unmeasured.**

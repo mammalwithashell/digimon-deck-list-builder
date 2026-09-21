@@ -56,3 +56,36 @@ pick and adds once (§15-15-10-1). Expect a one-field `p0.hand` divergence on
 the 2nd pick row (DCGO already shows EX7-070 in hand) with no downstream
 rows; triage it as the documented DCGO quirk (the sister ToyAgumon
 EX7-008#effect#1 measured exactly this), not as an engine bug.
+
+## Oracle run 2026-09-21 (close-out job `three-musketeers-2`) — the PREDICTED diff, measured
+
+`effect#0` and `inherited#0` were already `confirmed` from the earlier pass.
+`effect#1` ran `completed` (sidecar
+`20260921T042338Z_438b4ce300ee4af09e2136c26f379ef0.state.jsonl`) and the
+`--all-diffs` re-run reports **exactly the one row this file predicted**, and
+nothing else:
+
+```
+DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps, 1 sim-only row)
+  LEAD step 3:
+    p0.hand: ours=[BT2-052, BT2-056, BT3-059, BT8-061]
+             dcgo=[BT2-052, BT2-056, BT3-059, BT8-061, EX7-070]
+```
+
+Step 3 is the SECOND bucket pick. DCGO has already moved the first bucket's
+EX7-070 to hand; ours adds both picks after the last bucket closes. Step 4 (the
+lone-remainder row) and step 5 (the T2 hand-over) match, so the end state —
+EX7-070 + the second ToyAgumon in hand, BT25-100 to the deck bottom — is
+identical on both engines.
+
+**Triage: the documented DCGO quirk, not an engine bug** —
+`G-EXAM-REVEAL-BUCKET-ADD-TIMING` in `docs/RUST_ENGINE_GAPS.md` (DCGO
+`RevealLibrary.cs:291-328` moves each pick on its own `SelectCardEffect`'s
+`Mode`; ours is the 15-1-2 / 15-1-6 choose-all-then-add reading, and 15-15-3-2
+puts revealed cards in no area meanwhile). The sister ToyAgumon
+`EX7-008#effect#1` and Deputymon `BT6-060#effect#0` measured the same single
+row. The clause therefore stands as `diverged` in the store with our side
+adjudicated correct; no further action.
+
+**Denominator: 3 clauses — 2 confirmed, 1 diverged (adjudicated DCGO quirk),
+0 unreachable, 0 unavailable, 0 unmeasured.**

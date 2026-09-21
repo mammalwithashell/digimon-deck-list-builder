@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:22:53.032594300+00:00",
+  "last_updated": "2026-09-21T04:57:29.532150800+00:00",
   "clauses": {
     "BT25-026#effect#0": {
       "clause_id": "BT25-026#effect#0",
@@ -19,6 +19,24 @@
       "text_sha256": "e6bade3e3b315e1a3d518705c53423f14d5e33a6ad4ba14a3b66a473a2a0445a",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-026-effect1.yaml",
       "recorded_at": "2026-09-19T15:22:53.032594300+00:00"
+    },
+    "BT25-026#effect#2": {
+      "clause_id": "BT25-026#effect#2",
+      "card_id": "BT25-026",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "01e2b285115c08ec35d3030c195accc28887d2a50bbd402ee38703c9f70b65b4",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-026-effect2.yaml",
+      "recorded_at": "2026-09-21T04:53:43.523453400+00:00"
+    },
+    "BT25-026#inherited#0": {
+      "clause_id": "BT25-026#inherited#0",
+      "card_id": "BT25-026",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "fb267b3a66681c2187e281af2679ddeb4b468472a8409873ca6fe288113bfc48",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-026-inherited0.yaml",
+      "recorded_at": "2026-09-21T04:57:29.532150800+00:00"
     }
   }
 }

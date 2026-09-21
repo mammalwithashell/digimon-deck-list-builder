@@ -94487,7 +94487,7 @@
       "Data"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends.\r\n[Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Dianamon] in the trash with the cost reduced by 2.",
-    "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon's attack target can't change.",
     "security_effect_description_eng": "",
     "evo_costs": [
       {

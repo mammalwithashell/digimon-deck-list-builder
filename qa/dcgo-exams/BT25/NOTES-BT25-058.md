@@ -100,3 +100,29 @@ apply here.
 Both bodies are silent in that window (p1's board is empty and each body guards
 its own picks), so whichever ordinal DCGO resolves, the end state is the same —
 the row cannot change the measurement, only abort it.
+
+---
+
+## Oracle run 2026-09-21 (close-out job `three-musketeers-2`) — `effect#3` confirmed
+
+The 2026-09-20 pass aborted this line on
+`prompt mismatch: step 14 expected count 2 but DCGO asked for count 1`, and the
+file's own note said to "drop the row then" if DCGO stacked only one skill.
+**Do not drop it.** The abort was an authoring defect: `count:` is the number of
+PICKS a prompt asks for and DCGO's MultipleSkills hook passes the literal `1`
+(`DCGO/Assets/Scripts/Script/MultipleSkills.cs:597-599`), while the stack size is
+asserted by `candidates:`; `ScriptedLine.TryTakeStep` (`ScriptedLine.cs:127-140`)
+checks the prompt KIND before the count, so the panel had already matched. The
+row was authored `count: 2`, which no other card's scenario used.
+
+Fixed to `count: 1` (candidates `[BT25-058, BT25-058]` unchanged), re-emitted and
+re-drained against `D:/dcgo-build/scripted-v16`: the line ran `completed` and the
+diff is **CLEAN** — 15 of 16 rows compared (1 sim-only), sidecar
+`20260921T045315Z_a77e80393ac548c2a6ea0552d1227aa3.state.jsonl`. The
+two-candidate MultipleSkills row on this card's own entry is therefore REAL and
+the "VERIFIED" claim in this file stands.
+
+`BT25-058#effect#3` → **confirmed**.
+
+**Denominator: 6 clauses — 6 confirmed, 0 diverged, 0 unreachable, 0 unavailable,
+0 unmeasured.**

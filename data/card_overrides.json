@@ -1371,6 +1371,7 @@
       }
     ]
   },
+  "_note_BT25-026": "BT25-026 Crescemon: the digimoncard.io ingest put a DIFFERENT card's inherited text in `inherited_effect_description_eng` (《Security A. +1》). The card face, the official Bandai DB (data/card_bundles/BT25-026.md, world.digimoncard.com) and DCGO (BT25/Blue/BT25_026.cs -> CanNotSwitchAttackTargetClass, isInheritedEffect) all print \"[Your Turn] This Digimon's attack target can't change.\" card_data.rs parses printed keywords out of this field, so the bad text gave every Digimon inheriting from Crescemon a free extra security check (measured by the DCGO exam: BT25-026-inherited0 diffed p1.security ours=3 dcgo=4). Guarded by tests/data_official_parity.rs::official_db_inherited_text_matches_cards_json.",
   "BT25-026": {
     "evo_costs": [
       {
@@ -1383,7 +1384,8 @@
         "level": 4,
         "memory_cost": 3
       }
-    ]
+    ],
+    "inherited_effect_description_eng": "[Your Turn] This Digimon's attack target can't change."
   },
   "BT25-048": {
     "evo_costs": [

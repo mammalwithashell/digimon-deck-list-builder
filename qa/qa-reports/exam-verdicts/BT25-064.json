@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:15:56.502501500+00:00",
+  "last_updated": "2026-09-21T04:45:20.183611100+00:00",
   "clauses": {
     "BT25-064#effect#0": {
       "clause_id": "BT25-064#effect#0",
@@ -19,7 +19,7 @@
       "text_sha256": "f7489a8b7ba819c2cb88eeaa168e7606110fcce7e928d1989fdd0930db17a87a",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-064-effect1.yaml",
       "reason": "DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-09-19T15:15:56.502501500+00:00"
+      "recorded_at": "2026-09-21T04:45:20.183611100+00:00"
     },
     "BT25-064#inherited#0": {
       "clause_id": "BT25-064#inherited#0",

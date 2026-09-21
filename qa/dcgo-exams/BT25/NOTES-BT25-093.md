@@ -145,3 +145,41 @@ Slot hygiene: one Digimon on P0's board, none on P1's, for the whole line.
 **`effect#4` moves `unreachable` -> `unmeasured`**: it needs an oracle pass
 against `D:/dcgo-build/scripted-v16`. Denominator now **6 clauses: 5 + 1
 authored-unmeasured, 0 unreachable.**
+
+## Oracle run 2026-09-21 — `effect#4` MEASURED: `unreachable` retired, now `diverged`
+
+The stored `unreachable` reason ("no line can mean 'hand plug-in' on both
+engines") **no longer holds** and has been overwritten in
+`qa/qa-reports/exam-verdicts/BT25-093.json`: `7e30343d4`
+(`G-ENGINE-OPTION-LINK-FROM-HAND`) moved our Option hand-link onto the
+`HAND_EFFECT` bit, `BT25-093-effect4.yaml` lowers against it, and the job ran
+`completed` (sidecar
+`20260921T042530Z_8f13b83c24244da187e28bc0f4379dc3.state.jsonl`).
+
+`--all-diffs` reports ONE row, at the host pick:
+
+```
+DIVERGED at step 7 (9 of 10 ours / 10 dcgo steps)
+  memory:  ours=0 dcgo=3
+  p0.hand: ours=[BT1-028,BT1-028,BT2-024,BT3-020]
+           dcgo=[BT1-028,BT1-028,BT2-024,BT25-093,BT3-020]
+```
+
+Everything after it matches: the link lands on Kamemon on both engines, the
+host reads 3000 DP (1000 + the `effect#3` Link DP box), the Option is in
+neither hand nor trash, and **the printed Cost 3 is paid on both sides** — ours
+has memory 3 → 0 by the pick, DCGO by the end of the procedure. So the clause's
+substance (cost 3, from hand, `[TS]` host) is measured correct; what diverges is
+WHEN the cost is paid.
+
+**Triage — the PDF backs DCGO, and the finding is ours:** `general_rule.pdf`
+§10-1-3 (p.19) orders the procedure declare/reveal → **choose the host** →
+10-1-3-2 "The specified link cost is paid" → plug in. Our Plug-In Option branch
+pays at declaration (`play_option_core` in `OptionPlayMode::Link`,
+`game_actions/link.rs:197-217`); our *Digimon*-link branch already pays after the
+pick. Logged as `G-ENGINE-OPTION-HAND-LINK-COST-TIMING` in
+`docs/RUST_ENGINE_GAPS.md`; not fixed in this stage. Clause stays `diverged`
+until that lands.
+
+**Denominator: 6 clauses — 5 confirmed, 1 diverged, 0 unreachable, 0
+unavailable, 0 unmeasured.**

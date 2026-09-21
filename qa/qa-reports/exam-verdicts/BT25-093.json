@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-19T15:22:50.392968200+00:00",
+  "last_updated": "2026-09-21T04:45:30.074686+00:00",
   "clauses": {
     "BT25-093#effect#0": {
       "clause_id": "BT25-093#effect#0",
@@ -41,11 +41,12 @@
     "BT25-093#effect#4": {
       "clause_id": "BT25-093#effect#4",
       "card_id": "BT25-093",
-      "verdict": "unreachable",
+      "verdict": "diverged",
       "label": "Link Condition",
       "text_sha256": "9d4716573dac469c1419dcbf9269cd84ee848a841a854e159fbc7d67eb6af6fa",
-      "reason": "Link Condition hand plug-in: same reason as BT25-100#effect#5 (NOTES-BT25-093.md). The Cost-3 link is only paid by a hand declaration; our engine puts the Option plug-in on the PLAY bit behind the mode-select, DCGO's is a separate ActivateCardAction the harness emits only from a HAND_EFFECT bit -- no line can mean 'hand plug-in' on both engines.",
-      "recorded_at": "2026-09-19T15:16:31.157405+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-093-effect4.yaml",
+      "reason": "DIVERGED at step 7 (compared 9 of 10 ours / 10 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-21T04:45:30.074686+00:00"
     },
     "BT25-093#effect#5": {
       "clause_id": "BT25-093#effect#5",

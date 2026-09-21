@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-21T04:57:53.707858600+00:00",
+  "clauses": {
+    "BT25-028#effect#0": {
+      "clause_id": "BT25-028#effect#0",
+      "card_id": "BT25-028",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "8f4a145aaab9fbd2a85b2c4318ee43219638f5bb4ee3a1132ecea6f714336b39",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-028-effect0.yaml",
+      "recorded_at": "2026-09-21T04:57:43.246531200+00:00"
+    },
+    "BT25-028#effect#1": {
+      "clause_id": "BT25-028#effect#1",
+      "card_id": "BT25-028",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "5ff7b824ad5ea8733c8e7bb13e29e7dfd402888ada9ac7c4545dac5227f90e45",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-028-effect1.yaml",
+      "recorded_at": "2026-09-21T04:57:43.713626500+00:00"
+    },
+    "BT25-028#effect#2": {
+      "clause_id": "BT25-028#effect#2",
+      "card_id": "BT25-028",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "714770389735a35db0c700a9190c79bfba536b065aa73e733e95aab47ab76e83",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-028-effect2.yaml",
+      "recorded_at": "2026-09-21T04:57:52.530823900+00:00"
+    },
+    "BT25-028#effect#3": {
+      "clause_id": "BT25-028#effect#3",
+      "card_id": "BT25-028",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "bc59f7e362654f3f82734ef35229d71e36b30b99bf7194cf985db4b59148d0b7",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-028-effect3.yaml",
+      "reason": "DIVERGED at step 24 (compared 20 of 26 ours / 23 dcgo steps (6 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-09-21T04:57:53.059500+00:00"
+    },
+    "BT25-028#inherited#0": {
+      "clause_id": "BT25-028#inherited#0",
+      "card_id": "BT25-028",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "1264383289c1de5c071a013773eeeefa3e4f2e055f06a30e57b730e545c6fa0e",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-028-inherited0.yaml",
+      "recorded_at": "2026-09-21T04:57:53.707858600+00:00"
+    }
+  }
+}

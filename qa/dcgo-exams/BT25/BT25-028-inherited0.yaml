@@ -148,9 +148,14 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-028 } }
     expect: { prompt: main_phase }
+  # `count:` on a MultipleSkills row is the PICKS THE PROMPT ASKS FOR (always 1 --
+  # MultipleSkills.cs:597-599 passes the literal 1 to TryAnswerStep), NOT the number
+  # of stacked bodies. The stack size is asserted by `candidates:` below. Authored as
+  # `count: 2` until 2026-09-21, which aborted this line before the candidate multiset
+  # was ever compared ('expected count 2 but DCGO asked for count 1').
   - actor: 0
     do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
-    expect: { prompt: MultipleSkills, count: 2, candidates: [BT25-028, BT25-028] }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-028, BT25-028] }
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
     expect: { prompt: OptionalSkill }
