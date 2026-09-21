@@ -217,7 +217,7 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
     // Pin memory at 0 so `check_turn_end` doesn't auto-rotate during play
     // dispose — we want explicit, turn-at-a-time advancement.
     r.game.set_memory(0);
-    let std_result = r.game.play_option_from_hand(0, 0);
+    let std_result = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0);
     assert_eq!(
         std_result,
         OptionPlayResult::Trashed,
@@ -244,7 +244,7 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
     advance_to_main(&mut r);
     let p1_battle_before = r.battle_area_size(1);
     let p1_turn_count = r.turn_count();
-    let delay_result = r.game.play_option_from_hand(1, 0);
+    let delay_result = crate::hand_declaration::declare_from_hand(&mut r.game, 1, 0);
     assert_eq!(
         delay_result,
         OptionPlayResult::Trashed,
@@ -292,7 +292,7 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
     // ── Turn 3 (P0): play Link Option ────────────────────────────────
     advance_to_main(&mut r);
     let dp_before = r.effective_dp(host).expect("host has base DP");
-    let link_result = r.game.play_option_from_hand(0, 0); // hand[0] = LINK-OPT
+    let link_result = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0); // hand[0] = LINK-OPT
     assert_eq!(
         link_result,
         OptionPlayResult::Pending,
@@ -440,13 +440,13 @@ fn rocks_plug_in_host_deletion_cascade() {
 
     // Attach PLUG-A.
     advance_to_main(&mut r);
-    let r1 = r.game.play_option_from_hand(0, 0); // PLUG-A (hand[0])
+    let r1 = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0); // PLUG-A (hand[0])
     assert_eq!(r1, OptionPlayResult::Pending);
     let aid = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, aid);
 
     // Attach PLUG-B.
-    let r2 = r.game.play_option_from_hand(0, 0); // PLUG-B is now hand[0]
+    let r2 = crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0); // PLUG-B is now hand[0]
     assert_eq!(r2, OptionPlayResult::Pending);
     let aid2 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, aid2);

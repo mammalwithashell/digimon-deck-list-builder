@@ -22,7 +22,8 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
 use digimon_engine::permanent::PermanentHandle;
@@ -577,10 +578,158 @@ fn bt25_100_no_mode_select_when_only_non_ts_digimon_on_board() {
     );
 }
 
-/// Positive control: with a legal [TS] Digimon host the dual-mode prompt is
-/// still offered, both branches labelled.
+// ── Section 6: the from-hand link is its OWN main-phase action ───────────
+//
+// `G-ENGINE-OPTION-LINK-FROM-HAND` (qa/dcgo-exams/BT25/NOTES-BT25-100.md
+// "`effect#5` -- unreachable: no shared action means \"plug this Option in from
+// hand\"", same clause on BT25-093#effect#4).
+//
+// general_rule.pdf (Ver.3.6) §6-5-1 lists the main-phase actions, and "use an
+// Option card from the hand" (§6-5-1-3) and "link a card from the hand or
+// battle area" (§6-5-1-4) are two SEPARATE entries; §10-1-1 says a card is
+// linked from the hand "by paying the cost as part of the main phase actions".
+// So plugging a Plug-In Option in from hand is its own declaration, and it
+// belongs on the `HAND_EFFECT` bit -- exactly where the Link DIGIMON's from-hand
+// declaration already lives -- not on a mode-select branch of the PLAY bit.
+//
+// DCGO draws the same line: the declaration is an `ActivateCardAction` over
+// `CardEffectFactory.LinkEffect`, which accepts ANY `CardSource` with a
+// `linkCondition` that `IsExistOnHand` (Link.cs:19-24) and never a
+// `PlayCardAction`. Before this change one wire integer meant two different
+// things and no exam line could mean "hand plug-in" on both engines.
+
+/// The PLAY bit is now §6-5-1-3 only: no mode-select, the Standard `[Main]`
+/// body runs directly even though a legal [TS] host is standing.
 #[test]
-fn bt25_100_mode_select_is_offered_when_a_legal_host_exists() {
+fn bt25_100_play_bit_is_the_use_action_only_no_link_mode_select() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "HOST", Some(0));
+    let opp = runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("a selection is parked");
+    assert_ne!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "the Link mode is a SEPARATE main-phase action (§6-5-1-4), so the play \
+         action offers no mode-select"
+    );
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "the Standard [Main] body runs directly (its De-Digivolve target prompt)"
+    );
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "the use action charges the printed use cost 3, never the link cost 2"
+    );
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, opp.index as u16))
+        .expect("choose opponent Digimon");
+}
+
+/// The `HAND_EFFECT` bit carries the §6-5-1-4 declaration, and taking it plugs
+/// the Option in for the LINK cost without running the `[Main]` body.
+#[test]
+fn bt25_100_hand_link_declaration_lives_on_the_hand_effect_bit() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let bit = HAND_EFFECT_START;
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[bit as usize], 1.0,
+        "the Plug-In Option's from-hand link is offered on its hand slot's \
+         HAND_EFFECT bit"
+    );
+    assert!(
+        runner.game.hand_effect_slot_is_link(0, 0),
+        "the slot carries no [Hand][Main], so the bit IS the link declaration"
+    );
+
+    let before = runner.memory();
+    runner.game.decode_action(bit, 0);
+    let view = runner
+        .pending_selection_view()
+        .expect("declaring the link parks the host pick");
+    assert_eq!(
+        view.kind,
+        SelectionKind::OwnField,
+        "§10-1-3-1: the player chooses 1 of their Digimon that meets the \
+         requirement -- never auto-picked (rule 17)"
+    );
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, host.index as u16))
+        .expect("choose the [TS] host");
+
+    let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "the Option is plugged in sideways");
+    assert_eq!(linked[0].card_id(&runner.game.card_data), "BT25-100");
+    assert_eq!(
+        runner.memory(),
+        before - 2,
+        "the link declaration pays the printed link cost 2, not the use cost 3"
+    );
+    assert_eq!(runner.hand_size(0), 0, "the card left the hand");
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT25-100"),
+        "a linked Option is not trashed"
+    );
+}
+
+/// The same host gate as the play-mode half: with no Digimon meeting the
+/// printed `[TS]` Link condition the declaration is not offered at all
+/// (general_rule.pdf §10-1-3-1; DCGO `Link.cs:24`).
+#[test]
+fn bt25_100_no_hand_link_bit_without_a_legal_host() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_tamer("TS-TAMER"))
+        .memory(20)
+        .start();
+    // A TS *Tamer* satisfies the Use Req. but is not a Digimon host, and a
+    // plain Lv.4 Digimon fails `link_requirement.filter.trait_has: TS`.
+    runner.place_on_field(0, "TS-TAMER", Some(0));
+    runner.place_on_field(0, "OPP-LV4", Some(0));
+    runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 0.0,
+        "no legal host → no §6-5-1-4 declaration on the hand slot"
+    );
+    assert!(!runner.game.hand_effect_slot_is_link(0, 0));
+}
+
+/// A Plug-In Option is still USABLE from hand while it is also linkable — the
+/// two declarations coexist on different bits, which is what makes them two
+/// actions rather than one action with a branch.
+#[test]
+fn bt25_100_play_and_link_bits_are_both_offered() {
     let mut runner = iron_runner()
         .hand(0, &["BT25-100"])
         .add_card(make_ts_digimon("HOST", 5))
@@ -590,21 +739,7 @@ fn bt25_100_mode_select_is_offered_when_a_legal_host_exists() {
     runner.place_on_field(1, "OPP-DIGIMON", Some(1));
     runner.game.enter_main_phase();
 
-    assert_eq!(
-        runner.game.play_option_from_hand(0, 0),
-        OptionPlayResult::Pending
-    );
-    let pending = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("mode-select installs");
-    assert_eq!(pending.kind, SelectionKind::EffectChoice);
-    let choices = pending
-        .effect_choices
-        .as_ref()
-        .expect("labelled mode choices");
-    assert_eq!(choices.len(), 2);
-    assert!(choices[0].label.contains("Main"));
-    assert!(choices[1].label.contains("Link"));
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[PLAY_HAND_START as usize], 1.0, "§6-5-1-3 use action");
+    assert_eq!(mask[HAND_EFFECT_START as usize], 1.0, "§6-5-1-4 link action");
 }

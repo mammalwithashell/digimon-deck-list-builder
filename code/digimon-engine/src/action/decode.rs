@@ -137,8 +137,20 @@ impl Game {
         // when the slot carries no `[Hand] [Main]` (mask order: [Main] wins).
         if (HAND_EFFECT_START..HAND_EFFECT_END).contains(&action_id) {
             let hand_idx = (action_id - HAND_EFFECT_START) as usize;
-            if !self.activate_hand_main(tp, hand_idx) {
+            // `hand_effect_slot_is_link` is the PUBLISHED contract for what
+            // this bit means (the mask, `explain_action` and the exam's
+            // lowering all read it), so dispatch on it rather than on "did
+            // `activate_hand_main` happen to fire". The difference is
+            // load-bearing for a Plug-In OPTION: `activate_hand_main` matches
+            // `EffectTiming::OptionMain` on an Option/Dual hand card and would
+            // run its `[Main]` body OUTSIDE the Option lifecycle — no use cost
+            // paid, no `pending_option`, no disposal — whereas the bit on such
+            // a slot is the §6-5-1-4 link declaration
+            // (`G-ENGINE-OPTION-LINK-FROM-HAND`).
+            if self.hand_effect_slot_is_link(tp, hand_idx) {
                 let _ = self.activate_hand_link(tp, hand_idx);
+            } else {
+                let _ = self.activate_hand_main(tp, hand_idx);
             }
             return;
         }

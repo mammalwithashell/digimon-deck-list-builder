@@ -103,6 +103,79 @@ impl Game {
         }
     }
 
+    /// The Plug-In **Option** half of the from-hand link declaration: if the
+    /// card at `player`'s hand slot `hand_index` is an Option (or a Dual card
+    /// read as one) carrying a `LinkCondition` effect, return its link cost
+    /// and the legal hosts it may plug into right now.
+    ///
+    /// `general_rule.pdf` (Ver.3.6) §10-1-1: "A card from the hand or battle
+    /// area can be linked to a Digimon in the battle area by paying the cost
+    /// **as part of the main phase actions**" — and §6-5-1 lists "use an
+    /// Option card from the hand" (§6-5-1-3) and "link a card from the hand or
+    /// battle area" (§6-5-1-4) as two SEPARATE main-phase actions. So plugging
+    /// a Plug-In Option in from hand is its own declaration, not a mode of
+    /// using it; the `HAND_EFFECT` bit is where that declaration lives, exactly
+    /// as it does for a Link Digimon (`hand_digimon_link_available`).
+    ///
+    /// DCGO agrees and needs no special case for it: `CardEffectFactory
+    /// .LinkEffect` (`Link.cs:19-24`) accepts ANY `CardSource` with a
+    /// `linkCondition` that `IsExistOnHand`, so the Option's link declaration
+    /// sits in its `CanDeclareSkillList` beside a Digimon's and the harness's
+    /// `InputDriver.FindHandDeclarableSkillIndex` finds it the same way.
+    ///
+    /// No Option use-requirement / colour check is applied: those gate §9-1
+    /// "Using Cards", and `LinkEffect`'s own `CanUseCondition` (`Link.cs:49`)
+    /// checks only the origin zone and the host set. Cost is the printed link
+    /// cost; the `ChangeLinkCost` delta is applied by the availability check
+    /// and again at pay time inside `play_option_core`.
+    pub fn hand_option_link_condition_targets(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<(u16, Vec<PermanentHandle>)> {
+        let card = self.player(player).hand.get(hand_index)?;
+        if !matches!(
+            card.card_kind(&self.card_data),
+            CardKind::Option | CardKind::Dual
+        ) {
+            return None;
+        }
+        let source_card = card.handle();
+        let effects = self.effects_for_card(card.card_id(&self.card_data), source_card)?;
+        let cost = effects.iter().find_map(|e| e.link_cost)?;
+        let hosts = self.link_host_candidates(player, source_card, &effects);
+        Some((cost, hosts))
+    }
+
+    /// Whether the `HAND_EFFECT` bit for `hand_index` should carry a Plug-In
+    /// Option's from-hand link: a link condition with at least one legal host
+    /// and an affordable cost. The affordability mirrors
+    /// `option_legal_play_modes`' Link arm (the `ChangeLinkCost` player delta
+    /// applies), so the bit is never offered for a link the decoder's
+    /// `play_option_core` re-entry would then refuse.
+    pub fn hand_option_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
+        match self.hand_option_link_condition_targets(player, hand_index) {
+            Some((cost, hosts)) => {
+                !hosts.is_empty() && self.can_afford_link_cost(self.effective_link_cost(player, cost))
+            }
+            None => false,
+        }
+    }
+
+    /// The printed link cost after this player's `ChangeLinkCost` modifiers —
+    /// the number `play_option_core`'s Link arm actually pays.
+    pub(crate) fn effective_link_cost(&self, player: PlayerId, cost: u16) -> u16 {
+        (cost as i32 + self.modifiers.link_cost_delta_for_player(player)).max(0) as u16
+    }
+
+    /// Either half of the §6-5-1-4 from-hand link declaration: the Shape-B
+    /// Link **Digimon** or the Plug-In **Option**. One card is never both (the
+    /// two helpers gate on disjoint `CardKind`s).
+    pub fn hand_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
+        self.hand_digimon_link_available(player, hand_index)
+            || self.hand_option_link_available(player, hand_index)
+    }
+
     /// What the `HAND_EFFECT` bit for `hand_index` MEANS right now: `true`
     /// when it is the from-hand `<Link>` declaration, `false` when it is a
     /// `[Hand] [Main]` activation (or nothing). The decoder's order is `[Main]`
@@ -112,7 +185,7 @@ impl Game {
     /// with the decoder on which decision the bit is.
     pub fn hand_effect_slot_is_link(&self, player: PlayerId, hand_index: usize) -> bool {
         crate::action::main_effect_select::hand_main_match(self, player, hand_index).is_none()
-            && self.hand_digimon_link_available(player, hand_index)
+            && self.hand_link_available(player, hand_index)
     }
 
     /// Decode entry for a `HAND_EFFECT` bit that carries a hand link (no
@@ -122,6 +195,27 @@ impl Game {
     /// `begin_digimon_link` with a `Hand` origin. Returns `false` when the
     /// slot carries no legal hand link (the mask already guards this).
     pub(crate) fn activate_hand_link(&mut self, player: PlayerId, hand_index: usize) -> bool {
+        // A Plug-In OPTION takes the Option lifecycle, not `begin_digimon_link`:
+        // the card is used out of the hand through `play_option_core` in
+        // `OptionPlayMode::Link`, which pays the link cost, fires
+        // `OnUseOption` without the `[Main]` body, and disposes by plugging the
+        // card into the chosen host. Same §6-5-1-4 declaration, different
+        // resolution machinery — see `hand_option_link_condition_targets`.
+        if self.hand_option_link_available(player, hand_index) {
+            let Some((cost, _)) = self.hand_option_link_condition_targets(player, hand_index)
+            else {
+                return false;
+            };
+            return !matches!(
+                self.play_option_core(
+                    player,
+                    OptionSource::Hand(hand_index),
+                    Some(OptionPlayMode::Link { cost }),
+                    OptionCostPolicy::Pay,
+                ),
+                OptionPlayResult::Invalid
+            );
+        }
         let Some((cost, hosts)) = self.hand_digimon_link_condition_targets(player, hand_index)
         else {
             return false;

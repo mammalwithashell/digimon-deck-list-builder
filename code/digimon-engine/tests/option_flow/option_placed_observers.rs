@@ -190,7 +190,7 @@ fn on_option_placed_fires_for_training_link_and_security_placement_with_event_ca
     r.game.enter_main_phase();
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Trashed
     );
     assert_eq!(
@@ -200,7 +200,7 @@ fn on_option_placed_fires_for_training_link_and_security_placement_with_event_ca
     );
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Trashed
     );
     assert_eq!(
@@ -210,7 +210,7 @@ fn on_option_placed_fires_for_training_link_and_security_placement_with_event_ca
     );
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Pending
     );
     let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
@@ -222,7 +222,7 @@ fn on_option_placed_fires_for_training_link_and_security_placement_with_event_ca
     );
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Pending
     );
     let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
@@ -264,7 +264,7 @@ fn link_on_option_placed_selection_resumes_on_link_after_choice_resolves() {
     r.game.enter_main_phase();
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Pending
     );
     let host_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
@@ -311,7 +311,7 @@ fn on_option_placed_scans_inherited_sources_under_breeding_top_card() {
     r.game.enter_main_phase();
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Trashed
     );
     assert_eq!(
@@ -346,11 +346,11 @@ fn once_per_turn_breeding_on_option_placed_observer_fires_once_not_zero() {
     r.game.enter_main_phase();
 
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Trashed
     );
     assert_eq!(
-        r.game.play_option_from_hand(0, 0),
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         digimon_engine::selection::OptionPlayResult::Trashed
     );
     assert_eq!(

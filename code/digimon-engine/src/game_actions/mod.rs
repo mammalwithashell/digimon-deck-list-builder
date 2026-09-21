@@ -930,6 +930,7 @@ impl Game {
         &self,
         card: &CardSource,
         player_id: PlayerId,
+        source: OptionSource,
     ) -> Vec<OptionPlayMode> {
         let effects = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
@@ -954,6 +955,29 @@ impl Game {
                 .link_host_candidates(player_id, card.handle(), &effects)
                 .is_empty()
         {
+            modes.retain(|m| !m.is_link());
+        }
+        // `G-ENGINE-OPTION-LINK-FROM-HAND`. From the HAND the Link mode is not
+        // a mode of this action at all. general_rule.pdf (Ver.3.6) §6-5-1 lists
+        // "use an Option card from the hand" (§6-5-1-3) and "link a card from
+        // the hand or battle area" (§6-5-1-4) as two SEPARATE main-phase
+        // actions, and §10-1-1 says a card is linked from the hand "by paying
+        // the cost as part of the main phase actions" — its own declaration,
+        // not a branch of using the card. So the from-hand link lives on the
+        // `HAND_EFFECT` bit (`hand_option_link_available` /
+        // `activate_hand_link`), exactly where the Link DIGIMON's already does,
+        // and the PLAY bit means only §6-5-1-3.
+        //
+        // DCGO draws the same line: the from-hand link is an
+        // `ActivateCardAction` over `CardEffectFactory.LinkEffect`
+        // (`Link.cs:19`), never a `PlayCardAction`.
+        //
+        // Every OTHER source keeps the Link mode: a `[Security]`-flipped
+        // Option resolves into play with no main-phase declaration to make, so
+        // its link is a mode of that resolution (G-ENGINE-SECURITY-OPTION-LINK-
+        // TO-OWN-DIGIMON, `35958972b`), and the same holds for the trash /
+        // revealed / digivolution-source uses an effect drives.
+        if matches!(source, OptionSource::Hand(_)) {
             modes.retain(|m| !m.is_link());
         }
         modes

@@ -420,7 +420,7 @@ impl Game {
                     let Some(card) = self.option_source_card(player_id, source) else {
                         return OptionPlayResult::Invalid;
                     };
-                    self.option_legal_play_modes(card, player_id)
+                    self.option_legal_play_modes(card, player_id, source)
                 };
                 match legal_modes.as_slice() {
                     [] => return OptionPlayResult::Invalid,

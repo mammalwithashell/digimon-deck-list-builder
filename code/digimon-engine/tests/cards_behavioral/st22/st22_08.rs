@@ -59,7 +59,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -134,26 +134,33 @@ fn mode_select_pending(runner: &DebugRunner) -> bool {
     )
 }
 
-/// Play ST22-08 from hand index 0. When the dual-mode mode-select prompt
-/// installs, pick a mode: `link_mode == false` → Standard `[Main]` (choice
-/// index 0); `link_mode == true` → Link Requirements (choice index 1).
-/// Returns the `OptionPlayResult` of the initial play call.
+/// Declare ST22-08 at hand index 0.
+///
+/// `link_mode == false` — §6-5-1-3 "Use an Option Card From the Hand": the PLAY
+/// bit, running the Standard `[Main]` body for the printed use cost.
+///
+/// `link_mode == true` — §6-5-1-4 "Linking a Card in the Hand or Battle Area":
+/// the hand slot's `HAND_EFFECT` bit, which is a DIFFERENT main-phase action,
+/// not a mode of the first (`G-ENGINE-OPTION-LINK-FROM-HAND`; general_rule.pdf
+/// Ver.3.6 §6-5-1, §10-1-1; DCGO `CardEffectFactory.LinkEffect`, `Link.cs:19`,
+/// reached as an `ActivateCardAction` and never a `PlayCardAction`).
+///
+/// Returns the `OptionPlayResult` of the play call, or `Pending` for the link
+/// declaration (which always parks its host pick).
 fn play_st22_08(runner: &mut DebugRunner, link_mode: bool) -> OptionPlayResult {
-    let result = runner.game.play_option_from_hand(0, 0);
-    if mode_select_pending(runner) {
-        let ids = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids
-            .clone();
-        let action = if link_mode { ids[1] } else { ids[0] };
-        runner
-            .game
-            .resolve_selection(0, action)
-            .expect("resolve mode-select");
+    if link_mode {
+        assert!(
+            runner.game.hand_effect_slot_is_link(0, 0),
+            "the hand slot's HAND_EFFECT bit must BE the §6-5-1-4 link declaration"
+        );
+        runner.game.decode_action(HAND_EFFECT_START, 0);
+        return OptionPlayResult::Pending;
     }
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        !mode_select_pending(runner),
+        "the from-hand link is a separate action, so the play action offers no mode-select"
+    );
     result
 }
 
@@ -635,12 +642,17 @@ fn st22_08_main_link_step_is_optional() {
         .expect("PASS must be accepted to decline the optional link");
 }
 
-/// make-engine-cloneable (Wave A): the dual-mode Plug-In Option play-mode select
-/// is resume-driven, so cloning the game at the mode prompt is faithful — the
-/// clone plays the chosen mode (advancing into the [Main] link prompt) while the
-/// original is untouched and replays identically.
+/// make-engine-cloneable (Wave A): the parked decision on the from-hand link
+/// declaration — §10-1-3-1's "the player chooses 1 of their Digimon that meets
+/// the requirement" — must clone faithfully: the clone resolves the host pick
+/// while the original is untouched and replays identically.
+///
+/// This used to clone at the dual-mode PLAY-bit mode-select. That prompt is no
+/// longer reachable from hand (the link became its own main-phase action,
+/// `G-ENGINE-OPTION-LINK-FROM-HAND`), so the clone-safety assertion moved onto
+/// the prompt that replaced it.
 #[test]
-fn st22_08_mode_select_clones_faithfully() {
+fn st22_08_hand_link_host_pick_clones_faithfully() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("YAML parses")
@@ -653,60 +665,49 @@ fn st22_08_mode_select_clones_faithfully() {
     runner.place_on_field(0, "MY-DIGI", None);
     runner.game.enter_main_phase();
 
-    let _ = runner.game.play_option_from_hand(0, 0);
-    assert!(
-        mode_select_pending(&runner),
-        "dual-mode mode-select installed"
-    );
-    assert!(
-        runner.game.pending_selection_resume.is_some(),
-        "the mode-select must be resume-driven (clone-safe)"
-    );
-    let main_mode = runner
+    let _ = play_st22_08(&mut runner, true);
+    let pending = runner
         .game
         .pending_selection
         .as_ref()
-        .unwrap()
-        .valid_action_ids[0];
+        .expect("the link declaration parks the host pick");
+    assert!(
+        matches!(pending.kind, SelectionKind::OwnField),
+        "§10-1-3-1's host choice is an own-field pick, never auto-resolved (rule 17)"
+    );
+    let host_action = *pending
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("a host is on offer");
 
-    // Clone at the mode-select; play Standard [Main] on the clone only.
+    // Clone at the host pick; resolve it on the clone only.
     let mut clone = runner.game.clone();
     clone
-        .resolve_selection(0, main_mode)
-        .expect("clone resolves the mode");
-    // Standard [Main] advances to the optional link host-selection prompt
-    // (an OwnField select, not the EffectChoice mode prompt).
+        .resolve_selection(0, host_action)
+        .expect("clone resolves the host pick");
+    let clone_linked = clone.player(0).battle_area[1].linked_cards.len();
+    assert_eq!(clone_linked, 1, "the clone plugged the Option in");
+
+    // INDEPENDENCE: the original is still parked at the host pick.
     assert!(
-        clone
+        runner
+            .game
             .pending_selection
             .as_ref()
-            .is_some_and(|s| !matches!(s.kind, SelectionKind::EffectChoice)),
-        "clone advanced past the mode-select into the [Main] link prompt"
-    );
-    let clone_disc = clone
-        .pending_selection
-        .as_ref()
-        .map(|s| std::mem::discriminant(&s.kind));
-
-    // INDEPENDENCE: the original is still at the mode-select.
-    assert!(
-        mode_select_pending(&runner),
-        "original survives the clone, still at the mode-select"
+            .is_some_and(|s| matches!(s.kind, SelectionKind::OwnField)),
+        "original survives the clone, still at the host pick"
     );
 
     // REPLAYS IDENTICALLY.
     runner
         .game
-        .resolve_selection(0, main_mode)
-        .expect("original resolves the mode");
+        .resolve_selection(0, host_action)
+        .expect("original resolves the host pick");
     assert_eq!(
-        runner
-            .game
-            .pending_selection
-            .as_ref()
-            .map(|s| std::mem::discriminant(&s.kind)),
-        clone_disc,
-        "original reaches the clone's pending-selection state"
+        runner.game.player(0).battle_area[1].linked_cards.len(),
+        clone_linked,
+        "original reaches the clone's post-resolution state"
     );
 }
 
@@ -1017,10 +1018,23 @@ fn st22_08_main_link_excludes_level_2_host() {
 // surfaces a mode-select prompt; each branch charges only its own cost.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// A dual-mode Plug-In Option installs a mode-select prompt offering both the
-/// Standard `[Main]` mode and the Link mode.
+/// A dual-mode Plug-In Option in hand is declarable TWO ways, on two different
+/// action bits — §6-5-1-3 (use) on the PLAY bit and §6-5-1-4 (link) on the
+/// `HAND_EFFECT` bit. It is NOT one action with a mode branch.
+///
+/// `G-ENGINE-OPTION-LINK-FROM-HAND`. general_rule.pdf (Ver.3.6) §6-5-1 lists
+/// "use an Option card from the hand" and "link a card from the hand or battle
+/// area" as separate main-phase actions, and §10-1-1 says a card is linked from
+/// the hand "by paying the cost as part of the main phase actions". DCGO draws
+/// the same line: the link is an `ActivateCardAction` over
+/// `CardEffectFactory.LinkEffect` (`Link.cs:19`), never a `PlayCardAction`.
+///
+/// Before this change the link rode a mode-select branch on the PLAY bit, so
+/// one wire integer meant two different declarations and no exam line could
+/// mean "plug this Option in from hand" on both engines
+/// (`qa/dcgo-exams/BT25/NOTES-BT25-100.md`).
 #[test]
-fn st22_08_dual_mode_installs_mode_select() {
+fn st22_08_dual_mode_offers_two_separate_main_phase_actions() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("YAML parses")
@@ -1034,36 +1048,26 @@ fn st22_08_dual_mode_installs_mode_select() {
     runner.place_on_field(0, "LV3-HOST", None);
     runner.game.enter_main_phase();
 
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 1.0,
+        "§6-5-1-3: the Option is usable from hand"
+    );
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 1.0,
+        "§6-5-1-4: the Option is linkable from hand"
+    );
+    assert!(
+        runner.game.hand_effect_slot_is_link(0, 0),
+        "the slot carries no [Hand][Main], so its HAND_EFFECT bit IS the link"
+    );
+
+    // The PLAY bit is the USE action and nothing else: no mode-select.
     let result = runner.game.play_option_from_hand(0, 0);
-    assert_eq!(
-        result,
-        OptionPlayResult::Pending,
-        "a dual-mode Option play must park a mode-select prompt"
-    );
+    assert_eq!(result, OptionPlayResult::Pending);
     assert!(
-        mode_select_pending(&runner),
-        "playing ST22-08 with both modes affordable must install a mode-select prompt"
-    );
-    let pending = runner.game.pending_selection.as_ref().unwrap();
-    assert_eq!(
-        pending.valid_action_ids.len(),
-        2,
-        "the mode-select must offer exactly two modes (Standard [Main] + Link)"
-    );
-    let choices = pending
-        .effect_choices
-        .as_ref()
-        .expect("mode-select must carry labeled effect_choices");
-    assert_eq!(choices.len(), 2, "two labeled mode choices");
-    assert!(
-        choices[0].label.contains("Main"),
-        "choice 0 must be the Standard [Main] Option mode; got {:?}",
-        choices[0].label
-    );
-    assert!(
-        choices[1].label.contains("Link"),
-        "choice 1 must be the Link Requirements mode; got {:?}",
-        choices[1].label
+        !mode_select_pending(&runner),
+        "the link is its own action, so the play action must not branch on a mode"
     );
 }
 
@@ -1245,11 +1249,11 @@ fn st22_08_link_mode_skips_main_effect() {
     );
 }
 
-/// When only the Link mode is affordable (memory covers the Cost-2 link but
-/// not the Cost-4 use), ST22-08 plays directly as a Link Option with no
-/// mode-select prompt.
+/// Each declaration carries its OWN affordability. With memory that covers the
+/// Cost-2 link but not the Cost-4 use, the §6-5-1-4 link action is offered and
+/// the §6-5-1-3 use action is not — two actions, two gates.
 #[test]
-fn st22_08_plays_link_directly_when_standard_unaffordable() {
+fn st22_08_link_action_stays_affordable_when_the_use_action_is_not() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("YAML parses")
@@ -1266,29 +1270,30 @@ fn st22_08_plays_link_directly_when_standard_unaffordable() {
     // Standard mode would push memory below the floor.
     runner.game.set_memory(-7);
 
-    let result = runner.game.play_option_from_hand(0, 0);
+    let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        result,
-        OptionPlayResult::Pending,
-        "a single affordable mode plays directly and parks its own flow"
+        mask[PLAY_HAND_START as usize], 0.0,
+        "the Cost-4 use action would push memory below the floor"
     );
-    assert!(
-        !mode_select_pending(&runner),
-        "no mode-select prompt installs when only one mode is affordable"
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 1.0,
+        "the Cost-2 link action is still affordable, and is its own action"
     );
+
+    let _ = play_st22_08(&mut runner, true);
     let pending = runner
         .game
         .pending_selection
         .as_ref()
-        .expect("the Link host-selection installs directly");
+        .expect("the link declaration parks its host pick");
     assert!(
         matches!(pending.kind, SelectionKind::OwnField),
-        "the single affordable mode (Link) goes straight to the host-selection"
+        "the link declaration goes straight to the host pick"
     );
     assert_eq!(
         runner.memory(),
         -9,
-        "the direct Link play charges exactly the Cost-2 link cost"
+        "the link declaration charges exactly the Cost-2 link cost"
     );
 }
 
@@ -1324,10 +1329,16 @@ fn st22_08_link_mode_not_offered_without_an_eligible_host() {
     runner.game.enter_main_phase();
 
     let before = runner.memory();
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 0.0,
+        "no eligible host → the §6-5-1-4 link action is not declarable at all"
+    );
+    assert!(!runner.game.hand_effect_slot_is_link(0, 0));
     let _ = runner.game.play_option_from_hand(0, 0);
     assert!(
         !mode_select_pending(&runner),
-        "no eligible host → the Link mode is not a legal play mode, so no mode-select installs"
+        "the use action never branches on a mode"
     );
     assert_eq!(
         runner.memory(),
