@@ -110,7 +110,12 @@ fn bt25_093_main_deletes_all_lowest_dp_opponent_digimon() {
     runner.game.enter_main_phase();
 
     let field_before = runner.battle_area_size(1);
-    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Pending);
+    // No [TS] Digimon on our side, so the Link play mode is not offered
+    // (F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST; general_rule.pdf §10-1-3-1)
+    // and the Standard [Main] body runs straight through: every step here is
+    // automatic (delete ALL lowest-DP, no link host), so the play completes
+    // synchronously and the Option is trashed.
+    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Trashed);
     let _ = runner.auto_resolve();
 
     // Both lowest-DP (3000) Digimon deleted; the 5000 survives.
@@ -174,7 +179,9 @@ fn bt25_093_no_fallback_when_deletion_happened() {
         .top_card()
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Pending);
+    // As above: no legal link host → no mode-select, and the body's steps are
+    // all automatic, so the play resolves synchronously.
+    assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Trashed);
     let _ = runner.auto_resolve();
 
     // The opponent Option survives (no fallback trash); only the Lv3 was deleted.

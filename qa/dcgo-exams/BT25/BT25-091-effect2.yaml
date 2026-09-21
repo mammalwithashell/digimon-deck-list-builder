@@ -113,14 +113,13 @@ steps:
   - actor: 0
     do: { play: { card: BT25-100, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our [Main]/[Link] mode-select. MEASURED 2026-09-18: our engine
-  # parks it here although P0 has NO Digimon -- no legal link host at all
-  # (printed: "into the specified DIGIMON"; BT25_100.cs: `IsDigimon &&
-  # HasTSTraits`). DCGO asks nothing: its Play bit IS the [Main] use. The
-  # vacuous "Plug in" branch is an engine finding, not part of this clause --
-  # NOTES-BT25-091.md (F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST).
-  - actor: 0
-    do: { select: { choice: "[Main]", sim_only: true } }
+  # NO mode-select row here. P0 has NO Digimon, so Iron Slash has no legal
+  # link host (printed: "into the specified DIGIMON"; BT25_100.cs: `IsDigimon
+  # && HasTSTraits`) and the Link play mode is not offered -- our Play bit IS
+  # the [Main] use, exactly like DCGO's. Until 2026-09-20 our engine parked a
+  # vacuous "[Main]"/"Plug in" mode-select here, absorbed by a sim-only row;
+  # F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST is FIXED (general_rule.pdf
+  # 10-1-3-1; DCGO Link.cs:24) and the row is gone.
   # Iron Slash [Main] FIRST: the <De-Digivolve 2> target (nothing to trash).
   - actor: 0
     do: { select: { targets: [opp.field.0] } }

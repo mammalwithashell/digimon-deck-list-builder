@@ -487,3 +487,124 @@ fn make_ts_tamer(id: &str) -> digimon_engine::CardData {
     card.traits = vec!["TS".to_string()];
     card
 }
+
+// ── Section 5: the Link PLAY MODE is gated on a legal host ───────────────
+//
+// F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST (qa/dcgo-exams/BT25/NOTES-BT25-091.md).
+// Playing a dual-mode Plug-In Option from hand used to offer the "Plug in via
+// Link Requirements" branch even with NO legal host on the board; taking it
+// paid the link cost and dropped the card in the trash linked to nothing.
+//
+// general_rule.pdf §10-1-3-1: "The player declares a link and reveals 1 card to
+// link. 1 link requirement is chosen on the revealed card, then the player
+// chooses 1 of their Digimon that meets the requirement." With no Digimon that
+// meets the requirement the link procedure cannot be performed, so the §6-5-1-4
+// main-phase link action is not available.
+//
+// DCGO agrees: `CardEffectFactory.LinkEffect` returns `null` outright when
+// `!CardEffectCommons.HasMatchConditionPermanent(CanSelectPermanentCondition)`
+// (DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/Link.cs:24, and
+// again in `CanUseCondition` at :53), so the declaration is never offered.
+//
+// The engine already holds this contract for the Digimon-side (Shape-B) hand
+// link — `Game::hand_digimon_link_available` requires `!hosts.is_empty()`.
+
+/// No own Digimon at all: the mode-select must not be installed — the play
+/// goes straight to the Standard `[Main]` body.
+#[test]
+fn bt25_100_no_mode_select_when_no_link_host_exists() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_tamer("TS-TAMER"))
+        .memory(20)
+        .start();
+    // Only a TS Tamer: satisfies the Use Req., but the printed Link condition
+    // names a [TS] *Digimon*, so there is no legal host.
+    runner.place_on_field(0, "TS-TAMER", Some(0));
+    let opp = runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert_eq!(result, OptionPlayResult::Pending);
+    let view = runner
+        .pending_selection_view()
+        .expect("a selection is parked");
+    assert_ne!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "no legal link host → the Link mode is not offered, so no mode-select installs"
+    );
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "the Standard [Main] body runs directly (its De-Digivolve target prompt)"
+    );
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "the direct Standard play charges the printed use cost 3, not the Link cost 2"
+    );
+    runner
+        .execute_action(view.selecting_player, encode_attack(0, opp.index as u16))
+        .expect("choose opponent Digimon");
+}
+
+/// A Digimon that FAILS the printed `[TS]` Link condition is not a host
+/// either: the Link mode stays off the mode-select.
+#[test]
+fn bt25_100_no_mode_select_when_only_non_ts_digimon_on_board() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_tamer("TS-TAMER"))
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "TS-TAMER", Some(0));
+    // A plain (non-[TS]) Digimon fails `link_requirement.filter.trait_has: TS`.
+    runner.place_on_field(0, "OPP-LV4", Some(0));
+    runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert_eq!(result, OptionPlayResult::Pending);
+    let view = runner
+        .pending_selection_view()
+        .expect("a selection is parked");
+    assert_ne!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "a non-[TS] Digimon is not a legal host → no Link mode, no mode-select"
+    );
+}
+
+/// Positive control: with a legal [TS] Digimon host the dual-mode prompt is
+/// still offered, both branches labelled.
+#[test]
+fn bt25_100_mode_select_is_offered_when_a_legal_host_exists() {
+    let mut runner = iron_runner()
+        .hand(0, &["BT25-100"])
+        .add_card(make_ts_digimon("HOST", 5))
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "HOST", Some(0));
+    runner.place_on_field(1, "OPP-DIGIMON", Some(1));
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("mode-select installs");
+    assert_eq!(pending.kind, SelectionKind::EffectChoice);
+    let choices = pending
+        .effect_choices
+        .as_ref()
+        .expect("labelled mode choices");
+    assert_eq!(choices.len(), 2);
+    assert!(choices[0].label.contains("Main"));
+    assert!(choices[1].label.contains("Link"));
+}

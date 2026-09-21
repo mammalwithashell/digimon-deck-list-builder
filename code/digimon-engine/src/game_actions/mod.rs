@@ -907,11 +907,25 @@ impl Game {
     /// a single affordable mode plays directly; an empty result means the
     /// Option cannot be played at all.
     ///
-    /// Only affordability is filtered here — host availability for a Link
-    /// play is resolved later by `dispose_option` (a Link play with no
-    /// eligible host trashes the card, identical to a single-mode Link
-    /// Option). This keeps `PLAY_HAND` masking and the mode-select offer
-    /// consistent with the engine's existing Link-Option contract.
+    /// Two things are filtered here: affordability, and — for the Link mode —
+    /// the existence of at least one legal HOST.
+    ///
+    /// `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST`. general_rule.pdf §10-1-3-1:
+    /// "The player declares a link and reveals 1 card to link. 1 link
+    /// requirement is chosen on the revealed card, then the player chooses 1 of
+    /// their Digimon that meets the requirement." With no Digimon meeting the
+    /// requirement the link procedure cannot be carried out, so the §6-5-1-4
+    /// "Linking a Card in the Hand or Battle Area" main-phase action is not
+    /// available at all. DCGO enforces exactly this: `CardEffectFactory
+    /// .LinkEffect` returns `null` when `!HasMatchConditionPermanent(
+    /// CanSelectPermanentCondition)` (`Link.cs:24`, re-checked in
+    /// `CanUseCondition` at `Link.cs:53`), so the declaration is never offered.
+    /// The Digimon-side (Shape-B) hand link already holds this contract via
+    /// `hand_digimon_link_available`; this is the Option-side half.
+    ///
+    /// `dispose_option`'s "no candidate → trash" arm stays as the resolution-
+    /// time safety net for a host that disappears mid-resolution; it is no
+    /// longer reachable from a player-declared Link play.
     pub(crate) fn option_legal_play_modes(
         &self,
         card: &CardSource,
@@ -924,18 +938,25 @@ impl Game {
             .option_use_cost(&self.card_data)
             .unwrap_or_else(|| card.play_cost(&self.card_data));
         let memory_min = self.rules.memory_range.0;
-        classify_option_modes(&effects)
-            .into_iter()
-            .filter(|mode| {
-                let cost = match mode {
-                    OptionPlayMode::Link { cost } => (*cost as i32
-                        + self.modifiers.link_cost_delta_for_player(player_id))
-                    .max(0) as i16,
-                    _ => use_cost as i16,
-                };
-                (self.memory - cost) >= memory_min
-            })
-            .collect()
+        let mut modes = classify_option_modes(&effects);
+        modes.retain(|mode| {
+            let cost = match mode {
+                OptionPlayMode::Link { cost } => {
+                    (*cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0)
+                        as i16
+                }
+                _ => use_cost as i16,
+            };
+            (self.memory - cost) >= memory_min
+        });
+        if modes.iter().any(|m| m.is_link())
+            && self
+                .link_host_candidates(player_id, card.handle(), &effects)
+                .is_empty()
+        {
+            modes.retain(|m| !m.is_link());
+        }
+        modes
     }
 
     pub(crate) fn pending_option_can_arts_digivolve(&self) -> bool {

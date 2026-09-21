@@ -1292,10 +1292,23 @@ fn st22_08_plays_link_directly_when_standard_unaffordable() {
     );
 }
 
-/// Choosing the Link mode with no eligible Lv.3+ host trashes ST22-08 (there
-/// is nothing to plug into) — consistent with a single-mode Link Option.
+/// The Link mode is NOT offered when no eligible Lv.3+ host exists — the
+/// mode-select collapses to the Standard `[Main]` mode and the play charges
+/// the printed use cost 4, never the Link cost 2.
+///
+/// `F-ENGINE-PLUGIN-MODE-SELECT-WITHOUT-HOST`. general_rule.pdf §10-1-3-1
+/// makes "the player chooses 1 of their Digimon that meets the requirement"
+/// part of the link procedure, so with no such Digimon the §6-5-1-4 link
+/// action cannot be declared. DCGO agrees — `CardEffectFactory.LinkEffect`
+/// returns `null` when `!HasMatchConditionPermanent(CanSelectPermanent
+/// Condition)` (`Link.cs:24`, re-checked at `Link.cs:53`).
+///
+/// Before the fix this test read "choosing the Link mode with no eligible host
+/// trashes ST22-08": the engine offered the branch, charged the link cost and
+/// dropped the card in the trash linked to nothing — an illegal action exposed
+/// to the RL action space.
 #[test]
-fn st22_08_link_mode_with_no_host_trashes() {
+fn st22_08_link_mode_not_offered_without_an_eligible_host() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("YAML parses")
@@ -1310,19 +1323,20 @@ fn st22_08_link_mode_with_no_host_trashes() {
     runner.place_on_field(0, "LV2-DIGI", None);
     runner.game.enter_main_phase();
 
-    let _ = play_st22_08(&mut runner, true);
+    let before = runner.memory();
+    let _ = runner.game.play_option_from_hand(0, 0);
     assert!(
-        runner.game.pending_selection.is_none(),
-        "with no eligible host the Link play installs no host-selection"
-    );
-    assert!(
-        runner.game.pending_option.is_none(),
-        "the Link play completes — no Option resolution is left parked"
+        !mode_select_pending(&runner),
+        "no eligible host → the Link mode is not a legal play mode, so no mode-select installs"
     );
     assert_eq!(
-        runner.trash_size(0),
-        1,
-        "a Link play with no eligible host trashes ST22-08"
+        runner.memory(),
+        before - 4,
+        "the direct Standard [Main] play charges the printed use cost 4, not the Link cost 2"
+    );
+    assert!(
+        runner.trash_size(0) == 0,
+        "ST22-08 is in flight as a [Main] Option, not trashed as a hostless link"
     );
 }
 
