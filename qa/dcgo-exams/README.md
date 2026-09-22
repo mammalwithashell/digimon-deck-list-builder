@@ -114,6 +114,18 @@ Two DCGO surfaces are FOLDED from our single-surface vocabulary at emit time
   `expect: {prompt: OptionalSkill}` — the fold marker. Picks emit
   OptionalSkill "yes" + the pick row; a `decline:` emits only
   OptionalSkill "no".
+- **Forced main-phase pass** (`pass: { sim_only: true }`): when the acting
+  player can do nothing at all in main phase, DCGO's
+  `TurnStateMachine.MainPhase()` finds `CanSelect()` false and ends the turn
+  without asking, while our engine still offers a main-phase decision whose
+  only legal answer is pass. Declare that pass `sim_only: true`: it runs in the
+  sim and emits NOTHING on the wire. Omit `expect:` on it, because DCGO has no
+  prompt to check. This is an **author declaration, never inferred**. The
+  sim-only lowering deals the deck in file order while DCGO shuffles by seed,
+  so our engine's mask does not reveal what DCGO's hand allows. Inferring it
+  was wrong for 26 of 36 candidate lines. Only declare it when the scenario's
+  stacked state leaves the player with nothing to do: no playable card, no
+  declarable skill, no attacker. Cite the reason in a comment on the step.
 
 ### `do` is symbolic, lowered to an action id
 

@@ -40,7 +40,7 @@ pub struct ScenarioDecks {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StepAction {
     Hatch(EmptyArgs),
-    Pass(EmptyArgs),
+    Pass(PassArgs),
     /// Move the breeding-area Digimon to the battle area (the second breeding
     /// action besides `hatch`). `from` defaults to `breeding` — the only zone
     /// a move can come from — but accepts an explicit `breeding` / `breeding.0`
@@ -754,7 +754,7 @@ impl<'de> Deserialize<'de> for StepAction {
 
         Ok(match verb {
             "hatch" => StepAction::Hatch(args_of::<EmptyArgs, D::Error>(verb, args)?),
-            "pass" => StepAction::Pass(args_of::<EmptyArgs, D::Error>(verb, args)?),
+            "pass" => StepAction::Pass(args_of::<PassArgs, D::Error>(verb, args)?),
             "move" => {
                 let a: MoveArgs = args_of::<MoveArgs, D::Error>(verb, args)?;
                 StepAction::Move { from: a.from }
@@ -919,6 +919,29 @@ impl Serialize for StepAction {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EmptyArgs {}
+
+/// Arguments of a `pass:` step.
+///
+/// `sim_only: true` declares that DCGO asks NOTHING at this point, so the pass
+/// is executed in our engine and emitted as nothing on the DCGO wire
+/// (`LoweredStep::SimOnlyAction`). The canonical case is a FORCED main-phase
+/// pass: DCGO's `TurnStateMachine.MainPhase()` evaluates `CanSelect()` (any
+/// hand card playable, any field / hand / trash skill declarable, any attacker)
+/// and, when it is false, calls `EndTurnProcess()` itself without a prompt.
+///
+/// This is an AUTHOR declaration, never inferred by the harness. Whether DCGO
+/// asks depends on DCGO's actual hand, and sim-only lowering does not deal
+/// DCGO's hand: it deals the deck in file order while DCGO shuffles
+/// everything the `stack:` does not pin (docs/DCGO_EXAM.md, "`stack:` and
+/// sim-only"). Inferring forced-ness from the sim-only deal was tried and was
+/// wrong for 26 of 36 lines. Declare it only where a recorded DCGO trace for
+/// the pinned seed shows the prompt is absent.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PassArgs {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub sim_only: bool,
+}
 
 
 /// The prompt the author expects DCGO to be asking at this step.
@@ -2013,5 +2036,55 @@ mod materials_tests {
         let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, s.steps[0].act);
+    }
+}
+
+#[cfg(test)]
+mod pass_args_tests {
+    use super::*;
+
+    fn first_step(yaml_steps: &str) -> Result<StepAction, String> {
+        let y = format!(
+            "card: ST1-02
+clause: ST1-02#effect#0
+seed: 7
+decks:
+  p0: {{ stack: [], rest: simple }}
+  p1: {{ stack: [], rest: simple }}
+steps:
+{yaml_steps}"
+        );
+        Scenario::from_yaml(&y).map(|s| s.steps[0].act.clone())
+    }
+
+    #[test]
+    fn pass_sim_only_parses_and_defaults_false() {
+        assert_eq!(
+            first_step("  - actor: 0
+    do: { pass: { sim_only: true } }
+").unwrap(),
+            StepAction::Pass(PassArgs { sim_only: true })
+        );
+        assert_eq!(
+            first_step("  - actor: 0
+    do: { pass: {} }
+").unwrap(),
+            StepAction::Pass(PassArgs { sim_only: false })
+        );
+    }
+
+    #[test]
+    fn a_plain_pass_round_trips_without_a_sim_only_key() {
+        let v = serde_yml::to_string(&StepAction::Pass(PassArgs::default())).unwrap();
+        assert!(!v.contains("sim_only"), "a default pass must serialize as `pass: {{}}`: {v}");
+        let v = serde_yml::to_string(&StepAction::Pass(PassArgs { sim_only: true })).unwrap();
+        assert!(v.contains("sim_only: true"), "{v}");
+    }
+
+    #[test]
+    fn pass_rejects_an_unknown_field() {
+        assert!(first_step("  - actor: 0
+    do: { pass: { simonly: true } }
+").is_err());
     }
 }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-24T02:07:42.203340100+00:00",
+  "last_updated": "2026-09-22T02:18:41.969664600+00:00",
   "clauses": {
     "P-130#effect#0": {
       "clause_id": "P-130#effect#0",
@@ -27,7 +27,7 @@
       "label": "Security Effect",
       "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
       "scenario_path": "qa/dcgo-exams/EX12/P-130-effect2.yaml",
-      "recorded_at": "2026-08-23T22:14:34.774784800+00:00"
+      "recorded_at": "2026-09-22T02:18:41.969664600+00:00"
     }
   }
 }

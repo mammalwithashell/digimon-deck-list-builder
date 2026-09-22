@@ -582,7 +582,18 @@ impl ScenarioAdapter {
                         board_p1: None,
                     });
                     spec_owner.push(i);
-                    lowered.push(classify_lowered_action(&game, actor, action_id)?);
+                    // `pass: { sim_only: true }` -- the author declares DCGO
+                    // asks nothing here (e.g. a FORCED main-phase pass: DCGO's
+                    // MainPhase() ends the turn itself when CanSelect() is
+                    // false). Executed in our engine, emitted as nothing on the
+                    // wire. Declared, never inferred: the sim-only deal is not
+                    // DCGO's deal, so our mask cannot tell whether DCGO asks.
+                    // See `scenario::PassArgs`.
+                    if matches!(&step.act, StepAction::Pass(a) if a.sim_only) {
+                        lowered.push(LoweredStep::SimOnlyAction(action_id));
+                    } else {
+                        lowered.push(classify_lowered_action(&game, actor, action_id)?);
+                    }
                     lowered_owner.push(i);
 
                     // `Game::decode_action` returns unit and SILENTLY IGNORES an
@@ -2809,5 +2820,63 @@ steps:
         let err =
             ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data).unwrap_err();
         assert!(err.contains("ZZ99-999"), "got: {err}");
+    }
+}
+
+/// `pass: { sim_only: true }`: an author-declared pass DCGO never prompts.
+#[cfg(test)]
+mod sim_only_pass_tests {
+    use super::*;
+    use crate::exam::scenario::Scenario;
+    use crate::exam::test_support;
+
+    fn st1_deck() -> Vec<String> {
+        let (mut main, egg) = test_support::st1_decks();
+        main.extend(egg);
+        main
+    }
+
+    fn lowered_for(line: &str) -> Vec<LoweredStep> {
+        let card_data = test_support::load_card_data();
+        let s = Scenario::from_yaml(line).expect("scenario parses");
+        let deck = st1_deck();
+        ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data)
+            .expect("line lowers")
+            .lowered_steps()
+            .to_vec()
+    }
+
+    const LINE: &str = r#"
+card: ST1-02
+clause: ST1-02#effect#0
+seed: 7
+decks:
+  p0: { stack: [], rest: simple }
+  p1: { stack: [], rest: simple }
+steps:
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: { sim_only: true } }
+"#;
+
+    /// The declared pass still RUNS in our engine (it is lowered to a real,
+    /// mask-legal action id) but contributes no DCGO wire row; the undeclared
+    /// pass beside it keeps its row.
+    #[test]
+    fn a_sim_only_pass_is_executed_but_emits_no_dcgo_row() {
+        let lowered = lowered_for(LINE);
+        assert!(
+            matches!(lowered[0], LoweredStep::Action(62)),
+            "a plain pass keeps its DCGO row: {:?}",
+            lowered[0]
+        );
+        assert_eq!(lowered[0].dcgo_wire_rows(), 1);
+        assert!(
+            matches!(lowered[1], LoweredStep::SimOnlyAction(62)),
+            "a declared sim_only pass is executed in our engine: {:?}",
+            lowered[1]
+        );
+        assert_eq!(lowered[1].dcgo_wire_rows(), 0, "and emits nothing on the DCGO wire");
     }
 }

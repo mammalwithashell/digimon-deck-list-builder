@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-23T22:11:36.525924100+00:00",
+  "last_updated": "2026-09-22T02:18:38.777572900+00:00",
   "clauses": {
     "BT8-097#effect#0": {
       "clause_id": "BT8-097#effect#0",
@@ -27,7 +27,7 @@
       "label": "Security Effect",
       "text_sha256": "4bdbcca3019740331dcb40e2bee74b37330245ecb726a13996c7412a1bd0ea1d",
       "scenario_path": "qa/dcgo-exams/EX12/BT8-097-effect2.yaml",
-      "recorded_at": "2026-08-23T22:11:36.525924100+00:00"
+      "recorded_at": "2026-09-22T02:18:38.777572900+00:00"
     }
   }
 }

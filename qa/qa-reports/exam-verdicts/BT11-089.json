@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-23T22:11:29.187314400+00:00",
+  "last_updated": "2026-09-22T02:20:20.265086900+00:00",
   "clauses": {
     "BT11-089#effect#0": {
       "clause_id": "BT11-089#effect#0",
@@ -11,14 +11,14 @@
       "scenario_path": "qa/dcgo-exams/BT11/BT11-089-effect0.yaml",
       "recorded_at": "2026-08-23T22:11:25.759422900+00:00"
     },
-    "BT11-089#effect#3": {
-      "clause_id": "BT11-089#effect#3",
+    "BT11-089#effect#2": {
+      "clause_id": "BT11-089#effect#2",
       "card_id": "BT11-089",
       "verdict": "confirmed",
       "label": "Security Effect",
       "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
       "scenario_path": "qa/dcgo-exams/EX12/BT11-089-effect3.yaml",
-      "recorded_at": "2026-08-23T22:11:29.187314400+00:00"
+      "recorded_at": "2026-09-22T02:20:20.265086900+00:00"
     }
   }
 }

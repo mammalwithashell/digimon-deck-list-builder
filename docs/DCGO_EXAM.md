@@ -1092,6 +1092,17 @@ evidence supports.
      `expect: {prompt: OptionalSkill}` over the live pick is the fold marker:
      picks emit OptionalSkill(yes) + the pick row, `decline:` emits only
      OptionalSkill(no).
+  3. *Forced main-phase pass* (`pass: { sim_only: true }`): if the acting player
+     has no playable card, no declarable skill and no attacker, DCGO's
+     `MainPhase()` sees `CanSelect()` false and calls `EndTurnProcess()` with no
+     prompt. Our engine still parks a main-phase decision. A `sim_only` pass runs
+     in the sim and emits **nothing**, and it carries no `expect:`. This is an
+     author declaration, never inferred from our mask: sim-only lowering deals
+     the deck in file order while DCGO shuffles by seed, so the hands differ.
+     Inference was wrong for 26 of 36 lines. It surfaced with scripted-v17:
+     v16 wrongly treated Susanoomon (EX12-076)'s Assembly play as free, which
+     made DCGO ask where it should not have. Ten EX12 lines were re-authored for
+     this.
   The DCGO-side decline bridge (a `select_cancel` answer to an OptionalSkill
   prompt means "no" — `OptionalSkill.cs`) is landed in the base-repo mod.
 

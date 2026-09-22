@@ -272,7 +272,7 @@ fn slot_matches(zone: Option<ActionZone>, index: Option<u16>, reference: &str) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::exam::scenario::{EmptyArgs, StepAction};
+    use crate::exam::scenario::{EmptyArgs, PassArgs, StepAction};
     use crate::exam::test_support;
 
     /// A real 2-player game advanced to the first turn player's Breeding
@@ -346,7 +346,7 @@ mod tests {
         // matched action ids 6 AND 7 and lowering refused. `from: hand.6` must
         // resolve to exactly one.
         let g = game();
-        let unpinned = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {}));
+        let unpinned = lower_step(&g, 0, &StepAction::Pass(PassArgs::default()));
         assert!(unpinned.is_ok(), "sanity: pass still lowers");
     }
 
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn pass_lowers_to_a_legal_action() {
         let g = game();
-        let id = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("pass is legal");
+        let id = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("pass is legal");
         let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
         assert_eq!(mask[id as usize], 1.0, "lowered to an action the mask forbids");
     }
@@ -398,7 +398,7 @@ mod tests {
         // action the engine would reject, so a scenario that lowers is
         // guaranteed to be a legal line before Unity is ever launched.
         let g = game();
-        for act in [StepAction::Pass(EmptyArgs {}), StepAction::Hatch(EmptyArgs {})] {
+        for act in [StepAction::Pass(PassArgs::default()), StepAction::Hatch(EmptyArgs {})] {
             if let Ok(id) = lower_step(&g, 0, &act) {
                 let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
                 assert_eq!(mask[id as usize], 1.0, "{act:?} lowered to an illegal id");
@@ -434,12 +434,12 @@ mod tests {
         )
         .expect("digivolve onto the breeding area");
         g.decode_action(digivolve, 0);
-        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("p0 main pass");
+        let pass = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("p0 main pass");
         g.decode_action(pass, 0);
 
         // Turn 2 (p1): pass breeding, pass main.
         for label in ["p1 breeding pass", "p1 main pass"] {
-            let pass = lower_step(&g, 1, &StepAction::Pass(EmptyArgs {})).expect(label);
+            let pass = lower_step(&g, 1, &StepAction::Pass(PassArgs::default())).expect(label);
             g.decode_action(pass, 1);
         }
 
@@ -549,7 +549,7 @@ mod tests {
     fn game_with_a_field_main() -> digimon_engine::Game {
         let mut g = game();
         // Breeding -> Main: field-effect activations only exist in Main.
-        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        let pass = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("breeding pass");
         g.decode_action(pass, 0);
         assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
 
@@ -656,7 +656,7 @@ mod tests {
     /// test of the lowering function against a real mask, not an oracle line.
     fn game_with_a_linkable_digimon() -> digimon_engine::Game {
         let mut g = game();
-        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        let pass = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("breeding pass");
         g.decode_action(pass, 0);
         assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
 
@@ -736,7 +736,7 @@ mod tests {
     /// Scopemon's HAND_EFFECT bit (it has no `[Hand] [Main]` of its own).
     fn game_with_a_linkable_digimon_in_hand() -> (digimon_engine::Game, usize) {
         let mut g = game();
-        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        let pass = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("breeding pass");
         g.decode_action(pass, 0);
         assert_eq!(g.current_phase, digimon_engine::GamePhase::Main);
 
@@ -835,7 +835,7 @@ mod tests {
             "ST1-02", "ST1-04", "ST1-05", "ST1-03", "ST1-03",
         ]));
         // Breeding -> Main: play actions only exist in the main phase.
-        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("breeding pass");
+        let pass = lower_step(&g, 0, &StepAction::Pass(PassArgs::default())).expect("breeding pass");
         g.decode_action(pass, 0);
         assert_eq!(
             g.current_phase,

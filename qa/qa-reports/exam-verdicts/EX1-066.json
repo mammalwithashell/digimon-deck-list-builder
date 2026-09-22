@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-23T22:11:43.910179300+00:00",
+  "last_updated": "2026-09-22T02:18:39.509136700+00:00",
   "clauses": {
     "EX1-066#effect#0": {
       "clause_id": "EX1-066#effect#0",
@@ -27,7 +27,7 @@
       "label": "Security Effect",
       "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect2.yaml",
-      "recorded_at": "2026-08-23T22:11:43.910179300+00:00"
+      "recorded_at": "2026-09-22T02:18:39.509136700+00:00"
     }
   }
 }

@@ -57,7 +57,12 @@
 # BT11-089#effect#0; it is out of this file's scope and is reported
 # separately rather than fixed here.)
 card: BT11-089
-clause: BT11-089#effect#3
+# Clause re-pointed BT11-089#effect#3 -> BT11-089#effect#2 (2026-09-21). The Toho denominator
+# correction removed a phantom slot, so this card's security effect "Play this
+# card without paying the cost." moved from index 3 to 2; the stored verdict's
+# text_sha256 matches BT11-089#effect#2 exactly. The filename keeps its old index so its
+# job id cannot collide with another scenario's.
+clause: BT11-089#effect#2
 seed: 424242
 decks:
   p0:
@@ -105,9 +110,16 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
+  # FORCED PASS -- DCGO asks nothing here (sim_only). Player 0 skips turn 1
+  # holding only cards it cannot play at 0 memory (cost-12/16 Digimon, and
+  # Susanoomon EX12-076's Assembly has no material). DCGO's
+  # TurnStateMachine.MainPhase() then finds CanSelect() false and calls
+  # EndTurnProcess() without a main_phase prompt -- measured on scripted-v17
+  # (seed 424242): the next prompt went to player 1. scripted-v16 asked only
+  # because its availability check priced Susanoomon's Assembly play at 0
+  # with no material, a DCGO bug upstream fixed. See scenario::PassArgs.
   - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
+    do: { pass: { sim_only: true } }
   # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
   - actor: 1
     do: { pass: {} }
