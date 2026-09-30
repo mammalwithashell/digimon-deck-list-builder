@@ -86,6 +86,11 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     "BT26-057": ["Black"],           # Bearcatmon (card Black/Red)
     "BT26-075": ["Purple"],          # ScourgeChiropmon (card Purple/Yellow)
     "BT26-080": ["Purple"],          # Bacchusmon (card Purple/Green)
+    # EX13 (2026-09-30) — from the official Bandai DB "DUAL Color" field
+    # (`dual_colors` in data/card_official.json). Both print a single White
+    # Option face on a two-colour Digimon face.
+    "EX13-065": ["White"],           # Sistermon Blanc (Awakened) (card White/Yellow)
+    "EX13-066": ["White"],           # Sistermon Noir (Awakened) (card White/Black)
 }
 
 RARITY_MAP = {
