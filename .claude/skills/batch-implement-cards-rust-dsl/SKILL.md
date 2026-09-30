@@ -469,6 +469,8 @@ The orchestrator has pre-wired `tests/cards_behavioral/<set>/mod.rs` and `main.r
 
 Create `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`. Start from one of the exemplar YAML(s) the scout cited as the closest match. Adapt the structure to the printed card text. Use only DSL verbs the scout cited (or that you have verified by Reading the DSL spec).
 
+**Security icons — check before authoring.** A pink `{Security}` effect (in the official text: `{Security} [Timing] …`, or the older `[Security] [Timing] …` inside the main effect box) is active while the card is FACE UP in the security stack → `scope: security` + its printed timing, or `kind: aura, scope: security`. A blue `[Security]` effect (the "Security Effect" section, `[Security] Play this card …`) fires on a security check → `when: on_security`. Never author a pink effect as `when: on_security`. Tests for pink effects must stage the card face up (`face_up_security.insert(card_index)`). The CI lint `tests/dsl/security_icon_lint.rs` fails the build on a mismatch — see `docs/RUST_DSL_AGENT_GUIDE.md` §"Security Icons".
+
 If you discover a needed verb is not in the DSL spec, STOP and emit verdict `BLOCKED` with `gap_kind: dsl` (or `engine` / `hybrid` per the diagnosis below).
 
 **Step 5 — Re-run tests until green.**

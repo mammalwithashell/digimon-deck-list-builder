@@ -656,6 +656,43 @@ Preferred shape:
 - `play_token` should reference a registered token name.
 - Token On Deletion behavior belongs on the token card, not in every creator.
 
+### Security Icons: Pink `{Security}` vs Blue `[Security]`
+
+Printed cards carry two different security icons, and they are different mechanics.
+The icon **colour** decides which one — not the word:
+
+| Printed icon | What it means | Official DB text | DSL shape |
+|---|---|---|---|
+| **Pink `{Security}`** | Active while the card sits **face up** in the security stack (rule 15-14-5). Never active face down. | `{Security} [End of Opponent's Turn] Play this card …` inside the main effect box. Older printings spell it `[Security] [All Turns] …` (a timing bracket right after it) inside the effect box — ST20-15, ST21-15, EX8-068/069/071, BT19-100, BT26-075. | `scope: security` + the printed timing (`when: end_of_your_turn`, `end_of_opponents_turn`, …) for a triggered effect; `kind: aura, scope: security` for `[All Turns]` / `[Your Turn]` continuous effects. |
+| **Blue `[Security]`** | The ordinary security effect: activates when the card is flipped during a security check. | Its own "Security Effect" section: `[Security] Play this card without paying the cost.` | `when: on_security` (on an Option, the existing `scope: inherited` idiom, e.g. BT25-096). |
+
+Worked examples: BT26-082 Ravemon (pink turn-boundary play), BT24-094 / BT21-095
+(pink auras), ST20-15 (older `[Security] [All Turns]` spelling), BT26-091 (blue).
+
+Rules of thumb:
+
+- **Don't gate pink effects on face-up yourself.** The engine does it: the triggered
+  path (`enqueue_from_security_stack_card`) and the aura walk
+  (`tick_declarative_effects`) both skip face-down security cards
+  (G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP). Tests must stage the card face up
+  (`game.players[p].face_up_security.insert(card_index)`); a face-down negative test
+  is cheap and worth having.
+- **Authoring a pink effect as `when: on_security` is the classic mistake** — it
+  would then fire on a security *check* instead of while face up. The reverse
+  (a blue effect as `scope: security`) makes it fire from a face-up stack card.
+- "When effects trash this card from the security stack, …" has **no icon**; it is
+  `scope: security` + `when: on_discard_security` and is exempt from the check below.
+- DCGO agrees: security-resident scripts gate on `IsExistInSecurity(card)` whose
+  default `isFlipped: false` means **face up**. (`IsExistInSecurity(card, false)` does
+  NOT mean "either face" — BT24-094's comment once said so.)
+
+**Enforced.** `digimon_dsl::security_icon_lint` cross-checks every spec against
+`data/card_official.json`: `scope: security` needs a printed pink icon, a printed
+pink icon needs a `scope: security` clause, and `when: on_security` needs a printed
+blue icon. It runs in CI as `tests/dsl/security_icon_lint.rs`
+(`cargo test -p digimon-engine --test dsl -- security_icon`) and locally via
+`cargo run -p dsl-lint -- code/digimon-engine/cards --printed data/card_official.json`.
+
 ## 8. Gap Filing Rules
 
 Use capability-centric language:

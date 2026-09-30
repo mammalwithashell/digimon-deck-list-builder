@@ -29,6 +29,7 @@ pub mod pretty;
 pub mod raw_rust_registry;
 pub mod registry;
 pub mod schema;
+pub mod security_icon_lint;
 pub mod spec;
 pub mod step;
 pub mod validator;

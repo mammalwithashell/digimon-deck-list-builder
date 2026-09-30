@@ -19,6 +19,7 @@ mod effect_refiring;
 mod embedded_registry;
 mod event_context_bindings;
 mod face_up_security_lifecycle;
+mod security_icon_lint;
 mod granted_effect_selection_body;
 mod group4_zone_movement;
 mod group6_auras;
