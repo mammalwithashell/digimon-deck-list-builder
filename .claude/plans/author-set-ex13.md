@@ -1,7 +1,8 @@
 # EX13 — author-set hand-off (Phases 1–3 done, 2026-09-30)
 
-Card data for EX13 is ingested and reconciled. `/author-set EX13` can start at
-**Phase 3 approval** (the slice partition below); the keyword gate is clear.
+Card data for EX13 is ingested and reconciled, the keyword gate is clear, and
+the slice partition below was **approved as-is (2026-09-30)**. `/author-set
+EX13` can go straight to the Phases 4–6 Workflow.
 
 Re-run the dry run any time:
 
@@ -19,7 +20,7 @@ PYTHONPATH=code python -m tools.author_set.report_set EX13
 | Keyword gate | clear. Every keyword EX13 prints already exists (`Engage`, `Guard`, `ArtsDigivolve`, `Decode`, ...) |
 | DCGO oracle | **20/77** scripts at the pinned submodule (593cd49a9); upstream DCGO2 develop (541bc287a, 2026-09-29) has **32/77**. See "Open items" |
 
-## Slice partition (needs approval before the Workflow runs)
+## Slice partition (approved as-is)
 
 From the dry run (10 slices + 21 orphan staples):
 
@@ -38,8 +39,7 @@ From the dry run (10 slices + 21 orphan staples):
 | Orphan staples (21) | 002, 004, 005, 009, 046, 047, 010, 011, 051, 052, 012, 013, 034, 042, 056, 058, 024, 076, 070, 073, 075 |
 
 The "Examon / holy warrior" slice is really the **Royal Knights** Assembly
-pool, so it may be worth splitting it by line (Omnimon, Examon, Alphamon,
-Gallantmon, and so on) before dispatch.
+pool; it was kept as one slice.
 
 ## What authors need to know
 
@@ -67,19 +67,25 @@ Gallantmon, and so on) before dispatch.
 
 ## Open items
 
-1. **DCGO bump (base-repo machine only, rules 27 and 29).** Upstream develop adds 12
-   EX13 scripts over the pin. Merge upstream into the fork's
-   `add-recording-mod-r2` branch, re-verify the recorder hook map, rebuild the
-   oracle player, then bump the submodule, following the BT26 bump (8649ae7a).
-   No DCGO script exists anywhere yet for these 45 cards: 003 014 016 025 026 027 028 029 030
-   031 032 033 034 035 036 037 038 040 042 043 046 048 049 050 052 053 054 055
-   057 058 059 060 061 063 064 065 066 067 068 070 071 072 073 074 077. For
-   those, card text + `general_rule.pdf` are the only references until
-   upstream catches up.
-2. **EX13-067 Nokia Shiramine: source conflict.** The card face prints
-   "play 1 [Gabumon] if … [Greymon] in its name **and** 1 [Agumon] if …",
-   while the official DB text says "**or**". `cards.json` keeps the
-   printed "and". A human should decide before this card is authored.
+1. **DCGO bump: merged, push blocked.** Upstream DCGO2 develop (541bc287a, 87
+   commits past the last merge) merged cleanly into the fork's
+   `add-recording-mod-r2` as `b9a0638cd` (EX13 scripts 20 -> 32). Recorder
+   hooks are verified untouched (no hook file or `GameRecorder`/`__rec` call
+   site in any upstream-changed path), and so is the Mono pin in `HarnessBuild.cs`. The
+   keyword dirs only saw edits (Ascension/Progress/Execute/Succession, all still
+   "simple"), so `data/dcgo_keyword_manifest.json` stays valid. The push was
+   refused (the Claude GitHub App isn't installed on the fork), so the merge
+   commit wasn't published. To reproduce on the base-repo machine:
+   `git fetch https://github.com/DCGO2/DCGO.git develop && git merge FETCH_HEAD`
+   on `add-recording-mod-r2`, push, rebuild the oracle player, then bump the
+   submodule here (following the BT26 bump, 8649ae7a).
+   Still no DCGO script anywhere for 45 cards: 003 014 016 025 026 027 028 029
+   030 031 032 033 034 035 036 037 038 040 042 043 046 048 049 050 052 053 054
+   055 057 058 059 060 061 063 064 065 066 067 068 070 071 072 073 074 077.
+   For those, the official card text and `general_rule.pdf` are the references.
+2. ~~EX13-067 source conflict~~ **Resolved: the official DB wins.** Its text is now
+   "... [Greymon] in its name **or** 1 [Agumon] ..." (the card face prints
+   "and").
 3. The ingest's DigiXros parser can't read the `Lv.5 × Lv.4 × Lv.3` Assembly
    shape ("Unparsed DigiXros element"). Only tools read `digixros_costs`, so
    nothing breaks. Fix it if clause_coverage needs it.
