@@ -191,3 +191,12 @@ def test_keyword_before_a_bare_name_is_not_swallowed_by_the_name_rule():
     rep = triage(["gain [Link] [Appmon] in its name"])
     assert "link" in rep.auto_ingest
     assert "appmon" in rep.name_hits
+
+
+def test_token_named_elsewhere_in_the_set_is_a_name_everywhere():
+    rep = triage([
+        "Then, if you don't have [Atho, René & Por], you may play 1 "
+        "[Atho, René & Por] Token.",
+    ])
+    assert rep.name_hits["atho, rené & por"] == 2
+    assert not rep.flag_for_human

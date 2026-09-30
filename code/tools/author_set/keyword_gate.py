@@ -188,6 +188,14 @@ def triage_set(
     """
     subsystem_keywords = subsystem_keywords or set()
     rep = KeywordGateReport(set_prefix=set_prefix)
+    effect_texts = list(effect_texts)
+    # A token is named in the set's own text ("play 1 [X] Token"); its other
+    # mentions ("if you don't have [X]") carry no positional suffix.
+    token_names = {
+        _strip_param(m.group(1))
+        for text in effect_texts
+        for m in re.finditer(rf"{_OPEN}({_INNER}){_CLOSE}\s*tokens?\b", text or "", re.IGNORECASE)
+    }
     for text in effect_texts:
         for raw, ref_kind in scan_bracket_refs(text):
             base = _strip_param(raw)
@@ -207,8 +215,8 @@ def triage_set(
             if base in KNOWN_TIMINGS or base in GRAMMAR:
                 rep.ignored[base] += 1
                 continue
-            # 3. known card name / trait by lexicon.
-            if base in card_names:
+            # 3. known card / token name, or trait, by lexicon.
+            if base in card_names or base in token_names:
                 rep.name_hits[base] += 1
                 continue
             if base in traits:
