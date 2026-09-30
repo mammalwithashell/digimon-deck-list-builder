@@ -1,0 +1,86 @@
+# BT26-094 Keenan Crier — Tamer, Purple, Cost 3. Traits: DATA SQUAD.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-094.md):
+#   [Start of Your Main Phase] By placing 1 [DATA SQUAD] trait card from your
+#     hand face down under this Tamer, <Draw 1> and gain 1 memory.
+#   [Your Turn] When your opponent's hand is trashed from or effects trash cards
+#     from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD]
+#     trait Digimon gains <Execute> for the turn.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_094.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP: identical to BT26-091 (see there).
+# Reactive (OnDiscardHand | OnDigivolutionCardDiscarded, optional TRUE):
+#   IsOwnerTurn && (a card of the OPPONENT's hand trashed || a card trashed from
+#   under THIS Tamer); CanActivate = can pay the suspend cost. Body: suspend
+#   self; if an own [DATA SQUAD] (EqualsTraits, top card) Digimon exists,
+#   mandatory (canNoSelect:false) pick → gains Execute until end of turn.
+#   → on_discard_hand gated on event_discard_player: opponent +
+#   on_digivolution_card_trashed gated on event_host_permanent_is_source.
+# Security: PlaySelfTamerSecurityEffect.
+
+card: BT26-094
+name: "Keenan Crier"
+kind: tamer
+color: [purple]
+cost: 3
+traits: [DATA SQUAD]
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "DATA SQUAD"
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [DATA SQUAD] card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: { trait_has: "DATA SQUAD" }
+          prompt: "Place 1 [DATA SQUAD] card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - when: [on_discard_hand, on_digivolution_card_trashed]
+    optional: true
+    active_when: { your_turn: true }
+    timing_conditions:
+      - when: on_discard_hand
+        condition:
+          event_discard_player: opponent
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_permanent_is_source: true
+    summary: "[Your Turn] When your opponent's hand is trashed from or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD] Digimon gains <Execute> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "DATA SQUAD"
+          prompt: "1 of your [DATA SQUAD] trait Digimon gains <Execute> for the turn"
+      - grant_keyword:
+          target: tgt
+          keyword: Execute
+          expiry: end_of_turn
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

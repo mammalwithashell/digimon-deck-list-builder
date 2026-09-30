@@ -11252,6 +11252,28 @@
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-072.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_072.rs",
       "notes": "TDD vs DCGO BT26_072.cs; 3-way cost modal only when a [Keenan Crier] Tamer exists."
+    },
+    "BT26-091": {
+      "card_name": "Yoshino Fujieda",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-091.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_091.rs",
+      "notes": "TDD vs DCGO BT26_091.cs; reactive trigger driven by real effects (Lalamon suspend, Falcomon source trash)."
+    },
+    "BT26-094": {
+      "card_name": "Keenan Crier",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_094.rs",
+      "notes": "TDD vs DCGO BT26_094.cs; on_discard_hand gated to the opponent hand (driven by Peckmon inherited)."
     }
   }
 }
