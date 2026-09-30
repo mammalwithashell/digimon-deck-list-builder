@@ -1,0 +1,89 @@
+# BT26-065 Falcomon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Traits: Avian, DATA SQUAD. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.2 / cost 0; [Digivolve] Lv.2 w/[DATA SQUAD]
+#   trait: Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-065.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Keenan Crier] or card
+#     with the [DATA SQUAD] trait and 1 purple card with [Ravemon] in its name or
+#     [Avian] or [Bird] in any of its traits among them to the hand. Return the
+#     rest to the bottom of the deck.
+#   Inherited: [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in
+#     your hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_065.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(level 2, TopCard
+#   EqualsTraits "DATA SQUAD", cost 0) → alt_paths.
+# On Play: SimplifiedRevealDeckTopCardsAndSelect(3) with two AddHand buckets,
+#   maxCount 1 each, in order: (EqualsCardName "Keenan Crier" || EqualsTraits
+#   "DATA SQUAD") then (HasCardColor Purple && (ContainsCardName "Ravemon" ||
+#   ContainsTraits "Avian" || ContainsTraits "Bird")); remainder → deck bottom.
+#   Not optional (-1 / false). → reveal + two-bucket select (min 1 each, no
+#   duplicate card) + deck-bottom remainder.
+# Inherited (OnAllyAttack, maxPerTurn 1, no IsOwnerTurn gate): DrawClass 1,
+#   then if hand >= 1 a canNoSelect:false SelectHandEffect Discard 1.
+#   → when_attacking, once_per_turn, draw 1 + mandatory select_hand + trash.
+
+card: BT26-065
+name: "Falcomon"
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Avian, DATA SQUAD]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── [On Play] reveal 3: add 1 Keenan/[DATA SQUAD] + 1 purple Ravemon/Avian/
+  #     Bird card; rest to the bottom ─────────────────────────────────────────
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Keenan Crier]/[DATA SQUAD] card and 1 purple [Ravemon]/[Avian]/[Bird] card to hand; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: ds_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - name_is: "Keenan Crier"
+                  - trait_has: "DATA SQUAD"
+            - bind_as: bird_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - color_is: purple
+                  - any_of:
+                      - name_contains: "Ravemon"
+                      - trait_contains: "Avian"
+                      - trait_contains: "Bird"
+          prompt: "Add 1 [Keenan Crier]/[DATA SQUAD] card and 1 purple [Ravemon]/[Avian]/[Bird] card to the hand"
+      - add_to_hand_from_reveal: { of: you, card: ds_pick }
+      - add_to_hand_from_reveal: { of: you, card: bird_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [When Attacking][OPT] <Draw 1> and trash 1 card in hand ─────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] <Draw 1> and trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

@@ -1,0 +1,148 @@
+# BT26-072 Peckmon — Digimon, Lv.4, Purple, DP 5000, Cost 4.
+# Traits: Avian, DATA SQUAD. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.3 / cost 2; [Digivolve] Lv.3 w/[DATA SQUAD]
+#   trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-072.md):
+#   <Blocker>
+#   [On Play] [When Digivolving] By trashing 1 card in your hand or placing it
+#     face down under any of your [Keenan Crier]s, delete 1 of your opponent's
+#     level 4 or lower Digimon.
+#   Inherited: [On Deletion] Your opponent trashes 1 card in their hand.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_072.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3, TopCard EqualsTraits "DATA SQUAD", cost 2.
+# <Blocker>: BlockerSelfStaticEffect.
+# Shared OP/WD (optional false, skippable; additionalActivateCondition = hand
+#   >= 1): if a Tamer whose top card is named [Keenan Crier] exists, a 3-way
+#   SetIntSelection {Trash 1 hand card | Place 1 hand card face down under a
+#   [Keenan Crier] | Don't pay}; otherwise the trash branch is taken directly.
+#   Trash branch: canNoSelect SelectHandEffect → trash. Place branch:
+#   canNoSelect Keenan pick, then canNoSelect hand pick → AddDigivolutionCards
+#   Bottom(face down). Only if the cost was paid: mandatory (canNoSelect:false)
+#   delete of an opponent Digimon with level <= 4.
+# Inherited (OnDestroyedAnyone, mandatory): the opponent selects 1 card of
+#   their hand (canNoSelect:false) → discard.
+
+card: BT26-072
+name: "Peckmon"
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 5000
+traits: [Avian, DATA SQUAD]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── [On Play][When Digivolving] trash 1 hand card OR place it under a
+  #     [Keenan Crier] → delete 1 opp Lv.<=4 Digimon ─────────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 hand card or placing it face down under a [Keenan Crier], delete 1 of your opponent's level 4 or lower Digimon"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              name_is: "Keenan Crier"
+          then:
+            - select_effect_choice:
+                bind_as: cost_mode
+                labels:
+                  - "Trash 1 card in your hand"
+                  - "Place 1 card in your hand face down under a [Keenan Crier]"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost?"
+          else:
+            # No [Keenan Crier]: DCGO skips the modal and goes straight to the
+            # (declinable) trash branch.
+            - select_hand:
+                of: you
+                bind_as: trashed_card
+                optional: true
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: trashed_card }
+      - if:
+          condition: { equals: [cost_mode, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: trashed_card
+                optional: true
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: trashed_card }
+      - if:
+          condition: { equals: [cost_mode, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: keenan
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - name_is: "Keenan Crier"
+                prompt: "Choose a [Keenan Crier] to place a card face down under"
+            - if:
+                condition: { binding_present: keenan }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: placed_card
+                      optional: true
+                      filter: {}
+                      prompt: "Place 1 card in your hand face down under the [Keenan Crier]"
+                  - if:
+                      condition: { binding_present: placed_card }
+                      then:
+                        - place_selected_card_under_tamer:
+                            card: placed_card
+                            tamer: keenan
+                            face_down: true
+      - if:
+          condition:
+            any_of:
+              - binding_present: trashed_card
+              - binding_present: placed_card
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+            - delete_permanent: { target: victim }
+
+  # ─── Inherited [On Deletion] your opponent trashes 1 card in their hand ────
+  - scope: inherited
+    when: on_deletion
+    summary: "Inherited [On Deletion] Your opponent trashes 1 card in their hand"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }

@@ -1,0 +1,53 @@
+# BT26-005 Pinamon — Digi-Egg, Lv.2, Purple.
+# Traits: Bird, DATA SQUAD. Form: In-Training.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-005.md):
+#   Inherited: [On Deletion] By trashing the bottom face-down card from under
+#     any of your Tamers, you may play 1 play cost 5 or lower [Avian] or
+#     [DATA SQUAD] trait card from your trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_005.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Inherited (OnDestroyedAnyone, skippable): CanActivate requires an own Tamer
+#   with a face-down source. Tamer pick canNoSelect:true (declining = not paying
+#   the cost); the bottom face-down source of the picked Tamer is trashed; on
+#   success PlayByEffect(Root.Trash, payCost false) over (ContainsTraits
+#   "Avian" || EqualsTraits "DATA SQUAD") && HasPlayCost && cost <= 5 — its
+#   select is the "you may". → ST24-12 idiom: optional clause +
+#   trash_bottom_face_down_source_under_tamer + optional select_trash + free play.
+
+card: BT26-005
+name: "Pinamon"
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Bird, DATA SQUAD]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        has_face_down_source: true
+    summary: "Inherited [On Deletion] By trashing a bottom face-down card under a Tamer, you may play 1 cost<=5 [Avian]/[DATA SQUAD] card from trash free"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - select_trash:
+          of: you
+          bind_as: revive
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - trait_contains: "Avian"
+                  - trait_has: "DATA SQUAD"
+              - play_cost_lte: 5
+          prompt: "You may play 1 play cost 5 or lower [Avian]/[DATA SQUAD] card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive }

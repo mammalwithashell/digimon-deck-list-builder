@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-18",
+  "last_updated": "2026-09-30",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -11186,6 +11186,72 @@
         "A3"
       ],
       "notes": "All printed clauses green: [Main] reveal_top_deck 2 -> single-bucket select_reveal_buckets {color_is purple, 1..1} (mandatory when a purple is revealed, silently empty otherwise; two purples = a real choice) -> add_to_hand_from_reveal -> order_remainder deck_bottom -> auto-seated as a Delay permanent; [Main]<Delay> (trigger: delayed, not activatable on the placing turn): optional select_own_permanent -> mandatory select_hand purple Digimon -> effect_initiated_digivolve cost reduce 2; inherited [Security] place_self_as_delay_option. Test fixes this pass: `.deck()` lists bottom -> top, `deck_bottom_ids` reads the Vec front, structural check recurses into `if`."
+    },
+    "BT26-002": {
+      "card_name": "Budmon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_002.rs",
+      "notes": "TDD vs DCGO BT26_002.cs; driven through a real ST24-12 effect trash."
+    },
+    "BT26-005": {
+      "card_name": "Pinamon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_005.rs",
+      "notes": "TDD vs DCGO BT26_005.cs (ST24-12 face-down-cost idiom)."
+    },
+    "BT26-036": {
+      "card_name": "Lalamon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_036.rs",
+      "notes": "TDD vs DCGO BT26_036.cs; inherited decline refunds OPT via continue_on_decline + refund_opt (DCGO RemoveUse)."
+    },
+    "BT26-039": {
+      "card_name": "Sunflowmon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_039.rs",
+      "notes": "TDD vs DCGO BT26_039.cs (ST24-05 free-Tamer idiom, name-exact Yoshino)."
+    },
+    "BT26-065": {
+      "card_name": "Falcomon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_065.rs",
+      "notes": "TDD vs DCGO BT26_065.cs; two ordered reveal buckets, no duplicates."
+    },
+    "BT26-072": {
+      "card_name": "Peckmon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_072.rs",
+      "notes": "TDD vs DCGO BT26_072.cs; 3-way cost modal only when a [Keenan Crier] Tamer exists."
     }
   }
 }

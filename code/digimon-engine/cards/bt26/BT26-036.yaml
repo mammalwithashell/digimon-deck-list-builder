@@ -1,0 +1,96 @@
+# BT26-036 Lalamon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation, DATA SQUAD. Attribute: Data.
+# Printed digivolve box: Green Lv.2 / cost 0; [Digivolve] Lv.2 w/[DATA SQUAD]
+#   trait: Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-036.md):
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with
+#     the [Vegetation], [Fairy] or [DATA SQUAD] trait or 1 green Tamer card among
+#     them to the hand. Return the rest to the bottom of the deck.
+#   Inherited: [When Attacking] [Once Per Turn] You may suspend 1 of your
+#     opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_036.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 2, TopCard EqualsTraits "DATA SQUAD", cost 0.
+# Shared [When Moving]/[On Play] (ActivateClassesForSharedEffects, optional
+#   false): SimplifiedRevealDeckTopCardsAndSelect(3), one AddHand bucket maxCount
+#   1 over EqualsTraits Vegetation|Fairy|DATA SQUAD || (IsTamer && green);
+#   remainder → deck bottom. [When Moving] is self-scoped → on_move gated on
+#   event_permanent_is_source (ST24-04 / EX11-038 idiom).
+# Inherited (OnAllyAttack, maxPerTurn 1, skippable, no IsOwnerTurn gate):
+#   CanActivate requires an opponent's unsuspended, suspendable Digimon;
+#   SelectPermanentEffect canNoSelect:true Mode.Tap; if nothing was picked →
+#   activateClass.RemoveUse() (the OPT is not spent). → optional select +
+#   suspend + refund_opt on binding_absent.
+
+card: BT26-036
+name: "Lalamon"
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation, DATA SQUAD]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── [When Moving][On Play] reveal 3; add 1 Vegetation/Fairy/DATA SQUAD card
+  #     or green Tamer; rest to the bottom ───────────────────────────────────
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Vegetation]/[Fairy]/[DATA SQUAD] card or 1 green Tamer card to hand; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: pick
+          filter:
+            any_of:
+              - trait_has: "Vegetation"
+              - trait_has: "Fairy"
+              - trait_has: "DATA SQUAD"
+              - all_of:
+                  - kind: tamer
+                  - color_is: green
+          prompt: "Add 1 [Vegetation]/[Fairy]/[DATA SQUAD] card or 1 green Tamer card to the hand"
+      - add_to_hand_from_reveal: { of: you, card: pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [When Attacking][OPT] you may suspend 1 opponent's Digimon ──
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        is_suspended: false
+    summary: "Inherited [When Attacking][OPT] You may suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          optional: true
+          # PASS continues the clause so the RemoveUse leg below runs.
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: false
+          prompt: "You may suspend 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: tgt }
+          then:
+            - suspend: { target: tgt }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
