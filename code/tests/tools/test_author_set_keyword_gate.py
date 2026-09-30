@@ -148,3 +148,46 @@ def test_name_trait_collision_is_a_known_limitation():
     rep = triage(["This Digimon gains [Greymon]."])  # 'greymon' is in NAMES
     assert "greymon" in rep.name_hits
     assert "greymon" not in rep.flag_for_human
+
+
+def test_printed_keyword_spellings_map_to_their_rust_home():
+    # "Draw" / "Security A." are printed spellings of the DrawX /
+    # SecurityAttack{Plus,Minus} variants; "Recovery" is a DSL step. None of
+    # them is a new keyword (they flagged on BT26 and EX13 before this).
+    rep = triage(
+        ["＜Draw 2＞ ...", "gains ＜Security A. +1＞", "gets ＜Security A. -1＞",
+         "＜Recovery +1 (Deck)＞"],
+        rust_keywords=RUST | {"drawx", "securityattackplus", "securityattackminus"},
+    )
+    assert set(rep.covered) == {"draw", "security a.", "recovery"}
+    assert not rep.flag_for_human
+
+
+def test_positional_name_and_token_references_are_not_keywords():
+    # EX13: "[X] in its name/text" and "[X] Token" refer to cards/tokens, and a
+    # list run ending in such a suffix covers every item (NBSP as printed).
+    rep = triage([
+        "into a Digimon card with [Imperialdramon]\xa0in its name",
+        "Add 1 Digimon card with [Huckmon] or [Sistermon]\xa0in its text",
+        "You may play 1 [Hinukamuy] Token.",
+        "play 1 [Atho, René & Por] Token",
+    ])
+    assert set(rep.name_hits) == {"imperialdramon", "huckmon", "sistermon",
+                                  "hinukamuy", "atho, rené & por"}
+    assert not rep.flag_for_human
+
+
+def test_in_its_traits_list_with_other_than_is_a_trait_run():
+    rep = triage([
+        "1 Digimon card with [Beast], [Animal] or [Sovereign], other than "
+        "[Sea Animal],\xa0in any of its traits among them"
+    ])
+    assert {"beast", "animal", "sovereign", "sea animal"} <= set(rep.trait_hits)
+    assert not rep.flag_for_human
+
+
+def test_keyword_before_a_bare_name_is_not_swallowed_by_the_name_rule():
+    # "[Link] [Appmon] in its name": no list separator, so Link stays a keyword.
+    rep = triage(["gain [Link] [Appmon] in its name"])
+    assert "link" in rep.auto_ingest
+    assert "appmon" in rep.name_hits
