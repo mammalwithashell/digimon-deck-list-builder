@@ -4171,6 +4171,18 @@ clauses (`end_of_your_turn` / `end_of_opponents_turn` / the `OnAllyAttack` scan)
 FACE-DOWN security cards — BT20-055 Invisimon and BT25-039 Sirenmon played / searched
 from a face-down security stack.
 
+**Icon, not wording.** The printed icon decides it: the pink `{Security}` icon
+marks an effect active while the card sits FACE UP in the security stack; the
+blue `[Security]` icon is the ordinary security effect that activates when the
+card is flipped during a security check. `[Security]` resolves through
+`SecuritySkill` / `pending_security` and is untouched by this gate, as are
+"When effects trash this card from the security stack" clauses
+(`on_discard_security`). DCGO agrees: all 44 security-resident scripts gate
+on `IsExistInSecurity(card)` whose default `isFlipped: false` means face up,
+and none gates on face down. The security-scope AURA walk
+(`game/triggers.rs`, `tick_declarative_effects`) already required face up;
+this fix brings the triggered path into line with it.
+
 **Fix.** The enqueue now requires the card's `card_index` in
 `Player.face_up_security` (`effect_queue.rs`). `on_discard_security`
 ("When effects trash this card from the security stack") is a different path and is

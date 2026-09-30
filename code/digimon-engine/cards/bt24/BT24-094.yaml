@@ -42,8 +42,8 @@
 # Region "All Turns - Security DP" (None): ChangeDPStaticEffect(+2000),
 #   permanentCondition = owner battle-area Digimon that are (Green || Yellow)
 #   && HasTSTraits, gated on `IsExistInSecurity(card, false)` (this card is in
-#   the security stack, face-up or face-down — the gate only checks presence
-#   in the security zone, not flip state). → `kind: aura`, `scope: security`,
+#   the security stack FACE UP — the `false` is `isFlipped`, i.e. not face
+#   down; rule 15-14-5, the pink {Security} icon). → `kind: aura`, `scope: security`,
 #   `dp_modifier: 2000`, target green/yellow TS own battle-area Digimon.
 #
 # Region "All Turns - Security Alliance" (OnAllyAttack): AllianceStaticEffect
