@@ -535,6 +535,28 @@ fn run_steps_with_runtime_inner(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
+    // A selection is ALREADY pending before the first step runs. This happens
+    // when a tail resumes inside a selection callback whose synchronous work
+    // fired an observer that drained inline and parked — a source trashed from
+    // under a Tamer (`fire_digivolution_card_trashed` drains synchronously by
+    // design, see EX10-036). Installing this slice's next selection now would
+    // overwrite — silently drop — the observer's prompt, so park the whole
+    // slice behind it, exactly as the post-step check below does after a
+    // synchronous step. G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION.
+    if !steps.is_empty() && ctx.game.pending_selection.is_some() {
+        let tail_trigger_context = ctx.game.current_trigger_context.clone();
+        wrap_pending_selection_with_tail(
+            ctx.game,
+            ctx.source_card,
+            ctx.source_permanent,
+            ctx.player,
+            steps.to_vec(),
+            bindings.clone(),
+            runtime.clone(),
+            tail_trigger_context,
+        );
+        return RunOutcome::Parked;
+    }
     let mut i = 0;
     while i < steps.len() {
         // Cost-pay abort short-circuit (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).

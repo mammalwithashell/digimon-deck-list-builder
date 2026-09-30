@@ -2198,6 +2198,18 @@ impl Game {
         else {
             return;
         };
+        // Rule 15-14-5: a `{Security}` effect is active only while its card is
+        // FACE UP in the security stack (BT26-082's official Q&A: "It can't be
+        // triggered or activated in areas other than the face-up security
+        // cards"). A face-down security card has no active effects.
+        // G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP.
+        if !self
+            .player(player)
+            .face_up_security
+            .contains(&card_source.card_index)
+        {
+            return;
+        }
         let card_id = card_source.card_id(&self.card_data).to_string();
         let source_kind = source_kind_for_card_kind(card_source.card_kind(&self.card_data));
 

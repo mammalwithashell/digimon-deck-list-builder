@@ -131,7 +131,7 @@ effects:
       all_of:
         - replacement_subject_is_mine: true
         - any_of:
-            - source_permanent_name_contains: "Rosemon"
+            - source_name_contains: "Rosemon"
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:

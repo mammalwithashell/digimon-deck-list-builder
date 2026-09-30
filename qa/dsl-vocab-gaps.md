@@ -8346,3 +8346,47 @@ pins that the turn scan does not trash such a marker.
   corrected). `EX12-076#effect#5` is the matching digivolve-cost line.
 - First reported: 2026-08-24
 
+
+## PredicateSpec silently ignores unknown keys  [G-DSL-PREDICATE-UNKNOWN-KEYS-SILENTLY-IGNORED]
+
+- Found 2026-09-30 (BT26-044 Lilamon test `bt26_044_inherited_ignores_non_rosemon_non_data_squad_carrier`).
+- `PredicateSpec` (`code/digimon-dsl/src/predicate.rs`) is `#[serde(default)]` without
+  `deny_unknown_fields`, so a misspelled leaf parses as `{}` — an always-true predicate.
+  `source_permanent_name_contains:` (not a real key; the leaf is `source_name_contains`)
+  sat inside an `any_of` in ST24-06, ST24-10, BT25-027, making their "[X] in its name or
+  the [DATA SQUAD] trait" leave-prevention apply to EVERY carrier. Those three cards are
+  fixed (`source_name_contains`).
+- Still open: reject unknown predicate keys at parse or lint time (dsl-lint) so the next
+  typo fails the build instead of widening a filter.
+
+## Count-capped multi-select cannot span both players or express "0 or exactly N"  [G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N]
+
+- Found 2026-09-30 (BT26-050 Rosemon: Burst Mode "[When Digivolving] You may suspend 2
+  Digimon or Tamers" — DCGO canNoSelect:true / canEndNotMax:false over BOTH players).
+- `select_count_capped_multi` resolves `of: any` to the controller only, and
+  `optional_zero` does not lower `min` (effective min = max(min, 0|1)).
+- Worked around in BT26-050 with an explicit suspend / don't-suspend modal plus two
+  sequential `select_any_permanent` picks (`not_in_binding`). Suggested vocab:
+  `of: any` support + `zero_or_exact: true`.
+
+## Player-level modifier with a permanent filter  [G-DSL-PLAYER-MODIFIER-PERMANENT-FILTER]
+
+- Found 2026-09-30 (BT26-050 Option face: "until their turn ends, none of their
+  suspended Digimon or Tamers can digivolve or unsuspend" — DCGO
+  `GainCanNotDigivolvePlayerEffect(permanentCondition: IsSuspended)`, evaluated
+  continuously).
+- `add_player_modifier` has no permanent filter. BT26-050 applies `CannotDigivolve` to the
+  opponent's permanents suspended at resolution (PARTIAL: one that becomes suspended later
+  in the window can still digivolve). `CannotUnsuspend` is exact at player level.
+- Suggested vocab: `add_player_modifier { …, permanent_filter: <predicate> }`.
+
+## `select_trash` binds a trash INDEX that goes stale  [G-DSL-TRASH-INDEX-BINDING-STALE]
+
+- Found 2026-09-30 (BT26-098 Queen of Thorns: pick a [Sunflowmon] AND a [Lilamon] from
+  trash, then place both — the Q&A makes it all-or-nothing, so both picks precede both
+  moves).
+- `select_trash` binds `TrashIndex`; the first placement shifts the trash and the second
+  binding then addresses the wrong slot (silently no-op). BT25-096 only works because it
+  places each card immediately after picking it (which breaks the all-or-nothing reading).
+- Worked around with `select_union_zone { zones: [trash] }` (handle-bound). Suggested:
+  bind `select_trash` picks by `CardHandle`.

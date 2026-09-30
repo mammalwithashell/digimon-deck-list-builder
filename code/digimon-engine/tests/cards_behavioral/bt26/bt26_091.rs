@@ -145,14 +145,19 @@ fn bt26_091_effect_trash_from_under_this_tamer_triggers() {
     r.fire_on_play(0, falco.index as usize);
     r.accept_optional_trigger().expect("Falcomon");
     pick_first(&mut r, 0); // Yoshino is the only Tamer with a face-down card
-    pass(&mut r, 0); // decline Falcomon's optional trash-return pick
-    // Yoshino's optional trigger (it follows Falcomon's resolution).
+    // The engine drains OnDigivolutionCardTrashed observers inline (the
+    // EX10-036 contract), so Yoshino's optional trigger surfaces before the
+    // rest of Falcomon's effect; Falcomon's return pick is parked behind it.
     r.accept_optional_trigger().expect("Yoshino triggers on the effect trash");
     assert!(r.game.players[0].battle_area[y.index as usize].is_suspended);
     let v = r.pending_selection_view().expect("digivolve base pick");
     assert!(v.is_optional, "'may digivolve'");
     pick_first(&mut r, 0);
     pick_hand(&mut r, 0, "FAIRY4");
+    // Falcomon's (parked) optional return pick still resolves afterwards.
+    let v = r.pending_selection_view().expect("Falcomon's return pick survived");
+    assert!(v.is_optional);
+    pass(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"FAIRY4".to_string()));
     let _ = y;

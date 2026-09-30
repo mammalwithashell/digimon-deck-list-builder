@@ -11274,6 +11274,72 @@
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-094.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_094.rs",
       "notes": "TDD vs DCGO BT26_094.cs; on_discard_hand gated to the opponent hand (driven by Peckmon inherited)."
+    },
+    "BT26-044": {
+      "card_name": "Lilamon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_044.rs",
+      "notes": "TDD vs DCGO BT26_044.cs. DCGO checks the inherited Rosemon/DATA SQUAD gate on the inherited card itself (always true); we follow the printed carrier reading, so expect an oracle divergence on a non-DS carrier."
+    },
+    "BT26-076": {
+      "card_name": "Crowmon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_076.rs",
+      "notes": "TDD vs DCGO BT26_076.cs; surfaced + fixed G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION."
+    },
+    "BT26-049": {
+      "card_name": "Rosemon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_049.rs",
+      "notes": "TDD vs DCGO BT26_049.cs; reactive cap = 3 + suspended Digimon/Tamers on both sides; on_suspend is per-permanent (G-ENGINE-ON-SUSPEND-BATCH)."
+    },
+    "BT26-050": {
+      "card_name": "Rosemon: Burst Mode",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_050.rs",
+      "notes": "Option-face can-not-digivolve lock is a resolution-time snapshot (G-DSL-PLAYER-MODIFIER-PERMANENT-FILTER); WD suspend-2 uses a modal + two either-side picks (G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N). Burst digivolve covered structurally only."
+    },
+    "BT26-082": {
+      "card_name": "Ravemon",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-082.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_082.rs",
+      "notes": "TDD vs DCGO BT26_082.cs; surfaced + fixed G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP (rule 15-14-5)."
+    },
+    "BT26-098": {
+      "card_name": "Queen of Thorns",
+      "validated_date": "2026-09-30",
+      "report": "bt26-data-squad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_098.rs",
+      "notes": "TDD vs DCGO BT26_098.cs; all-or-nothing placement per Q&A (handle-bound picks, G-DSL-TRASH-INDEX-BINDING-STALE); the DCGO placement-order choice is not surfaced."
     }
   }
 }

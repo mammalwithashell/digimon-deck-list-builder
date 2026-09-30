@@ -4128,3 +4128,62 @@ mapping — it returns a 4-long vector for a 3-step line).
 exactly those two clauses: `dna:` / `materials:` appear in only two scenarios in
 `qa/dcgo-exams/` (`BT8-084-effect0.yaml`, `BT16-077-effect0.yaml`), so no other card's
 stored verdict was affected.
+
+## G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION — RESOLVED 2026-09-30 (found 2026-09-30, BT26 Data Squad)
+
+**Symptom.** A triggered effect's prompt was silently lost. BT26-076 Crowmon's
+`[When Digivolving]` pays "trash the bottom face-down card from under any of your
+Tamers" and then makes the opponent discard. The trash fires
+`OnDigivolutionCardTrashed`; every `[Your Turn]` observer of that event (Crowmon's
+own reactive digivolve, BT26-044 Lilamon's, …) recorded its `[Once Per Turn]` use
+but its selection never reached the player.
+
+**Cause.** `fire_digivolution_card_trashed` drains the effect queue synchronously
+(the documented EX10-036 contract), so the observer runs mid-effect and parks a
+selection. The cost step's tail then resumed inside the selection callback and
+`run_steps_with_runtime` dispatched its first step — here `as_selecting_player` →
+the opponent's `select_hand` — which installed a new `pending_selection` over the
+observer's. The post-step "a synchronous step left a selection pending → park the
+tail" guard only ran AFTER a step, never before the first one of a resumed slice.
+
+**Fix.** `run_steps_with_runtime_inner` (`dsl_cards/step/mod.rs`) now checks for an
+already-pending selection before running the first step and parks the whole slice
+behind it (`wrap_pending_selection_with_tail`) — the same mechanism as the post-step
+guard. Regression: `bt26_076_self_caused_tamer_trash_prompt_survives_the_discard`,
+`bt26_091_effect_trash_from_under_this_tamer_triggers` (the latter's order changed:
+the inline observer now resolves before the rest of the causing effect, consistent
+with EX10-036's interleave).
+
+**Still open (timing, not loss):** rules-wise a trigger caused mid-effect waits until
+the effect finishes; the engine's synchronous `OnDigivolutionCardTrashed` drain
+resolves the observer first. Switching that drain to `maybe_drain_effect_queue`
+breaks `ex10_036_clause_a_after_source_trash_prompts_opp_field_delete`, so it was
+left as-is — flagged for the next oracle pass on a DATS line.
+
+## G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP — RESOLVED 2026-09-30 (found 2026-09-30, BT26-082 Ravemon)
+
+**Rule.** 15-14-5: a `{Security}` effect is active only while its card is face up in
+the security stack; BT26-082's official Q&A says the same ("It can't be triggered or
+activated in areas other than the face-up security cards").
+
+**Symptom.** `enqueue_from_security_stack_card` fired `scope: security` turn-boundary
+clauses (`end_of_your_turn` / `end_of_opponents_turn` / the `OnAllyAttack` scan) for
+FACE-DOWN security cards — BT20-055 Invisimon and BT25-039 Sirenmon played / searched
+from a face-down security stack.
+
+**Fix.** The enqueue now requires the card's `card_index` in
+`Player.face_up_security` (`effect_queue.rs`). `on_discard_security`
+("When effects trash this card from the security stack") is a different path and is
+unaffected. BT20-055 / BT25-039 tests now mark the card face up; new negative test
+`bt26_082_face_down_security_does_nothing`.
+
+## G-ENGINE-ON-SUSPEND-BATCH — OPEN (found 2026-09-30, BT26 Data Squad)
+
+DCGO fires ONE `OnTappedAnyone` per suspend action carrying every suspended permanent
+(`CardController.cs` `SuspendPermanents…` → `StackSkillInfos(_hashtable{"Permanents"})`).
+The engine fires `on_suspend` once per permanent. For the DATS observers:
+`[Once Per Turn]` ones (BT26-044 Lilamon, BT26-049 Rosemon, ST24-11 Rosemon) differ
+only when the first trigger is declined and refunded (DCGO RemoveUse) — ours
+re-offers on the second event of the same batch; non-OPT ones (BT26-091 Yoshino)
+would trigger twice per multi-suspend, but its "by suspending this Tamer" cost makes
+the second unpayable. Needs a batched suspend event (like `pending_hand_discard`).

@@ -1,0 +1,223 @@
+# BT26-050 Rosemon: Burst Mode — DUAL (Digimon Lv.7 Green/Red DP 15000 // Option
+#   Green use cost 6). Traits: Fairy, DATA SQUAD. Attribute: Data.
+# Printed digivolve box: Green Lv.6 / cost 5; [Digivolve] Lv.6 w/[DATA SQUAD]
+#   trait: Cost 5; [Burst Digivolve] [Rosemon]: Cost 0 by returning 1
+#   [Yoshino Fujieda] to the hand.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-050.md):
+#   Digimon face:
+#   [When Digivolving] You may suspend 2 Digimon or Tamers. Then, 2 of your
+#     opponent's Digimon or Tamers can't unsuspend until their turn ends.
+#   [When Digivolving] [When Attacking] By returning 1 other suspended Digimon to
+#     the bottom of the deck, trash your opponent's top security card.
+#   Option face (DUAL): <Use Req. ([DATA SQUAD] trait)> [Main] Suspend 2 of your
+#     opponent's Digimon or Tamers. Then, until their turn ends, none of their
+#     suspended Digimon or Tamers can digivolve or unsuspend.
+#   DUAL Rule: <Arts Digivolve>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_050.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 6 + HasDataSquadTraits, cost 5.
+# Burst Digivolution: from a Digimon whose top card is named [Rosemon]; Tamer
+#   condition = an own battle-area [Yoshino Fujieda] (returned to hand); cost 0.
+#   → burst_digivolve alt path (BT25-104 ShineGreymon: Burst Mode idiom).
+# WD #1 (not optional): (a) canNoSelect:true / canEndNotMax:false Tap pick of
+#   min(2, n) over ANY battle-area Digimon/Tamer (both players) — i.e. 0 or
+#   exactly min(2, n); (b) canNoSelect:false pick of
+#   min(2, n) OPPONENT Digimon/Tamers → GainCanNotUnsuspend(UntilOpponentTurnEnd)
+#   on each.
+# WD/WA #2 (not optional, skippable; CanActivate requires a candidate):
+#   canNoSelect:true pick of 1 OTHER suspended Digimon (either player) →
+#   deck-bottom; on success trash the opponent's top security card.
+# Option [Main]: mandatory Tap pick of min(2, n) opponent Digimon/Tamers; then
+#   PLAYER-level GainCanNotDigivolve + GainCanNotUnsuspend over "opponent's
+#   Digimon/Tamer that IsSuspended" (evaluated continuously) until the end of
+#   the opponent's turn.
+#   PARTIAL: the DSL player modifier has no permanent filter
+#   (G-DSL-PLAYER-MODIFIER-PERMANENT-FILTER), so the can't-digivolve lock is
+#   applied to the opponent's Digimon/Tamers suspended AT RESOLUTION (they
+#   cannot unsuspend, so the snapshot holds for everything suspended now); a
+#   permanent that becomes suspended later that window (e.g. by attacking on
+#   the opponent's turn) is not locked out of digivolving. The can't-unsuspend
+#   half is exact (a player-level lock only ever matters to suspended cards).
+
+card: BT26-050
+name: "Rosemon: Burst Mode"
+kind: dual
+
+level: 7
+color: [green, red]
+dp: 15000
+traits: [Fairy, DATA SQUAD]
+form: Mega
+attribute: Data
+
+dual:
+  digimon:
+    level: 7
+    dp: 15000
+    colors: [green, red]
+    traits: [Fairy, DATA SQUAD]
+    effect_text: "[When Digivolving] You may suspend 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. [When Digivolving] [When Attacking] By returning 1 other suspended Digimon to the bottom of the deck, trash your opponent's top security card."
+    inherited_text: ""
+  option:
+    use_cost: 6
+    colors: [green]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "DATA SQUAD"
+    effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Suspend 2 of your opponent's Digimon or Tamers. Then, until their turn ends, none of their suspended Digimon or Tamers can digivolve or unsuspend. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: "DATA SQUAD"
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: "Rosemon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: yoshino
+          filter: { kind: tamer, name_is: "Yoshino Fujieda" }
+          prompt: "Return [Yoshino Fujieda] to the hand"
+      - return_to_hand: { target: yoshino }
+    on_burst_turn_end:
+      - trash_top_source: { target: self }
+
+effects:
+  # ─── [When Digivolving] may suspend 2 Digimon/Tamers (either side); then 2
+  #     opp Digimon/Tamers can't unsuspend until their turn ends ─────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] You may suspend 2 Digimon or Tamers; then 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+    process:
+      # "You may suspend 2 Digimon or Tamers" — DCGO: canNoSelect:true,
+      # canEndNotMax:false over BOTH players' Digimon/Tamers ⇒ 0 or exactly
+      # min(2, n). `select_count_capped_multi` is single-player and cannot
+      # express "0 or exactly N" (G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N), so
+      # the decline is an explicit modal and the two picks are sequential
+      # either-side selections (the second excludes the first).
+      - select_effect_choice:
+          bind_as: suspend_mode
+          labels:
+            - "Suspend 2 Digimon or Tamers"
+            - "Don't suspend"
+          prompt: "You may suspend 2 Digimon or Tamers"
+      - if:
+          condition: { equals: [suspend_mode, 0] }
+          then:
+            - select_any_permanent:
+                bind_as: susp1
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "Suspend 2 Digimon or Tamers (1st)"
+            - select_any_permanent:
+                bind_as: susp2
+                filter:
+                  all_of:
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                    - not_in_binding: susp1
+                prompt: "Suspend 2 Digimon or Tamers (2nd)"
+            - suspend: { target: susp1 }
+            - suspend: { target: susp2 }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 2
+          max: 2
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: to_lock
+          prompt: "2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+      - per_selected:
+          selection: to_lock
+          bind_as: locked
+          body:
+            - add_modifier:
+                target: locked
+                modifier: CannotUnsuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── [WD][WA] by bottom-decking 1 other suspended Digimon, trash the
+  #     opponent's top security card ─────────────────────────────────────────
+  - when: [when_digivolving, when_attacking]
+    condition:
+      any_field_permanent:
+        of: any
+        kind: digimon
+        is_suspended: true
+        other: true
+    summary: "[When Digivolving][When Attacking] By returning 1 other suspended Digimon to the bottom of the deck, trash your opponent's top security card"
+    process:
+      - select_any_permanent:
+          bind_as: bounced
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+              - other: true
+          prompt: "Return 1 other suspended Digimon to the bottom of the deck to trash your opponent's top security card"
+      - if:
+          condition: { binding_present: bounced }
+          then:
+            - return_to_deck: { target: bounced, position: bottom }
+            - trash_top_security: { of: opponent }
+
+  # ─── Option face [Main] suspend 2 opp; their suspended Digimon/Tamers can't
+  #     digivolve or unsuspend until their turn ends ─────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Suspend 2 of your opponent's Digimon or Tamers; until their turn ends, none of their suspended Digimon or Tamers can digivolve or unsuspend"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 2
+          max: 2
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: main_suspend
+          prompt: "Suspend 2 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: main_suspend
+          bind_as: ms
+          body:
+            - suspend: { target: ms }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - is_suspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          bind_as: frozen
+          body:
+            - add_modifier:
+                target: frozen
+                modifier: CannotDigivolve
+                value: 1
+                expiry: end_of_opponents_turn
