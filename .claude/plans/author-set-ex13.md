@@ -1,0 +1,85 @@
+# EX13 — author-set hand-off (Phases 1–3 done, 2026-09-30)
+
+Card data for EX13 is ingested and reconciled. `/author-set EX13` can start at
+**Phase 3 approval** (the slice partition below); the keyword gate is clear.
+
+Re-run the dry run any time:
+
+```bash
+PYTHONPATH=code python -m tools.author_set.report_set EX13
+```
+
+## What is in place
+
+| Step | State |
+|---|---|
+| Official Bandai DB mirror | `data/card_bundles/EX13-001..077.md` + `data/card_official.json` (77/77) |
+| Ingest | 77 cards in `data/cards.json`, indices 4325..4401 |
+| Reconcile vs official DB | `data/card_overrides.json`: 5 Rule-granted traits, 26 evo-circle sets, 4 colour sets, 13 missing Assembly lines, 2 DUAL blocks, printed-text fixes |
+| Keyword gate | clear. Every keyword EX13 prints already exists (`Engage`, `Guard`, `ArtsDigivolve`, `Decode`, ...) |
+| DCGO oracle | **20/77** scripts at the pinned submodule (593cd49a9); upstream DCGO2 develop (541bc287a, 2026-09-29) has **32/77**. See "Open items" |
+
+## Slice partition (needs approval before the Workflow runs)
+
+From the dry run (10 slices + 21 orphan staples):
+
+| Slice | Cards |
+|---|---|
+| Examon / holy warrior (15) | 020, 014, 015, 023, 036, 037, 043, 060, 061, 062, 064, 016, 045, 077, 001 |
+| Dracomon / dragon (6) | 008, 018, 039, 021, 041, 044 |
+| Veedramon / CS (6) | 017, 019, 022, 067, 069, 074 |
+| Mutant (6) | 050, 053, 054, 031, 059, 063 |
+| Richard Sampson / DATA SQUAD (5) | 003, 026, 030, 032, 071 |
+| Chronicle (5) | 006, 049, 055, 057, 072 |
+| Sukamon / beast (4) | 027, 038, 028, 040 |
+| Guilmon / reptile (3) | 007, 048, 068 |
+| Puppet (3) | 065, 066, 035 |
+| Witchelny (3) | 025, 029, 033 |
+| Orphan staples (21) | 002, 004, 005, 009, 046, 047, 010, 011, 051, 052, 012, 013, 034, 042, 056, 058, 024, 076, 070, 073, 075 |
+
+The "Examon / holy warrior" slice is really the **Royal Knights** Assembly
+pool, so it may be worth splitting it by line (Omnimon, Examon, Alphamon,
+Gallantmon, and so on) before dispatch.
+
+## What authors need to know
+
+- **Assembly is the set mechanic.** 17 cards: 014, 015, 016, 020, 023, 024,
+  031, 036, 037, 043, 044, 060, 061, 062, 063, 076, 077. The DSL has
+  `kind: assembly` (EX12, BT24-081 are prior art). New requirement shapes to
+  check against the vocabulary:
+  - `Lv.5 × Lv.4 × Lv.3, all w/…`: one material per level (10 cards)
+  - `… w/different colors` (077): is there a `distinct_by: color`?
+  - `[WarGreymon]×[MetalGarurumon]×[Agumon]×[Gabumon]` (016): four named materials
+  - `3 [Huckmon] text Digimon cards w/different names` (061)
+- The Assembly text is in `xros_req` in the corpus's existing
+  `Assembly Requirements [Assembly -N] …` shape. The engine does not read
+  `xros_req`; author it in YAML.
+- **Rule lines are not in card text** (corpus convention). They must be
+  authored as `also_treated_as` or traits:
+  - EX13-029 FlameWizardmon: Name, also treated as [Wizardmon]
+  - EX13-053 Thundermon: Name, treated as including [Mamemon]
+  - EX13-066 Sistermon Noir (Awakened): also treated as Name
+    [Sistermon Ciel (Awakened)] + [Data] attribute (the attribute is already in
+    `attribute_eng`)
+  - Trait grants 025/038/054/056/076 are already in `type_eng`/`attribute_eng`.
+- DUAL cards: 065, 066 (both White Option face, use cost 5, `<Arts Digivolve>`).
+- Tokens: [Atho, René & Por] (014 and the Sistermon line), [Hinukamuy] (061).
+
+## Open items
+
+1. **DCGO bump (base-repo machine only, rules 27 and 29).** Upstream develop adds 12
+   EX13 scripts over the pin. Merge upstream into the fork's
+   `add-recording-mod-r2` branch, re-verify the recorder hook map, rebuild the
+   oracle player, then bump the submodule, following the BT26 bump (8649ae7a).
+   No DCGO script exists anywhere yet for these 45 cards: 003 014 016 025 026 027 028 029 030
+   031 032 033 034 035 036 037 038 040 042 043 046 048 049 050 052 053 054 055
+   057 058 059 060 061 063 064 065 066 067 068 070 071 072 073 074 077. For
+   those, card text + `general_rule.pdf` are the only references until
+   upstream catches up.
+2. **EX13-067 Nokia Shiramine: source conflict.** The card face prints
+   "play 1 [Gabumon] if … [Greymon] in its name **and** 1 [Agumon] if …",
+   while the official DB text says "**or**". `cards.json` keeps the
+   printed "and". A human should decide before this card is authored.
+3. The ingest's DigiXros parser can't read the `Lv.5 × Lv.4 × Lv.3` Assembly
+   shape ("Unparsed DigiXros element"). Only tools read `digixros_costs`, so
+   nothing breaks. Fix it if clause_coverage needs it.
