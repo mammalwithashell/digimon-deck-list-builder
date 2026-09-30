@@ -18,7 +18,7 @@ PYTHONPATH=code python -m tools.author_set.report_set EX13
 | Ingest | 77 cards in `data/cards.json`, indices 4325..4401 |
 | Reconcile vs official DB | `data/card_overrides.json`: 5 Rule-granted traits, 26 evo-circle sets, 4 colour sets, 13 missing Assembly lines, 2 DUAL blocks, printed-text fixes |
 | Keyword gate | clear. Every keyword EX13 prints already exists (`Engage`, `Guard`, `ArtsDigivolve`, `Decode`, ...) |
-| DCGO oracle | **20/77** scripts at the pinned submodule (593cd49a9); upstream DCGO2 develop (541bc287a, 2026-09-29) has **32/77**. See "Open items" |
+| DCGO oracle | **32/77** scripts at the submodule (`b9a0638cd` = fork + DCGO2 develop 541bc287a); oracle player not yet rebuilt |
 
 ## Slice partition (approved as-is)
 
@@ -67,18 +67,17 @@ pool; it was kept as one slice.
 
 ## Open items
 
-1. **DCGO bump: merged, push blocked.** Upstream DCGO2 develop (541bc287a, 87
-   commits past the last merge) merged cleanly into the fork's
-   `add-recording-mod-r2` as `b9a0638cd` (EX13 scripts 20 -> 32). Recorder
-   hooks are verified untouched (no hook file or `GameRecorder`/`__rec` call
-   site in any upstream-changed path), and so is the Mono pin in `HarnessBuild.cs`. The
-   keyword dirs only saw edits (Ascension/Progress/Execute/Succession, all still
-   "simple"), so `data/dcgo_keyword_manifest.json` stays valid. The push was
-   refused (the Claude GitHub App isn't installed on the fork), so the merge
-   commit wasn't published. To reproduce on the base-repo machine:
-   `git fetch https://github.com/DCGO2/DCGO.git develop && git merge FETCH_HEAD`
-   on `add-recording-mod-r2`, push, rebuild the oracle player, then bump the
-   submodule here (following the BT26 bump, 8649ae7a).
+1. **DCGO bump: done in git; the oracle player still needs a rebuild.**
+   Upstream DCGO2 develop (541bc287a, 87 commits past the last merge) merged
+   cleanly into the fork's `add-recording-mod-r2` as `b9a0638cd` (pushed), and
+   the submodule here points at it. EX13 scripts go from 20 to 32. Recorder hooks
+   are verified untouched (no hook file or `GameRecorder`/`__rec` call site in
+   any upstream-changed path), and so is the Mono pin in `HarnessBuild.cs`. The
+   keyword dirs only saw edits (Ascension/Progress/Execute/Succession, still
+   "simple"), so `data/dcgo_keyword_manifest.json` stays valid.
+   **Still to do on the base-repo machine:** `git submodule update DCGO`, then
+   rebuild the oracle player (scripted-v18) against `b9a0638cd` before any EX13
+   exam. The full exam corpus has not been re-measured against it.
    Still no DCGO script anywhere for 45 cards: 003 014 016 025 026 027 028 029
    030 031 032 033 034 035 036 037 038 040 042 043 046 048 049 050 052 053 054
    055 057 058 059 060 061 063 064 065 066 067 068 070 071 072 073 074 077.
