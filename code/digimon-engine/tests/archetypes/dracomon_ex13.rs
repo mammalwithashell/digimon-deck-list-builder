@@ -11,9 +11,9 @@
 //! this file asserts only the cross-card SYSTEM facts no per-card test can see.
 //!
 //! Real DSL cards fill every role. The single synthetic card is the Lv.5
-//! Assembly material: every Lv.5 Digimon with [Dracomon]/[Examon] in its text
-//! (EX13-021 Wingdramon, EX13-041 Groundramon) is BLOCKED (no YAML), so no real
-//! implemented card can be that material. Its own printed effect is never fired.
+//! Assembly material in Combos 1–6, authored while EX13-021 Wingdramon /
+//! EX13-041 Groundramon were BLOCKED (both are implemented as of 2026-10-01 —
+//! Combo 7 uses them for [Examon]'s DNA). Its own printed effect is never fired.
 //!
 //! **Printed-text fidelity.** DSL-loaded `CardData` carries empty printed text
 //! (`card_data_from_compiled`), but every "[Dracomon] or [Examon] in its text"
@@ -99,8 +99,7 @@ fn with_printed_text(runner: &mut DebugRunner) {
 }
 
 fn builder() -> DebugRunnerBuilder {
-    // Role: Lv.5 [Examon]-text Assembly material. Only EX13-021 / EX13-041 fit
-    // and both are BLOCKED (no YAML) — see module doc.
+    // Role: Lv.5 [Examon]-text Assembly material (synthetic — see module doc).
     let mut l5 = make_test_card(MAT_L5, "Dragon Five");
     l5.level = Some(5);
     l5.dp = Some(7000);
@@ -786,4 +785,170 @@ fn dracomon_inherited_eot_dna_turns_breakdramon_and_blue_six_into_examon() {
         "end-of-turn attack checked 2 (＜Security A. +1＞)"
     );
     assert_eq!(field_ids(&runner, 1), vec![BIYOMON], "declined battle left the Biyomon");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Combo 7 — Wingdramon / Groundramon as Lv.6 [Slayerdramon] / [Breakdramon]
+//           for [Examon]'s DNA digivolution
+//           (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const WINGDRAMON: &str = "EX13-021";
+const GROUNDRAMON: &str = "EX13-041";
+/// BT20-045 Examon — <Blast DNA Digivolve ([Breakdramon] + [Slayerdramon])>.
+const EXAMON_BT20: &str = "BT20-045";
+
+/// The slice cards plus the two Lv.5 bridges and the Blast-DNA Examon, with
+/// printed text copied for every real card (see the module doc).
+fn dna_start(b: impl FnOnce(DebugRunnerBuilder) -> DebugRunnerBuilder) -> DebugRunner {
+    let extra = [WINGDRAMON, GROUNDRAMON, EXAMON_BT20];
+    let mut ids: Vec<&str> = REAL.to_vec();
+    ids.extend(extra);
+    let mut runner = b(dsl_builder(&ids)
+        .deck(0, &[BIYOMON; 8])
+        .deck(1, &[BIYOMON; 8])
+        .security(1, &[BIYOMON; 5]))
+    .start();
+    runner.skip_mulligan();
+    with_printed_text(&mut runner);
+    for id in extra {
+        let p = printed(id);
+        for c in runner.game.card_data.iter_mut().filter(|c| c.card_id == id) {
+            c.effect_text = p.effect_text.clone();
+            c.inherited_text = p.inherited_text.clone();
+            c.security_text = p.security_text.clone();
+        }
+    }
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner
+}
+
+fn sorted(mut v: Vec<String>) -> Vec<String> {
+    v.sort();
+    v
+}
+
+/// Cards: EX13-021 Wingdramon, EX13-044 Breakdramon, EX13-045 Examon.
+///
+/// Expected: Wingdramon (printed Blue/Red **Lv.5**) is "also treated as Lv.6
+/// [Slayerdramon] for [Examon]'s DNA digivolution", so it is the Blue Lv.6 half
+/// of Examon's "Green Lv.6 + Blue Lv.6: Cost 0" recipe; Breakdramon (Green
+/// Lv.6) is the other half. Main-phase DNA merges both stacks under Examon for
+/// 0 memory and Examon's DNA [When Digivolving] fires (+10000 → 25000 DP).
+///
+/// Sources: `cards/ex13/EX13-021.json`, `EX13-045.json`; DCGO
+/// `EX13/Blue/EX13_021.cs` (`AddJogressLevelsClass`, `EqualsCardName("Examon")`),
+/// `EX13/Green/EX13_045.cs` (`AddJogressConditionClass` green Lv.6 + blue Lv.6).
+#[test]
+fn wingdramon_as_lv6_slayerdramon_dna_digivolves_with_breakdramon_into_examon() {
+    let mut runner = dna_start(|b| b.hand(0, &[EXAMON]).memory(3));
+    runner.place_on_field(0, WINGDRAMON, Some(0));
+    runner.place_on_field(0, BREAKDRAMON, Some(0));
+    runner.game.tick_declarative_effects();
+    let mem0 = runner.memory();
+
+    assert!(runner.game.initiate_dna_digivolve(0, 0), "Examon's DNA is legal");
+    runner.game.resolve_selection(0, 0).expect("first material");
+    runner.game.resolve_selection(0, 1).expect("second material");
+
+    assert_eq!(field_ids(&runner, 0), vec![EXAMON], "two Digimon became one");
+    let ex = find_perm(&runner, 0, EXAMON);
+    assert_eq!(
+        sorted(stack_ids(&runner, ex)),
+        sorted(vec![WINGDRAMON.into(), BREAKDRAMON.into(), EXAMON.into()])
+    );
+    assert_eq!(runner.memory(), mem0, "DNA cost 0");
+    assert_eq!(runner.effective_dp(ex), Some(25_000), "DNA [When Digivolving] +10000");
+}
+
+/// Cards: EX13-021 Wingdramon + EX13-041 Groundramon → EX13-045 Examon.
+///
+/// Expected: TWO printed Lv.5s satisfy the Lv.6 recipe — Groundramon (Green,
+/// treated as Lv.6 [Breakdramon]) + Wingdramon (Blue, treated as Lv.6
+/// [Slayerdramon]). Neither is Lv.6 for any other DNA result (per-card tests).
+#[test]
+fn wingdramon_and_groundramon_both_lv5_dna_digivolve_into_examon() {
+    let mut runner = dna_start(|b| b.hand(0, &[EXAMON]).memory(3));
+    runner.place_on_field(0, GROUNDRAMON, Some(0));
+    runner.place_on_field(0, WINGDRAMON, Some(0));
+    runner.game.tick_declarative_effects();
+
+    assert!(runner.game.initiate_dna_digivolve(0, 0), "Lv.5 + Lv.5 → Examon");
+    runner.game.resolve_selection(0, 0).expect("first material");
+    runner.game.resolve_selection(0, 1).expect("second material");
+    let ex = find_perm(&runner, 0, EXAMON);
+    assert_eq!(
+        sorted(stack_ids(&runner, ex)),
+        sorted(vec![GROUNDRAMON.into(), WINGDRAMON.into(), EXAMON.into()])
+    );
+}
+
+/// Cards: EX13-008 Dracomon (inherited [End of Your Turn] may-DNA), EX13-018
+/// Coredramon, EX13-021 Wingdramon, EX13-044 Breakdramon, EX13-045 Examon.
+///
+/// Expected: the effect-initiated DNA (Dracomon's inherited clause enforces the
+/// printed recipe) honors the treatment too: the Dracomon→Coredramon→Wingdramon
+/// stack + Breakdramon DNA into Examon.
+#[test]
+fn dracomon_inherited_eot_dna_uses_wingdramon_as_the_blue_lv6() {
+    let mut runner = dna_start(|b| b.hand(0, &[EXAMON]).memory(3));
+    runner.place_stack(0, &[DRACOMON, COREDRAMON_BLUE, WINGDRAMON]);
+    let brk = runner.place_on_field(0, BREAKDRAMON, Some(0));
+    runner.game.tick_declarative_effects();
+
+    runner.end_turn();
+    let view = runner.pending_selection_view().expect("Dracomon's inherited EoT trigger");
+    assert!(view.is_optional, "\"may DNA digivolve\"");
+    accept(&mut runner);
+    act(&mut runner, one_side(brk));
+    pick_hand(&mut runner, EXAMON);
+
+    let ex = find_perm(&runner, 0, EXAMON);
+    assert_eq!(
+        sorted(stack_ids(&runner, ex)),
+        sorted(vec![
+            DRACOMON.into(),
+            COREDRAMON_BLUE.into(),
+            WINGDRAMON.into(),
+            BREAKDRAMON.into(),
+            EXAMON.into()
+        ]),
+        "Wingdramon's stack + Breakdramon merged under Examon"
+    );
+}
+
+/// Cards: EX13-021 Wingdramon (field), EX13-044 Breakdramon (hand), BT20-045
+/// Examon (hand, <Blast DNA Digivolve ([Breakdramon] + [Slayerdramon])>).
+///
+/// Expected: when the opponent attacks Wingdramon, the Counter window offers
+/// Examon's Blast DNA — Wingdramon is [Slayerdramon] for [Examon]'s DNA
+/// digivolution — and resolving it stacks Wingdramon + Breakdramon under
+/// BT20-045.
+#[test]
+fn wingdramon_as_slayerdramon_enables_bt20_examon_blast_dna_with_breakdramon() {
+    let mut runner = dna_start(|b| b.hand(1, &[EXAMON_BT20, BREAKDRAMON]));
+    let attacker = runner.place_on_field(0, BIYOMON, Some(0));
+    let wing = runner.place_on_field(1, WINGDRAMON, Some(0));
+    runner.game.tick_declarative_effects();
+
+    let result = runner.attack_digimon(attacker, wing, false);
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    let view = runner.pending_selection_view().expect("Counter window");
+    assert!(
+        view.valid_action_ids
+            .contains(&digimon_engine::action::space::DNA_DIGIVOLVE_START),
+        "BT20-045 Blast DNA is offered; view={view:?}"
+    );
+    runner
+        .execute_action(1, digimon_engine::action::space::DNA_DIGIVOLVE_START)
+        .expect("Blast DNA");
+    runner.execute_action(1, 0).expect("Wingdramon as the field material");
+    runner
+        .execute_action(1, PLAY_HAND_START + 1)
+        .expect("Breakdramon as the hand material");
+    let ex = find_perm(&runner, 1, EXAMON_BT20);
+    assert_eq!(
+        sorted(stack_ids(&runner, ex)),
+        sorted(vec![WINGDRAMON.into(), BREAKDRAMON.into(), EXAMON_BT20.into()])
+    );
 }

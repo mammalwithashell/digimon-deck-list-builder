@@ -21,12 +21,12 @@ Pipeline: batch-implement-cards-rust-dsl (author-set EX13 slice)
 | EX13-008 | Dracomon | IMPLEMENT | IMPLEMENTED | self-reviewed | 12/12 | [When Moving][On Play] reveal-3 text pick, rest to bottom; [Bebydomon] alt; inherited EoT may-DNA |
 | EX13-018 | Coredramon | IMPLEMENT | IMPLEMENTED | self-reviewed | 15/15 | trash-text-card → Draw 2; [Your Turn] ally-played → digivolve into [Examon]-text −2; inherited +2000 |
 | EX13-039 | Coredramon | IMPLEMENT | IMPLEMENTED | self-reviewed | 15/15 | may return non-Egg text card from trash; same observer; inherited +2000 |
-| EX13-021 | Wingdramon | IMPLEMENT | BLOCKED (hybrid) | — | 0 | "treated as Lv.6 [Slayerdramon] for [Examon]'s DNA" |
-| EX13-041 | Groundramon | IMPLEMENT | BLOCKED (hybrid) | — | 0 | "treated as Lv.6 [Breakdramon] for [Examon]'s DNA" |
+| EX13-021 | Wingdramon | IMPLEMENT | IMPLEMENTED (2026-10-01) | — | 18/18 | "treated as Lv.6 [Slayerdramon] for [Examon]'s DNA" via `dna_material_identity` |
+| EX13-041 | Groundramon | IMPLEMENT | IMPLEMENTED (2026-10-01) | — | 18/18 | `dna_material_identity`; `CannotUnsuspendInUnsuspendPhase`; `event_battle_deleter` |
 | EX13-044 | Breakdramon | IMPLEMENT | IMPLEMENTED | self-reviewed | 20/20 | Assembly -5 (3 per-level text materials); up-to-2 any-side suspend + 2-target CannotUnsuspend; face+inherited OPT suspend→battle |
 
 ## Engine-Gap Blocked Cards
-### EX13-021 Wingdramon / EX13-041 Groundramon (hybrid)
+### EX13-021 Wingdramon / EX13-041 Groundramon (hybrid) — RESOLVED 2026-10-01 (see engine-gaps.md)
 - Effect text: "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon]/[Breakdramon] for [Examon]'s DNA digivolution."
 - Missing engine API: result-scoped DNA-material identity override (DCGO `AddJogressLevelsClass` + scoped `ChangeCardNamesClass`); all DNA / Blast-DNA material matchers read printed level/name only.
 - Suggested addition: `Game::dna_material_identity(material, result)` consulted by every DNA material predicate. See `qa/archetype-qa/engine-gaps.md` §G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.

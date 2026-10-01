@@ -2947,6 +2947,68 @@ impl Game {
         self.pending_attack.as_ref().map(|p| p.attacker)
     }
 
+    /// "Add N to this Digimon's DP deletion effects' maximums" total for the
+    /// battle-area permanent `host`: the sum of every self-scoped
+    /// `Effect::dp_delete_effect_max_delta` in `host`'s card stack whose
+    /// scope matches the card's position (inherited ⇔ under the top card) and
+    /// whose condition (`active_when`) holds — read live, so a card that just
+    /// became a digivolution source counts immediately — plus any
+    /// materialized `ModifierType::ChangeDPDeleteEffectMaxDP` entries on
+    /// `host` installed by other routes (filtered-target auras, steps).
+    ///
+    /// Added to the DP cap of every deletion effect whose source permanent is
+    /// `host` (DCGO `Player.MaxDP_DeleteEffect` →
+    /// `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`). Non-battle-area handles
+    /// (breeding sentinel, stale indices) yield 0.
+    /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    pub fn dp_delete_effect_max_bonus(&self, host: PermanentHandle) -> i32 {
+        use crate::effect_context::EffectReadContext;
+
+        let materialized = self.modifiers.dp_delete_effect_max_delta(host);
+        let Some(perm) = self
+            .players
+            .get(host.player as usize)
+            .and_then(|p| p.battle_area.get(host.index as usize))
+        else {
+            return materialized;
+        };
+        let stack_size = perm.card_sources.len();
+        let sources: Vec<(String, crate::card_source::CardHandle, bool)> = perm
+            .card_sources
+            .iter()
+            .enumerate()
+            .map(|(i, src)| {
+                (
+                    src.card_id(&self.card_data).to_string(),
+                    src.handle(),
+                    i + 1 < stack_size,
+                )
+            })
+            .collect();
+        let mut total = materialized;
+        for (card_id, handle, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, handle) else {
+                continue;
+            };
+            for effect in effects.iter() {
+                let Some(delta) = effect.dp_delete_effect_max_delta else {
+                    continue;
+                };
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                let ctx = EffectReadContext::new(self, handle, Some(host), host.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                total += delta;
+            }
+        }
+        total
+    }
+
     fn live_declarative_formula_sum(
         &self,
         target: crate::permanent::PermanentHandle,

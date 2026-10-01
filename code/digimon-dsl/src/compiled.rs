@@ -380,6 +380,16 @@ pub struct CompiledPredicate {
     pub can_digivolve_onto: Option<String>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
+    /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
+    /// N DP or less"). Set by the compile-time pass in `deletion_cap.rs` (never
+    /// authored) when this predicate filters the candidates of a select whose
+    /// binding a `delete_*` step consumes, or the `over` of
+    /// `delete_all_permanents`. The engine then adds the effect source
+    /// permanent's `ChangeDPDeleteEffectMaxDP` delta to the cap ("add 2000 to
+    /// this Digimon's DP deletion effects' maximums" — DCGO
+    /// `Player.MaxDP_DeleteEffect`). G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    #[serde(default)]
+    pub dp_lte_deletion_cap: bool,
     pub dp_gte: Option<CompiledDpConstraint>,
     pub stack_size_lte: Option<CompiledDpConstraint>,
     pub stack_size_gte: Option<CompiledDpConstraint>,
@@ -661,6 +671,10 @@ pub struct CompiledPredicate {
     /// G-DSL-BATTLE-WINNER-IS-SOURCE.
     #[serde(default)]
     pub event_winner_is_source: Option<bool>,
+    /// `on_ally_won_battle`: the surviving combatant whose battle opponent was
+    /// actually deleted matches this permanent predicate. G-DSL-BATTLE-DELETER.
+    #[serde(default)]
+    pub event_battle_deleter: Option<Box<CompiledPredicate>>,
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
@@ -1004,6 +1018,17 @@ pub enum CompiledModifierValue {
     Formula(CompiledFormula),
 }
 
+/// Compiled typed `add_modifier` payload (exactly one variant per step; the
+/// validator guarantees it matches the modifier). The engine lowers it to the
+/// corresponding `ModifierPayload` variant.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledModifierPayload {
+    Name(String),
+    Colors(Vec<CompiledColor>),
+    Dp(i32),
+    Traits { add: Vec<String>, replace: bool },
+}
+
 /// Compiled synthetic identity for a `TreatAsDigimon` modifier. Mirrors the
 /// engine's `ModifierPayload::SynthIdentity` fields; the engine lowering
 /// converts `kind`/`colors` to its own enums.
@@ -1115,6 +1140,12 @@ pub enum CompiledDeclarativeClause {
         /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023).
         #[serde(default)]
         modifier_from: Option<CompiledEffectController>,
+        /// Result-scoped DNA-material identity ("also treated as Lv.6
+        /// [Slayerdramon] for [Examon]'s DNA digivolution"). Self-aura only.
+        /// No `skip_serializing_if`: bincode round-trip.
+        /// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+        #[serde(default)]
+        dna_material_identity: Option<CompiledDnaMaterialIdentity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -1374,6 +1405,15 @@ pub enum CompiledEffectController {
 pub struct CompiledAuraEffectImmunity {
     pub source_kind: Option<CompiledEffectSourceKind>,
     pub source_controller: CompiledEffectController,
+}
+
+/// Compiled `dna_material_identity:` aura payload.
+/// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledDnaMaterialIdentity {
+    pub for_result: String,
+    pub level: Option<u8>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2097,6 +2137,11 @@ pub enum CompiledStep {
         /// the field must always be written or the byte stream desyncs.
         #[serde(default)]
         synth_identity: Option<CompiledSynthIdentity>,
+        /// Typed identity/metadata payload (name / colors / base DP / traits)
+        /// — G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD. `None` for scalar
+        /// modifiers. No `skip_serializing_if` (bincode, as above).
+        #[serde(default)]
+        payload: Option<CompiledModifierPayload>,
         /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
         /// target, register a source-independent floating effect re-applied each
         /// tick instead of a one-time scan. No `skip_serializing_if` for the
@@ -2323,6 +2368,13 @@ pub enum CompiledStep {
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,
+        /// The total-DP budget is a deletion effect's maximum (the picks are
+        /// consumed by a `delete_*` step) — set by `deletion_cap.rs`; the
+        /// engine adds the source permanent's `ChangeDPDeleteEffectMaxDP`
+        /// delta (DCGO `sumDP > MaxDP_DeleteEffect(..)`, e.g. ST7-12).
+        /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+        #[serde(default)]
+        deletion_cap: bool,
     },
     /// Play-cost-budget analog of `SelectOpponentDpBudget`.
     /// G-MULTI-SELECT-OPP-PLAY-COST-SUM. `play_cost_budget` is a

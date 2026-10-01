@@ -2791,6 +2791,19 @@ pub struct AddModifierArgs {
     /// is live; lowers to `ModifierPayload::SynthIdentity`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synth_identity: Option<SynthIdentitySpec>,
+    /// Typed payload for the identity/metadata modifiers whose effect is not a
+    /// scalar (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD, the "Track C modifier
+    /// payload YAML shape" item). Exactly one key is set, and it must match the
+    /// modifier (validated):
+    ///   * `name:`   → `ChangeBaseCardName` / `CanOnlyDigivolveInto`
+    ///   * `colors:` → `ChangeBaseCardColor` (replace) / `AddColor` (gain)
+    ///   * `dp:`     → `ChangeOriginDP` / `ChangeCardDP` (base-DP set)
+    ///   * `traits:` (+ `replace_traits`) → `ChangeTraits`
+    /// e.g. EX13-031 KingSukamon "change the base name, color and DP of 1 of
+    /// your opponent's Digimon to [Sukamon], white and 3000 until their turn
+    /// ends" is three `add_modifier` steps on one bound target.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub payload: Option<ModifierPayloadSpec>,
     /// CONTINUOUS mass modifier: instead of a one-time scan over the CURRENT
     /// matches, install a source-independent floating effect re-applied to the
     /// live candidate set every tick — so Digimon that ENTER during the window
@@ -2820,6 +2833,33 @@ pub struct SynthIdentitySpec {
     pub colors: Vec<crate::spec::ColorSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traits: Vec<String>,
+}
+
+/// Typed `add_modifier` payload (see `AddModifierArgs::payload`). A struct of
+/// optional keys rather than a tagged enum so the YAML stays flat
+/// (`payload: { name: Sukamon }`); the validator enforces "exactly one key,
+/// compatible with the modifier".
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ModifierPayloadSpec {
+    /// Card name the target is treated as having (replaces its base name).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Colors: the new base colors (`ChangeBaseCardColor`) or the colors
+    /// gained (`AddColor`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub colors: Option<Vec<crate::spec::ColorSpec>>,
+    /// New base DP. Other DP modifiers still apply on top (DCGO
+    /// `ChangeBaseDPClass`: `Permanent.BaseDP` is replaced, then `DP` adds the
+    /// +/- effects to it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp: Option<i32>,
+    /// Traits added (`ChangeTraits`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub traits: Option<Vec<String>>,
+    /// With `traits:` — replace the printed traits instead of adding to them.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub replace_traits: bool,
 }
 
 fn synth_identity_default_kind() -> crate::spec::CardKind {

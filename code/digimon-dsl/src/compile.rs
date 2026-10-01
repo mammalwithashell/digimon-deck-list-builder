@@ -38,7 +38,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         return Err(errors);
     }
 
-    Ok(CompiledCard {
+    let mut card = CompiledCard {
         card: spec.card.clone(),
         name: spec.name.clone(),
         kind: compile_card_kind(spec.kind),
@@ -57,7 +57,12 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         use_requirement,
         alt_paths,
         effects,
-    })
+    };
+    // G-ENGINE-DP-DELETION-MAX-MODIFIER: flag the DP caps that belong to
+    // deletion effects so "add N to this Digimon's DP deletion effects'
+    // maximums" can raise exactly those.
+    crate::deletion_cap::mark_card(&mut card);
+    Ok(card)
 }
 
 // ── Enum mappings ───────────────────────────────────────────────────
@@ -182,6 +187,28 @@ fn compile_synth_identity(
         traits: s.traits.clone(),
         dp: s.dp,
     }
+}
+
+/// Lower a typed `add_modifier` payload. The validator guarantees exactly one
+/// key is set; this picks it (name > colors > dp > traits) so a spec that
+/// slipped past validation still compiles deterministically.
+fn compile_modifier_payload(
+    p: &crate::step::ModifierPayloadSpec,
+) -> Option<crate::compiled::CompiledModifierPayload> {
+    use crate::compiled::CompiledModifierPayload as P;
+    if let Some(name) = &p.name {
+        return Some(P::Name(name.clone()));
+    }
+    if let Some(colors) = &p.colors {
+        return Some(P::Colors(colors.iter().copied().map(compile_color).collect()));
+    }
+    if let Some(dp) = p.dp {
+        return Some(P::Dp(dp));
+    }
+    p.traits.as_ref().map(|traits| P::Traits {
+        add: traits.clone(),
+        replace: p.replace_traits,
+    })
 }
 
 fn compile_player_ref(p: crate::common::PlayerRef) -> CompiledPlayerRef {
@@ -981,6 +1008,7 @@ fn compile_predicate(
         can_digivolve_onto: p.can_digivolve_onto.clone(),
         dp_eq,
         dp_lte,
+        dp_lte_deletion_cap: false,
         dp_gte,
         stack_size_lte,
         stack_size_gte,
@@ -1263,6 +1291,14 @@ fn compile_predicate(
         event_winner_owner: p.event_winner_owner.map(compile_player_ref),
         event_winner_trait_has: p.event_winner_trait_has.clone(),
         event_winner_is_source: p.event_winner_is_source,
+        event_battle_deleter: p.event_battle_deleter.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_battle_deleter"),
+                card_id,
+                errors,
+            ))
+        }),
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
         event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
@@ -2239,6 +2275,13 @@ fn compile_declarative(
                     source_controller: compile_effect_controller(imm.source_controller),
                 }),
                 modifier_from: a.modifier_from.map(compile_effect_controller),
+                dna_material_identity: a.dna_material_identity.as_ref().map(|d| {
+                    CompiledDnaMaterialIdentity {
+                        for_result: d.for_result.clone(),
+                        level: d.level,
+                        name: d.name.clone(),
+                    }
+                }),
                 summary,
                 summary_key,
             }
@@ -3431,6 +3474,7 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
             synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            payload: a.payload.as_ref().and_then(compile_modifier_payload),
             continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
@@ -3733,6 +3777,7 @@ fn compile_step(
                 .enumerate()
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
+            deletion_cap: false,
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: compile_formula(

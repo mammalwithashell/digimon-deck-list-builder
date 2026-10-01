@@ -11259,33 +11259,33 @@
       "card_name": "Wingdramon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_021.rs",
+      "test_count": 18,
       "patterns": [
         "H",
         "G2"
       ],
-      "notes": "BLOCKED on \"[All Turns] also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution\" \u2014 no DNA-material result-scoped identity override (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET; engine-gaps.md + dsl-vocab-gaps.md). Other clauses expressible."
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: [All Turns] Lv.6 [Slayerdramon] for [Examon]'s DNA = `dna_material_identity` self-aura (ModifierType::DnaMaterialIdentity, Game::dna_material_extras; Main DNA, Blast DNA, EoT/effect DNA all honor it; name result-scoped per printed text, DCGO adds it globally). <Jamming>; [OP][WD] two independent mandatory picks: trash bottom 2 sources, then CannotSuspend until their turn ends; [Coredramon] alt cost 3; inherited OPT optional self-unsuspend gated on carrier [Dracomon]/[Examon] text. Combo tests: tests/archetypes/dracomon_ex13.rs Combo 7."
     },
     "EX13-041": {
       "card_name": "Groundramon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_041.rs",
+      "test_count": 18,
       "patterns": [
         "H",
         "G2"
       ],
-      "notes": "BLOCKED on \"[All Turns] also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution\" \u2014 G-DNA-MATERIAL-TREATED-AS-FOR-TARGET. Other clauses expressible."
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: Lv.6 [Breakdramon] for [Examon]'s DNA via `dna_material_identity`. <Fortitude>; [OP][WD] suspend 1 opp Digimon/Tamer, then CannotUnsuspendInUnsuspendPhase (new modifier: blocks only their next unsuspend phase, effect unsuspends stay legal; DCGO isOnlyActivePhase) with end_of_opponents_next_turn; [Coredramon] alt cost 3; inherited OPT `on_ally_won_battle` + new `event_battle_deleter` leaf (G-DSL-BATTLE-DELETER: surviving own [Dracomon]/[Examon]-text combatant whose opponent was actually deleted) \u2192 trash opponent's top security."
     },
     "EX13-017": {
       "card_name": "Veemon",
@@ -11474,17 +11474,17 @@
       "card_name": "KingSukamon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Mutant (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_031.rs",
+      "test_count": 23,
       "patterns": [
         "C",
         "D"
       ],
-      "notes": "BLOCKED (dsl) \u2014 'change the base name, color and DP of 1 of your opponent's Digimon to [Sukamon], white and 3000 until their turn ends' needs ChangeBaseCardName (Name payload) + ChangeBaseCardColor (Colors payload) on a timed step; engine has both modifiers + payload consult sites, but `add_modifier` only accepts a payload for TreatAsDigimon (open 'Track C modifier payload YAML shape' entry in qa/dsl-vocab-gaps.md). No files written."
+      "notes": "IMPLEMENTED 2026-10-01 (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD resolved). [OP][WD][OD] optional union-zone cost (hand \u222a own Digimon sources, [Chuumon]/[Sukamon] in name; offered even with no opponent Digimon per general_rule 15-7-5) \u2192 mandatory opponent-Digimon pick \u2192 three typed-payload add_modifier steps: ChangeBaseCardName{name: Sukamon}, ChangeBaseCardColor{colors: [white]}, ChangeOriginDP{dp: 3000} (base set; ChangeDp still stacks), expiry end_of_opponents_turn. Assembly -4: three identical Lv.4-or-lower [Sukamon]-name Digimon slots from trash. Inherited [All Turns][OPT] on_any_deletion of another [Sukamon]-named Digimon (either player; last-known synth names, so a Digimon renamed by the main effect counts) \u2192 reveal 3, may play cost<=3 [Chuumon]/[Sukamon] Digimon free, trash rest. No DCGO script."
     },
     "EX13-003": {
       "card_name": "Kyaromon",
@@ -12000,17 +12000,17 @@
       "card_name": "Guilmon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Guilmon / reptile (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_007.rs",
+      "test_count": 11,
       "patterns": [
         "A3",
         "D-inherited-modifier"
       ],
-      "notes": "Inherited '[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums' has no engine primitive (G-ENGINE-DP-DELETION-MAX-MODIFIER). [When Moving][On Play] trash-1-from-hand -> return [Gallantmon]/red Tamer from trash is expressible; not shipped partially."
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited '[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums' is an inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP` / `modifier_value: 2000` (read live by Game::dp_delete_effect_max_bonus; deletion caps flagged by digimon_dsl::deletion_cap). [When Moving][On Play] declinable cost `select_hand` (clause gated on hand >= 1, DCGO CanActivate) -> optional trash pick ([Gallantmon]-named Digimon | red Tamer; the just-trashed card is eligible) -> add to hand."
     },
     "EX13-048": {
       "card_name": "Kotemon",
@@ -12502,17 +12502,17 @@
       "card_name": "Growlmon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "EX13 slice \u2014 orphan staples",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_010.rs",
+      "test_count": 10,
       "patterns": [
         "F1",
         "G4"
       ],
-      "notes": "Inherited 'Add 2000 to this Digimon's DP deletion effects' maximums' has no engine primitive (G-ENGINE-DP-DELETION-MAX-MODIFIER). Face-up WM/WD delete-or-buff clause is expressible; no partial YAML shipped."
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited +2000 DP-deletion maximum via inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP`. WM/WD mandatory delete (<=4000, auto-flagged as a deletion cap so a Guilmon EX13-007 source raises it to 6000) + `effect_deleted_any_opponent_digimon: false` -> <Raid> and +3000 for the turn. Tests cover EX13-013 WarGrowlmon cap 5000->7000 over this Growlmon and 9000 with Guilmon+Growlmon sources."
     },
     "EX13-076": {
       "card_name": "Imperialdramon: Paladin Mode",

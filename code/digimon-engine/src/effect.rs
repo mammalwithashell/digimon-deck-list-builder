@@ -334,6 +334,14 @@ pub struct Effect {
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
+    /// Continuous "add N to this Digimon's DP deletion effects' maximums"
+    /// grant carried by a self-scoped declarative effect (face-up or
+    /// inherited). Read LIVE by [`crate::game::Game::dp_delete_effect_max_bonus`]
+    /// from the host's card stack, so a source that joins the stack mid-turn
+    /// (e.g. Guilmon under a just-digivolved Growlmon) counts for the
+    /// [When Digivolving] delete without waiting for a declarative tick.
+    /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    pub dp_delete_effect_max_delta: Option<i32>,
     pub dp_modifier_fn: Option<DynamicModifierFn>,
     pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
@@ -833,6 +841,7 @@ impl EffectBuilder {
                 activation_cost_fn: None,
                 activation_cost_kind: None,
                 dp_modifier: 0,
+                dp_delete_effect_max_delta: None,
                 dp_modifier_fn: None,
                 security_attack_fn: None,
                 cost_reduction: 0,
@@ -1060,6 +1069,12 @@ impl EffectBuilder {
 
     pub fn dp_modifier(mut self, n: i32) -> Self {
         self.inner.dp_modifier = n;
+        self
+    }
+
+    /// See [`Effect::dp_delete_effect_max_delta`].
+    pub fn dp_delete_effect_max_delta(mut self, n: i32) -> Self {
+        self.inner.dp_delete_effect_max_delta = Some(n);
         self
     }
 

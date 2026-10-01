@@ -1712,12 +1712,19 @@ fn eval_event_fields(
             .as_ref()
             .and_then(|trigger| trigger.deleted_object.as_ref())
         {
-            // Deleted object is gone from the field — match its snapshot name.
+            // Deleted object is gone from the field — match its snapshot name:
+            // the printed name, or any last-known rules name captured in
+            // `names_just_before` (synth identity — includes a
+            // `ChangeBaseCardName` overlay live at deletion time).
             let name_match = rctx
                 .game
                 .card_data_for_handle(snapshot.top_card)
                 .map(|data| data.card_name.to_lowercase().contains(&want))
-                .unwrap_or(false);
+                .unwrap_or(false)
+                || snapshot
+                    .names_just_before
+                    .iter()
+                    .any(|name| name.to_lowercase().contains(&want));
             if !name_match {
                 return false;
             }
@@ -1815,6 +1822,22 @@ fn eval_event_fields(
             return false;
         };
         if (Some(winner) == rctx.source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.event_battle_deleter {
+        // on_ally_won_battle (EndOfBattle): the surviving combatant whose battle
+        // opponent was actually deleted. `None` when the loser's deletion was
+        // prevented or no combatant survived. G-DSL-BATTLE-DELETER.
+        let Some(deleter) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_deleter)
+        else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Permanent(deleter), None) {
             return false;
         }
     }
@@ -2937,7 +2960,10 @@ fn eval_card_fields(
             }
         }
         if let Some(cap) = &pred.dp_lte {
-            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+            if dp
+                > eval_dp_constraint(cap, rctx, perm_target, bindings)
+                    + deletion_cap_bonus(pred, rctx)
+            {
                 return false;
             }
         }
@@ -3427,20 +3453,38 @@ fn eval_permanent_fields(
             .chain(synth_identity.card_names.iter())
             .any(|x| x.to_lowercase().contains(&needle))
     });
-    let name_is_overlay_match = pred
-        .name_is
-        .as_ref()
-        .is_some_and(|n| synth_identity.card_names.iter().any(|name| name == n));
+    // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: while a DNA / Blast-DNA material
+    // requirement is evaluated for a specific result card, the material's
+    // result-scoped identity extras ("also treated as Lv.6 [Slayerdramon] for
+    // [Examon]'s DNA digivolution") also satisfy `level_eq` / `name_*`.
+    let dna_extras = if in_breeding {
+        crate::dna_digivolve::DnaMaterialExtras::default()
+    } else {
+        rctx.dna_result_card
+            .and_then(|h| rctx.game.card_source_for_handle(h))
+            .map(|result| rctx.game.dna_material_extras(handle, result))
+            .unwrap_or_default()
+    };
+    let level_eq_dna_match = pred
+        .level_eq
+        .is_some_and(|want| dna_extras.levels.contains(&want));
+    let name_is_overlay_match = pred.name_is.as_ref().is_some_and(|n| {
+        synth_identity.card_names.iter().any(|name| name == n)
+            || dna_extras.names.iter().any(|name| name == n)
+    });
     let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
+        let needle = n.to_lowercase();
         synth_identity
             .card_names
             .iter()
-            .any(|name| name.to_lowercase().contains(&n.to_lowercase()))
+            .chain(dna_extras.names.iter())
+            .any(|name| name.to_lowercase().contains(&needle))
     });
     let name_in_overlay_match = pred.name_in.as_ref().is_some_and(|names| {
-        names
-            .iter()
-            .any(|n| synth_identity.card_names.iter().any(|name| name == n))
+        names.iter().any(|n| {
+            synth_identity.card_names.iter().any(|name| name == n)
+                || dna_extras.names.iter().any(|name| name == n)
+        })
     });
     let color_is_overlay_match = pred.color_is.is_some_and(|want| {
         synth_identity
@@ -3479,6 +3523,7 @@ fn eval_permanent_fields(
     let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
+        || level_eq_dna_match
         || trait_overlay_match
         || trait_contains_overlay_match
         || in_text_contains_overlay_match
@@ -3495,6 +3540,9 @@ fn eval_permanent_fields(
             // Authoritative permanent-kind check is `kind_matches_field`
             // (token-aware) below — don't let the card-search matcher re-reject.
             p.kind = None;
+        }
+        if level_eq_dna_match {
+            p.level_eq = None;
         }
         if trait_overlay_match {
             p.trait_has = None;
@@ -3730,7 +3778,7 @@ fn eval_dp_constraints(
         }
     }
     if let Some(cap) = &pred.dp_lte {
-        if dp > eval_dp_constraint(cap, rctx, handle, bindings) {
+        if dp > eval_dp_constraint(cap, rctx, handle, bindings) + deletion_cap_bonus(pred, rctx) {
             return false;
         }
     }
@@ -3824,6 +3872,30 @@ fn aggregate_material_count(
         | CompiledAggregateSelector::HighestLevel
         | CompiledAggregateSelector::LowestPlayCost => None,
     }
+}
+
+/// "Add N to this Digimon's DP deletion effects' maximums": when `pred.dp_lte`
+/// is a deletion effect's DP cap (flagged at compile time by
+/// `digimon_dsl::deletion_cap`), the effect source permanent's summed
+/// `ChangeDPDeleteEffectMaxDP` delta raises the cap. DCGO
+/// `Player.MaxDP_DeleteEffect` → `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`
+/// (adds only when `cardEffect.EffectSourceCard.PermanentOfThisCard()` is the
+/// modifier's own permanent). 0 for non-deletion caps and for effects with no
+/// source permanent (Options, rules processes).
+/// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+fn deletion_cap_bonus(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> i32 {
+    if !pred.dp_lte_deletion_cap {
+        return 0;
+    }
+    deletion_max_bonus_for_source(rctx)
+}
+
+/// The effect source permanent's summed `ChangeDPDeleteEffectMaxDP` delta.
+/// Shared by the predicate cap path and the deletion-flagged DP-budget select.
+pub(crate) fn deletion_max_bonus_for_source(rctx: &EffectReadContext<'_>) -> i32 {
+    rctx.source_permanent
+        .map(|h| rctx.game.dp_delete_effect_max_bonus(h))
+        .unwrap_or(0)
 }
 
 fn eval_dp_constraint(
