@@ -1300,6 +1300,7 @@ impl DelayHandDigivolveFlow {
             from_hand,
             cost,
             ignore_requirements,
+            ignore_level: false,
         }, CompiledStep::CancelReplacement] = process
         else {
             return None;

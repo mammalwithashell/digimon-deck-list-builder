@@ -237,6 +237,26 @@ impl<'a> EffectContext<'a> {
             )
     }
 
+    /// "Digivolve … ignoring level": only the base's level requirement is
+    /// waived; colour still applies and the printed cost (then `cost_delta`)
+    /// is paid. See `Game::effect_initiated_digivolve_from_source_ignore_level`.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub fn effect_initiated_digivolve_from_source_ignore_level(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game.effect_initiated_digivolve_from_source_ignore_level(
+            player,
+            source,
+            target,
+            cost_delta,
+            PlaySource::ByEffect,
+        )
+    }
+
     /// Merge two existing battle-area permanents into a single permanent
     /// topped with a card from hand. Effect-initiated DNA digivolve.
     ///

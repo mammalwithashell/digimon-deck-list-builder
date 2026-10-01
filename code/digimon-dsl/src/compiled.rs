@@ -294,6 +294,40 @@ pub enum CompiledCost {
 
 // ── Predicate tree ──────────────────────────────────────────────────
 
+impl CompiledPredicate {
+    /// A copy of this predicate with every SUBJECT-level leaf (`level_eq`,
+    /// `level_lte`, `level_gte`, their `*_binding` siblings, and
+    /// `level_matches_aggregate`) waived — in positive positions only: the
+    /// top level and nested `all_of` / `any_of` branches. Negated positions
+    /// (`none_of`, `not`) are left untouched, since waiving a leaf there
+    /// would flip "not level N" into "never".
+    ///
+    /// Drives "digivolve … ignoring level" (DCGO
+    /// `CardEffectCommons.IgnoreRequirement.Level`): an alt-digivolve path's
+    /// `from:` filter is evaluated with its level gate dropped while every
+    /// other requirement (colour, trait, name) still applies — matching
+    /// DCGO `AddDigivolutionRequirement.GetEvoCost`, whose `ignoreLevel`
+    /// skips only the level test. G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub fn without_subject_level_leaves(&self) -> CompiledPredicate {
+        let mut out = self.clone();
+        out.strip_subject_level_leaves_in_place();
+        out
+    }
+
+    fn strip_subject_level_leaves_in_place(&mut self) {
+        self.level_eq = None;
+        self.level_eq_binding = None;
+        self.level_lte_binding = None;
+        self.level_gte_binding = None;
+        self.level_lte = None;
+        self.level_gte = None;
+        self.level_matches_aggregate = None;
+        for child in self.all_of.iter_mut().chain(self.any_of.iter_mut()) {
+            child.strip_subject_level_leaves_in_place();
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CompiledPredicate {
     pub kind: Option<CompiledCardKind>,
@@ -1910,6 +1944,11 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+        /// Waive only the base's level requirement (DCGO
+        /// `IgnoreRequirement.Level`); printed cost still paid, then `cost`.
+        /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+        #[serde(default)]
+        ignore_level: bool,
     },
     /// Effect-initiated App Fuse: two engine-driven selections (own permanent,
     /// then result card from `from_zone`) routed through the app-fusion commit.

@@ -8378,7 +8378,9 @@ pins that the turn scan does not trash such a marker.
   ```
 - The rest of the card (Assembly -4 with 3 Lv.4-or-lower [Sukamon]-name Digimon from trash; the hand-or-digivolution-cards trash cost via `select_union_zone`; the inherited [All Turns][OPT] "other [Sukamon] deleted → reveal 3, play cost<=3 [Chuumon]/[Sukamon] free, trash rest") looks expressible today; re-attempt once the payload lands.
 
-## `effect_initiated_digivolve { ignore_level: true }`  [G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST] — hybrid, OPEN 2026-10-01
+## `effect_initiated_digivolve { ignore_level: true }`  [G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01.** `EffectDigivolveArgs.ignore_level` / `CompiledStep::EffectInitiatedDigivolve.ignore_level` lower to `EffectContext::effect_initiated_digivolve_from_source_ignore_level` (see `qa/archetype-qa/engine-gaps.md` §G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST). Compile error if combined with `ignore_requirements`. Driver EX13-071 now IMPLEMENTED. Verify: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digivolve_ignore_level_and_tamer_base`.
 
 - **Card (BLOCKED):** EX13-071 Richard Sampson [Main] [Once Per Turn] — "…it may digivolve into [Kentaurosmon] in the hand or trash, ignoring level and with the cost reduced by 1." (slice "Richard Sampson / DATA SQUAD", EX13 author-set; no DCGO script). Also BT24-025 / BT12-089 ("ignoring level").
 - **Missing DSL vocabulary:** `EffectDigivolveArgs` has only `ignore_requirements`, which lowers to the zero-base-cost, colour-ignoring engine path. Needs an `ignore_level: bool` flag (colour circle kept, printed cost paid then `cost` delta applied).

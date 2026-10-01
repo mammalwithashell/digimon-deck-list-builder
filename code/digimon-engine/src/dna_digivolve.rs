@@ -264,8 +264,57 @@ impl Game {
         // alt-digivolve paths are folded in so they surface through the same
         // digivolve action + mask + commit path; the commit path checks
         // `route.app_fusion` to also consume the host's linked cards.
-        routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle));
+        routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, false));
         routes.extend(self.collect_app_fusion_routes(card, base_handle));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
+        routes.dedup();
+        routes
+    }
+
+    /// Every digivolve route for `card` onto `base_handle` with the LEVEL
+    /// requirement waived — DCGO `CardEffectCommons.IgnoreRequirement.Level`
+    /// ("digivolve into X … ignoring level", e.g. EX13-071 Richard Sampson,
+    /// BT24-025 Shellmon, BT12-089 Takato Matsuki). Mirrors DCGO
+    /// `CardSource.EvoCosts(IgnoreRequirement.Level)`:
+    ///
+    /// - printed evo-cost circles match on COLOUR only (any level), and
+    ///   their printed memory cost is what is paid;
+    /// - DSL alt-digivolve paths (`alt_paths: kind: digivolve`, DCGO
+    ///   `AddDigivolutionRequirement`) are evaluated with their `from:`
+    ///   filter's subject-level leaves dropped
+    ///   (`CompiledPredicate::without_subject_level_leaves`) — colour, trait
+    ///   and name gates still apply.
+    ///
+    /// App Fusion is excluded (an alt-PLAY mechanic, never an effect
+    /// digivolve), and the `CanOnlyDigivolveInto` restriction still applies.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub(crate) fn digivolve_routes_ignoring_level(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Vec<DigivolveRouteMatch> {
+        let is_breeding_base = base_handle.index == crate::action::space::BREEDING_TARGET as u8;
+        if !is_breeding_base && self.digivolve_target_blocked_by_restriction(base_handle, card) {
+            return Vec::new();
+        }
+        let Some(base) = self.digivolve_base_permanent(base_handle) else {
+            return Vec::new();
+        };
+        let mut routes = {
+            let identity = base.synth_identity(&self.card_data, &self.modifiers, base_handle);
+            if matches!(
+                identity.kind,
+                CardKind::Digimon | CardKind::Dual | CardKind::DigiEgg
+            ) {
+                all_matching_evo_costs(card.digivolution_costs(&self.card_data), None, &identity.colors)
+                    .into_iter()
+                    .map(DigivolveRouteMatch::digivolve)
+                    .collect()
+            } else {
+                Vec::new()
+            }
+        };
+        routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, true));
         routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
         routes.dedup();
         routes
@@ -294,10 +343,14 @@ impl Game {
         self.all_digivolve_routes_for_card(card, base_handle)
     }
 
+    /// `ignore_level`: evaluate each path's `from:` filter with its subject
+    /// level leaves waived and match borrowed printed circles on colour only
+    /// (see `digivolve_routes_ignoring_level`).
     fn collect_dsl_alt_digivolve_routes(
         &self,
         card: &CardSource,
         base_handle: PermanentHandle,
+        ignore_level: bool,
     ) -> Vec<DigivolveRouteMatch> {
         #[cfg(feature = "dsl-yaml-loader")]
         {
@@ -375,6 +428,17 @@ impl Game {
                 // point the evaluator at the hand-card data. For the legacy
                 // LookupDirection::From, `from:` filters the source
                 // permanent (the existing semantic).
+                // G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST: "ignoring level"
+                // drops the SOURCE (base) permanent's level gate only — an
+                // Into-direction `from:` filters the result card, whose
+                // level is not a digivolution requirement, so it is kept.
+                let level_waived;
+                let from = if ignore_level && direction == LookupDirection::From {
+                    level_waived = from.without_subject_level_leaves();
+                    &level_waived
+                } else {
+                    from
+                };
                 let from_matches = match direction {
                     LookupDirection::From => {
                         eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle))
@@ -406,9 +470,14 @@ impl Game {
                     if profile.level == 0 || profile.colors.is_empty() {
                         continue;
                     }
-                    let Some(matching_cost) =
-                        matching_evo_cost(card, profile.level, &profile.colors, &self.card_data)
-                    else {
+                    let profile_level = (!ignore_level).then_some(profile.level);
+                    let Some(matching_cost) = all_matching_evo_costs(
+                        card.digivolution_costs(&self.card_data),
+                        profile_level,
+                        &profile.colors,
+                    )
+                    .into_iter()
+                    .min() else {
                         continue;
                     };
                     Some(matching_cost)
@@ -425,7 +494,7 @@ impl Game {
                     if base_requires_treated_as && !explicit_tamer_base {
                         continue;
                     }
-                    printed_digivolve_memory_cost(card, base, &self.card_data)
+                    printed_digivolve_memory_cost(card, base, &self.card_data, ignore_level)
                 };
 
                 let memory_cost = match &path.cost {
@@ -911,7 +980,7 @@ impl Game {
         };
         all_matching_evo_costs(
             card.digivolution_costs(&self.card_data),
-            base_level,
+            Some(base_level),
             &identity.colors,
         )
         .into_iter()
@@ -924,6 +993,7 @@ fn printed_digivolve_memory_cost(
     card: &CardSource,
     base: &Permanent,
     card_data: &[CardData],
+    ignore_level: bool,
 ) -> Option<u16> {
     let base_top = base.top_card();
     let base_meta = &card_data[base_top.data_index];
@@ -932,8 +1002,13 @@ fn printed_digivolve_memory_cost(
         return None;
     }
 
-    let base_level = base_top.digimon_level(card_data)?;
     let base_colors = base_top.digimon_colors(card_data);
+    if ignore_level {
+        return all_matching_evo_costs(card.digivolution_costs(card_data), None, &base_colors)
+            .into_iter()
+            .min();
+    }
+    let base_level = base_top.digimon_level(card_data)?;
     matching_evo_cost(card, base_level, &base_colors, card_data)
 }
 
@@ -970,15 +1045,18 @@ fn matching_evo_cost_from_evo_costs(
 /// practice a card's two printed circles are usually different colours at the
 /// same cost (deduped to one here); distinct costs arise when an evo-cost and a
 /// DSL alt-path overlap on the same base.
+///
+/// `base_level: None` waives the level match (DCGO
+/// `IgnoreRequirement.Level`: colour-matching circles of ANY level count).
 fn all_matching_evo_costs(
     evo_costs: &[crate::card_data::EvoCost],
-    base_level: u8,
+    base_level: Option<u8>,
     base_colors: &[CardColor],
 ) -> Vec<u16> {
     let mut costs: Vec<u16> = evo_costs
         .iter()
         .filter(|ec| {
-            ec.level == base_level
+            base_level.is_none_or(|lvl| ec.level == lvl)
                 && crate::action::mask::evo_color(ec.card_color)
                     .map(|c| base_colors.contains(&c))
                     .unwrap_or(false)
