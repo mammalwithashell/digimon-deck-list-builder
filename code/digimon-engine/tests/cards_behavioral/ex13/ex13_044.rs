@@ -163,14 +163,10 @@ fn side_action(h: PermanentHandle) -> u16 {
     encode_attack(0, h.index as u16)
 }
 
-/// Choose label `idx` of the pending effect-choice prompt.
-fn choose(runner: &mut DebugRunner, idx: usize) {
-    runner.execute_branch(idx).expect("effect choice");
-}
-
-/// "Suspend" at the effect-choice gate, then pick `target` (either side).
+/// Pick `target` (either side) at the optional "suspend up to 2" prompt.
+/// DCGO: one SelectPermanentEffect with canNoSelect / canEndNotMax, so each
+/// pick is a single `select_any_permanent` step and PASS stops early.
 fn suspend_pick(runner: &mut DebugRunner, target: PermanentHandle) {
-    choose(runner, 0);
     pick(runner, perm_action(target));
 }
 
@@ -292,7 +288,7 @@ fn ex13_044_assembly_places_three_text_materials_and_costs_7() {
     }
     // Decline the optional suspend; nothing to lock on an empty opponent board.
     if runner.pending_selection().is_some() {
-        choose(&mut runner, 1);
+        pass(&mut runner);
     }
     let _ = runner.auto_resolve();
 
@@ -391,7 +387,6 @@ fn ex13_044_on_play_suspends_two_chosen_permanents_then_locks_two_opponents() {
 fn ex13_044_on_play_suspend_may_target_your_own_permanents() {
     let mut runner = play_breakdramon(&["OPP-A"], &["OWN-PLAIN"]);
     let own = find_perm(&runner, 0, "OWN-PLAIN");
-    choose(&mut runner, 0);
     let view = runner.pending_selection_view().expect("suspend prompt");
     assert!(view.valid_action_ids.contains(&perm_action(own)), "\"any Digimon or Tamers\"");
     let opp = find_perm(&runner, 1, "OPP-A");
@@ -403,7 +398,7 @@ fn ex13_044_on_play_suspend_may_target_your_own_permanents() {
 #[test]
 fn ex13_044_on_play_suspend_is_optional_but_the_lock_still_happens() {
     let mut runner = play_breakdramon(&["OPP-A", "OPP-B"], &[]);
-    choose(&mut runner, 1); // "Don't suspend"
+    pass(&mut runner); // "Don't suspend"
     let opp_a = find_perm(&runner, 1, "OPP-A");
     let opp_b = find_perm(&runner, 1, "OPP-B");
     assert!(!is_suspended(&runner, opp_a));
@@ -418,7 +413,7 @@ fn ex13_044_on_play_can_stop_after_one_suspend() {
     let opp_a = find_perm(&runner, 1, "OPP-A");
     let opp_b = find_perm(&runner, 1, "OPP-B");
     suspend_pick(&mut runner, opp_a);
-    choose(&mut runner, 1); // "up to 2": stop after one
+    pass(&mut runner); // "up to 2": stop after one
     assert!(is_suspended(&runner, opp_a));
     assert!(!is_suspended(&runner, opp_b));
 }
@@ -426,7 +421,7 @@ fn ex13_044_on_play_can_stop_after_one_suspend() {
 #[test]
 fn ex13_044_on_play_lock_clamps_to_one_opponent_permanent() {
     let mut runner = play_breakdramon(&["OPP-A"], &[]);
-    choose(&mut runner, 1);
+    pass(&mut runner);
     lock_first_available(&mut runner);
     let _ = runner.auto_resolve();
     assert!(locked(&runner, find_perm(&runner, 1, "OPP-A")));
@@ -438,7 +433,7 @@ fn ex13_044_lock_prevents_unsuspending_through_the_opponents_turn() {
     let mut runner = play_breakdramon(&["OPP-A"], &[]);
     let opp_a = find_perm(&runner, 1, "OPP-A");
     suspend_pick(&mut runner, opp_a);
-    choose(&mut runner, 1);
+    pass(&mut runner);
     lock_first_available(&mut runner);
     let _ = runner.auto_resolve();
     runner.end_turn(); // opponent's unsuspend phase
@@ -462,9 +457,9 @@ fn ex13_044_digivolving_from_groundramon_costs_3_and_fires_when_digivolving() {
     // The only unsuspended permanent left is Breakdramon itself: stop.
     if runner
         .pending_selection_view()
-        .is_some_and(|v| v.effect_choices.is_some())
+        .is_some_and(|v| v.is_optional)
     {
-        choose(&mut runner, 1);
+        pass(&mut runner);
     }
     lock_first_available(&mut runner);
     let _ = runner.auto_resolve();
