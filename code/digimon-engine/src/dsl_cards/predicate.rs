@@ -3630,11 +3630,15 @@ fn eval_permanent_fields(
         }
     }
     if let Some(spec) = pred.can_attack {
-        // G-DSL-CAN-ATTACK-PREDICATE — DCGO `Permanent.CanAttack`: at least
-        // one legal attack target exists under the same options the consuming
-        // `may_attack_now` uses (identical target set, so a candidate is never
-        // a dead pick). DCGO's extra turn-player / `IsAttacking` gates are not
-        // applied here, to stay identical to what `may_attack_now` offers.
+        // G-DSL-CAN-ATTACK-PREDICATE — DCGO `Permanent.CanAttack`: false off
+        // its owner's turn ("can not attack during opponent's turn"), then at
+        // least one legal attack target exists under the same options the
+        // consuming `may_attack_now` uses (identical target set, so a
+        // candidate is never a dead pick). DCGO's `IsAttacking` gate is not
+        // applied here.
+        if rctx.game.turn_player() != handle.player {
+            return false;
+        }
         let restriction = match spec.targets {
             digimon_dsl::compiled::CompiledAttackTargetSpec::Any => crate::effect_context::AttackTargetRestriction::Any,
             digimon_dsl::compiled::CompiledAttackTargetSpec::Player => {

@@ -1113,6 +1113,15 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// 6-1-4-1: memory crossed to the opponent's side while an effect was
+    /// still resolving (inside a drain or a deferred-drain scope), so
+    /// `check_turn_end` held the turn end back. The outermost
+    /// `drain_effect_queue` exit re-runs `check_turn_end` once that
+    /// processing has finished. G-ENGINE-TURN-END-MID-EFFECT.
+    pub(crate) turn_end_check_deferred: bool,
+    /// Depth of `resolve_generic_selection` calls in progress; while > 0,
+    /// `check_turn_end` defers (G-ENGINE-TURN-END-MID-EFFECT).
+    pub(crate) selection_resolution_depth: u16,
     /// G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): the next play commit enters
     /// the battle area suspended. Set by the `play_from_trash_free`
     /// `suspended: true` DSL arm; consumed (and cleared) at the
