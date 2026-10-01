@@ -3832,20 +3832,77 @@ pub fn try_install(
         }
         CompiledStep::SelectEffectChoice {
             labels,
+            legal_when,
             bind_as,
             prompt,
             ..
         } => {
-            install_select_effect_choice(
-                ctx,
-                labels.clone(),
-                bind_as.clone(),
-                prompt.clone(),
-                tail.to_vec(),
-                bindings,
-                runtime.clone(),
-            );
-            selection_result(ctx)
+            // G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY — evaluate per-branch
+            // legality at install time (absent = every label legal).
+            let legal: Vec<usize> = {
+                let rctx = ctx.as_read();
+                (0..labels.len())
+                    .filter(|&i| match legal_when.as_ref().and_then(|c| c.get(i)) {
+                        Some(cond) => eval_predicate_with_bindings(
+                            cond,
+                            &rctx,
+                            PredicateSubject::None,
+                            Some(&bindings),
+                        ),
+                        None => true,
+                    })
+                    .collect()
+            };
+            match legal.as_slice() {
+                // No legal branch: nothing to choose. Bind nothing (branch
+                // `if`s on the unbound index fail) and let the tail continue.
+                [] => InstallResult::Continue,
+                // Exactly one legal branch: a one-option choice is not a
+                // choice (DCGO `SetBool(onlyLegalBranch)`, same collapse as
+                // `select_union_zone` / single-destination remainder). Bind it
+                // and run the tail inline — no prompt.
+                [only] => {
+                    let mut b = bindings;
+                    if let Some(name) = bind_as {
+                        b.insert_literal(name, *only as i64);
+                    }
+                    run_steps_with_runtime(tail, ctx, &mut b, runtime);
+                    if ctx.game.pending_selection.is_some() {
+                        InstallResult::Parked
+                    } else {
+                        InstallResult::TailAlreadyRan
+                    }
+                }
+                _ => {
+                    install_select_effect_choice(
+                        ctx,
+                        labels.clone(),
+                        bind_as.clone(),
+                        prompt.clone(),
+                        tail.to_vec(),
+                        bindings,
+                        runtime.clone(),
+                    );
+                    // Mask illegal branches out of the prompt. Action ids stay
+                    // `HAND_EFFECT_START + label_index`, so the resolve path's
+                    // index mapping (closure + resume frame) is unchanged.
+                    if legal.len() < labels.len() {
+                        if let Some(sel) = ctx.game.pending_selection.as_mut() {
+                            if sel.kind == SelectionKind::EffectChoice {
+                                let allowed: Vec<u16> = legal
+                                    .iter()
+                                    .map(|&i| crate::action::space::HAND_EFFECT_START + i as u16)
+                                    .collect();
+                                sel.valid_action_ids.retain(|id| allowed.contains(id));
+                                if let Some(choices) = sel.effect_choices.as_mut() {
+                                    choices.retain(|c| allowed.contains(&c.action_id));
+                                }
+                            }
+                        }
+                    }
+                    selection_result(ctx)
+                }
+            }
         }
         CompiledStep::SelectReveal {
             of,

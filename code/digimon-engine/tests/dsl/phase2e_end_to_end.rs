@@ -50,6 +50,7 @@ fn select_reveal_then_effect_choice_then_gain_memory() {
         },
         CompiledStep::SelectEffectChoice {
             labels: vec!["A".to_string(), "B".to_string()],
+            legal_when: None,
             bind_as: Some("branch".to_string()),
             prompt: "choose".to_string(),
             prompt_key: None,

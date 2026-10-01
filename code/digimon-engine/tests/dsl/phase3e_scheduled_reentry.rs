@@ -25,7 +25,10 @@ fn scheduled_drain_resumes_after_selection_and_continues_remaining_effects() {
             when: CompiledTiming::EndOfYourTurn,
             body: vec![
                 CompiledStep::SelectEffectChoice {
-                    labels: vec!["first".to_string()],
+                    // Two labels: a one-label choice auto-resolves without parking
+                    // (G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY), and this test needs a park.
+                    labels: vec!["first".to_string(), "second".to_string()],
+                    legal_when: None,
                     bind_as: None,
                     prompt: "Choose one".to_string(),
                     prompt_key: None,

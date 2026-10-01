@@ -3737,7 +3737,17 @@ fn eval_permanent_fields(
         } else {
             perm.card_sources[..n - 1]
                 .iter()
-                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
                 .count()
         };
         if matching < usize::from(*at_least) {
@@ -3754,7 +3764,17 @@ fn eval_permanent_fields(
         let matching = perm
             .linked_cards
             .iter()
-            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
             .count();
         if matching < usize::from(*at_least) {
             return false;
@@ -4069,7 +4089,17 @@ fn eval_breeding_permanent_fields(
         } else {
             perm.card_sources[..n - 1]
                 .iter()
-                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
                 .count()
         };
         if matching < usize::from(*at_least) {
@@ -4084,7 +4114,17 @@ fn eval_breeding_permanent_fields(
         let matching = perm
             .linked_cards
             .iter()
-            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
             .count();
         if matching < usize::from(*at_least) {
             return false;

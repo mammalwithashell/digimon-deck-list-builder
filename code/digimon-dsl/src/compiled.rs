@@ -2575,6 +2575,10 @@ pub enum CompiledStep {
     },
     SelectEffectChoice {
         labels: Vec<String>,
+        /// Per-branch legality parallel to `labels`; `None` = all legal.
+        /// Exactly one legal branch auto-binds (no prompt); zero → no bind.
+        /// (No `skip_serializing_if`: the embedded pack is bincode.)
+        legal_when: Option<Vec<CompiledPredicate>>,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
