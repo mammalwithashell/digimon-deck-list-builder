@@ -199,6 +199,15 @@ pub enum StepSpec {
     TrashBottomSources(TrashBottomSourcesArgs),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    /// Trash each `select_materials`-bound card (a card-list binding) from
+    /// `target`'s digivolution cards. Card-list sibling of
+    /// `TrashSelectedSources` (which takes `select_own_sources` source refs);
+    /// pairs with `select_materials` so per-pick constraints (`uniqueness`,
+    /// `same_by`) apply. Each trash fires `OnDigivolutionCardTrashed` and
+    /// honors `ImmuneFromStackTrashing`. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-
+    /// SELECTION (EX13-016 Omnimon "by trashing 2 same-level cards from its
+    /// digivolution cards").
+    TrashSelectedMaterials(TrashSelectedMaterialsArgs),
     PlaceSelectedCardUnderTamer(PlaceSelectedCardUnderTamerArgs),
     PlaceSelectedSourcesUnderTamer(PlaceSelectedSourcesUnderTamerArgs),
     MoveMatchingSourcesUnderTamer(MoveMatchingSourcesUnderTamerArgs),
@@ -581,6 +590,7 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::TrashSelectedMaterials(v) => kv!(s, "trash_selected_materials", v),
             StepSpec::PlaceSelectedCardUnderTamer(v) => {
                 kv!(s, "place_selected_card_under_tamer", v)
             }
@@ -862,6 +872,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "trash_selected_materials" => StepSpec::TrashSelectedMaterials(map.next_value()?),
             "place_selected_card_under_tamer" => {
                 StepSpec::PlaceSelectedCardUnderTamer(map.next_value()?)
             }
@@ -1102,6 +1113,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_bottom_sources",
                         "trash_all_sources",
                         "trash_selected_sources",
+                        "trash_selected_materials",
                         "return_selected_sources_to_hand",
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
@@ -2266,6 +2278,25 @@ pub struct TrashSelectedSourcesArgs {
     pub source_refs: String,
 }
 
+/// Args for `trash_selected_materials` — trash the `cards` card-list binding
+/// (from `select_materials`) out of `target`'s digivolution cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashSelectedMaterialsArgs {
+    pub target: BindingRef,
+    pub cards: BindingRef,
+}
+
+/// Pick-set "all the same" constraint for `select_materials` (`same_by:`).
+/// `level`: every pick shares one level, and a first pick is only offered
+/// from a level that holds at least `min` candidates (so the selection can
+/// always be completed). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SameBy {
+    Level,
+}
+
 /// Args for `return_selected_sources_to_deck` — return each
 /// `select_own_sources`-bound digivolution source card to its owner's deck at
 /// `position` (top or bottom). Sibling of `TrashSelectedSourcesArgs` with a
@@ -3154,6 +3185,17 @@ pub struct SelectMaterialsArgs {
     /// distinct card name" — the printed-text "1 of each different name".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uniqueness: Option<crate::alt_path::DistinctBy>,
+    /// Minimum picks before PASS commits (default 0 ⇒ the historical
+    /// "at least 1 unless `optional_zero`"). With `min > 0` the step is a
+    /// required cost: fewer than `min` eligible cards ⇒ nothing is picked
+    /// and the rest of the body does not run. G-ENGINE-SAME-LEVEL-SOURCE-
+    /// PAIR-SELECTION.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub min: u8,
+    /// "All picks share X" constraint (`level`). Mutually exclusive with
+    /// `uniqueness`. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub same_by: Option<SameBy>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

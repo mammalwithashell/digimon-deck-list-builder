@@ -276,6 +276,13 @@ pub enum CompiledRepeat {
     Range { min: u8, max: u8 },
 }
 
+/// Compiled `select_materials { same_by: … }`. G-ENGINE-SAME-LEVEL-SOURCE-
+/// PAIR-SELECTION.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledSameBy {
+    Level,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledDistinctBy {
     CardNumber,
@@ -400,6 +407,9 @@ pub struct CompiledPredicate {
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
+    /// See `PredicateSpec::can_change_orientation` (EX13-023).
+    #[serde(default)]
+    pub can_change_orientation: Option<bool>,
     pub has_keyword: Option<String>,
     /// Permanent-subject leaf for printed/granted/temporary Security A.
     /// deltas. Used by Venusmon-style text that cares about "with
@@ -1100,6 +1110,11 @@ pub enum CompiledDeclarativeClause {
         /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
         #[serde(default)]
         effect_immunity: Option<CompiledAuraEffectImmunity>,
+        /// Effect-controller scope for the named `modifier` grant
+        /// (`effect_immunity_filter.controller`). `None` ⇒ unscoped.
+        /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023).
+        #[serde(default)]
+        modifier_from: Option<CompiledEffectController>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -2260,6 +2275,14 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional_zero: bool,
+        /// Minimum picks (0 ⇒ historical behaviour). G-ENGINE-SAME-LEVEL-
+        /// SOURCE-PAIR-SELECTION.
+        #[serde(default)]
+        min: u8,
+        /// "All picks share X" (`SameBy::Level`). G-ENGINE-SAME-LEVEL-
+        /// SOURCE-PAIR-SELECTION.
+        #[serde(default)]
+        same_by: Option<CompiledSameBy>,
     },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,
@@ -2328,6 +2351,13 @@ pub enum CompiledStep {
     },
     TrashSelectedSources {
         source_refs: String,
+    },
+    /// Trash the `cards` card-list binding from `target`'s digivolution
+    /// cards (`select_materials` sibling of `TrashSelectedSources`).
+    /// G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    TrashSelectedMaterials {
+        target: CompiledBindingRef,
+        cards: CompiledBindingRef,
     },
     /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME — return each
     /// `SelectOwnSources`-bound digivolution source card to its owner's hand

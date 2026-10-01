@@ -530,6 +530,22 @@ pub struct AuraBody {
     /// G-DSL-AURA-EFFECT-IMMUNITY.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect_immunity: Option<AuraEffectImmunity>,
+
+    /// Effect-controller scope for the named `modifier` grant — installs it
+    /// with an `effect_immunity_filter { controller }` so protection-style
+    /// modifiers apply only against effects of that controller. Printed
+    /// "Your opponent's effects can't reduce this unsuspended Digimon's DP,
+    /// return its stacked cards to the hand or deck, or trash them"
+    /// (EX13-023) ⇒ three self-auras `modifier: ImmuneFromDPMinus` /
+    /// `ImmuneFromStackReturn` / `ImmuneFromStackTrashing`, each
+    /// `modifier_from: opponent`, gated by `active_when:
+    /// { source_is_unsuspended: true }`. Consulted by the modifiers that
+    /// read the filter (`ImmuneFromDPMinus` in `effective_dp`, the stacked-
+    /// card protections via `ModifierRegistry::blocks_effect_from`).
+    /// Omitted ⇒ unscoped (every effect). Requires `modifier`.
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_from: Option<crate::step::EffectControllerSpec>,
 }
 
 /// Inline continuous effect-immunity grant used inside [`AuraBody`].

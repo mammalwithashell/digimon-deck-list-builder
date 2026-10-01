@@ -1034,6 +1034,7 @@ fn compile_predicate(
         }),
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
+        can_change_orientation: p.can_change_orientation,
         has_keyword: p.has_keyword.clone(),
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
@@ -2237,6 +2238,7 @@ fn compile_declarative(
                     source_kind: imm.source_kind.map(compile_effect_source_kind),
                     source_controller: compile_effect_controller(imm.source_controller),
                 }),
+                modifier_from: a.modifier_from.map(compile_effect_controller),
                 summary,
                 summary_key,
             }
@@ -2987,6 +2989,10 @@ fn compile_step(
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
+        S::TrashSelectedMaterials(a) => CompiledStep::TrashSelectedMaterials {
+            target: compile_binding_ref(&a.target),
+            cards: compile_binding_ref(&a.cards),
+        },
         S::PlaceSelectedCardUnderTamer(a) => CompiledStep::PlaceSelectedCardUnderTamer {
             card: compile_binding_ref(&a.card),
             tamer: compile_binding_ref(&a.tamer),
@@ -3615,6 +3621,10 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional_zero: a.optional_zero,
+            min: a.min,
+            same_by: a.same_by.map(|s| match s {
+                crate::step::SameBy::Level => crate::compiled::CompiledSameBy::Level,
+            }),
         },
         S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
             target: a

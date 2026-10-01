@@ -94,6 +94,13 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return 0;
         }
+        // <De-Digivolve> trashes the top stacked cards: a stacked-card trash
+        // protection blocks it (DCGO `IDegeneration.Degeneration` checks
+        // `ImmuneFromStackTrashing`; EX13-023 official Q&A).
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+        if self.stack_trash_blocked(target) {
+            return 0;
+        }
         // Per-pop immunity recheck (judge-quiz Q15): De-Digivolve is applied
         // one card at a time and a newly-exposed top card's continuous
         // immunity halts the remaining pops. The core also re-ticks

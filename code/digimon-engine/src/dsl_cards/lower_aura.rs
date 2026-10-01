@@ -26,7 +26,7 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledAuraEffectImmunity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
+    CompiledAuraEffectImmunity, CompiledEffectController, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
     CompiledPredicate, CompiledScope, CompiledSynthIdentity,
 };
 
@@ -70,6 +70,7 @@ pub fn lower_all(
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    modifier_from: Option<CompiledEffectController>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
     if applies_to_opponent_security_dp || applies_to_own_security_dp {
@@ -143,6 +144,7 @@ pub fn lower_all(
         modifier_name,
         synth_identity,
         effect_immunity,
+        modifier_from,
         raw,
     ) {
         vec![effect]
@@ -273,8 +275,15 @@ pub fn lower(
     modifier_name: Option<String>,
     synth_identity: Option<CompiledSynthIdentity>,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    modifier_from: Option<CompiledEffectController>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
+    // G-ENGINE-STACKED-CARD-RETURN-PROTECTION — controller scope for the
+    // named `modifier` grant (`effect_immunity_filter`).
+    let modifier_immunity = modifier_from.map(|c| crate::modifiers::EffectImmunityFilter {
+        source_kind: None,
+        controller: crate::dsl_cards::step::modifiers::lower_effect_controller(c),
+    });
     // G-DSL-AURA-GRANT-TRAITS: shared `Arc` so both the self-aura and the
     // filtered-target closures can install the same trait overlay.
     let grant_traits: Option<Arc<Vec<String>>> = if grant_traits.is_empty() {
@@ -424,6 +433,14 @@ pub fn lower(
                                 base: false,
                             },
                         );
+                    } else if let Some(immunity) = modifier_immunity {
+                        ctx.add_declarative_modifier_with_immunity(
+                            handle,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            immunity,
+                        );
                     } else {
                         ctx.add_declarative_modifier(
                             handle,
@@ -551,6 +568,14 @@ pub fn lower(
                                 value: name.as_ref().clone(),
                                 base: false,
                             },
+                        );
+                    } else if let Some(immunity) = modifier_immunity {
+                        ctx.add_declarative_modifier_with_immunity(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            immunity,
                         );
                     } else {
                         ctx.add_declarative_modifier(

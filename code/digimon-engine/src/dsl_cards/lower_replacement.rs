@@ -398,6 +398,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
+        || pred.can_change_orientation.is_some()
         || pred.has_keyword.is_some()
         || !pred.zone.is_empty()
         || pred.owner.is_some()
@@ -461,7 +462,8 @@ fn process_places_permanent_in_security(process: &[CompiledStep]) -> bool {
 fn step_places_permanent_in_security(step: &CompiledStep) -> bool {
     match step {
         CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { .. }
-        | CompiledStep::PlacePermanentOnSecurityAndHandleReplacement { .. } => true,
+        | CompiledStep::PlacePermanentOnSecurityAndHandleReplacement { .. }
+        | CompiledStep::SecurityPlaceTopStackedCard { .. } => true,
         CompiledStep::AsSelectingPlayer { body, .. }
         | CompiledStep::Optional(body)
         | CompiledStep::ScheduleDelayed { body, .. } => process_places_permanent_in_security(body),
@@ -583,6 +585,76 @@ fn required_selection_step_has_candidate(
             ..
         } => resolve_permanent_binding(of_permanent, bindings)
             .is_some_and(|perm| permanent_has_matching_materials(ctx, perm, filter, bindings)),
+        // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION — a required multi-pick
+        // over the carrier's digivolution cards is payable only when the
+        // offerable pool (filter + `uniqueness` / `same_by` pool restriction)
+        // reaches the floor. EX13-016 Omnimon: only offer the save when a
+        // same-level PAIR exists.
+        CompiledStep::SelectMaterials {
+            of_permanent,
+            max,
+            filter,
+            uniqueness,
+            optional_zero,
+            min,
+            same_by,
+            ..
+        } => {
+            let floor = (*min).max(if *optional_zero { 0 } else { 1 });
+            if floor == 0 {
+                return true;
+            }
+            if let digimon_dsl::compiled::CompiledCountBound::Literal(m) = max {
+                if *m == 0 {
+                    return false;
+                }
+            }
+            let Some(perm) = resolve_step_permanent(of_permanent, ctx, bindings) else {
+                return false;
+            };
+            let mode = match same_by {
+                Some(digimon_dsl::compiled::CompiledSameBy::Level) => {
+                    Some(crate::effect_context::DistinctByMode::SameLevel)
+                }
+                None => uniqueness.map(|u| match u {
+                    digimon_dsl::compiled::CompiledDistinctBy::CardNumber => {
+                        crate::effect_context::DistinctByMode::CardNumber
+                    }
+                    digimon_dsl::compiled::CompiledDistinctBy::Level => {
+                        crate::effect_context::DistinctByMode::Level
+                    }
+                    digimon_dsl::compiled::CompiledDistinctBy::Name => {
+                        crate::effect_context::DistinctByMode::Name
+                    }
+                    digimon_dsl::compiled::CompiledDistinctBy::Color => {
+                        crate::effect_context::DistinctByMode::Color
+                    }
+                }),
+            };
+            crate::dsl_cards::step::selections::count_capped_card_candidate_indices(
+                ctx.game,
+                perm.player,
+                crate::effect_context::CountCappedZone::Material(perm),
+                filter,
+                bindings,
+                ctx.source_card,
+                ctx.source_permanent,
+                ctx.source_kind,
+                ctx.player,
+                mode,
+                floor as usize,
+            )
+            .len()
+                >= floor as usize
+        }
+        // G-TOP-STACKED-CARD-TO-SECURITY — "by placing its top stacked card
+        // as the top security card" is payable only while a digivolution
+        // card sits under the top (the Digimon must survive the move).
+        CompiledStep::SecurityPlaceTopStackedCard { carrier, .. } => {
+            resolve_step_permanent(carrier, ctx, bindings)
+                .and_then(|h| ctx.game.player(h.player).battle_area.get(h.index as usize))
+                .is_some_and(|perm| perm.card_sources.len() >= 2)
+        }
         CompiledStep::SelectOwnSources {
             target,
             filter,
@@ -874,6 +946,21 @@ fn count_matching_zone_cards(
             )
         })
         .count()
+}
+
+/// Resolve a step's permanent binding for the read-only preflight: named
+/// bindings (incl. `replacement_subject`) plus the effect's own carrier.
+fn resolve_step_permanent(
+    binding: &CompiledBindingRef,
+    ctx: &EffectReadContext<'_>,
+    bindings: &Bindings,
+) -> Option<PermanentHandle> {
+    match binding {
+        CompiledBindingRef::Source | CompiledBindingRef::SelfRef | CompiledBindingRef::Carrier => {
+            ctx.source_permanent
+        }
+        other => resolve_permanent_binding(other, bindings),
+    }
 }
 
 fn resolve_permanent_binding(

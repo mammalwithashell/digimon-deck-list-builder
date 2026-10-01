@@ -8401,7 +8401,10 @@ pins that the turn scan does not trash such a marker.
 - **`event_winner_is_source:` predicate** [G-DSL-BATTLE-WINNER-IS-SOURCE] — `on_ally_won_battle` scoped to the carrier ("When THIS Digimon wins a battle"), firing for effect battles too (the `on_any_deletion` + `source_deleted_battle_opponent` idiom reads the live attack and misses `battle:`). Driver EX13-045 Examon.
 - **`select_any_permanent` honors `continue_on_decline`** [G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE] — RESOLVED (compiled field appended; installer threads the decline tail + resume `RunTail`). Driver EX13-043 Leopardmon "You may suspend 1 Digimon. Then, you may return …".
 
-## Same-level pair selection from a stack  [G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION] — hybrid, OPEN 2026-10-01
+## Same-level pair selection from a stack  [G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01:** `select_materials` gains `min:` (pick floor) and `same_by: level` (lowers to `DistinctByMode::SameLevel` + install-time `prune_pool`), and the new step `trash_selected_materials { target, cards }` trashes a `select_materials` card-list binding. Also added this run (G-ENGINE-STACKED-CARD-RETURN-PROTECTION): aura `modifier_from:` (controller scope for the named `modifier`), `ImmuneFromStackReturn` modifier name, `can_change_orientation` predicate. Drivers EX13-016 / EX13-023 (IMPLEMENTED). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- stack_pair_and_protection`.
+- *(original entry follows)*
 
 - **Card (BLOCKED):** EX13-016 Omnimon — "by trashing 2 same-level cards from its digivolution cards, it doesn't leave".
 - **Missing DSL vocabulary:** `select_materials { …, same_by: level }` (all picks share one key; first pick limited to keys with ≥max candidates).

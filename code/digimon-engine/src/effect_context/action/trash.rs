@@ -24,6 +24,29 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Whether `target`'s stacked cards are protected from being trashed by
+    /// THIS effect (its controller `self.player`), per
+    /// `ModifierType::ImmuneFromStackTrashing` and each entry's controller
+    /// scope. G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn stack_trash_blocked(&self, target: PermanentHandle) -> bool {
+        self.game.modifiers.blocks_effect_from(
+            target,
+            ModifierType::ImmuneFromStackTrashing,
+            self.player,
+        )
+    }
+
+    /// Whether `target`'s stacked cards are protected from being returned to
+    /// the hand or deck by THIS effect (`ModifierType::ImmuneFromStackReturn`).
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn stack_return_blocked(&self, target: PermanentHandle) -> bool {
+        self.game.modifiers.blocks_effect_from(
+            target,
+            ModifierType::ImmuneFromStackReturn,
+            self.player,
+        )
+    }
+
     pub fn select_deleted_self_digisources_from_trash<F, C>(
         &mut self,
         max: u8,
@@ -457,6 +480,12 @@ impl<'a> EffectContext<'a> {
     /// Token cards (`is_token == true`) are still pushed to trash; the
     /// caller's gate is responsible for any token-aware filtering.
     pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION: stacked-card trash
+        // protection (DCGO `TrashDigivolutionCards` checks
+        // `ImmuneFromStackTrashing` before any removal).
+        if self.stack_trash_blocked(perm) {
+            return false;
+        }
         let (removed, host_card) = {
             // Soft-fail: carrier missing (DCGO: `if (_permanent == null) yield break;`).
             let permanent = match self
@@ -565,11 +594,7 @@ impl<'a> EffectContext<'a> {
         // Distinct from `CannotBeDestroyed` (which protects the live top
         // card from deletion) — this protects the digivolution sources
         // sitting beneath the top from being peeled off and trashed.
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return false;
         }
         // Validate target slot.
@@ -616,11 +641,7 @@ impl<'a> EffectContext<'a> {
         if count == 0 {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return 0;
         }
 
@@ -665,11 +686,7 @@ impl<'a> EffectContext<'a> {
         if count == 0 || !self.can_affect_permanent(target) {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return 0;
         }
 

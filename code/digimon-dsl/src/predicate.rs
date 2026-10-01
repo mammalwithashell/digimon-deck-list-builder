@@ -248,6 +248,13 @@ pub struct PredicateSpec {
     pub is_suspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_unsuspended: Option<bool>,
+    /// Permanent-subject leaf: the permanent can change orientation — a
+    /// suspended one can unsuspend (no `CannotUnsuspend`), an unsuspended one
+    /// can suspend (no `CannotSuspend`). DCGO `Permanent.CanChangeOrientation`
+    /// (`IsSuspended ? CanUnsuspend : CanSuspend`). Driver EX13-023
+    /// UlforceVeedramon "1 of your Digimon may change orientation".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_change_orientation: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
     /// Permanent-subject predicate. True when the candidate currently has

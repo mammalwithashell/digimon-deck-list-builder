@@ -95,6 +95,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ChangeEndTurnMinMemory" => ModifierType::ChangeEndTurnMinMemory,
         "ImmuneFromDPMinus" => ModifierType::ImmuneFromDPMinus,
         "ImmuneFromStackTrashing" => ModifierType::ImmuneFromStackTrashing,
+        "ImmuneFromStackReturn" => ModifierType::ImmuneFromStackReturn,
         "DisableEffect" => ModifierType::DisableEffect,
         "TreatAsDigimon" => ModifierType::TreatAsDigimon,
         "ChangeCardDP" => ModifierType::ChangeCardDP,
@@ -207,6 +208,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ChangeEndTurnMinMemory
         | ModifierType::ImmuneFromDPMinus
         | ModifierType::ImmuneFromStackTrashing
+        | ModifierType::ImmuneFromStackReturn
         | ModifierType::DisableEffect
         | ModifierType::TreatAsDigimon
         | ModifierType::ChangeCardDP
@@ -320,6 +322,7 @@ mod tests {
             ModifierType::ChangeEndTurnMinMemory,
             ModifierType::ImmuneFromDPMinus,
             ModifierType::ImmuneFromStackTrashing,
+            ModifierType::ImmuneFromStackReturn,
             ModifierType::DisableEffect,
             ModifierType::TreatAsDigimon,
             ModifierType::ChangeCardDP,

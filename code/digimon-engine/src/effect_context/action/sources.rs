@@ -909,6 +909,11 @@ impl<'a> EffectContext<'a> {
     /// Returns `true` when the source handle was found and moved; `false` if
     /// the permanent slot is gone or the card is not in its stack.
     pub fn return_card_source_to_hand(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023): stacked cards
+        // protected from returns by this effect's controller stay put.
+        if self.stack_return_blocked(perm) {
+            return false;
+        }
         let removed = {
             let permanent = match self
                 .game
@@ -988,6 +993,11 @@ impl<'a> EffectContext<'a> {
         card: CardHandle,
         to_bottom: bool,
     ) -> bool {
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023; DCGO
+        // `IReturnStackToLibrary` checks `ImmuneFromStackReturnToLibrary`).
+        if self.stack_return_blocked(perm) {
+            return false;
+        }
         // Tier-2 delegation (facade placement rule, RUST_ENGINE_API.md §3):
         // the mutation + observer dispatch live in game_actions/sources.rs.
         self.game.return_card_source_to_deck(perm, card, to_bottom)

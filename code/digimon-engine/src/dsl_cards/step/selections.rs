@@ -4199,6 +4199,8 @@ pub fn try_install(
             bind_as,
             prompt,
             optional_zero,
+            min,
+            same_by,
             ..
         } => {
             let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
@@ -4214,13 +4216,30 @@ pub fn try_install(
             // engine multi-pick encodes breeding sources in the
             // `BREEDING_SOURCE_SELECT` action range (Task S1.3).
             let has_candidates = has_material_candidates(ctx, perm, filter, Some(&bindings));
-            let completes_synchronously = !has_candidates || max_value == 0;
+            // `same_by: level` → the SameLevel pick-set mode (mutually
+            // exclusive with `uniqueness`, enforced by the validator).
+            // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+            let mode = match same_by {
+                Some(digimon_dsl::compiled::CompiledSameBy::Level) => {
+                    Some(DistinctByMode::SameLevel)
+                }
+                None => map_distinct_by(*uniqueness),
+            };
+            // A required floor (`min > 0`) the pool can't reach is an
+            // unpayable cost: nothing is picked and the rest of the body is
+            // skipped (the closure install never fires its tail callback).
+            let min_value = (*min).min(max_value);
+            let unpayable_min = min_value > 0
+                && material_candidate_count(ctx, perm, filter, &bindings, mode, min_value)
+                    < min_value as usize;
+            let completes_synchronously = !has_candidates || max_value == 0 || unpayable_min;
             install_select_materials(
                 ctx,
                 perm,
+                min_value,
                 max_value,
                 filter.clone(),
-                map_distinct_by(*uniqueness),
+                mode,
                 bind_as.clone(),
                 prompt.clone(),
                 *optional_zero,
@@ -4638,6 +4657,33 @@ fn count_opponent_source_candidates(
             .count();
     }
     count.min(usize::from(u8::MAX)) as u8
+}
+
+/// Number of offerable first-pick material candidates of `perm` under
+/// `filter` + `mode` (incl. the `SameLevel` pool restriction for a `need`
+/// floor). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+fn material_candidate_count(
+    ctx: &EffectContext<'_>,
+    perm: PermanentHandle,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+    mode: Option<DistinctByMode>,
+    need: u8,
+) -> usize {
+    count_capped_card_candidate_indices(
+        ctx.game,
+        perm.player,
+        CountCappedZone::Material(perm),
+        filter,
+        bindings,
+        ctx.source_card,
+        ctx.source_permanent,
+        ctx.source_kind,
+        ctx.player,
+        mode,
+        need as usize,
+    )
+    .len()
 }
 
 fn has_material_candidates(
@@ -7057,6 +7103,7 @@ fn install_select_count_capped_multi(
         player,
 
         distinct_by,
+        min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
@@ -7113,7 +7160,7 @@ fn install_select_count_capped_multi(
 /// install-time scan); the pairwise exclusions are applied by the executor on
 /// re-park, matching the closure.
 #[allow(clippy::too_many_arguments)]
-fn count_capped_card_candidate_indices(
+pub(crate) fn count_capped_card_candidate_indices(
     game: &crate::game::Game,
     of_player: PlayerId,
     zone: CountCappedZone,
@@ -7124,6 +7171,7 @@ fn count_capped_card_candidate_indices(
     source_kind: crate::enums::EffectSourceKind,
     player: PlayerId,
     distinct_by: Option<DistinctByMode>,
+    need: usize,
 ) -> Vec<usize> {
     use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
     let zone_len = match zone {
@@ -7171,10 +7219,24 @@ fn count_capped_card_candidate_indices(
                 Some(filter_bindings),
             )
         {
-            out.push(i);
+            out.push((i, h));
         }
     }
-    out
+    // Pool-level restriction, mirroring `select_count_capped_multi_min` so the
+    // resume frame's candidates equal the closure install's.
+    // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    if let Some(mode) = distinct_by {
+        let pool: Vec<&crate::card_data::CardData> = out
+            .iter()
+            .filter_map(|(_, h)| game.card_data_for_handle(*h))
+            .collect();
+        if pool.len() == out.len() {
+            let keep = mode.prune_pool(&pool, need);
+            let mut k = keep.into_iter();
+            out.retain(|_| k.next().unwrap_or(true));
+        }
+    }
+    out.into_iter().map(|(i, _)| i).collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -7894,6 +7956,7 @@ fn install_select_material(
 fn install_select_materials(
     ctx: &mut EffectContext<'_>,
     perm: PermanentHandle,
+    min: u8,
     max: u8,
     filter: CompiledPredicate,
     uniqueness: Option<DistinctByMode>,
@@ -7938,11 +8001,12 @@ fn install_select_materials(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_count_capped_multi(
+    ctx.select_count_capped_multi_min(
         // The carrier's owner — `Material` candidates come from
         // `perm.player`'s battle area regardless of `of_player`.
         perm.player,
         CountCappedZone::Material(perm),
+        min,
         max,
         &prompt,
         optional_zero,
@@ -7984,6 +8048,7 @@ fn install_select_materials(
         player,
 
         uniqueness,
+        min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
@@ -8008,7 +8073,7 @@ fn install_select_materials(
                         previous_phase,
                         zone: CountCappedZone::Material(perm),
                         range_start,
-                        min: 0,
+                        min,
                         max,
                         is_optional_zero: optional_zero,
                         distinct_by: uniqueness,

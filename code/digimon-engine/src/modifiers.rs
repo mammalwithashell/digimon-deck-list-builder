@@ -1109,6 +1109,36 @@ impl ModifierRegistry {
         })
     }
 
+    /// Whether any `modifier` entry on `target` blocks an effect controlled
+    /// by `effect_controller`, honoring each entry's
+    /// `effect_immunity_filter.controller` scope:
+    ///   - `OpponentOnly` — blocks only effects controlled by `target`'s
+    ///     opponent ("your opponent's effects can't …", EX13-023);
+    ///   - `OwnOnly` — blocks only the owner's own effects;
+    ///   - `Any` / no filter — blocks every effect (back-compat for entries
+    ///     installed without a filter).
+    /// Used by the stacked-card protections (`ImmuneFromStackTrashing`,
+    /// `ImmuneFromStackReturn`). G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn blocks_effect_from(
+        &self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        effect_controller: PlayerId,
+    ) -> bool {
+        let from_opponent = effect_controller != target.player;
+        self.get(target, modifier).into_iter().any(|entry| {
+            match entry
+                .effect_immunity_filter
+                .map(|f| f.controller)
+                .unwrap_or(EffectControllerFilter::Any)
+            {
+                EffectControllerFilter::Any => true,
+                EffectControllerFilter::OpponentOnly => from_opponent,
+                EffectControllerFilter::OwnOnly => !from_opponent,
+            }
+        })
+    }
+
     /// Iterate over ALL `ModifierEntry` values attached to `target`
     /// (regardless of `ModifierType`). Used by the Phase 7 replacement
     /// dispatcher to scan for `CannotBe*` entries across all modifier types

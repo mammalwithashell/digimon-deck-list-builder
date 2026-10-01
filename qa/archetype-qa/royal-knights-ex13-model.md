@@ -15,7 +15,7 @@ printed text + `general_rule.pdf` govern.
 | EX13-020 | Magnamon | IMPLEMENTED | engine | Blocker/Armor Purge; OP/WD/WA +1000 per trash colour then −4000 per 5000 DP; printed + inherited [End of Your Turn][OPT] unsuspend a [Free]/[Royal Knight] Digimon |
 | EX13-014 | Jesmon | IMPLEMENTED | payoff/engine | WD/WA free [Huckmon]-text Option ≤5; [All Turns][OPT] own Digimon played → may delete opp lowest DP + Atho token |
 | EX13-015 | Gallantmon | IMPLEMENTED | payoff | Raid/Progress/Blocker; OP/WD/WA/Counter OPT delete opp ≥12000, else trash their top security; 9000-DP leave-replacement |
-| EX13-023 | UlforceVeedramon | **BLOCKED** | payoff | stacked-card protection aura has no engine primitive |
+| EX13-023 | UlforceVeedramon | IMPLEMENTED (2026-10-01) | payoff | stacked-card protection aura (G-ENGINE-STACKED-CARD-RETURN-PROTECTION RESOLVED) |
 | EX13-036 | Kentaurosmon | IMPLEMENTED | payoff | [Security]/OP −7000 (all at ≤6 total security); WD trash most-security top → re-run [Security]; place Digimon as security |
 | EX13-037 | Dynasmon | IMPLEMENTED | payoff/engine | OP/WD/WA trash own top security +10000, ≤3 → trash theirs; [All Turns][OPT] security removed (either stack) → opp −12000, ≤3 → Recovery +1 |
 | EX13-043 | Leopardmon | IMPLEMENTED | enabler | OP/WD suspend any Digimon then bottom-deck opp lowest; WD/WA OPT play a [Royal Knight]/[Beast]… card from hand −4 −1 per suspended Digimon |
@@ -23,7 +23,7 @@ printed text + `general_rule.pdf` govern.
 | EX13-061 | Gankoomon | IMPLEMENTED | payoff | Reboot/Blocker; OP/WD Hinukamuy token + white Digimon immunity; white suspend → free [Huckmon] Option |
 | EX13-062 | Craniamon | PARTIAL | payoff | Reboot/Blocker; OP/WD opp-effect immunity; self-suspend OPT → delete ALL opp lowest play cost; self-unsuspend → +3000 (effect-driven only — G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND) |
 | EX13-064 | LordKnightmon | IMPLEMENTED | payoff | WD free ≤8 [Knightmon]-text from hand/trash; [Your Turn] Knightmon-text gain Alliance/Piercing; other Digimon/Tamer played → Rush+Collision attack |
-| EX13-016 | Omnimon | **BLOCKED** | payoff | same-level source-pair leave-replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION) |
+| EX13-016 | Omnimon | IMPLEMENTED (2026-10-01) | payoff | same-level source-pair leave-replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION RESOLVED) |
 | EX13-045 | Examon | IMPLEMENTED | finisher | DNA Green Lv.6 + Blue Lv.6 cost 0; if DNA: attacks + all own +10000, then may battle; win → free ≤12 [Dracomon]/[Examon]-text card |
 | EX13-077 | Omnimon: Merciful Mode | IMPLEMENTED (2026-10-01) | finisher | Assembly distinct-colour materials (G-ASSEMBLY-DISTINCT-BY-COLOR resolved) |
 
@@ -92,7 +92,7 @@ printed text + `general_rule.pdf` govern.
 - Gankoomon / Jesmon white-suspend → free [Huckmon] Option — needs a real implemented [Huckmon]-text Option; deferred.
 
 ### Blocked combos
-- UlforceVeedramon (EX13-023) CS line / Magnamon wake — EX13-023 BLOCKED (engine).
+- UlforceVeedramon (EX13-023) CS line / Magnamon wake — EX13-023 now IMPLEMENTED (2026-10-01); combo test not yet authored.
 - Omnimon (EX13-016) DNA/Assembly and its leave-replacement — BLOCKED (hybrid).
 - Omnimon → Omnimon: Merciful Mode (EX13-016 → EX13-077) — both BLOCKED.
 

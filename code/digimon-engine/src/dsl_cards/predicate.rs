@@ -3567,6 +3567,20 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = pred.can_change_orientation {
+        // DCGO `CanChangeOrientation`: IsSuspended ? CanUnsuspend : CanSuspend.
+        let can = if perm.is_suspended {
+            !rctx.game.cannot_unsuspend(handle)
+        } else {
+            !rctx
+                .game
+                .modifiers
+                .has(handle, crate::enums::ModifierType::CannotSuspend)
+        };
+        if can != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.has_face_down_source {
         let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
         if has_face_down != want {
@@ -4011,7 +4025,9 @@ fn eval_breeding_permanent_fields(
         }
     }
 
-    pred.is_suspended.is_none() && pred.is_unsuspended.is_none()
+    pred.is_suspended.is_none()
+        && pred.is_unsuspended.is_none()
+        && pred.can_change_orientation.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

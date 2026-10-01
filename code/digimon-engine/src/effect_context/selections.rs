@@ -171,6 +171,15 @@ pub enum DistinctByMode {
     /// none). Not a pairwise comparison — use [`DistinctByMode::admits`].
     /// G-ASSEMBLY-DISTINCT-BY-COLOR (EX13-077).
     Color,
+    /// "N same-level cards" — the opposite of the distinct modes: every pick
+    /// shares ONE level (a level-less card is never admissible). Not a
+    /// matroid, so per-pick masking alone could strand a pick; installers
+    /// additionally restrict the initial pool with
+    /// [`DistinctByMode::prune_pool`] to levels holding at least the required
+    /// number of candidates. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION
+    /// (EX13-016 Omnimon "trashing 2 same-level cards from its digivolution
+    /// cards").
+    SameLevel,
 }
 
 impl DistinctByMode {
@@ -200,6 +209,31 @@ impl DistinctByMode {
                 masks.push(color_mask(&candidate.colors));
                 colors_assignable(&masks)
             }
+            DistinctByMode::SameLevel => {
+                candidate.level.is_some() && picked.iter().all(|p| p.level == candidate.level)
+            }
+        }
+    }
+
+    /// Install-time pool restriction: given every candidate that passed the
+    /// filter (in zone order) and the number of picks the selection needs to
+    /// reach its floor, return which candidates may be offered as a FIRST
+    /// pick. Only `SameLevel` prunes — a candidate stays iff its level is
+    /// held by at least `need` candidates, so once it is picked the
+    /// remaining same-level candidates can always complete the selection.
+    /// Every other mode is a matroid and keeps the whole pool.
+    pub fn prune_pool(self, pool: &[&crate::card_data::CardData], need: usize) -> Vec<bool> {
+        match self {
+            DistinctByMode::SameLevel => {
+                let need = need.max(1);
+                pool.iter()
+                    .map(|c| {
+                        c.level.is_some()
+                            && pool.iter().filter(|o| o.level == c.level).count() >= need
+                    })
+                    .collect()
+            }
+            _ => vec![true; pool.len()],
         }
     }
 }
@@ -1784,6 +1818,34 @@ impl<'a> EffectContext<'a> {
             if admissible && filter(self.game, &card_clone) {
                 candidate_indices.push(i);
             }
+        }
+
+        // Pool-level restriction (`SameLevel`: only levels that can still
+        // reach the floor). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+        if let Some(mode) = distinct_by {
+            let need = min.max(if is_optional_zero { 0 } else { 1 }) as usize;
+            let keep = {
+                let pool: Vec<&crate::card_data::CardData> = candidate_indices
+                    .iter()
+                    .map(|&i| {
+                        let data_index = match zone {
+                            CountCappedZone::Hand => self.game.player(of_player).hand[i].data_index,
+                            CountCappedZone::Trash => {
+                                self.game.player(of_player).trash[i].data_index
+                            }
+                            CountCappedZone::Material(perm_handle) => {
+                                material_zone_slice(self.game, perm_handle)
+                                    .expect("material carrier present")[i]
+                                    .data_index
+                            }
+                        };
+                        &self.game.card_data[data_index]
+                    })
+                    .collect();
+                mode.prune_pool(&pool, need)
+            };
+            let mut k = keep.into_iter();
+            candidate_indices.retain(|_| k.next().unwrap_or(true));
         }
 
         // Fewer candidates than the required minimum → the cost is unpayable.

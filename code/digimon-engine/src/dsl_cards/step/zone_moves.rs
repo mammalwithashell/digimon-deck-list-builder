@@ -279,6 +279,25 @@ pub fn try_run(
             true
         }
 
+        // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION — trash a
+        // `select_materials` card-list binding from `target`'s digivolution
+        // cards. Same per-card soft-fail contract as `TrashSelectedSources`;
+        // `trash_card_source` honors `ImmuneFromStackTrashing`.
+        CompiledStep::TrashSelectedMaterials { target, cards } => {
+            let Some(ResolvedBinding::Permanent(carrier)) =
+                resolve_binding_ref(target, ctx, bindings)
+            else {
+                return true;
+            };
+            let Some(resolved) = resolve_binding_ref(cards, ctx, bindings) else {
+                return true;
+            };
+            for card in resolved_cards(resolved) {
+                let _ = ctx.trash_card_source(carrier, card);
+            }
+            true
+        }
+
         CompiledStep::PlaceSelectedCardUnderTamer {
             card,
             tamer,

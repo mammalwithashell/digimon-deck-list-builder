@@ -835,7 +835,27 @@ pub enum ModifierType {
     /// be trashed (peeled) by effects. Distinct from `CannotBeDestroyed`,
     /// which protects the top card. Consult site: source-trash mutation
     /// (the inherited stack-peel path).
+    ///
+    /// Honors `effect_immunity_filter.controller` for the effect controller
+    /// scope (no filter ⇒ every effect) via
+    /// `ModifierRegistry::blocks_effect_from`. Every stacked-card trash
+    /// mover consults it — top-card peel, bottom trash, selected-source
+    /// trash, face-down bottom trash and <De-Digivolve> (DCGO
+    /// `Permanent.ImmuneFromStackTrashing`, checked by `TrashStack`,
+    /// `TrashDigivolutionCards` and `Degeneration`).
     ImmuneFromStackTrashing,
+    /// Permanent-scoped: this permanent's stacked cards (its digivolution
+    /// cards and its top card as a "stacked card") can't be returned to the
+    /// hand or deck by effects. Distinct from `CannotBeReturnedToHand` /
+    /// `CannotBeReturnedToDeck`, which protect the permanent itself — the
+    /// EX13-023 official Q&A: "XX is still permitted to be performed on the
+    /// Digimon itself". Honors `effect_immunity_filter.controller` via
+    /// `ModifierRegistry::blocks_effect_from`. Consult sites: the source →
+    /// hand / deck movers (`EffectContext::return_card_source_to_hand` /
+    /// `return_card_source_to_deck`). DCGO `ImmuneStackReturnToLibraryClass`
+    /// / `Permanent.ImmuneFromStackReturnToLibrary`.
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023 UlforceVeedramon).
+    ImmuneFromStackReturn,
 
     // Effect-suppression
     /// Permanent-scoped: suppresses dispatch of one specific timing's

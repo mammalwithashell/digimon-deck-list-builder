@@ -308,6 +308,21 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         });
                                     }
                                 }
+                                // `modifier_from` scopes the named `modifier`
+                                // grant; it lowers on the declarative-tick
+                                // path only (G-ENGINE-STACKED-CARD-RETURN-
+                                // PROTECTION).
+                                if b.modifier_from.is_some()
+                                    && (b.modifier.is_none() || b.while_condition.is_some())
+                                {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.modifier_from"),
+                                        message:
+                                            "modifier_from requires `modifier` and does not support while_condition (gate with active_when)"
+                                                .to_string(),
+                                    });
+                                }
                                 // unify-dsl-scalar-and-comparators: `dp_modifier`
                                 // is now a `FormulaSpec`. A bare `Literal` is a
                                 // static grant and needs no validation; the
@@ -1146,6 +1161,25 @@ fn validate_step(
                 ctx,
                 errors,
             );
+            // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION: `same_by` and
+            // `uniqueness` are opposite pick-set constraints.
+            if args.same_by.is_some() && args.uniqueness.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.same_by"),
+                    message: "select_materials: `same_by` and `uniqueness` are mutually exclusive"
+                        .to_string(),
+                });
+            }
+            if let crate::step::CountBound::Literal(max) = &args.max {
+                if args.min > *max {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.min"),
+                        message: format!("select_materials: min {} exceeds max {}", args.min, max),
+                    });
+                }
+            }
         }
         StepSpec::SelectUnionZone(args) => {
             validate_predicate(
@@ -2658,6 +2692,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeEndTurnMinMemory",
     "ImmuneFromDPMinus",
     "ImmuneFromStackTrashing",
+    "ImmuneFromStackReturn",
     "DisableEffect",
     "TreatAsDigimon",
     "ChangeCardDP",

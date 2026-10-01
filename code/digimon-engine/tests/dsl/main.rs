@@ -143,6 +143,7 @@ mod schema_export;
 mod security_boundary;
 mod security_stack_steps;
 mod select_materials;
+mod stack_pair_and_protection;
 mod selection_dp_extrema;
 mod self_source_count_threshold;
 mod source_stack_aggregates;

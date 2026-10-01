@@ -17,7 +17,7 @@ processing conditions rule 15-7-2 / 15-7-4 (Reppamon Q&A "Yes, you can.").
 | EX13-003 Kyaromon | IMPLEMENTED | engine (egg) | Inherited [Your Turn][OPT] when your security is removed from, the carrier may digivolve into a [Kentaurosmon]-name / [Holy Beast] hand card, cost −1. |
 | EX13-026 Kudamon | IMPLEMENTED | enabler | [On Play]/[When Moving] reveal 3: add 1 HB/RK/DS card to hand + place 1 face down at the BOTTOM of a [DATA SQUAD] Tamer (Q&A); rest bottom. Inherited [WA][OPT] opp Digimon <Security A. −1> until their turn ends. |
 | EX13-030 Reppamon | IMPLEMENTED | engine / defence | <Barrier> + inherited <Barrier>. [OP][WD][WA][OPT] by trashing top security, may play [Richard Sampson] from hand/trash free (cost payable with no Richard — Q&A). |
-| EX13-032 Chirinmon | **BLOCKED** (engine, partial) | payoff | Clause 1 (unsuspend + WD lock) authored; both would-leave saves blocked on G-TOP-STACKED-CARD-TO-SECURITY. |
+| EX13-032 Chirinmon | IMPLEMENTED (2026-10-01) | payoff | All clauses authored; would-leave saves unblocked by G-TOP-STACKED-CARD-TO-SECURITY (RESOLVED). |
 | EX13-071 Richard Sampson | **BLOCKED** (hybrid, partial) | engine (tamer) | SOMP/On Play stash + memory, [Security] play authored; [Main] Kudamon→Kentaurosmon blocked on G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST. |
 
 Cross-set cards used (all IMPLEMENTED DSL): EX13-036 Kentaurosmon (Lv.6
@@ -74,7 +74,7 @@ ST2-10 Plesiomon (vanilla filler / opponent bodies).
 - Richard SOMP stash → Chirinmon trashes a Tamer face-down card to unsuspend — EX13-071 + EX13-032 BLOCKED.
 - Richard [Main] Kudamon → Kentaurosmon (ignore level, −1) — EX13-071 BLOCKED (G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST).
 - Chirinmon WD unsuspend + opponent [When Digivolving] lock — EX13-032 BLOCKED.
-- Chirinmon / Kentaurosmon-carrier "top stacked card to security" leave save — EX13-032 BLOCKED (G-TOP-STACKED-CARD-TO-SECURITY).
+- Chirinmon / Kentaurosmon-carrier "top stacked card to security" leave save — EX13-032 now IMPLEMENTED (2026-10-01); combo test not yet authored.
 - Kyaromon → Chirinmon off a security trash — EX13-032 BLOCKED.
 
 ## Playstyle

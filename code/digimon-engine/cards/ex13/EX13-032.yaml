@@ -16,17 +16,25 @@
 #
 # DCGO: no EX13_032.cs at b9a0638cd.
 #
-# ─── Status: BLOCKED (engine) — partial ──────────────────────────────────────
-# Clause 1 is authored below. Clauses 2 (face-up would-leave save) and 3
-# (inherited [Kentaurosmon]-carrier save) are NOT authored:
-# G-TOP-STACKED-CARD-TO-SECURITY (qa/archetype-qa/engine-gaps.md). "Top
-# stacked card" is DCGO's Permanent.TopCard (BT20_084.cs AddSecurityCard(card),
-# BT23_008.cs AddDigivolutionCardsBottom({TopCard}), BT26_058.cs), but the only
-# verb, `security_place_top_stacked_card`, extracts card_sources[len-2] (the
-# card UNDER the top), and no primitive moves a permanent's TOP card to
-# security while the permanent stays topped by the next card. Authoring either
-# clause today would place the wrong card — no approximation.
+# ─── Status: IMPLEMENTED (all clauses) ─────────────────────────────────────
+# Clauses 2 and 3 unblocked by G-TOP-STACKED-CARD-TO-SECURITY (RESOLVED
+# 2026-10-01): "top stacked card" is DCGO's Permanent.TopCard (BT20_084.cs
+# AddSecurityCard(card), BT20_055.cs, BT23_008.cs, BT26_058.cs) — the visible
+# top card itself. `security_place_top_stacked_card` now moves
+# card_sources[len-1] (it previously moved the card UNDER the top), so the
+# Digimon stays in play topped by the card that was under it.
 #
+# ─── Clauses 2 / 3 modelling ────────────────────────────────────────────────
+# kind: replacement on when_would_leave_battle_area, optional (the "by
+# placing…" processing cost is a choice). Payability: at least one
+# digivolution card under the top (the top must leave without emptying the
+# Digimon; DCGO BT20_084 gates on DigivolutionCards.Count > 0) — face-up
+# clause: `materials_count_gte: 1` + `is_source_permanent` (self only);
+# inherited clause: the host carries Chirinmon as a source, so it always has
+# one, gated on `source_name_contains: Kentaurosmon` (carrier top-card name) + OPT.
+# Process: security_place_top_stacked_card (face-down top: printed text gives
+# no face-up instruction) then cancel_replacement.
+
 # ─── Clause 1 modelling ──────────────────────────────────────────────────────
 # Optional processing condition with two alternative costs:
 # - `optional` + `outer_prompt`: accept/decline confirm surfaces before any
@@ -162,3 +170,37 @@ effects:
                             modifier: CannotActivateWhenDigivolvingEffects
                             value: 1
                             expiry: end_of_opponents_turn
+
+  # ─── [All Turns] would-leave save (face-up) ────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - is_source_permanent: true
+        - materials_count_gte: 1
+    summary: "[All Turns] When this Digimon would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave"
+    process:
+      - security_place_top_stacked_card:
+          carrier: replacement_subject
+          of: you
+          position: top
+          face: down
+      - cancel_replacement: {}
+
+  # ─── Inherited [All Turns][OPT] would-leave save ([Kentaurosmon] carrier) ──
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      source_name_contains: "Kentaurosmon"
+    summary: "Inherited [All Turns][OPT] When this [Kentaurosmon]-named Digimon would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave"
+    process:
+      - security_place_top_stacked_card:
+          carrier: replacement_subject
+          of: you
+          position: top
+          face: down
+      - cancel_replacement: {}

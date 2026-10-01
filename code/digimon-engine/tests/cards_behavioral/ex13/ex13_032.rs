@@ -27,22 +27,19 @@
 //! DCGO's `Permanent.TopCard` (BT20_084.cs `AddSecurityCard(card, toTop)`,
 //! BT23_008.cs `AddDigivolutionCardsBottom({ TopCard })`, BT26_058.cs).
 //!
-//! # Verdict — BLOCKED (engine), partial YAML
-//! Clause 1 is authored and tested live. Clauses 2 and 3 (would-leave →
-//! place the TOP card as the top security card, the rest of the stack stays)
-//! are BLOCKED on `G-TOP-STACKED-CARD-TO-SECURITY` (qa/archetype-qa/
-//! engine-gaps.md): the only verb, `security_place_top_stacked_card`, extracts
-//! `card_sources[len-2]` (the card UNDER the top) — not DCGO's `TopCard` — and
-//! no primitive removes a permanent's top card to security while the permanent
-//! stays in play topped by the next card. Their tests are `#[ignore]`d with the
-//! gap id; the clauses are NOT authored (no approximation).
+//! # Verdict — IMPLEMENTED (all clauses)
+//! Clauses 2 and 3 (would-leave → place the TOP card as the top security
+//! card; the rest of the stack stays) were unblocked by
+//! `G-TOP-STACKED-CARD-TO-SECURITY` (RESOLVED 2026-10-01):
+//! `security_place_top_stacked_card` now moves the visible top card
+//! (`card_sources[len-1]`, DCGO `TopCard`), not the card under it.
 //!
 //! # Patterns (RUST_DSL_TEST_API §4.3)
 //! - E2 optional processing condition with a two-way cost choice (top security
 //!   OR bottom face-down card under a Tamer), [Once Per Turn], WD + WA.
 //! - Unsuspend self; opponent Digimon gets CannotActivateWhenDigivolvingEffects
 //!   until the end of their turn.
-//! - F replacement would-leave (BLOCKED).
+//! - F replacement would-leave (optional processing cost, cancel_replacement).
 
 #![allow(dead_code, unused_imports)]
 
@@ -361,38 +358,125 @@ fn ex13_032_once_per_turn_blocks_a_second_attack_trigger() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// BLOCKED — would-leave clauses (G-TOP-STACKED-CARD-TO-SECURITY)
+// Section 6 — would-leave saves (G-TOP-STACKED-CARD-TO-SECURITY, RESOLVED)
 // ════════════════════════════════════════════════════════════════════════════
 
+use super::orphan_support::{assert_replacement_prompt, delete_with};
+use digimon_engine::replacement::ReplacementCause;
+
+fn top_of(r: &DebugRunner, h: PermanentHandle) -> String {
+    r.game.players[h.player as usize].battle_area[h.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string()
+}
+
+fn top_security_id(r: &DebugRunner) -> String {
+    r.game.players[0]
+        .security
+        .last()
+        .expect("security top")
+        .card_id(&r.game.card_data)
+        .to_string()
+}
+
 #[test]
-#[ignore = "pending: G-TOP-STACKED-CARD-TO-SECURITY from qa/archetype-qa/engine-gaps.md"]
 fn ex13_032_would_leave_places_top_card_as_top_security_and_stays() {
     let mut r = runner(1);
     let chirin = r.place_stack(0, &["BASE-L4", CARD_ID]);
-    let opp = r.place_on_field(1, "KENT", Some(0));
-    r.game.players[1].battle_area[opp.index as usize].is_suspended = true;
-    r.attack_digimon(chirin, opp, false);
-    r.decline_optional_trigger().ok(); // [When Attacking] cost
-    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+    let sec_before = r.game.players[0].security.len();
+    delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
+    assert_replacement_prompt(&r);
     r.accept_optional_trigger().expect("accept would-leave save");
     drain(&mut r);
-    let top = r.game.players[0].security.last().unwrap();
-    assert_eq!(top.card_id(&r.game.card_data), CARD_ID, "Chirinmon → top security");
-    assert_eq!(
-        r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),
-        "BASE-L4",
-        "the Digimon stays, topped by the next card"
+    assert_eq!(r.game.players[0].security.len(), sec_before + 1);
+    assert_eq!(top_security_id(&r), CARD_ID, "Chirinmon itself → top security");
+    let placed = r.game.players[0].security.last().unwrap().card_index;
+    assert!(
+        !r.game.players[0].face_up_security.contains(&placed),
+        "placed face-down (no face-up instruction)"
+    );
+    assert_eq!(r.game.players[0].battle_area.len(), 1, "the Digimon doesn't leave");
+    assert_eq!(top_of(&r, chirin), "BASE-L4", "now topped by the card that was under it");
+    assert!(
+        !r.game.players[0].trash.iter().any(|c| c.card_id(&r.game.card_data) == "BASE-L4"),
+        "nothing was trashed"
     );
 }
 
 #[test]
-#[ignore = "pending: G-TOP-STACKED-CARD-TO-SECURITY from qa/archetype-qa/engine-gaps.md"]
-fn ex13_032_inherited_save_only_for_kentaurosmon_named_carrier() {
-    // Inherited [All Turns][OPT]: a [Kentaurosmon]-named carrier over Chirinmon
-    // that would leave places its top card (the Kentaurosmon) as the top
-    // security card and stays as Chirinmon. Authored once the gap closes.
+fn ex13_032_would_leave_decline_lets_it_leave() {
     let mut r = runner(1);
-    let carrier = r.place_stack(0, &[CARD_ID, "KENT"]);
-    let _ = carrier;
-    panic!("authored when G-TOP-STACKED-CARD-TO-SECURITY closes");
+    let chirin = r.place_stack(0, &["BASE-L4", CARD_ID]);
+    let sec_before = r.game.players[0].security.len();
+    delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
+    assert_replacement_prompt(&r);
+    r.decline_optional_trigger().expect("decline");
+    drain(&mut r);
+    assert!(r.game.players[0].battle_area.is_empty(), "declined → deleted");
+    assert_eq!(r.game.players[0].security.len(), sec_before);
+}
+
+#[test]
+fn ex13_032_would_leave_not_offered_without_a_card_under_it() {
+    // Moving the top card would empty the Digimon: no stacked card under the
+    // top → the save is unpayable and never offered.
+    let mut r = runner(1);
+    let chirin = r.place_on_field(0, CARD_ID, Some(0));
+    delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
+    drain(&mut r);
+    assert!(r.game.players[0].battle_area.is_empty(), "deleted, no save offered");
+    assert_eq!(r.game.players[0].security.len(), 1);
+}
+
+#[test]
+fn ex13_032_would_leave_save_is_not_once_per_turn() {
+    let mut r = runner(1);
+    let chirin = r.place_stack(0, &["FILL", "BASE-L4", CARD_ID]);
+    delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
+    r.accept_optional_trigger().expect("first save");
+    drain(&mut r);
+    assert_eq!(top_of(&r, chirin), "BASE-L4");
+    // Chirinmon is now in security; BASE-L4 (no Chirinmon text) is the top, so
+    // a second removal is not saved by Chirinmon's face-up clause.
+    delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
+    drain(&mut r);
+    assert!(r.game.players[0].battle_area.is_empty());
+}
+
+#[test]
+fn ex13_032_inherited_save_only_for_kentaurosmon_named_carrier() {
+    // [Kentaurosmon]-named carrier over Chirinmon: its top card (Kentaurosmon)
+    // goes to the top of security and the Digimon stays, now as Chirinmon.
+    let mut r = runner(1);
+    let carrier = r.place_stack(0, &["BASE-L4", CARD_ID, "KENT"]);
+    delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
+    assert_replacement_prompt(&r);
+    r.accept_optional_trigger().expect("accept inherited save");
+    drain(&mut r);
+    assert_eq!(top_security_id(&r), "KENT", "the Kentaurosmon top card → top security");
+    assert_eq!(top_of(&r, carrier), CARD_ID, "stays, topped by Chirinmon");
+
+    // A non-[Kentaurosmon] carrier over Chirinmon gets no inherited save.
+    let mut r = runner(1);
+    let carrier = r.place_stack(0, &["BASE-L4", CARD_ID, "OPP"]);
+    delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
+    drain(&mut r);
+    assert!(r.game.players[0].battle_area.is_empty(), "no save for a non-Kentaurosmon carrier");
+}
+
+#[test]
+fn ex13_032_inherited_save_is_once_per_turn() {
+    let mut r = runner(1);
+    let carrier = r.place_stack(0, &["FILL", CARD_ID, "KENT", "KENT"]);
+    delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
+    r.accept_optional_trigger().expect("first inherited save");
+    drain(&mut r);
+    assert_eq!(top_of(&r, carrier), "KENT", "still a Kentaurosmon over Chirinmon");
+    delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
+    drain(&mut r);
+    assert!(
+        r.game.players[0].battle_area.is_empty(),
+        "[Once Per Turn]: the second removal is not saved"
+    );
 }

@@ -11540,17 +11540,16 @@
       "card_name": "Chirinmon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
       "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-032.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_032.rs",
-      "test_count": 13,
+      "test_count": 17,
       "patterns": [
         "E2",
         "F"
       ],
-      "notes": "PARTIAL YAML: [WD][WA][OPT] two-cost optional processing condition (top security OR bottom face-down under a Tamer; menu only when both payable) \u2192 unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects until their turn ends \u2014 green. BLOCKED on G-TOP-STACKED-CARD-TO-SECURITY for the [All Turns] would-leave save and the inherited [Kentaurosmon] save: 'top stacked card' = DCGO TopCard, but security_place_top_stacked_card extracts card_sources[len-2]; clauses not authored, 2 tests ignored with the gap id."
+      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement."
     },
     "EX13-071": {
       "card_name": "Richard Sampson",
@@ -11787,27 +11786,35 @@
       "card_name": "Omnimon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
       "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "BLOCKED: '[All Turns] When this Digimon would leave\u2026, by trashing 2 same-level cards from its digivolution cards, it doesn't leave' needs a same-level pair multi-pick (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION). Rest looks expressible."
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_016.rs",
+      "test_count": 11,
+      "patterns": [
+        "A",
+        "C",
+        "E",
+        "F"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01: all clauses. Raid/Blocker; [OP][WD][WA][OPT] 2 opp Digimon/Tamers CannotSuspend until their turn ends (select_count_capped_multi clamp + per-pick modifier); [OP][WD][Counter][OPT] may delete opp Digimon with <= this Digimon's source count; [All Turns] would-leave save via select_materials {min: 2, max: 2, same_by: level} + trash_selected_materials + cancel_replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION RESOLVED; only offered when a same-level pair exists). DNA + Assembly -7 routes authored (structural test). [Counter] timing covered structurally only (no live counter-window test)."
     },
     "EX13-023": {
       "card_name": "UlforceVeedramon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
       "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "BLOCKED: '[All Turns] Your opponent's effects can't reduce this unsuspended Digimon's DP, return its stacked cards to the hand or deck, or trash them' \u2014 no stacked-card return protection modifier and no continuous unsuspended-gated opponent-scoped aura for the three protections (G-ENGINE-STACKED-CARD-RETURN-PROTECTION)."
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_023.rs",
+      "test_count": 12,
+      "patterns": [
+        "A",
+        "C",
+        "D",
+        "E"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01: all clauses. Blocker/Evade; [OP][WD][WA][OPT] 1 own Digimon may change orientation (new can_change_orientation predicate; decline refunds OPT per DCGO RemoveUse); [OP][WD] may return all fewest-source opp Digimon to deck bottom (BT24-030 idiom); [All Turns] three self-auras ImmuneFromDPMinus / ImmuneFromStackReturn / ImmuneFromStackTrashing with modifier_from: opponent, active_when source_is_unsuspended (G-ENGINE-STACKED-CARD-RETURN-PROTECTION RESOLVED; de-digivolve + selected-source trash + source returns consult it)."
     },
     "EX13-077": {
       "card_name": "Omnimon: Merciful Mode",
