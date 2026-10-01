@@ -223,11 +223,11 @@ fn ex13_065_guard_saves_an_ally_from_an_opponent_effect() {
 /// The card's signature line: <Guard> deletes this Digimon (other than in
 /// battle) → its own <Decode> may play the [Sistermon Blanc] under it. The
 /// Decode window opens INSIDE Guard's replacement process, i.e. a second
-/// replacement parks while Guard's is still unresolved — the engine's
-/// single-slot `parked_replacement` trips its nested-park debug_assert (and
-/// would drop the outer outcome in release).
+/// replacement parks while Guard's is still unresolved. The parked-replacement
+/// stack drains LIFO: the carrier's deletion commits first, then Guard's
+/// cancel applies because the carrier was deleted (G-NESTED-PARKED-REPLACEMENT,
+/// RESOLVED 2026-10-01).
 #[test]
-#[ignore = "pending: G-NESTED-PARKED-REPLACEMENT from qa/archetype-qa/engine-gaps.md"]
 fn ex13_065_guard_deletion_then_decode_plays_sistermon_blanc() {
     let mut r = builder().deck(0, &["FILL"; 6]).start();
     r.skip_mulligan();
@@ -244,6 +244,33 @@ fn ex13_065_guard_deletion_then_decode_plays_sistermon_blanc() {
     assert!(mine.contains(&"WHITE-ALLY".to_string()), "ally doesn't leave");
     assert!(mine.contains(&"SIS-BLANC".to_string()), "<Decode> played [Sistermon Blanc]");
     assert!(!mine.contains(&CARD_ID.to_string()));
+}
+
+/// Same nesting, <Decode> declined: the Guard cost deletion still completes
+/// (carrier + its source to trash), so the ally still doesn't leave.
+#[test]
+fn ex13_065_guard_deletion_with_decode_declined_still_saves_ally() {
+    let mut r = builder().deck(0, &["FILL"; 6]).start();
+    r.skip_mulligan();
+    r.place_stack(0, &["SIS-BLANC", CARD_ID]);
+    let ally = r.place_on_field(0, "WHITE-ALLY", Some(0));
+    r.game.tick_declarative_effects();
+    r.game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+    // Accept <Guard>.
+    let v = r.pending_selection_view().expect("<Guard> offered");
+    let a = v.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap();
+    r.execute_action(v.selecting_player, a).unwrap();
+    // Decline the nested <Decode> window.
+    let v = r.pending_selection_view().expect("nested <Decode> window");
+    assert!(v.is_optional, "<Decode> is a 'you may'");
+    r.execute_action(v.selecting_player, PASS).unwrap();
+    assert!(r.pending_selection_view().is_none());
+    let mine = field_ids(&r, 0);
+    assert_eq!(mine, vec!["WHITE-ALLY".to_string()], "ally doesn't leave; carrier deleted");
+    let trash: Vec<String> = r.game.player(0).trash.iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string()).collect();
+    assert!(trash.contains(&CARD_ID.to_string()) && trash.contains(&"SIS-BLANC".to_string()));
 }
 
 // ─── <Decode ([Sistermon Blanc])> ───────────────────────────────────────────

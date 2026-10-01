@@ -107,7 +107,7 @@ impl<'a> EffectContext<'a> {
 
     pub fn trash_top_security_and_cancel_current_replacement(&mut self, player: PlayerId) -> bool {
         if self.trash_top_security(player) {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
             true

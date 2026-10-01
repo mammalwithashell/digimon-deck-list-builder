@@ -135,7 +135,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
 }
 
 fn set_outcome(ctx: &mut EffectContext<'_>, outcome: ReplacementOutcome) {
-    if ctx.game.parked_replacement.is_some() {
+    if ctx.game.has_active_parked_replacement() {
         match outcome {
             ReplacementOutcome::None => {}
             ReplacementOutcome::Cancelled => ctx.cancel_leave(),

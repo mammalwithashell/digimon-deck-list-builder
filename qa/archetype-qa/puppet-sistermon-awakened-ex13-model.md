@@ -16,7 +16,7 @@ and the **KingEtemon "Etemon party"** (a yellow Lv.6 that floods the board with
 | Card | Role | One-line function |
 |---|---|---|
 | EX13-066 Sistermon Noir (Awakened) | payoff + engine | DUAL. Option [Main]: free-play a play cost <=4 [Sistermon] from hand/trash, then `<De-Digivolve 1>` per own Digimon; `<Arts Digivolve>` onto a Sistermon. Digimon: [WD] delete opp Digimon play cost <=4; `<Decode ([Sistermon Noir]/[Sistermon Ciel])>`. |
-| EX13-065 Sistermon Blanc (Awakened) | enabler / protection | DUAL. Option [Main]: free-play a <=4 [Sistermon], then 1 opp Digimon -3000 DP per own Digimon. Digimon: `<Decode ([Sistermon Blanc])>`, `<Guard>`. **BLOCKED** (G-NESTED-PARKED-REPLACEMENT, `qa/archetype-qa/engine-gaps.md`). |
+| EX13-065 Sistermon Blanc (Awakened) | enabler / protection | DUAL. Option [Main]: free-play a <=4 [Sistermon], then 1 opp Digimon -3000 DP per own Digimon. Digimon: `<Decode ([Sistermon Blanc])>`, `<Guard>`. IMPLEMENTED 2026-10-01 (G-NESTED-PARKED-REPLACEMENT RESOLVED; combo tests not yet authored). |
 | EX13-035 KingEtemon | payoff | [OP][WD] free-play up to 2 [Chuumon]/[Sukamon]/[Etemon] Digimon (<=6 total cost; +6 by returning 10 such cards from trash). [All Turns] 3+ [Sukamon]/[Etemon] Digimon -> opp Digimon -3000 DP + `<Security A. -1>`. |
 | BT6-082 Sistermon Blanc (cross-set) | Arts / alt-path base | Lv.3, play cost 3, [Huckmon] in its text -> Noir's "Lv.3 w/[Huckmon] in text: Cost 3" base; [On Play] `<Draw 1>`. |
 | BT6-084 Sistermon Ciel (cross-set) | Option colour enabler / Arts base | White Lv.4; name route for Noir (cost 1). |
@@ -100,7 +100,7 @@ and the **KingEtemon "Etemon party"** (a yellow Lv.6 that floods the board with
 4. C4 — return-10 budget.
 
 ## Blocked / dropped
-- BLOCKED (EX13-065, G-NESTED-PARKED-REPLACEMENT): "Blanc (Awakened) Option ->
+- Unblocked 2026-10-01 (EX13-065 IMPLEMENTED; G-NESTED-PARKED-REPLACEMENT RESOLVED) — still to author: "Blanc (Awakened) Option ->
   -3000 x N DP", "Blanc (Awakened) <Guard> + <Decode> recursion",
   "Blanc (Awakened) Lv.3 -> Noir (Huckmon text, cost 3)".
 - Dropped (low value / covered per-card): BT20-084's [Trash] free-digivolve onto

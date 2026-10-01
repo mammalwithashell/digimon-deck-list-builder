@@ -894,13 +894,29 @@ pub struct Game {
     /// `effect_queue::resolve_generic_selection` after the user's callback
     /// runs. `None` outside a parked-replacement scope.
     ///
-    /// **Single-outstanding invariant:** at most one slot occupied at a time;
-    /// the dispatcher `debug_assert!`s on duplicate install.
+    /// **Stack (G-NESTED-PARKED-REPLACEMENT, 2026-10-01):** a replacement
+    /// process can itself cause an event whose replacement window parks
+    /// (e.g. `<Guard>` deletes its carrier, whose own `<Decode>` window then
+    /// prompts). Parked replacements are pushed and drained LIFO — the inner
+    /// event commits before the outer replacement's outcome is committed.
+    /// Plain data (clone-safe for `Game: Clone`).
+    ///
+    /// Outcome writers (`EffectContext::cancel_leave` etc.) address only the
+    /// TOP entry and only when it belongs to the currently-running scope —
+    /// see `parked_replacement_floor`.
     ///
     /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
     /// independent concerns. Phase C §4.1.
     #[doc(hidden)]
-    pub(crate) parked_replacement: Option<crate::replacement::ParkedReplacement>,
+    pub(crate) parked_replacement: Vec<crate::replacement::ParkedReplacement>,
+
+    /// Stack depth of `parked_replacement` at the entry of the replacement
+    /// process currently running synchronously (0 outside any process). A
+    /// process running while an OUTER replacement is parked must not write
+    /// its outcome into that outer entry: entries at index `< floor` belong
+    /// to enclosing events. Saved/restored by `replacement::run_effect_inner`.
+    #[doc(hidden)]
+    pub(crate) parked_replacement_floor: usize,
 
     /// Temporary bridge used by DSL replacement-process outcome steps before
     /// the dispatcher has installed a `ParkedReplacement`. The replacement
@@ -1865,7 +1881,7 @@ impl Game {
         &mut self,
         parked: crate::replacement::ParkedReplacement,
     ) {
-        self.parked_replacement = Some(parked);
+        self.parked_replacement.push(parked);
     }
 
     /// Test-only getter for the parked-replacement outcome. The
@@ -1876,7 +1892,14 @@ impl Game {
     pub fn parked_replacement_outcome_for_test(
         &self,
     ) -> Option<crate::replacement::ReplacementOutcome> {
-        self.parked_replacement.as_ref().map(|p| p.outcome)
+        self.parked_replacement.last().map(|p| p.outcome)
+    }
+
+    /// Test-only: number of parked replacements currently stacked
+    /// (G-NESTED-PARKED-REPLACEMENT).
+    #[doc(hidden)]
+    pub fn parked_replacement_depth_for_test(&self) -> usize {
+        self.parked_replacement.len()
     }
 
     /// Get the next player clockwise from the given player.

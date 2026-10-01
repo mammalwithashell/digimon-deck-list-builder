@@ -2216,7 +2216,7 @@ pub(crate) fn continue_delay_cancel_after_selection(
         return;
     }
 
-    if let Some(parked) = game.parked_replacement.as_mut() {
+    if let Some(parked) = game.active_parked_replacement_mut() {
         parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
     }
 }
@@ -2487,7 +2487,7 @@ fn install_delay_dna_card_selection(
                     );
                     if merged.is_some() {
                         ctx.cancel_current_replacement();
-                        if let Some(parked) = game.parked_replacement.as_mut() {
+                        if let Some(parked) = game.active_parked_replacement_mut() {
                             parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
                         }
                     }
@@ -2588,7 +2588,7 @@ pub(crate) fn run_delay_dna_card_selection_step(
                     );
                     if merged.is_some() {
                         ctx.cancel_current_replacement();
-                        if let Some(parked) = ctx.game.parked_replacement.as_mut() {
+                        if let Some(parked) = ctx.game.active_parked_replacement_mut() {
                             parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
                         }
                     }

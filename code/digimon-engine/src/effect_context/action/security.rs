@@ -51,7 +51,7 @@ impl<'a> EffectContext<'a> {
                 self.player,
             )
         {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.handle_replacement();
             }
             true
@@ -141,7 +141,7 @@ impl<'a> EffectContext<'a> {
         face_up: bool,
     ) -> bool {
         if self.place_self_at_security(position, face_up) {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
             true

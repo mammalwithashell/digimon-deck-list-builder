@@ -868,7 +868,7 @@ impl Game {
                 h.index -= 1;
             }
         };
-        if let Some(parked) = self.parked_replacement.as_mut() {
+        for parked in self.parked_replacement.iter_mut() {
             if let Some(sp) = parked.source_permanent.as_mut() {
                 shift(sp);
             }
