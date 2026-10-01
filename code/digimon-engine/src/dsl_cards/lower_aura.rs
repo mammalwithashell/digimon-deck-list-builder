@@ -289,6 +289,20 @@ pub fn lower(
     let active_when = active_when.map(Arc::new);
 
     let mut builder: EffectBuilder = Effect::declarative(card).name("Aura");
+    // G-ENGINE-DP-DELETION-MAX-MODIFIER: a SELF-aura "add N to this Digimon's
+    // DP deletion effects' maximums" rides on the Effect itself and is read
+    // live from the host's stack by `Game::dp_delete_effect_max_bonus` —
+    // NOT materialized per tick — so a source that joins the stack mid-turn
+    // (Guilmon under a just-digivolved Growlmon) raises that Growlmon's
+    // [When Digivolving] deletion cap without waiting for the next tick.
+    let mut modifier = modifier;
+    if is_self_aura
+        && target_player.is_none()
+        && modifier.as_deref() == Some("ChangeDPDeleteEffectMaxDP")
+    {
+        builder = builder.dp_delete_effect_max_delta(modifier_value);
+        modifier = None;
+    }
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }

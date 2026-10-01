@@ -102,6 +102,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ChangeSAttack" => ModifierType::ChangeSAttack,
         "ChangeLinkCost" => ModifierType::ChangeLinkCost,
         "ChangeLinkMax" => ModifierType::ChangeLinkMax,
+        "ChangeDPDeleteEffectMaxDP" => ModifierType::ChangeDPDeleteEffectMaxDP,
         "ChangePermanentLevel" => ModifierType::ChangePermanentLevel,
         "ChangeTraits" => ModifierType::ChangeTraits,
         "ChangeBaseCardName" => ModifierType::ChangeBaseCardName,
@@ -214,6 +215,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ChangeSAttack
         | ModifierType::ChangeLinkCost
         | ModifierType::ChangeLinkMax
+        | ModifierType::ChangeDPDeleteEffectMaxDP
         | ModifierType::ChangePermanentLevel
         | ModifierType::ChangeTraits
         | ModifierType::ChangeBaseCardName
@@ -327,6 +329,7 @@ mod tests {
             ModifierType::ChangeSAttack,
             ModifierType::ChangeLinkCost,
             ModifierType::ChangeLinkMax,
+            ModifierType::ChangeDPDeleteEffectMaxDP,
             ModifierType::ChangePermanentLevel,
             ModifierType::ChangeTraits,
             ModifierType::ChangeBaseCardName,

@@ -11993,17 +11993,17 @@
       "card_name": "Guilmon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Guilmon / reptile (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_007.rs",
+      "test_count": 11,
       "patterns": [
         "A3",
         "D-inherited-modifier"
       ],
-      "notes": "Inherited '[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums' has no engine primitive (G-ENGINE-DP-DELETION-MAX-MODIFIER). [When Moving][On Play] trash-1-from-hand -> return [Gallantmon]/red Tamer from trash is expressible; not shipped partially."
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited '[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums' is an inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP` / `modifier_value: 2000` (read live by Game::dp_delete_effect_max_bonus; deletion caps flagged by digimon_dsl::deletion_cap). [When Moving][On Play] declinable cost `select_hand` (clause gated on hand >= 1, DCGO CanActivate) -> optional trash pick ([Gallantmon]-named Digimon | red Tamer; the just-trashed card is eligible) -> add to hand."
     },
     "EX13-048": {
       "card_name": "Kotemon",
@@ -12495,17 +12495,17 @@
       "card_name": "Growlmon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "EX13 slice \u2014 orphan staples",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_010.rs",
+      "test_count": 10,
       "patterns": [
         "F1",
         "G4"
       ],
-      "notes": "Inherited 'Add 2000 to this Digimon's DP deletion effects' maximums' has no engine primitive (G-ENGINE-DP-DELETION-MAX-MODIFIER). Face-up WM/WD delete-or-buff clause is expressible; no partial YAML shipped."
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited +2000 DP-deletion maximum via inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP`. WM/WD mandatory delete (<=4000, auto-flagged as a deletion cap so a Guilmon EX13-007 source raises it to 6000) + `effect_deleted_any_opponent_digimon: false` -> <Raid> and +3000 for the turn. Tests cover EX13-013 WarGrowlmon cap 5000->7000 over this Growlmon and 9000 with Guilmon+Growlmon sources."
     },
     "EX13-076": {
       "card_name": "Imperialdramon: Paladin Mode",

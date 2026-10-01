@@ -18,7 +18,7 @@ Pipeline: batch-implement-cards-rust-dsl
 ## Per-Card Verdicts
 | Card ID | Name | Mode | Verdict | Review | Tests | Notes |
 |---------|------|------|---------|--------|-------|-------|
-| EX13-007 | Guilmon | IMPLEMENT | BLOCKED (engine) | self-review | 0/0 | Inherited "Add 2000 to this Digimon's DP deletion effects' maximums" — no primitive (G-ENGINE-DP-DELETION-MAX-MODIFIER) |
+| EX13-007 | Guilmon | IMPLEMENT | IMPLEMENTED | self-review | 11/11 | WM/OP trash 1 → return [Gallantmon]/red Tamer; inherited +2000 DP-deletion max (G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01) |
 | EX13-048 | Kotemon | IMPLEMENT | IMPLEMENTED | self-review | 19/19 | Two-bucket reveal ([Knightmon] text / name) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon |
 | EX13-068 | Takato Matsuki | IMPLEMENT | IMPLEMENTED | self-review | 13/13 | SoT memory→3; SoMP optional return-self → free [Takato Matsuki] from hand → if no Digimon, free [Guilmon] from trash; Security play self |
 
