@@ -85,6 +85,9 @@ pool; it was kept as one slice.
 2. ~~EX13-067 source conflict~~ **Resolved: the official DB wins.** Its text is now
    "... [Greymon] in its name **or** 1 [Agumon] ..." (the card face prints
    "and").
-3. The ingest's DigiXros parser can't read the `Lv.5 × Lv.4 × Lv.3` Assembly
-   shape ("Unparsed DigiXros element"). Only tools read `digixros_costs`, so
-   nothing breaks. Fix it if clause_coverage needs it.
+3. ~~The ingest's DigiXros parser can't read the `Lv.5 × Lv.4 × Lv.3` Assembly
+   shape~~ **Resolved 2026-10-01:** `tools/xros_cost_parser.py` parses all 17
+   EX13 Assembly requirements (per-level slots, name/text/trait alternatives,
+   keyword, colour, "different colors"), and an overridden `xros_req` now
+   re-derives `dna_costs` / `digixros_costs`. Tests in
+   `code/tests/tools/test_xros_cost_parser_assembly.py`.

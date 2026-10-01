@@ -93515,8 +93515,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has the [TS] trait, ＜Draw 1＞ (Draw 1 card from your deck.)",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [TS] trait, Draw 1",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [TS] trait, ＜Draw 1＞ (Draw 1 card from your deck.)",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -93543,8 +93543,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When any of your [DATA SQUAD] trait Tamers are played, both players ＜Draw 1＞ (Draw 1 card from your deck.)",
-    "inherited_effect_description_eng": "[Once Per Turn] When any of your [DATA SQUAD] trait Tamers are played, both players Draw 1",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your [DATA SQUAD] trait Tamers are played, both players ＜Draw 1＞ (Draw 1 card from your deck.)",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -93572,7 +93572,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By trashing your top security card, this Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost reduced by 1.",
+    "effect_description_eng": "",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By trashing your top security card, this Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost reduced by 1.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -93604,8 +93604,8 @@
     "attribute_eng": [
       "Tool"
     ],
-    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1.",
-    "inherited_effect_description_eng": "[Once Per Turn] When a [Social|Tool|Game] trait card would link to this Digimon, you may reduce the cost by 1.",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -93633,8 +93633,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2.",
-    "inherited_effect_description_eng": "[Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with or the [TS] trait in the hand with the cost reduced by 2.",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -93663,8 +93663,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your [Titan] trait Digimon unsuspends.",
-    "inherited_effect_description_eng": "[Once Per Turn] When one of your opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your [Titan] trait Digimon unsuspends.",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your [Titan] trait Digimon unsuspends.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -151434,8 +151434,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
-    "inherited_effect_description_eng": "This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -151461,8 +151461,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
-    "inherited_effect_description_eng": "[Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -151487,7 +151487,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand.",
+    "effect_description_eng": "",
     "inherited_effect_description_eng": "[All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -151514,8 +151514,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "Inherited Effect [Your Turn] This Digimon with the [TB] trait gains ＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)",
-    "inherited_effect_description_eng": "This Digimon with the [TB] trait gains",
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -157962,12 +157962,12 @@
       {
         "elements": [
           {
-            "name_contains": "Seven Code",
-            "trait_match": "",
+            "name_contains": "",
+            "trait_match": "Seven Code",
             "trait_alternatives": [],
             "level_max": null,
             "count": 7,
-            "is_digimon_only": false,
+            "is_digimon_only": true,
             "color": null
           }
         ],
@@ -158949,7 +158949,60 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "text_any": [
+              "Huckmon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "text_any": [
+              "Huckmon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "text_any": [
+              "Huckmon"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-015": {
     "index": 4339,
@@ -158988,9 +159041,52 @@
     "xros_req": "Assembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Guilmon]/[Growlmon] in name\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
     "digixros_costs": [
       {
-        "elements": [],
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "name_any": [
+              "Guilmon",
+              "Growlmon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "name_any": [
+              "Guilmon",
+              "Growlmon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "name_any": [
+              "Guilmon",
+              "Growlmon"
+            ]
+          }
+        ],
         "reduce_cost_per_card": 5,
-        "max_materials": 0,
+        "max_materials": 3,
         "different_card_numbers": false,
         "different_names": false,
         "has_text": "",
@@ -159058,6 +159154,56 @@
           "text_contains": ""
         },
         "memory_cost": 0
+      }
+    ],
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "WarGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "MetalGarurumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Agumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Gabumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 7,
+        "max_materials": 4,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
       }
     ]
   },
@@ -159216,7 +159362,30 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] [Veemon]: Cost 3 \r\nAssembly Requirements [Assembly -2] [Veemon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Veemon]: Cost 3 \r\nAssembly Requirements [Assembly -2] [Veemon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Veemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-021": {
     "index": 4345,
@@ -159330,7 +159499,63 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Veemon]/[Veedramon] in name\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Veemon]/[Veedramon] in name\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "name_any": [
+              "Veemon",
+              "Veedramon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "name_any": [
+              "Veemon",
+              "Veedramon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "name_any": [
+              "Veemon",
+              "Veedramon"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-024": {
     "index": 4348,
@@ -159371,7 +159596,63 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-025": {
     "index": 4349,
@@ -159648,17 +159929,20 @@
       {
         "elements": [
           {
-            "name_contains": "Sukamon",
+            "name_contains": "",
             "trait_match": "",
             "trait_alternatives": [],
-            "level_max": null,
-            "count": 1,
-            "is_digimon_only": false,
-            "color": null
+            "level_max": 4,
+            "count": 3,
+            "is_digimon_only": true,
+            "color": null,
+            "name_any": [
+              "Sukamon"
+            ]
           }
         ],
         "reduce_cost_per_card": 4,
-        "max_materials": 1,
+        "max_materials": 3,
         "different_card_numbers": false,
         "different_names": false,
         "has_text": "",
@@ -159862,7 +160146,51 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Holy Beast",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Yellow",
+            "level_exact": 5
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Holy Beast",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Yellow",
+            "level_exact": 4
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Holy Beast",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Yellow",
+            "level_exact": 3
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-037": {
     "index": 4361,
@@ -159904,7 +160232,60 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[Witchelny] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.5 w/[Witchelny] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "text_any": [
+              "Witchelny"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "text_any": [
+              "Witchelny"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "text_any": [
+              "Witchelny"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-038": {
     "index": 4362,
@@ -160128,7 +160509,60 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Mammal",
+            "trait_alternatives": [
+              "Beast",
+              "Beastkin"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Green",
+            "level_exact": 5
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Mammal",
+            "trait_alternatives": [
+              "Beast",
+              "Beastkin"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Green",
+            "level_exact": 4
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Mammal",
+            "trait_alternatives": [
+              "Beast",
+              "Beastkin"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Green",
+            "level_exact": 3
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-044": {
     "index": 4368,
@@ -160169,7 +160603,63 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3,
+            "text_any": [
+              "Dracomon",
+              "Examon"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-045": {
     "index": 4369,
@@ -160808,7 +161298,51 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Chronicle",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 5
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Chronicle",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 4
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Chronicle",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "level_exact": 3
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-061": {
     "index": 4385,
@@ -160845,7 +161379,33 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 4 \r\nAssembly Requirements [Assembly -5] 3 [Huckmon] text Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 4 \r\nAssembly Requirements [Assembly -5] 3 [Huckmon] text Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 3,
+            "is_digimon_only": true,
+            "color": null,
+            "text_any": [
+              "Huckmon"
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 5,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": true,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-062": {
     "index": 4386,
@@ -160884,9 +161444,43 @@
     "xros_req": "Assembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all Black w/＜Blocker＞\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
     "digixros_costs": [
       {
-        "elements": [],
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Black",
+            "level_exact": 5,
+            "keyword": "Blocker"
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Black",
+            "level_exact": 4,
+            "keyword": "Blocker"
+          },
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": "Black",
+            "level_exact": 3,
+            "keyword": "Blocker"
+          }
+        ],
         "reduce_cost_per_card": 5,
-        "max_materials": 0,
+        "max_materials": 3,
         "different_card_numbers": false,
         "different_names": false,
         "has_text": "",
@@ -160934,17 +161528,20 @@
       {
         "elements": [
           {
-            "name_contains": "Mamemon",
+            "name_contains": "",
             "trait_match": "",
             "trait_alternatives": [],
-            "level_max": null,
-            "count": 1,
+            "level_max": 5,
+            "count": 3,
             "is_digimon_only": false,
-            "color": null
+            "color": null,
+            "text_any": [
+              "Mamemon"
+            ]
           }
         ],
         "reduce_cost_per_card": 4,
-        "max_materials": 1,
+        "max_materials": 3,
         "different_card_numbers": false,
         "different_names": true,
         "has_text": "",
@@ -161400,7 +161997,32 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5 \r\nAssembly Requirements [Assembly -8] 6 [Free]/[Royal Knight] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5 \r\nAssembly Requirements [Assembly -8] 6 [Free]/[Royal Knight] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Free",
+            "trait_alternatives": [
+              "Royal Knight"
+            ],
+            "level_max": null,
+            "count": 6,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 8,
+        "max_materials": 6,
+        "different_card_numbers": false,
+        "different_names": true,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX13-077": {
     "index": 4401,
@@ -161430,6 +162052,30 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "[Digivolve] [Omnimon]: Cost 2 \r\nAssembly Requirements [Assembly -8] 6 [ADVENTURE] trait Digimon cards w/different colors\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Omnimon]: Cost 2 \r\nAssembly Requirements [Assembly -8] 6 [ADVENTURE] trait Digimon cards w/different colors\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "ADVENTURE",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 6,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 8,
+        "max_materials": 6,
+        "different_card_numbers": false,
+        "different_names": false,
+        "different_colors": true,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   }
 }
