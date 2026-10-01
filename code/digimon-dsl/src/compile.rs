@@ -184,6 +184,28 @@ fn compile_synth_identity(
     }
 }
 
+/// Lower a typed `add_modifier` payload. The validator guarantees exactly one
+/// key is set; this picks it (name > colors > dp > traits) so a spec that
+/// slipped past validation still compiles deterministically.
+fn compile_modifier_payload(
+    p: &crate::step::ModifierPayloadSpec,
+) -> Option<crate::compiled::CompiledModifierPayload> {
+    use crate::compiled::CompiledModifierPayload as P;
+    if let Some(name) = &p.name {
+        return Some(P::Name(name.clone()));
+    }
+    if let Some(colors) = &p.colors {
+        return Some(P::Colors(colors.iter().copied().map(compile_color).collect()));
+    }
+    if let Some(dp) = p.dp {
+        return Some(P::Dp(dp));
+    }
+    p.traits.as_ref().map(|traits| P::Traits {
+        add: traits.clone(),
+        replace: p.replace_traits,
+    })
+}
+
 fn compile_player_ref(p: crate::common::PlayerRef) -> CompiledPlayerRef {
     use crate::common::PlayerRef as S;
     match p {
@@ -3424,6 +3446,7 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
             synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            payload: a.payload.as_ref().and_then(compile_modifier_payload),
             continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {

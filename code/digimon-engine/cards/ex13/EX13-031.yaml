@@ -1,0 +1,161 @@
+# EX13-031 KingSukamon — Digimon, Lv.5, Yellow, DP 7000, Play Cost 7.
+# Traits: Mutant. Form: Ultimate. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX13-031.md):
+#   Digivolve: Yellow Lv.4 / 3; Black Lv.4 / 3
+#   [On Play] [When Digivolving] [On Deletion] By trashing 1 card with
+#     [Chuumon] or [Sukamon] in its name from your hand or your Digimon's
+#     digivolution cards, you may change the base name, color and DP of 1 of
+#     your opponent's Digimon to [Sukamon], white and 3000 until their turn
+#     ends.
+#   Assembly -4: 3 Lv.4 or lower Digimon cards w/[Sukamon] in name
+#   Inherited Effect: [All Turns] [Once Per Turn] When any other Digimon with
+#     [Sukamon] in their names are deleted, reveal the top 3 cards of your
+#     deck. You may play 1 play cost 3 or lower Digimon card with [Chuumon] or
+#     [Sukamon] in its name among them without paying the cost. Trash the rest.
+#
+# Official Q&A: "This effect changes 1 of your opponent's Digimon into a
+#   Digimon whose original name is [Sukamon], its original color is white, and
+#   its original DP is 3000."
+#
+# DCGO C# reference: none at the submodule (no EX13_031.cs at b9a0638cd).
+# Printed text + the Q&A + general_rule.pdf govern; "base DP" follows DCGO's
+# engine-side `ChangeBaseDPClass` (Permanent.BaseDP is REPLACED, and the +/- DP
+# effects still apply on top of it).
+#
+# ── Clause notes ─────────────────────────────────────────────────────────────
+# [OP][WD][OD] "By X, you may Y" (general_rule 15-7): the cost is optional and
+#   the player may pay it even when the result can't happen (15-7-5), so the
+#   cost prompt is NOT gated on the opponent having a Digimon. EX11-038 idiom:
+#   one optional `select_union_zone` over hand ∪ own Digimon sources, then
+#   `trash_union_bound`. Only on payment does the change happen; the target
+#   pick (1 of your opponent's Digimon) is then mandatory when one exists.
+#   The change is three typed-payload `add_modifier` steps on the one target
+#   (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD): `ChangeBaseCardName { name }`,
+#   `ChangeBaseCardColor { colors }` (replace — "white", not "also white") and
+#   `ChangeOriginDP { dp }` (base DP set). `end_of_opponents_turn` = "until
+#   their turn ends": from your turn it lasts through their next turn; from
+#   their turn ([On Deletion] on their turn) it ends at the end of that turn.
+#   [On Deletion]: KingSukamon is already in the trash; its former sources are
+#   too, so only hand cards / your other Digimon's sources can pay.
+# Assembly -4: three identical slots — Lv.4-or-lower Digimon cards with
+#   [Sukamon] in their names, from the trash, placed under it (no
+#   different-names constraint in the printed requirement).
+# Inherited: "any other Digimon" — either player's, not this carrier. Matched
+#   on the deleted Digimon's last-known name (`event_target_name_contains`
+#   reads the snapshot's rules names, so an opponent Digimon renamed [Sukamon]
+#   by the main effect counts). The reveal/trash is mandatory; only the play is
+#   a may (EX13-028 idiom).
+
+card: EX13-031
+name: KingSukamon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Mutant]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+  # ─── Assembly -4: 3 Lv.4 or lower Digimon cards w/[Sukamon] in name ──────
+  - kind: assembly
+    materials:
+      - filter: { all_of: [ { kind: digimon }, { level_lte: 4 }, { name_contains: Sukamon } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_lte: 4 }, { name_contains: Sukamon } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_lte: 4 }, { name_contains: Sukamon } ] }
+        zones: [trash]
+        stack_under: true
+    cost: 4
+
+effects:
+  - when: [on_play, when_digivolving, on_deletion]
+    summary: "[On Play][When Digivolving][On Deletion] By trashing 1 [Chuumon]/[Sukamon] card from hand or your Digimon's sources, 1 opponent Digimon becomes base [Sukamon]/white/3000 DP until their turn ends"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          optional: true
+          bind_as: cost_card
+          filter:
+            any_of:
+              - name_contains: Chuumon
+              - name_contains: Sukamon
+          prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?"
+          then:
+            - trash_union_bound:
+                binding: cost_card
+            - if:
+                condition:
+                  any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter: { kind: digimon }
+                      prompt: "Change the base name, color and DP of 1 of your opponent's Digimon to [Sukamon], white and 3000 until their turn ends"
+                  - add_modifier:
+                      target: victim
+                      modifier: ChangeBaseCardName
+                      value: 0
+                      payload: { name: Sukamon }
+                      expiry: end_of_opponents_turn
+                  - add_modifier:
+                      target: victim
+                      modifier: ChangeBaseCardColor
+                      value: 0
+                      payload: { colors: [white] }
+                      expiry: end_of_opponents_turn
+                  - add_modifier:
+                      target: victim
+                      modifier: ChangeOriginDP
+                      value: 0
+                      payload: { dp: 3000 }
+                      expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "Inherited [All Turns][OPT] When any other [Sukamon]-named Digimon is deleted, reveal top 3; you may play 1 cost<=3 [Chuumon]/[Sukamon] Digimon free; trash the rest"
+    condition:
+      all_of:
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_target_name_contains: Sukamon
+        - event_permanent_is_source: false
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 3
+                  - any_of:
+                      - name_contains: Chuumon
+                      - name_contains: Sukamon
+          prompt: "You may play 1 play cost 3 or lower Digimon card with [Chuumon] or [Sukamon] in its name without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest

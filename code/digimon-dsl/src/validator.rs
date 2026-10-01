@@ -900,6 +900,7 @@ fn validate_step(
                 }),
                 _ => {}
             }
+            validate_modifier_payload(args, card_id, prefix, errors);
         }
         StepSpec::AddPlayerModifier(args) => {
             if !is_known_modifier(&args.modifier) {
@@ -2763,6 +2764,82 @@ fn is_known_expiry(name: &str) -> bool {
     KNOWN_EXPIRY_KEYS.contains(&name)
 }
 
+/// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the typed `add_modifier` payload
+/// must carry exactly one key, compatible with the modifier; and the
+/// replace-style identity modifiers that are meaningless without a payload
+/// (`ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeTraits`) require one,
+/// so a spec can't install an entry that silently no-ops.
+fn validate_modifier_payload(
+    args: &crate::step::AddModifierArgs,
+    card_id: &str,
+    prefix: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    let push = |errors: &mut Vec<ValidationError>, message: String| {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.payload"),
+            message,
+        })
+    };
+    let m = args.modifier.as_str();
+    let Some(p) = &args.payload else {
+        if matches!(m, "ChangeBaseCardName" | "ChangeBaseCardColor" | "ChangeTraits") {
+            push(
+                errors,
+                format!(
+                    "{m} requires a payload (e.g. `payload: {{ name: Sukamon }}`, \
+                     `payload: {{ colors: [white] }}`, `payload: {{ traits: [Holy] }}`)"
+                ),
+            );
+        }
+        return;
+    };
+    let keys: Vec<&str> = [
+        p.name.as_ref().map(|_| "name"),
+        p.colors.as_ref().map(|_| "colors"),
+        p.dp.map(|_| "dp"),
+        p.traits.as_ref().map(|_| "traits"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if keys.len() != 1 {
+        push(
+            errors,
+            format!(
+                "add_modifier payload must set exactly one of name/colors/dp/traits, got {keys:?}"
+            ),
+        );
+        return;
+    }
+    if p.replace_traits && p.traits.is_none() {
+        push(errors, "payload.replace_traits is only valid with payload.traits".into());
+    }
+    let allowed: &[&str] = match keys[0] {
+        "name" => &["ChangeBaseCardName", "CanOnlyDigivolveInto"],
+        "colors" => &["ChangeBaseCardColor", "AddColor"],
+        "dp" => &["ChangeOriginDP", "ChangeCardDP"],
+        _ => &["ChangeTraits"],
+    };
+    if !allowed.contains(&m) {
+        push(
+            errors,
+            format!(
+                "payload.{} is only valid for modifier {}, not {m}",
+                keys[0],
+                allowed.join(" / ")
+            ),
+        );
+    }
+    if p.colors.as_ref().is_some_and(|c| c.is_empty()) {
+        push(errors, "payload.colors must list at least one color".into());
+    }
+    if p.name.as_ref().is_some_and(|n| n.trim().is_empty()) {
+        push(errors, "payload.name must be non-empty".into());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3020,6 +3097,72 @@ effects:
         assert!(errs.iter().any(|e| e
             .message
             .contains("synth_identity is only valid for modifier TreatAsDigimon")));
+    }
+
+    fn payload_card(steps: &str) -> CardSpec {
+        let yaml = format!(
+            r#"
+card: X-1
+name: Test
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    process:
+{steps}
+"#
+        );
+        serde_yml::from_str(&yaml).unwrap()
+    }
+
+    /// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the EX13-031 shape validates.
+    #[test]
+    fn typed_modifier_payloads_validate() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, payload: { name: Sukamon }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeBaseCardColor, value: 0, payload: { colors: [white] }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeOriginDP, value: 0, payload: { dp: 3000 }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeTraits, value: 0, payload: { traits: [Holy], replace_traits: true }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn typed_modifier_payload_must_match_modifier() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardColor, value: 0, payload: { name: Sukamon }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("payload.name is only valid for modifier")));
+    }
+
+    #[test]
+    fn typed_modifier_payload_needs_exactly_one_key() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, payload: { name: Sukamon, dp: 3000 }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("exactly one of")));
+    }
+
+    #[test]
+    fn change_base_card_name_without_payload_is_rejected() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("ChangeBaseCardName requires a payload")));
     }
 
     /// PUPPETS-G008 security-DP auras (ST19-03 / EX7-024 / ST3-12 idiom):

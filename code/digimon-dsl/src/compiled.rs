@@ -991,6 +991,17 @@ pub enum CompiledModifierValue {
     Formula(CompiledFormula),
 }
 
+/// Compiled typed `add_modifier` payload (exactly one variant per step; the
+/// validator guarantees it matches the modifier). The engine lowers it to the
+/// corresponding `ModifierPayload` variant.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledModifierPayload {
+    Name(String),
+    Colors(Vec<CompiledColor>),
+    Dp(i32),
+    Traits { add: Vec<String>, replace: bool },
+}
+
 /// Compiled synthetic identity for a `TreatAsDigimon` modifier. Mirrors the
 /// engine's `ModifierPayload::SynthIdentity` fields; the engine lowering
 /// converts `kind`/`colors` to its own enums.
@@ -2079,6 +2090,11 @@ pub enum CompiledStep {
         /// the field must always be written or the byte stream desyncs.
         #[serde(default)]
         synth_identity: Option<CompiledSynthIdentity>,
+        /// Typed identity/metadata payload (name / colors / base DP / traits)
+        /// — G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD. `None` for scalar
+        /// modifiers. No `skip_serializing_if` (bincode, as above).
+        #[serde(default)]
+        payload: Option<CompiledModifierPayload>,
         /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
         /// target, register a source-independent floating effect re-applied each
         /// tick instead of a one-time scan. No `skip_serializing_if` for the

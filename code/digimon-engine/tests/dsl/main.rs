@@ -2,6 +2,7 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod add_modifier_typed_payload;
 mod also_treated_as;
 mod assembly_play;
 mod attack_history_predicate;
