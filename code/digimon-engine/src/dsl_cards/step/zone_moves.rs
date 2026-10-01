@@ -429,6 +429,37 @@ pub fn try_run(
             true
         }
 
+        // G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT (EX13-076) — return EVERY
+        // digivolution card of the target (its stack below the top card) to
+        // the owners' deck, bottom-most source first. A return, not a trash.
+        // Gated on the effect being able to affect the target (immunity).
+        CompiledStep::ReturnAllSourcesToDeck { target, position } => {
+            let to_bottom =
+                super::map_stack_position(*position) == crate::enums::StackPosition::Bottom;
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                if ctx.can_affect_permanent(h) {
+                    let sources: Vec<crate::card_source::CardHandle> = ctx
+                        .game
+                        .player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .map(|perm| {
+                            perm.card_sources
+                                .iter()
+                                .take(perm.card_sources.len().saturating_sub(1))
+                                .map(|c| c.handle())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    for card in sources {
+                        ctx.return_card_source_to_deck(h, card, to_bottom);
+                    }
+                }
+            }
+            true
+        }
+
         CompiledStep::PlaySelectedSourcesFree { source_refs } => {
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 ctx.play_selected_sources_without_cost(source_refs);

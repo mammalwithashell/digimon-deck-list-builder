@@ -265,6 +265,8 @@ impl Game {
             in_counter_window: false,
             effect_driven_option_use: false,
             active_deletion_batch: None,
+            pending_deletion_batch_rest: Vec::new(),
+            pending_deletion_batch_parked: None,
             dsl_outer_tail: None,
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
@@ -410,6 +412,8 @@ impl Game {
         self.dsl_replacement_outcome = None;
         self.in_counter_window = false;
         self.active_deletion_batch = None;
+        self.pending_deletion_batch_rest.clear();
+        self.pending_deletion_batch_parked = None;
         self.dsl_outer_tail = None;
         self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;

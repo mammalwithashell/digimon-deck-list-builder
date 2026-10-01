@@ -100,14 +100,26 @@ fn park_begin_attack_resume_frame(
 
 pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bindings) -> bool {
     match step {
-        CompiledStep::Battle { attacker, defender } => {
+        CompiledStep::Battle {
+            attacker,
+            defender,
+            compare,
+        } => {
             let Some(attacker) = resolve_permanent_ref(attacker, ctx, bindings) else {
                 return true;
             };
             let Some(defender) = resolve_permanent_ref(defender, ctx, bindings) else {
                 return true;
             };
-            ctx.battle_digimon(attacker, defender);
+            let comparison = match compare {
+                digimon_dsl::compiled::CompiledBattleCompare::Dp => {
+                    crate::combat::BattleComparison::Dp
+                }
+                digimon_dsl::compiled::CompiledBattleCompare::DigivolutionCards => {
+                    crate::combat::BattleComparison::DigivolutionCards
+                }
+            };
+            ctx.battle_digimon_with(attacker, defender, comparison);
             true
         }
         CompiledStep::MayAttackNow {

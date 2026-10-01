@@ -5550,15 +5550,15 @@
       "archetype": "TS Olympos",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-020.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_020.rs",
-      "test_count": 6,
-      "tests_passing": 6,
+      "test_count": 7,
+      "tests_passing": 7,
       "tests_ignored": 0,
       "patterns": [
         "A1",
         "SELECT_REVEAL_BUCKETS",
         "INHERITED_ON_UNSUSPEND"
       ],
-      "notes": "Reveal-3 two-bucket Sea Beast/Shaman/Aqua/Sea Animal Digimon plus TS card search with no duplicate selected card; blue Lv2 and TS Lv2 alt paths; inherited Your Turn OPT hand-size gated draw."
+      "notes": "Reveal-3 two-bucket Sea Beast/Shaman/Aqua/Sea Animal Digimon plus TS card search with no duplicate selected card; blue Lv2 and TS Lv2 alt paths; inherited Your Turn OPT hand-size gated draw. 2026-10-01: inherited OnUnsuspend clause gained the missing `event_permanent_is_source` self-gate (DCGO BT24_020.cs) now that the unsuspend phase fires OnUnsuspend (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND)."
     },
     "BT24-043": {
       "card_name": "Tapirmon",
@@ -11361,12 +11361,12 @@
       "archetype": "Slice \u2014 Veedramon / CS (EX13)",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-069.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_069.rs",
-      "test_count": 13,
+      "test_count": 15,
       "patterns": [
         "F",
         "C"
       ],
-      "notes": "[Start of Your Main Phase] [Veemon]/[Veedramon]-name Digimon \u2192 +1 memory; [Your Turn] own Digimon effect-unsuspend \u2192 suspend-self cost, Draw 1, then optional own Digimon digivolve into [Veedramon]-name hand card cost -2 (has_digivolve_candidate / can_digivolve_onto); [Security] play self. Note: engine does not fire OnUnsuspend for the unsuspend-phase bulk unsuspend."
+      "notes": "[Start of Your Main Phase] [Veemon]/[Veedramon]-name Digimon \u2192 +1 memory; [Your Turn] own Digimon unsuspend (effect OR unsuspend phase \u2014 G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND RESOLVED 2026-10-01; triggers once per simultaneous unsuspend-phase batch) \u2192 suspend-self cost, Draw 1, then optional own Digimon digivolve into [Veedramon]-name hand card cost -2 (has_digivolve_candidate / can_digivolve_onto); [Security] play self."
     },
     "EX13-074": {
       "card_name": "Rie Kishibe",
@@ -11752,19 +11752,19 @@
       "card_name": "Craniamon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-062.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_062.rs",
-      "test_count": 15,
+      "test_count": 18,
       "patterns": [
         "H5",
         "H7",
         "F6",
         "C-assembly"
       ],
-      "notes": "Reboot/Blocker; OP/WD opponent-effect immunity; [All Turns][OPT] on self suspend may batch-delete opp lowest play cost; [All Turns] on self unsuspend +3000 until your turn ends \u2014 fires for EFFECT unsuspension only: unsuspend-phase/Reboot unsuspension does not fire OnUnsuspend in the engine (DCGO does) \u2192 G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND. Assembly 'all black w/<Blocker>' via new printed_keyword predicate."
+      "notes": "Reboot/Blocker; OP/WD opponent-effect immunity; [All Turns][OPT] on self suspend may batch-delete opp lowest play cost; [All Turns] on self unsuspend +3000 until your turn ends \u2014 fires for effect unsuspension AND own unsuspend-phase / opponent's-unsuspend-phase <Reboot> unsuspension (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND RESOLVED 2026-10-01). Assembly 'all black w/<Blocker>' via printed_keyword predicate."
     },
     "EX13-064": {
       "card_name": "LordKnightmon",
@@ -12511,18 +12511,18 @@
       "card_name": "Imperialdramon: Paladin Mode",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "EX13 slice \u2014 orphan staples",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_076.rs",
+      "test_count": 17,
       "patterns": [
         "C",
         "F3",
         "H"
       ],
-      "notes": "Still BLOCKED on G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT (battle comparing digivolution-card counts instead of DP). The Assembly -8 'w/different names' half is no longer a blocker (G-ASSEMBLY-NO-DISTINCT-BY RESOLVED 2026-10-01; `distinct_by: name` on plain `kind: assembly` works, pinned by EX13-061/EX13-063). No YAML shipped: a partial card missing the battle clause would be an approximation."
+      "notes": "Piercing/Vortex/Blocker/Evade; Blue Lv.6 / Green Lv.6 cost 6 + Lv.6 [Free]/[Royal Knight] cost 5; Assembly -8 six [Free]/[Royal Knight] distinct_by name; [OP][WD][WA] shared OPT: optional suspend 1 unsuspended opp Digimon, then optional pick \u2192 return_all_sources_to_deck bottom + battle { compare: digivolution_cards } (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT RESOLVED 2026-10-01), refund_opt when nothing done; [All Turns][OPT] win a battle \u2192 optional bottom-deck 1 opp Digimon, then (if suspended) yes/no unsuspend, refund_opt when nothing done. DCGO EX13_076.cs trashes the stripped sources; the official printed text returns them to the deck bottom (implemented). Tie + <Evade> exposed G-ENGINE-BATCH-DELETION-PARK-DROPS-REST (fixed same commit)."
     }
   }
 }

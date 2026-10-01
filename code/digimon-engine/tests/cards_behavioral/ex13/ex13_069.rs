@@ -42,7 +42,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming, Compi
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -337,6 +337,65 @@ fn ex13_069_does_not_trigger_on_the_opponents_turn() {
     runner.game.players[0].battle_area[digi.index as usize].is_suspended = true;
     runner.game.unsuspend(digi);
     assert!(runner.pending_selection().is_none(), "[Your Turn]");
+}
+
+// ─── Unsuspend phase (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND) ───────────────
+
+/// Rina + two suspended Digimon on player 1's side (also Rina suspended), then
+/// player 0 ends the turn → player 1's unsuspend phase unsuspends all three
+/// simultaneously.
+fn phase_setup() -> DebugRunner {
+    let mut runner = builder()
+        .deck(0, &["FILL"; 3])
+        .deck(1, &["FILL", "FILL", "FILL", "DRAW"])
+        .start();
+    runner.skip_mulligan();
+    let rina = runner.place_on_field(1, CARD_ID, Some(0));
+    let a = runner.place_on_field(1, "BASE-L3", Some(0));
+    let b = runner.place_on_field(1, "BASE-L3", Some(0));
+    for h in [rina, a, b] {
+        runner.game.players[1].battle_area[h.index as usize].is_suspended = true;
+    }
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    runner
+}
+
+#[test]
+fn ex13_069_unsuspend_phase_triggers_once_and_resumes_into_the_draw_phase() {
+    let mut runner = phase_setup();
+    assert_eq!(runner.turn_player(), 1);
+    let hand0 = runner.hand_size(1);
+    let view = runner.pending_selection_view().expect("Rina's confirm in the unsuspend phase");
+    assert_eq!(view.previous_phase, GamePhase::Unsuspend, "fires before the draw phase");
+    assert_eq!(runner.hand_size(1), hand0, "draw phase has not started yet");
+    accept_confirm(&mut runner);
+    assert!(runner.game.players[1].battle_area[0].is_suspended, "cost: Rina suspended");
+    let hand_ids1: Vec<String> = runner.game.players[1]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(hand_ids1.contains(&"DRAW".to_string()), "<Draw 1>");
+    // No [Veedramon] card → nothing to digivolve; the turn continues.
+    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection_view().is_none(), "triggered once for the batch");
+    assert_eq!(runner.hand_size(1), hand0 + 2, "<Draw 1> + the draw-phase draw");
+    assert_ne!(runner.game.current_phase, GamePhase::Unsuspend);
+}
+
+#[test]
+fn ex13_069_unsuspend_phase_decline_is_not_re_offered_per_digimon() {
+    let mut runner = phase_setup();
+    let hand0 = runner.hand_size(1);
+    let view = runner.pending_selection_view().expect("confirm");
+    runner.execute_action(view.selecting_player, PASS).expect("decline");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "two Digimon unsuspended simultaneously → one trigger, not one per Digimon"
+    );
+    assert!(!runner.game.players[1].battle_area[0].is_suspended, "cost not paid");
+    assert_eq!(runner.hand_size(1), hand0 + 1, "only the draw-phase draw");
 }
 
 // ─── [Security] ──────────────────────────────────────────────────────────────

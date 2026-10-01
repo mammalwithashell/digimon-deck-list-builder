@@ -21,9 +21,11 @@
 //! - F6 effect immunity (opponent's effects, 4 source kinds).
 //! - Self-suspend trigger → optional batched delete-all over a play-cost
 //!   aggregate (OPT).
-//! - Self-unsuspend trigger → DP buff until your turn ends (effect-driven
-//!   unsuspension; phase / Reboot unsuspension is the logged engine gap
-//!   G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND).
+//! - Self-unsuspend trigger → DP buff until your turn ends — effect-driven,
+//!   own unsuspend-phase, and opponent's-unsuspend-phase <Reboot>
+//!   unsuspension all fire it (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND,
+//!   RESOLVED 2026-10-01; DCGO routes phase/Reboot through
+//!   `IUnsuspendPermanents` → `OnUnTappedAnyone`).
 //! - Assembly with three per-level materials filtered on a face-up printed
 //!   keyword (G-DSL-PREDICATE-PRINTED-KEYWORD).
 
@@ -320,6 +322,75 @@ fn ex13_062_another_digimon_unsuspending_does_not_buff() {
     runner.game.unsuspend(other);
     let _ = runner.auto_resolve();
     assert_eq!(runner.effective_dp(me), Some(12000));
+}
+
+#[test]
+fn ex13_062_reboot_unsuspend_in_opponents_unsuspend_phase_gives_3000() {
+    // G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND: <Reboot> unsuspends Craniamon
+    // in the OPPONENT's unsuspend phase, which fires "When this Digimon
+    // unsuspends" → +3000 until ITS controller's turn ends.
+    let mut runner = builder()
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.players[0].battle_area[me.index as usize].is_suspended = true;
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.turn_player(), 1);
+    assert!(
+        !runner.game.players[0].battle_area[me.index as usize].is_suspended,
+        "<Reboot> unsuspended Craniamon"
+    );
+    assert_eq!(runner.effective_dp(me), Some(15000), "+3000 on Reboot unsuspension");
+    // Still up through our next turn (until OUR turn ends).
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.turn_player(), 0);
+    assert_eq!(runner.effective_dp(me), Some(15000), "lasts until your turn ends");
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.effective_dp(me), Some(12000), "expired at the end of your turn");
+}
+
+#[test]
+fn ex13_062_own_unsuspend_phase_gives_3000_until_your_turn_ends() {
+    let mut runner = builder()
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    // Craniamon belongs to the NEXT turn player (1); its own unsuspend phase
+    // unsuspends it.
+    let me = runner.place_on_field(1, CARD_ID, Some(0));
+    runner.game.players[1].battle_area[me.index as usize].is_suspended = true;
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.turn_player(), 1);
+    assert!(!runner.game.players[1].battle_area[me.index as usize].is_suspended);
+    assert_eq!(runner.effective_dp(me), Some(15000), "+3000 on phase unsuspension");
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.turn_player(), 0);
+    assert_eq!(runner.effective_dp(me), Some(12000), "expired at the end of its controller's turn");
+}
+
+#[test]
+fn ex13_062_unsuspended_craniamon_gets_nothing_in_the_unsuspend_phase() {
+    let mut runner = builder()
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    let me = runner.place_on_field(1, CARD_ID, Some(0));
+    runner.game.set_memory(-3);
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.turn_player(), 1);
+    assert_eq!(runner.effective_dp(me), Some(12000), "it never went suspended → unsuspended");
 }
 
 // ─── Section 3 — Assembly ────────────────────────────────────────────────────

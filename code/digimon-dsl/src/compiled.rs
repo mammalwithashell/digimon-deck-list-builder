@@ -1391,6 +1391,14 @@ pub enum CompiledAppFuseZone {
     Trash,
 }
 
+/// What an effect battle compares (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum CompiledBattleCompare {
+    #[default]
+    Dp,
+    DigivolutionCards,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
 #[strum_discriminants(derive(strum_macros::EnumIter, Hash))]
 #[strum_discriminants(name(CompiledStepDiscriminant))]
@@ -2343,6 +2351,12 @@ pub enum CompiledStep {
         source_refs: String,
         position: CompiledStackPosition,
     },
+    /// Return every digivolution card of `target` to the deck (EX13-076).
+    /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT.
+    ReturnAllSourcesToDeck {
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+    },
     BindPermanentProperty {
         from: CompiledBindingRef,
         property: CompiledPermanentProperty,
@@ -2549,6 +2563,9 @@ pub enum CompiledStep {
     Battle {
         attacker: CompiledBindingRef,
         defender: CompiledBindingRef,
+        /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT — what the battle compares.
+        #[serde(default)]
+        compare: CompiledBattleCompare,
     },
     MayAttackNow {
         attacker: CompiledBindingRef,
