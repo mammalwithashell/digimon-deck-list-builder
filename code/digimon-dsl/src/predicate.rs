@@ -255,6 +255,19 @@ pub struct PredicateSpec {
     /// UlforceVeedramon "1 of your Digimon may change orientation".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_change_orientation: Option<bool>,
+    /// Permanent-subject leaf: the permanent can attack right now via an
+    /// effect-granted attack — i.e. the engine would offer at least one legal
+    /// attack target for `may_attack_now` with the same `targets` /
+    /// `without_suspending` / `ignore_summoning_sickness` options (suspended /
+    /// can't-suspend, summoning sickness vs <Rush>, `CannotAttack`, Raid /
+    /// `CanAttackUnsuspended` / `CannotAttackTarget` target legality). DCGO
+    /// `Permanent.CanAttack(cardEffect,
+    /// withoutTap)` — the `canTargetCondition` every "1 of your Digimon may
+    /// attack" pick uses (EX12_014.cs, BT24_037.cs, BT25_016.cs, …), so an
+    /// unable-to-attack Digimon is never offered and an all-ineligible board
+    /// shows no prompt. G-DSL-CAN-ATTACK-PREDICATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_attack: Option<CanAttackPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
     /// Permanent-subject predicate. True when the candidate currently has
@@ -1302,6 +1315,24 @@ pub struct DigivolveCandidatePredicate {
     /// as a `Card` subject). Omit to accept any Digimon card with a route.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter: Option<Box<PredicateSpec>>,
+}
+
+/// Options for the `can_attack` permanent leaf — mirror the
+/// `may_attack_now` step that will consume the pick.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(deny_unknown_fields)]
+pub struct CanAttackPredicate {
+    /// Which attack targets count (`any` / `player` / `digimon`).
+    #[serde(default)]
+    pub targets: crate::step::AttackTargetSpec,
+    /// The attack will be made without suspending.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub without_suspending: bool,
+    /// The attack ignores summoning sickness.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_summoning_sickness: bool,
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.

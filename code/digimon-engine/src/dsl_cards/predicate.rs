@@ -3629,6 +3629,33 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(spec) = pred.can_attack {
+        // G-DSL-CAN-ATTACK-PREDICATE — DCGO `Permanent.CanAttack`: at least
+        // one legal attack target exists under the same options the consuming
+        // `may_attack_now` uses (identical target set, so a candidate is never
+        // a dead pick). DCGO's extra turn-player / `IsAttacking` gates are not
+        // applied here, to stay identical to what `may_attack_now` offers.
+        let restriction = match spec.targets {
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Any => crate::effect_context::AttackTargetRestriction::Any,
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Player => {
+                crate::effect_context::AttackTargetRestriction::PlayerOnly
+            }
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Digimon => {
+                crate::effect_context::AttackTargetRestriction::DigimonOnly
+            }
+        };
+        let can = !crate::action::mask::effect_attack_target_action_ids_with_options(
+                rctx.game,
+                handle,
+                restriction,
+                spec.without_suspending,
+                spec.ignore_summoning_sickness,
+            )
+            .is_empty();
+        if !can {
+            return false;
+        }
+    }
     if let Some(want) = pred.has_face_down_source {
         let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
         if has_face_down != want {
@@ -4100,6 +4127,7 @@ fn eval_breeding_permanent_fields(
     pred.is_suspended.is_none()
         && pred.is_unsuspended.is_none()
         && pred.can_change_orientation.is_none()
+        && pred.can_attack.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

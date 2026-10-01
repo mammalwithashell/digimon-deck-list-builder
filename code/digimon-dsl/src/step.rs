@@ -2386,6 +2386,12 @@ pub struct MoveMatchingSourcesUnderTamerArgs {
 pub struct TrashTopStackedSourcesArgs {
     pub target: BindingRef,
     pub count: crate::formula::FormulaSpec,
+    /// `true` for printed "trash the top N **stacked cards**": each pass
+    /// trashes the visible top card itself (DCGO `ITrashStack`), down to one
+    /// remaining card. `false` (default) for "the top N **digivolution
+    /// cards**": the top card stays. G-TOP-STACKED-CARD-TRASH.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_top_card: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

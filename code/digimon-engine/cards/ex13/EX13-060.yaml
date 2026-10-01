@@ -102,7 +102,7 @@ effects:
           bind_as: attacker
           optional: true
           continue_on_decline: true
-          filter: { kind: digimon }
+          filter: { kind: digimon, can_attack: { targets: any } }
           prompt: "Choose 1 of your Digimon to attack"
       - if:
           condition: { binding_present: attacker }

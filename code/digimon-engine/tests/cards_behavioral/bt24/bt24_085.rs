@@ -141,6 +141,10 @@ fn bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack() {
     runner.register_effect("TS-HIGH", Arc::new(OptionMainNoop));
     runner.register_effect("PLAIN-LOW", Arc::new(OptionMainNoop));
 
+    // Turn 1 with the attacker played on turn 0: it is not summoning-sick,
+    // so it can attack (the pick is `can_attack`-filtered,
+    // G-DSL-CAN-ATTACK-PREDICATE).
+    runner.game.turn_count = 1;
     let tamer = runner.place_on_field(0, "BT24-085", Some(0));
     let attacker = runner.place_on_field(0, "TS-ATTACKER", Some(0));
     let hand_before = runner.hand_size(0);

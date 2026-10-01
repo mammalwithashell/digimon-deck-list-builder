@@ -454,6 +454,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::can_change_orientation` (EX13-023).
     #[serde(default)]
     pub can_change_orientation: Option<bool>,
+    /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
+    #[serde(default)]
+    pub can_attack: Option<CompiledCanAttack>,
     pub has_keyword: Option<String>,
     /// Permanent-subject leaf for printed/granted/temporary Security A.
     /// deltas. Used by Venusmon-style text that cares about "with
@@ -1853,6 +1856,9 @@ pub enum CompiledStep {
     TrashTopStackedSources {
         target: CompiledBindingRef,
         count: CompiledFormula,
+        /// See `TrashTopStackedSourcesArgs::include_top_card`.
+        #[serde(default)]
+        include_top_card: bool,
     },
     Hatch {
         of: CompiledPlayerRef,
@@ -2889,6 +2895,14 @@ pub enum CompiledRevealRemainder {
     /// Player-elected top/bottom — lowers the remainder placement through
     /// `CompiledStackPosition::Choice`.
     Choose,
+}
+
+/// Lowered `PredicateSpec::can_attack` options.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledCanAttack {
+    pub targets: CompiledAttackTargetSpec,
+    pub without_suspending: bool,
+    pub ignore_summoning_sickness: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

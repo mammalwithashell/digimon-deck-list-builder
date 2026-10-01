@@ -49,7 +49,8 @@ effects:
       - optional:
           - select_own_permanent:
               bind_as: attacker
-              filter: { kind: digimon }
+              # DCGO BT24_037.cs CanSelectAttackPermanentCondition: CanAttack.
+              filter: { kind: digimon, can_attack: { targets: any } }
               prompt: "Select 1 of your Digimon that may attack"
               optional: true
           - may_attack_now:

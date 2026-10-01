@@ -2112,12 +2112,12 @@
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_008.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
         "H9",
         "D4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. | 2026-10-01 G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE: the [Main][OPT] cost now moves the visible TOP card (this card) to the bottom (DCGO TopCard); previously moved the card under it. +2 tests (rotation, then play [Gabumon])."
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
@@ -2143,12 +2143,12 @@
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_018.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
         "H2",
         "D4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. | 2026-10-01 G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE: the [Main][OPT] cost now moves the visible TOP card (this card) to the bottom (DCGO TopCard); previously moved the card under it. +2 tests (rotation, then play [Agumon])."
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
@@ -11825,13 +11825,13 @@
       "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-077.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_077.rs",
-      "test_count": 20,
+      "test_count": 22,
       "patterns": [
         "C-assembly",
         "F3",
         "H"
       ],
-      "notes": "Assembly -8 '6 [ADVENTURE] trait Digimon cards w/different colors' via new `distinct_by: color` (G-ASSEMBLY-DISTINCT-BY-COLOR RESOLVED 2026-10-01): bipartite card->colour matching in eligibility (incl. the mask's hidden -8 availability) and per-pick masking; multicolour cards stand for one free colour, Hall violations rejected. [Omnimon]: Cost 2 digivolve (name_is). [OP][WD] optional own attacker + may_attack_now without suspending (continue_on_decline), then repeat_effect_choice floor(own Digimon+Tamer rules colours / 2): optional effect battle (BT25-058 idiom) or yes/no 'by returning 5 opp trash cards to deck bottom' -> <Recovery +1>. [All Turns] AddColor (source colours) + 1000 DP per distinct own Digimon/Tamer colour; distinct_colors_count now reads synthesized (rules) colours so gained colours count. No DCGO EX13_077.cs."
+      "notes": "Assembly -8 '6 [ADVENTURE] trait Digimon cards w/different colors' via new `distinct_by: color` (G-ASSEMBLY-DISTINCT-BY-COLOR RESOLVED 2026-10-01): bipartite card->colour matching in eligibility (incl. the mask's hidden -8 availability) and per-pick masking; multicolour cards stand for one free colour, Hall violations rejected. [Omnimon]: Cost 2 digivolve (name_is). [OP][WD] optional own attacker + may_attack_now without suspending (continue_on_decline), then repeat_effect_choice floor(own Digimon+Tamer rules colours / 2): optional effect battle (BT25-058 idiom) or yes/no 'by returning 5 opp trash cards to deck bottom' -> <Recovery +1>. [All Turns] AddColor (source colours) + 1000 DP per distinct own Digimon/Tamer colour; distinct_colors_count now reads synthesized (rules) colours so gained colours count. No DCGO EX13_077.cs. | 2026-10-01 G-DSL-CAN-ATTACK-PREDICATE: the attacker pick only offers Digimon that can attack without suspending (`can_attack: { without_suspending: true }`; DCGO CanAttack(withoutTap)); no eligible Digimon => no prompt, the Then still runs. +2 tests."
     },
     "EX13-006": {
       "card_name": "Dorimon",

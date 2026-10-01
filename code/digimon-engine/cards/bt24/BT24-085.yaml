@@ -41,6 +41,7 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: TS
+              - can_attack: { targets: any }
           prompt: "Choose 1 of your [TS] Digimon that may attack"
       - may_attack_now:
           attacker: attacker

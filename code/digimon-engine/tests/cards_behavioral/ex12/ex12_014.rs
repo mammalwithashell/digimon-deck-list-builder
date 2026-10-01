@@ -172,3 +172,82 @@ fn ex12_014_declining_source_placement_still_offers_attack() {
     );
     assert!(choose_attacker.is_optional);
 }
+
+// ─── G-DSL-CAN-ATTACK-PREDICATE (2026-10-01) ─────────────────────────────────
+//
+// DCGO EX12_014.cs `IsYourDigimon`: `IsPermanentExistsOnOwnerBattleAreaDigimon
+// && permanent.CanAttack(activateClass)`, and the select is skipped when
+// `HasMatchConditionOwnersPermanent` is false.
+
+fn can_attack_skip_placement(runner: &mut DebugRunner) {
+    if let Some(v) = runner.pending_selection_view() {
+        if matches!(v.kind, SelectionKind::UnionZone { .. }) {
+            runner
+                .execute_action(v.selecting_player, PASS)
+                .expect("decline placement");
+        }
+    }
+}
+
+#[test]
+fn ex12_014_attacker_pick_excludes_digimon_that_cannot_attack() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-014 YAML loads")
+        .add_card(vb_text_digimon("ATTACKER", CardColor::Yellow, 4, 6000))
+        .add_card(vb_text_digimon("TIRED", CardColor::Yellow, 4, 6000))
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Canoweissmon is an established Digimon here: it can attack.
+    let canoweiss = runner.place_on_field(0, CARD_ID, Some(0));
+    let tired = runner.place_on_field(0, "TIRED", Some(0));
+    runner.game.players[0].battle_area[tired.index as usize].is_suspended = true;
+    let fresh = runner.place_on_field(0, "ATTACKER", None); // summoning sickness
+
+    fire_when_digivolving(&mut runner, canoweiss);
+    can_attack_skip_placement(&mut runner);
+    let prompt = runner
+        .pending_selection_view()
+        .expect("Canoweissmon can attack, so the attacker prompt is shown");
+    assert_eq!(prompt.kind, SelectionKind::OwnField);
+    let offered: Vec<u16> = prompt
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    let slot = |h: digimon_engine::permanent::PermanentHandle| {
+        digimon_engine::action::space::encode_attack(0, h.index as u16)
+    };
+    assert!(offered.contains(&slot(canoweiss)), "{offered:?}");
+    assert!(!offered.contains(&slot(tired)), "a suspended Digimon cannot attack");
+    assert!(
+        !offered.contains(&slot(fresh)),
+        "a summoning-sick Digimon cannot attack"
+    );
+}
+
+#[test]
+fn ex12_014_no_attacker_prompt_when_no_digimon_can_attack() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-014 YAML loads")
+        .add_card(vb_text_digimon("TIRED", CardColor::Yellow, 4, 6000))
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    let canoweiss = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.players[0].battle_area[canoweiss.index as usize].is_suspended = true;
+    let tired = runner.place_on_field(0, "TIRED", Some(0));
+    runner.game.players[0].battle_area[tired.index as usize].is_suspended = true;
+
+    fire_when_digivolving(&mut runner, canoweiss);
+    can_attack_skip_placement(&mut runner);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no Digimon can attack => no (dead) attacker prompt"
+    );
+}

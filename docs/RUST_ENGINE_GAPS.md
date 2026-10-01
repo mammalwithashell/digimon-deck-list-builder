@@ -4194,3 +4194,13 @@ stored verdict was affected.
 - **Test:** `code/digimon-engine/tests/archetypes/witchelny_ex13.rs::c6_demimeramon_attack_climbs_into_flamewizardmon_for_1_and_chains_its_wd` (`#[ignore]`d reproducer; un-ignore when fixed).
 - **Suggested fix:** route the effect-initiated digivolve's `WhenDigivolving` / `OnDigivolve` drains through `maybe_drain_effect_queue()` (or hold a deferred-drain scope across the resumed body) so they become pending activations resolved after the enclosing effect; re-run `cards_behavioral` (effect-digivolve cards) for ordering regressions.
 - Engine code NOT edited by this run.
+
+## "Top stacked card" verbs moved the card UNDER the top  [G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE / G-TOP-STACKED-CARD-TRASH] — RESOLVED 2026-10-01
+
+- **Root cause:** `EffectContext::place_top_source_as_bottom` and `EffectContext::trash_top_n_stacked_sources` read "top stacked card" as `card_sources[len-2]`. "Stacked cards" include the top card (DCGO `TopCard`; BT21-030 Q&A), the same off-by-one fixed for `security_place_top_stacked_card` (G-TOP-STACKED-CARD-TO-SECURITY).
+- **Fix:** `place_top_source_as_bottom` now moves `card_sources[len-1]` (BT23-008, BT23-018 — DCGO `BT23_008.cs`/`BT23_018.cs` `AddDigivolutionCardsBottom({ TopCard })`). `trash_top_n_stacked_sources(target, count, include_top_card)` — `true` pops the visible top each pass (DCGO `ITrashStack`; BT21-030), `false` keeps the "top N digivolution cards" reading (BT13-030, EX7-016, EX7-020). Details: `qa/archetype-qa/engine-gaps.md` §G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE, `qa/dsl-vocab-gaps.md` §G-TOP-STACKED-CARD-TRASH.
+
+## "Can attack" filter for effect-granted attacker picks  [G-DSL-CAN-ATTACK-PREDICATE] — RESOLVED 2026-10-01
+
+- New permanent predicate leaf `can_attack` evaluated via `action::mask::effect_attack_target_action_ids_with_options` (the same target set `may_attack_now` offers). Applied to every pure "1 of your Digimon may attack" pick (DCGO `permanent.CanAttack`). See `qa/dsl-vocab-gaps.md` §G-DSL-CAN-ATTACK-PREDICATE.
+- **Open, found while testing (not fixed):** in `cards_behavioral` `bt24::bt24_085::bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack` (memory −2, [End of Your Turn] use an Option, then "1 of your [TS] Digimon may attack"), the turn passes to P1 in the MIDDLE of the effect, right after the Option resolves and before the attacker pick runs (seen as `turn_player() == 1`, then `GameOver` from P1's deck-out in the fixture). Rules: the turn ends only after the effect finishes resolving. Suspected `check_turn_end` firing from inside Option use within an effect body.

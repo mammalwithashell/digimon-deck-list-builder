@@ -185,6 +185,7 @@ dual:
                 any_permanent:
                   of: you
                   kind: digimon
+                  can_attack: { targets: any }
               then:
                 - select_effect_choice:
                     bind_as: main_attack_choice
@@ -195,7 +196,8 @@ dual:
                     then:
                       - select_own_permanent:
                           bind_as: attack_target
-                          filter: { kind: digimon }
+                          # DCGO EX12_018.cs: IsPermanentExistsOnOwnerBattleAreaDigimon && CanAttack.
+                          filter: { kind: digimon, can_attack: { targets: any } }
                           prompt: "Choose 1 of your Digimon to attack"
                       - may_attack_now:
                           attacker: attack_target

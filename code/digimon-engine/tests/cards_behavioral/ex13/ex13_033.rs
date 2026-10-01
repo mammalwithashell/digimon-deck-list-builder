@@ -351,6 +351,9 @@ fn ex13_033_declining_the_cost_keeps_security_and_no_attack() {
 #[test]
 fn ex13_033_cost_payable_even_if_attack_declined() {
     let mut r = runner(&["S1", "S2", "S3", "S4"], &[CARD_ID]);
+    // A ready ally: the just-played Mistymon can't attack (summoning
+    // sickness), and the pick only offers Digimon that can.
+    r.place_on_field(0, "ALLY", Some(0));
     r.play(0, 0).expect("played");
     answer_cost(&mut r, true);
     assert_eq!(r.security_count(0), 3);
