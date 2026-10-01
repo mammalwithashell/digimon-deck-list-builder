@@ -1,0 +1,42 @@
+{
+  "index": 4357,
+  "norm_id": 0.21785,
+  "card_id": "EX13-033",
+  "card_index": 33,
+  "card_name_eng": "Mistymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_033",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [
+    "Magic Warrior",
+    "Witchelny"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)\r\n[On Play] [When Digivolving] You may place 1 [Witchelny] text card from your hand as the bottom security card. Then, by trashing your top security card, 1 of your Digimon may attack.\r\n[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -6000 DP for the turn. Then, if you have 3 or fewer security cards, delete 1 of their 6000 DP or lower Digimon.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+}

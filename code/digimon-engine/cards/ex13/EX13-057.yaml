@@ -1,0 +1,136 @@
+# EX13-057 Grademon — Digimon, Lv.5, Black/Yellow, DP 7000, Cost 7.
+# Traits: Warrior / X Antibody / Chronicle. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Black Lv.4 / cost 4, Yellow Lv.4 / cost 4
+#   [Digivolve] [Raptordramon]/Lv.4 w/[Chronicle] trait: Cost 3
+#   [On Play] [When Digivolving] Until your opponent's turn ends, 1 of your
+#   [X Antibody] or [Chronicle] trait Digimon gains <Reboot> and <Blocker>. If
+#   during an attack, it also isn't affected by their Digimon effects and gets
+#   +5000 DP.
+#   [End of Attack] [Once Per Turn] This Digimon may digivolve into a Digimon
+#   card with the [Chronicle] trait in the hand or trash.
+#   Inherited: [All Turns] [Once Per Turn] When any of your [Chronicle] trait
+#   Digimon would leave the battle area, by trashing your top security card,
+#   they don't leave.
+#
+# DCGO: no EX13_057.cs at b9a0638cd — printed text governs. The "if during an
+# attack" rider follows DCGO BT20/Black/BT20_053.cs (BT20-053 Grademon):
+# `attackProcess.IsAttacking` → `DigimonEffectImmunity` + `ChangeDigimonDP(+5000)`
+# on the SAME chosen Digimon, both `UntilOpponentTurnEnd`.
+#   - "during an attack" → `during_attack: true` (G-DSL-DURING-ATTACK,
+#     Game::pending_attack).
+#   - "isn't affected by their Digimon effects" → grant_effect_immunity
+#     { source_kind: digimon, source_controller: opponent } (EX11-046 idiom).
+#   - [End of Attack] digivolve: EX13-055 shape (hand ∪ trash union pick filtered
+#     by `can_digivolve_onto: source`, printed cost paid).
+#   - Inherited leave-prevention: BT24-101 shape (any own filtered Digimon,
+#     trash top security, OPT), scope: inherited.
+
+card: EX13-057
+name: Grademon
+kind: digimon
+level: 5
+color: [black, yellow]
+cost: 7
+dp: 7000
+traits: [Warrior, X Antibody, Chronicle]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Raptordramon }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: Chronicle
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody]/[Chronicle] Digimon gains Reboot and Blocker; if during an attack, it also isn't affected by their Digimon effects and gets +5000 DP"
+    process:
+      - select_own_permanent:
+          bind_as: boost
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: X Antibody
+                  - trait_has: Chronicle
+          prompt: "Select 1 of your [X Antibody] or [Chronicle] trait Digimon to gain <Reboot> and <Blocker> until your opponent's turn ends"
+      - grant_keyword:
+          target: boost
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: boost
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { during_attack: true }
+          then:
+            - grant_effect_immunity:
+                target: boost
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+            - add_dp_modifier:
+                target: boost
+                value: 5000
+                expiry: end_of_opponents_turn
+
+  - when: end_of_attack
+    once_per_turn: true
+    summary: "[End of Attack][OPT] This Digimon may digivolve into a [Chronicle] trait Digimon card in the hand or trash"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - kind: digimon
+            - trait_has: Chronicle
+            - can_digivolve_onto: source
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Chronicle
+              - can_digivolve_onto: source
+          bind_as: evo
+          prompt: "This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: printed
+          ignore_requirements: false
+
+  - kind: replacement
+    scope: inherited
+    timing: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - trait_has: Chronicle
+        - security_count_gte: 1
+    summary: "[Inherited][All Turns][OPT] When any of your [Chronicle] trait Digimon would leave the battle area, by trashing your top security card, they don't leave"
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }

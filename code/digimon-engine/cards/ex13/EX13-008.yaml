@@ -1,0 +1,78 @@
+# EX13-008 Dracomon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Dragon. Form: Rookie. Attribute: Data.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   [Digivolve] [Bebydomon]: Cost 0   (+ Red Lv.2 / cost 0 circle)
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card
+#   with [Dracomon] or [Examon] in its text among them to the hand. Return the
+#   rest to the bottom of the deck.
+#   Inherited: [End of Your Turn] This Digimon and any of your other Digimon
+#   may DNA digivolve into a Digimon card in the hand.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_008.cs
+#   - Alt digivolve EqualsCardName("Bebydomon"), cost 0, requirements kept.
+#   - Shared [When Moving]/[On Play], optional: false →
+#     SimplifiedRevealDeckTopCardsAndSelect(3, HasText(Dracomon)||HasText(Examon),
+#     AddHand max 1, RemainingCardsPlace.DeckBottom).
+#   - Inherited OnEndTurn: DNADigivolvePermanentsIntoHandOrTrashCard(payCost: true)
+#     with CanJogressFromTargetPermanent(this) → a NORMAL DNA digivolve (printed
+#     DNA requirements + DNA cost). BT17-007 idiom: `ignore_requirements: false`.
+#
+# "[X] in its text" is the broad DCGO HasText scan → `in_text_contains`.
+
+card: EX13-008
+name: Dracomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Dragon]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Bebydomon }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Dracomon]/[Examon]-text card to hand; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - choose_from_reveal:
+          of: you
+          filter:
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+          destination: hand
+          bind_as: picked
+          prompt: "Add 1 card with [Dracomon] or [Examon] in its text to your hand"
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: end_of_your_turn
+    scope: inherited
+    optional: true
+    summary: "[Inherited][End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in hand (paying its DNA cost)"
+    process:
+      - may_dna_digivolve_now:
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve this Digimon and another of your Digimon into a Digimon card in your hand"

@@ -1,0 +1,68 @@
+# EX13-047 Gotsumon — Digimon, Lv.3, Black, 3000 DP, play cost 3.
+# Traits: Rock. Rookie / Data. Digivolve: Black Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-047.md):
+#   <Blocker> [On Play] Reveal the top 3 cards of your deck. Add 1 card with
+#   the [Royal Knight] trait and 1 card with <Blocker> among them to the hand.
+#   Return the rest to the bottom of the deck. [When Attacking] Lose 2 memory.
+#   Inherited: [Opponent's Turn] This Digimon gets +2000 DP.
+#   Official Q&A: "a card with <Blocker>" = a card that always has it (printed
+#   face-up keyword); granted or inherited <Blocker> doesn't count.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_047.cs
+#   BlockerSelfStaticEffect; On Play SimplifiedRevealDeckTopCardsAndSelect(3)
+#   with CardTraits.Contains("Royal Knight") / HasBlocker buckets, rest bottom;
+#   When Attacking AddMemory(-2); inherited ChangeSelfDPStaticEffect(+2000)
+#   while IsOpponentTurn.
+#
+# DSL: `reveal_search` (EX13-027) with `printed_keyword: Blocker` (EX13-062);
+# `lose_memory`; inherited `kind: aura` `dp_modifier` gated `opponents_turn`.
+
+card: EX13-047
+name: Gotsumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 3000
+traits: [Rock]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Royal Knight] trait card and 1 card with <Blocker> to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter: { trait_has: "Royal Knight" }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with the [Royal Knight] trait to the hand"
+            - filter: { printed_keyword: Blocker }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with <Blocker> to the hand"
+          remainder: bottom
+
+  - when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2
+
+  - scope: inherited
+    kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "Inherited [Opponent's Turn] This Digimon gets +2000 DP"

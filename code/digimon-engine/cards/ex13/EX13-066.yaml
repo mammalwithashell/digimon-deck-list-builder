@@ -1,0 +1,146 @@
+# EX13-066 Sistermon Noir (Awakened) — DUAL card (Digimon + Option).
+# Digimon face: Lv.4 White/Black, DP 6000, Puppet / Champion / Virus (+ Data by
+# Rule). The Digimon face has NO play cost (official DB "Play cost: D") — it
+# is reached only by digivolving or <Arts Digivolve>. Option: White, use 5.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX13-066.md):
+#   DIGIMON FACE
+#   [Digivolve] [Sistermon Noir]/[Sistermon Ciel]: Cost 1
+#   [Digivolve] Lv.3 w/[Huckmon] in text: Cost 3
+#   <Decode ([Sistermon Noir]/[Sistermon Ciel])>
+#   [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of
+#     4 or less.
+#   (Rule) Also treated as Name: [Sistermon Ciel (Awakened)] and Trait: [Data]
+#     Attribute.
+#   OPTION FACE
+#   [Main] You may play 1 play cost 4 or lower card with [Sistermon] in its
+#     name from your hand or trash without paying the cost. Then, to 1 of your
+#     opponent's Digimon, <De-Digivolve 1> for each of your Digimon.
+#   <Arts Digivolve>
+#
+# DCGO C# reference: none at the submodule (no EX13_066.cs at b9a0638cd).
+# Printed text + general_rule.pdf govern.
+#
+# ── Clause notes ─────────────────────────────────────────────────────────────
+# Digivolve: no standard colour circles — only the two special conditions.
+#   "[Sistermon Noir]/[Sistermon Ciel]" are NAME conditions (`name_in`, which
+#   honours also_treated_as — e.g. BT23-077 Sistermon Ciel is also Noir).
+# Rule line: `also_treated_as: [Sistermon Ciel (Awakened)]`. The [Data]
+#   attribute rides on `attribute_eng` (["Virus","Data"], card_overrides.json),
+#   which production folds into traits; the DSL `attribute` field is a single
+#   string, so the printed primary attribute is authored here.
+# <Decode>: non-cancelling would-leave replacement gated other-than-battle,
+#   playing a [Sistermon Noir]/[Sistermon Ciel]-named source free.
+# [When Digivolving]: mandatory single delete over opp Digimon with play cost
+#   <= 4 (BT23-077 idiom).
+# Option [Main]: optional hand-or-trash union pick → free play; then a
+#   mandatory <De-Digivolve N> on 1 opp Digimon, N = your Digimon count read
+#   at resolution (after the optional play). De-Digivolve stops at level 3.
+
+card: EX13-066
+name: "Sistermon Noir (Awakened)"
+kind: dual
+
+level: 4
+color: [white, black]
+cost: 5
+dp: 6000
+traits: [Puppet]
+form: Champion
+attribute: Virus
+
+also_treated_as: ["Sistermon Ciel (Awakened)"]
+
+alt_paths:
+  - kind: digivolve
+    from: { name_in: ["Sistermon Noir", "Sistermon Ciel"] }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - in_text_contains: Huckmon
+    cost: 3
+
+dual:
+  digimon:
+    level: 4
+    dp: 6000
+    colors: [white, black]
+    traits: [Puppet]
+    effect_text: |
+      <Decode ([Sistermon Noir]/[Sistermon Ciel])>
+      [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less.
+    effects:
+      - kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        active_when:
+          none_of:
+            - replacement_cause: battle
+        summary: "<Decode ([Sistermon Noir]/[Sistermon Ciel])> play 1 matching source when this would leave outside battle"
+        process:
+          - select_material:
+              of_permanent: replacement_subject
+              bind_as: decode_source
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_in: ["Sistermon Noir", "Sistermon Ciel"]
+              prompt: "Choose a [Sistermon Noir]/[Sistermon Ciel] digivolution card to play"
+          - play_from_materials:
+              target: replacement_subject
+              source_index: decode_source
+              cost_delta: free
+
+      - when: when_digivolving
+        summary: "[When Digivolving] Delete 1 opponent Digimon with play cost 4 or less"
+        process:
+          - select_opponent_permanent:
+              bind_as: target
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 4
+              prompt: "Delete 1 of your opponent's Digimon with a play cost of 4 or less"
+          - delete_permanent: { target: target }
+  option:
+    use_cost: 5
+    colors: [white]
+    effect_text: |
+      [Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, <De-Digivolve 1> for each of your Digimon.
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] May play 1 play cost <=4 [Sistermon] card from hand/trash free; then <De-Digivolve 1> 1 opp Digimon per your Digimon"
+        process:
+          - select_union_zone:
+              of: you
+              zones: [hand, trash]
+              optional: true
+              bind_as: sistermon_free
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  - name_contains: Sistermon
+                  - play_cost_lte: 4
+              prompt: "You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost"
+          - play_union_bound_free:
+              binding: sistermon_free
+          - select_opponent_permanent:
+              bind_as: dd_target
+              filter: { kind: digimon }
+              prompt: "<De-Digivolve 1> 1 of your opponent's Digimon for each of your Digimon"
+          - de_digivolve:
+              target: dd_target
+              amount:
+                base: 0
+                per:
+                  card_count_in_zone:
+                    of: you
+                    zone: battle_area
+                    filter: { kind: digimon }
+                delta: 1
+              stop_at_level: 3

@@ -158515,8 +158515,12 @@
     "card_colors": [
       0
     ],
-    "type_eng": [],
-    "form_eng": [],
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
     "attribute_eng": [],
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2.",
@@ -158595,7 +158599,9 @@
     "card_colors": [
       2
     ],
-    "type_eng": [],
+    "type_eng": [
+      "Flame"
+    ],
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "",
@@ -160434,7 +160440,7 @@
       5
     ],
     "type_eng": [
-      "Mine"
+      "Machine"
     ],
     "form_eng": [],
     "attribute_eng": [

@@ -1,0 +1,135 @@
+# EX13-033 Mistymon — Digimon, Lv.5, Yellow/Red, DP 7000, Cost 7.
+# Traits: Magic Warrior / Witchelny. Form: Ultimate. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-033.md):
+#   Digivolve: Yellow Lv.4 / 4; Red Lv.4 / 4; [Digivolve] Lv.4 w/[Witchelny]
+#   in text: Cost 3
+#   <Barrier>
+#   [On Play] [When Digivolving] You may place 1 [Witchelny] text card from
+#   your hand as the bottom security card. Then, by trashing your top security
+#   card, 1 of your Digimon may attack.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, 1 of
+#   your opponent's Digimon gets -6000 DP for the turn. Then, if you have 3 or
+#   fewer security cards, delete 1 of their 6000 DP or lower Digimon.
+#   Inherited Effect: [All Turns] [Once Per Turn] When your security stack is
+#   removed from, this Digimon may unsuspend.
+#
+# DCGO: no EX13_033.cs in the submodule. Printed text + general_rule.pdf govern.
+#
+# DSL notes:
+#   - OP/WD: two independent optional parts in one clause.
+#       1. optional `select_hand` ([Witchelny] in text — `in_text_contains`,
+#          official Q&A) → `place_on_security` bottom, face down (BT22-041 idiom).
+#       2. "Then, by trashing your top security card, ..." — optional
+#          processing condition (15-7-4). It is the SECOND half of the clause,
+#          so a clause-level outer prompt can't carry it; the accept/decline is
+#          an explicit `select_effect_choice` (pay / don't), gated on
+#          security >= 1 (15-7-2) re-read AFTER the placement (a placed card
+#          can fund it). Paying is allowed even if no Digimon then attacks
+#          (15-7-5): optional own-Digimon pick → `may_attack_now` (EX12-014
+#          idiom).
+#   - [All Turns][OPT] "When your security stack is removed from" →
+#     `on_own_security_removed` (AD1-017 idiom). -6000 "for the turn" →
+#     end_of_turn; the delete reads effective DP after the debuff.
+#   - Inherited: optional ("may") self-unsuspend on the same observer.
+
+card: EX13-033
+name: Mistymon
+kind: digimon
+level: 5
+color: [yellow, red]
+cost: 7
+dp: 7000
+traits: [Magic Warrior, Witchelny]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - in_text_contains: Witchelny
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may place 1 [Witchelny]-text card from hand as bottom security. Then, by trashing your top security card, 1 of your Digimon may attack"
+    process:
+      - select_hand:
+          of: you
+          bind_as: witch_card
+          optional: true
+          filter: { in_text_contains: Witchelny }
+          prompt: "You may place 1 [Witchelny] text card from your hand as the bottom security card"
+      - place_on_security:
+          of: you
+          source: { card: { binding: witch_card, zone: hand } }
+          position: bottom
+          face_up: false
+      - if:
+          condition: { security_count_gte: 1 }
+          then:
+            - select_effect_choice:
+                bind_as: pay_cost
+                labels:
+                  - "Trash your top security card (1 of your Digimon may attack)"
+                  - "Don't trash"
+                prompt: "By trashing your top security card, 1 of your Digimon may attack"
+            - if:
+                condition: { equals: [pay_cost, 0] }
+                then:
+                  - trash_top_security: { of: you }
+                  - select_own_permanent:
+                      bind_as: attacker
+                      optional: true
+                      filter: { kind: digimon }
+                      prompt: "1 of your Digimon may attack"
+                  - may_attack_now:
+                      attacker: attacker
+                      targets: any
+                      optional: true
+
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When your security is removed from, 1 opponent Digimon gets -6000 DP for the turn; then, if 3 or fewer security, delete 1 of their 6000 DP or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -6000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -6000
+          expiry: end_of_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 6000
+                prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+            - delete_permanent: { target: delete_target }
+
+  - scope: inherited
+    when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "Inherited [All Turns][OPT] When your security is removed from, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

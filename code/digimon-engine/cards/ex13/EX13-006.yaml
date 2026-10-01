@@ -1,0 +1,51 @@
+# EX13-006 Dorimon — Digi-Egg, Lv.2, Black.
+# Traits: Lesser / X Antibody / Chronicle. Form: In-Training.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Inherited: [End of Your Turn] [Once Per Turn] By paying 1 cost, 1 of your
+#   Digimon with the [X Antibody] or [Chronicle] trait may unsuspend.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_006.cs
+#   - OnEndTurn, SetIsInheritedEffect(true), SetUpActivateClass(..., 1, true)
+#     → optional activation, [Once Per Turn]; IsOwnerTurn.
+#   - Activate: AddMemory(-1) (the paid cost) FIRST, then SelectPermanentEffect
+#     (canNoSelect: true, Mode.UnTap) over own SUSPENDED permanents whose top
+#     card has [X Antibody] or [Chronicle].
+#
+# `optional: true` with `lose_memory: 1` as the first body step installs the
+# outer accept/decline confirm (G-OUTER-OPTIONAL-NOT-INSTALLED; BT12-092 /
+# BT22-041 idiom): declining pays nothing; accepting pays 1, then the
+# unsuspend pick is itself declinable ("may unsuspend", DCGO canNoSelect).
+
+card: EX13-006
+name: Dorimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser, X Antibody, Chronicle]
+form: In-Training
+
+effects:
+  - when: end_of_your_turn
+    scope: inherited
+    optional: true
+    once_per_turn: true
+    summary: "[Inherited][End of Your Turn][OPT] By paying 1 cost, 1 of your [X Antibody]/[Chronicle] trait Digimon may unsuspend"
+    process:
+      - lose_memory: 1
+      - select_own_permanent:
+          bind_as: unsuspend_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+              - any_of:
+                  - trait_has: X Antibody
+                  - trait_has: Chronicle
+          prompt: "1 of your Digimon with the [X Antibody] or [Chronicle] trait may unsuspend"
+      - if:
+          condition: { binding_present: unsuspend_target }
+          then:
+            - unsuspend: { target: unsuspend_target }

@@ -1,0 +1,25 @@
+{
+  "index": 4328,
+  "norm_id": 0.2164,
+  "card_id": "EX13-004",
+  "card_index": 4,
+  "card_name_eng": "DemiMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

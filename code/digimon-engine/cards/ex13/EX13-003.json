@@ -1,0 +1,28 @@
+{
+  "index": 4327,
+  "norm_id": 0.21635,
+  "card_id": "EX13-003",
+  "card_index": 3,
+  "card_name_eng": "Kyaromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_003",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Lesser",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a Digimon card with [Kentaurosmon] in its name or the [Holy Beast] trait in the hand with the cost reduced by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

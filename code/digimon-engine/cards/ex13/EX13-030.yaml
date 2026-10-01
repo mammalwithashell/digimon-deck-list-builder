@@ -1,0 +1,67 @@
+# EX13-030 Reppamon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Traits: Holy Beast / DATA SQUAD. Form: Champion. Attribute: Vaccine.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Yellow Lv.3 / cost 2; [Digivolve] Lv.3 w/[DATA SQUAD] trait: Cost 2
+#   <Barrier>
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing
+#   your top security card, you may play 1 [Richard Sampson] from your hand or
+#   trash without paying the cost.
+#   Inherited Effect: <Barrier>
+#   Official Q&A: "Yes, you can." (the optional processing condition can be
+#   paid even when no [Richard Sampson] is playable — rule 15-7-4).
+#
+# DCGO: no EX13_030.cs at b9a0638cd.
+# - Cost clause: BT23-035 Dynasmon idiom — `optional` + `outer_prompt` (the
+#   body's first step is the bare cost, so the accept/decline confirm surfaces
+#   BEFORE any security card moves; 15-7-4). `security_count_gte: 1` gate: an
+#   unpayable processing condition can't be chosen (15-7-2).
+# - "you may play 1 [Richard Sampson] from your hand or trash" — optional
+#   `select_union_zone` over hand+trash → `play_union_bound_free` (BT25-096 /
+#   BT19-099 idiom). Declining after paying is legal.
+
+card: EX13-030
+name: Reppamon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Holy Beast, DATA SQUAD]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition: { security_count_gte: 1 }
+    summary: "[On Play][When Digivolving][When Attacking][OPT] By trashing your top security card, you may play 1 [Richard Sampson] from hand or trash for free"
+    process:
+      - trash_top_security: { of: you }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: richard
+          optional: true
+          filter: { name_is: "Richard Sampson" }
+          prompt: "You may play 1 [Richard Sampson] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: richard }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

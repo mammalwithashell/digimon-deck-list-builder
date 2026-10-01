@@ -1,0 +1,162 @@
+# EX13-045 Examon — Digimon, Lv.7, Green/Red/Blue, DP 15000, Cost 15.
+# Traits: Holy Warrior / Royal Knight. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-045.md):
+#   ＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Evade＞
+#   [When Digivolving] If DNA digivolving, this Digimon attacks and all of your
+#   Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon
+#   may battle 1 of your opponent's Digimon.
+#   [Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or
+#   use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from
+#   your hand or its digivolution cards without paying the cost.
+#   Digivolve: Green Lv.6 / 5; Red Lv.6 / 5; Blue Lv.6 / 5;
+#   [DNA Digivolve] Green Lv.6 + Blue Lv.6: Cost 0 (stack and digivolve
+#   unsuspended).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_045.cs
+#   - AddJogressConditionClass: green Lv.6 + blue Lv.6, cost 0.
+#   - Raid / Piercing / SAttack+1 / Blocker / Evade self effects.
+#   - [When Digivolving] (not optional, not OPT): `if (IsJogress)` { if this
+#     can attack → SelectAttackEffect with SetCanNotSelectNotAttack (mandatory
+#     attack, any target); then ChangeDigimonDPPlayerEffect(+10000 to own
+#     Digimon, UntilOpponentTurnEnd) }. The "may battle" leg is OUTSIDE the
+#     IsJogress block: canNoSelect: true pick over opponent Digimon → IBattle.
+#   - OnEndBattle, OPT (hash EX13_045_YT), skippable, owner's turn,
+#     CanTriggerWhenWinBattle(this): choose hand vs digivolution cards vs
+#     "Don't play or use"; canNoSelect: true; Option → PlayOptionCards(payCost:
+#     false), else PlayPermanentCards(payCost: false); `RemoveUse` when nothing
+#     was picked.
+#
+# DSL notes:
+#   - DNA gate is a step-level `if { dna_origin: true }` (EX6-011 idiom) so the
+#     "Then, may battle" leg runs on every [When Digivolving], as DCGO does
+#     (the printed "Then" sentence sits outside the "If DNA" sentence).
+#   - "this Digimon attacks" = mandatory `force_attack { attacker: source }`;
+#     "all of your Digimon get +10000" = `for_each` over own battle-area Digimon
+#     present at resolution.
+#   - "may battle" = optional opponent pick (continue_on_decline) + `battle`.
+#   - "wins a battle" = `on_ally_won_battle` (fires for attack AND effect
+#     battles, from `resolve_battle`) scoped to this Digimon via the new
+#     `event_winner_is_source: true` (G-DSL-BATTLE-WINNER-IS-SOURCE), gated
+#     `your_turn`. (The `on_any_deletion` + `source_deleted_battle_opponent`
+#     idiom misses effect battles — it reads the live attack.)
+#   - play-or-use from hand or its digivolution cards = one `select_union_zone
+#     [hand, material]` pick, then `binding_card_kind` (widened to union
+#     bindings — G-DSL-BINDING-CARD-KIND-UNION) routes an Option to
+#     `use_option_bound` and anything else to `play_union_bound_free`.
+
+card: EX13-045
+name: Examon
+kind: digimon
+level: 7
+color: [green, red, blue]
+cost: 15
+dp: 15000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: green }
+      - { level_eq: 6, color_is: blue }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade>"
+
+  - when: when_digivolving
+    summary: "[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends; then this Digimon may battle 1 of your opponent's Digimon"
+    process:
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - for_each:
+                over:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                bind_as: buffed
+                body:
+                  - add_dp_modifier:
+                      target: buffed
+                      value: 10000
+                      expiry: end_of_opponents_turn
+            - force_attack:
+                attacker: source
+                targets: any
+                prompt: "This Digimon attacks"
+      - select_opponent_permanent:
+          bind_as: battle_target
+          filter: { kind: digimon }
+          optional: true
+          continue_on_decline: true
+          prompt: "This Digimon may battle 1 of your opponent's Digimon"
+      - battle:
+          attacker: source
+          defender: battle_target
+
+  - when: on_ally_won_battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_winner_is_source: true
+    summary: "[Your Turn][OPT] When this Digimon wins a battle, you may play or use 1 play/use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          material_of: source
+          optional: true
+          filter:
+            all_of:
+              - play_or_use_cost_lte: 12
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+              - none_of:
+                  - kind: digi_egg
+          bind_as: examon_card
+          prompt: "Play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or this Digimon's digivolution cards without paying the cost"
+      - if:
+          condition: { binding_card_kind: { binding: examon_card, kind: option } }
+          then:
+            - use_option_bound:
+                binding: examon_card
+          else:
+            - play_union_bound_free:
+                binding: examon_card
+      - if:
+          condition: { binding_absent: examon_card }
+          then:
+            - refund_opt: {}

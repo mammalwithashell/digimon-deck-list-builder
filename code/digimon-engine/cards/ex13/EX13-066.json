@@ -1,0 +1,61 @@
+{
+  "index": 4390,
+  "norm_id": 0.2195,
+  "card_id": "EX13-066",
+  "card_index": 66,
+  "card_name_eng": "Sistermon Noir (Awakened)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_066",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 4,
+  "rarity": 1,
+  "card_colors": [
+    4,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus",
+    "Data"
+  ],
+  "effect_description_eng": "＜Decode ([Sistermon Noir]/[Sistermon Ciel])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)\r\n[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Sistermon Noir]/[Sistermon Ciel]: Cost 1 \r\n[Digivolve] Lv.3 w/[Huckmon] in text: Cost 3",
+  "dual": {
+    "digimon": {
+      "level": 4,
+      "dp": 6000,
+      "colors": [
+        "White",
+        "Black"
+      ],
+      "traits": [
+        "Puppet"
+      ],
+      "evo_costs": [],
+      "effect_text": "＜Decode ([Sistermon Noir]/[Sistermon Ciel])＞\r\n[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    },
+    "option": {
+      "use_cost": 5,
+      "colors": [
+        "White"
+      ],
+      "effect_text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your Digimon.",
+      "security_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    }
+  }
+}

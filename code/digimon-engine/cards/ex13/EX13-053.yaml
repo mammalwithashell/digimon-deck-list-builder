@@ -1,0 +1,138 @@
+# EX13-053 Thundermon — Digimon, Lv.4, Black, DP 4000, Cost 4.
+# Traits: Mutant. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-053.md):
+#   [On Play] [On Deletion] You may return up to 3 Digimon cards with [Mamemon]
+#   in their texts from your trash to the top of the deck. Then, delete 1 of
+#   your opponent's Digimon with a play cost of 3 or less. For each one this
+#   effect returned, add 1 to this effect's play cost maximum.
+#   (Rule) Name: Treated as including [Mamemon].
+#   Inherited: [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon.
+#   Digivolve: Black Lv.3 / 2; Yellow Lv.3 / 2.
+#
+# DCGO C# reference: none (no EX13_053.cs). The (Rule) name mirrors DCGO's
+# EX12_041 "Also treated as including [Mamemon]", which rewrites each name to
+# "Mamemon <name>": an alias that CONTAINS [Mamemon] (name_contains matches)
+# while the card is not a [Mamemon] by exact name.
+#
+# DSL notes:
+#   - "up to 3 ... to the top of the deck": three chained OPTIONAL
+#     `select_union_zone { zones: [trash] }` picks, each returned to the deck
+#     top immediately (EX7-043 idiom) — so the stacking ORDER is the player's
+#     choice, and declining any pick stops returning. A pick is only offered
+#     after the previous one was taken (`binding_present`).
+#   - "Then, delete ..." is mandatory regardless of the return. The cap
+#     (3 + returned count) branches on how many picks were taken.
+#   - "[Mamemon] in their texts" → `in_text_contains` (broad text scan: name,
+#     aliases, traits, all printed text — official Q&A).
+
+card: EX13-053
+name: Thundermon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Mutant]
+attribute: Data
+also_treated_as: ["Mamemon Thundermon"]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+
+effects:
+  - when: [on_play, on_deletion]
+    summary: "[On Play][On Deletion] You may return up to 3 [Mamemon]-text Digimon cards from trash to the deck top; then delete 1 opponent Digimon with play cost <= 3 (+1 per returned card)"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          bind_as: ret_1
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: Mamemon
+          prompt: "You may return up to 3 Digimon cards with [Mamemon] in their texts from your trash to the top of the deck (1/3)"
+      - if:
+          condition: { binding_present: ret_1 }
+          then:
+            - return_union_bound_to_deck: { binding: ret_1, position: top }
+            - select_union_zone:
+                of: you
+                zones: [trash]
+                bind_as: ret_2
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - in_text_contains: Mamemon
+                prompt: "You may return up to 3 Digimon cards with [Mamemon] in their texts from your trash to the top of the deck (2/3)"
+            - if:
+                condition: { binding_present: ret_2 }
+                then:
+                  - return_union_bound_to_deck: { binding: ret_2, position: top }
+                  - select_union_zone:
+                      of: you
+                      zones: [trash]
+                      bind_as: ret_3
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - in_text_contains: Mamemon
+                      prompt: "You may return up to 3 Digimon cards with [Mamemon] in their texts from your trash to the top of the deck (3/3)"
+                  - if:
+                      condition: { binding_present: ret_3 }
+                      then:
+                        - return_union_bound_to_deck: { binding: ret_3, position: top }
+      - if:
+          condition: { binding_present: ret_3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter: { all_of: [ { kind: digimon }, { play_cost_lte: 6 } ] }
+                prompt: "Delete 1 of your opponent's Digimon with a play cost of 6 or less"
+            - delete_permanent: { target: victim }
+          else:
+            - if:
+                condition: { binding_present: ret_2 }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter: { all_of: [ { kind: digimon }, { play_cost_lte: 5 } ] }
+                      prompt: "Delete 1 of your opponent's Digimon with a play cost of 5 or less"
+                  - delete_permanent: { target: victim }
+                else:
+                  - if:
+                      condition: { binding_present: ret_1 }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim
+                            filter: { all_of: [ { kind: digimon }, { play_cost_lte: 4 } ] }
+                            prompt: "Delete 1 of your opponent's Digimon with a play cost of 4 or less"
+                        - delete_permanent: { target: victim }
+                      else:
+                        - select_opponent_permanent:
+                            bind_as: victim
+                            filter: { all_of: [ { kind: digimon }, { play_cost_lte: 3 } ] }
+                            prompt: "Delete 1 of your opponent's Digimon with a play cost of 3 or less"
+                        - delete_permanent: { target: victim }
+
+  - scope: inherited
+    when: on_deletion
+    summary: "Inherited [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+          stop_at_level: 3

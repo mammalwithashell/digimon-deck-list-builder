@@ -1,0 +1,66 @@
+# EX13-003 Kyaromon — Digi-Egg, Lv.2, Yellow. Traits: Lesser / DATA SQUAD.
+# Form: In-Training.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Inherited Effect: [Your Turn] [Once Per Turn] When your security stack is
+#   removed from, this Digimon may digivolve into a Digimon card with
+#   [Kentaurosmon] in its name or the [Holy Beast] trait in the hand with the
+#   cost reduced by 1.
+#
+# DCGO: no EX13_003.cs at b9a0638cd. Idiom: ST24-01 Koromon (inherited
+# condition-gated optional hand pick → effect_initiated_digivolve of the
+# carrier, cost reduced) + AD1-017 `on_own_security_removed` observer.
+#
+# - `active_when: { your_turn: true }`  — [Your Turn].
+# - `condition` mirrors a CanActivate gate: an eligible Digimon card must be in
+#   hand, so the OPT is not burned on a trigger that can offer nothing.
+# - "may" lives on the `select_hand` (optional: PASS declines); a declined pick
+#   leaves `evo` unbound and the digivolve step no-ops.
+# - `cost: { reduce: 1 }` — the target's printed digivolution cost minus 1;
+#   requirements (level/colour circle) are enforced (not "ignoring").
+
+card: EX13-003
+name: Kyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, DATA SQUAD]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - name_contains: "Kentaurosmon"
+                - trait_has: "Holy Beast"
+        n: 1
+    summary: "Inherited [Your Turn][OPT] When your security stack is removed from, this Digimon may digivolve into a [Kentaurosmon]-name or [Holy Beast] Digimon card in hand, cost -1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Kentaurosmon"
+                  - trait_has: "Holy Beast"
+          prompt: "This Digimon may digivolve into a Digimon card with [Kentaurosmon] in its name or the [Holy Beast] trait in your hand, with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: { reduce: 1 }

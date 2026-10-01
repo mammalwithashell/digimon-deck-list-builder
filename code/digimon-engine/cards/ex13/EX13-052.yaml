@@ -1,0 +1,70 @@
+# EX13-052 Gladimon — Digimon, Lv.4, Black, 4000 DP, play cost 4.
+# Traits: Warrior. Champion / Vaccine. Digivolve: Black Lv.3 / cost 2.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-052.md):
+#   <Guard> (When any of your other Digimon would leave the battle area by
+#   your opponent's effects, by deleting this Digimon, they don't leave.)
+#   [On Play] [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon would leave the
+#   battle area other than by your effects, by deleting 1 of your other
+#   Digimon with [Knightmon] in its text, it doesn't leave.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_052.cs). Printed text governs.
+#
+# DSL: printed `grant_keyword: Guard` (engine keyword, EX13-065 precedent);
+# [On Play]/[On Deletion] `de_digivolve` (EX13-053 idiom); inherited
+# would-leave replacement with a delete cost = EX13-027 idiom (no
+# `replacement_subject_is_mine` → the subject is the carrier itself).
+
+card: EX13-052
+name: Gladimon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Warrior]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Guard
+
+  - when: [on_play, on_deletion]
+    summary: "[On Play][On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+          stop_at_level: 3
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "Inherited [All Turns][OPT] When this Digimon would leave other than by your effects, by deleting 1 of your other [Knightmon]-text Digimon, it doesn't leave"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - in_text_contains: Knightmon
+          prompt: "Delete 1 of your other Digimon with [Knightmon] in its text"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

@@ -1,0 +1,74 @@
+# EX13-071 Richard Sampson — Tamer, Yellow, Cost 4. Trait: DATA SQUAD.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   [Start of Your Main Phase] [On Play] You may place your deck's top card face
+#   down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory.
+#   [Main] [Once Per Turn] By trashing 3 bottom face-down cards from under any
+#   of your Tamers and placing 1 each of level 4 and level 5 [Holy Beast] trait
+#   yellow Digimon cards from your trash as 1 of your [Kudamon]'s bottom
+#   digivolution cards, it may digivolve into [Kentaurosmon] in the hand or
+#   trash, ignoring level and with the cost reduced by 1.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO: no EX13_071.cs at b9a0638cd.
+#
+# ─── Status: BLOCKED (hybrid) — partial ──────────────────────────────────────
+# The [Main] clause is NOT authored: G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST
+# (qa/archetype-qa/engine-gaps.md + qa/dsl-vocab-gaps.md). "Ignoring level" is
+# DCGO IgnoreRequirement.Level (BT24_025.cs, BT12_089.cs): the colour-matching
+# circle's printed digivolution cost is still paid (here −1); only the level
+# gate drops. `effect_initiated_digivolve` offers only `ignore_requirements`,
+# which also drops colour AND zeroes the base cost, so the "−1" would read as
+# free — an approximation. Every other piece (3× bottom face-down trash across
+# Tamers, Lv.4 + Lv.5 trash placement under a [Kudamon], hand-or-trash pick)
+# exists; only the digivolve leg is missing.
+#
+# ─── Authored clauses ────────────────────────────────────────────────────────
+# 1. [Start of Your Main Phase][On Play]: "You may place" is a binary choice
+#    (EffectChoice place / don't place), offered only when the deck has a card.
+#    Placement goes to the BOTTOM of this Tamer's stack, face down (ST24-09 /
+#    BT25-087 `place_as_bottom_source` deck_top idiom). "Then" memory gain is
+#    independent of the choice.
+# 2. [Security] play self free (BT25-087 idiom).
+
+card: EX13-071
+name: Richard Sampson
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    summary: "[Start of Your Main Phase][On Play] You may place your deck's top card face down under this Tamer; then, if your opponent has a Digimon, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels:
+                  - "Place your deck's top card face down under this Tamer"
+                  - "Don't place"
+                prompt: "You may place your deck's top card face down under this Tamer"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      - if:
+          condition:
+            any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+          then:
+            - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

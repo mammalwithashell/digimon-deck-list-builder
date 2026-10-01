@@ -1,0 +1,153 @@
+# EX13-043 Leopardmon — Digimon, Lv.6, Green, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-043.md):
+#   [On Play] [When Digivolving] You may suspend 1 Digimon. Then, you may
+#   return 1 of your opponent's lowest DP Digimon to the bottom of the deck.
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1
+#   [Mammal], [Beast], [Beastkin] or [Royal Knight] trait card from your hand
+#   with the cost reduced by 4. For each suspended Digimon, further reduce it
+#   by 1.
+#   [All Turns] [Once Per Turn] When any of your suspended Digimon would leave
+#   the battle area other than by your effects, by unsuspending 1 of your
+#   Digimon, they don't leave.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait
+#   Digivolve: Green Lv.5 / cost 3; [Leopardmon: Leopard Mode]: cost 1.
+#   Official Q&A: "Yes, either can be suspended." (either player's Digimon).
+#
+# DCGO C# reference: none at the submodule (no EX13_043.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - [OP][WD]: optional any-side Digimon pick (Q&A) → suspend; then an
+#     independent optional lowest-DP opponent pick → `return_to_deck bottom`
+#     (top card to the deck bottom, sources trashed — DCGO DeckBottomBounceClass).
+#     Both picks continue on decline.
+#   - [WD][WA][OPT]: optional hand pick → `play_or_use_from_hand` with
+#     `reduce = 4 + suspended Digimon on both fields` (formula evaluated at
+#     resolution). Declining refunds the OPT (nothing activated).
+#   - [All Turns][OPT] leave-replacement over any own suspended Digimon, cost =
+#     unsuspend 1 own suspended Digimon (may be the leaving one itself). Engine
+#     replacements resolve per subject (BT25-043 "they don't leave" precedent).
+
+card: EX13-043
+name: Leopardmon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: "Leopardmon: Leopard Mode" }
+    cost: 1
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin]
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - color_is: green
+            - any_of: [ { trait_has: Mammal }, { trait_has: Beast }, { trait_has: Beastkin } ]
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - color_is: green
+            - any_of: [ { trait_has: Mammal }, { trait_has: Beast }, { trait_has: Beastkin } ]
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - color_is: green
+            - any_of: [ { trait_has: Mammal }, { trait_has: Beast }, { trait_has: Beastkin } ]
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend 1 Digimon; then you may return 1 of your opponent's lowest DP Digimon to the bottom of the deck"
+    process:
+      - select_any_permanent:
+          bind_as: to_suspend
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "You may suspend 1 Digimon"
+      - suspend: { target: to_suspend }
+      - select_opponent_permanent:
+          bind_as: to_bottom
+          filter: { kind: digimon }
+          selector: lowest_dp
+          optional: true
+          continue_on_decline: true
+          prompt: "You may return 1 of your opponent's lowest DP Digimon to the bottom of the deck"
+      - return_to_deck: { target: to_bottom, position: bottom }
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] You may play or use 1 [Mammal]/[Beast]/[Beastkin]/[Royal Knight] trait card from hand with the cost reduced by 4, and by 1 more for each suspended Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: beast_card
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mammal
+              - trait_has: Beast
+              - trait_has: Beastkin
+              - trait_has: "Royal Knight"
+          prompt: "Play or use 1 [Mammal], [Beast], [Beastkin] or [Royal Knight] trait card from your hand with the cost reduced by 4 (and 1 more per suspended Digimon)"
+      - if:
+          condition: { binding_present: beast_card }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: beast_card
+                cost_delta:
+                  reduce:
+                    base: 4
+                    per:
+                      suspended_count: { of: any }
+                    delta: 1
+          else:
+            - refund_opt: {}
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - is_suspended: true
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns][OPT] When any of your suspended Digimon would leave other than by your effects, by unsuspending 1 of your Digimon, they don't leave"
+    process:
+      - select_own_permanent:
+          bind_as: to_unsuspend
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Unsuspend 1 of your Digimon so your suspended Digimon doesn't leave"
+      - unsuspend: { target: to_unsuspend }
+      - cancel_replacement: {}

@@ -1,0 +1,113 @@
+# EX13-063 PrinceMamemon — Digimon, Lv.6, Black, DP 12000, Cost 11.
+# Traits: Mutant. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-063.md):
+#   [On Play] [When Digivolving] [On Deletion] Reveal the top 3 cards of your
+#   deck. You may play 1 play cost 10 or lower Digimon card with [Mamemon] in
+#   its name or the [Mutant] trait among them without paying the cost. Trash
+#   the rest.
+#   [On Deletion] Delete 1 of your opponent's highest play cost Digimon.
+#   [All Turns] All of your Digimon with [Mamemon] in their names gain
+#   <Blocker> and <Guard>.
+#   Assembly -4: 3 Lv.5 or lower [Mamemon] text cards w/different names
+#   ("When this would be played, by placing the specified cards from the trash
+#   under it, reduce the play cost.")
+#   Digivolve: Black Lv.5 / 3.
+#
+# DCGO C# reference: none (no EX13_063.cs). Printed text + general_rule.pdf
+# (16-45 <Guard>) govern.
+#
+# DSL notes:
+#   - Reveal clause: EX8-050 idiom (see EX13-059).
+#   - [On Deletion] delete: mandatory `select_opponent_permanent` +
+#     `selector: highest_play_cost` (EX11-044 idiom); ties are a player choice.
+#     The two [On Deletion] effects are separate triggers (player orders them).
+#   - Aura: EX12-065 idiom, one `kind: aura` per granted keyword; the name
+#     filter reads the synth identity, so a "treated as including [Mamemon]"
+#     alias (EX13-053) qualifies and PrinceMamemon itself qualifies. Granted
+#     <Guard> is collected by replacement.rs's granted-keyword scan.
+#   - Assembly: one material slot, `repeat: 3` + `distinct_by: name` (EX12-048
+#     idiom), "[Mamemon] text" → `in_text_contains`, "Lv.5 or lower" →
+#     `level_lte: 5` (no kind restriction — the text says "cards").
+
+card: EX13-063
+name: PrinceMamemon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 12000
+traits: [Mutant]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_lte: 5
+            - in_text_contains: Mamemon
+        repeat: { min: 3, max: 3 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 4
+
+effects:
+  - when: [on_play, when_digivolving, on_deletion]
+    summary: "[On Play][When Digivolving][On Deletion] Reveal top 3; you may play 1 cost<=10 [Mamemon]-name or [Mutant] Digimon free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 10
+                  - any_of:
+                      - name_contains: Mamemon
+                      - trait_has: Mutant
+          prompt: "Play 1 play cost 10 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - when: on_deletion
+    summary: "[On Deletion] Delete 1 of your opponent's highest play cost Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          selector: highest_play_cost
+          prompt: "Delete 1 of your opponent's highest play cost Digimon"
+      - delete_permanent: { target: victim }
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      name_contains: Mamemon
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] Your [Mamemon]-named Digimon gain <Blocker>"
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      name_contains: Mamemon
+    grant_keyword: { keyword: Guard }
+    summary: "[All Turns] Your [Mamemon]-named Digimon gain <Guard>"

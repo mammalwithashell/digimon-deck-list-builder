@@ -1,0 +1,100 @@
+# EX13-039 Coredramon — Digimon, Lv.4, Green/Red, DP 5000, Cost 5.
+# Traits: Dragon. Form: Champion. Attribute: Virus.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Green Lv.3 / 3; Red Lv.3 / 3.  [Digivolve] Lv.3 w/[Dracomon] in name: Cost 2
+#   [On Play] [When Digivolving] You may return 1 non-Digi-Egg card with
+#   [Dracomon] or [Examon] in its text from your trash to the hand.
+#   [Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in
+#   their texts are played, this Digimon may digivolve into a Digimon card with
+#   [Examon] in its text in the hand with the cost reduced by 2.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_039.cs
+#   - Alt digivolve ContainsCardName("Dracomon"), level 3, cost 2 (requirements kept).
+#   - Shared [OP]/[WD]: skippable, gated on an eligible trash card;
+#     SelectCardEffect(Root.Trash, AddHand, max 1, canNoSelect) over
+#     !IsDigiEgg && (HasText(Dracomon) || HasText(Examon)). BT21-056 idiom:
+#     optional `select_trash` + `add_to_hand_from_trash` (the pick itself is the "may").
+#   - [Your Turn] OnEnterFieldAnyone, NO once-per-turn, skippable:
+#     CanTriggerOnPermanentPlay(own Digimon, != this, TopCard.HasText(...)) →
+#     DigivolveIntoHandOrTrashCard(this, IsDigimon && HasText("Examon"),
+#     payCost: true, reduceCost 2). EX12-002 idiom (on_ally_played + optional
+#     hand pick + effect_initiated_digivolve cost reduce 2, target: source).
+#   - Inherited ChangeSelfDPStaticEffect(+2000, IsOwnerTurn).
+
+card: EX13-039
+name: Coredramon
+kind: digimon
+level: 4
+color: [green, red]
+cost: 5
+dp: 5000
+traits: [Dragon]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, name_contains: Dracomon }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may return 1 non-Digi-Egg [Dracomon]/[Examon]-text card from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+              - none_of:
+                  - kind: digi_egg
+          prompt: "You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - when: on_ally_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - any_of:
+            - event_target_in_text_contains: Dracomon
+            - event_target_in_text_contains: Examon
+    summary: "[Your Turn] When another own [Dracomon]/[Examon]-text Digimon is played, this Digimon may digivolve into an [Examon]-text Digimon in hand for 2 less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: examon_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: Examon
+          prompt: "Digivolve into a Digimon card with [Examon] in its text in your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: examon_evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: examon_evo
+                cost: { reduce: 2 }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

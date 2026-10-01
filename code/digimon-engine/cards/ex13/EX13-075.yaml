@@ -1,0 +1,43 @@
+# EX13-075 Mon — Tamer, White, play cost 4.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-075.md):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3. [On Play]
+#   Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its text
+#   among them to the hand. Return the rest to the bottom of the deck.
+#   Security: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_075.cs). Printed text governs.
+#
+# DSL: BT21-084 (start_of_your_turn `memory_lte: 2` → `set_memory: 3`;
+# `on_security` → `play_from_security`) + EX13-027 `reveal_search`.
+
+card: EX13-075
+name: Mon
+kind: tamer
+color: [white]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Huckmon]-text card to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter: { in_text_contains: Huckmon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Huckmon] in its text to the hand"
+          remainder: bottom
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

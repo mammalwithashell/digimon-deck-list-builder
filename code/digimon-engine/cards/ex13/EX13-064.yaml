@@ -1,0 +1,135 @@
+# EX13-064 LordKnightmon — Digimon, Lv.6, Purple/Black, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight / CS. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-064.md):
+#   [When Digivolving] You may play or use 1 play or use cost 8 or lower
+#   [Knightmon] text card from your hand or trash without paying the cost.
+#   [Your Turn] All of your [Knightmon] text Digimon gain ＜Alliance＞ and
+#   ＜Piercing＞.
+#   [Your Turn] [Once Per Turn] When any of your other Digimon or Tamers are
+#   played, 1 of your [Knightmon] text Digimon may gain ＜Rush＞ and
+#   ＜Collision＞ for the turn and attack.
+#   Digivolve: Purple Lv.5 / 4; Black Lv.5 / 4; Lv.5 w/[Knightmon] in text: 3;
+#   [Digivolve] While you have 3 or fewer security cards, [Rie Kishibe]: Cost 5.
+#
+# DCGO C# reference: none at the submodule (no EX13_064.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - [Rie Kishibe] route: a `kind: digivolve` alt-path from a Tamer named
+#     [Rie Kishibe] (BT7-071 Hybrid precedent for a Tamer-sourced digivolve)
+#     with an alt-path `condition: { security_count_lte: 3 }`.
+#   - [WD] play-or-use from hand OR trash = one `select_union_zone [hand,
+#     trash]` pick, routed by `binding_card_kind` (Option → use_option_bound,
+#     else play_union_bound_free). "[Knightmon] text" = `in_text_contains`
+#     (official Q&A: name, traits, effects, requirements). Digi-Eggs can be
+#     neither played nor used from these zones, so they are excluded.
+#   - [Your Turn] aura over own Digimon whose card has [Knightmon] in its text
+#     (LordKnightmon itself qualifies via its name).
+#   - [Your Turn][OPT] other Digimon/Tamer played → optional own [Knightmon]
+#     text Digimon pick; the chosen one gains Rush + Collision for the turn and
+#     attacks (the "may" covers the whole action: once chosen it attacks).
+
+card: EX13-064
+name: LordKnightmon
+kind: digimon
+level: 6
+color: [purple, black]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight", CS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: Knightmon
+    cost: 3
+  - kind: digivolve
+    from: { kind: tamer, name_is: "Rie Kishibe" }
+    condition: { security_count_lte: 3 }
+    cost: 5
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          filter:
+            all_of:
+              - play_or_use_cost_lte: 8
+              - in_text_contains: Knightmon
+              - none_of:
+                  - kind: digi_egg
+          bind_as: knight_card
+          prompt: "Play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost"
+      - if:
+          condition: { binding_card_kind: { binding: knight_card, kind: option } }
+          then:
+            - use_option_bound:
+                binding: knight_card
+          else:
+            - play_union_bound_free:
+                binding: knight_card
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      in_text_contains: Knightmon
+    grant_keyword: { keyword: Alliance }
+    summary: "[Your Turn] All of your [Knightmon] text Digimon gain <Alliance>"
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      in_text_contains: Knightmon
+    grant_keyword: { keyword: Piercing }
+    summary: "[Your Turn] All of your [Knightmon] text Digimon gain <Piercing>"
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_is_source: false
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: tamer
+            - event_target_kind: token
+    summary: "[Your Turn][OPT] When any of your other Digimon or Tamers are played, 1 of your [Knightmon] text Digimon may gain <Rush> and <Collision> for the turn and attack"
+    process:
+      - select_own_permanent:
+          bind_as: knight
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: Knightmon
+          prompt: "1 of your [Knightmon] text Digimon may gain <Rush> and <Collision> for the turn and attack"
+      - grant_keyword:
+          target: knight
+          keyword: Rush
+          expiry: end_of_turn
+      - grant_keyword:
+          target: knight
+          keyword: Collision
+          expiry: end_of_turn
+      - may_attack_now:
+          attacker: knight
+          targets: any

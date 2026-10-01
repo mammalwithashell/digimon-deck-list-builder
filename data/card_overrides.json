@@ -17632,7 +17632,13 @@
   },
   "EX13-001": {
     "effect_description_eng": "",
-    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2."
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2.",
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ]
   },
   "EX13-002": {
     "effect_description_eng": "",
@@ -17644,7 +17650,10 @@
   },
   "EX13-004": {
     "effect_description_eng": "",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card."
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card.",
+    "type_eng": [
+      "Flame"
+    ]
   },
   "EX13-005": {
     "effect_description_eng": "",
@@ -18118,5 +18127,10 @@
   },
   "EX13-067": {
     "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve, if you have 1 or fewer Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name from your hand or trash without paying the cost."
+  },
+  "EX13-051": {
+    "type_eng": [
+      "Machine"
+    ]
   }
 }

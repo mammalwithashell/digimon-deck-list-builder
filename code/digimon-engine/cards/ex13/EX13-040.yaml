@@ -1,0 +1,73 @@
+# EX13-040 Mikemon — Digimon, Lv.4, Green, DP 5000, Cost 4.
+# Traits: Beast. Form: Champion. Attribute: Data.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Green Lv.3 / cost 2
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't
+#   unsuspend until their turn ends.
+#   [All Turns] When this Digimon suspends, suspend 1 of your opponent's
+#   Digimon or Tamers.
+#   Inherited Effect: [All Turns] All of your suspended Digimon get +1000 DP.
+#
+# DCGO: no EX13_040.cs at b9a0638cd. Idioms: EX12-063 (CannotUnsuspend on a
+# selected opponent Digimon/Tamer, expiry end_of_opponents_turn = "until their
+# turn ends"), BT23-058 (self-scoped on_suspend via event_permanent_is_source),
+# BT25-050 (inherited aura over own Digimon).
+
+card: EX13-040
+name: Mikemon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 5000
+traits: [Beast]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon or Tamer can't unsuspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers that can't unsuspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[All Turns] When this Digimon suspends, suspend 1 of your opponent's Digimon or Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    summary: "Inherited [All Turns] All of your suspended Digimon get +1000 DP"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      is_suspended: true
+    dp_modifier: 1000

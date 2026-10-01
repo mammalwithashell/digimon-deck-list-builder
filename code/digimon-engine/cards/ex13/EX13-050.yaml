@@ -1,0 +1,43 @@
+# EX13-050 Bokomon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Mutant. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-050.md):
+#   [All Turns] Players can't gain memory other than by Tamer effects.
+#   Inherited: <Blocker>
+#   Digivolve: Black Lv.2 / 0.
+#   Official Q&A: the restriction affects BOTH players.
+#
+# DCGO C# reference: none (no EX13_050.cs). Printed text + official Q&A govern.
+#
+# DSL notes:
+#   - EX8-030 / BT3-077 Tapirmon/Gazimon idiom (`flood_gate` +
+#     `CannotGainMemoryExceptFromTamers`), widened from `opponent` to
+#     `target_player: any` for "Players" (lower_flood_gate::players_for_ref
+#     installs the player modifier on every player).
+
+card: EX13-050
+name: Bokomon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Mutant]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    summary: "[All Turns] Players can't gain memory other than by Tamer effects"
+    active_when: { all_turns: true }
+    target_player: any
+    modifier: CannotGainMemoryExceptFromTamers
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

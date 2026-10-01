@@ -1,0 +1,25 @@
+{
+  "index": 4392,
+  "norm_id": 0.2196,
+  "card_id": "EX13-068",
+  "card_index": 68,
+  "card_name_eng": "Takato Matsuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_068",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Takato Matsuki] from your hand without paying the cost. After, if you don't have a Digimon, you may play 1 [Guilmon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

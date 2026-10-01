@@ -1,0 +1,148 @@
+# EX13-062 Craniamon — Digimon, Lv.6, Black, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-062.md):
+#   ＜Reboot＞ ＜Blocker＞
+#   [On Play] [When Digivolving] Your opponent's effects don't affect this
+#   Digimon until their turn ends.
+#   [All Turns] [Once Per Turn] When this Digimon suspends, you may delete all
+#   of your opponent's Digimon with the lowest play cost.
+#   [All Turns] When this Digimon unsuspends, it gets +3000 DP until your turn
+#   ends.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all black w/＜Blocker＞
+#   Digivolve: Black Lv.5 / cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_062.cs
+#   - RebootSelfStaticEffect, BlockerSelfStaticEffect.
+#   - AddAssemblyConditionClass: 3 elements (IsLevel5 / IsLevel4 / IsLevel3),
+#     each own card && HasDigimonColor(Black) && HasBlocker (face-up printed
+#     BlockerClass, not inherited / security); reduceCost 5.
+#   - Shared OP/WD (mandatory): CanNotAffectedClass on this Digimon's top card,
+#     SkillCondition = effect source card owned by the opponent, lasting
+#     UntilOpponentTurnEnd.
+#   - OnTappedAnyone, OPT (hash EX13_062_Delete), optional (isOptional true):
+#     CanTriggerWhenSelfPermanentSuspends; DestroyPermanentsClass over EVERY
+#     opponent Digimon with IsMinCost (batched, no selection).
+#   - OnUnTappedAnyone, not OPT, mandatory: this permanent unsuspended →
+#     +3000 DP UntilOwnerTurnEnd.
+#
+# DSL notes:
+#   - "Your opponent's effects don't affect" = the 4-source-kind opponent
+#     immunity idiom (BT13-088 / EX6-011): digimon + tamer + option + rule.
+#   - "delete all ... lowest play cost" = batched `delete_all_permanents` over
+#     opponent Digimon whose play cost ≤ the opponent-scoped `lowest_play_cost`
+#     aggregate (BT23-058 Craniamon idiom, now batched).
+#   - Assembly "w/＜Blocker＞" = `printed_keyword: Blocker` (card-scope, face-up
+#     keyword line; G-DSL-PREDICATE-PRINTED-KEYWORD, added for this card).
+#   - KNOWN ENGINE GAP (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND): the engine's
+#     unsuspend-phase and <Reboot> unsuspension mutate `is_suspended` without
+#     firing `OnUnsuspend` (game_phases.rs), while DCGO routes both through
+#     `IUnsuspendPermanents` → `OnUnTappedAnyone`. The +3000 clause therefore
+#     fires for effect-driven unsuspension only. Logged in
+#     qa/archetype-qa/engine-gaps.md; verdict PARTIAL.
+
+card: EX13-062
+name: Craniamon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all black w/＜Blocker＞ ─────────────
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - color_is: black
+            - printed_keyword: Blocker
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - color_is: black
+            - printed_keyword: Blocker
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - color_is: black
+            - printed_keyword: Blocker
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Your opponent's effects don't affect this Digimon until their turn ends"
+    process:
+      - grant_effect_immunity:
+          target: source
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: source
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: source
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: source
+          source_kind: rule
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, you may delete all of your opponent's Digimon with the lowest play cost"
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - play_cost_lte:
+                  aggregate:
+                    selector: lowest_play_cost
+                    scope: opponent
+
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, it gets +3000 DP until your turn ends"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_your_turn
