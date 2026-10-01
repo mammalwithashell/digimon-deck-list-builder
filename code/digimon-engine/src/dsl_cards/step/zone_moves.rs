@@ -795,12 +795,16 @@ pub fn try_run(
             let _ = ctx.trash_top_n_digivolution_cards_of_each(player, n);
             true
         }
-        CompiledStep::TrashTopStackedSources { target, count } => {
+        CompiledStep::TrashTopStackedSources {
+            target,
+            count,
+            include_top_card,
+        } => {
             if let Some(ResolvedBinding::Permanent(target)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
                 let count = formula_to_u8(count, ctx, bindings);
-                let _ = ctx.trash_top_n_stacked_sources(target, count);
+                let _ = ctx.trash_top_n_stacked_sources(target, count, *include_top_card);
             }
             true
         }

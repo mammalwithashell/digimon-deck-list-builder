@@ -283,3 +283,81 @@ fn bt24_037_dna_origin_grants_security_attack_and_dp_until_turn_end() {
         "DNA-origin Security A. +1 should expire at end of turn"
     );
 }
+
+// ─── G-DSL-CAN-ATTACK-PREDICATE (2026-10-01) ─────────────────────────────────
+//
+// DCGO BT24_037.cs `CanSelectAttackPermanentCondition`: only a Digimon with
+// `permanent.CanAttack(activateClass)` is offered as the attacker, and the
+// attacker select is skipped entirely when none can attack.
+
+fn can_attack_debuff_then_attacker_prompt(runner: &mut DebugRunner, silphy: PermanentHandleAlias) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(silphy));
+    runner.game.drain_effect_queue();
+    let debuff_prompt = runner
+        .pending_selection_view()
+        .expect("On Play selects an opposing Digimon for -5000 DP");
+    assert_eq!(debuff_prompt.kind, SelectionKind::OppField);
+    runner
+        .game
+        .resolve_selection(debuff_prompt.selecting_player, debuff_prompt.valid_action_ids[0])
+        .expect("debuff target resolves");
+}
+
+type PermanentHandleAlias = digimon_engine::permanent::PermanentHandle;
+
+#[test]
+fn bt24_037_attacker_pick_offers_only_digimon_that_can_attack() {
+    let mut runner = silphymon_runner();
+    runner.game.turn_count = 1;
+    // Silphymon was just played (summoning sickness, no <Rush>).
+    let silphy = runner.place_on_field(0, "BT24-037", None);
+    let suspended = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.players[0].battle_area[suspended.index as usize].is_suspended = true;
+    let locked = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.modifiers.add(
+        locked,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotAttack,
+            1,
+            digimon_engine::enums::Expiry::EndOfTurn,
+            1,
+        ),
+    );
+    let ready = runner.place_on_field(0, "ALLY", Some(0));
+    runner.place_on_field(1, "DEF", Some(0));
+
+    can_attack_debuff_then_attacker_prompt(&mut runner, silphy);
+    let prompt = runner
+        .pending_selection_view()
+        .expect("one Digimon can attack, so the attacker prompt is shown");
+    assert_eq!(prompt.kind, SelectionKind::OwnField);
+    let offered: Vec<u16> = prompt
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    assert_eq!(
+        offered,
+        vec![encode_attack(0, ready.index as u16)],
+        "summoning-sick, suspended and CannotAttack Digimon are not offered"
+    );
+}
+
+#[test]
+fn bt24_037_no_attacker_prompt_when_no_digimon_can_attack() {
+    let mut runner = silphymon_runner();
+    runner.game.turn_count = 1;
+    let silphy = runner.place_on_field(0, "BT24-037", None);
+    let suspended = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.players[0].battle_area[suspended.index as usize].is_suspended = true;
+    runner.place_on_field(1, "DEF", Some(0));
+
+    can_attack_debuff_then_attacker_prompt(&mut runner, silphy);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no Digimon can attack ⇒ no (dead) attacker prompt"
+    );
+}

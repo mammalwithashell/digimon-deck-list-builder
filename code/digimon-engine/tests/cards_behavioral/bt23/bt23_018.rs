@@ -476,3 +476,96 @@ fn bt23_018_main_opt_blocked_when_stack_empty() {
         "Main OPT must not install a selection when stack is bare"
     );
 }
+
+// ─── G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE (2026-10-01) ────────────────────────
+//
+// "this Digimon's top stacked card" is the visible TOP card itself (DCGO
+// `BT23_018.cs`: `CardSource topCard = card.PermanentOfThisCard().TopCard;`
+// → `AddDigivolutionCardsBottom({ topCard })`). The verb previously moved
+// `card_sources[len - 2]` (the card under the top).
+
+fn tsc_stack_ids(runner: &DebugRunner, h: PermanentHandle) -> Vec<String> {
+    runner.game.players[h.player as usize].battle_area[h.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+fn tsc_runner() -> DebugRunner {
+    let mut partner = make_test_card("AGUMON-HAND", "Agumon");
+    partner.level = Some(3);
+    partner.play_cost = 3;
+    DebugRunner::builder()
+        .dsl_card("BT23-018")
+        .expect("BT23-018 found in embedded DSL pack")
+        .add_card(digimon_engine::debug_runner::make_test_card_with_level("SRC-A", "Source A", 2))
+        .add_card(digimon_engine::debug_runner::make_test_card_with_level("SRC-B", "Source B", 3))
+        .add_card(partner)
+        .memory(10)
+        .start()
+}
+
+fn tsc_fire_main(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::MainOnField,
+        digimon_engine::selection::TriggerSource::Permanent(h),
+    );
+    runner.game.drain_effect_queue();
+}
+
+/// The cost moves the TOP card (BT23-018 itself) to the bottom; the card that was
+/// directly under it becomes the new top. Stack is bottom → top.
+#[test]
+fn bt23_018_main_opt_cost_moves_the_visible_top_card_to_the_bottom() {
+    let mut runner = tsc_runner();
+    let h = runner.place_stack(0, &["SRC-A", "SRC-B", "BT23-018"]);
+    assert_eq!(tsc_stack_ids(&runner, h), vec!["SRC-A", "SRC-B", "BT23-018"]);
+    tsc_fire_main(&mut runner, h);
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        tsc_stack_ids(&runner, h),
+        vec!["BT23-018", "SRC-A", "SRC-B"],
+        "top stacked card (BT23-018) → bottom digivolution card; SRC-B is the new top"
+    );
+}
+
+/// After paying the cost, the printed play of [Agumon] from hand is offered
+/// and resolves.
+#[test]
+fn bt23_018_main_opt_then_plays_agumon_from_hand() {
+    let mut runner = tsc_runner();
+    runner.add_to_hand(0, "AGUMON-HAND");
+    let h = runner.place_stack(0, &["SRC-A", "SRC-B", "BT23-018"]);
+    tsc_fire_main(&mut runner, h);
+    // Accept any activation prompt, then pick the hand card.
+    for _ in 0..4 {
+        let Some(view) = runner.pending_selection_view() else { break };
+        if view.kind == digimon_engine::selection::SelectionKind::Hand {
+            let a = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != digimon_engine::action::space::PASS)
+                .expect("Agumon selectable");
+            runner.execute_action(view.selecting_player, a).expect("pick");
+            break;
+        }
+        let a = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+            .expect("non-pass");
+        runner.execute_action(view.selecting_player, a).expect("advance");
+    }
+    let _ = runner.auto_resolve();
+    assert_eq!(tsc_stack_ids(&runner, h), vec!["BT23-018", "SRC-A", "SRC-B"]);
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&runner.game.card_data)
+            == "AGUMON-HAND"),
+        "[Agumon] played from hand"
+    );
+}

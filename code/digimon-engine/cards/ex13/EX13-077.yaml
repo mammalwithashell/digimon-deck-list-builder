@@ -82,7 +82,9 @@ effects:
           bind_as: attacker
           optional: true
           continue_on_decline: true
-          filter: { kind: digimon }
+          # DCGO `CanAttack(withoutTap: true)`: only a Digimon that could
+          # actually attack without suspending is offered; none ⇒ no prompt.
+          filter: { kind: digimon, can_attack: { without_suspending: true } }
           prompt: "1 of your Digimon may attack without suspending"
       - may_attack_now:
           attacker: attacker

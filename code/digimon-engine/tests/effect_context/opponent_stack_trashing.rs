@@ -90,7 +90,7 @@ fn selected_opponent_digimon_trashes_top_n_stacked_sources_below_top() {
             false,
             source_count,
             move |ctx, target| {
-                assert_eq!(ctx.trash_top_n_stacked_sources(target, 2), 2);
+                assert_eq!(ctx.trash_top_n_stacked_sources(target, 2, false), 2);
             },
         );
     }

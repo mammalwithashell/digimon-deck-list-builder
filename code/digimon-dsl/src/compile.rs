@@ -1063,6 +1063,11 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         can_change_orientation: p.can_change_orientation,
+        can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
+            targets: compile_attack_target_spec(c.targets),
+            without_suspending: c.without_suspending,
+            ignore_summoning_sickness: c.ignore_summoning_sickness,
+        }),
         has_keyword: p.has_keyword.clone(),
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
@@ -3065,6 +3070,7 @@ fn compile_step(
         S::TrashTopStackedSources(a) => CompiledStep::TrashTopStackedSources {
             target: compile_binding_ref(&a.target),
             count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
+            include_top_card: a.include_top_card,
         },
         S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),

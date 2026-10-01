@@ -323,7 +323,12 @@ fn ex13_077_assembly_declined_at_the_gate_plays_at_full_cost() {
     runner.game.decode_action(PLAY_HAND_START, 0);
     assert!(has_trash_pick(&runner));
     pass(&mut runner);
-    assert_eq!(runner.game.memory, -6, "full cost 16 paid");
+    // Full cost 16 → −6. The fresh Omnimon can't attack (summoning sickness)
+    // and is alone (1 color), so its [On Play] opens no prompt
+    // (G-DSL-CAN-ATTACK-PREDICATE) and the turn passes at −6: the memory
+    // gauge now reads +6 from the opponent's side.
+    assert_eq!(runner.game.turn_player(), 1, "−6 memory passed the turn");
+    assert_eq!(runner.game.memory, 6, "full cost 16 paid (−6 for P0)");
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 1);
     assert_eq!(runner.trash_size(0), 6);
 }
@@ -432,7 +437,8 @@ fn ex13_077_declined_attack_and_one_color_activates_nothing() {
     let omni = runner.place_on_field(0, CARD_ID, None);
     runner.place_on_field(1, "OPP", Some(0));
     fire(&mut runner, EffectTiming::OnPlay, omni);
-    pass(&mut runner); // no attacker
+    // The just-played Omnimon is the only Digimon and can't attack
+    // (summoning sickness) ⇒ no attacker prompt at all.
     assert!(
         runner.pending_selection_view().is_none(),
         "1 color → floor(1/2) = 0 effects"
@@ -534,4 +540,63 @@ fn ex13_077_declining_at_the_attack_target_prompt_still_runs_the_then() {
     pass(&mut runner);
     assert_eq!(runner.security_count(1), opp_sec0, "no attack");
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice), "Then: 1 effect");
+}
+
+// ─── G-DSL-CAN-ATTACK-PREDICATE (2026-10-01) ─────────────────────────────────
+//
+// "1 of your Digimon may attack without suspending": only a Digimon that can
+// attack WITHOUT suspending is offered (DCGO `CanAttack(withoutTap: true)` —
+// a suspended Digimon qualifies, a summoning-sick or CannotAttack one does
+// not). With no eligible Digimon there is no attacker prompt and the "Then"
+// still resolves.
+
+#[test]
+fn ex13_077_attacker_pick_offers_only_digimon_that_can_attack_without_suspending() {
+    let mut runner = builder().security(1, &["SEC"; 3]).start();
+    runner.skip_mulligan();
+    runner.game.turn_count = 1;
+    let omni = runner.place_on_field(0, CARD_ID, None); // just played
+    let ready = runner.place_on_field(0, "ALLY-R", Some(0));
+    let suspended = runner.place_on_field(0, "ALLY-R", Some(0));
+    runner.game.players[0].battle_area[suspended.index as usize].is_suspended = true;
+    let fresh = runner.place_on_field(0, "ALLY-B", None);
+    let locked = runner.place_on_field(0, "ALLY-B", Some(0));
+    runner.game.modifiers.add(
+        locked,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotAttack,
+            1,
+            digimon_engine::enums::Expiry::EndOfTurn,
+            1,
+        ),
+    );
+    fire(&mut runner, EffectTiming::OnPlay, omni);
+
+    let v = runner.pending_selection_view().expect("attacker prompt");
+    assert_eq!(v.kind, SelectionKind::OwnField);
+    let offered = non_pass(&runner);
+    let slot = |h: PermanentHandle| ATTACK_START + h.index as u16;
+    assert!(offered.contains(&slot(ready)), "{offered:?}");
+    assert!(
+        offered.contains(&slot(suspended)),
+        "a suspended Digimon can still attack WITHOUT suspending"
+    );
+    assert!(!offered.contains(&slot(omni)), "summoning-sick Omnimon is not offered");
+    assert!(!offered.contains(&slot(fresh)), "summoning-sick ally is not offered");
+    assert!(!offered.contains(&slot(locked)), "CannotAttack ally is not offered");
+}
+
+#[test]
+fn ex13_077_no_attacker_prompt_when_none_can_attack_and_then_still_runs() {
+    let mut runner = builder().start();
+    runner.skip_mulligan();
+    runner.game.turn_count = 1;
+    let omni = runner.place_on_field(0, CARD_ID, None); // summoning sick
+    runner.place_on_field(0, "TAMER-Y", Some(0)); // White + Yellow = 2 colors
+    fire(&mut runner, EffectTiming::OnPlay, omni);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "no attacker prompt; the 'Then' (1 effect for 2 colors) is offered directly"
+    );
 }

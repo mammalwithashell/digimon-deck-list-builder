@@ -413,19 +413,27 @@ impl<'a> EffectContext<'a> {
         moved_count
     }
 
-    /// Move `target`'s **top stacked card** (the card immediately beneath its
-    /// active top card — `card_sources[len - 2]`) to the bottom of its own
-    /// digivolution stack. Returns `false` if the target has no stacked card
-    /// beneath the top (i.e. `card_sources.len() < 2`), in which case the
-    /// printed-cost cannot be paid; callers should gate the activating step
-    /// with a `materials_count_gte: 1` (or equivalent) predicate.
+    /// Move `target`'s **top stacked card** — the visible TOP card itself,
+    /// `card_sources[len - 1]` (DCGO `Permanent.TopCard`) — to the bottom of
+    /// its own digivolution stack. The permanent stays in play, now topped by
+    /// the card that was directly under it. Returns `false` if the target has
+    /// no digivolution card under the top (i.e. `card_sources.len() < 2`), in
+    /// which case the printed cost cannot be paid; callers gate the
+    /// activating step with a `materials_count_gte: 1` (or equivalent)
+    /// predicate.
     ///
-    /// Closes `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` for the deterministic
-    /// "top stacked card → bottom" cost shape that DCGO encodes as
-    /// `card.PermanentOfThisCard().TopCard` followed by
-    /// `AddDigivolutionCardsBottom`. Per the no-approximations policy this
-    /// path does NOT surface a player choice over which source moves — the
-    /// printed text identifies a singular "top" source.
+    /// "Stacked cards" are ALL the cards of the Digimon including its top card
+    /// (BT21-030 official Q&A: "the top card is trashed until there are no
+    /// more stacked cards"; Armor Purge "trashing this Digimon's top stacked
+    /// card"). DCGO `BT23_008.cs` / `BT23_018.cs`: `CardSource topCard =
+    /// card.PermanentOfThisCard().TopCard;` then
+    /// `AddDigivolutionCardsBottom({ topCard })`. G-TOP-STACKED-CARD-TO-
+    /// BOTTOM-SOURCE (2026-10-01) — this previously moved `card_sources
+    /// [len - 2]` (the card UNDER the top), the same off-by-one fixed for
+    /// `security_place_top_stacked_card` (G-TOP-STACKED-CARD-TO-SECURITY).
+    ///
+    /// Deterministic — the printed text identifies a singular top card, so no
+    /// player choice is surfaced.
     pub fn place_top_source_as_bottom(&mut self, target: PermanentHandle) -> bool {
         let stack_size = self
             .game
@@ -437,9 +445,9 @@ impl<'a> EffectContext<'a> {
         if stack_size < 2 {
             return false;
         }
-        let top_stacked_idx = stack_size - 2;
+        let top_card_idx = stack_size - 1;
         self.place_as_bottom_source(
-            crate::enums::CardSourceRef::Material(target, top_stacked_idx),
+            crate::enums::CardSourceRef::Material(target, top_card_idx),
             target,
             false,
         )
