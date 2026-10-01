@@ -1,5 +1,90 @@
 {
   "archetypes": {
+    "veedramon-cs (EX13)": {
+      "slice": "EX13 Veedramon / CS slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/veedramon-cs-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/veedramon_cs_ex13.rs",
+      "cards": [
+        "EX13-017",
+        "EX13-019",
+        "EX13-022",
+        "EX13-067",
+        "EX13-069",
+        "EX13-074"
+      ],
+      "combos_tested": [
+        "C1 Veemon search -> Veedramon on curve (Rina also a legal [Veedramon]-text hit)",
+        "C2 Veedramon [When Attacking] -> Rina for 1 (Nokia not eligible)",
+        "C3 AeroVeedramon [When Digivolving] free Rina -> Aero's own Tamer-played lock (OPT)",
+        "C4 Attack -> Aero inherited untap -> Rina Draw 1 + 0-cost Veedramon digivolve",
+        "C5 Opponent removal -> Veemon suspend-instead -> Aero untap -> Rina draw (OPT spent on 2nd)",
+        "C6 Security Rina on opponent's turn -> Aero lock (ignored reproducer, CONFIRMED engine bug)",
+        "C7 Nokia: lone Agumon -> Greymon -> free Gabumon from trash (+ 2-Digimon negative)",
+        "C8 Rina + Nokia Start-of-Main ramp (+ no-Veemon negative)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Rie Kishibe Knightmon draw engine / LordKnightmon digivolve",
+          "blocked_on": "EX13-074",
+          "reason": "BLOCKED engine gap (no YAML; validated_cards_dsl.json)"
+        },
+        {
+          "combo": "BT22-025 UlforceVeedramon mode 'play blue Tamer <=4 free' -> Rina",
+          "blocked_on": null,
+          "reason": "not selected: out-of-slice payoff already covered by C3"
+        }
+      ],
+      "cross_set_partner_used": [
+        "BT13-030",
+        "ST1-03",
+        "BT23-008",
+        "ST2-03",
+        "ST1-02"
+      ],
+      "cross_set_pulled": [],
+      "findings": [
+        {
+          "combo": "C6",
+          "id": "G-ENGINE-SECURITY-PLAY-SKIPS-ENTER-FIELD-OBSERVERS",
+          "routed_to": "docs/RUST_ENGINE_GAPS.md",
+          "severity": "confirmed-engine-bug",
+          "source_consulted": "DCGO Script/CardEffectFactory.cs PlaySelfTamerSecurityEffect (activateETB: true); DCGO EX13/Blue/EX13_022.cs; src/effect_context/selections.rs play_pending_security",
+          "summary": "play_pending_security calls fire_on_play only, so [Security]-played cards never fire OnEnterFieldAnyone/OnAllyPlayed observers (AeroVeedramon's Tamer-played lock misses a security-played Rina).",
+          "test": "veedramon_cs_ex13::c6_security_rina_played_on_opponents_turn_fires_aero_lock"
+        }
+      ],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": false,
+          "data": {
+            "implemented": 5,
+            "total": 6,
+            "blocked": [
+              "EX13-074"
+            ]
+          },
+          "detail": "slice coverage 5/6; EX13-074 BLOCKED (engine gap)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 8,
+            "blocked_combos": 1
+          },
+          "detail": "all 8 authored combos name only IMPLEMENTED cards; 1 Rie Kishibe combo blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype (archetype-static-tests: 'Veedramon' not in deck_library.json)"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "result": "PASS-WITH-FINDING (9/10 interaction tests green; C6 is an #[ignore]'d reproducer for a CONFIRMED engine bug); 1 combo blocked on EX13-074"
+    },
     "BEATBREAK / Glowing Dawn (BT25)": {
       "cards": [
         "BT25-003",
@@ -2288,8 +2373,717 @@
       "implemented_cards": 18,
       "cross_set_pulled": [],
       "cross_set_partner_used": []
+    },
+    "mutant (EX13)": {
+      "slice": "EX13 Mutant / Mamemon slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/mutant-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/mutant_ex13.rs",
+      "cards": [
+        "EX13-050",
+        "EX13-053",
+        "EX13-054",
+        "EX13-031",
+        "EX13-059",
+        "EX13-063"
+      ],
+      "combos_tested": [
+        "C1 Thundermon (Rule) [Mamemon] alias pays BigMamemon EoYT cost -> double removal",
+        "C2 Thundermon returns Thundermon#2+BigMamemon#2 to top -> BigMamemon WD reveal replays Thundermon (double On Play)",
+        "C3 BigMamemon self-sacrifice -> On Deletion reveal plays Nanimon (Rule Mutant) + Thundermon inherited De-Digivolve",
+        "C4 Bokomon -> Thundermon inherited Blocker trade deletes the attacker (+ vanilla-base no-block negative)",
+        "C5 Nanimon -> BigMamemon +1000 inherited; reveal plays Bokomon -> Digimon-sourced memory gain blocked (+ declined control)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "PrinceMamemon Blocker/Guard aura over Thundermon/BigMamemon",
+          "blocked_on": "EX13-063",
+          "reason": "BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY (validated_cards_dsl.json)"
+        },
+        {
+          "combo": "PrinceMamemon Assembly -4 from [Mamemon]-text trash",
+          "blocked_on": "EX13-063",
+          "reason": "BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY"
+        },
+        {
+          "combo": "BigMamemon inherited delete-ALL-lowest under PrinceMamemon",
+          "blocked_on": "EX13-063",
+          "reason": "BLOCKED (only Lv.6 in the line)"
+        },
+        {
+          "combo": "PrinceMamemon On Deletion reveal<=10 + delete highest chain",
+          "blocked_on": "EX13-063",
+          "reason": "BLOCKED"
+        },
+        {
+          "combo": "KingSukamon Sukamon rewrite + inherited Sukamon-deleted reveal",
+          "blocked_on": "EX13-031",
+          "reason": "BLOCKED dsl gap (base name/colour/DP payload; no YAML)"
+        },
+        {
+          "combo": "Nanimon [Security] play-after-battle",
+          "blocked_on": null,
+          "reason": "not selected: single-card, covered by cards_behavioral/ex13/ex13_054.rs"
+        },
+        {
+          "combo": "Bokomon floodgate vs Tamer memory",
+          "blocked_on": null,
+          "reason": "not selected: single-card, covered by cards_behavioral/ex13/ex13_050.rs"
+        }
+      ],
+      "cross_set_partner_used": [
+        "ST1-02",
+        "ST1-04",
+        "ST1-05",
+        "ST4-07",
+        "ST5-02"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "notes": "C5: DebugRunner::execute_action bypasses Game::decode_action's tick_declarative_effects; the test re-ticks explicitly (harness artifact, not an engine bug). Unrelated pre-existing failures observed in the archetypes binary at run time (dna_omnimon x3, machine_bt25 x1, omnimon_ace x3, puppet_sister x1) — not touched by this slice; working tree has in-flight uncommitted digimon-dsl edits.",
+      "static_tests": {
+        "coverage_gate": {
+          "passed": false,
+          "data": {
+            "implemented": 4,
+            "total": 6,
+            "blocked": [
+              "EX13-031",
+              "EX13-063"
+            ]
+          },
+          "detail": "slice coverage 4/6; EX13-031 BLOCKED (dsl), EX13-063 BLOCKED (engine, G-ASSEMBLY-NO-DISTINCT-BY)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 5,
+            "blocked_combos": 5
+          },
+          "detail": "all 5 authored combos name only IMPLEMENTED cards; 5 PrinceMamemon/KingSukamon combos blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "result": "PASS (6/6 interaction tests green); 5 combos blocked on EX13-031 / EX13-063"
+    },
+    "richard-sampson-data-squad (EX13)": {
+      "slice": "EX13 Richard Sampson / DATA SQUAD slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/richard-sampson-data-squad-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/richard_sampson_data_squad_ex13.rs",
+      "cards": [
+        "EX13-003",
+        "EX13-026",
+        "EX13-030",
+        "EX13-032",
+        "EX13-071"
+      ],
+      "cross_set_partner_used": [
+        "EX13-036",
+        "EX12-046",
+        "ST24-14",
+        "ST1-02",
+        "ST2-10"
+      ],
+      "cross_set_pulled": [],
+      "combos_tested": [
+        "C1 Kudamon (on Kyaromon) breeding move [When Moving] reveal -> 1 to hand + 1 face down at bottom of DS Tamer ST24-14 (+ no-DS-Tamer add-only control)",
+        "C2 Reppamon WD security-trash cost (no Richard, Q&A) wakes Kyaromon inherited -> digivolve into Shishimamon at 4-1 (+ declined-cost control)",
+        "C3 Reppamon OPT shared across WD/WA: digivolve-paid cost not re-offered on attack; Kudamon inherited Security A.-1 still fires",
+        "C4 Reppamon inherited Barrier save trashes security on your turn -> Kyaromon digivolves Shishimamon into Kentaurosmon at 3-1 (+ opponent-turn [Your Turn] negative)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Reppamon OP/WD/WA plays [Richard Sampson] free",
+          "blocked_on": "EX13-071",
+          "reason": "BLOCKED (hybrid) G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST"
+        },
+        {
+          "combo": "Kudamon reveal stashes under Richard Sampson",
+          "blocked_on": "EX13-071",
+          "reason": "BLOCKED"
+        },
+        {
+          "combo": "Richard SOMP stash -> Chirinmon trashes Tamer face-down card to unsuspend",
+          "blocked_on": "EX13-071, EX13-032",
+          "reason": "BLOCKED"
+        },
+        {
+          "combo": "Richard [Main] Kudamon -> Kentaurosmon ignoring level, cost -1",
+          "blocked_on": "EX13-071",
+          "reason": "G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST"
+        },
+        {
+          "combo": "Chirinmon WD unsuspend + opponent [When Digivolving] lock",
+          "blocked_on": "EX13-032",
+          "reason": "BLOCKED (engine)"
+        },
+        {
+          "combo": "Chirinmon / Kentaurosmon-carrier top-stacked-card-to-security leave save",
+          "blocked_on": "EX13-032",
+          "reason": "G-TOP-STACKED-CARD-TO-SECURITY"
+        },
+        {
+          "combo": "Kyaromon -> Chirinmon off a security trash",
+          "blocked_on": "EX13-032",
+          "reason": "BLOCKED"
+        }
+      ],
+      "findings": [
+        "G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER (docs/RUST_ENGINE_GAPS.md): an OPT-spent trigger (Reppamon WA after its WD paid) is still listed in the TriggerOrder menu and resolves as a no-op — outcome-correct, but a dead RL choice. Low severity."
+      ],
+      "notes": "Real DSL cards in every role, no synthetic cards. Static harness not run: slice is not a deck_library.json archetype (same as the other EX13 slices).",
+      "static_tests": {
+        "coverage_gate": {
+          "passed": false,
+          "data": {
+            "implemented": 3,
+            "total": 5,
+            "blocked": [
+              "EX13-032",
+              "EX13-071"
+            ]
+          },
+          "detail": "slice coverage 3/5; EX13-032 BLOCKED (engine, partial), EX13-071 BLOCKED (hybrid, partial)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 4,
+            "blocked_combos": 7
+          },
+          "detail": "all 4 authored combos name only IMPLEMENTED cards; 7 Richard/Chirinmon combos blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "result": "PASS (7/7 interaction tests green); 7 combos blocked on EX13-032 / EX13-071"
+    },
+    "sukamon / beast (EX13)": {
+      "slice": "EX13 Sukamon / beast slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/sukamon-beast-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/sukamon_beast_ex13.rs",
+      "cards": [
+        "EX13-027",
+        "EX13-038",
+        "EX13-028",
+        "EX13-040"
+      ],
+      "combos_tested": [
+        "C1 Sukamon-on-Chuumon <Blocker> loses battle -> inherited prevention deletes Sukamon#2 -> its On Deletion plays Chuumon free -> Chuumon On Play re-tutors Sukamon",
+        "C2 lone Sukamon blocker: no replacement offered; On Deletion still replays Chuumon -> re-tutor (unhappy path)",
+        "C3 Chuumon On Play tutors Sukamon -> digivolve onto Chuumon -> stack inherits leave-prevention",
+        "C4 Salamon On Play tutors Leopardmon + Mikemon -> Mikemon digivolves, WD CannotUnsuspend lock",
+        "C5 Mikemon attack self-suspend -> suspends locked Birdramon; Salamon inherited +1000 (6000); lock survives opponent unsuspend phase"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Sukamon -> KingSukamon digivolution line",
+          "blocked_on": "EX13-031",
+          "reason": "BLOCKED (validated_cards_dsl.json)"
+        },
+        {
+          "combo": "Chuumon [When Moving] from breeding",
+          "blocked_on": null,
+          "reason": "not selected: single-card, covered by cards_behavioral/ex13/ex13_027.rs"
+        },
+        {
+          "combo": "Chuumon reveal hitting Etemon-named cards (EX13-035 KingEtemon)",
+          "blocked_on": null,
+          "reason": "not selected: outside slice; name filter covered per-card"
+        },
+        {
+          "combo": "Salamon Beast bucket finding Chuumon (cross-line)",
+          "blocked_on": null,
+          "reason": "not selected: low play value"
+        }
+      ],
+      "cross_set_partner_used": [
+        "ST1-02",
+        "ST1-04",
+        "ST1-05",
+        "EX13-043"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": true,
+          "data": {
+            "implemented": 4,
+            "total": 4,
+            "blocked": []
+          },
+          "detail": "slice coverage 4/4 IMPLEMENTED"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 5,
+            "blocked_combos": 1
+          },
+          "detail": "all 5 authored combos name only IMPLEMENTED cards; KingSukamon (EX13-031) line blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "notes": "No DCGO C# for EX13-027/028/038/040; printed text (official Bandai DB bundles) + general_rule.pdf govern. Real DSL cards in every role; no synthetic cards.",
+      "result": "PASS (5/5 interaction tests green); 1 combo blocked on EX13-031"
+    },
+    "royal-knights-assembly (EX13)": {
+      "slice": "EX13 Examon / holy warrior (Royal Knights Assembly) slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/royal-knights-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/royal_knights_ex13.rs",
+      "cards": [
+        "EX13-001",
+        "EX13-020",
+        "EX13-014",
+        "EX13-015",
+        "EX13-023",
+        "EX13-036",
+        "EX13-037",
+        "EX13-043",
+        "EX13-060",
+        "EX13-061",
+        "EX13-062",
+        "EX13-064",
+        "EX13-016",
+        "EX13-045",
+        "EX13-077"
+      ],
+      "combos_tested": [
+        "C1 Takato -> Gigimon inherited -> Gallantmon for 1 -> WD trashes their top security",
+        "C2 Gallantmon security trash -> Dynasmon -12000 + Recovery (+ unhappy: Gallantmon deletes instead, Dynasmon dormant)",
+        "C3 Gankoomon played under Jesmon -> one OPT deletion + Atho + Hinukamuy tokens",
+        "C4 Leopardmon suspend-first -> Craniamon at 7 (+ ordering: play-first costs 8 and passes the turn)",
+        "C5 Craniamon attack-suspend wipe -> printed + inherited Magnamon wake Craniamon (+3000) and Magnamon",
+        "C6 Leopardmon + Blue Lv.6 DNA -> Examon (+10000 team, forced attack, battle) -> Magnamon wakes Examon"
+      ],
+      "results": {
+        "passed": 8,
+        "failed": 0
+      },
+      "combos_dropped": [
+        {
+          "combo": "UlforceVeedramon CS line / Magnamon wake",
+          "blocked_on": "EX13-023",
+          "reason": "BLOCKED engine gap (no YAML)"
+        },
+        {
+          "combo": "Omnimon DNA/Assembly + leave-replacement",
+          "blocked_on": "EX13-016",
+          "reason": "BLOCKED hybrid gap (no YAML)"
+        },
+        {
+          "combo": "Omnimon -> Omnimon: Merciful Mode",
+          "blocked_on": "EX13-016,EX13-077",
+          "reason": "BLOCKED (no YAML)"
+        },
+        {
+          "combo": "Alphamon [Chronicle] engine",
+          "blocked_on": null,
+          "reason": "not selected: no in-slice [Chronicle] partner"
+        },
+        {
+          "combo": "LordKnightmon + Knightmon recursion",
+          "blocked_on": null,
+          "reason": "not selected: EX13-058 has no verdict (unknown != implemented)"
+        },
+        {
+          "combo": "Kentaurosmon most-security trash -> Dynasmon",
+          "blocked_on": null,
+          "reason": "not selected: redundant with C2"
+        },
+        {
+          "combo": "Gankoomon/Jesmon white-suspend free [Huckmon] Option",
+          "blocked_on": null,
+          "reason": "not selected: needs a real implemented [Huckmon]-text Option"
+        }
+      ],
+      "cross_set_partner_used": [
+        "EX13-068",
+        "ST1-02",
+        "ST1-05",
+        "ST1-08",
+        "ST1-10",
+        "ST2-02",
+        "ST2-10",
+        "ST4-09"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "static_tests": {
+        "note": "harness resolved the pre-EX13 'Royal Knights' deck-library pool; run with --no-write",
+        "deck_legality": {
+          "passed": true
+        },
+        "smoke_games": {
+          "passed": true,
+          "detail": "3/3 smoke games completed cleanly"
+        },
+        "combo_presence": {
+          "passed": false,
+          "detail": "6/8 combos fully implemented; 2 blocked (EX13-023; EX13-016+EX13-077)"
+        },
+        "coverage_gate": {
+          "passed": false,
+          "detail": "slice coverage 12/15 (EX13-062 PARTIAL counted implemented); EX13-016/-023/-077 BLOCKED; legacy RK pool 76/89"
+        }
+      }
+    },
+    "guilmon / reptile (EX13)": {
+      "slice": "EX13 Guilmon / reptile slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/guilmon-reptile-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/guilmon_reptile_ex13.rs",
+      "cards": [
+        "EX13-007",
+        "EX13-048",
+        "EX13-068"
+      ],
+      "combos_tested": [
+        "C1 Takato reload via real turn flow: SoT memory 1->3, SoMP return-to-bottom -> free Takato from hand -> (no Digimon) free EX4-006 Guilmon from trash",
+        "C2 Takato refresh plays a red Tamer -> EX13-001 Gigimon inherited -> Growlmon (EX3-057) digivolve cost 2-2=0 -> When Digivolving deletes <=3000 DP; revival branch skipped",
+        "C3 Kotemon reveal tutors real LordKnightmon (text bucket) + Knightmon (name bucket), rest to bottom",
+        "C4 Kotemon inherited shield: sacrifice other Knightmon -> its [On Deletion] plays Kotemon #2 free -> Kotemon #2 [On Play] tutors LordKnightmon",
+        "C5 Lone Knightmon (no other Knightmon-text ally): no shield offer, its [On Deletion] still replays Kotemon"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Guilmon [On Play]/[When Moving] trash 1 -> return Takato (red Tamer) / Gallantmon from trash; inherited +2000 DP-deletion max feeding Growlmon",
+          "blocked_on": "EX13-007",
+          "reason": "BLOCKED engine gap G-ENGINE-DP-DELETION-MAX-MODIFIER (no YAML; validated_cards_dsl.json)"
+        },
+        {
+          "combo": "Takato [Security] self-play",
+          "blocked_on": null,
+          "reason": "not selected: single-card, covered by per-card ex13_068 tests"
+        },
+        {
+          "combo": "Takato SoMP decline skips the 'after' revival (Q&A)",
+          "blocked_on": null,
+          "reason": "not selected: covered by per-card ex13_068 tests"
+        }
+      ],
+      "cross_set_partner_used": [
+        "EX13-001",
+        "EX4-006",
+        "EX3-057",
+        "EX13-058",
+        "EX13-064",
+        "ST1-02",
+        "ST1-04"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": false,
+          "data": {
+            "implemented": 2,
+            "total": 3,
+            "blocked": [
+              "EX13-007"
+            ]
+          },
+          "detail": "slice coverage 2/3; EX13-007 BLOCKED (engine gap)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 5,
+            "blocked_combos": 1
+          },
+          "detail": "all 5 authored combos name only IMPLEMENTED cards; 1 EX13-007 combo blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype (archetype-static-tests: 'Guilmon' not in deck_library.json)"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "result": "PASS (5/5 interaction tests green; no engine findings)"
+    },
+    "chronicle (EX13)": {
+      "slice": "EX13 Chronicle slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/chronicle-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/chronicle_ex13.rs",
+      "cards": [
+        "EX13-006",
+        "EX13-049",
+        "EX13-055",
+        "EX13-057",
+        "EX13-072"
+      ],
+      "combos_tested": [
+        "C1 Dorimon in breeding -> Dorumon for 0 -> move: When Moving reveal tutors Raptordramon (PASS)",
+        "C2 Raptordramon WD -3000 + Dorumon inherited WA -2000 delete a 5000 DP Digimon (PASS)",
+        "C3 Raptordramon WA climbs into Grademon from trash; Grademon WD during-attack rider (Reboot/Blocker/immunity/+5000), inherited Barrier kept (PASS) + no-Chronicle-card unhappy path (PASS)",
+        "C4 Kota start-of-main trashes Grademon (Draw 1, +1 memory) -> Raptordramon WA reclaims it from trash (PASS)",
+        "C5 Grademon End of Attack climbs into EX13-060 Alphamon ([Grademon] route 4); Alphamon WD -8000 deletes Birdramon (PASS)",
+        "C6 Grademon inherited under Alphamon shields a Chronicle ally (Dorumon) by trashing top security; vanilla ally not covered (PASS)",
+        "C7 Dorimon inherited end-of-turn pays 1 and unsuspends the Raptordramon that attacked (PASS)",
+        "C8 one Raptordramon attack: Kota option use at -1 + Raptordramon climb both resolve (FAIL -> ignored; G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Kota using BT9-109 [X Antibody] / BT20-095 / P-204 Chronicle Options with their printed effects",
+          "blocked_on": "BT9-109, BT20-095, P-204",
+          "reason": "cards unimplemented (no YAML); C8 uses a synthetic effectless Chronicle Option instead"
+        },
+        {
+          "combo": "Grademon End of Attack into BT20-056 Alphamon",
+          "blocked_on": "BT20-056",
+          "reason": "PARTIAL in validated_cards_dsl.json (WD breeding-digivolve clause missing); EX13-060 used instead"
+        }
+      ],
+      "cross_set_partner_used": [
+        "ST1-02",
+        "ST1-04",
+        "ST1-05",
+        "EX13-060"
+      ],
+      "cross_set_pulled": [],
+      "findings": [
+        {
+          "id": "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "test": "chronicle_ex13::c8_kota_option_use_and_raptordramon_climb_both_resolve_from_one_attack",
+          "sources": "DCGO Script/AttackProcess.cs ~L197; general_rule.pdf 11-2-1/11-1-4; printed EX13-072"
+        }
+      ],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": true,
+          "data": {
+            "implemented": 5,
+            "total": 5,
+            "blocked": []
+          },
+          "detail": "slice coverage 5/5 IMPLEMENTED"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 8,
+            "blocked_combos": 2
+          },
+          "detail": "all 8 authored combos name only IMPLEMENTED cards (plus one synthetic Option role in C8)"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "notes": "No DCGO C# for the five slice cards; printed text (official Bandai DB bundles) + general_rule.pdf govern, DCGO BT20_053.cs as sibling for the Grademon rider. Real DSL cards in every role except C8's Chronicle Option (no implemented real card).",
+      "result": "8/9 interaction tests green; 1 ignored reproducer for an engine gap"
+    },
+    "puppet (sistermon awakened duals) (EX13)": {
+      "slice": "EX13 Puppet (Sistermon Awakened DUALs) slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/puppet-sistermon-awakened-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/puppet_sistermon_ex13.rs",
+      "cards": [
+        "EX13-065",
+        "EX13-066",
+        "EX13-035"
+      ],
+      "combos_tested": [
+        "C1 Noir Option free-plays BT6-082 from trash (Draw 1) -> De-Digivolve 2 strips opp Lv.5/4 -> Arts digivolve onto BT6-082 (Huckmon-text Lv.3) -> Noir WD deletes the now play cost 3 Digimon (PASS)",
+        "C1' declined free play -> De-Digivolve 1 only -> Arts onto BT6-084 -> WD has no play cost <=4 target (PASS)",
+        "C2 Noir digivolves onto BT23-077 for 1 -> WD delete -> opp-effect deletion -> Decode plays BT23-077 -> its On Play deletes a second opp Digimon; cost-5 survives (PASS)",
+        "C3 KingEtemon WD (on ST3-08, cost 5) plays 2 Sukamon from trash (6) -> aura: opp -3000 DP + Security A. -1 (PASS)",
+        "C3' KingEtemon plays Chuumon + Sukamon -> Chuumon On Play tutors after KingEtemon's effect; aura stays off at 2 counters (PASS)",
+        "C4 return-10 -> max 12 -> ChuuChuumon (4) + Sukamon (3) both land (PASS)",
+        "C4' decline return -> max 6 -> Sukamon excluded after ChuuChuumon (PASS)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Sistermon Blanc (Awakened) Option -> free play + -3000 DP per own Digimon",
+          "blocked_on": "EX13-065",
+          "reason": "BLOCKED (validated_cards_dsl.json; G-NESTED-PARKED-REPLACEMENT)"
+        },
+        {
+          "combo": "Sistermon Blanc (Awakened) <Guard> + <Decode> recursion",
+          "blocked_on": "EX13-065",
+          "reason": "BLOCKED (G-NESTED-PARKED-REPLACEMENT is exactly this path)"
+        },
+        {
+          "combo": "Sistermon Blanc (Awakened) Lv.3 -> Noir (Huckmon text, cost 3) / Arts onto Blanc (Awakened)",
+          "blocked_on": "EX13-065",
+          "reason": "BLOCKED"
+        },
+        {
+          "combo": "BT20-084 [Trash] free-digivolve onto Noir (also treated as Sistermon Ciel (Awakened))",
+          "blocked_on": null,
+          "reason": "not selected: name-reference semantics ambiguous without DCGO; low value"
+        },
+        {
+          "combo": "KingEtemon aura counting opponent Sukamon",
+          "blocked_on": null,
+          "reason": "not selected: covered per-card (ex13_035_aura_counts_digimon_on_both_fields)"
+        }
+      ],
+      "cross_set_partner_used": [
+        "BT6-082",
+        "BT6-084",
+        "BT23-077",
+        "EX10-039",
+        "EX13-027",
+        "EX13-028",
+        "ST3-08",
+        "ST1-02",
+        "ST1-04",
+        "ST1-05",
+        "ST1-07",
+        "ST1-08"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": false,
+          "data": {
+            "implemented": 2,
+            "total": 3,
+            "blocked": [
+              "EX13-065"
+            ]
+          },
+          "detail": "slice coverage 2/3 IMPLEMENTED; EX13-065 BLOCKED (G-NESTED-PARKED-REPLACEMENT)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 7,
+            "blocked_combos": 3
+          },
+          "detail": "all 7 authored combos name only IMPLEMENTED cards; 3 EX13-065 combos blocked, not authored"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "notes": "No DCGO C# for EX13-035/065/066 (b9a0638cd); official Bandai DB bundles + general_rule.pdf govern. Real DSL cards in every role, no synthetic cards. Printed text copied onto DSL card data so Noir's 'Lv.3 w/[Huckmon] in text' route sees BT6-082's text. 7/7 PASS."
+    },
+    "witchelny (EX13)": {
+      "slice": "EX13 Witchelny slice (author-set)",
+      "date": "2026-10-01",
+      "model_doc": "qa/archetype-qa/witchelny-ex13-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/witchelny_ex13.rs",
+      "cards": [
+        "EX13-025",
+        "EX13-029",
+        "EX13-033"
+      ],
+      "combos_tested": [
+        "C1 Candlemon (Rule Witchelny) unlocks cost-2 FlameWizardmon; WD trash -> -4000 + delete <=4000 at 3 security (PASS)",
+        "C1b non-Witchelny base pays printed cost 3 (PASS)",
+        "C2 FlameWizardmon WD cost triggers Mistymon observer: -6000 + delete -> two removals from one digivolve (PASS)",
+        "C3 Mistymon WD places Witchelny card bottom, pays top, attacks; payment fires own observer at 3 security (PASS)",
+        "C4 Candlemon + FlameWizardmon inherited saves (distinct OPTs) protect Mistymon; first save's trash feeds Mistymon delete; third removal goes through (PASS)",
+        "C5 Candlemon start-of-main trash/draw/memory + Witchelny recycle placement; trash fires Mistymon observer (PASS)",
+        "C6 DemiMeramon WA climb into FlameWizardmon at -1, trash, derived FW WD delete at 3 security (FAIL -> ignored; G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY)",
+        "C7 Dynasmon WA trash -> Mistymon inherited unsuspends Dynasmon (PASS)"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "FlameWizardmon Armor Purge interplay with inherited save",
+          "blocked_on": null,
+          "reason": "not selected (per-card coverage); cap"
+        },
+        {
+          "combo": "Mistymon Barrier in battle",
+          "blocked_on": null,
+          "reason": "not selected (per-card coverage); cap"
+        },
+        {
+          "combo": "Dynasmon Assembly -5 from three Witchelny cards",
+          "blocked_on": null,
+          "reason": "not selected; covered by royal_knights_ex13.rs"
+        }
+      ],
+      "cross_set_partner_used": [
+        "EX13-004",
+        "EX13-037",
+        "ST3-02",
+        "ST3-03",
+        "ST3-06",
+        "ST3-10"
+      ],
+      "cross_set_pulled": [],
+      "findings": [
+        {
+          "id": "G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "test": "witchelny_ex13::c6_demimeramon_attack_climbs_into_flamewizardmon_for_1_and_chains_its_wd",
+          "sources": "general_rule.pdf 15-8-3-2; DCGO Script/CardEffectCommons.cs DigivolveIntoHandOrTrashCard + EX13/Yellow/EX13_004.cs successProcess"
+        }
+      ],
+      "static_tests": {
+        "coverage_gate": {
+          "passed": true,
+          "data": {
+            "implemented": 3,
+            "total": 3,
+            "blocked": []
+          },
+          "detail": "slice coverage 3/3 IMPLEMENTED (partners EX13-004/EX13-037 IMPLEMENTED)"
+        },
+        "combo_presence": {
+          "passed": true,
+          "data": {
+            "combos_total": 8,
+            "blocked_combos": 0
+          },
+          "detail": "all authored combos name only IMPLEMENTED real cards; no synthetic cards"
+        },
+        "deck_legality": {
+          "passed": null,
+          "detail": "not run: slice is not a deck_library.json archetype"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not run: no decklist for the slice in deck_library.json"
+        }
+      },
+      "notes": "No DCGO C# for the three slice cards; printed text (official Bandai DB bundles) governs; inherited save mirrors DCGO BT18/Yellow/BT18_030.cs. 7 pass, 1 ignored reproducer."
     }
   },
-  "last_updated": "2026-06-14",
+  "last_updated": "2026-10-01",
   "version": 1
 }
