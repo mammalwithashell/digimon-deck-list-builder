@@ -1222,6 +1222,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 ));
             }
         };
+        // A step is a ONE-key map. A second key (e.g. a step arg mis-indented
+        // to sit beside the verb: `- select_hand: {..}\n  optional: true`) used
+        // to be silently ignored; make it a hard error.
+        if let Some(extra) = map.next_key::<String>()? {
+            return Err(de::Error::custom(format!(
+                "step `{key}` has an unexpected sibling key `{extra}` — a step must be a \
+                 one-key map `{{verb: args}}` (is an arg mis-indented?)"
+            )));
+        }
         Ok(step)
     }
 }
@@ -2154,7 +2163,7 @@ pub struct PlaceOnSecurityArgs {
 /// struct variants are plain maps `{ card: … }` / `{ permanent: … }` that work
 /// on both the streaming and from_value paths; the self markers are strings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum SecuritySource {
     /// A bound card from hand or trash (`{ card: <binding> }`); the binding's
     /// own `zone` selects hand vs trash, exactly as the former hand-only
@@ -2597,7 +2606,7 @@ pub struct UseOptionBoundArgs {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum CostDelta {
     /// Cost REDUCTION subtracted from the printed play cost (clamped at 0).
     /// `reduce` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare
@@ -3573,7 +3582,7 @@ pub struct SelectCountCappedArgs {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum CountBound {
     Literal(u8),
     Formula {
@@ -3762,7 +3771,7 @@ pub enum LinkCardsTo {
 /// N }`, which work for both the streaming YAML deserializer and the
 /// `serde_yml::from_value(Value::Mapping)` path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum LinkCardsCount {
     Exactly { exactly: u8 },
     UpTo { up_to: u8 },

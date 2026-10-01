@@ -8,7 +8,7 @@ use crate::common::PlayerRef;
 use crate::predicate::{PredicateSpec, Zone};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum FormulaSpec {
     Literal(i32),
     BasePerDelta {
@@ -200,7 +200,7 @@ pub struct CardCountInZoneSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum PerSelector {
     MaterialCount,
     StackSize,

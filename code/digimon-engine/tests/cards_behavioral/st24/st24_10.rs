@@ -466,3 +466,98 @@ fn st24_10_inherited_leave_replacement_prevents_leave() {
         }
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 4 — inherited leave-prevention NAME / TRAIT gate
+//
+// "When this Digimon with [Rosemon] in its name or the [DATA SQUAD] trait
+// would leave …" — DCGO ST24_10.cs Inherited CanUseCondition:
+// `TopCard.ContainsCardName("Rosemon") || TopCard.EqualsTraits("DATA SQUAD")`.
+// Regression guard: the YAML used to spell the name leaf
+// `source_permanent_name_contains` (not a DSL key). It was silently dropped,
+// turning that `any_of` branch into an always-true empty predicate, so the
+// save fired for ANY carrier.
+// ════════════════════════════════════════════════════════════════════════════
+
+fn gate_top(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(6);
+    c.dp = Some(11000);
+    c.play_cost = 13;
+    c.traits = vec!["Beast".to_string()];
+    c
+}
+
+/// `top_id` sits on top of Lilamon (so only the INHERITED clause applies); a
+/// Tamer holds one face-down source to pay the cost. Deletes the carrier and
+/// drives every prompt (accepting). Returns
+/// `(replacement_prompt_offered, carrier_still_on_field)`.
+fn gate_delete_carrier(top_id: &str) -> (bool, bool) {
+    let mut runner = base_builder()
+        .add_card(gate_top("PLAIN-TOP", "Plainmon"))
+        .add_card(gate_top("NAME-TOP", "Rosemon Burst Mode X"))
+        .start();
+    runner.set_first_player(0);
+    let carrier = runner.place_stack(0, &[CARD_ID, top_id]);
+    let t = runner.place_stack(0, &["FILLER", "TAMER"]);
+    runner.game.players[0].battle_area[t.index as usize].card_sources[0].face_down = true;
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+
+    let mut guard = 0;
+    let mut saw_replacement = false;
+    while runner.pending_selection().is_some() {
+        guard += 1;
+        assert!(guard < 32);
+        if matches!(
+            runner.pending_selection().unwrap().kind,
+            SelectionKind::Replacement
+        ) {
+            saw_replacement = true;
+        }
+        let actions: Vec<u16> = runner
+            .pending_selection()
+            .unwrap()
+            .valid_action_ids
+            .iter()
+            .copied()
+            .collect();
+        if let Some(a) = actions.iter().copied().find(|a| *a != PASS) {
+            if runner.execute_action(0, a).is_ok() {
+                continue;
+            }
+        }
+        let _ = runner.execute_action(0, PASS);
+    }
+    let _ = runner.auto_resolve();
+    let stayed = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == top_id);
+    (saw_replacement, stayed)
+}
+
+/// NEGATIVE: a carrier with neither [Rosemon] in its name nor the
+/// [DATA SQUAD] trait gets no inherited save — it simply leaves.
+#[test]
+fn st24_10_inherited_save_not_offered_without_name_or_trait() {
+    let (offered, stayed) = gate_delete_carrier("PLAIN-TOP");
+    assert!(
+        !offered,
+        "no leave-prevention prompt for a non-[Rosemon], non-[DATA SQUAD] carrier"
+    );
+    assert!(!stayed, "the ungated carrier leaves the battle area");
+}
+
+/// POSITIVE (name branch): a carrier with [Rosemon] in its name but WITHOUT
+/// the [DATA SQUAD] trait is still protected.
+#[test]
+fn st24_10_inherited_save_offered_for_name_match_without_trait() {
+    let (offered, stayed) = gate_delete_carrier("NAME-TOP");
+    assert!(offered, "a [Rosemon]-named carrier is offered the inherited save");
+    assert!(stayed, "accepting the save keeps the [Rosemon]-named carrier");
+}

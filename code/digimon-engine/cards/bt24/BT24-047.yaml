@@ -10,7 +10,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, color: green }
+    from: { level_eq: 3, color_is: green }
     cost: 2
 
 effects:

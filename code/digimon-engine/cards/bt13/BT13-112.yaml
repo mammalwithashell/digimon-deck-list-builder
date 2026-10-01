@@ -20,7 +20,7 @@ effects:
       any_of:
         - any_permanent:
             of: opponent
-            predicate: { kind: digimon }
+            kind: digimon
         - count_gte:
             filter:
               owner: you

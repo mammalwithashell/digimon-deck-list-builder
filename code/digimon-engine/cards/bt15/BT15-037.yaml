@@ -57,7 +57,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, color: yellow }
+    from: { level_eq: 3, color_is: yellow }
     cost: 2
 
 effects:

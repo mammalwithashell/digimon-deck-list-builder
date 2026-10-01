@@ -775,3 +775,64 @@ fn bt13_015_own_and_inherited_deletion_clauses_are_structurally_distinct() {
         "own and inherited deletion clauses must be distinct compiled entries (separate OPT identity)"
     );
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Red Lv.4" circle
+// used to say `from: { level_eq: 4, color: red }`. `color` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-4 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn bt13_015_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(4);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve BT13-015 (from hand) onto a level-4 base of `color`.
+fn bt13_015_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT13-015")
+        .expect("BT13-015 in embedded DSL pack")
+        .add_card(bt13_015_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["BT13-015"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT13-015")
+        .expect("BT13-015 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn bt13_015_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !bt13_015_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-4 base must NOT digivolve into BT13-015 via the Red Lv.4 alt path"
+    );
+}
+
+#[test]
+fn bt13_015_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        bt13_015_color_gate_try(digimon_engine::enums::CardColor::Red),
+        "a red level-4 base digivolves into BT13-015 via the Red Lv.4 alt path"
+    );
+}

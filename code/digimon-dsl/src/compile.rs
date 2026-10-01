@@ -937,9 +937,8 @@ fn compile_predicate(
         card_id,
         errors,
     );
-    // Unknown fields in `extra` are silently dropped here — they are absorbed
-    // by serde's flatten+unknown-fields mechanism and flagged by the semantic
-    // validator (Task 12), not by the compiler.
+    // `p.extra` is always empty here: unknown predicate keys are rejected at
+    // deserialize time by `predicate::deny_unknown_predicate_keys`.
 
     CompiledPredicate {
         kind: p.kind.map(compile_card_kind),
@@ -3927,19 +3926,43 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
         },
-        S::SelectCountCappedMulti(a) => CompiledStep::SelectCountCappedMulti {
-            of: compile_player_ref(a.of),
-            zone: compile_zone(a.zone),
-            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
-            min: a.min,
-            clamp_to_available: a.clamp_to_available,
-            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
-            bind_as: a.bind_as.clone(),
-            prompt: a.prompt.clone(),
-            prompt_key: a.prompt_key.clone(),
-            optional_zero: a.optional_zero,
-            distinct_by: a.distinct_by.map(compile_distinct_by),
-        },
+        S::SelectCountCappedMulti(a) => {
+            // The runtime (`count_capped_candidate_count`) only scans hand,
+            // trash and the battle area; any other zone used to install
+            // NOTHING and silently skip the rest of the slice (BT18-102 had
+            // `zone: material`). Use `select_own_sources` / `select_materials`
+            // for digivolution cards.
+            if !matches!(
+                a.zone,
+                crate::predicate::Zone::Hand
+                    | crate::predicate::Zone::Trash
+                    | crate::predicate::Zone::BattleArea
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zone"),
+                    message: format!(
+                        "select_count_capped_multi supports zone hand, trash or battle_area \
+                         (got {:?}); use select_own_sources / select_materials for \
+                         digivolution cards",
+                        a.zone
+                    ),
+                });
+            }
+            CompiledStep::SelectCountCappedMulti {
+                of: compile_player_ref(a.of),
+                zone: compile_zone(a.zone),
+                max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
+                min: a.min,
+                clamp_to_available: a.clamp_to_available,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                bind_as: a.bind_as.clone(),
+                prompt: a.prompt.clone(),
+                prompt_key: a.prompt_key.clone(),
+                optional_zero: a.optional_zero,
+                distinct_by: a.distinct_by.map(compile_distinct_by),
+            }
+        }
         S::SelectEffectChoice(a) => CompiledStep::SelectEffectChoice {
             labels: a.labels.clone(),
             bind_as: a.bind_as.clone(),

@@ -201,3 +201,33 @@ fn bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and
         );
     }
 }
+
+/// W1 regression guard — the activation condition's "opponent has a Digimon"
+/// leg used to read `any_permanent: { of: opponent, predicate: { kind: digimon } }`.
+/// `predicate` is not a DSL key (ExistentialPredicate flattens its predicate),
+/// so it was silently dropped and ANY opponent permanent (e.g. a lone Tamer)
+/// satisfied it. DCGO BT13_112.cs CanActivateCondition requires an opponent
+/// battle-area DIGIMON (or a breeding Digimon with a Royal Knight source).
+#[test]
+fn bt13_112_does_not_activate_with_only_an_opponent_tamer_and_no_breeding_sources() {
+    let mut tamer = make_test_card("OPP-TAMER", "Opponent Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-112")
+        .expect("BT13-112 must load from embedded DSL pack")
+        .add_card(tamer)
+        .memory(0)
+        .start();
+    runner.place_on_field(1, "OPP-TAMER", None);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    assert_eq!(
+        runner.pending_kind(),
+        None,
+        "with only an opponent Tamer (no opponent Digimon) and no breeding Royal \
+         Knight sources, the [On Play] effect must not activate"
+    );
+}
