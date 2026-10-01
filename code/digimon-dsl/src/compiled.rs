@@ -281,6 +281,9 @@ pub enum CompiledDistinctBy {
     CardNumber,
     Level,
     Name,
+    /// Set-level "different colors" (bipartite card → color assignment).
+    /// See `alt_path::DistinctBy::Color`. G-ASSEMBLY-DISTINCT-BY-COLOR.
+    Color,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

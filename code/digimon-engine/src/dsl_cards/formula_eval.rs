@@ -1177,7 +1177,12 @@ fn distinct_colors_in_zone(
                 }) {
                     return None;
                 }
-                Some(perm.top_card().colors(ctx.card_data()).to_vec())
+                // Rules colors (synthesized identity: printed top card after
+                // `ChangeBaseCardColor` / `AddColor`) — DCGO
+                // `TopCard.CardColors`, which `ChangeCardColorClass` mutates.
+                // "your Digimon and Tamers' colors" counts a gained color
+                // (EX13-077 "gains all colors in its digivolution cards").
+                Some(perm.colors_for_rules(ctx.card_data(), &ctx.game.modifiers, handle))
             })
             .flatten()
             .collect(),

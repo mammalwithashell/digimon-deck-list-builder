@@ -38,7 +38,7 @@ iterated in a throw-away scratch test binary (deleted) and then registered in
 | EX13-056 | Giromon | IMPLEMENT | IMPLEMENTED | 10 | Collision, Blocker, Rule [Machine]; self-suspend OPT reveal-3 play Lv.4- black printed-Blocker, trash rest; inherited opp-turn OPT Lv.5- play from hand |
 | EX13-058 | Knightmon | IMPLEMENT | IMPLEMENTED | 10 | WA/OD free play-or-use [Knightmon]-text ≤4; opp-turn Reboot+Blocker aura for [Knightmon]-text Digimon; inherited OPT De-Digivolve on [Knightmon]-text play |
 | EX13-024 | Slayerdramon | IMPLEMENT | IMPLEMENTED | 13 | Raid, Blocker, Assembly -5, named special digivolve; OP/WD trash N opp sources (N = own sources, clamped) then optional fewest-source deck-bottom; face-up + inherited OPT replacements |
-| EX13-076 | Imperialdramon: Paladin Mode | — | BLOCKED (hybrid) | 0 | battle comparing digivolution-card counts (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) + Assembly w/different names (G-ASSEMBLY-NO-DISTINCT-BY) |
+| EX13-076 | Imperialdramon: Paladin Mode | — | BLOCKED (hybrid) | 0 | battle comparing digivolution-card counts (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT); Assembly w/different names RESOLVED 2026-10-01 |
 | EX13-070 | Davis Motomiya & Ken Ichijoji | IMPLEMENT | IMPLEMENTED | 11 | memory floor; EoT suspend-self → choose-one: digivolve (−1 per opp Digimon) / DNA into [Free] (printed DNA cost); security play |
 | EX13-073 | Tai Kamiya & Matt Ishida | IMPLEMENT | IMPLEMENTED | 13 | SoMP +1 with ADVENTURE Digimon; ally-played suspend-self draw 1 + trash 1 (own play triggers per Q&A); Lv.5+ ADVENTURE Rush/Blocker; security play |
 | EX13-075 | Mon | IMPLEMENT | IMPLEMENTED | 6 | memory floor; reveal 3 add [Huckmon]-text; security play |

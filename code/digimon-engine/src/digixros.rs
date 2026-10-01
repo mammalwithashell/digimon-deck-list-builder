@@ -77,6 +77,11 @@ pub enum DigiXrosDistinctBy {
     CardNumber,
     Level,
     Name,
+    /// "w/different colors": the slot's committed materials must admit an
+    /// injective material → printed-color assignment (set-level, see
+    /// `effect_context::selections::colors_assignable`).
+    /// G-ASSEMBLY-DISTINCT-BY-COLOR.
+    Color,
 }
 
 /// A declarative recipe slot in a pending DigiXros transaction.
@@ -259,6 +264,8 @@ pub struct MaterialIdentity {
     pub card_name: String,
     /// `CardData::level` (`distinct_by: level`); `None` for level-less cards.
     pub level: Option<u8>,
+    /// Printed colors as a bitmask (`distinct_by: color`).
+    pub color_mask: u8,
 }
 
 impl MaterialIdentity {
@@ -267,6 +274,7 @@ impl MaterialIdentity {
             card_number: card.card_id.clone(),
             card_name: card.card_name.clone(),
             level: card.level,
+            color_mask: crate::effect_context::selections::color_mask(&card.colors),
         }
     }
 
@@ -280,6 +288,8 @@ impl MaterialIdentity {
             // Two level-less cards never collide by level (there is nothing to
             // compare); DCGO's level dedup only fires on a concrete level match.
             DigiXrosDistinctBy::Level => self.level.is_some() && self.level == other.level,
+            // Set-level; never decided pairwise (see `slot_has_colliding_identity`).
+            DigiXrosDistinctBy::Color => false,
         }
     }
 }
@@ -457,12 +467,18 @@ impl DigiXrosTransaction {
         candidate: &MaterialIdentity,
         mode: DigiXrosDistinctBy,
     ) -> bool {
-        self.selected_materials
+        let committed = self
+            .selected_materials
             .iter()
             .chain(self.pre_attached_materials.iter())
             .filter(|m| m.recipe_slot == Some(slot_index))
-            .filter_map(|m| m.identity.as_ref())
-            .any(|committed| candidate.collides(committed, mode))
+            .filter_map(|m| m.identity.as_ref());
+        if mode == DigiXrosDistinctBy::Color {
+            let mut masks: Vec<u8> = committed.map(|m| m.color_mask).collect();
+            masks.push(candidate.color_mask);
+            return !crate::effect_context::selections::colors_assignable(&masks);
+        }
+        committed.into_iter().any(|c| candidate.collides(c, mode))
     }
 
     pub fn add_pre_attached_material(&mut self, material: DigiXrosSelectedMaterial) {
@@ -1103,6 +1119,7 @@ fn compiled_path_transaction(
                     CompiledDistinctBy::CardNumber => DigiXrosDistinctBy::CardNumber,
                     CompiledDistinctBy::Level => DigiXrosDistinctBy::Level,
                     CompiledDistinctBy::Name => DigiXrosDistinctBy::Name,
+                    CompiledDistinctBy::Color => DigiXrosDistinctBy::Color,
                 }),
                 allowed_zones: BTreeSet::new(),
                 cost_delta_per_material: material.cost_delta.unwrap_or(default_delta),

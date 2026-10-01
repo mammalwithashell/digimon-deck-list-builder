@@ -8407,7 +8407,10 @@ pins that the turn scan does not trash such a marker.
 - **Missing DSL vocabulary:** `select_materials { …, same_by: level }` (all picks share one key; first pick limited to keys with ≥max candidates).
 - **Lowers to engine API:** none yet — needs a SAME-key mode on the count-capped multi-pick; see `qa/archetype-qa/engine-gaps.md` §G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
 
-## Assembly `distinct_by: color`  [G-ASSEMBLY-DISTINCT-BY-COLOR] — hybrid, OPEN 2026-10-01
+## Assembly `distinct_by: color`  [G-ASSEMBLY-DISTINCT-BY-COLOR] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01:** `distinct_by: color` added to the DSL (`alt_path::DistinctBy::Color`, `CompiledDistinctBy::Color`), usable on Assembly / DigiXros materials and `select_count_capped_multi`. Lowers to `DistinctByMode::Color` — a bipartite card → colour matching (`DistinctByMode::admits`), see `qa/archetype-qa/engine-gaps.md` §G-ASSEMBLY-DISTINCT-BY-COLOR. Driver EX13-077 (IMPLEMENTED). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- distinct_by_color` (4), `…--test cards_behavioral -- "ex13::ex13_077"` (20).
+- *(original entry follows)*
 
 - **Card (BLOCKED):** EX13-077 Omnimon: Merciful Mode — "Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors".
 - **Missing DSL vocabulary:** `DistinctBy::Color` (`distinct_by: color`).
@@ -8422,5 +8425,5 @@ pins that the turn scan does not trash such a marker.
 
 - **Card (BLOCKED):** EX13-076 Imperialdramon: Paladin Mode — "...have this Digimon battle it. Compare the number of digivolution cards instead of DP in this battle."
 - **Missing DSL vocabulary:** `battle: { attacker: source, defender: <binding>, compare: source_count }` (default `compare: dp`).
-- **Lowers to engine API:** none yet — `battle` lowers to `Game::battle_digimon`, which only compares DP; see `qa/archetype-qa/engine-gaps.md` §G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT. The same card is also blocked on Assembly `distinct_by: name` (§G-ASSEMBLY-NO-DISTINCT-BY).
+- **Lowers to engine API:** none yet — `battle` lowers to `Game::battle_digimon`, which only compares DP; see `qa/archetype-qa/engine-gaps.md` §G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT. The same card's Assembly `distinct_by: name` half (§G-ASSEMBLY-NO-DISTINCT-BY) is RESOLVED 2026-10-01; only the battle comparator still blocks it.
 

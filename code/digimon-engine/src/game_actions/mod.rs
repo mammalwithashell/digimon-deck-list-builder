@@ -847,21 +847,51 @@ impl Game {
             })
             .collect();
 
-        // Per-trash-card distinctness key for each slot's element mode.
-        let slot_keys: Vec<Option<Vec<Option<String>>>> = slot_element
-            .iter()
-            .map(|&e| {
-                distincts.get(e).copied().flatten().map(|mode| {
+        // Per-element distinctness constraint over trash indices.
+        let element_distinct: Vec<AssemblyDistinct> = (0..elements.len())
+            .map(|e| match distincts.get(e).copied().flatten() {
+                None => AssemblyDistinct::None,
+                Some(digimon_dsl::compiled::CompiledDistinctBy::Color) => AssemblyDistinct::Colors(
+                    trash
+                        .iter()
+                        .map(|cs| {
+                            crate::effect_context::selections::color_mask(
+                                &self.card_data[cs.data_index].colors,
+                            )
+                        })
+                        .collect(),
+                ),
+                Some(mode) => AssemblyDistinct::Keys(
                     trash
                         .iter()
                         .map(|cs| assembly_distinct_key(mode, &self.card_data[cs.data_index]))
-                        .collect()
-                })
+                        .collect(),
+                ),
             })
             .collect();
+
+        // Cheap necessary condition for a `Color` element: its filter-passing
+        // cards must contain `count` cards w/different colors (the transversal
+        // matroid's rank). Rejects the common unaffordable case without the
+        // backtracking search below (mask hot path).
+        for (e, (_, count)) in elements.iter().enumerate() {
+            if let AssemblyDistinct::Colors(masks) = &element_distinct[e] {
+                let Some(first_slot) = slot_element.iter().position(|&se| se == e) else {
+                    continue;
+                };
+                let element_masks: Vec<u8> =
+                    match_table[first_slot].iter().map(|&t| masks[t]).collect();
+                if crate::effect_context::selections::max_color_matching(&element_masks)
+                    < usize::from(*count)
+                {
+                    return false;
+                }
+            }
+        }
+
         let mut used = vec![false; trash.len()];
         let mut chosen: Vec<Option<usize>> = vec![None; slots.len()];
-        assembly_assign_keyed(&match_table, &slot_element, &slot_keys, 0, &mut used, &mut chosen)
+        assembly_assign_keyed(&match_table, &slot_element, &element_distinct, 0, &mut used, &mut chosen)
     }
 
     pub(crate) fn commit_pending_would_play(
@@ -3538,17 +3568,38 @@ fn assembly_distinct_key(
         D::Name => Some(data.card_name.clone()),
         D::CardNumber => Some(data.card_id.clone()),
         D::Level => data.level.map(|l| l.to_string()),
+        // Set-level — handled by `AssemblyDistinct::Colors`, never keyed.
+        D::Color => None,
     }
+}
+
+/// An Assembly element's distinctness constraint, pre-resolved per trash index.
+#[cfg(feature = "dsl-yaml-loader")]
+enum AssemblyDistinct {
+    /// No constraint beyond handle-distinctness.
+    None,
+    /// Pairwise key equality (`name` / `card_number` / `level`); a `None` key
+    /// never collides.
+    Keys(Vec<Option<String>>),
+    /// "w/different colors": per trash index the printed-color bitmask; the
+    /// element's chosen cards must be perfectly color-assignable.
+    Colors(Vec<u8>),
 }
 
 /// `assembly_assign` with per-element distinctness: a slot whose element has
 /// a `distinct_by` key may not take a card whose key matches a card already
-/// chosen for ANOTHER slot of the same element. G-ASSEMBLY-NO-DISTINCT-BY.
+/// chosen for ANOTHER slot of the same element (G-ASSEMBLY-NO-DISTINCT-BY);
+/// a `Color` element's chosen cards must stay perfectly color-assignable
+/// (G-ASSEMBLY-DISTINCT-BY-COLOR).
+///
+/// Slots of one element are interchangeable (same filter, symmetric
+/// constraint), so a slot only takes trash indices ABOVE the previous
+/// same-element slot's pick — combinations, not permutations.
 #[cfg(feature = "dsl-yaml-loader")]
 fn assembly_assign_keyed(
     match_table: &[Vec<usize>],
     slot_element: &[usize],
-    slot_keys: &[Option<Vec<Option<String>>>],
+    element_distinct: &[AssemblyDistinct],
     slot: usize,
     used: &mut [bool],
     chosen: &mut [Option<usize>],
@@ -3556,24 +3607,36 @@ fn assembly_assign_keyed(
     if slot >= match_table.len() {
         return true;
     }
+    let element = slot_element[slot];
+    let same_element_prev: Vec<usize> = (0..slot)
+        .filter(|&prev| slot_element[prev] == element)
+        .filter_map(|prev| chosen[prev])
+        .collect();
+    let floor = same_element_prev.last().copied();
     for &t in &match_table[slot] {
-        if used[t] {
+        if used[t] || floor.is_some_and(|f| t <= f) {
             continue;
         }
-        if let Some(keys) = &slot_keys[slot] {
-            if let Some(key) = &keys[t] {
-                let collides = (0..slot).any(|prev| {
-                    slot_element[prev] == slot_element[slot]
-                        && chosen[prev].is_some_and(|c| keys[c].as_ref() == Some(key))
-                });
-                if collides {
+        match &element_distinct[element] {
+            AssemblyDistinct::None => {}
+            AssemblyDistinct::Keys(keys) => {
+                if let Some(key) = &keys[t] {
+                    if same_element_prev.iter().any(|&c| keys[c].as_ref() == Some(key)) {
+                        continue;
+                    }
+                }
+            }
+            AssemblyDistinct::Colors(masks) => {
+                let mut set: Vec<u8> = same_element_prev.iter().map(|&c| masks[c]).collect();
+                set.push(masks[t]);
+                if !crate::effect_context::selections::colors_assignable(&set) {
                     continue;
                 }
             }
         }
         used[t] = true;
         chosen[slot] = Some(t);
-        if assembly_assign_keyed(match_table, slot_element, slot_keys, slot + 1, used, chosen) {
+        if assembly_assign_keyed(match_table, slot_element, element_distinct, slot + 1, used, chosen) {
             used[t] = false;
             chosen[slot] = None;
             return true;
@@ -3731,6 +3794,7 @@ fn assembly_element_distinct_mode(
         D::CardNumber => DistinctByMode::CardNumber,
         D::Level => DistinctByMode::Level,
         D::Name => DistinctByMode::Name,
+        D::Color => DistinctByMode::Color,
     })
 }
 

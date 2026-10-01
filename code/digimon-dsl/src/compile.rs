@@ -363,6 +363,7 @@ fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
         S::CardNumber => CompiledDistinctBy::CardNumber,
         S::Level => CompiledDistinctBy::Level,
         S::Name => CompiledDistinctBy::Name,
+        S::Color => CompiledDistinctBy::Color,
     }
 }
 

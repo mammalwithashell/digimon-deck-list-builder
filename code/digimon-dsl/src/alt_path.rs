@@ -215,4 +215,10 @@ pub enum DistinctBy {
     CardNumber,
     Level,
     Name,
+    /// "w/different colors" — a SET-level constraint: the chosen cards must
+    /// admit an injective assignment card → one of its printed colors (a
+    /// multicolor card represents exactly one of its colors; a colorless card
+    /// can represent none). Bipartite matching, not pairwise inequality.
+    /// G-ASSEMBLY-DISTINCT-BY-COLOR (EX13-077 Omnimon: Merciful Mode).
+    Color,
 }

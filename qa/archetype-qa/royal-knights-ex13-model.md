@@ -25,7 +25,7 @@ printed text + `general_rule.pdf` govern.
 | EX13-064 | LordKnightmon | IMPLEMENTED | payoff | WD free ≤8 [Knightmon]-text from hand/trash; [Your Turn] Knightmon-text gain Alliance/Piercing; other Digimon/Tamer played → Rush+Collision attack |
 | EX13-016 | Omnimon | **BLOCKED** | payoff | same-level source-pair leave-replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION) |
 | EX13-045 | Examon | IMPLEMENTED | finisher | DNA Green Lv.6 + Blue Lv.6 cost 0; if DNA: attacks + all own +10000, then may battle; win → free ≤12 [Dracomon]/[Examon]-text card |
-| EX13-077 | Omnimon: Merciful Mode | **BLOCKED** | finisher | Assembly distinct-colour materials (G-ASSEMBLY-DISTINCT-BY-COLOR) |
+| EX13-077 | Omnimon: Merciful Mode | IMPLEMENTED (2026-10-01) | finisher | Assembly distinct-colour materials (G-ASSEMBLY-DISTINCT-BY-COLOR resolved) |
 
 ## Digivolution lines
 - Gigimon (egg) → … → red Lv.5 → **Gallantmon** (Red Lv.5 / 3; −2 via Gigimon's Tamer trigger → 1).

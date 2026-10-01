@@ -40,6 +40,7 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
         CompiledDistinctBy::CardNumber => DistinctByMode::CardNumber,
         CompiledDistinctBy::Level => DistinctByMode::Level,
         CompiledDistinctBy::Name => DistinctByMode::Name,
+        CompiledDistinctBy::Color => DistinctByMode::Color,
     })
 }
 
@@ -1417,16 +1418,9 @@ fn count_capped_rejects_distinct(
     candidate_data_index: usize,
 ) -> bool {
     let candidate = &game.card_data[candidate_data_index];
-    picked_data_indices.iter().any(|&picked_idx| {
-        let picked = &game.card_data[picked_idx];
-        match mode {
-            DistinctByMode::CardNumber => picked.card_id == candidate.card_id,
-            DistinctByMode::Level => {
-                matches!((picked.level, candidate.level), (Some(p), Some(c)) if p == c)
-            }
-            DistinctByMode::Name => picked.card_name == candidate.card_name,
-        }
-    })
+    let picked: Vec<&crate::card_data::CardData> =
+        picked_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+    !mode.admits(&picked, candidate)
 }
 
 fn park_non_dsl_count_capped_state(
@@ -1488,21 +1482,22 @@ fn run_non_dsl_count_capped_step(
         return;
     }
 
+    // EVERY pick so far (not just the latest): a set-level mode (`Color`)
+    // needs the whole accumulated set. Earlier picks are no longer in
+    // `candidate_actions`, so resolve each handle's data index directly.
+    // G-ASSEMBLY-DISTINCT-BY-COLOR.
     let picked_data_indices: Vec<usize> = state
         .accum
         .iter()
         .filter_map(|&picked| {
-            state
-                .candidate_actions
-                .iter()
-                .copied()
-                .find(|&candidate| {
-                    count_capped_handle_for_action(game, state.of_player, state.zone, candidate)
-                        == Some(picked)
-                })
-                .and_then(|candidate| {
-                    count_capped_data_index_for_action(game, state.of_player, state.zone, candidate)
-                })
+            let slice: &[crate::card_source::CardSource] = match state.zone {
+                CountCappedZone::Hand => &game.player(state.of_player).hand,
+                CountCappedZone::Trash => &game.player(state.of_player).trash,
+                CountCappedZone::Material(ph) => {
+                    crate::effect_context::selections::material_zone_slice(game, ph)?
+                }
+            };
+            slice.iter().find(|c| c.handle() == picked).map(|c| c.data_index)
         })
         .collect();
 
@@ -3307,7 +3302,7 @@ fn run_multipick_step(
     action_id: u16,
     is_pass: bool,
 ) {
-    use crate::effect_context::selections::{material_zone_slice, CountCappedZone, DistinctByMode};
+    use crate::effect_context::selections::{material_zone_slice, CountCappedZone};
     if is_pass {
         run_multipick_terminal(game, state);
         return;
@@ -3369,16 +3364,9 @@ fn run_multipick_step(
                     },
                 };
                 let cand_data = &game.card_data[cand_data_idx];
-                !accum_data_indices.iter().any(|&pdi| {
-                    let pd = &game.card_data[pdi];
-                    match mode {
-                        DistinctByMode::CardNumber => pd.card_id == cand_data.card_id,
-                        DistinctByMode::Level => {
-                            matches!((pd.level, cand_data.level), (Some(p), Some(c)) if p == c)
-                        }
-                        DistinctByMode::Name => pd.card_name == cand_data.card_name,
-                    }
-                })
+                let picked: Vec<&crate::card_data::CardData> =
+                    accum_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+                mode.admits(&picked, cand_data)
             })
             .collect()
     } else {
@@ -7067,6 +7055,8 @@ fn install_select_count_capped_multi(
         source_permanent,
         source_kind,
         player,
+
+        distinct_by,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
@@ -7118,8 +7108,10 @@ fn install_select_count_capped_multi(
 /// Re-derive the filter-passing zone indices for a card-based count_capped
 /// (Hand/Trash/Material), mirroring `select_count_capped_multi_min`'s install-time
 /// candidate scan with the `CompiledPredicate` on `PredicateSubject::Card`.
-/// Data-pure. `distinct_by` is NOT applied here (the executor applies it on
-/// re-park, matching the closure).
+/// Data-pure. Of `distinct_by` only the empty-set admissibility is applied
+/// here (a colorless card can never start a `Color` set — mirrors the closure's
+/// install-time scan); the pairwise exclusions are applied by the executor on
+/// re-park, matching the closure.
 #[allow(clippy::too_many_arguments)]
 fn count_capped_card_candidate_indices(
     game: &crate::game::Game,
@@ -7131,6 +7123,7 @@ fn count_capped_card_candidate_indices(
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
     player: PlayerId,
+    distinct_by: Option<DistinctByMode>,
 ) -> Vec<usize> {
     use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
     let zone_len = match zone {
@@ -7166,12 +7159,18 @@ fn count_capped_card_candidate_indices(
     );
     let mut out = Vec::new();
     for (i, h) in handles.into_iter().enumerate() {
-        if eval_predicate_with_bindings(
-            filter,
-            &read,
-            PredicateSubject::Card(h),
-            Some(filter_bindings),
-        ) {
+        let admissible = distinct_by.is_none_or(|mode| {
+            game.card_data_for_handle(h)
+                .is_some_and(|data| mode.admits(&[], data))
+        });
+        if admissible
+            && eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Card(h),
+                Some(filter_bindings),
+            )
+        {
             out.push(i);
         }
     }
@@ -7983,6 +7982,8 @@ fn install_select_materials(
         source_permanent,
         source_kind,
         player,
+
+        uniqueness,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {

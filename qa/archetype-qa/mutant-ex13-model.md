@@ -16,7 +16,7 @@ Per-card status (`qa/qa-reports/validated_cards_dsl.json`):
 | EX13-054 Nanimon | IMPLEMENTED |
 | EX13-059 BigMamemon | IMPLEMENTED |
 | EX13-031 KingSukamon | **BLOCKED** (dsl — base name/colour/DP rewrite payload) |
-| EX13-063 PrinceMamemon | **BLOCKED** (engine — `G-ASSEMBLY-NO-DISTINCT-BY`) |
+| EX13-063 PrinceMamemon | IMPLEMENTED (2026-10-01; `G-ASSEMBLY-NO-DISTINCT-BY` resolved) |
 
 ## Card pool & roles
 

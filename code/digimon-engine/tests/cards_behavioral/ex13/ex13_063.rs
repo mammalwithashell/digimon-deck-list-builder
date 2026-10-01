@@ -295,7 +295,6 @@ fn ex13_063_assembly_three_distinct_mamemon_text_cards_for_7() {
 }
 
 #[test]
-#[ignore = "G-ASSEMBLY-NO-DISTINCT-BY (docs/RUST_ENGINE_GAPS.md): resolve_eligible_assembly / assembly_can_fulfill / install_assembly_element drop the material's `distinct_by`, so same-name cards satisfy \"w/different names\""]
 fn ex13_063_assembly_rejects_duplicate_names_and_level_6() {
     // Two [Mamemon]-named copies + a Lv.6: only 2 distinct eligible names → no
     // Assembly; full cost 11 at memory 0 overdraws → the play is masked out.
@@ -313,7 +312,6 @@ fn ex13_063_assembly_rejects_duplicate_names_and_level_6() {
 }
 
 #[test]
-#[ignore = "G-ASSEMBLY-NO-DISTINCT-BY (docs/RUST_ENGINE_GAPS.md)"]
 fn ex13_063_assembly_second_pick_excludes_an_already_chosen_name() {
     let mut runner = builder()
         .hand(0, &[CARD_ID])

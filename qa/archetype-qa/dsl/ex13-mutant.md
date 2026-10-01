@@ -28,7 +28,7 @@ the references. Per-card JSONs were added from `data/cards.json` +
 | EX13-054 | Nanimon | IMPLEMENT | IMPLEMENTED | self-reviewed | 12/12 | [Security] play after battle (its [On Play] fires); [OP][OD] CannotAttackPlayer until the opponent's turn ends; inherited +1000 DP; Rule [Mutant] trait |
 | EX13-031 | KingSukamon | IMPLEMENT | BLOCKED (dsl) | — | 0 | timed ChangeBaseCardName / ChangeBaseCardColor need an `add_modifier` payload (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD); engine has the modifiers |
 | EX13-059 | BigMamemon | IMPLEMENT | IMPLEMENTED | self-reviewed | 19/19 | [WD][OD] reveal 3 → free cost<=7 [Mamemon]-name/[Mutant] Digimon; [EoYT][OPT] optional "by deleting a [Mamemon]" → delete 1 lowest play cost (ties = choice); inherited → delete ALL lowest |
-| EX13-063 | PrinceMamemon | IMPLEMENT | BLOCKED (engine) | self-reviewed | 17/19 (2 ignored) | G-ASSEMBLY-NO-DISTINCT-BY: plain Assembly accepts same-name copies for "w/different names". All other clauses green (reveal/free play cost<=10, [On Deletion] delete highest, <Blocker>+<Guard> aura incl. a granted-Guard save) |
+| EX13-063 | PrinceMamemon | IMPLEMENT | IMPLEMENTED (2026-10-01 re-run) | self-reviewed | 19/19 | G-ASSEMBLY-NO-DISTINCT-BY RESOLVED: pins un-ignored and green. All other clauses green (reveal/free play cost<=10, [On Deletion] delete highest, <Blocker>+<Guard> aura incl. a granted-Guard save) |
 
 ## Engine-Gap Blocked Cards
 ### EX13-063 PrinceMamemon

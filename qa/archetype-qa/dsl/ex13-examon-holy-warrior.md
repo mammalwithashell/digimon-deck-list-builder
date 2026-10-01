@@ -32,7 +32,7 @@ Pipeline: batch-implement-cards-rust-dsl (author-set EX13 slice)
 | EX13-064 | LordKnightmon | IMPLEMENT | IMPLEMENTED | self-reviewed | 14/14 | [Rie Kishibe] Tamer route ≤3 security (engine fix); WD union hand|trash play-or-use; [Knightmon]-text aura; Rush+Collision attack |
 | EX13-016 | Omnimon | IMPLEMENT | BLOCKED (hybrid) | — | 0 | "trash 2 same-level digivolution cards" selection |
 | EX13-045 | Examon | IMPLEMENT | IMPLEMENTED | self-reviewed | 12/12 | DNA → mass +10000 + forced attack, then may battle; win-battle (incl. effect battles) → play/use [Dracomon]/[Examon]-text ≤12 free |
-| EX13-077 | Omnimon: Merciful Mode | IMPLEMENT | BLOCKED (hybrid) | — | 0 | Assembly "w/different colors" |
+| EX13-077 | Omnimon: Merciful Mode | IMPLEMENT | IMPLEMENTED (2026-10-01) | self-reviewed | 20/20 | Assembly "w/different colors" via `distinct_by: color` (G-ASSEMBLY-DISTINCT-BY-COLOR RESOLVED) |
 
 ## Engine-Gap Blocked Cards
 ### EX13-023 UlforceVeedramon (engine)
