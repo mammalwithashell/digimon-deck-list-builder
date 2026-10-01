@@ -405,6 +405,11 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ## Open gaps
 
+### `source_count` / `link_card_count` ignored combinators in their nested filter  [G-ENGINE-SOURCE-COUNT-FILTER-COMBINATORS]  — RESOLVED 2026-10-01
+- **Found in:** BT13-112 Omnimon (breeding-area branch gated on `source_count: { filter: { all_of: [kind: digimon, trait_has: Royal Knight] } }`, DCGO `DigivolutionCards.Count(IsDigimon && HasRoyalKnightTraits) >= 1`).
+- **Bug:** both the battle-area and breeding-area evaluators (`dsl_cards/predicate.rs`) scored each source with `eval_card_fields`, the bare leaf path, which never reads `all_of` / `any_of` / `none_of` / `not` — so a combinator-only filter matched every source (a non-Royal-Knight breeding stack enabled the play branch). BT25-085's `any_of` in a sibling leaf used `self_source_count`, which already evaluated correctly.
+- **Fix:** evaluate through `eval_predicate_with_bindings(.., PredicateSubject::Card(source), ..)` — same leaf path plus combinators. Covered by `bt13_112_breeding_sources_without_a_royal_knight_do_not_enable_activation` / `bt13_112_only_delete_branch_legal_skips_the_branch_prompt`. Companion DSL change: `select_effect_choice.legal_when` (G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY, `qa/resolved-gaps.md`).
+
 ### From-hand Digimon-link initiation (DigiLink Shape-B, root `Hand`)  [G-ENGINE-DIGIMON-LINK-FROM-HAND]  — RESOLVED 2026-09-17
 - **Severity:** was 🟡 PARTIAL (deferred residual of the 2026-06-06 Shape-B landing, below) — the printed keyword says "Plug this card from the **hand** or battle area", DCGO `LinkEffect` is declarable while `IsExistOnHand(card)`, but our action space exposed no hand-initiated *Digimon* link (only the Plug-In *Option* play mode), so an RL agent could never take it and every exam line had to play the Digimon first.
 - **Discovered in:** three-musketeers-1 exam-tooling stage (the `link:` scenario verb, `qa/dcgo-exams/BT21/NOTES-BT21-071.md` / `-074.md`).

@@ -1385,6 +1385,11 @@ fn validate_step(
                 validate_step(s, &format!("{prefix}.optional[{k}]"), card_id, ctx, errors);
             }
         }
+        StepSpec::SelectEffectChoice(args) => {
+            for (k, cond) in args.legal_when.iter().flatten().enumerate() {
+                validate_predicate(cond, &format!("{prefix}.legal_when[{k}]"), card_id, ctx, errors);
+            }
+        }
         _ => {}
     }
 }
@@ -1752,6 +1757,15 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectEffectChoice(args) => {
+            for (k, cond) in args.legal_when.iter().flatten().enumerate() {
+                validate_predicate_binding_scope(
+                    cond,
+                    &format!("{prefix}.legal_when[{k}]"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::RepeatEffectChoice(args) => {

@@ -3600,6 +3600,16 @@ pub enum CountBound {
 #[serde(deny_unknown_fields)]
 pub struct SelectEffectChoiceArgs {
     pub labels: Vec<String>,
+    /// Per-branch legality, parallel to `labels` (same length). Branch `i` is
+    /// offered only when `legal_when[i]` holds at install time (`{}` = always
+    /// legal); illegal branches are masked out of the prompt. When exactly ONE
+    /// branch is legal the choice is not a choice: it is bound and its tail
+    /// runs without a prompt (DCGO `SetBool(onlyLegalBranch)` — e.g. BT13-112
+    /// Omnimon). When NO branch is legal the step binds nothing and the tail
+    /// continues (branch `if`s on the unbound index all fail). Absent = every
+    /// label legal. G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legal_when: Option<Vec<PredicateSpec>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default)]

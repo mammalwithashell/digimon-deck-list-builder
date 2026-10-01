@@ -3971,6 +3971,26 @@ fn compile_step(
         }
         S::SelectEffectChoice(a) => CompiledStep::SelectEffectChoice {
             labels: a.labels.clone(),
+            legal_when: a.legal_when.as_ref().map(|conds| {
+                if conds.len() != a.labels.len() {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.legal_when"),
+                        message: format!(
+                            "legal_when has {} entries but labels has {}; they must be parallel",
+                            conds.len(),
+                            a.labels.len()
+                        ),
+                    });
+                }
+                conds
+                    .iter()
+                    .enumerate()
+                    .map(|(k, p)| {
+                        compile_predicate(p, &format!("{prefix}.legal_when[{k}]"), card_id, errors)
+                    })
+                    .collect()
+            }),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),

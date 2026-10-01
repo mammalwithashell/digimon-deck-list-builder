@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use digimon_engine::action::space::{
-    encode_attack, encode_breeding_select, encode_breeding_source_select,
+    encode_attack, PASS, encode_breeding_select, encode_breeding_source_select,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
@@ -83,6 +83,25 @@ fn source_action(runner: &DebugRunner, card_id: &str) -> u16 {
     encode_breeding_source_select(0, idx as u16).expect("breeding source action")
 }
 
+/// Accept the printed "You may" gate (DCGO `SetUpActivateClass(..., isOptional:
+/// true, ...)`), surfaced as an outer optional-trigger prompt.
+fn accept_you_may(runner: &mut DebugRunner) {
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "the [On Play] effect is optional (\"You may\") and must prompt first"
+    );
+    runner.accept_optional_trigger().expect("accept You may");
+}
+
+fn install_non_royal_breeding_stack(runner: &mut DebugRunner) {
+    let handle = runner.place_stack(0, &["NON-RK", "KING"]);
+    let perm = runner.game.players[0]
+        .battle_area
+        .remove(handle.index as usize);
+    runner.game.players[0].breeding_area = Some(perm);
+}
+
 fn find_field_card(runner: &DebugRunner, card_id: &str) -> PermanentHandle {
     let index = runner.game.players[0]
         .battle_area
@@ -106,10 +125,14 @@ fn bt13_112_loads_from_dsl() {
 #[test]
 fn bt13_112_delete_branch_deletes_one_opponent_digimon() {
     let mut runner = runner();
+    // Royal Knight breeding sources make the play branch legal too, so the
+    // branch prompt appears and the delete branch is an explicit pick.
+    install_breeding_stack(&mut runner);
     let opp = runner.place_on_field(1, "OPP-DGM", None);
     let omnimon = runner.place_on_field(0, "BT13-112", None);
 
     runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
 
     runner.execute_branch(0).expect("choose delete branch");
@@ -133,6 +156,7 @@ fn bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and
     let memory_before = runner.game.memory;
 
     runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
     runner
         .execute_branch(1)
@@ -169,8 +193,17 @@ fn bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and
     runner
         .execute_action(0, omega_a_action)
         .expect("choose one Omnimon source");
+    // The duplicate-name Omnimon source is masked, so the batch commits. The
+    // played Royal Knights' own [On Play] effects then trigger (DCGO
+    // `PlayPermanentCards(..., activateETB: true)`; the printed text does not
+    // say "without activating"), so the only thing that may still be pending is
+    // the ordering / optional prompt of those triggers — never another source
+    // pick.
     assert!(
-        runner.pending_selection().is_none(),
+        !matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { .. })
+        ),
         "duplicate-name Omnimon source is masked, so the batch commits"
     );
 
@@ -188,11 +221,6 @@ fn bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and
         3,
         "remaining duplicate source, non-Royal-Knight source, and breeding top card are trashed"
     );
-    assert_eq!(
-        runner.game.memory, memory_before,
-        "played sources' own On Play effects are suppressed"
-    );
-
     for card_id in ["BT13-112", "RK-ALPHA", "RK-OMEGA-A"] {
         let handle = find_field_card(&runner, card_id);
         assert!(
@@ -200,6 +228,27 @@ fn bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and
             "{card_id} should have Rush for the turn"
         );
     }
+
+    // Resolve the two queued [On Play] triggers (order prompt, if any).
+    let mut guard = 0;
+    while runner.pending_selection().is_some() {
+        guard += 1;
+        assert!(guard < 10, "trigger resolution must terminate");
+        let action = runner
+            .pending_selection()
+            .unwrap()
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|id| *id != PASS)
+            .expect("an accept / order action");
+        runner.execute_action(0, action).expect("resolve trigger prompt");
+    }
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 2 * ON_PLAY_GAIN,
+        "both played Royal Knights' own [On Play] effects activate"
+    );
 }
 
 /// W1 regression guard — the activation condition's "opponent has a Digimon"
@@ -230,4 +279,106 @@ fn bt13_112_does_not_activate_with_only_an_opponent_tamer_and_no_breeding_source
         "with only an opponent Tamer (no opponent Digimon) and no breeding Royal \
          Knight sources, the [On Play] effect must not activate"
     );
+}
+
+/// "You may" — DCGO BT13_112.cs registers both activations with
+/// `isOptional: true`. Declining leaves the opponent's Digimon untouched.
+#[test]
+fn bt13_112_effect_is_optional_and_can_be_declined() {
+    let mut runner = runner();
+    runner.place_on_field(1, "OPP-DGM", None);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    assert!(runner.pending_is_optional(), "the You-may gate admits PASS");
+    runner.decline_optional_trigger().expect("decline");
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.battle_area_size(1), 1, "declining deletes nothing");
+}
+
+/// Issue 1 — the breeding-area branch requires a breeding DIGIMON with at least
+/// one [Royal Knight] trait Digimon among its digivolution cards (DCGO
+/// `CanSelectPermanentCondition1`: `permanent.DigivolutionCards.Count(IsDigimon
+/// && HasRoyalKnightTraits && CanPlayAsNewPermanent) >= 1`). A breeding stack
+/// whose sources are all non-Royal-Knight does not satisfy it, so with no
+/// opponent Digimon the effect has nothing to do and must not activate.
+#[test]
+fn bt13_112_breeding_sources_without_a_royal_knight_do_not_enable_activation() {
+    let mut runner = runner();
+    install_non_royal_breeding_stack(&mut runner);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    assert_eq!(
+        runner.pending_kind(),
+        None,
+        "a breeding stack with no [Royal Knight] source does not satisfy the \
+         activation condition"
+    );
+    assert!(
+        runner.game.players[0].breeding_area.is_some(),
+        "the breeding Digimon is untouched"
+    );
+}
+
+/// Issues 1 + 2 — opponent has a Digimon, breeding stack has only non-Royal-
+/// Knight sources: only the delete branch is legal. DCGO
+/// (`SetBool(canSelectDelete)`) goes straight to the delete target pick with no
+/// branch prompt — a one-option choice is not a choice.
+#[test]
+fn bt13_112_only_delete_branch_legal_skips_the_branch_prompt() {
+    let mut runner = runner();
+    install_non_royal_breeding_stack(&mut runner);
+    let opp = runner.place_on_field(1, "OPP-DGM", None);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "with only the delete branch legal, no branch prompt is shown"
+    );
+    runner
+        .execute_action(0, encode_attack(0, opp.index as u16))
+        .expect("choose opponent Digimon");
+    assert_eq!(runner.battle_area_size(1), 0);
+    assert!(
+        runner.game.players[0].breeding_area.is_some(),
+        "the breeding branch did not run"
+    );
+}
+
+/// Issue 2 — no opponent Digimon, breeding stack has Royal Knight sources: only
+/// the play branch is legal, so DCGO (`SetBool(false)`) runs it without a
+/// branch prompt.
+#[test]
+fn bt13_112_only_play_branch_legal_skips_the_branch_prompt() {
+    let mut runner = runner();
+    install_breeding_stack(&mut runner);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::BreedingPermanent),
+        "with only the breeding branch legal, it runs directly"
+    );
+}
+
+/// Both branches legal → the branch prompt offers exactly the two branches.
+#[test]
+fn bt13_112_both_branches_legal_prompts_with_two_options() {
+    let mut runner = runner();
+    install_breeding_stack(&mut runner);
+    runner.place_on_field(1, "OPP-DGM", None);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
+    assert_eq!(runner.pending_action_count(), 2);
 }
