@@ -2639,6 +2639,15 @@ pub struct EffectDigivolveArgs {
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
+    /// "digivolve … ignoring level" (DCGO `IgnoreRequirement.Level`): only
+    /// the base's LEVEL requirement is waived — colour-matching printed
+    /// circles of any level and level-stripped alt-paths still gate the
+    /// digivolve, and the cheapest such route's printed cost is the base
+    /// that `cost` adjusts (`{ reduce: 1 }` = "with the cost reduced by 1").
+    /// Mutually exclusive with `ignore_requirements`.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_level: bool,
 }
 
 /// Source zone for the result (fusing-in) card in an `app_fuse` step.

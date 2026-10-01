@@ -1,0 +1,118 @@
+# EX13-074 Rie Kishibe — Tamer, Purple/Black, Cost 4. Trait: CS.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-074.md):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [All Turns] [Once Per Turn] When any of your [Knightmon] text Digimon are
+#   played or deleted, by placing 1 such card from your hand or trash under
+#   this Tamer, <Draw 1>.
+#   [Main] [Once Per Turn] If this Tamer has 3 or more [Knightmon] text cards
+#   under it, it may digivolve into [LordKnightmon] in the hand or trash for a
+#   digivolution cost of 3, ignoring digivolution requirements.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: "[Knightmon] text" = the text/icon appears in the card's
+#   name, traits, effects, inherited effects, (Rule), or any requirement box.
+#   (The per-card JSON files the [Security] line under inherited text; the
+#   official DB has it as the Security Effect.)
+#
+# DCGO: no EX13_074.cs at b9a0638cd. Nearest behavioural analogue:
+# BT22_090.cs (older Rie Kishibe, "this Tamer may digivolve into
+# [LordKnightmon] in the hand …") — `DigivolveIntoHandOrTrashCard(targetPermanent:
+# card.PermanentOfThisCard(), …)`: a plain digivolve onto the Tamer permanent,
+# so the Tamer card and every card under it become digivolution cards of the
+# new Digimon, the digivolution draw happens and [When Digivolving] fires.
+#
+# ─── Clauses ─────────────────────────────────────────────────────────────────
+# 1. [Start of Your Turn] memory floor 3 (BT21-102 / BT22-084 idiom; mandatory).
+# 2. [All Turns][OPT] own [Knightmon]-text Digimon played OR deleted (one
+#    clause, one shared OPT slot). "by placing 1 such card" is the cost: the
+#    clause is optional (decline → OPT unspent, nothing placed), offered only
+#    when a [Knightmon]-text card ("such card") is in your hand or trash; the
+#    chosen card goes face up to the BOTTOM of this Tamer's stack ("under this
+#    Tamer"; EX13-071 Q&A: under-Tamer placement is the bottom), then Draw 1 —
+#    gated on the placement actually happening (`bind_placed_as`). A deleted
+#    [Knightmon] Digimon card is itself in the trash and eligible.
+# 3. [Main][OPT] with >=3 [Knightmon]-text cards under this Tamer: an optional
+#    hand-or-trash [LordKnightmon] pick, then `effect_initiated_digivolve` onto
+#    THIS Tamer with `ignore_requirements: true` + fixed cost 3. The engine
+#    accepts a level-less (Tamer) base only when requirements are waived
+#    (G-TAMER-DIGIVOLVE-INTO-DIGIMON, resolved 2026-10-01).
+#    Face-down cards under the Tamer are counted by their printed text like
+#    any other source (DCGO `CardSource.HasText` does not consult
+#    `IsFlipped`); unverified against general_rule.pdf (not in this checkout).
+# 4. [Security] play self free.
+
+card: EX13-074
+name: Rie Kishibe
+kind: tamer
+color: [purple, black]
+cost: 4
+traits: [CS]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory <= 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: [on_ally_played, on_any_deletion]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When your [Knightmon] text Digimon is played or deleted, by placing 1 [Knightmon] text card from your hand or trash under this Tamer, <Draw 1>"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_in_text_contains: Knightmon
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand, trash]
+              in_text_contains: Knightmon
+            n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: knight_card
+          filter: { in_text_contains: Knightmon }
+          prompt: "Place 1 [Knightmon] text card from your hand or trash under this Tamer"
+      - place_as_bottom_source:
+          source: knight_card
+          target: source
+          bind_placed_as: placed_knight
+      - if:
+          condition: { binding_present: placed_knight }
+          then:
+            - draw: { of: you, count: 1 }
+
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][OPT] With 3+ [Knightmon] text cards under this Tamer, it may digivolve into [LordKnightmon] in hand/trash for cost 3, ignoring digivolution requirements"
+    condition:
+      self_source_count:
+        filter: { in_text_contains: Knightmon }
+        op: gte
+        value: 3
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: lordknightmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: LordKnightmon
+          prompt: "This Tamer may digivolve into a [LordKnightmon] in your hand or trash for a digivolution cost of 3, ignoring digivolution requirements"
+      - effect_initiated_digivolve:
+          target: source
+          source: lordknightmon
+          cost: 3
+          ignore_requirements: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

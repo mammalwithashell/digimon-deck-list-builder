@@ -13,16 +13,13 @@
 #
 # DCGO: no EX13_071.cs at b9a0638cd.
 #
-# ─── Status: BLOCKED (hybrid) — partial ──────────────────────────────────────
-# The [Main] clause is NOT authored: G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST
-# (qa/archetype-qa/engine-gaps.md + qa/dsl-vocab-gaps.md). "Ignoring level" is
-# DCGO IgnoreRequirement.Level (BT24_025.cs, BT12_089.cs): the colour-matching
-# circle's printed digivolution cost is still paid (here −1); only the level
-# gate drops. `effect_initiated_digivolve` offers only `ignore_requirements`,
-# which also drops colour AND zeroes the base cost, so the "−1" would read as
-# free — an approximation. Every other piece (3× bottom face-down trash across
-# Tamers, Lv.4 + Lv.5 trash placement under a [Kudamon], hand-or-trash pick)
-# exists; only the digivolve leg is missing.
+# ─── Status: IMPLEMENTED (2026-10-01) ────────────────────────────────────────
+# The [Main] clause landed with G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST:
+# `effect_initiated_digivolve { ignore_level: true }` (DCGO
+# IgnoreRequirement.Level, BT24_025.cs / BT12_089.cs) waives ONLY the level
+# gate — the result's colour-matching printed circle (any level) or a
+# level-stripped alt-path still decides the digivolve, and the cheapest such
+# route's printed cost is paid, here −1 (`cost: { reduce: 1 }`).
 #
 # ─── Authored clauses ────────────────────────────────────────────────────────
 # 1. [Start of Your Main Phase][On Play]: "You may place" is a binary choice
@@ -30,7 +27,21 @@
 #    Placement goes to the BOTTOM of this Tamer's stack, face down (ST24-09 /
 #    BT25-087 `place_as_bottom_source` deck_top idiom). "Then" memory gain is
 #    independent of the choice.
-# 2. [Security] play self free (BT25-087 idiom).
+# 2. [Main][Once Per Turn]: activation is gated on the WHOLE cost being
+#    payable (>=3 face-down cards under your Tamers, a [Kudamon], and both a
+#    Lv.4 and a Lv.5 yellow [Holy Beast] Digimon card already in the trash).
+#    Cost: trash 3 bottom face-down cards across your Tamers (each pick
+#    surfaced — BT25-035 idiom), choose the [Kudamon], then place the Lv.4
+#    and the Lv.5 card from trash as its bottom digivolution cards. The two
+#    placements are sequential bottom insertions, so the player first picks
+#    which of the two ends up at the very bottom (an EffectChoice; the
+#    second-placed card is the bottom-most). Then "it may digivolve": an
+#    optional hand-or-trash pick of a [Kentaurosmon] (select_union_zone),
+#    digivolving that [Kudamon] ignoring level with the cost reduced by 1.
+#    The trash materials are checked BEFORE the face-down cards are trashed
+#    (a card trashed by the same cost is not yet in the trash when the cost
+#    is declared payable).
+# 3. [Security] play self free (BT25-087 idiom).
 
 card: EX13-071
 name: Richard Sampson
@@ -67,6 +78,101 @@ effects:
             any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
           then:
             - gain_memory: 1
+
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][OPT] Trash 3 bottom face-down cards under your Tamers + place a Lv.4 and a Lv.5 yellow [Holy Beast] Digimon from trash under a [Kudamon]; it may digivolve into [Kentaurosmon] in hand/trash ignoring level, cost -1"
+    condition:
+      all_of:
+        - face_down_sources_under_tamers_gte: 3
+        - any_permanent: { of: you, zone: [battle_area], kind: digimon, name_is: Kudamon }
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              all_of:
+                - kind: digimon
+                - level_eq: 4
+                - color_is: yellow
+                - trait_has: "Holy Beast"
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              all_of:
+                - kind: digimon
+                - level_eq: 5
+                - color_is: yellow
+                - trait_has: "Holy Beast"
+            n: 1
+    process:
+      # Cost (a): trash 3 bottom face-down cards from under any of your Tamers.
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 3 }
+      # Cost (b): 1 Lv.4 + 1 Lv.5 yellow [Holy Beast] Digimon card from trash
+      # as 1 of your [Kudamon]'s bottom digivolution cards.
+      - select_own_permanent:
+          bind_as: kudamon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Kudamon
+          prompt: "Choose 1 of your [Kudamon] to place the level 4 and level 5 cards under"
+      - select_effect_choice:
+          bind_as: bottom_order
+          labels:
+            - "Level 5 card at the very bottom (place the level 4 card first)"
+            - "Level 4 card at the very bottom (place the level 5 card first)"
+          prompt: "Choose the order of the 2 cards placed as bottom digivolution cards"
+      - if:
+          condition: { equals: [bottom_order, 0] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: first_material
+                filter:
+                  all_of: [{ kind: digimon }, { level_eq: 4 }, { color_is: yellow }, { trait_has: "Holy Beast" }]
+                prompt: "Place 1 level 4 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
+            - place_as_bottom_source: { source: first_material, target: kudamon }
+            - select_trash:
+                of: you
+                bind_as: second_material
+                filter:
+                  all_of: [{ kind: digimon }, { level_eq: 5 }, { color_is: yellow }, { trait_has: "Holy Beast" }]
+                prompt: "Place 1 level 5 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
+            - place_as_bottom_source: { source: second_material, target: kudamon }
+          else:
+            - select_trash:
+                of: you
+                bind_as: first_material
+                filter:
+                  all_of: [{ kind: digimon }, { level_eq: 5 }, { color_is: yellow }, { trait_has: "Holy Beast" }]
+                prompt: "Place 1 level 5 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
+            - place_as_bottom_source: { source: first_material, target: kudamon }
+            - select_trash:
+                of: you
+                bind_as: second_material
+                filter:
+                  all_of: [{ kind: digimon }, { level_eq: 4 }, { color_is: yellow }, { trait_has: "Holy Beast" }]
+                prompt: "Place 1 level 4 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
+            - place_as_bottom_source: { source: second_material, target: kudamon }
+      # "it may digivolve into [Kentaurosmon] in the hand or trash, ignoring
+      # level and with the cost reduced by 1."
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: kentaurosmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Kentaurosmon
+          prompt: "That [Kudamon] may digivolve into a [Kentaurosmon] in your hand or trash, ignoring level, with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: kudamon
+          source: kentaurosmon
+          cost: { reduce: 1 }
+          ignore_level: true
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
