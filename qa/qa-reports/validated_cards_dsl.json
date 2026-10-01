@@ -4868,11 +4868,8 @@
       "test_count": 9,
       "tests_passing": 9,
       "tests_ignored": 0,
-      "patterns": [
-        "ROYAL-KNIGHTS-POOL-STUB",
-        "GAP-STUB"
-      ],
-      "notes": "[W5 2026-10-01] breeding branch now gated on a breeding DIGIMON with >=1 [Royal Knight] Digimon source (was materials_count_gte: 1; DCGO CanSelectPermanentCondition1) via source_count, whose combinator filters were silently ignored engine-wide (fixed); select_effect_choice gains legal_when -- illegal branch masked, single legal branch runs without a prompt (DCGO SetBool); added optional: true for printed \"You may\" (DCGO isOptional); played Royal Knights now activate their own [On Play] (suppress_on_play: false, DCGO activateETB: true); color corrected black->white. +5 tests, 2 updated. | [W1 2026-10-01 silent-key fix] activation condition used `any_permanent: { predicate: {...} }` (`predicate` dropped -> any opp permanent, e.g. a lone Tamer, satisfied it); now flat `kind: digimon` (DCGO CanActivateCondition). +1 test. | Load-only gap stub; modal delete or different-name Royal Knight source play from breeding remains blocked.",
+      "patterns": ["MODAL-EFFECT-CHOICE"],
+      "notes": "[W5 2026-10-01] breeding branch now gated on a breeding DIGIMON with >=1 [Royal Knight] Digimon source (was materials_count_gte: 1; DCGO CanSelectPermanentCondition1) via source_count, whose combinator filters were silently ignored engine-wide (fixed); select_effect_choice gains legal_when -- illegal branch masked, single legal branch runs without a prompt (DCGO SetBool); added optional: true for printed \"You may\" (DCGO isOptional); played Royal Knights now activate their own [On Play] (suppress_on_play: false, DCGO activateETB: true); color corrected black->white. +5 tests, 2 updated. | [W1 2026-10-01 silent-key fix] activation condition used `any_permanent: { predicate: {...} }` (`predicate` dropped -> any opp permanent, e.g. a lone Tamer, satisfied it); now flat `kind: digimon` (DCGO CanActivateCondition). +1 test.",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
     },
     "BT15-092": {
