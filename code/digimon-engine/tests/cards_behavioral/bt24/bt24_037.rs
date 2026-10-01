@@ -361,3 +361,123 @@ fn bt24_037_no_attacker_prompt_when_no_digimon_can_attack() {
         "no Digimon can attack ⇒ no (dead) attacker prompt"
     );
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Yellow Lv.4" circle
+// used to say `from: { level_eq: 4, color: yellow }`. `color` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-4 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn bt24_037_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(4);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve BT24-037 (from hand) onto a level-4 base of `color`.
+fn bt24_037_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT24-037")
+        .expect("BT24-037 in embedded DSL pack")
+        .add_card(bt24_037_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["BT24-037"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT24-037")
+        .expect("BT24-037 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn bt24_037_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !bt24_037_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-4 base must NOT digivolve into BT24-037 via the Yellow Lv.4 alt path"
+    );
+}
+
+#[test]
+fn bt24_037_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        bt24_037_color_gate_try(digimon_engine::enums::CardColor::Yellow),
+        "a yellow level-4 base digivolves into BT24-037 via the Yellow Lv.4 alt path"
+    );
+}
+
+// ─── Colour-gated DNA materials (W1 regression guard) ───────────────────────
+//
+// The printed "[DNA Digivolve] Yellow Lv.4 + red/green Lv.4" alt path's materials used
+// `color:` — not a DSL predicate key — so it was silently dropped and ANY two
+// level-4 Digimon formed a legal DNA pair. Now `color_is`.
+
+fn bt24_037_dna_mat(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 5;
+    c.traits = Vec::new();
+    c
+}
+
+fn bt24_037_dna_route(a: digimon_engine::enums::CardColor, b: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT24-037")
+        .expect("BT24-037 in embedded DSL pack")
+        .add_card(bt24_037_dna_mat("DNA-A", a))
+        .add_card(bt24_037_dna_mat("DNA-B", b))
+        .add_card(digimon_engine::debug_runner::make_test_card("DNA-FILL", "DNA-FILL"))
+        .hand(0, &["BT24-037"])
+        .deck(0, &["DNA-FILL"; 5])
+        .deck(1, &["DNA-FILL"])
+        .memory(10)
+        .start();
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    r.place_on_field(0, "DNA-A", Some(0));
+    r.place_on_field(0, "DNA-B", Some(0));
+    r.game.tick_declarative_effects();
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT24-037")
+        .expect("BT24-037 in hand");
+    r.game.has_valid_dna_route_for_hand_card(0, hand_idx)
+}
+
+#[test]
+fn bt24_037_dna_rejects_two_blue_level4_materials() {
+    use digimon_engine::enums::CardColor;
+    assert!(
+        !bt24_037_dna_route(CardColor::Blue, CardColor::Blue),
+        "two blue Lv.4 Digimon are not a legal Yellow Lv.4 + red/green Lv.4 DNA pair"
+    );
+}
+
+#[test]
+fn bt24_037_dna_accepts_printed_color_pair() {
+    use digimon_engine::enums::CardColor;
+    assert!(
+        bt24_037_dna_route(CardColor::Yellow, CardColor::Green),
+        "a Yellow Lv.4 + Green Lv.4 pair is a legal Yellow Lv.4 + red/green Lv.4 DNA pair"
+    );
+}

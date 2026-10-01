@@ -310,3 +310,98 @@ fn bt25_027_leave_prevention_declined_lets_it_leave() {
         "declining leave-prevention lets MachGaogamon leave"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Section 4 — inherited leave-prevention NAME / TRAIT gate
+//
+// "When this Digimon with [Gaogamon] in its name or the [DATA SQUAD] trait
+// would leave …" — DCGO BT25_027.cs Inherited CanUseCondition:
+// `TopCard.ContainsCardName("Gaogamon") || TopCard.EqualsTraits("DATA SQUAD")`.
+// Regression guard: the YAML used to spell the name leaf
+// `source_permanent_name_contains` (not a DSL key). It was silently dropped,
+// turning that `any_of` branch into an always-true empty predicate, so the
+// save fired for ANY carrier.
+// ---------------------------------------------------------------------------
+
+fn gate_top(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = make_test_card(card_id, name);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Blue];
+    card.level = Some(6);
+    card.dp = Some(10000);
+    card.play_cost = 10;
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
+}
+
+/// `top_id` sits on top of BT25-027 (so only the INHERITED clause applies);
+/// a DATA SQUAD Tamer holds one face-down source to pay the cost. Deletes the
+/// carrier and drives every prompt (accepting). Returns
+/// `(replacement_prompt_offered, carrier_still_on_field)`.
+fn gate_delete_carrier(top_id: &str) -> (bool, bool) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT25-027 YAML loads")
+        .add_card(ds_tamer("DS-TAMER", "Thomas H. Norstein"))
+        .add_card(gate_top("PLAIN-TOP", "Plainmon", &["Beast"]))
+        .add_card(gate_top("NAME-TOP", "ZeedGaogamon X", &["Beast"]))
+        .add_card(filler("STASH"))
+        .memory(10)
+        .start();
+    let carrier = runner.place_stack(0, &[CARD_ID, top_id]);
+    let tamer = runner.place_stack(0, &["STASH", "DS-TAMER"]);
+    runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down = true;
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+
+    let mut guard = 0;
+    let mut saw_replacement = false;
+    while runner.pending_selection().is_some() {
+        guard += 1;
+        assert!(guard < 32);
+        if matches!(
+            runner.pending_selection().unwrap().kind,
+            SelectionKind::Replacement
+        ) {
+            saw_replacement = true;
+        }
+        let actions: Vec<u16> = runner
+            .pending_selection()
+            .unwrap()
+            .valid_action_ids
+            .iter()
+            .copied()
+            .collect();
+        if let Some(a) = actions.iter().copied().find(|a| *a != PASS) {
+            if runner.execute_action(0, a).is_ok() {
+                continue;
+            }
+        }
+        let _ = runner.execute_action(0, PASS);
+    }
+    let _ = runner.auto_resolve();
+    (saw_replacement, find_field(&runner, 0, top_id).is_some())
+}
+
+/// NEGATIVE: a carrier with neither [Gaogamon] in its name nor the
+/// [DATA SQUAD] trait gets no inherited save — it simply leaves.
+#[test]
+fn bt25_027_inherited_save_not_offered_without_name_or_trait() {
+    let (offered, stayed) = gate_delete_carrier("PLAIN-TOP");
+    assert!(
+        !offered,
+        "no leave-prevention prompt for a non-[Gaogamon], non-[DATA SQUAD] carrier"
+    );
+    assert!(!stayed, "the ungated carrier leaves the battle area");
+}
+
+/// POSITIVE (name branch): a carrier with [Gaogamon] in its name but WITHOUT
+/// the [DATA SQUAD] trait is still protected.
+#[test]
+fn bt25_027_inherited_save_offered_for_gaogamon_name_without_trait() {
+    let (offered, stayed) = gate_delete_carrier("NAME-TOP");
+    assert!(offered, "a [Gaogamon]-named carrier is offered the inherited save");
+    assert!(stayed, "accepting the save keeps the [Gaogamon]-named carrier");
+}

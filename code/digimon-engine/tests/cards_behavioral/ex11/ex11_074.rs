@@ -155,3 +155,64 @@ fn ex11_074_optional_battle_can_be_declined() {
     );
     assert!(runner.game.pending_attack.is_none());
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Green Lv.6" circle
+// used to say `from: { level_eq: 6, color_includes: green }`. `color_includes` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-6 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn ex11_074_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(6);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve EX11-074 (from hand) onto a level-6 base of `color`.
+fn ex11_074_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("EX11-074")
+        .expect("EX11-074 in embedded DSL pack")
+        .add_card(ex11_074_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["EX11-074"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "EX11-074")
+        .expect("EX11-074 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn ex11_074_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !ex11_074_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-6 base must NOT digivolve into EX11-074 via the Green Lv.6 alt path"
+    );
+}
+
+#[test]
+fn ex11_074_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        ex11_074_color_gate_try(digimon_engine::enums::CardColor::Green),
+        "a green level-6 base digivolves into EX11-074 via the Green Lv.6 alt path"
+    );
+}

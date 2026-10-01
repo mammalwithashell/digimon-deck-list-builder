@@ -698,7 +698,7 @@
         "G2-adjacent",
         "H11"
       ],
-      "notes": "Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works). Merge 2026-05-22: bt20_016_dna_on_deletion raw_rust placeholder removed."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` AND DNA materials used non-key `color:` (dropped -> any-colour Lv.4 base / any Lv.4 DNA pair); now `color_is`. +4 colour-gate tests. | Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works). Merge 2026-05-22: bt20_016_dna_on_deletion raw_rust placeholder removed."
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
@@ -916,7 +916,7 @@
         "H_PROGRESS",
         "H3-PIERCING"
       ],
-      "notes": "Re-attempt 2026-05-21: fully completed. [When Digivolving] delete-lowest-DP + return-2-opponent-trash-to-deck-bottom (DSL verb return_trash_list_to_deck_bottom; G-ZONE-TRASH-TO-DECK actually resolved) + opponent plays 2 Petrification Tokens + per-opponent-count DP buff until opp turn end. Raid/Progress/Piercing keywords. 16/16 tests pass, 0 ignored. Reviewer APPROVED."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color_includes:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | Re-attempt 2026-05-21: fully completed. [When Digivolving] delete-lowest-DP + return-2-opponent-trash-to-deck-bottom (DSL verb return_trash_list_to_deck_bottom; G-ZONE-TRASH-TO-DECK actually resolved) + opponent plays 2 Petrification Tokens + per-opponent-count DP buff until opp turn end. Raid/Progress/Piercing keywords. 16/16 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "EX11-012": {
       "card_name": "Medusamon",
@@ -933,7 +933,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00c3\u00a2\u00e2\u20ac\u00a0\u00e2\u20ac\u2122 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color_includes:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00c3\u00a2\u00e2\u20ac\u00a0\u00e2\u20ac\u2122 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -1550,7 +1550,7 @@
         "H10",
         "H4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-010": {
       "card_name": "Garurumon",
@@ -4107,7 +4107,7 @@
         "HAND-MAIN",
         "INHERITED-REPLACEMENT"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G020 (hand-[Main] trash-cost preflight + bottom-source placement + self-digivolve) closed. All tests pass including the Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source digivolve chain."
+      "notes": "[W1 2026-10-01 silent-key fix] hand-[Main] condition used `any_field_permanent: { predicate: {...} }` (`predicate` dropped -> any own permanent satisfied the Arisa AND Shoemon legs); now flat battle-area `any_permanent` name gates (DCGO). +2 tests. | Substrate sweep 2026-05-20: PUPPETS-G020 (hand-[Main] trash-cost preflight + bottom-source placement + self-digivolve) closed. All tests pass including the Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source digivolve chain."
     },
     "EX11-022": {
       "card_name": "Karakurumon",
@@ -4872,7 +4872,7 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "Load-only gap stub; modal delete or different-name Royal Knight source play from breeding remains blocked.",
+      "notes": "[W1 2026-10-01 silent-key fix] activation condition used `any_permanent: { predicate: {...} }` (`predicate` dropped -> any opp permanent, e.g. a lone Tamer, satisfied it); now flat `kind: digimon` (DCGO CanActivateCondition). +1 test. | Load-only gap stub; modal delete or different-name Royal Knight source play from breeding remains blocked.",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
     },
     "BT15-092": {
@@ -6545,7 +6545,7 @@
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "thomas-data-squad",
-      "notes": "Alt-digivolve onto DATA SQUAD lvl4 cost3; WD/WA bounce opp lvl<=4 then trash FD-under-Tamer to unsuspend self; main+inherited leave-prevention replacement paying FD-trash cost. 5 behavioral tests pass (run via isolated target due to concurrent cards_behavioral breakage; modules wired).",
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | Alt-digivolve onto DATA SQUAD lvl4 cost3; WD/WA bounce opp lvl<=4 then trash FD-under-Tamer to unsuspend self; main+inherited leave-prevention replacement paying FD-trash cost. 5 behavioral tests pass (run via isolated target due to concurrent cards_behavioral breakage; modules wired).",
       "patterns": [
         "alt-digivolve",
         "WD/WA-shared",
@@ -7448,7 +7448,7 @@
         "H1",
         "H10"
       ],
-      "notes": "[OP][WD] treat 1 Marcus Damon as 3000 DP Digimon (TreatAsDigimon+synth_identity \u2014 NEW DSL substrate) + CannotDigivolve + Rush + Alliance (end_of_turn) then may_attack_now; [All Turns][OPT] own+inherited yellow/red-Tamer-deletion -> place Marcus from trash as top security; GeoGreymon alt-path cost3. Reviewer APPROVED."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.4 base); now `color_is`. +2 colour-gate tests. | [OP][WD] treat 1 Marcus Damon as 3000 DP Digimon (TreatAsDigimon+synth_identity \u2014 NEW DSL substrate) + CannotDigivolve + Rush + Alliance (end_of_turn) then may_attack_now; [All Turns][OPT] own+inherited yellow/red-Tamer-deletion -> place Marcus from trash as top security; GeoGreymon alt-path cost3. Reviewer APPROVED."
     },
     "BT13-020": {
       "card_name": "ShineGreymon: Burst Mode",
@@ -8542,7 +8542,7 @@
         "BARRIER-FACE-AND-INHERITED",
         "ALL-TURNS-OPT-GAIN-MEMORY-ON-OWN-SECURITY-REMOVED"
       ],
-      "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch \u2014 the Q9 activation-site crux).",
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.3 base); now `color_is`. +2 colour-gate tests. | <Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch \u2014 the Q9 activation-site crux).",
       "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
     },
     "AD1-024": {
@@ -9704,7 +9704,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/st24/ST24-10.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_10.rs",
-      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
     },
     "ST24-12": {
       "card_name": "Falcomon",
@@ -9781,7 +9781,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/st24/ST24-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_06.rs",
-      "notes": "TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
     },
     "ST24-11": {
       "card_name": "Rosemon",
@@ -10039,7 +10039,7 @@
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_015.rs",
       "test_count": null,
-      "notes": "workflow wave, Opus-approved; full-suite green 2026-07-02"
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.4 base); now `color_is`. +2 colour-gate tests. | workflow wave, Opus-approved; full-suite green 2026-07-02"
     },
     "BT9-041": {
       "card_name": "RizeGreymon (X Antibody)",

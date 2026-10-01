@@ -36,6 +36,7 @@ effects:
   - scope: inherited
     kind: aura
     active_when: { your_turn: true }
-    target: { source: true }
+    # `target: {}` = the carrier-self inherited-aura idiom.
+    target: {}
     dp_modifier: 2000
     summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

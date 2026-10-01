@@ -84,7 +84,7 @@ effects:
       all_of:
         - replacement_subject_is_mine: true
         - any_of:
-            - source_permanent_name_contains: Gaogamon
+            - source_name_contains: Gaogamon
             - source_permanent_trait_has: DATA SQUAD
     summary: "Inherited [All Turns][OPT] Gaogamon-name/DATA SQUAD carrier doesn't leave by trashing FD"
     process:

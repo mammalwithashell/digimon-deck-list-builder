@@ -1265,6 +1265,25 @@ fn validate_step(
             }
         }
         StepSpec::SelectCountCappedMulti(args) => {
+            // Mirrors the compile-time check: the runtime only scans hand /
+            // trash / battle_area; any other zone silently installed nothing.
+            if !matches!(
+                args.zone,
+                crate::predicate::Zone::Hand
+                    | crate::predicate::Zone::Trash
+                    | crate::predicate::Zone::BattleArea
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zone"),
+                    message: format!(
+                        "select_count_capped_multi supports zone hand, trash or battle_area \
+                         (got {:?}); use select_own_sources / select_materials for \
+                         digivolution cards",
+                        args.zone
+                    ),
+                });
+            }
             if let crate::step::CountBound::Formula { formula } = &args.max {
                 validate_formula(
                     formula,

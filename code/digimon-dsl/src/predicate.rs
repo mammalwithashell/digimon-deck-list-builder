@@ -7,8 +7,9 @@
 //!
 //! NOTE: this struct deliberately does NOT set `deny_unknown_fields`
 //! because it is flattened into several call-sites (MaterialSpec, field
-//! predicates). Typos in leaf-predicate fields are silently dropped at
-//! parse time; the semantic validator (Task 12) must re-check.
+//! predicates). Unknown keys instead land in the `extra` sink, which is
+//! deserialized through `deny_unknown_predicate_keys` — so a typo'd or
+//! invented predicate key is still a hard parse error.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -986,11 +987,39 @@ pub struct PredicateSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub event_target_level: Option<MetricComparators>,
 
-    /// Captures unrecognized fields for controlled extension. Validator
-    /// (Task 12) checks this for typos in inline predicate positions.
-    #[serde(flatten)]
+    /// Leftover-key sink. `PredicateSpec` cannot use `deny_unknown_fields`
+    /// (it is `#[serde(flatten)]`'d into `MaterialSpec` / `ExistentialPredicate`,
+    /// and serde forbids combining the two), so unrecognized keys land here —
+    /// and `deny_unknown_predicate_keys` turns any non-empty sink into a hard
+    /// deserialize error. Historically this map was "checked by the validator"
+    /// but nothing ever checked it, so a typo'd / invented predicate key
+    /// (e.g. `source_permanent_name_contains` on ST24-06 / ST24-10 / BT25-027)
+    /// silently became an always-true empty predicate. Always empty after a
+    /// successful parse; kept as a field so the flatten plumbing stays intact.
+    #[serde(flatten, deserialize_with = "deny_unknown_predicate_keys")]
     #[schemars(skip)]
     pub extra: IndexMap<String, serde_yml::Value>,
+}
+
+/// Reject any predicate key that is not a declared `PredicateSpec` field.
+/// See the doc on `PredicateSpec::extra`.
+fn deny_unknown_predicate_keys<'de, D>(
+    deserializer: D,
+) -> Result<IndexMap<String, serde_yml::Value>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let extra = IndexMap::<String, serde_yml::Value>::deserialize(deserializer)?;
+    if extra.is_empty() {
+        Ok(extra)
+    } else {
+        let keys: Vec<&str> = extra.keys().map(String::as_str).collect();
+        Err(serde::de::Error::custom(format!(
+            "unknown predicate key(s): {} (not a PredicateSpec field — check the spelling \
+             against code/digimon-dsl/src/predicate.rs)",
+            keys.join(", ")
+        )))
+    }
 }
 
 impl PredicateSpec {
@@ -1079,7 +1108,7 @@ pub enum DpConstraint {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 enum DpConstraintDeserialize {
     Literal(i32),
     WrappedFormula { formula: FormulaSpec },
@@ -1233,7 +1262,7 @@ pub enum EventCauseSpec {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum PlayerRefSelector {
     Player(PlayerRef),
     Scoped { of: PlayerRef },
@@ -1253,7 +1282,7 @@ pub enum SourceStackScopeOf {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum SourceStackScope {
     /// `{ of: self }` — the carrier's own non-flipped source stack.
     Scoped { of: SourceStackScopeOf },
