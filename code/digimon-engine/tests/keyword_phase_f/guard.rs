@@ -363,3 +363,131 @@ fn guard_ignores_own_effects_self_and_non_digimon_subjects() {
         "self deletion should proceed without a Guard replacement"
     );
 }
+
+// ─── Nested replacement windows (G-NESTED-PARKED-REPLACEMENT) ───────────────
+//
+// <Guard>'s cost ("by deleting this Digimon") is itself a deletion with its own
+// replacement windows on the carrier (<Evade>, <Armor Purge>, <Fragment>,
+// <Decode>, ...). When one of those prompts, the inner window parks while
+// Guard's replacement is still unresolved. The parked replacements form a
+// stack drained LIFO: the carrier's deletion commits first, then Guard's
+// outcome is committed — "they don't leave" only if the carrier was actually
+// deleted (DCGO `GuardProcess` → `DeletePeremanentAndProcessAccordingToResult`
+// success branch; rules 16-45).
+
+fn trash_ids(r: &DebugRunner, player: u8) -> Vec<String> {
+    r.game.players[player as usize]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect()
+}
+
+/// Guard carrier (with one card under it) that ALSO has `extra` keywords
+/// acting on its own deletion.
+fn nested_guard_runner(extra: Vec<Keyword>) -> (DebugRunner, PermanentHandle) {
+    let mut kws = vec![Keyword::Guard];
+    kws.extend(extra);
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_with_keywords("GUARD", 4, 5000, kws))
+        .add_card(plain_digimon("UNDER"))
+        .add_card(plain_digimon("ALLY"))
+        .start();
+    r.place_stack(0, &["UNDER", "GUARD"]);
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+    r.game.tick_declarative_effects();
+    (r, ally)
+}
+
+/// Accept Guard; the carrier's own window must then open (nested), with
+/// Guard's replacement still parked.
+fn accept_guard_into_nested_window(r: &mut DebugRunner, ally: PermanentHandle) {
+    r.game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Guard");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "the Guard carrier's own replacement window opens inside Guard's process"
+    );
+    assert_eq!(
+        field_ids(r, 0),
+        vec!["GUARD".to_string(), "ALLY".to_string()],
+        "nothing has left yet: both the cost deletion and the ally's leave are pending"
+    );
+}
+
+fn resolve_all_accepting(r: &mut DebugRunner) {
+    let mut steps = 0;
+    while let Some(v) = r.pending_selection_view() {
+        let a = v.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap();
+        r.execute_action(v.selecting_player, a).unwrap();
+        steps += 1;
+        assert!(steps < 8, "nested drain terminates");
+    }
+}
+
+#[test]
+fn guard_cost_deletion_with_evade_declined_deletes_carrier_and_saves_ally() {
+    let (mut r, ally) = nested_guard_runner(vec![Keyword::Evade]);
+    accept_guard_into_nested_window(&mut r, ally);
+    r.game.resolve_selection(0, PASS).expect("decline <Evade>");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(field_ids(&r, 0), vec!["ALLY".to_string()], "ally doesn't leave");
+    assert!(trash_ids(&r, 0).contains(&"GUARD".to_string()), "carrier deleted (cost paid)");
+}
+
+#[test]
+fn guard_cost_deletion_prevented_by_evade_does_not_save_ally() {
+    let (mut r, ally) = nested_guard_runner(vec![Keyword::Evade]);
+    accept_guard_into_nested_window(&mut r, ally);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    resolve_all_accepting(&mut r);
+    assert_eq!(
+        field_ids(&r, 0),
+        vec!["GUARD".to_string()],
+        "Evade prevented the cost deletion, so Guard's 'they don't leave' does not apply"
+    );
+    assert!(r.game.players[0].battle_area[0].is_suspended, "Evade suspended the carrier");
+    assert!(trash_ids(&r, 0).contains(&"ALLY".to_string()), "the ally leaves");
+}
+
+#[test]
+fn guard_cost_deletion_prevented_by_fragment_pick_does_not_save_ally() {
+    // <Fragment (1)> parks a SECOND selection (the source pick) on top of
+    // Guard's parked replacement — a two-deep parked stack.
+    let (mut r, ally) = nested_guard_runner(vec![Keyword::Fragment(1)]);
+    accept_guard_into_nested_window(&mut r, ally);
+    resolve_all_accepting(&mut r);
+    assert_eq!(field_ids(&r, 0), vec!["GUARD".to_string()], "Fragment saved the carrier");
+    assert!(trash_ids(&r, 0).contains(&"UNDER".to_string()), "Fragment trashed 1 source");
+    assert!(trash_ids(&r, 0).contains(&"ALLY".to_string()), "cost unpaid → ally leaves");
+}
+
+#[test]
+fn nested_guard_evade_park_clones_faithfully() {
+    let (mut r, ally) = nested_guard_runner(vec![Keyword::Evade]);
+    accept_guard_into_nested_window(&mut r, ally);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "the nested <Evade> prompt is resume-driven"
+    );
+    let mut cloned = r.game.clone();
+    cloned.resolve_selection(0, PASS).expect("clone declines <Evade>");
+    assert_eq!(
+        cloned.players[0]
+            .battle_area
+            .iter()
+            .map(|p| p.top_card().card_id(&cloned.card_data).to_string())
+            .collect::<Vec<_>>(),
+        vec!["ALLY".to_string()],
+        "clone drains both parked replacements"
+    );
+    // Original is untouched and resolves identically.
+    assert_eq!(field_ids(&r, 0), vec!["GUARD".to_string(), "ALLY".to_string()]);
+    r.game.resolve_selection(0, PASS).expect("original declines <Evade>");
+    assert_eq!(field_ids(&r, 0), vec!["ALLY".to_string()]);
+}

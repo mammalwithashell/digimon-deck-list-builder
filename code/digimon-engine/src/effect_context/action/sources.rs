@@ -89,7 +89,7 @@ impl<'a> EffectContext<'a> {
             .game
             .place_sourceless_permanent_on_security_bottom(player, target, self.player)
         {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
             true

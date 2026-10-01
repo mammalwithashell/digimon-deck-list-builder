@@ -18,7 +18,7 @@ Pipeline: batch-implement-cards-rust-dsl
 ## Per-Card Verdicts
 | Card ID | Name | Mode | Verdict | Review | Tests | Notes |
 |---------|------|------|---------|--------|-------|-------|
-| EX13-065 | Sistermon Blanc (Awakened) | IMPLEMENT | BLOCKED (engine) | self-reviewed | 16/16 + 1 ignored | DUAL. Guard → own Decode nesting hits G-NESTED-PARKED-REPLACEMENT; every other clause green (name/Lv.2-text digivolve, Decode, Guard, Option free play + per-ally -3000, Arts) |
+| EX13-065 | Sistermon Blanc (Awakened) | IMPLEMENT | IMPLEMENTED | self-reviewed | 18/18 | DUAL. Guard → own Decode nesting (G-NESTED-PARKED-REPLACEMENT RESOLVED 2026-10-01); every other clause green (name/Lv.2-text digivolve, Decode, Guard, Option free play + per-ally -3000, Arts) |
 | EX13-066 | Sistermon Noir (Awakened) | IMPLEMENT | IMPLEMENTED | self-reviewed | 18/18 | DUAL. name_in / Lv.3-text digivolve, also_treated_as, Decode, [WD] delete cost<=4, Option free play + De-Digivolve N per ally, Arts |
 | EX13-035 | KingEtemon | IMPLEMENT | IMPLEMENTED | self-reviewed | 18/18 | [OP][WD] optional return-10 (+6) then up to 2 free plays under a running budget; [All Turns] both-fields count → opp -3000 DP + Security A. -1 |
 

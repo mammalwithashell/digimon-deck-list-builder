@@ -12050,12 +12050,12 @@
       "card_name": "Sistermon Blanc (Awakened)",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Puppet (Sistermon Awakened DUALs) (EX13)",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-065.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_065.rs",
-      "test_count": 17,
+      "test_count": 18,
       "patterns": [
         "DUAL",
         "ARTS",
@@ -12064,7 +12064,7 @@
         "A-UNION",
         "FORMULA"
       ],
-      "notes": "BLOCKED G-NESTED-PARKED-REPLACEMENT (qa/archetype-qa/engine-gaps.md): <Guard> deletes this Digimon inside its replacement process; when a [Sistermon Blanc] is under it, its own <Decode> window parks a SECOND replacement while Guard's is unresolved -> nested-park debug_assert (release would drop Guard's outcome). Pinned by the ignored test ex13_065_guard_deletion_then_decode_plays_sistermon_blanc. Every other clause is faithful and green: no-standard-circle digivolve ([Sistermon Blanc] cost 0 via name_is, Lv.2 [Huckmon]-text cost 1), <Decode ([Sistermon Blanc])> name_is replacement (non-battle only), <Guard> (with no matching Decode source), Option [Main] optional hand/trash free play of a play cost<=4 [Sistermon] card then 1 opp Digimon -3000 DP per own Digimon, <Arts Digivolve> onto alt-path-only bases (engine fix G-ENGINE-ARTS-ALT-PATH-BASE). No DCGO script at b9a0638cd."
+      "notes": "IMPLEMENTED 2026-10-01 after G-NESTED-PARKED-REPLACEMENT RESOLVED (Game::parked_replacement is now a LIFO stack + scope floor; <Guard> defers its cancel via ReplacementContext::cancel_if_card_deleted until the carrier's own deletion commits). Signature line green: <Guard> deletes this Digimon -> nested <Decode> plays the [Sistermon Blanc] under it (ex13_065_guard_deletion_then_decode_plays_sistermon_blanc, un-ignored) and the Decode-declined variant still saves the ally. Other clauses: no-standard-circle digivolve ([Sistermon Blanc] cost 0 via name_is, Lv.2 [Huckmon]-text cost 1), <Decode ([Sistermon Blanc])> name_is replacement (non-battle only), <Guard>, Option [Main] optional hand/trash free play of a play cost<=4 [Sistermon] card then 1 opp Digimon -3000 DP per own Digimon, <Arts Digivolve> onto alt-path-only bases (G-ENGINE-ARTS-ALT-PATH-BASE). No DCGO script at b9a0638cd; Guard cost-success semantics per DCGO Guard.cs (DeletePeremanentAndProcessAccordingToResult)."
     },
     "EX13-066": {
       "card_name": "Sistermon Noir (Awakened)",
