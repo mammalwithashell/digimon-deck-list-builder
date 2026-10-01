@@ -134,10 +134,14 @@ fn bt25_059_on_play_installs_suspend_up_to_2_prompt() {
     let ceres = runner.place_on_field(0, CARD_ID, Some(0));
     runner.fire_on_play(0, ceres.index as usize);
 
+    // "Suspend up to 2 Digimon" spans BOTH battle areas (`of: any`).
     assert!(
-        matches!(runner.pending_kind(), Some(SelectionKind::OwnField)),
-        "suspend-up-to-2 prompt installs"
+        matches!(runner.pending_kind(), Some(SelectionKind::AnyField)),
+        "suspend-up-to-2 prompt installs over both sides"
     );
+    let view = runner.pending_selection_view().unwrap();
+    assert!(view.is_optional, "you MAY suspend");
+    assert_eq!(view.valid_action_ids.len(), 3, "own Vegetation, Ceresmon, and the opponent's Digimon");
 }
 
 #[test]
@@ -176,7 +180,7 @@ fn bt25_059_on_suspend_debuffs_opponent_digimon() {
     // Suspending a Digimon (via Ceresmon's OP/WD) triggers the on_suspend clause.
     runner.fire_on_play(0, ceres.index as usize);
     // Resolve the suspend-up-to-2 selection by suspending Ceresmon itself.
-    if matches!(runner.pending_kind(), Some(SelectionKind::OwnField)) {
+    if matches!(runner.pending_kind(), Some(SelectionKind::AnyField)) {
         let view = runner.pending_selection_view().unwrap();
         runner
             .execute_action(view.selecting_player, view.valid_action_ids[0])

@@ -41,8 +41,22 @@ fn setup() -> DebugRunner {
             }];
             c
         })
-        .add_card(digimon("BIRD5", "Birdy", CardColor::Purple, 4, 5, &["Mysterious Bird"]))
-        .add_card(digimon("BIRD6", "Big Birdy", CardColor::Purple, 5, 6, &["Avian"]))
+        .add_card(digimon(
+            "BIRD5",
+            "Birdy",
+            CardColor::Purple,
+            4,
+            5,
+            &["Mysterious Bird"],
+        ))
+        .add_card(digimon(
+            "BIRD6",
+            "Big Birdy",
+            CardColor::Purple,
+            5,
+            6,
+            &["Avian"],
+        ))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(5)
@@ -62,10 +76,16 @@ fn bt26_076_wd_deletes_then_pays_for_opponent_discard() {
     fire(&mut r, EffectTiming::WhenDigivolving, crow);
     let _ = r.pending_selection_view().expect("delete pick");
     pick_first(&mut r, 0); // the only Lv.4
-    let v = r.pending_selection_view().expect("optional Tamer pick (cost)");
+    let v = r
+        .pending_selection_view()
+        .expect("optional Tamer pick (cost)");
     assert!(v.is_optional);
     pick_first(&mut r, 0);
-    assert_eq!(r.game.pending_selection.as_ref().unwrap().selecting_player, 1, "opponent chooses");
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().selecting_player,
+        1,
+        "opponent chooses"
+    );
     pick_hand(&mut r, 1, "JUNK");
     let _ = r.auto_resolve();
     assert_eq!(field_ids(&r, 1), vec!["OPP5".to_string()]);
@@ -98,11 +118,14 @@ fn bt26_076_opponent_hand_trash_digivolves_from_trash() {
     let carrier = r.place_stack(0, &["BT26-072", "FILLER"]);
     fire(&mut r, EffectTiming::OnDeletion, carrier);
     pick_hand(&mut r, 1, "JUNK");
-    r.accept_optional_trigger().expect("reactive digivolve offered (yes/no)");
+    r.accept_optional_trigger()
+        .expect("reactive digivolve offered (yes/no)");
     pick_first(&mut r, 0); // RAVE from trash
     let _ = r.auto_resolve();
     assert_eq!(
-        r.game.players[0].battle_area[crow.index as usize].top_card().card_id(&r.game.card_data),
+        r.game.players[0].battle_area[crow.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
         "RAVE"
     );
     assert_eq!(r.memory(), 5 - 3, "circle cost 4 reduced by 1");
@@ -118,7 +141,10 @@ fn bt26_076_reactive_needs_a_trash_candidate() {
     fire(&mut r, EffectTiming::OnDeletion, carrier);
     pick_hand(&mut r, 1, "JUNK");
     let _ = r.auto_resolve();
-    assert!(r.game.pending_selection.is_none(), "no [Ravemon]/[DATA SQUAD] in trash ⇒ no trigger");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no [Ravemon]/[DATA SQUAD] in trash ⇒ no trigger"
+    );
 }
 
 /// Crowmon's own [When Digivolving] trashes from under a Tamer, which fires
@@ -135,9 +161,10 @@ fn bt26_076_self_caused_tamer_trash_prompt_survives_the_discard() {
     push_hand(&mut r, 1, "JUNK");
     fire(&mut r, EffectTiming::WhenDigivolving, crow);
     pick_first(&mut r, 0); // Tamer (cost) — no delete target exists
-    r.accept_optional_trigger().expect("reactive digivolve offered");
+    r.accept_optional_trigger()
+        .expect("reactive digivolve offered");
     pick_first(&mut r, 0); // RAVE
-    // The rest of the [When Digivolving] still runs: the opponent discards.
+                           // The rest of the [When Digivolving] still runs: the opponent discards.
     pick_hand(&mut r, 1, "JUNK");
     let _ = r.auto_resolve();
     assert_eq!(r.hand_size(1), 0);
@@ -153,9 +180,14 @@ fn bt26_076_inherited_on_deletion_plays_bird_from_trash() {
     fire(&mut r, EffectTiming::OnDeletion, carrier);
     let v = r.pending_selection_view().expect("optional trash pick");
     assert!(v.is_optional);
-    assert_eq!(v.valid_action_ids.iter().filter(|&&a| a != digimon_engine::action::space::PASS).count(), 1);
+    assert_eq!(
+        v.valid_action_ids
+            .iter()
+            .filter(|&&a| a != digimon_engine::action::space::PASS)
+            .count(),
+        1
+    );
     pick_first(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"BIRD5".to_string()));
 }
-

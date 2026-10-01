@@ -18,9 +18,30 @@ fn setup() -> DebugRunner {
         .expect("BT26-005")
         .add_card(filler("FILLER"))
         .add_card(tamer("TAMER", "Tamer", CardColor::Purple, &["DATA SQUAD"]))
-        .add_card(digimon("AVIAN5", "Peckmon", CardColor::Purple, 4, 5, &["Avian"]))
-        .add_card(digimon("DS6", "Big", CardColor::Purple, 5, 6, &["DATA SQUAD"]))
-        .add_card(digimon("PLAIN", "Plain", CardColor::Purple, 3, 3, &["Beast"]))
+        .add_card(digimon(
+            "AVIAN5",
+            "Peckmon",
+            CardColor::Purple,
+            4,
+            5,
+            &["Avian"],
+        ))
+        .add_card(digimon(
+            "DS6",
+            "Big",
+            CardColor::Purple,
+            5,
+            6,
+            &["DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "PLAIN",
+            "Plain",
+            CardColor::Purple,
+            3,
+            3,
+            &["Beast"],
+        ))
         .deck(0, &["FILLER"; 5])
         .deck(1, &["FILLER"; 5])
         .memory(3)

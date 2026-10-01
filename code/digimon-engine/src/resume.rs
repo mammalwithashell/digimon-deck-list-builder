@@ -1133,8 +1133,10 @@ pub struct CountCappedPermanentsState {
     pub prov: ResumeProvenance,
     pub selecting_player: PlayerId,
     pub previous_phase: GamePhase,
-    /// Drives the `OppField`/`OwnField` selection kind for the frontend router.
-    pub target_is_opponent: bool,
+    /// The selection kind for the frontend router: `OppField` / `OwnField`
+    /// for a one-player pick, `AnyField` when candidates span BOTH battle
+    /// areas (`of: any`, ids `encode_attack(player, index)`).
+    pub field_kind: crate::selection::SelectionKind,
     /// `min` is already clamped (`max.min(candidates)` when `clamp_to_available`).
     pub min: u8,
     pub max: u8,

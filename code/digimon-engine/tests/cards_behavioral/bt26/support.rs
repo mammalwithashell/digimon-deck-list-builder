@@ -9,7 +9,14 @@ use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
-pub fn digimon(id: &str, name: &str, color: CardColor, level: u8, cost: u16, traits: &[&str]) -> CardData {
+pub fn digimon(
+    id: &str,
+    name: &str,
+    color: CardColor,
+    level: u8,
+    cost: u16,
+    traits: &[&str],
+) -> CardData {
     let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Digimon;
     c.colors = vec![color];
@@ -46,17 +53,26 @@ fn data_idx(r: &DebugRunner, card_id: &str) -> usize {
 pub fn push_hand(r: &mut DebugRunner, p: u8, card_id: &str) {
     let idx = data_idx(r, card_id);
     let next = r.game.next_card_index();
-    r.game.players[p as usize].hand.push(CardSource::new(idx, p, next));
+    r.game.players[p as usize]
+        .hand
+        .push(CardSource::new(idx, p, next));
 }
 
 pub fn push_trash(r: &mut DebugRunner, p: u8, card_id: &str) {
     let idx = data_idx(r, card_id);
     let next = r.game.next_card_index();
-    r.game.players[p as usize].trash.push(CardSource::new(idx, p, next));
+    r.game.players[p as usize]
+        .trash
+        .push(CardSource::new(idx, p, next));
 }
 
 /// A Tamer (top = `tamer_id`) carrying `n` face-down FILLER sources.
-pub fn tamer_with_face_down(r: &mut DebugRunner, p: u8, tamer_id: &str, n: usize) -> PermanentHandle {
+pub fn tamer_with_face_down(
+    r: &mut DebugRunner,
+    p: u8,
+    tamer_id: &str,
+    n: usize,
+) -> PermanentHandle {
     let mut ids: Vec<&str> = vec!["FILLER"; n];
     ids.push(tamer_id);
     let t = r.place_stack(p, &ids);
@@ -69,7 +85,8 @@ pub fn tamer_with_face_down(r: &mut DebugRunner, p: u8, tamer_id: &str, n: usize
 }
 
 pub fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -122,7 +139,8 @@ pub fn pick_first(r: &mut DebugRunner, p: u8) {
 }
 
 pub fn pass(r: &mut DebugRunner, p: u8) {
-    r.execute_action(p, digimon_engine::action::space::PASS).expect("PASS legal");
+    r.execute_action(p, digimon_engine::action::space::PASS)
+        .expect("PASS legal");
 }
 
 /// Answer a reveal selection by picking the revealed card whose id is `card_id`.
@@ -134,7 +152,9 @@ pub fn pick_reveal(r: &mut DebugRunner, p: u8, card_id: &str) {
         .position(|c| c.card_id(&r.game.card_data) == card_id)
         .unwrap_or_else(|| panic!("{card_id} not revealed"));
     let action = digimon_engine::action::space::SEL_REVEAL_START + idx as u16;
-    let v = r.pending_selection_view().expect("reveal selection pending");
+    let v = r
+        .pending_selection_view()
+        .expect("reveal selection pending");
     assert!(
         v.valid_action_ids.contains(&action),
         "{card_id} is not a legal pick here (valid {:?})",

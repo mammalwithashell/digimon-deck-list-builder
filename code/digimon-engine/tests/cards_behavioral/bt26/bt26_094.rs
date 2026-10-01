@@ -23,7 +23,14 @@ fn setup() -> DebugRunner {
         .dsl_card("BT26-072")
         .expect("Peckmon")
         .add_card(filler("FILLER"))
-        .add_card(digimon("DS-DIGI", "DS", CardColor::Purple, 5, 7, &["DATA SQUAD"]))
+        .add_card(digimon(
+            "DS-DIGI",
+            "DS",
+            CardColor::Purple,
+            5,
+            7,
+            &["DATA SQUAD"],
+        ))
         .add_card(digimon("JUNK", "Junk", CardColor::Red, 3, 3, &[]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
@@ -87,10 +94,15 @@ fn bt26_094_own_hand_trash_does_not_trigger() {
     push_hand(&mut r, 0, "JUNK");
     let peck = r.place_on_field(0, "BT26-072", Some(0));
     r.fire_on_play(0, peck.index as usize);
-    r.execute_branch(0).expect("Keenan present ⇒ cost modal; take 'trash'");
+    r.execute_branch(0)
+        .expect("Keenan present ⇒ cost modal; take 'trash'");
     pick_hand(&mut r, 0, "JUNK");
     let _ = r.auto_resolve();
-    assert_eq!(trash_ids(&r, 0), vec!["JUNK".to_string()], "our own hand was trashed");
+    assert_eq!(
+        trash_ids(&r, 0),
+        vec!["JUNK".to_string()],
+        "our own hand was trashed"
+    );
     assert!(!r.game.players[0].battle_area[k.index as usize].is_suspended);
 }
 

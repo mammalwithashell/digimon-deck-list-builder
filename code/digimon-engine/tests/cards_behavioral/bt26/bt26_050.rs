@@ -23,7 +23,12 @@ fn setup() -> DebugRunner {
         .dsl_card(CARD_ID)
         .expect("BT26-050")
         .add_card(filler("FILLER"))
-        .add_card(tamer("YOSHINO", "Yoshino Fujieda", CardColor::Green, &["DATA SQUAD"]))
+        .add_card(tamer(
+            "YOSHINO",
+            "Yoshino Fujieda",
+            CardColor::Green,
+            &["DATA SQUAD"],
+        ))
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
         .add_card(tamer("OPP-T", "Opp Tamer", CardColor::Red, &[]))
         .add_card(digimon("MINE", "Mine", CardColor::Green, 4, 5, &[]))
@@ -37,15 +42,24 @@ fn setup() -> DebugRunner {
 }
 
 fn drive_first_one(r: &mut DebugRunner) {
-    let Some(sel) = r.game.pending_selection.as_ref() else { return };
+    let Some(sel) = r.game.pending_selection.as_ref() else {
+        return;
+    };
     let p = sel.selecting_player;
-    let a = sel.valid_action_ids.iter().copied().find(|&a| a != digimon_engine::action::space::PASS).unwrap_or(digimon_engine::action::space::PASS);
+    let a = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .unwrap_or(digimon_engine::action::space::PASS);
     r.execute_action(p, a).unwrap();
 }
 
 fn drive_first(r: &mut DebugRunner) {
     for _ in 0..12 {
-        let Some(sel) = r.game.pending_selection.as_ref() else { return };
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            return;
+        };
         let p = sel.selecting_player;
         let a = sel
             .valid_action_ids
@@ -62,7 +76,10 @@ fn bt26_050_has_burst_and_level6_alt_paths() {
     let r = setup();
     let card = r.compiled_card(CARD_ID).unwrap();
     let dbg = format!("{:?}", card.alt_paths);
-    assert!(dbg.contains("Rosemon") && dbg.contains("Yoshino Fujieda"), "{dbg}");
+    assert!(
+        dbg.contains("Rosemon") && dbg.contains("Yoshino Fujieda"),
+        "{dbg}"
+    );
     let _ = CompiledAltPathKind::Digivolve;
 }
 
@@ -73,8 +90,10 @@ fn bt26_050_wd_suspend_is_optional_lock_is_mandatory() {
     let a = r.place_on_field(1, "OPP", Some(0));
     let b = r.place_on_field(1, "OPP-T", Some(0));
     fire(&mut r, EffectTiming::WhenDigivolving, bm);
-    // "You may suspend 2" ⇒ an explicit suspend / don't-suspend choice.
-    r.execute_branch(1).expect("don't suspend");
+    // "You may suspend 2" ⇒ PASS is legal with zero picks.
+    let v = r.pending_selection_view().expect("optional suspend pick");
+    assert!(v.is_optional, "may decline");
+    pass(&mut r, 0);
     // Lock leg is mandatory; the other WD (bounce) has no suspended candidate.
     drive_first(&mut r);
     assert!(!r.game.players[1].battle_area[a.index as usize].is_suspended);
@@ -89,20 +108,39 @@ fn bt26_050_wd_suspends_two_across_both_sides() {
     let mine = r.place_on_field(0, "MINE", Some(0));
     let opp = r.place_on_field(1, "OPP", Some(0));
     fire(&mut r, EffectTiming::WhenDigivolving, bm);
-    r.execute_branch(0).expect("suspend 2");
-    // Pick our own Digimon and the opponent's — either side is legal.
-    let own_action = r.pending_selection_view().unwrap().valid_action_ids.clone();
-    assert!(own_action.len() >= 3, "both players' Digimon/Tamers are candidates");
+    // One prompt over BOTH players' Digimon/Tamers (self, MINE, OPP).
+    let picks: Vec<_> = r
+        .pending_selection_view()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&x| x != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(
+        picks.len(),
+        3,
+        "both players' Digimon/Tamers are candidates"
+    );
     let _ = (mine, opp);
     drive_first_one(&mut r); // 1st pick
-    drive_first_one(&mut r); // 2nd pick (excludes the 1st)
+                             // "0 or exactly 2": stopping after one pick is not legal.
+    let v = r.pending_selection_view().expect("2nd pick pending");
+    assert!(!v.is_optional, "cannot stop at 1");
+    drive_first_one(&mut r); // 2nd pick
     drive_first_one(&mut r); // the mandatory can't-unsuspend pick
-    // Decline the separate [WD] bounce so the count is not disturbed.
+                             // Decline the separate [WD] bounce so the count is not disturbed.
     if r.game.pending_selection.is_some() {
         pass(&mut r, 0);
     }
     let _ = r.auto_resolve();
-    let n = r.game.players.iter().flat_map(|p| p.battle_area.iter()).filter(|p| p.is_suspended).count();
+    let n = r
+        .game
+        .players
+        .iter()
+        .flat_map(|p| p.battle_area.iter())
+        .filter(|p| p.is_suspended)
+        .count();
     assert_eq!(n, 2, "exactly 2 suspended");
 }
 
@@ -115,7 +153,14 @@ fn bt26_050_bounce_other_suspended_trashes_top_security() {
     fire(&mut r, EffectTiming::WhenAttacking, bm);
     let v = r.pending_selection_view().expect("optional bounce pick");
     assert!(v.is_optional);
-    assert_eq!(v.valid_action_ids.iter().filter(|&&x| x != digimon_engine::action::space::PASS).count(), 1, "only the OTHER suspended Digimon");
+    assert_eq!(
+        v.valid_action_ids
+            .iter()
+            .filter(|&&x| x != digimon_engine::action::space::PASS)
+            .count(),
+        1,
+        "only the OTHER suspended Digimon"
+    );
     pick_first(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).is_empty(), "bounced");
@@ -151,8 +196,26 @@ fn bt26_050_option_main_suspends_two_and_locks() {
         .collect();
     assert_eq!(suspended.len(), 2, "exactly 2 suspended");
     for h in &suspended {
-        assert!(r.modifiers().has(*h, ModifierType::CannotDigivolve), "suspended ⇒ can't digivolve");
+        assert!(
+            r.modifiers().has(*h, ModifierType::CannotDigivolve),
+            "suspended ⇒ can't digivolve"
+        );
     }
-    let untouched = [a, b, c].into_iter().find(|h| !suspended.contains(h)).unwrap();
-    assert!(!r.modifiers().has(untouched, ModifierType::CannotDigivolve), "unsuspended one may still digivolve");
+    let untouched = [a, b, c]
+        .into_iter()
+        .find(|h| !suspended.contains(h))
+        .unwrap();
+    assert!(
+        !r.modifiers().has(untouched, ModifierType::CannotDigivolve),
+        "unsuspended one may still digivolve"
+    );
+
+    // The lock is continuous: a Digimon of theirs that becomes suspended LATER
+    // in the window (e.g. by attacking on their turn) is locked too.
+    r.game.players[1].battle_area[untouched.index as usize].is_suspended = true;
+    r.game.tick_declarative_effects();
+    assert!(
+        r.modifiers().has(untouched, ModifierType::CannotDigivolve),
+        "later-suspended ⇒ locked"
+    );
 }

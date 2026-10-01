@@ -24,15 +24,43 @@ fn setup(deck_top: &[&str]) -> (DebugRunner, PermanentHandle) {
         .expect("BT26-065 in embedded DSL pack")
         .add_card(filler("FILLER"))
         // Green [DATA SQUAD] — bucket 1 only (not purple).
-        .add_card(digimon("DS-GREEN", "Lalamon", CardColor::Green, 3, 3, &["Vegetation", "DATA SQUAD"]))
+        .add_card(digimon(
+            "DS-GREEN",
+            "Lalamon",
+            CardColor::Green,
+            3,
+            3,
+            &["Vegetation", "DATA SQUAD"],
+        ))
         // Purple Mysterious Bird/[DATA SQUAD] — legal for BOTH buckets.
-        .add_card(digimon("DS-BIRD", "Crowmon", CardColor::Purple, 5, 7, &["Mysterious Bird", "DATA SQUAD"]))
+        .add_card(digimon(
+            "DS-BIRD",
+            "Crowmon",
+            CardColor::Purple,
+            5,
+            7,
+            &["Mysterious Bird", "DATA SQUAD"],
+        ))
         // Purple Avian, not DATA SQUAD — bucket 2 only.
-        .add_card(digimon("AVIAN", "Hawkmon", CardColor::Purple, 3, 3, &["Avian"]))
+        .add_card(digimon(
+            "AVIAN",
+            "Hawkmon",
+            CardColor::Purple,
+            3,
+            3,
+            &["Avian"],
+        ))
         // Purple named Ravemon, no traits — bucket 2 only (name match).
         .add_card(digimon("RAVE", "Ravemon", CardColor::Purple, 6, 12, &[]))
         // Green Avian — fails bucket 2's purple gate.
-        .add_card(digimon("GREEN-AVIAN", "Biyomon", CardColor::Green, 3, 3, &["Avian"]))
+        .add_card(digimon(
+            "GREEN-AVIAN",
+            "Biyomon",
+            CardColor::Green,
+            3,
+            3,
+            &["Avian"],
+        ))
         .deck(0, &deck)
         .deck(1, &["FILLER"; 5])
         .memory(3)
@@ -51,7 +79,10 @@ fn bt26_065_adds_one_per_bucket_and_bottoms_the_rest() {
     let _ = r.auto_resolve();
 
     let hand = hand_ids(&r, 0);
-    assert!(hand.contains(&"DS-GREEN".to_string()) && hand.contains(&"AVIAN".to_string()), "{hand:?}");
+    assert!(
+        hand.contains(&"DS-GREEN".to_string()) && hand.contains(&"AVIAN".to_string()),
+        "{hand:?}"
+    );
     assert_eq!(hand.len(), 2);
     // Remainder (FILLER) went to the BOTTOM (index 0).
     assert_eq!(deck_ids(&r, 0)[0], "FILLER");
@@ -64,7 +95,10 @@ fn bt26_065_first_bucket_is_mandatory_when_a_candidate_exists() {
     let (mut r, h) = setup(&["DS-GREEN", "FILLER", "FILLER"]);
     r.fire_on_play(0, h.index as usize);
     let v = r.pending_selection_view().expect("bucket 1 prompt");
-    assert!(!v.is_optional, "'Add 1' is not a 'may' — no PASS while a candidate exists");
+    assert!(
+        !v.is_optional,
+        "'Add 1' is not a 'may' — no PASS while a candidate exists"
+    );
 }
 
 #[test]
@@ -84,7 +118,10 @@ fn bt26_065_second_bucket_requires_purple() {
     let (mut r, h) = setup(&["GREEN-AVIAN", "FILLER", "FILLER"]);
     r.fire_on_play(0, h.index as usize);
     let _ = r.auto_resolve();
-    assert!(hand_ids(&r, 0).is_empty(), "a green Avian matches neither bucket");
+    assert!(
+        hand_ids(&r, 0).is_empty(),
+        "a green Avian matches neither bucket"
+    );
     assert_eq!(r.deck_size(0), 7);
 }
 

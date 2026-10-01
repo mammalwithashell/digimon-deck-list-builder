@@ -51,6 +51,16 @@ pub fn resolve_binding_ref(
                     .resolve_token_as_battle_area_top(*token)
                     .map(ResolvedBinding::Permanent);
             }
+            // G-DSL-TRASH-INDEX-BINDING-STALE: a pinned trash pick resolves
+            // by the card's identity, not the (possibly shifted) index.
+            if let Some(BindingValue::TrashIndex(p, _)) = bindings.get_ref(name) {
+                let p = *p;
+                if let Some(pos) =
+                    bindings.resolve_pinned_trash_index(name, &ctx.game.player(p).trash)
+                {
+                    return pos.map(|i| ResolvedBinding::TrashIndex(p, i));
+                }
+            }
             resolve_named(name, bindings)
         }
         CompiledBindingRef::EventTarget => {

@@ -21,7 +21,14 @@ fn setup() -> DebugRunner {
         .expect("ST24-12")
         .add_card(filler("FILLER"))
         .add_card(tamer("TAMER", "Tamer", CardColor::Green, &["DATA SQUAD"]))
-        .add_card(digimon("DS-DIGI", "DS", CardColor::Purple, 4, 5, &["DATA SQUAD"]))
+        .add_card(digimon(
+            "DS-DIGI",
+            "DS",
+            CardColor::Purple,
+            4,
+            5,
+            &["DATA SQUAD"],
+        ))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(3)

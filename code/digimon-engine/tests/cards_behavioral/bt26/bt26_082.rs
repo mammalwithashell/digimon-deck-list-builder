@@ -55,8 +55,15 @@ fn bt26_082_wd_delete_self_deletes_highest_dp() {
     // No Tamer face-down cards ⇒ the 2-way modal {Delete this | Don't pay}.
     r.execute_branch(0).expect("delete this Digimon");
     let _ = r.auto_resolve();
-    assert!(!field_ids(&r, 0).contains(&CARD_ID.to_string()), "Ravemon deleted as the cost");
-    assert_eq!(field_ids(&r, 1), vec!["SMALL".to_string()], "the highest-DP Digimon was deleted");
+    assert!(
+        !field_ids(&r, 0).contains(&CARD_ID.to_string()),
+        "Ravemon deleted as the cost"
+    );
+    assert_eq!(
+        field_ids(&r, 1),
+        vec!["SMALL".to_string()],
+        "the highest-DP Digimon was deleted"
+    );
 }
 
 #[test]
@@ -93,15 +100,28 @@ fn bt26_082_on_deletion_discard_then_face_up_bottom_security() {
     let rave = r.place_on_field(0, CARD_ID, Some(0));
     let sec_before = r.security_count(0);
     // Delete it for real so the card is in the trash when [On Deletion] runs.
-    r.game.delete_permanents_batch(vec![rave], digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    r.game.delete_permanents_batch(
+        vec![rave],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     pick_hand(&mut r, 1, "JUNK");
-    r.execute_branch(0).expect("place face up as bottom security");
+    r.execute_branch(0)
+        .expect("place face up as bottom security");
 
     let _ = r.auto_resolve();
     assert_eq!(r.security_count(0), sec_before + 1);
     let bottom = &r.game.players[0].security[0];
-    assert_eq!(bottom.card_id(&r.game.card_data), CARD_ID, "placed at the bottom");
-    assert!(r.game.players[0].face_up_security.contains(&bottom.card_index), "face up");
+    assert_eq!(
+        bottom.card_id(&r.game.card_data),
+        CARD_ID,
+        "placed at the bottom"
+    );
+    assert!(
+        r.game.players[0]
+            .face_up_security
+            .contains(&bottom.card_index),
+        "face up"
+    );
 }
 
 #[test]
@@ -114,7 +134,10 @@ fn bt26_082_face_up_security_plays_itself_at_end_of_opponents_turn() {
     let idx = r.game.players[0].security[0].card_index;
     r.game.players[0].face_up_security.insert(idx);
     r.end_turn();
-    assert!(r.game.players[0].battle_area.is_empty(), "waits for the OPPONENT's turn end");
+    assert!(
+        r.game.players[0].battle_area.is_empty(),
+        "waits for the OPPONENT's turn end"
+    );
     r.end_turn();
     assert!(field_ids(&r, 0).contains(&CARD_ID.to_string()));
     assert_eq!(r.security_count(0), 1);
@@ -129,6 +152,9 @@ fn bt26_082_face_down_security_does_nothing() {
         .start();
     r.end_turn();
     r.end_turn();
-    assert!(!field_ids(&r, 0).contains(&CARD_ID.to_string()), "{{Security}} needs face up (15-14-5)");
+    assert!(
+        !field_ids(&r, 0).contains(&CARD_ID.to_string()),
+        "{{Security}} needs face up (15-14-5)"
+    );
     assert_eq!(r.security_count(0), 2);
 }

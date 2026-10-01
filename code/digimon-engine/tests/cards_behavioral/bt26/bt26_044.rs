@@ -33,7 +33,14 @@ fn setup() -> DebugRunner {
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
         // Green Lv.6 Fairy with a Green Lv.5 / cost 4 circle.
         .add_card({
-            let mut c = digimon("ROSE", "Rosemon", CardColor::Green, 6, 12, &["Fairy", "DATA SQUAD"]);
+            let mut c = digimon(
+                "ROSE",
+                "Rosemon",
+                CardColor::Green,
+                6,
+                12,
+                &["Fairy", "DATA SQUAD"],
+            );
             c.evo_costs = vec![digimon_engine::card_data::EvoCost {
                 card_color: CardColor::Green as u8,
                 level: 5,
@@ -41,10 +48,31 @@ fn setup() -> DebugRunner {
             }];
             c
         })
-        .add_card(digimon("DS6", "DS carrier", CardColor::Green, 6, 12, &["DATA SQUAD"]))
-        .add_card(digimon("PLAIN6", "Plain carrier", CardColor::Green, 6, 12, &["Beast"]))
+        .add_card(digimon(
+            "DS6",
+            "DS carrier",
+            CardColor::Green,
+            6,
+            12,
+            &["DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "PLAIN6",
+            "Plain carrier",
+            CardColor::Green,
+            6,
+            12,
+            &["Beast"],
+        ))
         // A Rosemon-NAMED carrier without the [DATA SQUAD] trait.
-        .add_card(digimon("ROSE-X", "Rosemon X", CardColor::Green, 6, 12, &["Fairy"]))
+        .add_card(digimon(
+            "ROSE-X",
+            "Rosemon X",
+            CardColor::Green,
+            6,
+            12,
+            &["Fairy"],
+        ))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(5)
@@ -83,7 +111,10 @@ fn bt26_044_declining_suspend_still_locks() {
     pass(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(!r.game.players[1].battle_area[opp.index as usize].is_suspended);
-    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend), "the 'Then' leg is independent");
+    assert!(
+        r.modifiers().has(opp, ModifierType::CannotUnsuspend),
+        "the 'Then' leg is independent"
+    );
 }
 
 #[test]
@@ -96,12 +127,16 @@ fn bt26_044_opponent_suspend_lets_it_digivolve_for_one_less() {
     r.place_on_field(1, "OPP", Some(0));
     fire(&mut r, EffectTiming::WhenAttacking, carrier);
     pick_first(&mut r, 0);
-    let v = r.pending_selection_view().expect("Lilamon's may-digivolve hand pick");
+    let v = r
+        .pending_selection_view()
+        .expect("Lilamon's may-digivolve hand pick");
     assert!(v.is_optional);
     pick_hand(&mut r, 0, "ROSE");
     let _ = r.auto_resolve();
     assert_eq!(
-        r.game.players[0].battle_area[lila.index as usize].top_card().card_id(&r.game.card_data),
+        r.game.players[0].battle_area[lila.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
         "ROSE"
     );
     assert_eq!(r.memory(), 5 - 3, "circle cost 4 reduced by 1");
@@ -123,17 +158,26 @@ fn bt26_044_declined_digivolve_refunds_once_per_turn() {
     let lala2 = r.place_stack(0, &["BT26-036", "FILLER"]);
     fire(&mut r, EffectTiming::WhenAttacking, lala2);
     pick_first(&mut r, 0);
-    assert!(r.pending_selection_view().is_some(), "re-offered after a decline");
+    assert!(
+        r.pending_selection_view().is_some(),
+        "re-offered after a decline"
+    );
     pick_hand(&mut r, 0, "ROSE");
     let _ = r.auto_resolve();
     assert_eq!(
-        r.game.players[0].battle_area[lila.index as usize].top_card().card_id(&r.game.card_data),
+        r.game.players[0].battle_area[lila.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
         "ROSE"
     );
 }
 
-fn delete_and_expect_replacement(r: &mut DebugRunner, carrier: digimon_engine::permanent::PermanentHandle) -> bool {
-    r.game.delete_permanents_batch(vec![carrier], ReplacementCause::OpponentEffect);
+fn delete_and_expect_replacement(
+    r: &mut DebugRunner,
+    carrier: digimon_engine::permanent::PermanentHandle,
+) -> bool {
+    r.game
+        .delete_permanents_batch(vec![carrier], ReplacementCause::OpponentEffect);
     matches!(r.pending_kind(), Some(SelectionKind::Replacement))
 }
 
@@ -142,11 +186,18 @@ fn bt26_044_inherited_prevents_leaving_for_data_squad_carrier() {
     let mut r = setup();
     let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
     let t = tamer_with_face_down(&mut r, 0, "TAMER", 1);
-    assert!(delete_and_expect_replacement(&mut r, carrier), "optional replacement prompt");
+    assert!(
+        delete_and_expect_replacement(&mut r, carrier),
+        "optional replacement prompt"
+    );
     let v = r.pending_selection_view().unwrap();
-    r.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    r.execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
     let _ = r.auto_resolve();
-    assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "did not leave");
+    assert!(
+        field_ids(&r, 0).contains(&"DS6".to_string()),
+        "did not leave"
+    );
     assert_eq!(sources(&r, t), 0, "cost paid");
 }
 
@@ -157,7 +208,10 @@ fn bt26_044_inherited_ignores_non_rosemon_non_data_squad_carrier() {
     tamer_with_face_down(&mut r, 0, "TAMER", 1);
     assert!(!delete_and_expect_replacement(&mut r, carrier));
     let _ = r.auto_resolve();
-    assert!(!field_ids(&r, 0).contains(&"PLAIN6".to_string()), "deleted normally");
+    assert!(
+        !field_ids(&r, 0).contains(&"PLAIN6".to_string()),
+        "deleted normally"
+    );
 }
 
 #[test]
@@ -165,6 +219,8 @@ fn bt26_044_inherited_protects_rosemon_named_carrier() {
     let mut r = setup();
     let carrier = r.place_stack(0, &[CARD_ID, "ROSE-X"]);
     tamer_with_face_down(&mut r, 0, "TAMER", 1);
-    assert!(delete_and_expect_replacement(&mut r, carrier), "[Rosemon] in its name qualifies");
+    assert!(
+        delete_and_expect_replacement(&mut r, carrier),
+        "[Rosemon] in its name qualifies"
+    );
 }
-

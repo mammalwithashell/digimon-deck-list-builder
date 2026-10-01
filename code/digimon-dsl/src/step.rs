@@ -907,9 +907,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "trash_union_bound" => StepSpec::TrashUnionBound(map.next_value()?),
-            "return_union_bound_to_deck" => {
-                StepSpec::ReturnUnionBoundToDeck(map.next_value()?)
-            }
+            "return_union_bound_to_deck" => StepSpec::ReturnUnionBoundToDeck(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -3429,6 +3427,11 @@ pub struct SelectCountCappedArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
+    /// "You may <verb> N": the player may finish with ZERO picks even when
+    /// `min`/`clamp_to_available` would otherwise force a count — i.e. the
+    /// legal totals are `0` or the normal required count (DCGO
+    /// `canNoSelect:true, canEndNotMax:false`). A partial pick between 1 and
+    /// the required count is still illegal.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional_zero: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]

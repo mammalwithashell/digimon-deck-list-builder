@@ -8356,18 +8356,23 @@ pins that the turn scan does not trash such a marker.
   sat inside an `any_of` in ST24-06, ST24-10, BT25-027, making their "[X] in its name or
   the [DATA SQUAD] trait" leave-prevention apply to EVERY carrier. Those three cards are
   fixed (`source_name_contains`).
-- Still open: reject unknown predicate keys at parse or lint time (dsl-lint) so the next
-  typo fails the build instead of widening a filter.
+- Still open (not a card blocker — every known casualty is fixed): reject unknown
+  predicate keys at parse or lint time (dsl-lint) so the next typo fails the build
+  instead of widening a filter. Same class as G-DSL-PREDICATE-UNKNOWN-FIELDS above.
 
 ## Count-capped multi-select cannot span both players or express "0 or exactly N"  [G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N]
 
 - Found 2026-09-30 (BT26-050 Rosemon: Burst Mode "[When Digivolving] You may suspend 2
   Digimon or Tamers" — DCGO canNoSelect:true / canEndNotMax:false over BOTH players).
-- `select_count_capped_multi` resolves `of: any` to the controller only, and
-  `optional_zero` does not lower `min` (effective min = max(min, 0|1)).
-- Worked around in BT26-050 with an explicit suspend / don't-suspend modal plus two
-  sequential `select_any_permanent` picks (`not_in_binding`). Suggested vocab:
-  `of: any` support + `zero_or_exact: true`.
+- **RESOLVED 2026-09-30.** `select_count_capped_multi { zone: battle_area, of: any }`
+  now offers both players' permanents in ONE prompt (`SelectionKind::AnyField`,
+  `collect_matching_any_permanents`), and `optional_zero: true` now means "0 or the
+  required count": PASS is legal at zero picks even when `min`/`clamp_to_available`
+  force a count, but not after a partial pick. BT26-050 uses it directly (the modal +
+  two `select_any_permanent` workaround is gone); tests `bt26_050_wd_*`.
+  Side effect: BT25-059 Ceresmon ("You may suspend up to 2 Digimon") already wrote
+  `of: any` and was silently restricted to its controller's side; it now offers both
+  sides (official Q&A confirms either side), tests updated.
 
 ## Player-level modifier with a permanent filter  [G-DSL-PLAYER-MODIFIER-PERMANENT-FILTER]
 
@@ -8375,10 +8380,12 @@ pins that the turn scan does not trash such a marker.
   suspended Digimon or Tamers can digivolve or unsuspend" — DCGO
   `GainCanNotDigivolvePlayerEffect(permanentCondition: IsSuspended)`, evaluated
   continuously).
-- `add_player_modifier` has no permanent filter. BT26-050 applies `CannotDigivolve` to the
-  opponent's permanents suspended at resolution (PARTIAL: one that becomes suspended later
-  in the window can still digivolve). `CannotUnsuspend` is exact at player level.
-- Suggested vocab: `add_player_modifier { …, permanent_filter: <predicate> }`.
+- **RESOLVED 2026-09-30 (no new vocab needed).** The existing floating mass modifier
+  `add_modifier { target: <predicate>, continuous: true }` is re-scanned every tick, so
+  `target: { of: opponent, is_suspended: true, … }` covers permanents that become
+  suspended later in the window. BT26-050 uses it; test
+  `bt26_050_option_main_suspends_two_and_locks` suspends a Digimon after resolution and
+  asserts it is locked.
 
 ## `select_trash` binds a trash INDEX that goes stale  [G-DSL-TRASH-INDEX-BINDING-STALE]
 
@@ -8388,5 +8395,8 @@ pins that the turn scan does not trash such a marker.
 - `select_trash` binds `TrashIndex`; the first placement shifts the trash and the second
   binding then addresses the wrong slot (silently no-op). BT25-096 only works because it
   places each card immediately after picking it (which breaks the all-or-nothing reading).
-- Worked around with `select_union_zone { zones: [trash] }` (handle-bound). Suggested:
-  bind `select_trash` picks by `CardHandle`.
+- **RESOLVED 2026-09-30.** `select_trash` still binds `TrashIndex` (other steps read the
+  index), but also pins the picked `CardHandle` (`Bindings::insert_trash_index_pinned`);
+  named-binding resolution and `binding_play_cost` re-locate the card by handle, and a
+  pinned card that has left the trash resolves to nothing. BT26-098 is back on plain
+  `select_trash` picks (its test is the regression).

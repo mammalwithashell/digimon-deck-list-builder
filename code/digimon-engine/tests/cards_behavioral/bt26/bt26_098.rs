@@ -23,11 +23,44 @@ fn setup() -> DebugRunner {
         .dsl_card(CARD_ID)
         .expect("BT26-098")
         .add_card(filler("FILLER"))
-        .add_card(tamer("YOSHINO", "Yoshino Fujieda", CardColor::Green, &["DATA SQUAD"]))
-        .add_card(digimon("LALA", "Lalamon", CardColor::Green, 3, 3, &["Vegetation", "DATA SQUAD"]))
-        .add_card(digimon("SUNF", "Sunflowmon", CardColor::Green, 4, 5, &["Vegetation", "DATA SQUAD"]))
-        .add_card(digimon("LILA", "Lilamon", CardColor::Green, 5, 6, &["Fairy", "DATA SQUAD"]))
-        .add_card(digimon("ROSE", "Rosemon", CardColor::Green, 6, 12, &["Fairy", "DATA SQUAD"]))
+        .add_card(tamer(
+            "YOSHINO",
+            "Yoshino Fujieda",
+            CardColor::Green,
+            &["DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "LALA",
+            "Lalamon",
+            CardColor::Green,
+            3,
+            3,
+            &["Vegetation", "DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "SUNF",
+            "Sunflowmon",
+            CardColor::Green,
+            4,
+            5,
+            &["Vegetation", "DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "LILA",
+            "Lilamon",
+            CardColor::Green,
+            5,
+            6,
+            &["Fairy", "DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "ROSE",
+            "Rosemon",
+            CardColor::Green,
+            6,
+            12,
+            &["Fairy", "DATA SQUAD"],
+        ))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(10)
@@ -80,7 +113,11 @@ fn bt26_098_main_is_all_or_nothing() {
     pick_first(&mut r, 0); // Sunflowmon
     pass(&mut r, 0); // decline Lilamon
     let _ = r.auto_resolve();
-    assert_eq!(sources(&r, lala), 0, "nothing placed when only one was chosen (Q&A)");
+    assert_eq!(
+        sources(&r, lala),
+        0,
+        "nothing placed when only one was chosen (Q&A)"
+    );
     assert!(trash_ids(&r, 0).contains(&"SUNF".to_string()));
 }
 
@@ -105,7 +142,7 @@ fn bt26_098_face_down_trash_reduces_use_cost_by_two() {
     assert!(v.is_optional);
     r.execute_branch(0).expect("accept the reduction");
     pick_first(&mut r, 0); // the Tamer
-    // [Main] has nothing to do (no Lalamon); let it resolve.
+                           // [Main] has nothing to do (no Lalamon); let it resolve.
     while r.game.pending_selection.is_some() {
         pass(&mut r, 0);
     }
@@ -124,4 +161,3 @@ fn bt26_098_no_reduction_offer_without_face_down_card() {
     }
     assert_eq!(r.memory(), mem - 5, "full use cost");
 }
-

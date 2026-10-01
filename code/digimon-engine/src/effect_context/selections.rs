@@ -3378,7 +3378,9 @@ fn install_count_capped_step(
     // `min` (G-SELECT-MULTI-MIN) raised to at least 1 unless `is_optional_zero`
     // permits a zero-pick finish.
     let effective_min = min.max(if is_optional_zero { 0 } else { 1 });
-    let is_optional = picked >= effective_min;
+    // `is_optional_zero` with `min > 0` = "decline entirely, or pick at least
+    // `min`" (G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N).
+    let is_optional = picked >= effective_min || (is_optional_zero && picked == 0);
 
     // Build valid_action_ids from remaining candidate indices.
     let valid_action_ids: Vec<u16> = candidate_indices

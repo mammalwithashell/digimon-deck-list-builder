@@ -4189,7 +4189,7 @@ this fix brings the triggered path into line with it.
 unaffected. BT20-055 / BT25-039 tests now mark the card face up; new negative test
 `bt26_082_face_down_security_does_nothing`.
 
-## G-ENGINE-ON-SUSPEND-BATCH — OPEN (found 2026-09-30, BT26 Data Squad)
+## G-ENGINE-ON-SUSPEND-BATCH — RESOLVED 2026-09-30 (found 2026-09-30, BT26 Data Squad)
 
 DCGO fires ONE `OnTappedAnyone` per suspend action carrying every suspended permanent
 (`CardController.cs` `SuspendPermanents…` → `StackSkillInfos(_hashtable{"Permanents"})`).
@@ -4199,3 +4199,13 @@ only when the first trigger is declined and refunded (DCGO RemoveUse) — ours
 re-offers on the second event of the same batch; non-OPT ones (BT26-091 Yoshino)
 would trigger twice per multi-suspend, but its "by suspending this Tamer" cost makes
 the second unpayable. Needs a batched suspend event (like `pending_hand_discard`).
+
+**Fix.** The trigger drain (`effect_queue.rs`, after the non-firing filter) keeps
+only the first FIRING `OnSuspend` entry per observer (same source card/permanent,
+slot, granted id, keyword) in a chooser's bundle and drops the rest (rule 15-5-2).
+Because non-firing entries are filtered first, "any of the batched permanents
+satisfies the condition" still holds. Test `bt26_049_two_suspends_in_one_action_trigger_once`.
+Limitation: the batch boundary is the drain bundle (one resolving effect), not the
+suspend call — two *separate* suspend actions inside one effect body would also
+collapse. No printed card in the pool is known to do that; add an event id to
+`QueuedEffect` if one appears.

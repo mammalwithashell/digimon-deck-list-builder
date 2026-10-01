@@ -78,19 +78,18 @@ effects:
             - if:
                 condition: { binding_present: lalamon }
                 then:
-                  # select_union_zone (trash only) binds the card by stable
-                  # handle; a plain select_trash binds a trash INDEX, which the
-                  # first placement would shift before the second resolves.
-                  - select_union_zone:
+                  # Both picks precede both moves. select_trash pins the picked
+                  # card's identity, so the first placement shifting the trash
+                  # does not stale the second binding
+                  # (G-DSL-TRASH-INDEX-BINDING-STALE, resolved).
+                  - select_trash:
                       of: you
-                      zones: [trash]
                       bind_as: sunflowmon_card
                       optional: true
                       filter: { name_is: "Sunflowmon" }
                       prompt: "Select 1 [Sunflowmon] from your trash"
-                  - select_union_zone:
+                  - select_trash:
                       of: you
-                      zones: [trash]
                       bind_as: lilamon_card
                       optional: true
                       filter: { name_is: "Lilamon" }

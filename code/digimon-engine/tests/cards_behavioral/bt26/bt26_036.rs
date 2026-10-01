@@ -22,7 +22,14 @@ fn setup(deck_top: &[&str]) -> (DebugRunner, PermanentHandle) {
         .dsl_card(CARD_ID)
         .expect("BT26-036 in embedded DSL pack")
         .add_card(filler("FILLER"))
-        .add_card(digimon("FAIRY", "Lilamon", CardColor::Green, 5, 6, &["Fairy"]))
+        .add_card(digimon(
+            "FAIRY",
+            "Lilamon",
+            CardColor::Green,
+            5,
+            6,
+            &["Fairy"],
+        ))
         .add_card(tamer("GREEN-T", "Some Tamer", CardColor::Green, &[]))
         .add_card(tamer("RED-T", "Other Tamer", CardColor::Red, &[]))
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
@@ -50,7 +57,11 @@ fn bt26_036_green_tamer_is_legal_red_tamer_is_not() {
     let (mut r, h) = setup(&["RED-T", "GREEN-T", "FILLER"]);
     r.fire_on_play(0, h.index as usize);
     let v = r.pending_selection_view().expect("reveal prompt");
-    assert_eq!(v.valid_action_ids.len(), 1, "only the green Tamer qualifies");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "only the green Tamer qualifies"
+    );
     pick_reveal(&mut r, 0, "GREEN-T");
     let _ = r.auto_resolve();
     assert_eq!(hand_ids(&r, 0), vec!["GREEN-T".to_string()]);
@@ -61,7 +72,10 @@ fn bt26_036_has_when_moving_timing() {
     use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
     let (r, _) = setup(&["FILLER", "FILLER", "FILLER"]);
     let card = r.compiled_card(CARD_ID).unwrap();
-    assert!(card.effects.iter().any(|c| matches!(c, CompiledClause::Triggered(t)
+    assert!(card
+        .effects
+        .iter()
+        .any(|c| matches!(c, CompiledClause::Triggered(t)
         if t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::OnMove))));
 }
 
@@ -89,7 +103,10 @@ fn bt26_036_declining_refunds_once_per_turn() {
     assert!(!r.game.players[1].battle_area[opp.index as usize].is_suspended);
     // DCGO RemoveUse: the OPT was not spent, so a later attack re-offers it.
     fire(&mut r, EffectTiming::WhenAttacking, carrier);
-    assert!(r.pending_selection_view().is_some(), "re-offered after a decline");
+    assert!(
+        r.pending_selection_view().is_some(),
+        "re-offered after a decline"
+    );
 }
 
 #[test]
@@ -102,4 +119,3 @@ fn bt26_036_inherited_silent_without_unsuspended_target() {
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none());
 }
-

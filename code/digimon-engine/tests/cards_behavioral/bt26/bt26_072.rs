@@ -20,7 +20,12 @@ fn setup() -> (DebugRunner, PermanentHandle) {
         .dsl_card(CARD_ID)
         .expect("BT26-072")
         .add_card(filler("FILLER"))
-        .add_card(tamer("KEENAN", "Keenan Crier", CardColor::Purple, &["DATA SQUAD"]))
+        .add_card(tamer(
+            "KEENAN",
+            "Keenan Crier",
+            CardColor::Purple,
+            &["DATA SQUAD"],
+        ))
         .add_card(digimon("OPP4", "Opp4", CardColor::Red, 4, 5, &[]))
         .add_card(digimon("OPP5", "Opp5", CardColor::Red, 5, 7, &[]))
         .add_card(digimon("JUNK", "Junk", CardColor::Red, 3, 3, &[]))
@@ -55,7 +60,11 @@ fn bt26_072_trash_cost_then_delete_lv4() {
     pick_hand(&mut r, 0, "JUNK");
     let _ = r.auto_resolve();
     assert_eq!(trash_ids(&r, 0), vec!["JUNK".to_string()]);
-    assert_eq!(field_ids(&r, 1), vec!["OPP5".to_string()], "Lv.4 deleted, Lv.5 untouched");
+    assert_eq!(
+        field_ids(&r, 1),
+        vec!["OPP5".to_string()],
+        "Lv.4 deleted, Lv.5 untouched"
+    );
 }
 
 #[test]
@@ -120,7 +129,10 @@ fn bt26_072_inherited_on_deletion_opponent_discards() {
     fire(&mut r, EffectTiming::OnDeletion, carrier);
     let v = r.pending_selection_view().expect("opponent chooses");
     assert!(!v.is_optional);
-    assert_eq!(r.game.pending_selection.as_ref().unwrap().selecting_player, 1);
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().selecting_player,
+        1
+    );
     pick_hand(&mut r, 1, "OPP4");
     let _ = r.auto_resolve();
     assert_eq!(hand_ids(&r, 1), vec!["JUNK".to_string()]);

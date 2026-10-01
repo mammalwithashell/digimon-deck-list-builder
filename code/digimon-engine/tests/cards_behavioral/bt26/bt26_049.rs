@@ -24,9 +24,30 @@ fn setup() -> DebugRunner {
         .add_card(filler("FILLER"))
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
         .add_card(tamer("OPP-T", "Opp Tamer", CardColor::Red, &[]))
-        .add_card(digimon("DS3", "DS three", CardColor::Green, 3, 3, &["DATA SQUAD"]))
-        .add_card(digimon("DS5", "DS five", CardColor::Green, 4, 5, &["DATA SQUAD"]))
-        .add_card(digimon("DS6", "DS six", CardColor::Green, 5, 6, &["DATA SQUAD"]))
+        .add_card(digimon(
+            "DS3",
+            "DS three",
+            CardColor::Green,
+            3,
+            3,
+            &["DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "DS5",
+            "DS five",
+            CardColor::Green,
+            4,
+            5,
+            &["DATA SQUAD"],
+        ))
+        .add_card(digimon(
+            "DS6",
+            "DS six",
+            CardColor::Green,
+            5,
+            6,
+            &["DATA SQUAD"],
+        ))
         .add_card(digimon("PLAIN3", "Plain", CardColor::Green, 3, 3, &[]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
@@ -44,7 +65,9 @@ fn suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
 /// or a prompt of `stop_prompt` appears.
 fn drive_until(r: &mut DebugRunner, stop_prompt: &str) -> bool {
     for _ in 0..12 {
-        let Some(sel) = r.game.pending_selection.as_ref() else { return false };
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            return false;
+        };
         if sel.prompt.contains(stop_prompt) {
             return true;
         }
@@ -121,7 +144,12 @@ fn bt26_049_reactive_cap_counts_suspended() {
     assert!(drive_until(&mut r, "play or use"), "reactive offered");
     let v = r.pending_selection_view().unwrap();
     assert!(v.is_optional);
-    let offered: Vec<u16> = v.valid_action_ids.iter().copied().filter(|&a| a != digimon_engine::action::space::PASS).collect();
+    let offered: Vec<u16> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect();
     assert_eq!(offered.len(), 1, "only DS5 is within 3 + 2");
     pick_hand(&mut r, 0, "DS5");
     let _ = r.auto_resolve();
@@ -149,13 +177,40 @@ fn bt26_049_reactive_decline_refunds() {
     // Trash via the engine surface a card effect would use.
     {
         let rc = rose_card(&r, rose);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, rc, Some(rose), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, rc, Some(rose), 0);
         assert!(ctx.trash_bottom_face_down_source(t));
     }
     r.game.drain_effect_queue();
-    assert!(r.pending_selection_view().is_some(), "re-offered after a decline");
+    assert!(
+        r.pending_selection_view().is_some(),
+        "re-offered after a decline"
+    );
 }
 
 fn rose_card(r: &DebugRunner, h: PermanentHandle) -> digimon_engine::card_source::CardHandle {
-    r.game.players[h.player as usize].battle_area[h.index as usize].top_card().handle()
+    r.game.players[h.player as usize].battle_area[h.index as usize]
+        .top_card()
+        .handle()
+}
+
+/// G-ENGINE-ON-SUSPEND-BATCH: suspending 2 permanents in one action is ONE
+/// "when … suspend" event (rule 15-5-2; DCGO fires one OnTappedAnyone with the
+/// whole list). Declining the reactive refunds its [Once Per Turn], but the
+/// same batch must not re-offer it.
+#[test]
+fn bt26_049_two_suspends_in_one_action_trigger_once() {
+    let mut r = setup();
+    let rose = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    push_hand(&mut r, 0, "DS3");
+    fire(&mut r, EffectTiming::WhenDigivolving, rose);
+    assert!(drive_until(&mut r, "play or use"), "reactive offered once");
+    pass(&mut r, 0);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no second offer from the same 2-permanent suspend"
+    );
+    assert_eq!(r.hand_size(0), 1);
 }

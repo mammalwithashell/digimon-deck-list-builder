@@ -11312,12 +11312,12 @@
       "card_name": "Rosemon: Burst Mode",
       "validated_date": "2026-09-30",
       "report": "bt26-data-squad",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_050.rs",
-      "notes": "Option-face can-not-digivolve lock is a resolution-time snapshot (G-DSL-PLAYER-MODIFIER-PERMANENT-FILTER); WD suspend-2 uses a modal + two either-side picks (G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N). Burst digivolve covered structurally only."
+      "notes": "WD suspend-2 is one either-side count-capped pick with 0-or-2 semantics (of: any + optional_zero); Option-face lock is a continuous mass modifier over the opponent's suspended Digimon/Tamers. Burst digivolve covered structurally only."
     },
     "BT26-082": {
       "card_name": "Ravemon",
@@ -11339,7 +11339,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-098.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_098.rs",
-      "notes": "TDD vs DCGO BT26_098.cs; all-or-nothing placement per Q&A (handle-bound picks, G-DSL-TRASH-INDEX-BINDING-STALE); the DCGO placement-order choice is not surfaced."
+      "notes": "TDD vs DCGO BT26_098.cs; all-or-nothing placement per Q&A (select_trash picks are handle-pinned, G-DSL-TRASH-INDEX-BINDING-STALE resolved); the DCGO placement-order choice is not surfaced."
     }
   }
 }

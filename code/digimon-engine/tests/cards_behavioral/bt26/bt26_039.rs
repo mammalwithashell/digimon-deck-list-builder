@@ -19,8 +19,18 @@ fn setup() -> (DebugRunner, PermanentHandle) {
         .dsl_card(CARD_ID)
         .expect("BT26-039 in embedded DSL pack")
         .add_card(filler("FILLER"))
-        .add_card(tamer("YOSHINO", "Yoshino Fujieda", CardColor::Green, &["DATA SQUAD"]))
-        .add_card(tamer("OTHER-DS-T", "Keenan Crier", CardColor::Purple, &["DATA SQUAD"]))
+        .add_card(tamer(
+            "YOSHINO",
+            "Yoshino Fujieda",
+            CardColor::Green,
+            &["DATA SQUAD"],
+        ))
+        .add_card(tamer(
+            "OTHER-DS-T",
+            "Keenan Crier",
+            CardColor::Purple,
+            &["DATA SQUAD"],
+        ))
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
         .deck(0, &["FILLER"; 5])
         .deck(1, &["FILLER"; 5])
@@ -52,7 +62,11 @@ fn bt26_039_only_yoshino_by_name() {
     r.fire_on_play(0, h.index as usize);
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none());
-    assert_eq!(r.hand_size(0), 1, "a different [DATA SQUAD] Tamer is not playable");
+    assert_eq!(
+        r.hand_size(0),
+        1,
+        "a different [DATA SQUAD] Tamer is not playable"
+    );
 }
 
 #[test]

@@ -1284,6 +1284,41 @@ impl Game {
                 continue;
             }
 
+            // G-ENGINE-ON-SUSPEND-BATCH: one suspend action that suspends
+            // several permanents is ONE `OnSuspend` event (rule 15-5-2: a
+            // condition met several times at once triggers once; DCGO fires a
+            // single `OnTappedAnyone` carrying the whole `Permanents` list).
+            // The engine enqueues one entry per suspended permanent, so the
+            // same observer can sit in this bundle several times. Keep the
+            // FIRST FIRING entry per observer and drop the rest — the
+            // non-firing ones were already excluded above, so "any of the
+            // batched permanents satisfies the condition" is preserved.
+            {
+                let mut seen = std::collections::HashSet::new();
+                let dup: Vec<usize> = bundle
+                    .iter()
+                    .copied()
+                    .filter(|&i| {
+                        let qe = &self.effect_queue[i];
+                        qe.timing == EffectTiming::OnSuspend
+                            && !seen.insert(format!(
+                                "{:?}|{:?}|{}|{:?}|{:?}",
+                                qe.source_card,
+                                qe.source_permanent,
+                                qe.effect_slot,
+                                qe.granted_effect_id,
+                                qe.keyword_effect
+                            ))
+                    })
+                    .collect();
+                if !dup.is_empty() {
+                    for idx in dup.into_iter().rev() {
+                        self.effect_queue.remove(idx);
+                    }
+                    continue;
+                }
+            }
+
             if bundle.len() == 1 {
                 let idx = bundle[0];
                 // Single trigger with activation_cost_fn + optional: true →
@@ -4260,9 +4295,9 @@ impl Game {
             // never both apply to one effect.
             let keyword = qe.keyword_effect.or_else(|| {
                 self.effects_for_queued(qe).and_then(|effects| {
-                    effects.get(qe.effect_slot as usize).and_then(|effect| {
-                        effect.granted_keyword.or(effect.keyword_source)
-                    })
+                    effects
+                        .get(qe.effect_slot as usize)
+                        .and_then(|effect| effect.granted_keyword.or(effect.keyword_source))
                 })
             });
             debug_assert!(action_id < HAND_EFFECT_END);

@@ -56,6 +56,11 @@ pub enum BindingValue {
     },
 }
 
+/// Reserved slot key holding a trash binding's stable-identity pin.
+fn trash_pin_key(name: &str) -> String {
+    format!("\u{0}trash_pin:{name}")
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
@@ -104,6 +109,9 @@ impl Bindings {
     }
 
     pub fn insert(&mut self, name: &str, value: BindingValue) {
+        // Re-binding a name drops any stable-identity pin from a previous
+        // trash pick under the same name.
+        self.slots.remove(&trash_pin_key(name));
         self.slots.insert(name.to_string(), value);
     }
 
@@ -357,6 +365,54 @@ impl Bindings {
 
     pub fn insert_trash_index_for(&mut self, name: &str, player: PlayerId, i: u16) {
         self.insert_trash_index(name, player, i);
+    }
+
+    /// `insert_trash_index` plus a stable-identity PIN of the picked card
+    /// (G-DSL-TRASH-INDEX-BINDING-STALE). A trash INDEX goes stale as soon as
+    /// an earlier trash card moves (e.g. two `select_trash` picks, then two
+    /// placements): consumers re-resolve the index from the pinned handle via
+    /// [`Bindings::trash_pin`], and a pinned card that has left the trash
+    /// resolves to nothing instead of silently addressing a different card.
+    /// The pin lives in the ordinary slot map under a reserved key, so it
+    /// survives `clone` / `merge_slots_from` with the binding it belongs to.
+    pub fn insert_trash_index_pinned(
+        &mut self,
+        name: &str,
+        player: PlayerId,
+        i: u16,
+        card: Option<CardHandle>,
+    ) {
+        self.insert_trash_index(name, player, i);
+        if let Some(card) = card {
+            self.slots
+                .insert(trash_pin_key(name), BindingValue::Card(card));
+        }
+    }
+
+    /// The card a `select_trash` pick bound to `name` was pinned to, if any.
+    pub fn trash_pin(&self, name: &str) -> Option<CardHandle> {
+        match self.slots.get(&trash_pin_key(name))? {
+            BindingValue::Card(h) => Some(*h),
+            _ => None,
+        }
+    }
+
+    /// Current trash position of a pinned trash binding: `Some(Some(i))` when
+    /// the pinned card is still in `player`'s trash, `Some(None)` when it has
+    /// left, `None` when the binding carries no pin (legacy index-only). `trash`
+    /// is the trash of the player the binding names.
+    pub fn resolve_pinned_trash_index(
+        &self,
+        name: &str,
+        trash: &[crate::card_source::CardSource],
+    ) -> Option<Option<u16>> {
+        let pin = self.trash_pin(name)?;
+        Some(
+            trash
+                .iter()
+                .position(|c| c.handle() == pin)
+                .map(|i| i as u16),
+        )
     }
 
     pub fn insert_literal(&mut self, name: &str, v: i64) {

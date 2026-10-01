@@ -330,6 +330,11 @@ pub(crate) fn run_resume(
                             tname,
                         );
                     }
+                    let pinned = game
+                        .player(of_player)
+                        .trash
+                        .get(trash_index)
+                        .map(|c| c.handle());
                     let mut ctx = EffectContext::new_with_source_kind_and_override(
                         game,
                         prov.source_card,
@@ -340,7 +345,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_trash_index(name, of_player, trash_index as u16);
+                        b.insert_trash_index_pinned(name, of_player, trash_index as u16, pinned);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -1446,7 +1451,9 @@ fn park_non_dsl_count_capped_state(
         selecting_player: state.prov.override_pin.unwrap_or(state.prov.controller),
         previous_phase: state.previous_phase,
         valid_action_ids: state.candidate_actions.clone(),
-        is_optional: picked >= effective_min,
+        // See G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N: a zero-pick decline
+        // stays legal under `optional_zero` even when `min > 0`.
+        is_optional: picked >= effective_min || (state.is_optional_zero && picked == 0),
         prompt: state.prompt.clone(),
         effect_choices: None,
         source_card: state.prov.source_card,
@@ -1583,11 +1590,7 @@ fn finish_non_dsl_count_capped(
             let mut picked = picked_so_far;
             picked.extend(state.accum.iter().copied());
             crate::cards::keyword_effects::drive_partition_picks(
-                ctx.game,
-                state.prov,
-                subject,
-                slots,
-                picked,
+                ctx.game, state.prov, subject, slots, picked,
             );
         }
         crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave { tamer } => {
@@ -2386,16 +2389,15 @@ pub(crate) fn install_count_capped_permanent_resume_step(
     use crate::selection::{PendingSelection, SelectionKind};
     let picked = state.accum.len() as u8;
     let effective_min = state.min.max(if state.optional_zero { 0 } else { 1 });
-    let is_optional = picked >= effective_min;
+    // `optional_zero` with `min > 0` = "decline entirely, or pick at least
+    // `min`" (DCGO canNoSelect:true + canEndNotMax:false) —
+    // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
+    let is_optional = picked >= effective_min || (state.optional_zero && picked == 0);
     let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
     game.current_phase = crate::enums::GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
         zone_owner: None,
-        kind: if state.target_is_opponent {
-            SelectionKind::OppField
-        } else {
-            SelectionKind::OwnField
-        },
+        kind: state.field_kind,
         selecting_player: state.selecting_player,
         previous_phase: state.previous_phase,
         valid_action_ids,
@@ -3261,7 +3263,10 @@ pub(crate) fn install_multipick_step(
     use crate::selection::{PendingSelection, SelectionKind};
     let picked = state.accum.len() as u8;
     let effective_min = state.min.max(if state.is_optional_zero { 0 } else { 1 });
-    let is_optional = picked >= effective_min;
+    // `optional_zero` with `min > 0` = "decline entirely, or pick at least
+    // `min`" (DCGO canNoSelect:true + canEndNotMax:false) —
+    // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
+    let is_optional = picked >= effective_min || (state.is_optional_zero && picked == 0);
     let valid_action_ids: Vec<u16> = state
         .candidate_indices
         .iter()
@@ -5447,7 +5452,13 @@ fn install_select_trash(
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_trash_index(name, target_player, idx as u16);
+                let pinned = cb_ctx
+                    .game
+                    .player(target_player)
+                    .trash
+                    .get(idx as usize)
+                    .map(|c| c.handle());
+                b.insert_trash_index_pinned(name, target_player, idx as u16, pinned);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -6942,6 +6953,7 @@ fn install_select_count_capped_multi(
         install_select_count_capped_permanents(
             ctx,
             target_player,
+            matches!(of, CompiledPlayerRef::Any),
             min,
             max,
             clamp_to_available,
@@ -7140,6 +7152,9 @@ fn count_capped_card_candidate_indices(
 fn install_select_count_capped_permanents(
     ctx: &mut EffectContext<'_>,
     target_player: u8,
+    // `of: any`: candidates span BOTH battle areas (G-DSL-COUNT-CAPPED-ANY-
+    // PLAYER-ZERO-OR-N — BT26-050 "You may suspend 2 Digimon or Tamers").
+    any_player: bool,
     min: u8,
     max: u8,
     clamp_to_available: bool,
@@ -7153,7 +7168,19 @@ fn install_select_count_capped_permanents(
 ) {
     use crate::action::space::encode_attack;
 
-    let candidates: Vec<(u16, PermanentHandle)> =
+    let candidates: Vec<(u16, PermanentHandle)> = if any_player {
+        // Both sides: encode `encode_attack(player, index)` and route as
+        // `AnyField`, exactly like the single-pick `select_any_permanent`.
+        collect_matching_any_permanents(ctx, None, &filter, Some(&bindings))
+            .into_iter()
+            .map(|handle| {
+                (
+                    encode_attack(handle.player as u16, handle.index as u16),
+                    handle,
+                )
+            })
+            .collect()
+    } else {
         collect_matching_permanents(ctx, target_player, &filter, Some(&bindings))
             .into_iter()
             .map(|handle| {
@@ -7168,7 +7195,8 @@ fn install_select_count_capped_permanents(
                 // "delete an opponent's Digimon" prompts unclickable.
                 (encode_attack(0, handle.index as u16), handle)
             })
-            .collect();
+            .collect()
+    };
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
     // MP-30/31 (General Rules/FAQ): a mandatory "N of your opponent's Digimon"
@@ -7199,7 +7227,13 @@ fn install_select_count_capped_permanents(
     // Targets on a player OTHER than the one making the choice render on the
     // selecting player's opponent half; drives the OppField/OwnField kind so
     // the frontend's field-click router can map board clicks to these picks.
-    let target_is_opponent = target_player != selecting_player;
+    let field_kind = if any_player {
+        SelectionKind::AnyField
+    } else if target_player != selecting_player {
+        SelectionKind::OppField
+    } else {
+        SelectionKind::OwnField
+    };
     let controller = ctx.player;
     let override_pin = ctx.override_selecting_player();
     let source_card = ctx.source_card;
@@ -7247,7 +7281,7 @@ fn install_select_count_capped_permanents(
         source_permanent,
         source_kind,
         selecting_player,
-        target_is_opponent,
+        field_kind,
         previous_phase,
         final_callback,
     );
@@ -7266,7 +7300,7 @@ fn install_select_count_capped_permanents(
                     },
                     selecting_player,
                     previous_phase,
-                    target_is_opponent,
+                    field_kind,
                     min,
                     max,
                     optional_zero,
@@ -7299,7 +7333,7 @@ fn install_count_capped_permanent_step(
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
     selecting_player: u8,
-    target_is_opponent: bool,
+    field_kind: SelectionKind,
     previous_phase: GamePhase,
     final_callback: Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>,
 ) {
@@ -7309,7 +7343,10 @@ fn install_count_capped_permanent_step(
     // PASS gating: the player may commit early once `picked` reaches the
     // required floor. G-SELECT-MULTI-MIN.
     let effective_min = min.max(if optional_zero { 0 } else { 1 });
-    let is_optional = picked >= effective_min;
+    // `optional_zero` with `min > 0` = "decline entirely, or pick at least
+    // `min`" (DCGO canNoSelect:true + canEndNotMax:false) —
+    // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
+    let is_optional = picked >= effective_min || (optional_zero && picked == 0);
     let valid_action_ids = candidates.iter().map(|(action, _)| *action).collect();
     let shared_cb: Arc<
         Mutex<Option<Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>>>,
@@ -7325,11 +7362,7 @@ fn install_count_capped_permanent_step(
         // phase or id range) can map board clicks to these picks. The
         // multi-select / accumulate-and-commit semantics are carried by the
         // re-installed step + `is_optional` PASS gating, not by the kind tag.
-        kind: if target_is_opponent {
-            SelectionKind::OppField
-        } else {
-            SelectionKind::OwnField
-        },
+        kind: field_kind,
         selecting_player,
         previous_phase,
         valid_action_ids,
@@ -7387,7 +7420,7 @@ fn install_count_capped_permanent_step(
                 source_permanent,
                 source_kind,
                 selecting_player,
-                target_is_opponent,
+                field_kind,
                 previous_phase,
                 next_cb,
             );
