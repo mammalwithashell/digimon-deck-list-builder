@@ -523,7 +523,7 @@ fn mask_overclock_suppressed_when_no_sacrifice() {
 // ─── §4.6c MayAttack ──────────────────────────────────────────────────
 
 #[test]
-fn mask_may_attack_emits_attack_bits_against_digimon_and_security() {
+fn mask_may_attack_emits_attack_bits_against_suspended_digimon_and_security() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red, 5000))
         .add_card(make_digimon("DEF", CardColor::Blue, 3000))
@@ -545,10 +545,21 @@ fn mask_may_attack_emits_attack_bits_against_digimon_and_security() {
         1.0,
         "MayAttack permits attacking security",
     );
+    // Normal MayAttack uses Main-phase target legality (37152674): an
+    // unsuspended enemy Digimon is not a target without Raid /
+    // CanAttackUnsuspended (only Vortex bypasses that) ...
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        0.0,
+        "MayAttack does not permit attacking an unsuspended enemy Digimon",
+    );
+    // ... while a suspended one is.
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
+    let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         1.0,
-        "MayAttack permits attacking any enemy Digimon",
+        "MayAttack permits attacking a suspended enemy Digimon",
     );
 }
 
@@ -606,10 +617,21 @@ fn mask_force_attack_emits_attack_bits_in_eot() {
         1.0,
         "ForceAttack permits attacking security in EOT",
     );
+    // Normal ForceAttack uses Main-phase target legality (37152674): an
+    // unsuspended enemy Digimon is not a target without Raid /
+    // CanAttackUnsuspended (only Vortex bypasses that) ...
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        0.0,
+        "ForceAttack does not permit attacking an unsuspended enemy Digimon",
+    );
+    // ... while a suspended one is.
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
+    let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         1.0,
-        "ForceAttack permits attacking enemy Digimon in EOT",
+        "ForceAttack permits attacking a suspended enemy Digimon",
     );
     // PASS is still emitted — execution-side enforcement of the "mandatory"
     // part is out of scope for mask-level parity (matches Python).
