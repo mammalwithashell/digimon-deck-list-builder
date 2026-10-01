@@ -354,7 +354,23 @@ impl<'a> EffectContext<'a> {
     /// This consumes `Game.pending_security`, so the security dispose phase
     /// cannot also trash the card. If the card was already played from
     /// security, the pending state is restored and this is a no-op.
+    ///
+    /// Every printed use is "add THIS card to the hand" (DCGO
+    /// `CardEffectCommons.AddThisCardToHand(card, …)` names the effect's own
+    /// card), so the pending card must be the resolving effect's source card.
+    /// When it is not — e.g. a removed security card's own trigger that waited
+    /// out an enclosing effect (15-8-3-2) after its removal already completed,
+    /// leaving `pending_security` holding an OUTER parked removal — this is a
+    /// no-op rather than moving that unrelated card.
     pub fn add_pending_security_to_hand(&mut self) -> bool {
+        if self
+            .game
+            .pending_security
+            .as_ref()
+            .is_some_and(|pending| pending.card.handle() != self.source_card)
+        {
+            return false;
+        }
         let Some(pending) = self.game.pending_security.take() else {
             return false;
         };

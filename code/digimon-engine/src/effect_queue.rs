@@ -1119,6 +1119,17 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+        // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
+        // back while an effect was resolving runs now that the outermost
+        // drain has settled with nothing parked (6-1-4-1).
+        if self.turn_end_check_deferred
+            && self.effect_drain_depth == 0
+            && self.draining_deferred == 0
+            && self.selection_resolution_depth == 0
+            && self.pending_selection.is_none()
+        {
+            self.check_turn_end();
+        }
     }
 
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
@@ -4506,6 +4517,11 @@ impl Game {
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
         self.current_phase = sel.previous_phase;
+        // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
+        // continuation below (pay-cost tails, parked security removals,
+        // scheduled drains, pending-attack resume, ...) are the rest of the
+        // effect's processing; hold `check_turn_end` until they have run.
+        self.selection_resolution_depth = self.selection_resolution_depth.saturating_add(1);
         // Wrap the callback in a deferred-drain scope (post-2026-05-23
         // G-DSL-OUTER-TAIL-NESTED-PARK fix). While the callback runs,
         // `fire_on_*` observer helpers go through `maybe_drain_effect_queue`
@@ -4644,9 +4660,10 @@ impl Game {
         if self.pending_selection.is_none() && self.pending_attack.is_some() {
             self.advance_pending_attack();
         }
+        self.selection_resolution_depth = self.selection_resolution_depth.saturating_sub(1);
         if self.pending_selection.is_none()
-            && self.current_phase == crate::enums::GamePhase::Main
-            && !was_attack_pending
+            && ((self.current_phase == crate::enums::GamePhase::Main && !was_attack_pending)
+                || self.turn_end_check_deferred)
         {
             self.check_turn_end();
         }

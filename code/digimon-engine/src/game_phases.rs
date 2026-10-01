@@ -358,6 +358,7 @@ impl Game {
         if self.game_over {
             return;
         }
+        self.turn_end_check_deferred = false;
 
         self.set_turn_phase(GamePhase::EndTurn);
 

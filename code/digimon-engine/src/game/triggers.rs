@@ -166,7 +166,16 @@ impl Game {
                     player: player_id,
                     index: index as u8,
                 };
-                let top = perm.top_card();
+                // A carrier whose only source was just extracted/trashed is a
+                // transient empty ("zombie") slot until the caller soft-removes
+                // it (`G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION`). The
+                // extraction itself fires observers (source-trash, would-play
+                // replacement) that tick declaratives BEFORE that cleanup, so
+                // an empty slot contributes no declarative source here rather
+                // than panicking in `top_card()`.
+                let Some(top) = perm.card_sources.last() else {
+                    continue;
+                };
                 sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
 
                 let stack_size = perm.card_sources.len();
@@ -184,7 +193,11 @@ impl Game {
                 }
             }
 
-            if let Some(perm) = player.breeding_area.as_ref() {
+            if let Some(perm) = player
+                .breeding_area
+                .as_ref()
+                .filter(|perm| !perm.card_sources.is_empty())
+            {
                 let handle = PermanentHandle {
                     player: player_id,
                     index: crate::action::space::BREEDING_TARGET as u8,
