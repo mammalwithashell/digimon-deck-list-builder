@@ -38,7 +38,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         return Err(errors);
     }
 
-    Ok(CompiledCard {
+    let mut card = CompiledCard {
         card: spec.card.clone(),
         name: spec.name.clone(),
         kind: compile_card_kind(spec.kind),
@@ -57,7 +57,12 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         use_requirement,
         alt_paths,
         effects,
-    })
+    };
+    // G-ENGINE-DP-DELETION-MAX-MODIFIER: flag the DP caps that belong to
+    // deletion effects so "add N to this Digimon's DP deletion effects'
+    // maximums" can raise exactly those.
+    crate::deletion_cap::mark_card(&mut card);
+    Ok(card)
 }
 
 // ── Enum mappings ───────────────────────────────────────────────────
@@ -980,6 +985,7 @@ fn compile_predicate(
         can_digivolve_onto: p.can_digivolve_onto.clone(),
         dp_eq,
         dp_lte,
+        dp_lte_deletion_cap: false,
         dp_gte,
         stack_size_lte,
         stack_size_gte,
@@ -3722,6 +3728,7 @@ fn compile_step(
                 .enumerate()
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
+            deletion_cap: false,
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: compile_formula(

@@ -67,3 +67,5 @@ mod ex13_024;
 mod ex13_070;
 mod ex13_073;
 mod ex13_075;
+mod ex13_007;
+mod ex13_010;

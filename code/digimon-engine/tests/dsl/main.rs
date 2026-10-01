@@ -12,6 +12,7 @@ mod delay_union_play_flow;
 mod digixros_aliases;
 mod digivolve_target_predicates;
 mod digixros_transaction_steps;
+mod dp_deletion_max_modifier;
 mod effect_battle;
 mod effect_granted_attack;
 mod effect_immunity_step;

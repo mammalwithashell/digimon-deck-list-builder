@@ -370,6 +370,16 @@ pub struct CompiledPredicate {
     pub can_digivolve_onto: Option<String>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
+    /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
+    /// N DP or less"). Set by the compile-time pass in `deletion_cap.rs` (never
+    /// authored) when this predicate filters the candidates of a select whose
+    /// binding a `delete_*` step consumes, or the `over` of
+    /// `delete_all_permanents`. The engine then adds the effect source
+    /// permanent's `ChangeDPDeleteEffectMaxDP` delta to the cap ("add 2000 to
+    /// this Digimon's DP deletion effects' maximums" — DCGO
+    /// `Player.MaxDP_DeleteEffect`). G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    #[serde(default)]
+    pub dp_lte_deletion_cap: bool,
     pub dp_gte: Option<CompiledDpConstraint>,
     pub stack_size_lte: Option<CompiledDpConstraint>,
     pub stack_size_gte: Option<CompiledDpConstraint>,
@@ -2297,6 +2307,13 @@ pub enum CompiledStep {
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,
+        /// The total-DP budget is a deletion effect's maximum (the picks are
+        /// consumed by a `delete_*` step) — set by `deletion_cap.rs`; the
+        /// engine adds the source permanent's `ChangeDPDeleteEffectMaxDP`
+        /// delta (DCGO `sumDP > MaxDP_DeleteEffect(..)`, e.g. ST7-12).
+        /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+        #[serde(default)]
+        deletion_cap: bool,
     },
     /// Play-cost-budget analog of `SelectOpponentDpBudget`.
     /// G-MULTI-SELECT-OPP-PLAY-COST-SUM. `play_cost_budget` is a

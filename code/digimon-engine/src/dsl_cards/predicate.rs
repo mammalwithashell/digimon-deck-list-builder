@@ -2937,7 +2937,10 @@ fn eval_card_fields(
             }
         }
         if let Some(cap) = &pred.dp_lte {
-            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+            if dp
+                > eval_dp_constraint(cap, rctx, perm_target, bindings)
+                    + deletion_cap_bonus(pred, rctx)
+            {
                 return false;
             }
         }
@@ -3716,7 +3719,7 @@ fn eval_dp_constraints(
         }
     }
     if let Some(cap) = &pred.dp_lte {
-        if dp > eval_dp_constraint(cap, rctx, handle, bindings) {
+        if dp > eval_dp_constraint(cap, rctx, handle, bindings) + deletion_cap_bonus(pred, rctx) {
             return false;
         }
     }
@@ -3810,6 +3813,30 @@ fn aggregate_material_count(
         | CompiledAggregateSelector::HighestLevel
         | CompiledAggregateSelector::LowestPlayCost => None,
     }
+}
+
+/// "Add N to this Digimon's DP deletion effects' maximums": when `pred.dp_lte`
+/// is a deletion effect's DP cap (flagged at compile time by
+/// `digimon_dsl::deletion_cap`), the effect source permanent's summed
+/// `ChangeDPDeleteEffectMaxDP` delta raises the cap. DCGO
+/// `Player.MaxDP_DeleteEffect` → `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`
+/// (adds only when `cardEffect.EffectSourceCard.PermanentOfThisCard()` is the
+/// modifier's own permanent). 0 for non-deletion caps and for effects with no
+/// source permanent (Options, rules processes).
+/// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+fn deletion_cap_bonus(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> i32 {
+    if !pred.dp_lte_deletion_cap {
+        return 0;
+    }
+    deletion_max_bonus_for_source(rctx)
+}
+
+/// The effect source permanent's summed `ChangeDPDeleteEffectMaxDP` delta.
+/// Shared by the predicate cap path and the deletion-flagged DP-budget select.
+pub(crate) fn deletion_max_bonus_for_source(rctx: &EffectReadContext<'_>) -> i32 {
+    rctx.source_permanent
+        .map(|h| rctx.game.dp_delete_effect_max_bonus(h))
+        .unwrap_or(0)
 }
 
 fn eval_dp_constraint(

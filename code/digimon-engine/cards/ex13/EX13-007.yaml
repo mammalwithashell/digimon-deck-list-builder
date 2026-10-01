@@ -1,0 +1,89 @@
+# EX13-007 Guilmon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Reptile. Form: Rookie. Attribute: Virus. Digivolve: Red Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-007.md):
+#   [When Moving] [On Play] By trashing 1 card in your hand, you may return 1
+#   Digimon card with [Gallantmon] in its name or 1 red Tamer card from your
+#   trash to the hand.
+#   Inherited: [All Turns] Add 2000 to this Digimon's DP deletion effects'
+#   maximums.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_007.cs
+#   - Shared [When Moving]/[On Play] (optional: false, isSkippable), gated on
+#     `HandCards.Count >= 1`: SelectHandEffect Discard max 1 canNoSelect → only
+#     if a card was trashed, SelectCardEffect AddHand from trash (canNoSelect)
+#     over `IsDigimon && ContainsCardName("Gallantmon") || IsTamer && Red`.
+#     The just-trashed card is itself eligible (it is in the trash by then).
+#   - Inherited ChangeDPDeleteEffectMaxDPClass (battle-area Digimon carrier):
+#     +2000 to the max DP of every DP deletion effect whose EffectSourceCard is
+#     in this Digimon's stack (`Player.MaxDP_DeleteEffect`).
+#
+# DSL:
+#   - "By trashing 1 card ..., you may ..." → declinable `select_hand { cost:
+#     true }` (decline aborts the clause); clause gated on hand ≥ 1 (DCGO
+#     CanActivate; also sidesteps G-DSL-COST-SELECT-NO-CANDIDATES-RUNS-TAIL).
+#   - [When Moving] → `on_move` + `event_permanent_is_source` (EX13-008 idiom).
+#   - Inherited deletion-max → inherited self-aura `modifier:
+#     ChangeDPDeleteEffectMaxDP` / `modifier_value: 2000`; the engine adds it to
+#     every deletion cap flagged by `digimon_dsl::deletion_cap`
+#     (G-ENGINE-DP-DELETION-MAX-MODIFIER, resolved 2026-10-01).
+
+card: EX13-007
+name: Guilmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+        n: 1
+    summary: "[When Moving][On Play] By trashing 1 card in your hand, you may return 1 [Gallantmon]-named Digimon card or 1 red Tamer card from your trash to the hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "You may trash 1 card in your hand to return 1 [Gallantmon] Digimon card or red Tamer card from your trash to the hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            any_of:
+              - all_of:
+                  - kind: digimon
+                  - name_contains: Gallantmon
+              - all_of:
+                  - kind: tamer
+                  - color_is: red
+          prompt: "You may return 1 Digimon card with [Gallantmon] in its name or 1 red Tamer card from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - kind: aura
+    scope: inherited
+    active_when: { all_turns: true }
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 2000
+    summary: "[Inherited][All Turns] Add 2000 to this Digimon's DP deletion effects' maximums"

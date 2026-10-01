@@ -1,0 +1,76 @@
+# EX13-010 Growlmon — Digimon, Lv.4, Red, DP 6000, Cost 6.
+# Traits: Dark Dragon. Form: Champion. Attribute: Virus. Digivolve: Red Lv.3 / cost 2.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-010.md):
+#   [When Moving] [When Digivolving] Delete 1 of your opponent's Digimon with
+#   4000 DP or less. If this effect didn't delete, this Digimon gains <Raid> and
+#   +3000 DP for the turn.
+#   Inherited: [All Turns] Add 2000 to this Digimon's DP deletion effects'
+#   maximums.
+#   Official Q&A: the delete is mandatory — with a 4000-DP-or-less opponent
+#   Digimon you must select and delete it.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_010.cs
+#   - Shared WM/WD (optional: false): SelectPermanentEffect canNoSelect false
+#     over opponent Digimon `DP <= MaxDP_DeleteEffect(4000)` →
+#     DeletePeremanentAndProcessAccordingToResult; failure → ChangeDigimonDP
+#     +3000 and GainRaid, both UntilEachTurnEnd.
+#   - Inherited ChangeDPDeleteEffectMaxDPClass (+2000, same shape as EX13-007).
+#
+# DSL: EX13-013 / EX13-015 select+delete + `effect_deleted_any_opponent_digimon:
+# false` fallback; [When Moving] → `on_move` + `event_permanent_is_source`.
+# The 4000 cap is flagged a deletion maximum by `digimon_dsl::deletion_cap`, so
+# a Guilmon (EX13-007) source under this Growlmon raises it to 6000.
+# Inherited → `modifier: ChangeDPDeleteEffectMaxDP` self-aura
+# (G-ENGINE-DP-DELETION-MAX-MODIFIER, resolved 2026-10-01).
+
+card: EX13-010
+name: Growlmon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 6000
+traits: ["Dark Dragon"]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - when: [on_move, when_digivolving]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][When Digivolving] Delete 1 opp Digimon with 4000 DP or less; if this effect didn't delete, this Digimon gains <Raid> and +3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - grant_keyword:
+                target: source
+                keyword: Raid
+                expiry: end_of_turn
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_turn
+
+  - kind: aura
+    scope: inherited
+    active_when: { all_turns: true }
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 2000
+    summary: "[Inherited][All Turns] Add 2000 to this Digimon's DP deletion effects' maximums"

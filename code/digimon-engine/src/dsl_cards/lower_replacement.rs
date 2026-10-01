@@ -605,9 +605,15 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
             min_picks,
+            deletion_cap,
             ..
         } => {
-            let budget = formula_eval::evaluate_read_with_bindings(
+            let bonus = if *deletion_cap {
+                crate::dsl_cards::predicate::deletion_max_bonus_for_source(ctx)
+            } else {
+                0
+            };
+            let budget = bonus + formula_eval::evaluate_read_with_bindings(
                 dp_budget,
                 ctx,
                 ctx.source_permanent.unwrap_or(PermanentHandle {

@@ -4135,12 +4135,12 @@ stored verdict was affected.
 
 ## "Add N to this Digimon's DP deletion effects' maximums" has no engine primitive  [G-ENGINE-DP-DELETION-MAX-MODIFIER]
 
-- **Status:** OPEN (2026-10-01, slice "Guilmon / reptile").
-- **Blocked cards:** EX13-007 Guilmon (inherited, unconditional); BT17-008, BT17-010, BT19-007, BT19-009 (same text gated "while you have 0 or less memory").
+- **Status:** RESOLVED 2026-10-01 (opened 2026-10-01, slice "Guilmon / reptile"). Landed `ModifierType::ChangeDPDeleteEffectMaxDP` + `Effect::dp_delete_effect_max_delta` (self-aura `modifier: ChangeDPDeleteEffectMaxDP`, read live by `Game::dp_delete_effect_max_bonus`) and the compile-time `digimon_dsl::deletion_cap` pass that flags deletion caps (`dp_lte_deletion_cap`, `select_opponent_dp_budget.deletion_cap`); the predicate consult adds the effect source permanent's bonus. EX13-007 / EX13-010 IMPLEMENTED. Tests: `--test dsl -- dp_deletion_max` (12), `--test cards_behavioral -- ex13::ex13_007 ex13::ex13_010` (20). Player-scoped 'maximum DP you can choose with DP-based deletion effects' (BT9-011, BT12-001, EX2-010, EX2-011) is a different scope and not covered. Details: `qa/archetype-qa/engine-gaps.md` §G-ENGINE-DP-DELETION-MAX-MODIFIER.
+- **Formerly blocked cards:** EX13-007 Guilmon (inherited, unconditional); BT17-008, BT17-010, BT19-007, BT19-009 (same text gated "while you have 0 or less memory").
 - **DCGO:** `ChangeDPDeleteEffectMaxDPClass` — raises the max DP of every DP-capped deletion effect whose `EffectSourceCard` belongs to this permanent's stack.
 - **Missing:** no modifier type; `dp_lte` caps are evaluated statically and cannot distinguish deletion caps from play/suspend/return caps.
 - **Suggested addition:** `ModifierType::DpDeletionMaxDelta(i32)` + a deletion-context marker on `dp_lte` (or a `deletion_dp_lte` key) so the cap adds the source permanent's summed delta only for deletion effects. Full write-up: `qa/archetype-qa/engine-gaps.md` §G-ENGINE-DP-DELETION-MAX-MODIFIER.
-- **Workaround:** None — BLOCKED (dropping the inherited clause is a silent drop).
+- **Workaround:** n/a (resolved).
 
 ## "[Security] Play this card" skips OnEnterFieldAnyone / OnAllyPlayed observers  [G-ENGINE-SECURITY-PLAY-SKIPS-ENTER-FIELD-OBSERVERS]
 

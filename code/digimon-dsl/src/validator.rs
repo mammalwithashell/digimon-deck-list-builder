@@ -2665,6 +2665,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeSAttack",
     "ChangeLinkCost",
     "ChangeLinkMax",
+    "ChangeDPDeleteEffectMaxDP",
     "ChangePermanentLevel",
     "ChangeTraits",
     "ChangeBaseCardName",

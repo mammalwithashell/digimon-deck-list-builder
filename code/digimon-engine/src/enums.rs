@@ -873,6 +873,16 @@ pub enum ModifierType {
     ChangeLinkCost,
     /// Modifies the maximum number of linked cards on this host.
     ChangeLinkMax,
+    /// "Add N to this Digimon's DP deletion effects' maximums" (EX13-007
+    /// Guilmon / EX13-010 Growlmon inherited; BT17-008 et al. memory-gated).
+    /// Permanent-scoped scalar (`ModifierPayload::None`, `value` = delta):
+    /// every DP-capped deletion effect whose source permanent is the host adds
+    /// the summed delta to its DP maximum (DCGO `ChangeDPDeleteEffectMaxDPClass`
+    /// consulted by `Player.MaxDP_DeleteEffect`, which the card scripts wrap
+    /// around each deletion cap). Consult sites: the `dp_lte_deletion_cap`
+    /// predicate path (`dsl_cards/predicate.rs`) and the deletion-flagged
+    /// `select_opponent_dp_budget` budget. G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    ChangeDPDeleteEffectMaxDP,
     /// Overrides the live permanent's level for predicates and digivolution
     /// requirements. Distinct from `ChangeLevel` which adjusts level by
     /// a delta on the printed value.

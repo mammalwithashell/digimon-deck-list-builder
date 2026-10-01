@@ -4370,8 +4370,16 @@ pub fn try_install(
             bind_as,
             prompt,
             then,
+            deletion_cap,
         } => {
-            let dp_budget = formula_value(dp_budget, ctx, &bindings);
+            let mut dp_budget = formula_value(dp_budget, ctx, &bindings);
+            if *deletion_cap {
+                // G-ENGINE-DP-DELETION-MAX-MODIFIER — the total-DP budget of a
+                // deletion is a "DP deletion effect's maximum".
+                dp_budget += crate::dsl_cards::predicate::deletion_max_bonus_for_source(
+                    &ctx.as_read(),
+                );
+            }
             if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }

@@ -1615,6 +1615,20 @@ impl ModifierRegistry {
             .sum()
     }
 
+    /// Summed "add N to this Digimon's DP deletion effects' maximums" delta on
+    /// `host` (`ModifierType::ChangeDPDeleteEffectMaxDP`). Added to the DP cap
+    /// of every deletion effect whose source permanent is `host`.
+    /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    pub fn dp_delete_effect_max_delta(&self, host: PermanentHandle) -> i32 {
+        self.get(host, ModifierType::ChangeDPDeleteEffectMaxDP)
+            .into_iter()
+            .map(|entry| match &entry.payload {
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Iterate over all player-scoped modifier entries for `target_player`.
     pub fn player_modifiers_iter(
         &self,

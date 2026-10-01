@@ -27,7 +27,7 @@ iterated in a throw-away scratch test binary (deleted) and then registered in
 | EX13-009 | Huckmon | IMPLEMENT | IMPLEMENTED | 11 | reveal 3 two buckets (Digimon / Tamer-or-Option w/ text); inherited OPT +1 memory on own white Digimon play |
 | EX13-046 | Kokuwamon | IMPLEMENT | IMPLEMENTED | 8 | reveal 3 ([Mamemon] text / [Mutant] trait); inherited On Deletion De-Digivolve 1 |
 | EX13-047 | Gotsumon | IMPLEMENT | IMPLEMENTED | 9 | Blocker; reveal ([Royal Knight] / printed <Blocker>, inherited <Blocker> excluded per Q&A); WA lose 2 memory; inherited opp-turn +2000 |
-| EX13-010 | Growlmon | — | BLOCKED (engine) | 0 | inherited "add 2000 to this Digimon's DP deletion effects' maximums" — G-ENGINE-DP-DELETION-MAX-MODIFIER |
+| EX13-010 | Growlmon | IMPLEMENT | IMPLEMENTED | 10 | WM/WD mandatory ≤4000 delete or <Raid>+3000; inherited +2000 DP-deletion max (G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01) |
 | EX13-011 | BaoHuckmon | IMPLEMENT | IMPLEMENTED | 12 | Raid; OP/WD ≤1 Tamer → optional free [Mon]; text-gated special digivolve; inherited your-turn +2000 |
 | EX13-051 | Guardromon | IMPLEMENT | IMPLEMENTED | 16 | Blocker; would-leave replacement for other <Blocker> allies (suspend this), batch-saves all leaving per Q&A; inherited opp-turn OPT unsuspend |
 | EX13-052 | Gladimon | IMPLEMENT | IMPLEMENTED | 11 | <Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting other [Knightmon]-text Digimon |
