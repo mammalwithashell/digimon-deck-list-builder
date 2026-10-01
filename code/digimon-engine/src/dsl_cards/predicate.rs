@@ -334,6 +334,13 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-DSL-DURING-ATTACK: "if during an attack" (DCGO
+    // `attackProcess.IsAttacking`) — an attack is in flight.
+    if let Some(want) = pred.during_attack {
+        if rctx.game.pending_attack.is_some() != want {
+            return false;
+        }
+    }
     if let Some(player_ref) = pred.digimon_attacked_this_turn {
         let attacked = resolve_predicate_players(player_ref, rctx)
             .into_iter()
@@ -757,8 +764,15 @@ pub fn eval_predicate_with_bindings(
         // Resolve the named card binding and compare its printed category.
         // Used by LM-020 to test the revealed opponent deck-top against the
         // declared category. Fails closed when the binding is unset or the
-        // card data can't be resolved.
-        let Some(handle) = bindings.and_then(|b| b.get_card(&binding_kind.binding)) else {
+        // card data can't be resolved. Also resolves an origin-tagged
+        // `select_union_zone` binding, so a "play OR use 1 card from your hand
+        // or its digivolution cards" body can branch Option → `use_option_bound`
+        // vs Digimon/Tamer → `play_union_bound_free` (EX13-045 Examon).
+        // G-DSL-BINDING-CARD-KIND-UNION.
+        let Some(handle) = bindings.and_then(|b| {
+            b.get_card(&binding_kind.binding)
+                .or_else(|| b.get_union_card(&binding_kind.binding).map(|(c, _, _)| c))
+        }) else {
             return false;
         };
         let Some(data) = rctx.game.card_data_for_handle(handle) else {
@@ -1379,6 +1393,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_is.is_none()
         && pred.name_contains.is_none()
         && pred.effect_text_contains.is_none()
+        && pred.printed_keyword.is_none()
         && pred.in_text_contains.is_none()
         && pred.name_in.is_none()
         && pred.name_not_shared_by_field_digimon.is_none()
@@ -1785,6 +1800,21 @@ fn eval_event_fields(
             .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
             .unwrap_or(false);
         if !matches {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_winner_is_source {
+        // on_ally_won_battle: is the winner THIS effect's carrier? A tie has no
+        // winner → fail. G-DSL-BATTLE-WINNER-IS-SOURCE.
+        let Some(winner) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+        else {
+            return false;
+        };
+        if (Some(winner) == rctx.source_permanent) != want {
             return false;
         }
     }
@@ -2754,6 +2784,17 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(ref keyword) = pred.printed_keyword {
+        // G-DSL-PREDICATE-PRINTED-KEYWORD: the candidate's face-up printed
+        // keyword line (effect text only) — DCGO `CardSource.HasBlocker`
+        // excludes inherited and security effects.
+        let Some(kw) = lookup_keyword(keyword, None) else {
+            return false;
+        };
+        if !crate::card_data::parse_printed_keywords(&data.effect_text, "", "").contains(&kw) {
+            return false;
+        }
+    }
     if let Some(ref n) = pred.effect_text_contains {
         // G-DSL-PREDICATE-TEXT-CONTAINS: case-insensitive substring scan
         // against the candidate card's printed text — `effect_text`,
@@ -2918,7 +2959,17 @@ fn eval_card_fields(
     // Absent / non-permanent binding → false (no target, no route).
     // G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     if let Some(binding) = &pred.can_digivolve_onto {
-        let Some(target) = bindings.and_then(|b| b.get_permanent(binding)) else {
+        // `source` (when not shadowed by a real binding) is the effect's own
+        // carrier permanent — "THIS Digimon may digivolve into ..." (EX13-055 /
+        // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
+        let target = bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
+            if binding == "source" {
+                rctx.source_permanent
+            } else {
+                None
+            }
+        });
+        let Some(target) = target else {
             return false;
         };
         if !can_card_digivolve_onto(rctx, card, target) {

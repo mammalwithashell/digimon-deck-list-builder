@@ -413,7 +413,16 @@ impl Game {
                     };
                     Some(matching_cost)
                 } else {
-                    if base_requires_treated_as {
+                    // A non-Digimon base (a Tamer) needs a "treated as a
+                    // Digimon" profile to borrow printed digivolve circles —
+                    // UNLESS the path names the Tamer base outright
+                    // (`from: { kind: tamer, … }`) with its own cost:
+                    // EX13-064 LordKnightmon "[Digivolve] While you have 3 or
+                    // fewer security cards, [Rie Kishibe]: Cost 5".
+                    // G-ENGINE-DIGIVOLVE-FROM-NAMED-TAMER.
+                    let explicit_tamer_base = path.cost.is_some()
+                        && from.kind == Some(digimon_dsl::compiled::CompiledCardKind::Tamer);
+                    if base_requires_treated_as && !explicit_tamer_base {
                         continue;
                     }
                     printed_digivolve_memory_cost(card, base, &self.card_data)

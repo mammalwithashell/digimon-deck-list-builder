@@ -1055,7 +1055,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to the Rust DSL implementation workflow and a faithful DebugRunner test must be written. **Do not count toward BLOCKING / PARTIAL tallies.**
 
-- **Tamer play-from-security pipeline** — `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081 Tai Kamiya & Matt Ishida, BT22-089 Mirei Mikagura, BT5-092 Nokia Shiramine, EX9-066 Tai Kamiya & Matt Ishida, ST20-15 Island of Adventure, EX4-061 Matt Ishida & Tai Kamiya (DNA Omnimon); Dark Masters adds: BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT4-097 Kari Kamiya, BT8-094 Digimon Emperor, BT13-102 Keenan Crier, EX9-068 Analogman, RB1-035 Hokuto Amanokawa (all Tamer security plays). See RUST_PYTHON_PARITY §2.5a, §2.5j.
+- **Tamer play-from-security pipeline** — **(2026-10-01: the observer half is CONFIRMED broken for the security-check path — see §G-ENGINE-SECURITY-PLAY-SKIPS-ENTER-FIELD-OBSERVERS.)** `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081 Tai Kamiya & Matt Ishida, BT22-089 Mirei Mikagura, BT5-092 Nokia Shiramine, EX9-066 Tai Kamiya & Matt Ishida, ST20-15 Island of Adventure, EX4-061 Matt Ishida & Tai Kamiya (DNA Omnimon); Dark Masters adds: BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT4-097 Kari Kamiya, BT8-094 Digimon Emperor, BT13-102 Keenan Crier, EX9-068 Analogman, RB1-035 Hokuto Amanokawa (all Tamer security plays). See RUST_PYTHON_PARITY §2.5a, §2.5j.
 - **Option multi-color match semantics** — RUST_PYTHON_PARITY §4.2 implements color match; verify multi-color Options require at least one matching own-side permanent **per** printed color (intersection), not any-one (union). Card: BT17-095 Miraculous Mega Knight (Red/Blue Option, DNA Omnimon). See RUST_PYTHON_PARITY §4.2, §4.2b.
 - **Conditional inherited DP based on top-card name** — fully expressible today via `Effect::inherited(card).dp_modifier(n).condition(|ctx| ctx.source_permanent().map_or(false, |p| p.contains_card_name("X", ctx.card_data())))`. Confirm the per-source walker passes the correct `source_permanent` into the read context. Cards: BT12-059 Agumon, BT23-008 Greymon (DNA Omnimon).
 
@@ -2333,6 +2333,10 @@ DCGO does not permit this: `SelectDigiXrosClass` sets `canEndNotMax: false` and 
 Confirmed by mutation: swapping two of the eight declared materials for `EX12-070, EX12-070` lowered fine (`card_ids: [… "EX12-070", "EX12-070"]`). Only the scenario's own `sources:` assertion caught it.
 
 DCGO enforces it via `CanTargetCondition_ByPreSelecetedList` → `GetUniqueNameCardCount`.
+
+**Consumer 2026-10-01:** EX13-063 PrinceMamemon (`Assembly -4: 3 Lv.5 or lower [Mamemon] text cards w/different names`, one `repeat: 3` + `distinct_by: name` material) is BLOCKED on this; pinned by two `#[ignore = "G-ASSEMBLY-NO-DISTINCT-BY …"]` tests in `tests/cards_behavioral/ex13/ex13_063.rs`. Same session: `ex13_063_assembly_needs_all_three_materials` passes, i.e. a repeat-3 element cannot be closed after one pick (the G-ASSEMBLY-NO-MINIMUM shape above did not reproduce for it).
+
+**RESOLVED 2026-10-01 (EX13-061 Gankoomon, slice "Examon / holy warrior").** `resolve_eligible_assembly` now carries each material's `distinct_by`; eligibility is a keyed SDR (`assembly_assign_keyed`: no two slots of one element may share the key), and `install_assembly_element` passes the element's mode (`assembly_element_distinct_mode`, read back from the alt-path registry) to `select_count_capped_multi_min` and the `NonDslCountCappedStep` resume frame, so a second same-name card is masked once one is picked. Pinned by `tests/cards_behavioral/ex13/ex13_061.rs` (`…_assembly_unavailable_with_only_two_distinct_names`, `…_assembly_masks_a_second_card_with_an_already_chosen_name`). EX13-063's two `#[ignore]` pins should now pass — un-ignore when that slice is re-run.
 
 
 ## ~~A Delay option with an EVENT window is auto-trashed a turn later~~ — RESOLVED 2026-08-26  [G-DELAY-EVENT-WINDOW-AUTOTRASHED]
@@ -4128,3 +4132,63 @@ mapping — it returns a 4-long vector for a 3-step line).
 exactly those two clauses: `dna:` / `materials:` appear in only two scenarios in
 `qa/dcgo-exams/` (`BT8-084-effect0.yaml`, `BT16-077-effect0.yaml`), so no other card's
 stored verdict was affected.
+
+## "Add N to this Digimon's DP deletion effects' maximums" has no engine primitive  [G-ENGINE-DP-DELETION-MAX-MODIFIER]
+
+- **Status:** OPEN (2026-10-01, slice "Guilmon / reptile").
+- **Blocked cards:** EX13-007 Guilmon (inherited, unconditional); BT17-008, BT17-010, BT19-007, BT19-009 (same text gated "while you have 0 or less memory").
+- **DCGO:** `ChangeDPDeleteEffectMaxDPClass` — raises the max DP of every DP-capped deletion effect whose `EffectSourceCard` belongs to this permanent's stack.
+- **Missing:** no modifier type; `dp_lte` caps are evaluated statically and cannot distinguish deletion caps from play/suspend/return caps.
+- **Suggested addition:** `ModifierType::DpDeletionMaxDelta(i32)` + a deletion-context marker on `dp_lte` (or a `deletion_dp_lte` key) so the cap adds the source permanent's summed delta only for deletion effects. Full write-up: `qa/archetype-qa/engine-gaps.md` §G-ENGINE-DP-DELETION-MAX-MODIFIER.
+- **Workaround:** None — BLOCKED (dropping the inherited clause is a silent drop).
+
+## "[Security] Play this card" skips OnEnterFieldAnyone / OnAllyPlayed observers  [G-ENGINE-SECURITY-PLAY-SKIPS-ENTER-FIELD-OBSERVERS]
+
+- **Status:** OPEN (found 2026-10-01, EX13 slice "Veedramon / CS", archetype interaction capstone).
+- **Symptom:** a Tamer (or Digimon) played by its own `[Security]` effect during a security check enters the battle area, but no "when a card is played / enters the field" observer on either side fires. Repro: AeroVeedramon (EX13-022) on the field, Rina Shinomiya (EX13-069) in security; the opponent attacks and checks Rina → she is played → AeroVeedramon's `[All Turns][Once Per Turn] When any of your Tamers are played, 1 of your opponent's Digimon or Tamers can't suspend` never fires.
+- **Root cause:** the DSL `play_from_security` step routes to `EffectContext::play_pending_security` (`code/digimon-engine/src/effect_context/selections.rs`) whenever `Game::pending_security` is set. That function pushes the `Permanent` and calls `Game::fire_on_play` only (OnPlay of the played card) instead of `Game::fire_play_event_triggers` (OnPlay + OnEnterFieldAnyone + OnAllyPlayed, `effect_initiated = true`), which every other effect-play path (`play_from_security_index`, `play_from_revealed_with_cost`, hand-transit `play_from_hand_with_cost_result_from_origin`) reaches.
+- **Sources:** DCGO `Script/CardEffectFactory.cs` `PlaySelfTamerSecurityEffect` → `CardEffectCommons.PlayPermanentCards(..., root: Execution, activateETB: true)` (enter-field triggers fire); DCGO `EX13/Blue/EX13_022.cs` `OnEnterFieldAnyone` (no turn gate); printed text EX13-022 / EX13-069; `general_rule.pdf` — a card placed by an effect's "play" is played.
+- **Blast radius:** every `[Security] Play this card` Tamer/Digimon against every play/enter-field observer (e.g. EX13-022, BT13-030 "when you play … a blue Tamer", Keenan-style "[Opponent's Turn] when an effect plays a Digimon").
+- **Test:** `code/digimon-engine/tests/archetypes/veedramon_cs_ex13.rs::c6_security_rina_played_on_opponents_turn_fires_aero_lock` (`#[ignore]`d reproducer; un-ignore when fixed).
+- **Suggested fix:** in `play_pending_security`, replace `self.game.fire_on_play(defender, field_index)` with `self.game.fire_play_event_triggers(defender, field_index, true, false)` (keep the `played` bit / CannotPlay*ByEffect gates as they are), then run the security-effect and Tamer-security behavioral suites for trigger-order regressions.
+
+## OPT-spent trigger still offered in the TriggerOrder menu  [G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER] (found 2026-10-01, low severity)
+
+- **Found by:** `/archetype-interaction-test-author`, EX13 Richard Sampson / DATA SQUAD slice, combo C3 —
+  `code/digimon-engine/tests/archetypes/richard_sampson_data_squad_ex13.rs::c3_reppamon_opt_spent_on_digivolve_but_kudamon_inherited_fires_on_attack`.
+- **Behaviour:** EX13-030 Reppamon's `[On Play][When Digivolving][When Attacking][Once Per Turn]` clause is paid on
+  digivolve; the same turn Reppamon (on EX13-026 Kudamon) attacks. The drainer installs a 2-entry `TriggerOrder`
+  (`EX13-030 slot 3 (optional)` + `EX13-026 slot 2 (mandatory)`). Ordering Reppamon first resolves as a no-op (no cost
+  prompt, no security trashed), so the **outcome is correct**; the defect is a dead decision in the RL action space.
+  With Reppamon's WA as the only trigger (per-card `ex13_030_once_per_turn_blocks_when_attacking_after_on_play`)
+  nothing installs, because a single entry skips the menu.
+- **Cause:** `effect_queue.rs` (~L1255) excludes non-firing entries from the bundle by condition only; the comment
+  there says OPT lockout "is accounting-only and doesn't change user-visible choice", which is not true once a
+  second trigger forces a menu. Printed text: a [Once Per Turn] effect that already activated this turn does not
+  activate again, so it should not be an orderable entry.
+- **Fix sketch:** also treat OPT-exhausted entries (no `bypass_once_per_turn`) as non-firing in
+  `non_firing_queued_effect_indices_for`. The test orders Reppamon first on purpose and will keep passing after the fix
+  (it only takes that branch when a `TriggerOrder` is installed).
+- Engine code NOT edited by this run.
+
+## Attacker's own `[When Attacking]` prompt drops every "when one of your / your opponent's Digimon attacks" observer  [G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS]
+
+- **Status:** OPEN (found 2026-10-01, EX13 slice "Chronicle", archetype interaction capstone). Promotes the "Residual" note under `G-ENGINE-ATTACK-SUSPENSION-NO-ONSUSPEND` to its own tracked gap — it now has a concrete card-pair reproducer.
+- **Symptom:** EX13-072 Kota Domoto ("[Your Turn] When one of your [Chronicle] trait Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or [Chronicle] Option from hand with the cost reduced by 1") is never offered when the attacker has its own `[When Attacking]` effect that installs a prompt. Repro: Kota + EX13-055 Raptordramon on the field, a [Chronicle] Option and EX13-057 Grademon in hand; Raptordramon attacks → Raptordramon's WA union pick installs directly (no `TriggerOrder` menu), and after it resolves (accepted OR declined) Kota's trigger never appears; Kota stays unsuspended. Same with a stack whose only WA is inherited (EX13-049 Dorumon under EX13-057, opponent Digimon present for the -2000 pick). With no attacker-side WA prompt, Kota is offered normally (per-card `ex13_072.rs`).
+- **Root cause:** `Game::fire_on_attack` (`code/digimon-engine/src/combat/mod.rs` ~L3997) enqueues and drains OnAttack, then `[When Attacking]` (+ OnSuspend), and `return`s as soon as `pending_selection.is_some()`; the OnAllyAttack fan-out (and the OnOpponentAttack fan-out after it) is only enqueued if nothing parked, and `advance_pending_attack` resumes at RaidOpen, so the observers are lost for the whole attack.
+- **Sources:** DCGO `Script/AttackProcess.cs` ~L197 stacks the attacker's [When Attacking] and every ally "when a Digimon attacks" observer in ONE `StackSkillInfos(..., EffectTiming.OnAllyAttack)` batch (turn player orders them together); `general_rule.pdf` 11-2-1 / 11-1-4 — all effects triggered by the attack declaration trigger simultaneously; printed text EX13-072 / EX13-055.
+- **Blast radius:** every OnAllyAttack / OnOpponentAttack observer in the pool (tamers like Kota, opponent-side "when an opponent's Digimon attacks" reactions) whenever the attacker carries any prompting `[When Attacking]` / OnAttack effect — very common.
+- **Test:** `code/digimon-engine/tests/archetypes/chronicle_ex13.rs::c8_kota_option_use_and_raptordramon_climb_both_resolve_from_one_attack` (`#[ignore]`d reproducer; un-ignore when fixed).
+- **Suggested fix:** enqueue OnAttack / WhenAttacking / OnSuspend / OnAllyAttack (attacker-filtered) — and arguably OnOpponentAttack — into the queue BEFORE the first drain, so they form one bundle (`TriggerOrder` for the turn player's, then the non-turn player's), instead of draining between fan-outs; then run the attack-trigger behavioral suites for order regressions.
+- Engine code NOT edited by this run.
+
+## Effect-initiated digivolve drains the new card's `[When Digivolving]` in the MIDDLE of the digivolving effect's body  [G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY]
+
+- **Status:** OPEN (found 2026-10-01, EX13 slice "Witchelny", archetype interaction capstone).
+- **Symptom:** EX13-004 DemiMeramon inherited "[When Attacking][OPT] This Digimon may digivolve into a [Witchelny]-text card in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card." With 5 security, Candlemon (EX13-025) on DemiMeramon digivolving into EX13-029 FlameWizardmon: FlameWizardmon's `[When Digivolving]` outer accept prompt appears while security is still **5** — i.e. before DemiMeramon's own "trash your top security card" ran. The WD then pays 5 → 4 and its "if you have 3 or fewer security cards, delete…" rider is skipped; DemiMeramon's trash lands afterwards (→ 3). Correct order: DemiMeramon trash (5 → 4), then WD pays (4 → 3) and deletes. Reproduces with a plain `enqueue_triggered(WhenAttacking)` + drain (not attack-specific), after the body parked on its `select_hand`.
+- **Suspected root cause:** `Game::effect_initiated_digivolve*` (`code/digimon-engine/src/game_actions/digivolve.rs` ~L1149-L1165, and the sibling fan-out ~L1754-L1772) calls `self.drain_effect_queue()` directly after enqueueing `WhenDigivolving` / `OnDigivolve`, rather than `maybe_drain_effect_queue()` (which defers while a body is resolving — the fix pattern used by G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT and c652676d1). When the digivolving body is resumed from a parked selection the deferred scope does not suppress this direct drain.
+- **Sources:** `general_rule.pdf` 15-8-3-2 ("Trigger-type effects can't activate during the processing for a rule or effect"); DCGO `Script/CardEffectCommons.cs` `DigivolveIntoHandOrTrashCard` (~L1110-L1140): `PlayCardClass.PlayCard()` only *stacks* the WD via `autoProcessing.StackSkillInfos`, then the caller's `successProcess` (EX13_004.cs: `IDestroySecurity(fromTop)`) runs immediately, and the stacked WD activates only after the effect ends.
+- **Blast radius:** every "digivolve by effect, then <more text>" body whose tail affects the new card's [When Digivolving] (security-count thresholds, memory, DP, hand contents) — DemiMeramon-style eggs, mid-attack climbs, Pagumon/Kapurimon-style tuck-then-digivolve, etc.
+- **Test:** `code/digimon-engine/tests/archetypes/witchelny_ex13.rs::c6_demimeramon_attack_climbs_into_flamewizardmon_for_1_and_chains_its_wd` (`#[ignore]`d reproducer; un-ignore when fixed).
+- **Suggested fix:** route the effect-initiated digivolve's `WhenDigivolving` / `OnDigivolve` drains through `maybe_drain_effect_queue()` (or hold a deferred-drain scope across the resumed body) so they become pending activations resolved after the enclosing effect; re-run `cards_behavioral` (effect-digivolve cards) for ordering regressions.
+- Engine code NOT edited by this run.

@@ -1996,6 +1996,12 @@ fn validate_predicate_binding_scope(
         ("can_digivolve_onto", &pred.can_digivolve_onto),
     ] {
         if let Some(binding) = binding {
+            // `can_digivolve_onto: source` names the effect's own carrier
+            // permanent ("THIS Digimon may digivolve into ..."), a magic name
+            // that is never a `bind_as`. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
+            if field == "can_digivolve_onto" && binding == "source" {
+                continue;
+            }
             report_if_undeclared_binding(
                 binding,
                 &format!("{prefix}.{field}"),
@@ -2224,7 +2230,8 @@ fn validate_formula_binding_scope(
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
         | FormulaSpec::Compound(CompoundFormula::Min(args))
-        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args))
+        | FormulaSpec::Compound(CompoundFormula::Multiply(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula_binding_scope(
                     arg,
@@ -2392,7 +2399,8 @@ fn validate_formula(
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
         | FormulaSpec::Compound(CompoundFormula::Min(args))
-        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args))
+        | FormulaSpec::Compound(CompoundFormula::Multiply(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula(arg, &format!("{prefix}[{i}]"), card_id, ctx, errors);
             }
@@ -2476,7 +2484,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             CompoundFormula::FloorDiv(args)
             | CompoundFormula::Max(args)
             | CompoundFormula::Min(args)
-            | CompoundFormula::Subtract(args),
+            | CompoundFormula::Subtract(args)
+            | CompoundFormula::Multiply(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::SourceStackCount { .. } | FormulaSpec::SourceStackDpSum { .. } => false,

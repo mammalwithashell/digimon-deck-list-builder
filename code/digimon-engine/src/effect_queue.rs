@@ -3703,7 +3703,8 @@ impl Game {
                             cause: pending.cause,
                         },
                     );
-                    self.drain_effect_queue();
+                    // See `fire_effect_security_removal` (15-8-3-2).
+                    self.maybe_drain_effect_queue();
                     if self.pending_selection.is_some() {
                         self.pending_effect_security_removal.push(pending);
                         return;
@@ -3909,7 +3910,16 @@ impl Game {
                 cause: pending.cause,
             },
         );
-        self.drain_effect_queue();
+        // 15-8-3-2: "trigger-type effects can't activate during the processing
+        // for a rule or effect". When the removal happens INSIDE a resolving
+        // effect body (the queued-effect deferred scope), the security-removed
+        // observers stay queued until that body has finished — e.g. EX13-037
+        // Dynasmon's [When Digivolving] trashes its own top security, then
+        // buffs and checks "if you have 3 or fewer security cards" BEFORE its
+        // own "When security stacks are removed from" observer resolves.
+        // Outside any effect scope this drains immediately, as before.
+        // G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT.
+        self.maybe_drain_effect_queue();
 
         if pending.defender != pending.observer_player {
             self.enqueue_triggered(
@@ -3922,7 +3932,7 @@ impl Game {
                     cause: pending.cause,
                 },
             );
-            self.drain_effect_queue();
+            self.maybe_drain_effect_queue();
         }
     }
 
@@ -3958,7 +3968,11 @@ impl Game {
                 card: card_handle,
             },
         );
-        self.drain_effect_queue();
+        // 15-8-3-2: inside a resolving effect body (deferred scope) the
+        // observers — and any SIBLING trigger already queued, e.g. EX13-036
+        // Kentaurosmon's second [When Digivolving] — must wait until the body
+        // finishes. G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT.
+        self.maybe_drain_effect_queue();
 
         let pending = PendingEffectSecurityRemoval {
             defender,

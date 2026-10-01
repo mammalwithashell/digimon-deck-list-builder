@@ -111,6 +111,16 @@ pub struct PredicateSpec {
     /// G-DSL-PREDICATE-TEXT-CONTAINS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_text_contains: Option<String>,
+    /// Card-scope "has <Keyword>" test against the candidate card's
+    /// PRINTED face-up keyword line — the innate keywords parsed from its
+    /// `effect_text` only (not inherited / security text, not granted
+    /// modifiers). Mirrors DCGO `CardSource.HasBlocker` (`BlockerClass`,
+    /// `!IsInheritedEffect && !IsSecurityEffect`). Distinct from
+    /// `has_keyword`, which reads a battle-area permanent's live keywords.
+    /// Drives EX13-062 Craniamon's Assembly "all black w/＜Blocker＞".
+    /// G-DSL-PREDICATE-PRINTED-KEYWORD.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub printed_keyword: Option<String>,
     /// Whole-card "[X] in its text" scan — the broad DCGO
     /// `CardSource.HasText` surface (`CardSource.cs`). Unlike
     /// `effect_text_contains` (which scans ONLY effect / inherited /
@@ -177,6 +187,9 @@ pub struct PredicateSpec {
     /// binding is absent or no longer a battle-area permanent.
     /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The magic name `source` resolves to the effect's own carrier
+    /// permanent ("THIS Digimon may digivolve into ..."), with no `bind_as`
+    /// needed. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE (EX13-055 / EX13-057).
     pub can_digivolve_onto: Option<String>,
 
     // Leaf — permanent-only
@@ -509,6 +522,13 @@ pub struct PredicateSpec {
     /// turn".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub digimon_attacked_this_turn: Option<PlayerRef>,
+    /// Game-level "if during an attack" gate: true (`during_attack: true`)
+    /// while an attack is in flight (`Game::pending_attack` is set — DCGO
+    /// `GManager.instance.attackProcess.IsAttacking`). `false` asserts no
+    /// attack is in progress. Drives EX13-057 Grademon's "If during an
+    /// attack, it also ..." rider (BT20-053 precedent). G-DSL-DURING-ATTACK.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub during_attack: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_breeding: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -632,6 +652,16 @@ pub struct PredicateSpec {
     /// carry this trait (case-insensitive). G-DSL-BATTLE-WINNER-BOARDWIDE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_winner_trait_has: Option<String>,
+    /// For `on_ally_won_battle` observers: the battle winner is (`true`) / is
+    /// not (`false`) the effect's own carrier permanent — the carrier-scoped
+    /// "When THIS Digimon wins a battle". Unlike the `on_any_deletion` +
+    /// `source_deleted_battle_opponent` idiom (which needs a live attack to
+    /// resolve the battle opponent), this reads `TriggerContext.battle_winner`,
+    /// so it also fires for effect-initiated battles ("this Digimon may battle
+    /// 1 of your opponent's Digimon" — EX13-045 Examon). Never matches on a tie.
+    /// G-DSL-BATTLE-WINNER-IS-SOURCE.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_winner_is_source: Option<bool>,
     /// For `on_discard_hand` observers: the player whose HAND was trashed
     /// (`TriggerContext.discard_hand_player`) must match this player-ref
     /// ("your hand is trashed from" ⇒ `you`). G-ENGINE-ON-DISCARD-HAND.

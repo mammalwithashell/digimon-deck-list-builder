@@ -665,6 +665,14 @@ fn compile_formula(
                 })
                 .collect(),
         ),
+        FormulaSpec::Compound(CompoundFormula::Multiply(v)) => CompiledFormula::Multiply(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    compile_formula(f, &format!("{prefix}.multiply[{i}]"), card_id, errors)
+                })
+                .collect(),
+        ),
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
             selector: compile_aggregate_selector(*a),
             scope: CompiledPlayerRef::You,
@@ -947,6 +955,7 @@ fn compile_predicate(
         name_is: p.name_is.clone(),
         name_contains: p.name_contains.clone(),
         effect_text_contains: p.effect_text_contains.clone(),
+        printed_keyword: p.printed_keyword.clone(),
         in_text_contains: p.in_text_contains.clone(),
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
@@ -1225,6 +1234,7 @@ fn compile_predicate(
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
         digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
+        during_attack: p.during_attack,
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -1250,6 +1260,7 @@ fn compile_predicate(
         event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
         event_winner_owner: p.event_winner_owner.map(compile_player_ref),
         event_winner_trait_has: p.event_winner_trait_has.clone(),
+        event_winner_is_source: p.event_winner_is_source,
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
         event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
@@ -3545,6 +3556,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             then: compile_then_tail(&a.then, prefix, card_id, errors),
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
             left_filter: compile_predicate(

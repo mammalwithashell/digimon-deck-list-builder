@@ -675,6 +675,14 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         .modifiers
                         .has(handle, crate::enums::ModifierType::CannotSuspend)
             })
+            // Self-scope at CANDIDATE collection, not only in the process:
+            // without it any other permanent's would-be-deletion (e.g. the
+            // opponent's Digimon losing a battle to this one) surfaced a
+            // spurious "<Evade>" accept prompt whose process then no-op'd.
+            // G-ENGINE-EVADE-CANDIDATE-SELF-SCOPE (surfaced by EX13-045).
+            .replacement_condition(|ctx, subject| {
+                matches!(subject, ReplacementSubject::Permanent(h) if Some(*h) == ctx.source_permanent)
+            })
             .replacement_process(|rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
                 let me_perm = rctx.effect.source_permanent;

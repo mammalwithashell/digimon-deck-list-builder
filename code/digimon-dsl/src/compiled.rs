@@ -331,6 +331,10 @@ pub struct CompiledPredicate {
     /// concatenated printed text (`effect_text` + `inherited_text` +
     /// `security_text`). G-DSL-PREDICATE-TEXT-CONTAINS.
     pub effect_text_contains: Option<String>,
+    /// Face-up printed keyword on the candidate card (effect-text keyword
+    /// line only). G-DSL-PREDICATE-PRINTED-KEYWORD.
+    #[serde(default)]
+    pub printed_keyword: Option<String>,
     /// Whole-card "[X] in its text" scan — the broad DCGO
     /// `CardSource.HasText` surface: name + also-treated-as / DigiXros
     /// aliases + traits (Type line) + all printed text (both dual faces).
@@ -510,6 +514,10 @@ pub struct CompiledPredicate {
     pub all_turns: Option<bool>,
     pub can_hatch: Option<CompiledPlayerRef>,
     pub digimon_attacked_this_turn: Option<CompiledPlayerRef>,
+    /// "If during an attack" — true while `Game::pending_attack` is set.
+    /// G-DSL-DURING-ATTACK.
+    #[serde(default)]
+    pub during_attack: Option<bool>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,
@@ -636,6 +644,10 @@ pub struct CompiledPredicate {
     pub event_winner_owner: Option<CompiledPlayerRef>,
     /// `on_ally_won_battle`: the battle winner's top card must carry this trait.
     pub event_winner_trait_has: Option<String>,
+    /// `on_ally_won_battle`: the battle winner is the effect carrier.
+    /// G-DSL-BATTLE-WINNER-IS-SOURCE.
+    #[serde(default)]
+    pub event_winner_is_source: Option<bool>,
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
@@ -844,6 +856,8 @@ pub enum CompiledFormula {
     /// practice (`a - b`). Composes with the other compounds so a card can
     /// express e.g. "N minus your Digimon count". G-DSL-FORMULA-SUBTRACT.
     Subtract(Vec<CompiledFormula>),
+    /// Product of every operand (`multiply(a, b) = a * b`). G-DSL-FORMULA-MULTIPLY.
+    Multiply(Vec<CompiledFormula>),
     Aggregate(CompiledAggregateSelector),
     AggregateScoped {
         selector: CompiledAggregateSelector,
@@ -2175,6 +2189,11 @@ pub enum CompiledStep {
         /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
         #[serde(default)]
         then: Vec<CompiledStep>,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it — parity with the own/opponent field selects.
+        /// G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE. Appended at the tail.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectDnaPair {
         left_filter: CompiledPredicate,

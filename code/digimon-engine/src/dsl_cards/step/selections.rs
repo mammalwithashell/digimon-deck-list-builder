@@ -840,6 +840,7 @@ pub(crate) fn run_resume(
                         Some(bind_right_as),
                         right_prompt,
                         optional,
+                        false,
                         (*inner_tail).clone(),
                         b,
                         runtime,
@@ -3723,6 +3724,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             then,
             ..
         } => {
@@ -3734,6 +3736,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
@@ -6640,6 +6643,7 @@ fn install_select_any_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -6681,6 +6685,15 @@ fn install_select_any_permanent(
     let bindings_for_resume = bindings.clone();
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
+    // `continue_on_decline` (G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE):
+    // PASS leaves the binding unresolved and the clause CONTINUES, mirroring
+    // `install_select_own_permanent` (EX13-043 Leopardmon "You may suspend 1
+    // Digimon. Then, you may return …").
+    let continue_tail = optional && continue_on_decline;
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
 
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -6730,7 +6743,28 @@ fn install_select_any_permanent(
                 &runtime,
             );
         }),
-        on_decline: None,
+        on_decline: if continue_tail {
+            Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }))
+        } else {
+            None
+        },
     });
     // Park the data frame alongside the closure (coexistence): driven by
     // `run_resume`'s AnyPermanent arm (linear search over the candidates).
@@ -6748,12 +6782,19 @@ fn install_select_any_permanent(
                     candidates: candidates_for_resume,
                 },
                 bind_as: bind_as_for_resume,
-                inner_tail: tail_for_resume,
+                inner_tail: Arc::clone(&tail_for_resume),
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
                 trigger_context: trigger_for_resume,
-                decline: crate::resume::ResumeDecline::None,
+                decline: if continue_tail {
+                    crate::resume::ResumeDecline::RunTail {
+                        tail: tail_for_resume,
+                        aborts_clause: false,
+                    }
+                } else {
+                    crate::resume::ResumeDecline::None
+                },
             }],
         });
     }
@@ -6861,6 +6902,7 @@ fn install_select_dna_pair(
                 Some(bind_right_as),
                 prompt,
                 optional,
+                false,
                 tail,
                 b,
                 runtime,
