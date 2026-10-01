@@ -560,7 +560,11 @@ fn ex7_073_wd_free_use_resolves_the_options_main_effect() {
     accept_all_prompts(&mut runner);
 
     let p0 = &runner.game.players[0];
-    assert_eq!(p0.battle_area.len(), 1, "P-180 is not a battle-area permanent");
+    assert_eq!(
+        p0.battle_area.len(),
+        1,
+        "P-180 is not a battle-area permanent"
+    );
     let stack = zone_ids(&p0.battle_area[0].card_sources, &runner.game.card_data);
     assert_eq!(
         stack.first().map(String::as_str),
@@ -575,7 +579,10 @@ fn ex7_073_wd_free_use_resolves_the_options_main_effect() {
         opp_security_before - 1,
         "P-180's [Main] trashed the opponent's top security card"
     );
-    assert_eq!(runner.game.memory, memory_after_digivolve, "cost 6 never paid");
+    assert_eq!(
+        runner.game.memory, memory_after_digivolve,
+        "cost 6 never paid"
+    );
 }
 
 /// NEGATIVE: no TM-text Option in hand (only a plain one) → Clause 1 is a
@@ -1086,7 +1093,10 @@ fn ex7_073_used_options_main_completes_before_pending_sibling_clause() {
 
     let card_data = runner.game.card_data.clone();
     let p0_trash = zone_ids(&runner.game.players[0].trash, &card_data);
-    let stack = zone_ids(&runner.game.players[0].battle_area[0].card_sources, &card_data);
+    let stack = zone_ids(
+        &runner.game.players[0].battle_area[0].card_sources,
+        &card_data,
+    );
 
     assert!(
         p0_trash.contains(&"P-180".to_string()) && p0_trash.contains(&"TM-A".to_string()),

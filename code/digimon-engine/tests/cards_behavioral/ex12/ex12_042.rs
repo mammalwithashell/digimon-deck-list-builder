@@ -1,6 +1,8 @@
 use digimon_engine::enums::{CardColor, Keyword};
 
-use super::support::{hand_contains, plain_digimon, select_first_non_pass, vb_digimon, DebugRunner};
+use super::support::{
+    hand_contains, plain_digimon, select_first_non_pass, vb_digimon, DebugRunner,
+};
 
 const CARD_ID: &str = "EX12-042";
 

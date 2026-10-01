@@ -322,8 +322,7 @@ fn bt25_072_registers_app_fusion_logamon_timemon() {
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
             && p.materials.first().is_some_and(|m| {
                 m.filter.name_in.as_ref().is_some_and(|names| {
-                    names.contains(&"Logamon".to_string())
-                        && names.contains(&"Timemon".to_string())
+                    names.contains(&"Logamon".to_string()) && names.contains(&"Timemon".to_string())
                 })
             })
     });
@@ -400,8 +399,7 @@ fn bt25_072_clause_shapes() {
     // Link box [When Linking] — linked scope.
     let when_linking = card.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
+            t.when.contains(&CompiledTiming::WhenLinked) && matches!(t.scope, CompiledScope::Linked)
         }
         _ => false,
     });
@@ -453,7 +451,8 @@ fn bt25_072_on_play_link_is_declinable() {
         r.game.pending_selection.is_some(),
         "On Play self-link installs a selection"
     );
-    r.execute_action(0, PASS).expect("decline the optional link");
+    r.execute_action(0, PASS)
+        .expect("decline the optional link");
     r.auto_resolve().ok();
 
     assert_eq!(
@@ -461,7 +460,11 @@ fn bt25_072_on_play_link_is_declinable() {
         0,
         "declined ⇒ nothing linked"
     );
-    assert_eq!(r.trash_size(0), 1, "declined ⇒ the Tool card stays in trash");
+    assert_eq!(
+        r.trash_size(0),
+        1,
+        "declined ⇒ the Tool card stays in trash"
+    );
     assert!(
         !r.game.modifiers.has(opp, ModifierType::CannotDigivolve),
         "declined ⇒ Shutmon never got linked ⇒ no deny-digivolve"
@@ -579,7 +582,10 @@ fn bt25_072_rejected_over_unmatched_red_lv4_base() {
 
     let mem_before = r.game.memory;
     let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
-    assert!(!ok, "digivolve over the unmatched red Lv.4 must be rejected");
+    assert!(
+        !ok,
+        "digivolve over the unmatched red Lv.4 must be rejected"
+    );
     assert_eq!(r.game.memory, mem_before, "no memory paid");
 }
 
@@ -634,7 +640,9 @@ fn bt25_072_when_linked_can_deny_opponent_tamer() {
     r.game.drain_effect_queue();
 
     assert!(
-        r.game.modifiers.has(opp_tamer, ModifierType::CannotDigivolve),
+        r.game
+            .modifiers
+            .has(opp_tamer, ModifierType::CannotDigivolve),
         "the opponent Tamer can't digivolve after Shutmon got linked"
     );
 }
@@ -800,7 +808,9 @@ fn bt25_072_when_linking_locks_two_opponents() {
         "the opponent Digimon can't unsuspend"
     );
     assert!(
-        r.game.modifiers.has(opp_tamer, ModifierType::CannotUnsuspend),
+        r.game
+            .modifiers
+            .has(opp_tamer, ModifierType::CannotUnsuspend),
         "the opponent Tamer can't unsuspend (both of the 2 required picks applied)"
     );
 }

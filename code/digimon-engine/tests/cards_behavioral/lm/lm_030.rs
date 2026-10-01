@@ -37,11 +37,11 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
-use digimon_engine::action::space::PASS;
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::selection::TriggerSource;
 
@@ -1153,9 +1153,12 @@ fn lm_030_delay_may_be_declined_leaving_the_option_on_the_field() {
 
     // (a) the carrier is NOT trashed -- the cost was never paid.
     assert!(
-        runner.game.player(0).battle_area.iter().any(|permanent| {
-            permanent.top_card().card_id(&runner.game.card_data) == "LM-030"
-        }),
+        runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|permanent| { permanent.top_card().card_id(&runner.game.card_data) == "LM-030" }),
         "declining must NOT trash the Option (the trash IS the unpaid cost)"
     );
     // (b) the linked effect did not resolve (§15-7-2): the green Digimon is
@@ -1177,4 +1180,3 @@ fn lm_030_delay_may_be_declined_leaving_the_option_on_the_field() {
         "the declined Option must remain a Delayed Option, not become inert"
     );
 }
-

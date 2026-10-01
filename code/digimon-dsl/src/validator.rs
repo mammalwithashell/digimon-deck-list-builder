@@ -278,8 +278,9 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
                                             path: format!("{prefix}.grant_traits[{i}]"),
-                                            message: "grant_traits entries must be non-empty trait names"
-                                                .to_string(),
+                                            message:
+                                                "grant_traits entries must be non-empty trait names"
+                                                    .to_string(),
                                         });
                                     }
                                 }

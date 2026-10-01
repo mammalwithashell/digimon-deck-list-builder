@@ -681,7 +681,10 @@ fn ex7_071_main_triple_delete_is_simultaneous_after_third_pick() {
 
     // Level 3 pick made -> level 4 prompt pending; nothing deleted yet.
     resolve_one_prompt(&mut runner);
-    assert!(runner.pending_selection_view().is_some(), "level 4 pick pending");
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "level 4 pick pending"
+    );
     assert_eq!(
         runner.battle_area_size(1),
         6,
@@ -689,7 +692,10 @@ fn ex7_071_main_triple_delete_is_simultaneous_after_third_pick() {
     );
     // Level 4 pick made -> level 5 prompt pending; still nothing deleted.
     resolve_one_prompt(&mut runner);
-    assert!(runner.pending_selection_view().is_some(), "level 5 pick pending");
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "level 5 pick pending"
+    );
     assert_eq!(
         runner.battle_area_size(1),
         6,
@@ -698,7 +704,11 @@ fn ex7_071_main_triple_delete_is_simultaneous_after_third_pick() {
     // Level 5 pick made -> all three leave together.
     resolve_one_prompt(&mut runner);
     drain_prompts(&mut runner);
-    assert_eq!(runner.battle_area_size(1), 3, "exactly one Digimon per level deleted");
+    assert_eq!(
+        runner.battle_area_size(1),
+        3,
+        "exactly one Digimon per level deleted"
+    );
     let mut left: Vec<String> = runner.game.players[1]
         .battle_area
         .iter()
@@ -733,5 +743,9 @@ fn ex7_071_security_triple_delete_is_simultaneous_after_third_pick() {
     );
     resolve_one_prompt(&mut runner);
     runner.auto_resolve().ok();
-    assert_eq!(runner.battle_area_size(0), 3, "exactly one Digimon per level deleted");
+    assert_eq!(
+        runner.battle_area_size(0),
+        3,
+        "exactly one Digimon per level deleted"
+    );
 }

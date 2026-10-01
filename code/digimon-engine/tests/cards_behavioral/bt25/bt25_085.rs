@@ -778,14 +778,12 @@ fn bt25_085_data_cards_json_is_a_dual_card() {
         .expect("BT25-085 must carry a `dual` block in data/cards.json");
     assert_eq!(dual.digimon.level, 6);
     assert_eq!(dual.digimon.dp, 12000);
-    assert!(dual
-        .digimon
-        .traits
-        .iter()
-        .any(|t| t == "Three Musketeers"));
+    assert!(dual.digimon.traits.iter().any(|t| t == "Three Musketeers"));
     assert_eq!(dual.option.use_cost, 6);
     assert!(
-        dual.option.effect_text.contains("[Three Musketeers] trait card"),
+        dual.option
+            .effect_text
+            .contains("[Three Musketeers] trait card"),
         "option face must carry the printed [Main] text; got {:?}",
         dual.option.effect_text
     );

@@ -1407,8 +1407,16 @@ effects:
 
     // The mask offers the link on GATCH-DSL's hand slot and NOT on FILLER's.
     let mask = build_action_mask(&r.game, 0);
-    assert_eq!(mask[hand_link_bit(1)], 1.0, "hand link offered for GATCH-DSL");
-    assert_eq!(mask[hand_link_bit(0)], 0.0, "no hand link for a plain Digimon");
+    assert_eq!(
+        mask[hand_link_bit(1)],
+        1.0,
+        "hand link offered for GATCH-DSL"
+    );
+    assert_eq!(
+        mask[hand_link_bit(0)],
+        0.0,
+        "no hand link for a plain Digimon"
+    );
 
     // Declare → host prompt (never auto-picked, rule 17) → pick HOST.
     let mem_before = r.memory();
@@ -1420,14 +1428,21 @@ effects:
         .as_ref()
         .expect("declaring a hand link installs the host-selection prompt");
     assert_eq!(pending.kind, SelectionKind::OwnField);
-    assert!(pending.source_permanent.is_none(), "a hand card has no source permanent");
+    assert!(
+        pending.source_permanent.is_none(),
+        "a hand card has no source permanent"
+    );
     let action = pending.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action);
 
     // Attached from hand (the hand lost GATCH-DSL and gained the WhenLinked
     // draw: net 0), nothing was absorbed from the field, cost paid, and the
     // linked Raid ESS reaches the host.
-    assert_eq!(r.battle_area_size(0), 1, "HOST alone stands; nothing was played");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "HOST alone stands; nothing was played"
+    );
     let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
     assert_eq!(linked.len(), 1, "GATCH-DSL attached as a linked card");
     assert_eq!(linked[0].card_id(&r.game.card_data), "GATCH-DSL");
@@ -1470,14 +1485,21 @@ fn digimon_link_from_hand_is_withheld_without_a_host_or_the_memory() {
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(mask[hand_link_bit(0)], 0.0, "no host → no hand link");
     r.game.decode_action(hand_link_bit(0) as u16, 0);
-    assert!(r.game.pending_selection.is_none(), "nothing parked without a host");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "nothing parked without a host"
+    );
     assert_eq!(r.hand_size(0), 1, "GATCH still in hand");
 
     // With a host the bit appears (cost 1 against memory 0 is affordable down
     // to the -10 floor, as for the field origin).
     r.place_on_field(0, "HOST", Some(0));
     let mask = build_action_mask(&r.game, 0);
-    assert_eq!(mask[hand_link_bit(0)], 1.0, "a host makes the hand link legal");
+    assert_eq!(
+        mask[hand_link_bit(0)],
+        1.0,
+        "a host makes the hand link legal"
+    );
 }
 
 /// Facet #6/#11 (DSL host-side) — a host Digimon authored in YAML with

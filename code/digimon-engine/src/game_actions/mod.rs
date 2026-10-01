@@ -960,10 +960,9 @@ impl Game {
         let mut modes = classify_option_modes(&effects);
         modes.retain(|mode| {
             let cost = match mode {
-                OptionPlayMode::Link { cost } => {
-                    (*cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0)
-                        as i16
-                }
+                OptionPlayMode::Link { cost } => (*cost as i32
+                    + self.modifiers.link_cost_delta_for_player(player_id))
+                .max(0) as i16,
                 _ => use_cost as i16,
             };
             (self.memory - cost) >= memory_min

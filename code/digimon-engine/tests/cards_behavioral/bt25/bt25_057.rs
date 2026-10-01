@@ -35,7 +35,9 @@ use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType, PlaySource};
+use digimon_engine::enums::{
+    CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType, PlaySource,
+};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{OptionPlayResult, SelectionKind, TriggerSource};
 

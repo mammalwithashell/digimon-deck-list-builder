@@ -140,7 +140,10 @@ impl Game {
         if let Some(fp) = forced_first_player {
             // Replay construction: explicit first player, no RNG involvement.
             let start = turn_order.iter().position(|&p| p == fp).ok_or_else(|| {
-                format!("first_player {} out of range for {} players", fp, rules.player_count)
+                format!(
+                    "first_player {} out of range for {} players",
+                    fp, rules.player_count
+                )
             })?;
             turn_order.rotate_left(start);
         } else if let Some(s) = seed {

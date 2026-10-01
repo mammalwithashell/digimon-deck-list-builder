@@ -1496,18 +1496,22 @@ pub(crate) fn run_optional_replacement_step(
     game.replacement_pending_outcome = Some(outcome);
     // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —
     // see `make_accept_callback`.
-    run_commit_with_flag(game, outcome != ReplacementOutcome::None,
+    run_commit_with_flag(
+        game,
+        outcome != ReplacementOutcome::None,
         // Accepted but non-replacing: this commit must not re-offer its own window.
-        Some((state.timing, state.subject)), |game| {
-        commit_deferred_outcome(
-            game,
-            state.subject,
-            state.cause,
-            state.event_cause_override,
-            state.original_destination,
-            outcome,
-        );
-    });
+        Some((state.timing, state.subject)),
+        |game| {
+            commit_deferred_outcome(
+                game,
+                state.subject,
+                state.cause,
+                state.event_cause_override,
+                state.original_destination,
+                outcome,
+            );
+        },
+    );
     if has_unrelated_parked_replacement {
         game.replacement_pending_outcome = None;
     }

@@ -42,8 +42,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
@@ -131,7 +130,10 @@ fn base() -> DebugRunnerBuilder {
 /// pick each time — the tests here assert WHICH end the rest went to, not the
 /// order among them.
 fn drain_ordering(runner: &mut DebugRunner) {
-    while matches!(runner.pending_kind(), Some(SelectionKind::OrderedPermutation { .. })) {
+    while matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OrderedPermutation { .. })
+    ) {
         let v = runner.pending_selection_view().unwrap();
         runner
             .execute_action(v.selecting_player, v.valid_action_ids[0])
@@ -166,8 +168,14 @@ fn ex7_044_structure_matches_printed_text() {
         })
         .collect();
     assert_eq!(triggered.len(), 1);
-    assert_eq!(triggered[0].when, vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving]);
-    assert!(!triggered[0].optional, "the reveal is mandatory (no printed 'may')");
+    assert_eq!(
+        triggered[0].when,
+        vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving]
+    );
+    assert!(
+        !triggered[0].optional,
+        "the reveal is mandatory (no printed 'may')"
+    );
 
     let collision = compiled.effects.iter().any(|c| {
         matches!(
@@ -201,39 +209,72 @@ fn ex7_044_on_play_places_tm_option_returns_rest_to_top_and_deletes_cheap_target
     runner.place_on_field(1, "TAMER-C4", Some(0));
     let deck_before = runner.deck_size(0);
     let giga_idx = runner.play(0, 0).expect("play Gigadramon");
-    let giga = PermanentHandle { player: 0, index: giga_idx as u8 };
+    let giga = PermanentHandle {
+        player: 0,
+        index: giga_idx as u8,
+    };
 
     let view = runner.pending_selection_view().expect("reveal pick prompt");
     assert_eq!(view.kind, SelectionKind::Reveal);
-    assert!(!view.valid_action_ids.contains(&PASS), "placing the Option is mandatory when one is revealed");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "placing the Option is mandatory when one is revealed"
+    );
     assert_eq!(view.valid_action_ids.len(), 1, "only Der Blitz qualifies");
     runner
         .execute_action(0, reveal_action(&runner, DER_BLITZ))
         .expect("pick Der Blitz");
 
-    let view = runner.pending_selection_view().expect("top/bottom choice for the remainder");
+    let view = runner
+        .pending_selection_view()
+        .expect("top/bottom choice for the remainder");
     assert_eq!(view.kind, SelectionKind::EffectChoice);
-    runner.execute_branch(0).expect("return the rest to the TOP");
+    runner
+        .execute_branch(0)
+        .expect("return the rest to the TOP");
     drain_ordering(&mut runner);
 
-    let view = runner.pending_selection_view().expect("delete target prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("delete target prompt");
     assert_eq!(view.kind, SelectionKind::OppField);
     assert!(!view.valid_action_ids.contains(&PASS));
-    assert_eq!(view.valid_action_ids.len(), 1, "only OPP-C3 (cost 3) qualifies; cost-5 Digimon and cost-4 Tamer excluded");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("delete OPP-C3");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only OPP-C3 (cost 3) qualifies; cost-5 Digimon and cost-4 Tamer excluded"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("delete OPP-C3");
     runner.auto_resolve().expect("finish");
 
-    assert_eq!(sources_of(&runner, giga), 2, "Der Blitz placed as Gigadramon's bottom source");
+    assert_eq!(
+        sources_of(&runner, giga),
+        2,
+        "Der Blitz placed as Gigadramon's bottom source"
+    );
     let bottom = runner.game.players[0].battle_area[giga.index as usize].card_sources[0]
         .card_id(&runner.game.card_data);
     assert_eq!(bottom, DER_BLITZ);
-    assert_eq!(runner.deck_size(0), deck_before - 1, "3 of the 4 revealed returned");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "3 of the 4 revealed returned"
+    );
     let deck = zone_ids(&runner.game.players[0].deck, &runner.game.card_data);
-    assert_eq!(deck[0], "F5", "the pre-existing bottom card is still at the bottom (rest went to the TOP)");
+    assert_eq!(
+        deck[0], "F5",
+        "the pre-existing bottom card is still at the bottom (rest went to the TOP)"
+    );
     assert!(runner.game.revealed_cards.is_empty());
     assert_eq!(runner.battle_area_size(1), 2, "OPP-C3 deleted");
     let survivors = zone_ids(
-        &runner.game.players[1].battle_area.iter().map(|p| p.top_card().clone()).collect::<Vec<_>>(),
+        &runner.game.players[1]
+            .battle_area
+            .iter()
+            .map(|p| p.top_card().clone())
+            .collect::<Vec<_>>(),
         &runner.game.card_data,
     );
     assert!(!survivors.contains(&"OPP-C3".to_string()));
@@ -250,15 +291,29 @@ fn ex7_044_on_play_can_delete_a_cheap_tamer() {
     runner
         .execute_action(0, reveal_action(&runner, DER_BLITZ))
         .expect("pick Der Blitz");
-    runner.execute_branch(1).expect("return the rest to the BOTTOM");
+    runner
+        .execute_branch(1)
+        .expect("return the rest to the BOTTOM");
     drain_ordering(&mut runner);
-    let view = runner.pending_selection_view().expect("delete target prompt");
-    assert_eq!(view.valid_action_ids.len(), 1, "a cost-3 Tamer is a legal target");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("delete TAMER-C3");
+    let view = runner
+        .pending_selection_view()
+        .expect("delete target prompt");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "a cost-3 Tamer is a legal target"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("delete TAMER-C3");
     runner.auto_resolve().expect("finish");
     assert_eq!(runner.battle_area_size(1), 0);
     let deck = zone_ids(&runner.game.players[0].deck, &runner.game.card_data);
-    assert_eq!(deck.last().map(String::as_str), Some("F5"), "rest went to the BOTTOM: F5 is now the top");
+    assert_eq!(
+        deck.last().map(String::as_str),
+        Some("F5"),
+        "rest went to the BOTTOM: F5 is now the top"
+    );
 }
 
 #[test]
@@ -270,13 +325,25 @@ fn ex7_044_on_play_no_tm_option_revealed_still_places_remainder_but_no_delete() 
     runner.place_on_field(1, "OPP-C3", Some(0));
     let deck_before = runner.deck_size(0);
     let giga_idx = runner.play(0, 0).expect("play Gigadramon");
-    let giga = PermanentHandle { player: 0, index: giga_idx as u8 };
+    let giga = PermanentHandle {
+        player: 0,
+        index: giga_idx as u8,
+    };
 
-    let view = runner.pending_selection_view().expect("top/bottom choice for the remainder");
-    assert_eq!(view.kind, SelectionKind::EffectChoice, "no qualifying Option → straight to the remainder choice");
+    let view = runner
+        .pending_selection_view()
+        .expect("top/bottom choice for the remainder");
+    assert_eq!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "no qualifying Option → straight to the remainder choice"
+    );
     runner.execute_branch(0).expect("top");
     drain_ordering(&mut runner);
-    assert!(runner.pending_selection().is_none(), "'If this effect placed' is false → no delete prompt");
+    assert!(
+        runner.pending_selection().is_none(),
+        "'If this effect placed' is false → no delete prompt"
+    );
     assert_eq!(sources_of(&runner, giga), 1);
     assert_eq!(runner.deck_size(0), deck_before, "all 4 returned");
     assert_eq!(runner.battle_area_size(1), 1, "OPP-C3 survives");
@@ -291,13 +358,19 @@ fn ex7_044_on_play_placed_but_no_cheap_target_skips_delete() {
     runner.place_on_field(1, "OPP-C5", Some(0));
     runner.place_on_field(1, "TAMER-C4", Some(0));
     let giga_idx = runner.play(0, 0).expect("play Gigadramon");
-    let giga = PermanentHandle { player: 0, index: giga_idx as u8 };
+    let giga = PermanentHandle {
+        player: 0,
+        index: giga_idx as u8,
+    };
     runner
         .execute_action(0, reveal_action(&runner, DER_BLITZ))
         .expect("pick Der Blitz");
     runner.execute_branch(0).expect("top");
     drain_ordering(&mut runner);
-    assert!(runner.pending_selection().is_none(), "no opponent permanent with play cost <= 3");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opponent permanent with play cost <= 3"
+    );
     assert_eq!(sources_of(&runner, giga), 2, "the Option was still placed");
     assert_eq!(runner.battle_area_size(1), 2);
 }
@@ -311,17 +384,27 @@ fn ex7_044_when_digivolving_runs_the_same_effect() {
     let base_perm = runner.place_on_field(0, "BLK-LV4", Some(0));
     runner.place_on_field(1, "OPP-C3", Some(0));
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before - 3, "Black Lv.4 / cost 3");
     runner
         .execute_action(0, reveal_action(&runner, DER_BLITZ))
         .expect("pick Der Blitz");
     runner.execute_branch(0).expect("top");
     drain_ordering(&mut runner);
-    let view = runner.pending_selection_view().expect("delete target prompt");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("delete");
+    let view = runner
+        .pending_selection_view()
+        .expect("delete target prompt");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("delete");
     runner.auto_resolve().expect("finish");
-    assert_eq!(sources_of(&runner, base_perm), 3, "BLK-LV4 + Der Blitz + Gigadramon");
+    assert_eq!(
+        sources_of(&runner, base_perm),
+        3,
+        "BLK-LV4 + Der Blitz + Gigadramon"
+    );
     assert_eq!(runner.battle_area_size(1), 0);
 }
 
@@ -335,7 +418,10 @@ fn ex7_044_inherited_collision_grants_keyword_to_carrier() {
     let stack = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     assert!(runner.game.has_keyword(stack, Keyword::Collision));
     let alone = runner.place_on_field(0, CARD_ID, Some(0));
-    assert!(!runner.game.has_keyword(alone, Keyword::Collision), "inherited only");
+    assert!(
+        !runner.game.has_keyword(alone, Keyword::Collision),
+        "inherited only"
+    );
 }
 
 #[test]
@@ -349,7 +435,9 @@ fn ex7_044_digivolves_from_red_lv4_with_tm_in_text_for_three() {
         .start();
     let base_perm = runner.place_on_field(0, "RED-TM-LV4", Some(0));
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before - 3);
     runner.auto_resolve().expect("resolve the WD reveal");
 }
@@ -361,5 +449,7 @@ fn ex7_044_cannot_digivolve_from_plain_red_lv4() {
         .hand(0, &[CARD_ID])
         .start();
     let base_perm = runner.place_on_field(0, "RED-LV4", Some(0));
-    assert!(!runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(!runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }

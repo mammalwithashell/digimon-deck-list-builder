@@ -60,7 +60,11 @@ fn bt8_071_metadata_matches_printed_card() {
 fn bt8_071_has_one_standard_lv2_purple_digivolve_circle() {
     let runner = runner();
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
-    assert_eq!(card.alt_paths.len(), 1, "one printed circle: Purple Lv.2 / cost 0");
+    assert_eq!(
+        card.alt_paths.len(),
+        1,
+        "one printed circle: Purple Lv.2 / cost 0"
+    );
     let path = &card.alt_paths[0];
     assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
     assert_eq!(path.cost, Some(CompiledCost::Literal(0)));
@@ -93,7 +97,11 @@ fn bt8_071_has_player_scoped_cannot_reduce_play_cost_flood_gate_for_both_players
         Some(CompiledPlayerRef::Any),
         "printed 'Players' (plural) must target BOTH players"
     );
-    assert_eq!(card.effects.len(), 1, "the flood gate is the card's only clause");
+    assert_eq!(
+        card.effects.len(),
+        1,
+        "the flood gate is the card's only clause"
+    );
 }
 
 // ─── Section 2 / 3 — Behavioral ──────────────────────────────────────────────

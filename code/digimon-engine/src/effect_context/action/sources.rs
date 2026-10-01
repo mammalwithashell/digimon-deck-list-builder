@@ -355,7 +355,8 @@ impl<'a> EffectContext<'a> {
         // Effect-driven source placement → OnAddDigivolutionCards batch
         // (DCGO `AddDigivolutionCardsBottom(list, activateClass)`).
         let cause = self.placing_effect_attribution();
-        self.game.note_effect_added_sources(tamer, moved_handles, cause);
+        self.game
+            .note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -409,7 +410,8 @@ impl<'a> EffectContext<'a> {
         };
         target_perm.card_sources.splice(0..0, moved);
         let cause = self.placing_effect_attribution();
-        self.game.note_effect_added_sources(tamer, moved_handles, cause);
+        self.game
+            .note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -508,7 +510,8 @@ impl<'a> EffectContext<'a> {
         // flushes only when the effect body completes — matching DCGO
         // `AddDigivolutionCardsBottom(selectedCards, activateClass)`.
         let cause = self.placing_effect_attribution();
-        self.game.note_effect_added_sources(target, vec![card], cause);
+        self.game
+            .note_effect_added_sources(target, vec![card], cause);
     }
 
     pub fn place_cards_under_tamer_bottom_in_order(
@@ -544,7 +547,8 @@ impl<'a> EffectContext<'a> {
         };
         target_perm.card_sources.splice(0..0, moved);
         let cause = self.placing_effect_attribution();
-        self.game.note_effect_added_sources(tamer, moved_handles, cause);
+        self.game
+            .note_effect_added_sources(tamer, moved_handles, cause);
         moved_count
     }
 
@@ -693,7 +697,8 @@ impl<'a> EffectContext<'a> {
             index: digimon_idx as u8,
         };
         let cause = self.placing_effect_attribution();
-        self.game.note_effect_added_sources(host, vec![top_handle], cause);
+        self.game
+            .note_effect_added_sources(host, vec![top_handle], cause);
     }
 
     /// Trash the current top Digimon of `perm` and promote the next-highest
@@ -834,7 +839,8 @@ impl<'a> EffectContext<'a> {
             p.card_sources.insert(0, card);
             // DCGO `Training.cs:29` passes `activateClass` → fires
             // OnAddDigivolutionCards for the Training carrier.
-            self.game.note_effect_added_sources(perm, vec![placed], cause);
+            self.game
+                .note_effect_added_sources(perm, vec![placed], cause);
             return;
         }
         if let Some(ref mut breeding) = player.breeding_area {

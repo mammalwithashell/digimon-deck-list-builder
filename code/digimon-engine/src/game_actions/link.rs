@@ -156,7 +156,8 @@ impl Game {
     pub fn hand_option_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
         match self.hand_option_link_condition_targets(player, hand_index) {
             Some((cost, hosts)) => {
-                !hosts.is_empty() && self.can_afford_link_cost(self.effective_link_cost(player, cost))
+                !hosts.is_empty()
+                    && self.can_afford_link_cost(self.effective_link_cost(player, cost))
             }
             None => false,
         }
@@ -334,7 +335,13 @@ impl Game {
                 player: state.owner,
                 index: target_index,
             });
-        self.finish_option_hand_link(state.owner, state.hand_index, state.card, state.cost, picked);
+        self.finish_option_hand_link(
+            state.owner,
+            state.hand_index,
+            state.card,
+            state.cost,
+            picked,
+        );
     }
 
     /// §10-1-3-2 + §10-1-3-3 for a from-hand Plug-In Option link: pin the
@@ -535,11 +542,9 @@ impl Game {
                         && matches!(perm.option_state, OptionState::Standard)
                 })
                 .unwrap_or(false),
-            DigimonLinkOrigin::Hand(owner) => self
-                .player(owner)
-                .hand
-                .iter()
-                .any(|c| c.handle() == card),
+            DigimonLinkOrigin::Hand(owner) => {
+                self.player(owner).hand.iter().any(|c| c.handle() == card)
+            }
         }
     }
 

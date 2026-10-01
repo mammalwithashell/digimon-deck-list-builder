@@ -597,11 +597,15 @@ fn bt20_020_gate_blocks_security_played_tamer() {
         .game
         .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ifm));
     runner.game.drain_effect_queue();
-    assert!(runner
-        .game
-        .modifiers
-        .player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect));
-    assert_eq!(runner.security_count(1), 1, "Dragon Mode rider trashes 1 security");
+    assert!(runner.game.modifiers.player_has(
+        1,
+        digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+    ));
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "Dragon Mode rider trashes 1 security"
+    );
 
     runner.attack_player(ifm, 1, false);
     runner.game.drain_effect_queue();
@@ -619,5 +623,9 @@ fn bt20_020_gate_blocks_security_played_tamer() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data).to_string())
         .collect();
-    assert_eq!(trash_ids, vec!["ST1-12", "ST1-12"], "both Tai end in the trash");
+    assert_eq!(
+        trash_ids,
+        vec!["ST1-12", "ST1-12"],
+        "both Tai end in the trash"
+    );
 }

@@ -82,7 +82,11 @@ fn base() -> DebugRunnerBuilder {
         .deck(1, &["FILL"; 6])
 }
 
-fn find_permanent(runner: &DebugRunner, player: u8, card_id: &str) -> digimon_engine::permanent::PermanentHandle {
+fn find_permanent(
+    runner: &DebugRunner,
+    player: u8,
+    card_id: &str,
+) -> digimon_engine::permanent::PermanentHandle {
     let idx = runner.game.players[player as usize]
         .battle_area
         .iter()
@@ -95,9 +99,10 @@ fn find_permanent(runner: &DebugRunner, player: u8, card_id: &str) -> digimon_en
 /// field (BT18-092 idiom — the real trigger path, without the turn cycle).
 fn fire_start_of_main(runner: &mut DebugRunner) {
     let inboots = find_permanent(runner, 0, CARD_ID);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(inboots));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(inboots),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -106,7 +111,9 @@ fn fire_start_of_main(runner: &mut DebugRunner) {
 #[test]
 fn bt18_093_metadata_and_three_triggered_clauses() {
     let runner = base().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
     assert_eq!(compiled.kind, CompiledCardKind::Tamer);
     assert_eq!(compiled.cost, Some(4));
     assert!(compiled.traits.iter().any(|t| t == "LIBERATOR"));
@@ -119,7 +126,11 @@ fn bt18_093_metadata_and_three_triggered_clauses() {
             _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 3, "start_of_your_turn + start_of_your_main_phase + on_security");
+    assert_eq!(
+        triggered.len(),
+        3,
+        "start_of_your_turn + start_of_your_main_phase + on_security"
+    );
 
     let sot = triggered
         .iter()
@@ -133,7 +144,10 @@ fn bt18_093_metadata_and_three_triggered_clauses() {
         .iter()
         .find(|t| t.when == vec![CompiledTiming::StartOfYourMainPhase])
         .expect("start_of_your_main_phase clause");
-    assert!(som.optional, "'By trashing …' is an optional processing condition (§15-7-1)");
+    assert!(
+        som.optional,
+        "'By trashing …' is an optional processing condition (§15-7-1)"
+    );
     assert!(!som.once_per_turn, "no [Once Per Turn] is printed");
     assert_eq!(som.scope, CompiledScope::FaceUp);
 
@@ -154,7 +168,11 @@ fn bt18_093_start_of_turn_sets_low_memory_to_three() {
     runner.end_turn();
     runner.end_turn();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), 3, "memory ≤ 2 is set to 3 at the start of P0's turn");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "memory ≤ 2 is set to 3 at the start of P0's turn"
+    );
 }
 
 #[test]
@@ -165,7 +183,11 @@ fn bt18_093_start_of_turn_leaves_high_memory_alone() {
     runner.end_turn();
     runner.end_turn();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), 5, "memory > 2 is untouched (condition gates)");
+    assert_eq!(
+        runner.memory(),
+        5,
+        "memory > 2 is untouched (condition gates)"
+    );
 }
 
 // ─── Section 3: [Start of Your Main Phase] trash-1 → Draw 1 ──────────────────
@@ -183,7 +205,10 @@ fn bt18_093_start_of_main_offers_only_eligible_hand_cards() {
         .pending_selection_view()
         .expect("an eligible card in hand must offer the trash-cost selection");
     assert_eq!(view.kind, SelectionKind::Hand);
-    assert!(view.is_optional, "'By trashing' is declinable — PASS must be legal");
+    assert!(
+        view.is_optional,
+        "'By trashing' is declinable — PASS must be legal"
+    );
     let picks: Vec<u16> = view
         .valid_action_ids
         .iter()
@@ -228,7 +253,11 @@ fn bt18_093_trashing_option_draws_one() {
         .expect("trash the Option");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.trash_size(0), trash_before + 1, "the Option was trashed");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "the Option was trashed"
+    );
     assert!(
         runner.game.players[0]
             .trash
@@ -237,7 +266,11 @@ fn bt18_093_trashing_option_draws_one() {
         "the trashed card is the chosen Option"
     );
     assert_eq!(runner.deck_size(0), deck_before - 1, "<Draw 1> fired");
-    assert_eq!(runner.hand_size(0), hand_before, "-1 trashed +1 drawn = net 0");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "-1 trashed +1 drawn = net 0"
+    );
 }
 
 #[test]
@@ -256,8 +289,16 @@ fn bt18_093_declining_trash_cost_changes_nothing() {
         .expect("decline the cost");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before, "nothing trashed, nothing drawn");
-    assert_eq!(runner.deck_size(0), deck_before, "no draw on decline (§15-7-2)");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "nothing trashed, nothing drawn"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "no draw on decline (§15-7-2)"
+    );
     assert_eq!(runner.trash_size(0), trash_before);
 }
 
@@ -278,7 +319,11 @@ fn bt18_093_security_plays_itself_free() {
     let _ = runner.attack_player(atk, 1, false);
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.security_count(1), 0, "the revealed Tamer left security");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "the revealed Tamer left security"
+    );
     assert!(
         runner.game.players[1]
             .battle_area
@@ -286,5 +331,9 @@ fn bt18_093_security_plays_itself_free() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
         "Violet Inboots was played into P1's battle area by its [Security] effect"
     );
-    assert_eq!(runner.memory(), memory_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
 }

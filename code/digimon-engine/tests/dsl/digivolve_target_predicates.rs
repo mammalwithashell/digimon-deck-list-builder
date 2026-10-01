@@ -105,7 +105,8 @@ fn validator_rejects_undeclared_can_digivolve_onto_binding() {
     let errs = validate(&spec, &ValidationContext { raw_rust: &reg })
         .expect_err("undeclared binding must be rejected");
     assert!(
-        errs.iter().any(|e| e.path.contains("can_digivolve_onto") && e.message.contains("nope")),
+        errs.iter()
+            .any(|e| e.path.contains("can_digivolve_onto") && e.message.contains("nope")),
         "expected an undeclared-binding error on can_digivolve_onto, got {errs:?}"
     );
 }
@@ -247,6 +248,9 @@ fn no_candidate_permanent_means_no_prompt_at_all() {
     r.game.enter_main_phase();
 
     fire_main(&mut r, tamer.index as usize);
-    assert!(r.pending_selection().is_none(), "no routable target → no prompt");
+    assert!(
+        r.pending_selection().is_none(),
+        "no routable target → no prompt"
+    );
     assert_eq!(r.hand_size(0), 2, "nothing consumed");
 }

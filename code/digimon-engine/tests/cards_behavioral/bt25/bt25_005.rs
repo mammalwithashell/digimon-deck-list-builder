@@ -147,8 +147,11 @@ impl CardEffect for PlaceHandUnder {
             .name("test placer: tuck hand cards under a permanent")
             .process(move |ctx| {
                 for _ in 0..count {
-                    let ok =
-                        ctx.place_as_bottom_source(CardSourceRef::Hand(ctx.player, 0), target, false);
+                    let ok = ctx.place_as_bottom_source(
+                        CardSourceRef::Hand(ctx.player, 0),
+                        target,
+                        false,
+                    );
                     assert!(ok, "placement must succeed");
                 }
             })
@@ -188,7 +191,13 @@ fn host_with_pagumon(r: &mut DebugRunner) -> PermanentHandle {
 /// Play `placer_id` for `player` and let its [On Play] tuck `player`'s
 /// hand[0..count] under `target`. Does NOT auto-resolve — the caller drives
 /// Pagumon's prompt.
-fn tuck(r: &mut DebugRunner, player: PlayerId, placer_id: &str, count: usize, target: PermanentHandle) {
+fn tuck(
+    r: &mut DebugRunner,
+    player: PlayerId,
+    placer_id: &str,
+    count: usize,
+    target: PermanentHandle,
+) {
     r.register_effect(placer_id, Arc::new(PlaceHandUnder { count, target }));
     let placer = r.place_on_field(player, placer_id, Some(0));
     r.game.fire_on_play(player, placer.index as usize);
@@ -218,9 +227,14 @@ fn stack_len(r: &DebugRunner, h: PermanentHandle) -> usize {
 
 /// Accept DCGO's outer yes/no (a `Replacement`-kind optional prompt).
 fn accept_outer(r: &mut DebugRunner) {
-    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement), "outer yes/no");
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "outer yes/no"
+    );
     assert!(r.pending_is_optional(), "the outer yes/no is declinable");
-    r.accept_optional_trigger().expect("accept the 'may digivolve'");
+    r.accept_optional_trigger()
+        .expect("accept the 'may digivolve'");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,7 +249,11 @@ fn bt25_005_is_a_black_lv2_lesser_iliad_ts_digi_egg() {
     assert_eq!(c.level, Some(2));
     assert_eq!(c.cost, Some(0));
     for t in ["Lesser", "Iliad", "TS"] {
-        assert!(c.traits.iter().any(|x| x == t), "missing trait {t}; traits={:?}", c.traits);
+        assert!(
+            c.traits.iter().any(|x| x == t),
+            "missing trait {t}; traits={:?}",
+            c.traits
+        );
     }
 }
 
@@ -255,10 +273,16 @@ fn bt25_005_single_inherited_optional_opt_your_turn_on_add_digivolution_cards_cl
         t.outer_prompt,
         "DCGO's initial yes/no — declining it refunds the OPT (rule 15-14-1-5)"
     );
-    assert_eq!(t.active_when.as_ref().and_then(|g| g.your_turn), Some(true), "[Your Turn]");
+    assert_eq!(
+        t.active_when.as_ref().and_then(|g| g.your_turn),
+        Some(true),
+        "[Your Turn]"
+    );
     let leaves = &t.condition.as_ref().expect("condition").all_of;
     assert!(
-        leaves.iter().any(|p| p.event_host_permanent_is_source == Some(true)),
+        leaves
+            .iter()
+            .any(|p| p.event_host_permanent_is_source == Some(true)),
         "\"this Digimon's digivolution cards\" → host == self"
     );
     let added = leaves
@@ -266,9 +290,14 @@ fn bt25_005_single_inherited_optional_opt_your_turn_on_add_digivolution_cards_cl
         .find_map(|p| p.event_added_card_any.as_deref())
         .expect("event_added_card_any gate");
     assert_eq!(added.trait_has.as_deref(), Some("Three Musketeers"));
-    assert!(added.kind.is_none(), "any card KIND with the trait qualifies");
     assert!(
-        !leaves.iter().any(|p| p.event_caused_by_own_effect.is_some()),
+        added.kind.is_none(),
+        "any card KIND with the trait qualifies"
+    );
+    assert!(
+        !leaves
+            .iter()
+            .any(|p| p.event_caused_by_own_effect.is_some()),
         "not owner-gated (DCGO cardEffectCondition: null)"
     );
 }
@@ -283,14 +312,20 @@ fn bt25_005_single_inherited_optional_opt_your_turn_on_add_digivolution_cards_cl
 #[test]
 fn bt25_005_may_digivolve_into_ts_card_in_hand_with_cost_reduced_by_2() {
     let mut r = base()
-        .hand(0, &["TM-CARD", "TS-LV4", "TMTEXT-LV4", "OTHER-LV4", "TS-LV5"])
+        .hand(
+            0,
+            &["TM-CARD", "TS-LV4", "TMTEXT-LV4", "OTHER-LV4", "TS-LV5"],
+        )
         .start();
     let host = host_with_pagumon(&mut r);
     tuck(&mut r, 0, "PLACER", 1, host);
     accept_outer(&mut r);
 
     assert_eq!(r.pending_kind(), Some(SelectionKind::Hand));
-    assert!(r.pending_is_optional(), "the hand pick is declinable (DCGO canNoSelect)");
+    assert!(
+        r.pending_is_optional(),
+        "the hand pick is declinable (DCGO canNoSelect)"
+    );
     let view = r.pending_selection_view().unwrap();
     let mut expected = vec![
         hand_action(&r, 0, "TS-LV4"),
@@ -306,12 +341,21 @@ fn bt25_005_may_digivolve_into_ts_card_in_hand_with_cost_reduced_by_2() {
     );
 
     let before = r.memory();
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
 
-    assert_eq!(top_id(&r, host), "TS-LV4", "the host digivolved into the hand card");
+    assert_eq!(
+        top_id(&r, host),
+        "TS-LV4",
+        "the host digivolved into the hand card"
+    );
     assert_eq!(stack_len(&r, host), 4, "Pagumon + TM-CARD + HOST + TS-LV4");
-    assert_eq!(r.memory(), before - 1, "digivolution cost 3, reduced by 2 → pays 1");
+    assert_eq!(
+        r.memory(),
+        before - 1,
+        "digivolution cost 3, reduced by 2 → pays 1"
+    );
 }
 
 #[test]
@@ -321,7 +365,8 @@ fn bt25_005_three_musketeers_in_text_card_is_a_legal_target() {
     tuck(&mut r, 0, "PLACER", 1, host);
     accept_outer(&mut r);
     let before = r.memory();
-    r.execute_action(0, hand_action(&r, 0, "TMTEXT-LV4")).expect("pick TMTEXT-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TMTEXT-LV4"))
+        .expect("pick TMTEXT-LV4");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TMTEXT-LV4");
     assert_eq!(r.memory(), before - 1);
@@ -335,7 +380,8 @@ fn bt25_005_cost_reduction_clamps_at_zero() {
     tuck(&mut r, 0, "PLACER", 1, host);
     accept_outer(&mut r);
     let before = r.memory();
-    r.execute_action(0, hand_action(&r, 0, "TS-CHEAP")).expect("pick TS-CHEAP");
+    r.execute_action(0, hand_action(&r, 0, "TS-CHEAP"))
+        .expect("pick TS-CHEAP");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-CHEAP");
     assert_eq!(r.memory(), before, "cost 1 − 2 clamps to 0");
@@ -365,7 +411,8 @@ fn bt25_005_declining_the_outer_prompt_keeps_the_opt_use() {
         "declining the activation did not consume the [Once Per Turn] use"
     );
     accept_outer(&mut r);
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-LV4");
 }
@@ -427,7 +474,8 @@ fn bt25_005_triggers_when_opponent_effect_places_tm_card_on_your_turn() {
     tuck(&mut r, 1, "OPP-PLACER", 1, host);
     accept_outer(&mut r);
     assert_eq!(r.pending_kind(), Some(SelectionKind::Hand));
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-LV4");
 }
@@ -450,7 +498,10 @@ fn bt25_005_no_prompt_when_tm_card_is_placed_under_a_sibling() {
     let _host = host_with_pagumon(&mut r);
     let sib = r.place_on_field(0, "SIB", Some(0));
     tuck(&mut r, 0, "PLACER", 1, sib);
-    assert!(r.game.pending_selection.is_none(), "\"this Digimon's digivolution cards\" only");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "\"this Digimon's digivolution cards\" only"
+    );
 }
 
 /// NEGATIVE (inherited only): a face-up Pagumon receiving a [Three
@@ -462,7 +513,10 @@ fn bt25_005_face_up_pagumon_does_not_trigger() {
     r.game.turn_player_idx = 0;
     let egg = r.place_on_field(0, CARD_ID, Some(0));
     tuck(&mut r, 0, "PLACER", 1, egg);
-    assert!(r.game.pending_selection.is_none(), "inherited effects only work from the digivolution cards");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "inherited effects only work from the digivolution cards"
+    );
 }
 
 /// Rule 15-5-2 batch: two [Three Musketeers] cards tucked by ONE effect →
@@ -473,10 +527,14 @@ fn bt25_005_multi_card_placement_in_one_effect_prompts_once() {
     let host = host_with_pagumon(&mut r);
     tuck(&mut r, 0, "PLACER", 2, host);
     accept_outer(&mut r);
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-LV4");
-    assert!(r.game.pending_selection.is_none(), "one trigger condition → one activation");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "one trigger condition → one activation"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -528,7 +586,8 @@ fn bt25_005_alt_path_only_ts_card_is_offered_and_digivolves() {
         "the alt-path-only card is legal from the green [TS] host; TS-LV4's black circle is not"
     );
     let before = r.memory();
-    r.execute_action(0, hand_action(&r, 0, "TEST-TS-ALT")).expect("pick");
+    r.execute_action(0, hand_action(&r, 0, "TEST-TS-ALT"))
+        .expect("pick");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TEST-TS-ALT");
     assert_eq!(r.memory(), before - 1, "alt-path cost 3, reduced by 2");
@@ -546,7 +605,8 @@ fn bt25_005_second_placement_in_the_same_turn_is_locked_out_after_a_digivolve() 
     let host = host_with_pagumon(&mut r);
     tuck(&mut r, 0, "PLACER", 1, host);
     accept_outer(&mut r);
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-LV4");
 
@@ -565,7 +625,8 @@ fn bt25_005_lockout_clears_on_your_next_turn() {
     let host = host_with_pagumon(&mut r);
     tuck(&mut r, 0, "PLACER", 1, host);
     accept_outer(&mut r);
-    r.execute_action(0, hand_action(&r, 0, "TS-LV4")).expect("pick TS-LV4");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV4"))
+        .expect("pick TS-LV4");
     r.auto_resolve().expect("finish");
 
     r.end_turn();
@@ -576,7 +637,8 @@ fn bt25_005_lockout_clears_on_your_next_turn() {
     tuck(&mut r, 0, "SIB", 1, host);
     accept_outer(&mut r);
     let before = r.memory();
-    r.execute_action(0, hand_action(&r, 0, "TS-LV5")).expect("pick TS-LV5");
+    r.execute_action(0, hand_action(&r, 0, "TS-LV5"))
+        .expect("pick TS-LV5");
     r.auto_resolve().expect("finish");
     assert_eq!(top_id(&r, host), "TS-LV5", "OPT resets on your next turn");
     assert_eq!(r.memory(), before - 2, "cost 4 − 2");

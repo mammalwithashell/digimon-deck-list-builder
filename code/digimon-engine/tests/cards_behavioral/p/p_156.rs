@@ -340,9 +340,7 @@ fn p_156_main_can_choose_opponents_tamer() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    let tamer_choice = runner
-        .pending_selection_view()
-        .expect("Tamer selection");
+    let tamer_choice = runner.pending_selection_view().expect("Tamer selection");
     assert_eq!(
         tamer_choice.valid_action_ids.len(),
         2,

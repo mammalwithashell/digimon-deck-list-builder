@@ -609,7 +609,10 @@ pub fn resolve_next(
             && crate::selection::is_dna_material_prompt(&pending.prompt)
             && t.player == pending.selecting_player)
             .then_some(slot);
-        for cand in [side_implicit, absolute].into_iter().chain(dna_material_slot) {
+        for cand in [side_implicit, absolute]
+            .into_iter()
+            .chain(dna_material_slot)
+        {
             if accepts(cand) {
                 return Ok(Some(cand));
             }
@@ -623,9 +626,7 @@ pub fn resolve_next(
     // ── Card-identity picks (hand / trash / reveal / security) ───────────
     if let Some(card_ids) = &payload.card_ids {
         let want = &card_ids[picks_done];
-        let zone_owner = pending
-            .zone_owner
-            .unwrap_or(pending.selecting_player);
+        let zone_owner = pending.zone_owner.unwrap_or(pending.selecting_player);
         let find_id = |ids: &[String], base: u16| -> Option<u16> {
             ids.iter().enumerate().find_map(|(i, cid)| {
                 let id = base + i as u16;
@@ -639,13 +640,20 @@ pub fn resolve_next(
                 .collect()
         };
         let hit = match pending.kind {
-            SelectionKind::Hand | SelectionKind::UnionZone { .. } => {
-                find_id(&zone_card_ids(&game.player(zone_owner).hand), PLAY_HAND_START)
-                    .or_else(|| find_id(&zone_card_ids(&game.player(zone_owner).trash), TRASH_EFFECT_START))
-            }
-            SelectionKind::Trash => {
-                find_id(&zone_card_ids(&game.player(zone_owner).trash), TRASH_EFFECT_START)
-            }
+            SelectionKind::Hand | SelectionKind::UnionZone { .. } => find_id(
+                &zone_card_ids(&game.player(zone_owner).hand),
+                PLAY_HAND_START,
+            )
+            .or_else(|| {
+                find_id(
+                    &zone_card_ids(&game.player(zone_owner).trash),
+                    TRASH_EFFECT_START,
+                )
+            }),
+            SelectionKind::Trash => find_id(
+                &zone_card_ids(&game.player(zone_owner).trash),
+                TRASH_EFFECT_START,
+            ),
             SelectionKind::Reveal | SelectionKind::RevealBucket { .. } => {
                 find_id(&zone_card_ids(&game.revealed_cards), SEL_REVEAL_START)
             }

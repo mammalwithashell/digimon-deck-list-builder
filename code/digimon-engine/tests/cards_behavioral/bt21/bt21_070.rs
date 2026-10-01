@@ -241,9 +241,9 @@ fn bt21_070_registers_stnd_alt_digivolve_cost_2() {
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(2)))
-            && p.from.as_ref().is_some_and(|f| {
-                f.trait_has.as_deref() == Some("Stnd.") && f.level_eq.is_none()
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.trait_has.as_deref() == Some("Stnd.") && f.level_eq.is_none())
     });
     assert!(
         has,

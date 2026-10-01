@@ -90,7 +90,9 @@ fn bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play() {
         .position(|c| c.card_id == "BT16-077")
         .expect("BT16-077 card data");
     let next = r.game.next_card_index();
-    r.game.players[0].trash.push(CardSource::new(data_idx, 0, next));
+    r.game.players[0]
+        .trash
+        .push(CardSource::new(data_idx, 0, next));
 
     let h = r.place_on_field(0, "BT16-077", Some(0));
     // Non-DNA WhenDigivolving (no DNA context).
@@ -103,7 +105,8 @@ fn bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play() {
         "the optional [When Digivolving] prompt must open on a non-DNA digivolve \
          (the Rush/attack half is not DNA-gated)"
     );
-    r.accept_optional_trigger().expect("accept [When Digivolving]");
+    r.accept_optional_trigger()
+        .expect("accept [When Digivolving]");
     assert_eq!(
         r.pending_kind(),
         Some(SelectionKind::OwnField),
@@ -131,7 +134,9 @@ fn bt16_077_rush_pick_attacks_the_player_immediately() {
     let mut r = DebugRunner::builder()
         .dsl_card("BT16-077")
         .expect("BT16-077 loads")
-        .add_card(digimon_engine::debug_runner::make_test_card("SEC-2K", "Sec"))
+        .add_card(digimon_engine::debug_runner::make_test_card(
+            "SEC-2K", "Sec",
+        ))
         .security(1, &["SEC-2K", "SEC-2K", "SEC-2K"])
         .memory(3)
         .start();
@@ -141,12 +146,15 @@ fn bt16_077_rush_pick_attacks_the_player_immediately() {
     r.game
         .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
-    r.accept_optional_trigger().expect("accept [When Digivolving]");
+    r.accept_optional_trigger()
+        .expect("accept [When Digivolving]");
     assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Rush pick");
 
     // Pick Dinobeemon itself, then answer any (player-only) attack prompt.
     for _ in 0..4 {
-        let Some(view) = r.pending_selection_view() else { break };
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
         let id = *view
             .valid_action_ids
             .iter()

@@ -277,7 +277,10 @@ fn bt25_100_linked_host_gains_dp_2000_collision_and_piercing() {
     let host = runner.place_on_field(0, "HOST", Some(0));
     let opp = runner.place_on_field(1, "OPP-DIGIMON", Some(1));
     runner.game.enter_main_phase();
-    let host_handle = PermanentHandle { player: 0, index: host.index };
+    let host_handle = PermanentHandle {
+        player: 0,
+        index: host.index,
+    };
     let before = runner.effective_dp(host_handle).expect("dp");
 
     assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
@@ -320,7 +323,10 @@ fn bt25_100_security_flip_links_to_defenders_digimon() {
     runner.game.enter_main_phase();
 
     let host_dp_before = runner
-        .effective_dp(PermanentHandle { player: 1, index: host.index })
+        .effective_dp(PermanentHandle {
+            player: 1,
+            index: host.index,
+        })
         .expect("host dp");
     let trash1_before = runner.trash_size(1);
     let _ = runner.attack_player(attacker, 1, false);
@@ -351,7 +357,10 @@ fn bt25_100_security_flip_links_to_defenders_digimon() {
     // The card is plugged into the host, NOT trashed — and only once.
     let host_perm = &runner.game.player(1).battle_area[host.index as usize];
     assert_eq!(host_perm.linked_cards.len(), 1);
-    assert_eq!(host_perm.linked_cards[0].card_id(&runner.game.card_data), "BT25-100");
+    assert_eq!(
+        host_perm.linked_cards[0].card_id(&runner.game.card_data),
+        "BT25-100"
+    );
     assert_eq!(
         runner.trash_size(1),
         trash1_before,
@@ -359,7 +368,10 @@ fn bt25_100_security_flip_links_to_defenders_digimon() {
     );
     assert_eq!(runner.security_count(1), 1, "one security card was checked");
     // Link DP (+2000) and the linked <Piercing> reach the host.
-    let host_handle = PermanentHandle { player: 1, index: host.index };
+    let host_handle = PermanentHandle {
+        player: 1,
+        index: host.index,
+    };
     assert_eq!(
         runner.effective_dp(host_handle).expect("host dp"),
         host_dp_before + 2000
@@ -426,7 +438,10 @@ fn bt25_100_security_flip_without_host_trashes_the_card() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
-    assert!(runner.pending_selection().is_none(), "no host → no link prompt");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no host → no link prompt"
+    );
     assert_eq!(runner.trash_size(1), trash1_before + 1);
 }
 
@@ -741,7 +756,10 @@ fn bt25_100_play_and_link_bits_are_both_offered() {
 
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(mask[PLAY_HAND_START as usize], 1.0, "§6-5-1-3 use action");
-    assert_eq!(mask[HAND_EFFECT_START as usize], 1.0, "§6-5-1-4 link action");
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 1.0,
+        "§6-5-1-4 link action"
+    );
 }
 
 /// §10-1-3 ORDER. The link procedure is `10-1-3-1` declare + reveal + **choose

@@ -141,7 +141,11 @@ fn bt25_059_on_play_installs_suspend_up_to_2_prompt() {
     );
     let view = runner.pending_selection_view().unwrap();
     assert!(view.is_optional, "you MAY suspend");
-    assert_eq!(view.valid_action_ids.len(), 3, "own Vegetation, Ceresmon, and the opponent's Digimon");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        3,
+        "own Vegetation, Ceresmon, and the opponent's Digimon"
+    );
 }
 
 #[test]

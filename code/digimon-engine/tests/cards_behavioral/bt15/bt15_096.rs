@@ -109,9 +109,7 @@ fn activate_staged_delay(runner: &mut DebugRunner) {
         .player(0)
         .battle_area
         .iter()
-        .position(|permanent| {
-            permanent.top_card().card_id(&runner.game.card_data) == "BT15-096"
-        })
+        .position(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "BT15-096")
         .map(|index| digimon_engine::permanent::PermanentHandle {
             player: 0,
             index: index as u8,

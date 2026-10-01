@@ -338,7 +338,11 @@ fn bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt
         .memory(10)
         .start();
     runner.set_first_player(1);
-    assert_eq!(runner.turn_player(), 1, "P1 is the turn player / Option user");
+    assert_eq!(
+        runner.turn_player(),
+        1,
+        "P1 is the turn player / Option user"
+    );
     let neptunemon = runner.place_on_field(0, "BT24-030", Some(0));
     // Gaia Force is red: its user needs a red card in play (4-19 color
     // requirements) -- the exam line uses Tai Kamiya ST1-12 for this.
@@ -389,7 +393,9 @@ fn bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt
         "the used Option is trashed before the non-turn player's body-raised trigger resolves"
     );
 
-    runner.decline_optional_trigger().expect("decline the unsuspend");
+    runner
+        .decline_optional_trigger()
+        .expect("decline the unsuspend");
     runner.auto_resolve().ok();
     assert!(
         battle_area_contains(&runner, 0, "BT24-030"),

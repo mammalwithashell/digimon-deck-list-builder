@@ -3313,11 +3313,11 @@ impl Game {
                             effect.inherited = grant.inherited;
                             if let Some(gc) = grant_condition.clone() {
                                 effect.condition = Some(match effect.condition.take() {
-                                    Some(own) => {
-                                        std::sync::Arc::new(move |rctx: &crate::effect_context::EffectReadContext| {
+                                    Some(own) => std::sync::Arc::new(
+                                        move |rctx: &crate::effect_context::EffectReadContext| {
                                             gc(rctx) && own(rctx)
-                                        })
-                                    }
+                                        },
+                                    ),
                                     None => gc,
                                 });
                             }

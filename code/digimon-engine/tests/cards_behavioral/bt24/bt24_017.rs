@@ -829,7 +829,11 @@ fn bt24_017_return_two_cost_may_be_declined_leaving_tail_unrun() {
         "delete prompt must install first"
     );
     resolve_first(&mut runner);
-    assert_eq!(runner.battle_area_size(1), 0, "the mandatory delete still runs");
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "the mandatory delete still runs"
+    );
     // 2 pushed + the deleted Digimon = 3 trash cards.
     assert_eq!(runner.trash_size(1), 3, "deleted Digimon joins the trash");
 

@@ -48,9 +48,7 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
@@ -112,8 +110,11 @@ impl CardEffect for PlaceHandUnder {
             .name("test placer: tuck hand cards under a permanent")
             .process(move |ctx| {
                 for _ in 0..count {
-                    let ok =
-                        ctx.place_as_bottom_source(CardSourceRef::Hand(ctx.player, 0), target, false);
+                    let ok = ctx.place_as_bottom_source(
+                        CardSourceRef::Hand(ctx.player, 0),
+                        target,
+                        false,
+                    );
                     assert!(ok, "placement must succeed");
                 }
             })
@@ -161,11 +162,18 @@ fn host_with_dorumon(r: &mut DebugRunner) -> PermanentHandle {
     r.place_stack(0, &[CARD_ID, "HOST"])
 }
 
-fn tuck(r: &mut DebugRunner, player: PlayerId, placer_id: &str, count: usize, target: PermanentHandle) {
+fn tuck(
+    r: &mut DebugRunner,
+    player: PlayerId,
+    placer_id: &str,
+    count: usize,
+    target: PermanentHandle,
+) {
     r.register_effect(placer_id, Arc::new(PlaceHandUnder { count, target }));
     let placer = r.place_on_field(player, placer_id, Some(0));
     r.game.fire_on_play(player, placer.index as usize);
-    r.auto_resolve().expect("no selection expected from a mandatory gain");
+    r.auto_resolve()
+        .expect("no selection expected from a mandatory gain");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,7 +187,11 @@ fn bt7_056_metadata_and_black_lv2_digivolve_circle() {
     assert_eq!(c.level, Some(3));
     assert_eq!(c.cost, Some(3));
     assert_eq!(c.dp, Some(1000));
-    assert!(c.traits.iter().any(|t| t == "X Antibody"), "traits={:?}", c.traits);
+    assert!(
+        c.traits.iter().any(|t| t == "X Antibody"),
+        "traits={:?}",
+        c.traits
+    );
     assert!(c.traits.iter().any(|t| t == "Beast"));
     let circles = c
         .alt_paths
@@ -218,7 +230,10 @@ fn bt7_056_has_mandatory_on_play_and_inherited_opt_your_turn_add_sources_clause(
         .expect("inherited OnAddDigivolutionCards clause");
     assert_eq!(inh.scope, CompiledScope::Inherited);
     assert!(inh.once_per_turn, "[Once Per Turn]");
-    assert!(!inh.optional, "gain 1 memory is mandatory (DCGO isOptional: false)");
+    assert!(
+        !inh.optional,
+        "gain 1 memory is mandatory (DCGO isOptional: false)"
+    );
     assert_eq!(
         inh.active_when.as_ref().and_then(|g| g.your_turn),
         Some(true),
@@ -226,11 +241,15 @@ fn bt7_056_has_mandatory_on_play_and_inherited_opt_your_turn_add_sources_clause(
     );
     let leaves = &inh.condition.as_ref().expect("condition").all_of;
     assert!(
-        leaves.iter().any(|p| p.event_host_permanent_is_source == Some(true)),
+        leaves
+            .iter()
+            .any(|p| p.event_host_permanent_is_source == Some(true)),
         "\"under this Digimon\" → host == self"
     );
     assert!(
-        leaves.iter().any(|p| p.event_caused_by_own_effect == Some(true)),
+        leaves
+            .iter()
+            .any(|p| p.event_caused_by_own_effect == Some(true)),
         "\"one of YOUR effects\" → placing effect belongs to the controller"
     );
     assert!(
@@ -254,23 +273,47 @@ fn bt7_056_on_play_adds_one_x_antibody_card_and_one_kota_domoto_bottoms_rest() {
     r.play(0, 0).expect("play Dorumon");
 
     let view = r.pending_selection_view().expect("bucket 0 prompt");
-    assert!(matches!(view.kind, SelectionKind::RevealBucket { bucket_index: 0, .. }));
+    assert!(matches!(
+        view.kind,
+        SelectionKind::RevealBucket {
+            bucket_index: 0,
+            ..
+        }
+    ));
     assert!(
         !view.valid_action_ids.contains(&PASS),
         "a candidate exists → the add is mandatory (Q&A: you still add it)"
     );
-    r.execute_action(0, reveal_action(&r, "XA")).expect("pick XA");
+    r.execute_action(0, reveal_action(&r, "XA"))
+        .expect("pick XA");
     let view = r.pending_selection_view().expect("bucket 1 prompt");
-    assert!(matches!(view.kind, SelectionKind::RevealBucket { bucket_index: 1, .. }));
+    assert!(matches!(
+        view.kind,
+        SelectionKind::RevealBucket {
+            bucket_index: 1,
+            ..
+        }
+    ));
     assert!(!view.valid_action_ids.contains(&PASS));
-    r.execute_action(0, reveal_action(&r, "KOTA")).expect("pick KOTA");
+    r.execute_action(0, reveal_action(&r, "KOTA"))
+        .expect("pick KOTA");
     r.auto_resolve().expect("finish");
 
     let hand = zone_ids(&r.game.players[0].hand, &r.game.card_data);
-    assert!(hand.contains(&"XA".to_string()), "X Antibody card added; hand={hand:?}");
-    assert!(hand.contains(&"KOTA".to_string()), "Kota Domoto added; hand={hand:?}");
+    assert!(
+        hand.contains(&"XA".to_string()),
+        "X Antibody card added; hand={hand:?}"
+    );
+    assert!(
+        hand.contains(&"KOTA".to_string()),
+        "Kota Domoto added; hand={hand:?}"
+    );
     assert_eq!(r.hand_size(0), 2);
-    assert_eq!(r.deck_size(0), deck_before - 2, "1 of the 3 revealed returned to the deck");
+    assert_eq!(
+        r.deck_size(0),
+        deck_before - 2,
+        "1 of the 3 revealed returned to the deck"
+    );
     assert_eq!(
         r.game.players[0].deck[0].card_id(&r.game.card_data),
         "F",
@@ -289,9 +332,18 @@ fn bt7_056_on_play_adds_only_the_kota_when_no_x_antibody_revealed() {
         .deck(0, &["F", "F", "PLAIN", "F", "KOTA"])
         .start();
     r.play(0, 0).expect("play Dorumon");
-    let view = r.pending_selection_view().expect("bucket 1 prompt (bucket 0 skipped: no X Antibody)");
-    assert!(matches!(view.kind, SelectionKind::RevealBucket { bucket_index: 1, .. }));
-    r.execute_action(0, reveal_action(&r, "KOTA")).expect("pick KOTA");
+    let view = r
+        .pending_selection_view()
+        .expect("bucket 1 prompt (bucket 0 skipped: no X Antibody)");
+    assert!(matches!(
+        view.kind,
+        SelectionKind::RevealBucket {
+            bucket_index: 1,
+            ..
+        }
+    ));
+    r.execute_action(0, reveal_action(&r, "KOTA"))
+        .expect("pick KOTA");
     r.auto_resolve().expect("finish");
     let hand = zone_ids(&r.game.players[0].hand, &r.game.card_data);
     assert_eq!(hand, vec!["KOTA".to_string()]);
@@ -323,8 +375,13 @@ fn bt7_056_buckets_reject_non_matching_cards() {
         .start();
     r.play(0, 0).expect("play Dorumon");
     let view = r.pending_selection_view().expect("bucket 0 prompt");
-    assert_eq!(view.valid_action_ids, vec![reveal_action(&r, "XA")], "only XA is a bucket-0 pick");
-    r.execute_action(0, reveal_action(&r, "XA")).expect("pick XA");
+    assert_eq!(
+        view.valid_action_ids,
+        vec![reveal_action(&r, "XA")],
+        "only XA is a bucket-0 pick"
+    );
+    r.execute_action(0, reveal_action(&r, "XA"))
+        .expect("pick XA");
     r.auto_resolve().expect("finish");
     let hand = zone_ids(&r.game.players[0].hand, &r.game.card_data);
     assert_eq!(hand, vec!["XA".to_string()], "PLAIN must not be added");
@@ -361,7 +418,11 @@ fn bt7_056_gains_when_it_is_itself_placed_under_a_digimon_by_your_effect() {
     let host = r.place_on_field(0, "HOST", Some(0));
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, host);
-    assert_eq!(r.memory(), before + 1, "15-5-3: the placed card's own inherited observer fires");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "15-5-3: the placed card's own inherited observer fires"
+    );
     let ids = zone_ids(
         &r.game.players[0].battle_area[host.index as usize].card_sources,
         &r.game.card_data,
@@ -377,7 +438,11 @@ fn bt7_056_no_gain_when_opponent_effect_places_under_host() {
     let host = host_with_dorumon(&mut r); // player 0's turn
     let before = r.memory();
     tuck(&mut r, 1, "OPP-PLACER", 1, host);
-    assert_eq!(r.memory(), before, "the placing effect must be the controller's own");
+    assert_eq!(
+        r.memory(),
+        before,
+        "the placing effect must be the controller's own"
+    );
     assert_eq!(
         r.game.players[0].battle_area[host.index as usize]
             .card_sources
@@ -421,7 +486,11 @@ fn bt7_056_face_up_dorumon_does_not_gain() {
     let doru = r.place_on_field(0, CARD_ID, Some(0));
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, doru);
-    assert_eq!(r.memory(), before, "inherited effects only work from the digivolution cards");
+    assert_eq!(
+        r.memory(),
+        before,
+        "inherited effects only work from the digivolution cards"
+    );
 }
 
 /// Rule 15-5-2 batch: two cards tucked by ONE effect → ONE gain.
@@ -431,7 +500,11 @@ fn bt7_056_multi_card_placement_in_one_effect_gains_once() {
     let host = host_with_dorumon(&mut r);
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 2, host);
-    assert_eq!(r.memory(), before + 1, "one trigger condition → one activation (15-5-2)");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "one trigger condition → one activation (15-5-2)"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -440,18 +513,28 @@ fn bt7_056_multi_card_placement_in_one_effect_gains_once() {
 
 #[test]
 fn bt7_056_second_placement_in_the_same_turn_is_locked_out() {
-    let mut r = base().hand(0, &["PLAIN", "PLAIN"]).deck(0, &["F"; 10]).start();
+    let mut r = base()
+        .hand(0, &["PLAIN", "PLAIN"])
+        .deck(0, &["F"; 10])
+        .start();
     let host = host_with_dorumon(&mut r);
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, host);
     assert_eq!(r.memory(), before + 1);
     tuck(&mut r, 0, "SIB", 1, host);
-    assert_eq!(r.memory(), before + 1, "[Once Per Turn]: no second gain this turn");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "[Once Per Turn]: no second gain this turn"
+    );
 }
 
 #[test]
 fn bt7_056_lockout_clears_on_your_next_turn() {
-    let mut r = base().hand(0, &["PLAIN", "PLAIN"]).deck(0, &["F"; 10]).start();
+    let mut r = base()
+        .hand(0, &["PLAIN", "PLAIN"])
+        .deck(0, &["F"; 10])
+        .start();
     let host = host_with_dorumon(&mut r);
     tuck(&mut r, 0, "PLACER", 1, host);
     r.end_turn();
