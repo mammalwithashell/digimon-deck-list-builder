@@ -1,0 +1,205 @@
+# EX13-076 Imperialdramon: Paladin Mode — Digimon, Lv.7, White/Blue/Green,
+# DP 16000, Cost 16. Traits: Ancient Holy Warrior. Form: Mega.
+# Attribute: Vaccine; (Rule) Trait: Has [Free] Attribute.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-076.md):
+#   ＜Piercing＞ ＜Vortex＞ ＜Blocker＞ ＜Evade＞
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may
+#   suspend 1 of your opponent's Digimon. Then, you may return all digivolution
+#   cards of 1 of their Digimon to the bottom of the deck and have this Digimon
+#   battle it. Compare the number of digivolution cards instead of DP in this
+#   battle.
+#   [All Turns] [Once Per Turn] When this Digimon wins a battle, you may return
+#   1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon
+#   may unsuspend.
+#   Assembly -8: 6 [Free]/[Royal Knight] trait Digimon cards w/different names
+#   Digivolve: Blue Lv.6 / cost 6; Green Lv.6 / cost 6;
+#     [Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5.
+#   Official Q&A: the battle starts immediately and otherwise follows the
+#   standard battle rules.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/White/EX13_076.cs
+#   - Pierce/Vortex/Blocker/Evade self statics.
+#   - Shared OP/WD/WA (hash EX13_076_OP_WD_WA, maxCountPerTurn 1, not
+#     optional): needs ≥1 opponent Digimon to activate. Pick 1 UNSUSPENDED
+#     opponent Digimon to suspend (canNoSelect), then pick 1 opponent Digimon
+#     (canNoSelect) → strip its digivolution cards and
+#     `new IBattle(this, it, null, true, CompareDigivolutionCards: true)`.
+#     `if (!isUsed) activateClass.RemoveUse()`.
+#     NOTE: DCGO strips via `TrashDigivolutionCardsFromTopOrBottom` (trash);
+#     the printed text (official DB — authoritative for what the card says)
+#     returns them to the BOTTOM OF THE DECK, which is what we implement.
+#   - [All Turns] OnEndBattle, OPT (hash EX13_076_AT): CanTriggerWhenWinBattle
+#     (winner stack contains this card). Optional pick 1 opponent Digimon →
+#     bottom of deck; then a yes/no "unsuspend this card?" →
+#     IUnsuspendPermanents. `if (!isUsed) RemoveUse()`.
+#   - Assembly: 6 elements EqualsTraits Free || Royal Knight,
+#     Combinations.WithDifferentNames, reduce 8.
+#   - Alt digivolve: Lv.6 with Free/Royal Knight trait, cost 5.
+#
+# DSL notes:
+#   - "Compare the number of digivolution cards instead of DP in this battle"
+#     = `battle: { compare: digivolution_cards }` (NEW 2026-10-01,
+#     G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) — the battle-scoped twin of
+#     <Iceclad> (`Game::battle_digimon_with(.., BattleComparison::
+#     DigivolutionCards)`).
+#   - "return all digivolution cards of 1 of their Digimon to the bottom of
+#     the deck" = `return_all_sources_to_deck` (NEW, same gap).
+#   - OPT refund when nothing was done = `refund_opt` under a final
+#     `binding_absent` check (G-OPT-REFUND-ON-DECLINE; DCGO RemoveUse).
+#   - "this Digimon may unsuspend" = a yes/no `select_effect_choice`, offered
+#     only while this Digimon is suspended (unsuspending an unsuspended
+#     Digimon does nothing — 1-3-3).
+#   - [Free] is an attribute; the corpus folds attributes into traits, so
+#     `trait_has: Free` (EX13-020 / EX13-070 idiom).
+
+card: EX13-076
+name: "Imperialdramon: Paladin Mode"
+kind: digimon
+level: 7
+color: [white, blue, green]
+cost: 16
+dp: 16000
+traits: ["Ancient Holy Warrior", Free]  # (Rule) Trait: Has [Free] Attribute.
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 6
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - trait_has: Free
+            - trait_has: "Royal Knight"
+    cost: 5
+  # ─── Assembly -8: 6 [Free]/[Royal Knight] trait Digimon cards w/different names
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - any_of:
+                - trait_has: Free
+                - trait_has: "Royal Knight"
+        repeat: { min: 6, max: 6 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 8
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: Vortex
+    summary: "<Vortex>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade>"
+
+  # ─── [OP][WD][WA][OPT] suspend 1; then strip 1 + digivolution-card battle ──
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [battle_area]
+          kind: digimon
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking][OPT] You may suspend 1 opponent Digimon; then you may return all digivolution cards of 1 of their Digimon to the bottom of the deck and battle it, comparing digivolution cards instead of DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: false
+          prompt: "You may suspend 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: suspend_target }
+          then:
+            - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: battle_target
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "You may return all digivolution cards of 1 of your opponent's Digimon to the bottom of the deck and have this Digimon battle it (comparing digivolution cards)"
+      - if:
+          condition: { binding_present: battle_target }
+          then:
+            - return_all_sources_to_deck:
+                target: battle_target
+                position: bottom
+            - battle:
+                attacker: this
+                defender: battle_target
+                compare: digivolution_cards
+      # DCGO `if (!isUsed) activateClass.RemoveUse()` (G-OPT-REFUND-ON-DECLINE).
+      - if:
+          condition:
+            all_of:
+              - binding_absent: suspend_target
+              - binding_absent: battle_target
+          then:
+            - refund_opt: {}
+
+  # ─── [All Turns][OPT] win a battle → bottom-deck 1; then may unsuspend ─────
+  - when: on_ally_won_battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_winner_is_source: true
+    summary: "[All Turns][OPT] When this Digimon wins a battle, you may return 1 of your opponent's Digimon to the bottom of the deck; then this Digimon may unsuspend"
+    process:
+      - select_opponent_permanent:
+          bind_as: bottom_target
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "You may return 1 of your opponent's Digimon to the bottom of the deck"
+      - if:
+          condition: { binding_present: bottom_target }
+          then:
+            - return_to_deck:
+                target: bottom_target
+                position: bottom
+      - if:
+          condition: { source_is_unsuspended: false }
+          then:
+            - select_effect_choice:
+                labels:
+                  - "Unsuspend this Digimon"
+                  - "Don't unsuspend"
+                bind_as: wake
+                prompt: "This Digimon may unsuspend"
+            - if:
+                condition: { equals: [wake, 0] }
+                then:
+                  - unsuspend: { target: source }
+      - if:
+          condition:
+            all_of:
+              - binding_absent: bottom_target
+              - any_of:
+                  - binding_absent: wake
+                  - equals: [wake, 1]
+          then:
+            - refund_opt: {}

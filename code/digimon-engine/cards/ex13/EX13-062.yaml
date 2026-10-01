@@ -34,12 +34,12 @@
 #     aggregate (BT23-058 Craniamon idiom, now batched).
 #   - Assembly "w/＜Blocker＞" = `printed_keyword: Blocker` (card-scope, face-up
 #     keyword line; G-DSL-PREDICATE-PRINTED-KEYWORD, added for this card).
-#   - KNOWN ENGINE GAP (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND): the engine's
-#     unsuspend-phase and <Reboot> unsuspension mutate `is_suspended` without
-#     firing `OnUnsuspend` (game_phases.rs), while DCGO routes both through
-#     `IUnsuspendPermanents` → `OnUnTappedAnyone`. The +3000 clause therefore
-#     fires for effect-driven unsuspension only. Logged in
-#     qa/archetype-qa/engine-gaps.md; verdict PARTIAL.
+#   - "When this Digimon unsuspends" fires for effect unsuspension AND for the
+#     unsuspend phase / <Reboot> unsuspension (DCGO routes both through
+#     `IUnsuspendPermanents` → `OnUnTappedAnyone`; engine fix
+#     G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND, RESOLVED 2026-10-01): with
+#     <Reboot>, Craniamon gets +3000 in the opponent's unsuspend phase that
+#     lasts through its controller's next turn.
 
 card: EX13-062
 name: Craniamon

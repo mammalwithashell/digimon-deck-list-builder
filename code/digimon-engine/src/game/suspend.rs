@@ -223,6 +223,44 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Enqueue `OnUnsuspend` for a SIMULTANEOUS batch of already-unsuspended
+    /// battle-area permanents (the unsuspend phase + <Reboot> —
+    /// G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND), WITHOUT draining. One
+    /// `EventObserved` scan per permanent (so "When THIS Digimon unsuspends"
+    /// self-gates resolve per permanent), then the batch is collapsed so an
+    /// observer like "When any of your Digimon unsuspend" triggers once for
+    /// the whole batch, as DCGO's single `OnUnTappedAnyone` stacking does.
+    /// The caller drains (and parks the turn machine if a selection opens).
+    pub(crate) fn enqueue_unsuspend_batch(
+        &mut self,
+        handles: &[PermanentHandle],
+        effect_initiated: bool,
+    ) {
+        let first_index = self.effect_queue.len();
+        let events: Vec<(PermanentHandle, CardHandle)> = handles
+            .iter()
+            .filter_map(|&h| {
+                self.players
+                    .get(h.player as usize)
+                    .and_then(|p| p.battle_area.get(h.index as usize))
+                    .filter(|perm| !perm.card_sources.is_empty())
+                    .map(|perm| (h, perm.top_card().handle()))
+            })
+            .collect();
+        for (handle, card) in events {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnUnsuspend,
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                    effect_initiated,
+                },
+            );
+        }
+        self.collapse_simultaneous_event_batch(first_index);
+    }
+
     /// Hatch for a player (copies turn_count to avoid borrow conflict).
     /// Fires `OnHatch` observers in every player's battle area after the egg
     /// moves into the breeding area.

@@ -227,6 +227,9 @@ pub enum StepSpec {
     /// Alphamon's would-leave self-protection cost (return 1 [X Antibody]/[Royal
     /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
     ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
+    /// Return ALL of a permanent's digivolution cards to the deck
+    /// (EX13-076). See [`ReturnAllSourcesToDeckArgs`].
+    ReturnAllSourcesToDeck(ReturnAllSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
@@ -607,6 +610,7 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSourcesToDeck(v) => {
                 kv!(s, "return_selected_sources_to_deck", v)
             }
+            StepSpec::ReturnAllSourcesToDeck(v) => kv!(s, "return_all_sources_to_deck", v),
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
@@ -889,6 +893,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_sources_to_deck" => {
                 StepSpec::ReturnSelectedSourcesToDeck(map.next_value()?)
             }
+            "return_all_sources_to_deck" => StepSpec::ReturnAllSourcesToDeck(map.next_value()?),
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
@@ -1653,6 +1658,43 @@ pub struct BindPermanentProperty {
 pub struct BattleArgs {
     pub attacker: BindingRef,
     pub defender: BindingRef,
+    /// What this battle compares. Default `dp` (the standard rule);
+    /// `digivolution_cards` = "Compare the number of digivolution cards
+    /// instead of DP in this battle" (EX13-076 Imperialdramon: Paladin Mode;
+    /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) — the battle-scoped twin of
+    /// `<Iceclad>`.
+    #[serde(default, skip_serializing_if = "BattleCompareSpec::is_dp")]
+    pub compare: BattleCompareSpec,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleCompareSpec {
+    #[default]
+    Dp,
+    DigivolutionCards,
+}
+
+impl BattleCompareSpec {
+    pub fn is_dp(&self) -> bool {
+        matches!(self, BattleCompareSpec::Dp)
+    }
+}
+
+/// `return_all_sources_to_deck` — return EVERY digivolution card of
+/// `target` (all of its stack below the top card) to the owners' deck at
+/// `position` ("return all digivolution cards of 1 of their Digimon to the
+/// bottom of the deck" — EX13-076). A return, not a trash: fires no
+/// `OnDigivolutionCardTrashed`; bottom returns fire
+/// `OnDigivolutionCardReturnedToDeckBottom` per card.
+/// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT (2026-10-01).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnAllSourcesToDeckArgs {
+    pub target: BindingRef,
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]

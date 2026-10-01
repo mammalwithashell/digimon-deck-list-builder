@@ -438,6 +438,35 @@ fn try_replace_inner(
 ///    modifiers, honoring `cause_filter` and `replacement_condition`. Emits
 ///    `PassiveCancel` candidates that synthesize `ReplacementOutcome::Cancelled`
 ///    at dispatch. See §10 of the spec.
+/// Stable identity of a replacement candidate: (source card, kind tag, slot).
+/// Used by the batched-deletion park (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST)
+/// to tell whether ONE optional replacement activation also covers another
+/// member of the same simultaneous batch ("… would leave …, they don't
+/// leave" — EX13-051 Guardromon).
+pub(crate) type CandidateIdentity = (CardHandle, u8, u8);
+
+pub(crate) fn candidate_identity(source_card: CardHandle, kind: &CandidateKind) -> CandidateIdentity {
+    match kind {
+        CandidateKind::EffectClosure { effect_slot, .. } => (source_card, 0, *effect_slot),
+        CandidateKind::GrantedKeywordEffect { effect_slot, .. } => (source_card, 1, *effect_slot),
+        CandidateKind::PassiveCancel => (source_card, 2, 0),
+    }
+}
+
+/// Identities of every replacement candidate currently active for `subject`
+/// at `timing` (no side effects; same collection the dispatcher uses).
+pub(crate) fn active_candidate_identities(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+) -> Vec<CandidateIdentity> {
+    collect_candidates(game, timing, subject, cause)
+        .iter()
+        .map(|c| candidate_identity(c.source_card, &c.kind))
+        .collect()
+}
+
 fn collect_candidates(
     game: &crate::game::Game,
     timing: EffectTiming,

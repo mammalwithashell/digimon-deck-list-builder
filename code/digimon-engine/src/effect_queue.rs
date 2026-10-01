@@ -2918,81 +2918,156 @@ impl Game {
     fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId) -> Vec<usize> {
         let mut to_skip: Vec<usize> = Vec::new();
         for i in 0..self.effect_queue.len() {
-            let qe = &self.effect_queue[i];
-            if qe.controller != chooser {
+            if self.effect_queue[i].controller != chooser {
                 continue;
             }
-            if qe.granted_effect_id.is_some() {
-                // Granted effects have no clause condition — keep them.
-                continue;
-            }
-            // Snapshot the fields we need; release the borrow before
-            // entering the trigger-context guard (which needs &mut self).
-            let card_id = qe.card_id.clone();
-            let keyword_effect = qe.keyword_effect;
-            let source_card = qe.source_card;
-            let source_permanent = qe.source_permanent;
-            let source_kind = qe.source_kind;
-            let controller = qe.controller;
-            let effect_slot = qe.effect_slot as usize;
-            let trigger_context = qe.trigger_context.clone();
-            let dna_origin_context = qe.dna_origin_context;
-
-            // Look up the effect's condition closure. If the effect
-            // doesn't exist anymore (carrier removed, registry mutated),
-            // the run-time path returns silently — treat the same here:
-            // keep the queued entry, let run-time handle it.
-            //
-            // `effects_for_card` returns an OWNED `Vec<Effect>` so the
-            // condition closure can be evaluated against `&mut self`
-            // without lifetime conflict — same idiom as the pre-cost
-            // prompt branch's evaluation in `drain_effect_queue`.
-            //
-            // Also temporarily install the queued effect's
-            // `dna_origin_context` onto `Game::current_dna_origin` so
-            // conditions that branch on DNA-origin (e.g. shared
-            // `[When Digivolving]` clauses with DNA-only rider arms)
-            // see the same value the run-time path would. Mirrors the
-            // `prev_dna_origin` save/restore in `run_queued_effect`.
-            let prev_dna_origin = self.current_dna_origin;
-            if dna_origin_context.is_some() {
-                self.current_dna_origin = dna_origin_context;
-            }
-            // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
-            // indexes the keyword's synthesized auto-effects, not the card's.
-            let looked_up = match keyword_effect {
-                Some(keyword) => Some(std::sync::Arc::new(
-                    crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
-                )),
-                None => self.effects_for_card(&card_id, source_card),
-            };
-            let condition_passes = if let Some(effects) = looked_up {
-                if let Some(eff) = effects.get(effect_slot) {
-                    if let Some(cond) = &eff.condition {
-                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
-                        let ctx = EffectContext::new_with_source_kind(
-                            &mut *trigger_guard.game,
-                            source_card,
-                            source_permanent,
-                            source_kind,
-                            controller,
-                        );
-                        cond(&ctx.as_read())
-                    } else {
-                        true // no condition → keep
-                    }
-                } else {
-                    true // slot missing → keep, let run-time handle it
-                }
-            } else {
-                true // effects missing → keep
-            };
-            self.current_dna_origin = prev_dna_origin;
-            if !condition_passes {
+            if !self.queued_effect_condition_passes(i) {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// Evaluate the clause-level condition of `effect_queue[i]` against the
+    /// current board (with the entry's trigger context + DNA-origin context
+    /// installed). Granted bodies and entries whose effect can no longer be
+    /// looked up report `true` (the run-time path decides those).
+    pub(crate) fn queued_effect_condition_passes(&mut self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            // Granted effects have no clause condition — keep them.
+            return true;
+        }
+        // Snapshot the fields we need; release the borrow before
+        // entering the trigger-context guard (which needs &mut self).
+        let card_id = qe.card_id.clone();
+        let keyword_effect = qe.keyword_effect;
+        let source_card = qe.source_card;
+        let source_permanent = qe.source_permanent;
+        let source_kind = qe.source_kind;
+        let controller = qe.controller;
+        let effect_slot = qe.effect_slot as usize;
+        let trigger_context = qe.trigger_context.clone();
+        let dna_origin_context = qe.dna_origin_context;
+
+        // Look up the effect's condition closure. If the effect
+        // doesn't exist anymore (carrier removed, registry mutated),
+        // the run-time path returns silently — treat the same here:
+        // keep the queued entry, let run-time handle it.
+        //
+        // `effects_for_card` returns an OWNED `Vec<Effect>` so the
+        // condition closure can be evaluated against `&mut self`
+        // without lifetime conflict — same idiom as the pre-cost
+        // prompt branch's evaluation in `drain_effect_queue`.
+        //
+        // Also temporarily install the queued effect's
+        // `dna_origin_context` onto `Game::current_dna_origin` so
+        // conditions that branch on DNA-origin (e.g. shared
+        // `[When Digivolving]` clauses with DNA-only rider arms)
+        // see the same value the run-time path would. Mirrors the
+        // `prev_dna_origin` save/restore in `run_queued_effect`.
+        let prev_dna_origin = self.current_dna_origin;
+        if dna_origin_context.is_some() {
+            self.current_dna_origin = dna_origin_context;
+        }
+        // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
+        // indexes the keyword's synthesized auto-effects, not the card's.
+        let looked_up = match keyword_effect {
+            Some(keyword) => Some(std::sync::Arc::new(
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
+            )),
+            None => self.effects_for_card(&card_id, source_card),
+        };
+        let condition_passes = if let Some(effects) = looked_up {
+            if let Some(eff) = effects.get(effect_slot) {
+                if let Some(cond) = &eff.condition {
+                    let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                    let ctx = EffectContext::new_with_source_kind(
+                        &mut *trigger_guard.game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                    );
+                    cond(&ctx.as_read())
+                } else {
+                    true // no condition → keep
+                }
+            } else {
+                true // slot missing → keep, let run-time handle it
+            }
+        } else {
+            true // effects missing → keep
+        };
+        self.current_dna_origin = prev_dna_origin;
+        condition_passes
+    }
+
+    /// Collapse a just-enqueued SIMULTANEOUS event batch so each effect
+    /// triggers at most once for the whole batch
+    /// (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND).
+    ///
+    /// A batch event ("your Digimon unsuspend" in the unsuspend phase) is
+    /// enqueued as one `EventObserved` scan per affected permanent, so an
+    /// observer like "When any of your Digimon unsuspend" collects one entry
+    /// per permanent. DCGO evaluates `CanUseCondition` ONCE against the whole
+    /// batch (`AutoProcessing.GetSkillInfos(hashtable{Permanents: list})`),
+    /// so such an effect triggers once. Here: among the entries at
+    /// `first_index..` that share an effect identity (source card + slot +
+    /// granted body / keyword synthesis + timing), keep the FIRST whose
+    /// condition passes now (all entries see the same post-batch board) and
+    /// drop the rest (a group where none passes keeps only its first entry,
+    /// which the drainer then discards as non-firing). Self-scoped observers
+    /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
+    /// event permanent is the source passes.
+    pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
+        type Key = (
+            CardHandle,
+            u8,
+            Option<u64>,
+            Option<crate::enums::Keyword>,
+            EffectTiming,
+        );
+        let len = self.effect_queue.len();
+        let key_of = |qe: &QueuedEffect| -> Key {
+            (
+                qe.source_card,
+                qe.effect_slot,
+                qe.granted_effect_id,
+                qe.keyword_effect,
+                qe.timing,
+            )
+        };
+        // Group batch entries by identity, preserving queue order.
+        let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
+        for i in first_index..len {
+            let key = key_of(&self.effect_queue[i]);
+            match groups.iter_mut().find(|(k, _)| *k == key) {
+                Some((_, members)) => members.push(i),
+                None => groups.push((key, vec![i])),
+            }
+        }
+        let mut drop: Vec<usize> = Vec::new();
+        for (_, members) in groups {
+            if members.len() < 2 {
+                continue;
+            }
+            // Keep the first member whose condition passes against the
+            // post-batch board; when none passes keep the first (the drainer
+            // discards it as non-firing, exactly as for a single entry).
+            let keep = members
+                .iter()
+                .copied()
+                .find(|&i| self.queued_effect_condition_passes(i))
+                .unwrap_or(members[0]);
+            drop.extend(members.into_iter().filter(|&i| i != keep));
+        }
+        drop.sort_unstable();
+        for idx in drop.into_iter().rev() {
+            self.effect_queue.remove(idx);
+        }
     }
 
     /// Execute a single queued effect: re-look-up, condition check,

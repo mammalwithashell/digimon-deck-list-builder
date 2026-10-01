@@ -55,6 +55,12 @@ effects:
     summary: "[Your Turn][Once Per Turn] When this Digimon unsuspends, if you have 7 or fewer cards in hand, Draw 1"
     condition:
       all_of:
+        # "When THIS Digimon unsuspends" (DCGO BT24_020.cs:
+        # CanTriggerWhenPermanentUnsuspends(permanent == card.PermanentOfThisCard()));
+        # the OnUnsuspend dispatch is a board-wide observer scan, and since
+        # 2026-10-01 the unsuspend phase fires it for every unsuspended
+        # Digimon (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND), so self-gate.
+        - event_permanent_is_source: true
         - your_turn: true
         - count_lte:
             filter: { of: you, zone: [hand] }

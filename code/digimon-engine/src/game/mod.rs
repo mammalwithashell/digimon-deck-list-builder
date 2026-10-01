@@ -111,6 +111,17 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     crate::card_data::parse_printed_keywords("", &card_data.inherited_text, "")
 }
 
+/// One stashed member of a parked multi-permanent deletion batch
+/// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingDeletionBatchRest {
+    pub(crate) player: PlayerId,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) cause: crate::replacement::ReplacementCause,
+    /// The parked optional replacement was also active for this member.
+    pub(crate) covered_by_parked: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
@@ -126,6 +137,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     /// cost. No turn-keyed scan resumes — this kind only carries the deferred
     /// trash of the activated Option.
     MainPhaseActivation,
+    /// The turn-start unsuspend-phase `OnUnsuspend` batch
+    /// (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND) parked on an observer's
+    /// selection. No Delay scan resumes — once the batch's queue settles the
+    /// turn machine continues into the draw phase
+    /// (`continue_begin_turn_after_unsuspend_phase`).
+    UnsuspendPhase,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -926,6 +943,28 @@ pub struct Game {
     /// requirement contract this state implements.
     #[doc(hidden)]
     pub(crate) active_deletion_batch: Option<crate::deletion_batch::DeletionBatch>,
+
+    /// The REST of a multi-permanent deletion batch whose replacement stage
+    /// parked on one member's optional replacement prompt (e.g. the attacker's
+    /// `<Evade>` in a tie — kill list `[defender, attacker]`). The parked
+    /// member is committed by the replacement accept/decline callback; the
+    /// other members (identified by their top card, since indices can shift)
+    /// are deleted with the same cause once the selection settles
+    /// (`resume_pending_deletion`). Before this, the batch was dropped on the
+    /// park and the other members silently survived
+    /// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST, found 2026-10-01 by EX13-076).
+    #[doc(hidden)]
+    pub(crate) pending_deletion_batch_rest: Vec<PendingDeletionBatchRest>,
+    /// The parked member of that batch (owner, top card) — still on the
+    /// battle area at resume time ⇒ its replacement cancelled the leave, so
+    /// rest members covered by the SAME replacement activation don't leave
+    /// either (one activation covers the whole simultaneous batch, as in
+    /// DCGO's list-based `WhenRemoveField`).
+    #[doc(hidden)]
+    pub(crate) pending_deletion_batch_parked: Option<(
+        crate::enums::PlayerId,
+        crate::card_source::CardHandle,
+    )>,
 
     /// Phase 2d Task 7: when a control-flow or iteration step's body parks
     /// a selection, the steps that follow the control-flow step in the

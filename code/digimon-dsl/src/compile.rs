@@ -3073,6 +3073,10 @@ fn compile_step(
             source_refs: a.source_refs.clone(),
             position: compile_stack_position(a.position),
         },
+        S::ReturnAllSourcesToDeck(a) => CompiledStep::ReturnAllSourcesToDeck {
+            target: compile_binding_ref(&a.target),
+            position: compile_stack_position(a.position),
+        },
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
             from: compile_binding_ref(&a.from),
             property: match a.property {
@@ -4135,6 +4139,12 @@ fn compile_step(
         S::Battle(b) => CompiledStep::Battle {
             attacker: compile_binding_ref(&b.attacker),
             defender: compile_binding_ref(&b.defender),
+            compare: match b.compare {
+                crate::step::BattleCompareSpec::Dp => crate::compiled::CompiledBattleCompare::Dp,
+                crate::step::BattleCompareSpec::DigivolutionCards => {
+                    crate::compiled::CompiledBattleCompare::DigivolutionCards
+                }
+            },
         },
         S::MayAttackNow(a) => CompiledStep::MayAttackNow {
             attacker: compile_binding_ref(&a.attacker),

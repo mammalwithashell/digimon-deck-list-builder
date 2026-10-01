@@ -170,6 +170,18 @@ pub enum AttackError {
     InvalidPhase,
 }
 
+/// What a Digimon-vs-Digimon battle compares to decide its winner.
+/// `Dp` is the standard rule; `DigivolutionCards` is the battle-scoped
+/// "compare the number of digivolution cards instead of DP" override
+/// (EX13-076; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT). `<Iceclad>` on either
+/// combatant forces the digivolution-card comparison regardless.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BattleComparison {
+    #[default]
+    Dp,
+    DigivolutionCards,
+}
+
 /// Result of an attack resolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackResult {
@@ -392,6 +404,27 @@ impl Game {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        self.battle_digimon_with(attacker, defender, BattleComparison::Dp)
+    }
+
+    /// [`Self::battle_digimon`] with an explicit battle comparison.
+    ///
+    /// `BattleComparison::DigivolutionCards` makes THIS battle compare the
+    /// two Digimon's digivolution-card counts instead of DP ("Compare the
+    /// number of digivolution cards instead of DP in this battle." — EX13-076
+    /// Imperialdramon: Paladin Mode; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+    /// It is the battle-scoped twin of `<Iceclad>` (16-34): DCGO routes both
+    /// through the same `IBattle.CompareStats` branch
+    /// (`HasIceclad || CompareDigivolutionCards`). Everything else is a
+    /// standard battle — ties delete both, battle deletions run the normal
+    /// replacement windows (<Evade>, would-leave), and `EndOfBattle` /
+    /// win-battle observers fire.
+    pub fn battle_digimon_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: BattleComparison,
+    ) -> AttackResult {
         if attacker.player == defender.player {
             return AttackResult::Invalid;
         }
@@ -399,7 +432,7 @@ impl Game {
             return AttackResult::Invalid;
         }
 
-        self.resolve_battle(attacker, defender)
+        self.resolve_battle_with(attacker, defender, comparison)
     }
 
     /// Declare an attack. Validates, installs `PendingAttack`, fires
@@ -4096,6 +4129,15 @@ impl Game {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        self.resolve_battle_with(attacker, defender, BattleComparison::Dp)
+    }
+
+    fn resolve_battle_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: BattleComparison,
+    ) -> AttackResult {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.battle_occurred = true;
         }
@@ -4115,7 +4157,12 @@ impl Game {
         // the combat resolver — we collapse that registration into a
         // direct `has_keyword` query at the resolver site since the swap
         // is binary and the registry indirection adds nothing.
-        let iceclad_active = self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
+        //
+        // A battle-scoped `BattleComparison::DigivolutionCards` (EX13-076,
+        // G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) takes the same branch — DCGO
+        // `IBattle.CompareStats`: `HasIceclad || CompareDigivolutionCards`.
+        let iceclad_active = comparison == BattleComparison::DigivolutionCards
+            || self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
             || self.has_keyword(defender, crate::enums::Keyword::Iceclad);
 
         let (a_value, d_value) = if iceclad_active {
