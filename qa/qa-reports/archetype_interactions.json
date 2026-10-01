@@ -26,8 +26,9 @@
       "combos_dropped": [
         {
           "combo": "Rie Kishibe Knightmon draw engine / LordKnightmon digivolve",
-          "blocked_on": "EX13-074",
-          "reason": "BLOCKED engine gap (no YAML; validated_cards_dsl.json)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-074 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED engine gap (no YAML; validated_cards_dsl.json))",
+          "blocked_on_was": "EX13-074"
         },
         {
           "combo": "BT22-025 UlforceVeedramon mode 'play blue Tamer <=4 free' -> Rina",
@@ -2397,28 +2398,33 @@
       "combos_dropped": [
         {
           "combo": "PrinceMamemon Blocker/Guard aura over Thundermon/BigMamemon",
-          "blocked_on": "EX13-063",
-          "reason": "BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY (validated_cards_dsl.json)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-063 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY (validated_cards_dsl.json))",
+          "blocked_on_was": "EX13-063"
         },
         {
           "combo": "PrinceMamemon Assembly -4 from [Mamemon]-text trash",
-          "blocked_on": "EX13-063",
-          "reason": "BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-063 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED engine gap G-ASSEMBLY-NO-DISTINCT-BY)",
+          "blocked_on_was": "EX13-063"
         },
         {
           "combo": "BigMamemon inherited delete-ALL-lowest under PrinceMamemon",
-          "blocked_on": "EX13-063",
-          "reason": "BLOCKED (only Lv.6 in the line)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-063 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (only Lv.6 in the line))",
+          "blocked_on_was": "EX13-063"
         },
         {
           "combo": "PrinceMamemon On Deletion reveal<=10 + delete highest chain",
-          "blocked_on": "EX13-063",
-          "reason": "BLOCKED"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-063 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED)",
+          "blocked_on_was": "EX13-063"
         },
         {
           "combo": "KingSukamon Sukamon rewrite + inherited Sukamon-deleted reveal",
-          "blocked_on": "EX13-031",
-          "reason": "BLOCKED dsl gap (base name/colour/DP payload; no YAML)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-031 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED dsl gap (base name/colour/DP payload; no YAML))",
+          "blocked_on_was": "EX13-031"
         },
         {
           "combo": "Nanimon [Security] play-after-battle",
@@ -2502,38 +2508,45 @@
       "combos_dropped": [
         {
           "combo": "Reppamon OP/WD/WA plays [Richard Sampson] free",
-          "blocked_on": "EX13-071",
-          "reason": "BLOCKED (hybrid) G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-071 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (hybrid) G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST)",
+          "blocked_on_was": "EX13-071"
         },
         {
           "combo": "Kudamon reveal stashes under Richard Sampson",
-          "blocked_on": "EX13-071",
-          "reason": "BLOCKED"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-071 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED)",
+          "blocked_on_was": "EX13-071"
         },
         {
           "combo": "Richard SOMP stash -> Chirinmon trashes Tamer face-down card to unsuspend",
-          "blocked_on": "EX13-071, EX13-032",
-          "reason": "BLOCKED"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-071, EX13-032 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED)",
+          "blocked_on_was": "EX13-071, EX13-032"
         },
         {
           "combo": "Richard [Main] Kudamon -> Kentaurosmon ignoring level, cost -1",
-          "blocked_on": "EX13-071",
-          "reason": "G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-071 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST)",
+          "blocked_on_was": "EX13-071"
         },
         {
           "combo": "Chirinmon WD unsuspend + opponent [When Digivolving] lock",
-          "blocked_on": "EX13-032",
-          "reason": "BLOCKED (engine)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-032 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (engine))",
+          "blocked_on_was": "EX13-032"
         },
         {
           "combo": "Chirinmon / Kentaurosmon-carrier top-stacked-card-to-security leave save",
-          "blocked_on": "EX13-032",
-          "reason": "G-TOP-STACKED-CARD-TO-SECURITY"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-032 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: G-TOP-STACKED-CARD-TO-SECURITY)",
+          "blocked_on_was": "EX13-032"
         },
         {
           "combo": "Kyaromon -> Chirinmon off a security trash",
-          "blocked_on": "EX13-032",
-          "reason": "BLOCKED"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-032 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED)",
+          "blocked_on_was": "EX13-032"
         }
       ],
       "findings": [
@@ -2593,8 +2606,9 @@
       "combos_dropped": [
         {
           "combo": "Sukamon -> KingSukamon digivolution line",
-          "blocked_on": "EX13-031",
-          "reason": "BLOCKED (validated_cards_dsl.json)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-031 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (validated_cards_dsl.json))",
+          "blocked_on_was": "EX13-031"
         },
         {
           "combo": "Chuumon [When Moving] from breeding",
@@ -2687,18 +2701,21 @@
       "combos_dropped": [
         {
           "combo": "UlforceVeedramon CS line / Magnamon wake",
-          "blocked_on": "EX13-023",
-          "reason": "BLOCKED engine gap (no YAML)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-023 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED engine gap (no YAML))",
+          "blocked_on_was": "EX13-023"
         },
         {
           "combo": "Omnimon DNA/Assembly + leave-replacement",
-          "blocked_on": "EX13-016",
-          "reason": "BLOCKED hybrid gap (no YAML)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-016 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED hybrid gap (no YAML))",
+          "blocked_on_was": "EX13-016"
         },
         {
           "combo": "Omnimon -> Omnimon: Merciful Mode",
-          "blocked_on": "EX13-016,EX13-077",
-          "reason": "BLOCKED (no YAML)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-016, EX13-077 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (no YAML))",
+          "blocked_on_was": "EX13-016,EX13-077"
         },
         {
           "combo": "Alphamon [Chronicle] engine",
@@ -2772,8 +2789,9 @@
       "combos_dropped": [
         {
           "combo": "Guilmon [On Play]/[When Moving] trash 1 -> return Takato (red Tamer) / Gallantmon from trash; inherited +2000 DP-deletion max feeding Growlmon",
-          "blocked_on": "EX13-007",
-          "reason": "BLOCKED engine gap G-ENGINE-DP-DELETION-MAX-MODIFIER (no YAML; validated_cards_dsl.json)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-007 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED engine gap G-ENGINE-DP-DELETION-MAX-MODIFIER (no YAML; validated_cards_dsl.json))",
+          "blocked_on_was": "EX13-007"
         },
         {
           "combo": "Takato [Security] self-play",
@@ -2929,18 +2947,21 @@
       "combos_dropped": [
         {
           "combo": "Sistermon Blanc (Awakened) Option -> free play + -3000 DP per own Digimon",
-          "blocked_on": "EX13-065",
-          "reason": "BLOCKED (validated_cards_dsl.json; G-NESTED-PARKED-REPLACEMENT)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-065 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (validated_cards_dsl.json; G-NESTED-PARKED-REPLACEMENT))",
+          "blocked_on_was": "EX13-065"
         },
         {
           "combo": "Sistermon Blanc (Awakened) <Guard> + <Decode> recursion",
-          "blocked_on": "EX13-065",
-          "reason": "BLOCKED (G-NESTED-PARKED-REPLACEMENT is exactly this path)"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-065 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED (G-NESTED-PARKED-REPLACEMENT is exactly this path))",
+          "blocked_on_was": "EX13-065"
         },
         {
           "combo": "Sistermon Blanc (Awakened) Lv.3 -> Noir (Huckmon text, cost 3) / Arts onto Blanc (Awakened)",
-          "blocked_on": "EX13-065",
-          "reason": "BLOCKED"
+          "blocked_on": null,
+          "reason": "UNBLOCKED 2026-10-01: EX13-065 now IMPLEMENTED (EX13 engine-gap fixes); combo not yet authored as an interaction test (was: BLOCKED)",
+          "blocked_on_was": "EX13-065"
         },
         {
           "combo": "BT20-084 [Trash] free-digivolve onto Noir (also treated as Sistermon Ciel (Awakened))",
