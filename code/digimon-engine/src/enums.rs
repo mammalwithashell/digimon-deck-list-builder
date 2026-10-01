@@ -676,6 +676,14 @@ pub enum ModifierType {
     // Suspend
     CannotSuspend,
     CannotUnsuspend,
+    /// Printed "… can't unsuspend in their next unsuspend phase" (EX13-041
+    /// Groundramon). Blocks ONLY the controller's turn-start bulk unsuspend
+    /// (`game_phases.rs`) — effect unsuspends and <Reboot> are unaffected,
+    /// unlike `CannotUnsuspend`. Install with `end_of_opponents_next_turn`
+    /// so it survives to the target's NEXT unsuspend phase whichever turn it
+    /// lands on. DCGO `GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase:
+    /// true, EffectDuration.UntilOwnerActivePhase)`.
+    CannotUnsuspendInUnsuspendPhase,
 
     // Selection/targeting
     CannotBeSelectedByEffect,
@@ -905,6 +913,17 @@ pub enum ModifierType {
     /// Adds names this card is treated as for DigiXros material matching
     /// (printed-text "treat this card as named X for DigiXros").
     ChangeCardNamesForDigiXros,
+    /// DNA-material identity override scoped to ONE DNA result — printed
+    /// "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for
+    /// [Examon]'s DNA digivolution" (EX13-021 / EX13-041 / BT20-025 /
+    /// BT20-042). Carries `ModifierPayload::DnaMaterialIdentity`; consulted
+    /// only by the DNA / Blast-DNA material matchers, and only when the DNA
+    /// result card's name matches `result_name` (DCGO `AddJogressLevelsClass`
+    /// + the name half of `Names_ForDNA`). Installed by the dedicated aura
+    /// payload `dna_material_identity:`; the validator rejects the bare
+    /// payload-less `modifier: DnaMaterialIdentity` aura string (it would be a
+    /// silent no-op). G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    DnaMaterialIdentity,
 }
 
 /// When a modifier expires.

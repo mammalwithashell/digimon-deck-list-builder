@@ -265,13 +265,60 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     && b.grant_traits.is_empty()
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
+                                    && b.dna_material_identity.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, effect_immunity, or dna_material_identity"
                                             .to_string(),
                                     });
+                                }
+                                // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: a
+                                // self-aura payload ("This Digimon is also
+                                // treated as …") naming a result and at least
+                                // one of level / name.
+                                if b.modifier.as_deref() == Some("DnaMaterialIdentity") {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.modifier"),
+                                        message: "DnaMaterialIdentity needs its payload: author it as dna_material_identity: { for_result, level, name }"
+                                            .to_string(),
+                                    });
+                                }
+                                if let Some(d) = &b.dna_material_identity {
+                                    let path = format!("{prefix}.dna_material_identity");
+                                    let is_self_target =
+                                        b.target.as_ref().map(|t| t.is_empty()).unwrap_or(true);
+                                    if !is_self_target
+                                        || b.target_player.is_some()
+                                        || b.while_condition.is_some()
+                                    {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: path.clone(),
+                                            message: "dna_material_identity is a self-aura payload: use target: {}, no target_player, no while_condition"
+                                                .to_string(),
+                                        });
+                                    }
+                                    if d.for_result.trim().is_empty() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{path}.for_result"),
+                                            message: "dna_material_identity.for_result must name the DNA result card"
+                                                .to_string(),
+                                        });
+                                    }
+                                    let name_empty =
+                                        d.name.as_ref().map(|n| n.trim().is_empty()).unwrap_or(true);
+                                    if d.level.is_none() && name_empty {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path,
+                                            message: "dna_material_identity needs a level and/or a name"
+                                                .to_string(),
+                                        });
+                                    }
                                 }
                                 for (i, t) in b.grant_traits.iter().enumerate() {
                                     if t.trim().is_empty() {
@@ -2591,6 +2638,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     // Suspend / select / affect
     "CannotSuspend",
     "CannotUnsuspend",
+    "CannotUnsuspendInUnsuspendPhase",
     "CannotBeSelectedByEffect",
     "CannotBeAffected",
     // Granted keywords
@@ -2674,6 +2722,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeBaseCardColor",
     "ChangeCardLevelForAssembly",
     "ChangeCardNamesForDigiXros",
+    "DnaMaterialIdentity",
 ];
 
 fn is_permanent_activation_modifier(name: &str) -> bool {

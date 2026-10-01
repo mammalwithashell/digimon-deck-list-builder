@@ -74,6 +74,15 @@ pub enum ModifierPayload {
         value: i32,
         delta: bool,
     },
+    /// `ModifierType::DnaMaterialIdentity` — while evaluating a DNA (or
+    /// Blast-DNA) material requirement for a result card named
+    /// `result_name`, the carrier is additionally treated as `level` and/or
+    /// as named `name`. G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    DnaMaterialIdentity {
+        result_name: String,
+        level: Option<u8>,
+        name: Option<String>,
+    },
 }
 
 impl Default for ModifierPayload {
@@ -573,6 +582,10 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
             | (
                 ModifierType::ChangePermanentLevel,
                 ModifierPayload::LevelOverride { .. }
+            )
+            | (
+                ModifierType::DnaMaterialIdentity,
+                ModifierPayload::DnaMaterialIdentity { .. }
             )
     )
 }

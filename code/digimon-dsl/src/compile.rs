@@ -1290,6 +1290,14 @@ fn compile_predicate(
         event_winner_owner: p.event_winner_owner.map(compile_player_ref),
         event_winner_trait_has: p.event_winner_trait_has.clone(),
         event_winner_is_source: p.event_winner_is_source,
+        event_battle_deleter: p.event_battle_deleter.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_battle_deleter"),
+                card_id,
+                errors,
+            ))
+        }),
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
         event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
@@ -2264,6 +2272,13 @@ fn compile_declarative(
                 effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
                     source_kind: imm.source_kind.map(compile_effect_source_kind),
                     source_controller: compile_effect_controller(imm.source_controller),
+                }),
+                dna_material_identity: a.dna_material_identity.as_ref().map(|d| {
+                    CompiledDnaMaterialIdentity {
+                        for_result: d.for_result.clone(),
+                        level: d.level,
+                        name: d.name.clone(),
+                    }
                 }),
                 summary,
                 summary_key,

@@ -179,6 +179,13 @@ pub struct TriggerContext {
     /// `CardEffectCommons.CanTriggerWhenWinBattle` reading the battle
     /// hashtable's `WinnerPermanents` while `WasTie == false`.
     pub battle_winner: Option<PermanentHandle>,
+    /// EndOfBattle (`BattleResolved`) only: the combatant that survived while
+    /// its battle opponent was actually deleted — including a tie whose
+    /// survivor was protected. `None` when the loser's deletion was prevented
+    /// or no combatant survived. Read by the `event_battle_deleter`
+    /// predicate ("when your Digimon delete your opponent's Digimon in
+    /// battle" — EX13-041). G-DSL-BATTLE-DELETER.
+    pub battle_deleter: Option<PermanentHandle>,
     /// TOP CARD of the Digimon the deleted carrier was battling, captured when
     /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
     /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still

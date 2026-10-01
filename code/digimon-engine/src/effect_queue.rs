@@ -1874,12 +1874,14 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
-            TriggerSource::BattleResolved { winner } => TriggerContext {
+            TriggerSource::BattleResolved { winner, deleter } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 // The battle winner (owner + trait read by the observer's
                 // `event_winner_*` predicates). `None` on a tie — no winner.
                 battle_winner: winner,
+                // G-DSL-BATTLE-DELETER — read by `event_battle_deleter`.
+                battle_deleter: deleter,
                 event_permanent: winner,
                 cause: Some(crate::trigger_context::EventCause::BattleDeletion),
                 ..TriggerContext::default()

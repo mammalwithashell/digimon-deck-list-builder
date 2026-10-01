@@ -26,7 +26,7 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledAuraEffectImmunity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
+    CompiledAuraEffectImmunity, CompiledDnaMaterialIdentity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
     CompiledPredicate, CompiledScope, CompiledSynthIdentity,
 };
 
@@ -70,6 +70,7 @@ pub fn lower_all(
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    dna_material_identity: Option<CompiledDnaMaterialIdentity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
     if applies_to_opponent_security_dp || applies_to_own_security_dp {
@@ -105,6 +106,7 @@ pub fn lower_all(
         let supports = is_self_aura
             && target_player.is_none()
             && grant_traits.is_empty()
+            && dna_material_identity.is_none()
             && (dp_modifier.is_some()
                 || security_attack.is_some()
                 || modifier.is_some()
@@ -143,6 +145,7 @@ pub fn lower_all(
         modifier_name,
         synth_identity,
         effect_immunity,
+        dna_material_identity,
         raw,
     ) {
         vec![effect]
@@ -273,6 +276,7 @@ pub fn lower(
     modifier_name: Option<String>,
     synth_identity: Option<CompiledSynthIdentity>,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    dna_material_identity: Option<CompiledDnaMaterialIdentity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
     // G-DSL-AURA-GRANT-TRAITS: shared `Arc` so both the self-aura and the
@@ -324,6 +328,7 @@ pub fn lower(
         && security_attack.is_none()
         && effect_immunity.is_none()
         && grant_traits.is_none()
+        && dna_material_identity.is_none()
     {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
@@ -376,6 +381,14 @@ pub fn lower(
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
         let self_grant_traits = grant_traits.clone();
+        // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET — result-scoped DNA identity.
+        let self_dna_identity = dna_material_identity.clone().map(|d| {
+            crate::modifiers::ModifierPayload::DnaMaterialIdentity {
+                result_name: d.for_result,
+                level: d.level,
+                name: d.name,
+            }
+        });
         // task_69f10a66 Family 1: a SELF-aura keyword grant is semantically a
         // (possibly conditional) `grant_keyword` clause — advertise the
         // granted keyword on the Effect exactly like `lower_grant_keyword`
@@ -446,6 +459,18 @@ pub fn lower(
                             Expiry::Permanent,
                         );
                     }
+                }
+                if let Some(payload) = &self_dna_identity {
+                    // "This Digimon is also treated as Lv.6 [X] for [Y]'s DNA
+                    // digivolution" — consulted only by the DNA material
+                    // matchers (`Game::dna_material_extras`).
+                    ctx.add_declarative_modifier_with_payload(
+                        handle,
+                        ModifierType::DnaMaterialIdentity,
+                        0,
+                        Expiry::Permanent,
+                        payload.clone(),
+                    );
                 }
                 if let Some(imm) = effect_immunity {
                     // Continuous filtered CannotBeAffected — "this Digimon

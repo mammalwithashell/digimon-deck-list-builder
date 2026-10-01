@@ -4145,6 +4145,12 @@ impl Game {
         // battle-area handle is still valid after the loser's deletion — the
         // combatants are on opposite sides, so the loser leaving does not
         // shift the winner's index.
+        // G-DSL-BATTLE-DELETER: the combatant that SURVIVED while its battle
+        // opponent was actually deleted ("when your Digimon delete your
+        // opponent's Digimon in battle"). DCGO fixes `LoserPermanents` to the
+        // actually-destroyed ones before `OnEndBattle`, and reads the winner's
+        // REAL (still-on-field) top card.
+        let mut deleter: Option<PermanentHandle> = None;
         let (outcome, winner) = if a_value > d_value {
             // Attacker wins — defender is deleted. Record on the in-flight
             // attack (when this battle IS the attack's battle) whether the
@@ -4170,22 +4176,38 @@ impl Game {
                     pa.battle_defender_deleted = defender_deleted;
                 }
             }
+            if defender_deleted {
+                deleter = Some(attacker);
+            }
             (AttackResult::AttackerWins, Some(attacker))
         } else if a_value < d_value {
             // Defender wins — attacker is deleted.
-            self.delete_permanent_with_cause(
-                attacker,
+            let batch_outcome = self.delete_permanents_batch(
+                vec![attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
+            if batch_outcome.completed.contains(&attacker) {
+                deleter = Some(defender);
+            }
             (AttackResult::DefenderWins, Some(defender))
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
             // DCGO convention, with both bodies leaving as one batch before
             // global OnAnyDeletion observers check survivor state.
-            self.delete_permanents_batch(
+            let batch_outcome = self.delete_permanents_batch(
                 vec![defender, attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
+            // A tie still "deletes in battle": a combatant whose own deletion
+            // was prevented deleted its opponent. Opposite sides, so neither
+            // removal shifts the survivor's index.
+            let defender_gone = batch_outcome.completed.contains(&defender);
+            let attacker_gone = batch_outcome.completed.contains(&attacker);
+            if defender_gone && !attacker_gone {
+                deleter = Some(attacker);
+            } else if attacker_gone && !defender_gone {
+                deleter = Some(defender);
+            }
             (AttackResult::MutualDestruction, None)
         };
 
@@ -4198,7 +4220,7 @@ impl Game {
         // unaffected (it fires on the separate OnAnyDeletion path).
         self.enqueue_triggered(
             crate::enums::EffectTiming::EndOfBattle,
-            crate::selection::TriggerSource::BattleResolved { winner },
+            crate::selection::TriggerSource::BattleResolved { winner, deleter },
         );
         self.drain_effect_queue();
 

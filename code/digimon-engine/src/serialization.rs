@@ -308,6 +308,7 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         ModifierType::CannotCounter => "CannotCounter",
         ModifierType::CannotSuspend => "CannotSuspend",
         ModifierType::CannotUnsuspend => "CannotUnsuspend",
+        ModifierType::CannotUnsuspendInUnsuspendPhase => "CannotUnsuspendInUnsuspendPhase",
         ModifierType::CannotDigivolve => "CannotDigivolve",
         // Effect-activation restrictions
         ModifierType::CannotActivateOnPlayEffects => "CannotActivateOnPlayEffects",

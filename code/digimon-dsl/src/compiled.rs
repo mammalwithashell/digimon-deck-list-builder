@@ -661,6 +661,10 @@ pub struct CompiledPredicate {
     /// G-DSL-BATTLE-WINNER-IS-SOURCE.
     #[serde(default)]
     pub event_winner_is_source: Option<bool>,
+    /// `on_ally_won_battle`: the surviving combatant whose battle opponent was
+    /// actually deleted matches this permanent predicate. G-DSL-BATTLE-DELETER.
+    #[serde(default)]
+    pub event_battle_deleter: Option<Box<CompiledPredicate>>,
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
@@ -1121,6 +1125,12 @@ pub enum CompiledDeclarativeClause {
         /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
         #[serde(default)]
         effect_immunity: Option<CompiledAuraEffectImmunity>,
+        /// Result-scoped DNA-material identity ("also treated as Lv.6
+        /// [Slayerdramon] for [Examon]'s DNA digivolution"). Self-aura only.
+        /// No `skip_serializing_if`: bincode round-trip.
+        /// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+        #[serde(default)]
+        dna_material_identity: Option<CompiledDnaMaterialIdentity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -1380,6 +1390,15 @@ pub enum CompiledEffectController {
 pub struct CompiledAuraEffectImmunity {
     pub source_kind: Option<CompiledEffectSourceKind>,
     pub source_controller: CompiledEffectController,
+}
+
+/// Compiled `dna_material_identity:` aura payload.
+/// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledDnaMaterialIdentity {
+    pub for_result: String,
+    pub level: Option<u8>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
