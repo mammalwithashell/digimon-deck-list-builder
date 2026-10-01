@@ -1818,6 +1818,22 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(inner) = &pred.event_battle_deleter {
+        // on_ally_won_battle (EndOfBattle): the surviving combatant whose battle
+        // opponent was actually deleted. `None` when the loser's deletion was
+        // prevented or no combatant survived. G-DSL-BATTLE-DELETER.
+        let Some(deleter) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_deleter)
+        else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Permanent(deleter), None) {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_discard_player {
         // on_discard_hand: the trashing player (whose hand lost cards) must
         // match the ref ("your hand is trashed from" ⇒ you). G-ENGINE-ON-DISCARD-HAND.
@@ -3427,20 +3443,38 @@ fn eval_permanent_fields(
             .chain(synth_identity.card_names.iter())
             .any(|x| x.to_lowercase().contains(&needle))
     });
-    let name_is_overlay_match = pred
-        .name_is
-        .as_ref()
-        .is_some_and(|n| synth_identity.card_names.iter().any(|name| name == n));
+    // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: while a DNA / Blast-DNA material
+    // requirement is evaluated for a specific result card, the material's
+    // result-scoped identity extras ("also treated as Lv.6 [Slayerdramon] for
+    // [Examon]'s DNA digivolution") also satisfy `level_eq` / `name_*`.
+    let dna_extras = if in_breeding {
+        crate::dna_digivolve::DnaMaterialExtras::default()
+    } else {
+        rctx.dna_result_card
+            .and_then(|h| rctx.game.card_source_for_handle(h))
+            .map(|result| rctx.game.dna_material_extras(handle, result))
+            .unwrap_or_default()
+    };
+    let level_eq_dna_match = pred
+        .level_eq
+        .is_some_and(|want| dna_extras.levels.contains(&want));
+    let name_is_overlay_match = pred.name_is.as_ref().is_some_and(|n| {
+        synth_identity.card_names.iter().any(|name| name == n)
+            || dna_extras.names.iter().any(|name| name == n)
+    });
     let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
+        let needle = n.to_lowercase();
         synth_identity
             .card_names
             .iter()
-            .any(|name| name.to_lowercase().contains(&n.to_lowercase()))
+            .chain(dna_extras.names.iter())
+            .any(|name| name.to_lowercase().contains(&needle))
     });
     let name_in_overlay_match = pred.name_in.as_ref().is_some_and(|names| {
-        names
-            .iter()
-            .any(|n| synth_identity.card_names.iter().any(|name| name == n))
+        names.iter().any(|n| {
+            synth_identity.card_names.iter().any(|name| name == n)
+                || dna_extras.names.iter().any(|name| name == n)
+        })
     });
     let color_is_overlay_match = pred.color_is.is_some_and(|want| {
         synth_identity
@@ -3479,6 +3513,7 @@ fn eval_permanent_fields(
     let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
+        || level_eq_dna_match
         || trait_overlay_match
         || trait_contains_overlay_match
         || in_text_contains_overlay_match
@@ -3495,6 +3530,9 @@ fn eval_permanent_fields(
             // Authoritative permanent-kind check is `kind_matches_field`
             // (token-aware) below — don't let the card-search matcher re-reject.
             p.kind = None;
+        }
+        if level_eq_dna_match {
+            p.level_eq = None;
         }
         if trait_overlay_match {
             p.trait_has = None;

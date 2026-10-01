@@ -11259,33 +11259,33 @@
       "card_name": "Wingdramon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_021.rs",
+      "test_count": 18,
       "patterns": [
         "H",
         "G2"
       ],
-      "notes": "BLOCKED on \"[All Turns] also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution\" \u2014 no DNA-material result-scoped identity override (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET; engine-gaps.md + dsl-vocab-gaps.md). Other clauses expressible."
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: [All Turns] Lv.6 [Slayerdramon] for [Examon]'s DNA = `dna_material_identity` self-aura (ModifierType::DnaMaterialIdentity, Game::dna_material_extras; Main DNA, Blast DNA, EoT/effect DNA all honor it; name result-scoped per printed text, DCGO adds it globally). <Jamming>; [OP][WD] two independent mandatory picks: trash bottom 2 sources, then CannotSuspend until their turn ends; [Coredramon] alt cost 3; inherited OPT optional self-unsuspend gated on carrier [Dracomon]/[Examon] text. Combo tests: tests/archetypes/dracomon_ex13.rs Combo 7."
     },
     "EX13-041": {
       "card_name": "Groundramon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_041.rs",
+      "test_count": 18,
       "patterns": [
         "H",
         "G2"
       ],
-      "notes": "BLOCKED on \"[All Turns] also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution\" \u2014 G-DNA-MATERIAL-TREATED-AS-FOR-TARGET. Other clauses expressible."
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: Lv.6 [Breakdramon] for [Examon]'s DNA via `dna_material_identity`. <Fortitude>; [OP][WD] suspend 1 opp Digimon/Tamer, then CannotUnsuspendInUnsuspendPhase (new modifier: blocks only their next unsuspend phase, effect unsuspends stay legal; DCGO isOnlyActivePhase) with end_of_opponents_next_turn; [Coredramon] alt cost 3; inherited OPT `on_ally_won_battle` + new `event_battle_deleter` leaf (G-DSL-BATTLE-DELETER: surviving own [Dracomon]/[Examon]-text combatant whose opponent was actually deleted) \u2192 trash opponent's top security."
     },
     "EX13-017": {
       "card_name": "Veemon",

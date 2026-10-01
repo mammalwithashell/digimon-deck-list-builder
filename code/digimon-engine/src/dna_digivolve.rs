@@ -38,6 +38,117 @@ pub struct DnaRouteMatch {
     pub memory_cost: i16,
 }
 
+/// Result-scoped DNA-material identity extras for ONE material permanent
+/// (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET). Printed "[All Turns] This Digimon
+/// is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution"
+/// adds `6` to `levels` and `"Slayerdramon"` to `names` — but only while the
+/// requirement being evaluated belongs to a DNA (or Blast-DNA) digivolution
+/// INTO a card named [Examon]. The printed level / name still match too
+/// ("also treated as"). DCGO: `Permanent.Levels_ForJogress` +
+/// `Permanent.Names_ForDNA`, fed by `AddJogressLevelsClass` (EX13_021.cs /
+/// EX13_041.cs). Colours are never changed.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DnaMaterialExtras {
+    pub levels: Vec<u8>,
+    pub names: Vec<String>,
+}
+
+impl DnaMaterialExtras {
+    pub fn is_empty(&self) -> bool {
+        self.levels.is_empty() && self.names.is_empty()
+    }
+}
+
+impl Game {
+    /// The result-scoped DNA identity extras `material` carries when it is
+    /// evaluated as a DNA material for `result` (a card in hand / trash).
+    /// Reads the `ModifierType::DnaMaterialIdentity` entries the material's
+    /// `dna_material_identity:` self-aura materialized this tick; an entry
+    /// applies when any of `result`'s effective names (printed + "also treated
+    /// as" aliases) equals the entry's `result_name`.
+    pub fn dna_material_extras(
+        &self,
+        material: PermanentHandle,
+        result: &CardSource,
+    ) -> DnaMaterialExtras {
+        let mut out = DnaMaterialExtras::default();
+        let entries = self
+            .modifiers
+            .get(material, ModifierType::DnaMaterialIdentity);
+        if entries.is_empty() {
+            return out;
+        }
+        let result_names = result.card_names(&self.card_data);
+        for entry in entries {
+            let crate::modifiers::ModifierPayload::DnaMaterialIdentity {
+                result_name,
+                level,
+                name,
+            } = &entry.payload
+            else {
+                continue;
+            };
+            if !result_names
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(result_name))
+            {
+                continue;
+            }
+            if let Some(l) = level {
+                if !out.levels.contains(l) {
+                    out.levels.push(*l);
+                }
+            }
+            if let Some(n) = name {
+                if !out.names.iter().any(|x| x.eq_ignore_ascii_case(n)) {
+                    out.names.push(n.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// `matching_dna_cost` for two battle-area materials named by handle,
+    /// honoring each material's result-scoped DNA identity extras.
+    pub(crate) fn matching_dna_cost_for_handles<'m>(
+        &self,
+        result: &CardSource,
+        result_meta: &'m CardData,
+        a: PermanentHandle,
+        b: PermanentHandle,
+    ) -> Option<&'m DnaCost> {
+        let perm_a = self.player(a.player).battle_area.get(a.index as usize)?;
+        let perm_b = self.player(b.player).battle_area.get(b.index as usize)?;
+        let ea = self.dna_material_extras(a, result);
+        let eb = self.dna_material_extras(b, result);
+        matching_dna_cost_ext(result_meta, (perm_a, &ea), (perm_b, &eb), &self.card_data)
+    }
+
+    /// `matching_dna_cost_perm_and_card` with the FIELD material's
+    /// result-scoped DNA identity extras honored (the card-side material is
+    /// not on the battle area, so "This Digimon is also treated as …" cannot
+    /// apply to it).
+    pub(crate) fn matching_dna_cost_for_handle_and_card<'m>(
+        &self,
+        result: &CardSource,
+        result_meta: &'m CardData,
+        field: PermanentHandle,
+        card_material: &CardData,
+    ) -> Option<&'m DnaCost> {
+        let field_perm = self
+            .player(field.player)
+            .battle_area
+            .get(field.index as usize)?;
+        let ef = self.dna_material_extras(field, result);
+        matching_dna_cost_perm_and_card_ext(
+            result_meta,
+            (field_perm, &ef),
+            card_material,
+            &self.card_data,
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DigivolveRouteMatch {
     pub memory_cost: u16,
@@ -649,9 +760,26 @@ impl Game {
 
         if matches!(window, DnaRouteWindow::Main) {
             let evo_meta = &self.card_data[hand_card.data_index];
-            if let Some((first_is_top, dna_cost)) =
-                get_dna_stacking_order(evo_meta, first, second, &self.card_data)
-            {
+            let first_extras = self.dna_material_extras(
+                PermanentHandle {
+                    player,
+                    index: first_idx as u8,
+                },
+                hand_card,
+            );
+            let second_extras = self.dna_material_extras(
+                PermanentHandle {
+                    player,
+                    index: second_idx as u8,
+                },
+                hand_card,
+            );
+            if let Some((first_is_top, dna_cost)) = get_dna_stacking_order_ext(
+                evo_meta,
+                (first, &first_extras),
+                (second, &second_extras),
+                &self.card_data,
+            ) {
                 return Some(DnaRouteMatch {
                     first_is_top,
                     memory_cost: dna_cost.memory_cost,
@@ -746,9 +874,16 @@ impl Game {
 
         let result_meta = &self.card_data[result.data_index];
         let material_meta = &self.card_data[material.data_index];
+        let field_extras = self.dna_material_extras(
+            PermanentHandle {
+                player,
+                index: field_idx as u8,
+            },
+            result,
+        );
 
         for cost in &result_meta.dna_costs {
-            if perm_matches_req(field, &cost.requirement1, &self.card_data)
+            if perm_matches_req_ext(field, &field_extras, &cost.requirement1, &self.card_data)
                 && card_data_matches_req(material_meta, &cost.requirement2)
             {
                 return Some(DnaRouteMatch {
@@ -756,7 +891,7 @@ impl Game {
                     memory_cost: cost.memory_cost,
                 });
             }
-            if perm_matches_req(field, &cost.requirement2, &self.card_data)
+            if perm_matches_req_ext(field, &field_extras, &cost.requirement2, &self.card_data)
                 && card_data_matches_req(material_meta, &cost.requirement1)
             {
                 return Some(DnaRouteMatch {
@@ -803,7 +938,10 @@ impl Game {
                 player,
                 index: field_idx as u8,
             };
-            let rctx = EffectReadContext::new(self, result.handle(), Some(field_handle), player);
+            // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: material predicates see the
+            // field material's result-scoped DNA identity extras.
+            let rctx = EffectReadContext::new(self, result.handle(), Some(field_handle), player)
+                .with_dna_result(result.handle());
             for path in paths {
                 if !matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve)
                     || path.materials.len() != 2
@@ -875,9 +1013,14 @@ impl Game {
                         continue;
                     }
                 }
+                // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: the registered DNA
+                // materials are evaluated FOR the hand result card.
+                let material_rctx =
+                    EffectReadContext::new(self, source_card, Some(source_permanent), controller)
+                        .with_dna_result(hand_card.handle());
                 if let Some(matched) = registered_dna_route_match(
                     registration.registers.as_ref(),
-                    &rctx,
+                    &material_rctx,
                     player,
                     first_idx,
                     second_idx,
@@ -1250,16 +1393,35 @@ fn blast_material_matches_card(
 }
 
 fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
+    perm_matches_req_ext(perm, &DnaMaterialExtras::default(), req, data)
+}
+
+/// `perm_matches_req` honoring the material's result-scoped DNA identity
+/// extras (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+fn perm_matches_req_ext(
+    perm: &Permanent,
+    extras: &DnaMaterialExtras,
+    req: &DnaRequirement,
+    data: &[CardData],
+) -> bool {
     let top = perm.top_card();
     let meta = &data[top.data_index];
-    card_data_matches_req(meta, req)
+    card_data_matches_req_ext(meta, extras, req)
 }
 
 fn card_data_matches_req(meta: &CardData, req: &DnaRequirement) -> bool {
+    card_data_matches_req_ext(meta, &DnaMaterialExtras::default(), req)
+}
+
+fn card_data_matches_req_ext(
+    meta: &CardData,
+    extras: &DnaMaterialExtras,
+    req: &DnaRequirement,
+) -> bool {
     if req.level > 0 {
-        match meta.level {
-            Some(l) if l == req.level => {}
-            _ => return false,
+        let printed_ok = meta.level == Some(req.level);
+        if !printed_ok && !extras.levels.contains(&req.level) {
+            return false;
         }
     }
     // Slash-color reqs like "Blue/Purple Lv.6" accept any listed color on
@@ -1269,13 +1431,17 @@ fn card_data_matches_req(meta: &CardData, req: &DnaRequirement) -> bool {
     if !req.card_colors.is_empty() && !req.card_colors.iter().any(|c| meta.colors.contains(c)) {
         return false;
     }
-    if !req.name_contains.is_empty()
-        && !meta
-            .card_name
-            .to_lowercase()
-            .contains(&req.name_contains.to_lowercase())
-    {
-        return false;
+    if !req.name_contains.is_empty() {
+        let needle = req.name_contains.to_lowercase();
+        let printed_ok = meta.card_name.to_lowercase().contains(&needle);
+        if !printed_ok
+            && !extras
+                .names
+                .iter()
+                .any(|n| n.to_lowercase().contains(&needle))
+        {
+            return false;
+        }
     }
     if !req.text_contains.is_empty() {
         // Python's `_perm_matches_dna_req` searches effect + inherited +
@@ -1314,13 +1480,27 @@ pub fn matching_dna_cost<'a>(
     perm_b: &Permanent,
     data: &[CardData],
 ) -> Option<&'a DnaCost> {
+    let none = DnaMaterialExtras::default();
+    matching_dna_cost_ext(evo_meta, (perm_a, &none), (perm_b, &none), data)
+}
+
+/// `matching_dna_cost` where each material carries its result-scoped DNA
+/// identity extras (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+pub fn matching_dna_cost_ext<'a>(
+    evo_meta: &'a CardData,
+    (perm_a, extras_a): (&Permanent, &DnaMaterialExtras),
+    (perm_b, extras_b): (&Permanent, &DnaMaterialExtras),
+    data: &[CardData],
+) -> Option<&'a DnaCost> {
     for cost in &evo_meta.dna_costs {
         let orderings = [
             (&cost.requirement1, &cost.requirement2),
             (&cost.requirement2, &cost.requirement1),
         ];
         for (ra, rb) in orderings {
-            if perm_matches_req(perm_a, ra, data) && perm_matches_req(perm_b, rb, data) {
+            if perm_matches_req_ext(perm_a, extras_a, ra, data)
+                && perm_matches_req_ext(perm_b, extras_b, rb, data)
+            {
                 return Some(cost);
             }
         }
@@ -1343,13 +1523,29 @@ pub fn matching_dna_cost_perm_and_card<'a>(
     card_material: &CardData,
     data: &[CardData],
 ) -> Option<&'a DnaCost> {
+    matching_dna_cost_perm_and_card_ext(
+        evo_meta,
+        (field_perm, &DnaMaterialExtras::default()),
+        card_material,
+        data,
+    )
+}
+
+/// `matching_dna_cost_perm_and_card` with the field material's result-scoped
+/// DNA identity extras (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+pub fn matching_dna_cost_perm_and_card_ext<'a>(
+    evo_meta: &'a CardData,
+    (field_perm, field_extras): (&Permanent, &DnaMaterialExtras),
+    card_material: &CardData,
+    data: &[CardData],
+) -> Option<&'a DnaCost> {
     for cost in &evo_meta.dna_costs {
         let orderings = [
             (&cost.requirement1, &cost.requirement2),
             (&cost.requirement2, &cost.requirement1),
         ];
         for (r_field, r_card) in orderings {
-            if perm_matches_req(field_perm, r_field, data)
+            if perm_matches_req_ext(field_perm, field_extras, r_field, data)
                 && card_data_matches_req(card_material, r_card)
             {
                 return Some(cost);
@@ -1394,14 +1590,26 @@ pub fn get_dna_stacking_order<'a>(
     perm_b: &Permanent,
     data: &[CardData],
 ) -> Option<(bool, &'a DnaCost)> {
+    let none = DnaMaterialExtras::default();
+    get_dna_stacking_order_ext(evo_meta, (perm_a, &none), (perm_b, &none), data)
+}
+
+/// `get_dna_stacking_order` where each material carries its result-scoped DNA
+/// identity extras (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+pub fn get_dna_stacking_order_ext<'a>(
+    evo_meta: &'a CardData,
+    (perm_a, extras_a): (&Permanent, &DnaMaterialExtras),
+    (perm_b, extras_b): (&Permanent, &DnaMaterialExtras),
+    data: &[CardData],
+) -> Option<(bool, &'a DnaCost)> {
     for cost in &evo_meta.dna_costs {
-        if perm_matches_req(perm_a, &cost.requirement1, data)
-            && perm_matches_req(perm_b, &cost.requirement2, data)
+        if perm_matches_req_ext(perm_a, extras_a, &cost.requirement1, data)
+            && perm_matches_req_ext(perm_b, extras_b, &cost.requirement2, data)
         {
             return Some((true, cost));
         }
-        if perm_matches_req(perm_a, &cost.requirement2, data)
-            && perm_matches_req(perm_b, &cost.requirement1, data)
+        if perm_matches_req_ext(perm_a, extras_a, &cost.requirement2, data)
+            && perm_matches_req_ext(perm_b, extras_b, &cost.requirement1, data)
         {
             return Some((false, cost));
         }

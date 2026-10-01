@@ -17,8 +17,8 @@ with `data/card_bundles/<ID>.md`); DCGO `$BASE_DCGO/Assets/Scripts/CardEffect/EX
 | EX13-008 Dracomon (Lv.3 R) | IMPLEMENTED | enabler / engine | [When Moving][On Play] reveal 3, add 1 [Dracomon]/[Examon]-text card; inherited [End of Your Turn] may DNA digivolve with another Digimon into a hand card (DCGO `Red/EX13_008.cs`). |
 | EX13-018 Coredramon (Lv.4 B/R) | IMPLEMENTED | engine (draw) | Lv.3 [Dracomon]-name route cost 2; [OP][WD] trash 1 [Dracomon]/[Examon]-text card → Draw 2; [Your Turn] other text-Digimon played → may digivolve into [Examon]-text hand card −2; inherited [Your Turn] +2000 (DCGO `Blue/EX13_018.cs`). |
 | EX13-039 Coredramon (Lv.4 G/R) | IMPLEMENTED | engine (recursion) | Same route/observer/inherited; [OP][WD] may return 1 non-egg [Dracomon]/[Examon]-text card from trash (DCGO `Green/EX13_039.cs`). |
-| EX13-021 Wingdramon (Lv.5) | **BLOCKED** | bridge / DNA half | "treated as Lv.6 [Slayerdramon] for [Examon]'s DNA" — G-DNA-MATERIAL-TREATED-AS-FOR-TARGET. |
-| EX13-041 Groundramon (Lv.5) | **BLOCKED** | bridge / DNA half | "treated as Lv.6 [Breakdramon] for [Examon]'s DNA" — same gap. |
+| EX13-021 Wingdramon (Lv.5) | IMPLEMENTED (2026-10-01) | bridge / DNA half | "treated as Lv.6 [Slayerdramon] for [Examon]'s DNA" — G-DNA-MATERIAL-TREATED-AS-FOR-TARGET resolved (`dna_material_identity`). |
+| EX13-041 Groundramon (Lv.5) | IMPLEMENTED (2026-10-01) | bridge / DNA half | "treated as Lv.6 [Breakdramon] for [Examon]'s DNA" — same primitive. |
 | EX13-044 Breakdramon (Lv.6 G/R) | IMPLEMENTED | payoff / control | Assembly −5 (Lv.5×Lv.4×Lv.3 text cards from trash); Piercing, Blocker; [OP][WD] suspend up to 2 (either side) then lock 2 opponent; face + inherited [All Turns][OPT] own Digimon suspends → a text Digimon battles (DCGO `Green/EX13_044.cs`). |
 | EX13-045 Examon (Lv.7, cross-slice) | IMPLEMENTED | finisher | DNA Green Lv.6 + Blue Lv.6 cost 0; DNA [WD] all own +10000 and it attacks; [Your Turn][OPT] wins a battle → play/use cost ≤12 text card from hand or its sources free (DCGO `Green/EX13_045.cs`). |
 
@@ -69,7 +69,7 @@ with `data/card_bundles/<ID>.md`); DCGO `$BASE_DCGO/Assets/Scripts/CardEffect/EX
 ### Blocked combos (not authored)
 - Coredramon observer → [Groundramon] (EX13-041) / [Wingdramon] (EX13-021) for −2 — BLOCKED on the missing Lv.5s (the only [Examon]-text Lv.5 targets).
 - [Groundramon]/[Wingdramon] → Breakdramon alt digivolve cost 3 — BLOCKED (EX13-021, EX13-041).
-- Wingdramon-as-[Slayerdramon] / Groundramon-as-[Breakdramon] for Examon DNA — BLOCKED (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+- Wingdramon-as-[Slayerdramon] / Groundramon-as-[Breakdramon] for Examon DNA — tested (Combo 7 in `tests/archetypes/dracomon_ex13.rs`: Main DNA, Lv.5+Lv.5 DNA, Dracomon EoT DNA, BT20-045 Blast DNA).
 
 ## Playstyle
 - Midrange combo: Dracomon/Coredramon dig and refill (card advantage + trash setup), Breakdramon tempo-locks the board, Examon closes. Cheap curve (3 → 2 → 7 Assembly), then a free DNA.

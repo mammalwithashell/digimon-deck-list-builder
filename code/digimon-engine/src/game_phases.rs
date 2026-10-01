@@ -117,7 +117,13 @@ impl Game {
                     player: tp,
                     index: i as u8,
                 };
-                if !self.cannot_unsuspend(h) {
+                // `CannotUnsuspendInUnsuspendPhase` ("can't unsuspend in their
+                // next unsuspend phase" — EX13-041) gates ONLY this bulk step.
+                if !self.cannot_unsuspend(h)
+                    && !self
+                        .modifiers
+                        .has(h, ModifierType::CannotUnsuspendInUnsuspendPhase)
+                {
                     unlocked.push(i as u8);
                 }
             }

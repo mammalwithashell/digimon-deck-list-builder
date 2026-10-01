@@ -8347,9 +8347,24 @@ pins that the turn scan does not trash such a marker.
 - First reported: 2026-08-24
 
 
-## DNA-material "treated as Lv.N [X] for [Y]'s DNA digivolution" static  [G-DNA-MATERIAL-TREATED-AS-FOR-TARGET] — hybrid, OPEN 2026-10-01
+## DNA-material "treated as Lv.N [X] for [Y]'s DNA digivolution" static  [G-DNA-MATERIAL-TREATED-AS-FOR-TARGET] — hybrid, RESOLVED 2026-10-01
 
-- **Cards (BLOCKED):** EX13-021 Wingdramon, EX13-041 Groundramon (also BT20-025 / BT20-042).
+> **RESOLVED 2026-10-01.** Landed as an `aura` payload (self-aura only, validator-enforced):
+> ```yaml
+> - kind: aura
+>   target: {}
+>   dna_material_identity: { for_result: Examon, level: 6, name: Slayerdramon }
+> ```
+> Lowers to `ModifierType::DnaMaterialIdentity` (`ModifierPayload::DnaMaterialIdentity { result_name, level, name }`),
+> read by `Game::dna_material_extras(material, result)` — see `qa/archetype-qa/engine-gaps.md`
+> §G-DNA-MATERIAL-TREATED-AS-FOR-TARGET. EX13-021 / EX13-041 IMPLEMENTED (BT20-025 / BT20-042 can reuse it).
+> Same change also landed two vocab items the cards needed: `event_battle_deleter: { <permanent predicate> }`
+> (G-DSL-BATTLE-DELETER, below) and the `CannotUnsuspendInUnsuspendPhase` modifier ("can't unsuspend in their next
+> unsuspend phase"). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dna_material_identity battle_deleter unsuspend_phase_lock`;
+> `RUST_MIN_STACK=134217728 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex13::ex13_021 ex13::ex13_041`;
+> `cargo test --manifest-path code/digimon-engine/Cargo.toml --test archetypes -- dracomon_ex13`.
+
+- **Cards (formerly BLOCKED):** EX13-021 Wingdramon, EX13-041 Groundramon (also BT20-025 / BT20-042).
 - **Missing DSL vocabulary:** a declarative clause for a material-side, result-scoped identity override, e.g.
   ```yaml
   - kind: dna_material_identity
@@ -8358,6 +8373,13 @@ pins that the turn scan does not trash such a marker.
     treated_as: { level: 6, name: Slayerdramon }
   ```
 - **Lowers to engine API:** none exists yet — needs the engine hook described in `qa/archetype-qa/engine-gaps.md` §G-DNA-MATERIAL-TREATED-AS-FOR-TARGET (DCGO `AddJogressLevelsClass` + scoped `ChangeCardNamesClass`).
+
+## Battle "deleter" on an EndOfBattle observer  [G-DSL-BATTLE-DELETER] — dsl+engine, RESOLVED 2026-10-01
+
+- **Card:** EX13-041 Groundramon inherited — "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card." (DCGO `CanTriggerWhenDeleteOpponentDigimonByBattle` with `winnerRealCondition`; `LoserPermanents` fixed to the actually destroyed ones.)
+- **Why the existing leaves did not fit:** `event_winner_*` reads `battle_winner`, which is set even when the loser's deletion was prevented and is `None` on a tie whose survivor was protected; `source_deleted_battle_opponent` is carrier-scoped.
+- **Landed:** `TriggerSource::BattleResolved { winner, deleter }` / `TriggerContext.battle_deleter` (the combatant that survived while its battle opponent was actually deleted, incl. a protected tie survivor; computed in `resolve_battle` from `DeletionBatchOutcome.completed`) + predicate leaf `event_battle_deleter: { <permanent predicate> }` for `on_ally_won_battle` observers. Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- battle_deleter`.
+- **Also landed (same change):** `ModifierType::CannotUnsuspendInUnsuspendPhase` — gates only the turn-start bulk unsuspend (DCGO `GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase: true)`); install with `end_of_opponents_next_turn`. Follow-up: BT23-047 / BT24-095 / BT16-025 model "can't unsuspend in their next unsuspend phase" as the broader `CannotUnsuspend` + `end_of_opponents_turn` (also blocks effect unsuspends); they can migrate to this modifier.
 
 ## `select_any_permanent` ignores `continue_on_decline`  [G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE] — OPEN 2026-10-01 (worked around)
 

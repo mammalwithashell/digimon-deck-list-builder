@@ -32,6 +32,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CanNotSwitchAttackTarget" => ModifierType::CanNotSwitchAttackTarget,
         "CannotSuspend" => ModifierType::CannotSuspend,
         "CannotUnsuspend" => ModifierType::CannotUnsuspend,
+        "CannotUnsuspendInUnsuspendPhase" => ModifierType::CannotUnsuspendInUnsuspendPhase,
         "CannotBeSelectedByEffect" => ModifierType::CannotBeSelectedByEffect,
         "CannotBeAffected" => ModifierType::CannotBeAffected,
         "GrantBlocker" => ModifierType::GrantBlocker,
@@ -109,6 +110,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ChangeBaseCardColor" => ModifierType::ChangeBaseCardColor,
         "ChangeCardLevelForAssembly" => ModifierType::ChangeCardLevelForAssembly,
         "ChangeCardNamesForDigiXros" => ModifierType::ChangeCardNamesForDigiXros,
+        "DnaMaterialIdentity" => ModifierType::DnaMaterialIdentity,
         _ => return None,
     })
 }
@@ -145,6 +147,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotBeAttackedBySecurityAttackChanged
         | ModifierType::CannotSuspend
         | ModifierType::CannotUnsuspend
+        | ModifierType::CannotUnsuspendInUnsuspendPhase
         | ModifierType::CannotBeSelectedByEffect
         | ModifierType::CannotBeAffected
         | ModifierType::GrantBlocker
@@ -220,7 +223,8 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::SourceNameAliases
         | ModifierType::ChangeBaseCardColor
         | ModifierType::ChangeCardLevelForAssembly
-        | ModifierType::ChangeCardNamesForDigiXros => {}
+        | ModifierType::ChangeCardNamesForDigiXros
+        | ModifierType::DnaMaterialIdentity => {}
     }
 }
 
@@ -258,6 +262,7 @@ mod tests {
             ModifierType::CannotBeAttackedBySecurityAttackChanged,
             ModifierType::CannotSuspend,
             ModifierType::CannotUnsuspend,
+            ModifierType::CannotUnsuspendInUnsuspendPhase,
             ModifierType::CannotBeSelectedByEffect,
             ModifierType::CannotBeAffected,
             ModifierType::GrantBlocker,
@@ -334,6 +339,7 @@ mod tests {
             ModifierType::ChangeBaseCardColor,
             ModifierType::ChangeCardLevelForAssembly,
             ModifierType::ChangeCardNamesForDigiXros,
+            ModifierType::DnaMaterialIdentity,
         ]
     }
 

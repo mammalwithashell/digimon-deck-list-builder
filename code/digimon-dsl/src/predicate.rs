@@ -662,6 +662,18 @@ pub struct PredicateSpec {
     /// G-DSL-BATTLE-WINNER-IS-SOURCE.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub event_winner_is_source: Option<bool>,
+    /// For `on_ally_won_battle` (EndOfBattle) observers: the battle's
+    /// DELETER — the combatant that survived the battle while its battle
+    /// opponent was actually deleted — must exist and match this permanent
+    /// predicate (e.g. `{ owner: you, in_text_contains: Dracomon }`). Fails
+    /// when the loser's deletion was prevented, or when both combatants were
+    /// deleted (a tie with no survivor). Printed "When any of your Digimon
+    /// with [X] in their texts delete your opponent's Digimon in battle"
+    /// (EX13-041 Groundramon; DCGO `CanTriggerWhenDeleteOpponentDigimonByBattle`
+    /// with `winnerRealCondition`, `LoserPermanents` fixed to the actually
+    /// destroyed ones). G-DSL-BATTLE-DELETER.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_battle_deleter: Option<Box<PredicateSpec>>,
     /// For `on_discard_hand` observers: the player whose HAND was trashed
     /// (`TriggerContext.discard_hand_player`) must match this player-ref
     /// ("your hand is trashed from" ⇒ `you`). G-ENGINE-ON-DISCARD-HAND.
