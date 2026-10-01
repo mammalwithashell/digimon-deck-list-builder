@@ -25,21 +25,17 @@
 //! (BT24_025.cs / BT12_089.cs): the printed digivolution cost of the
 //! colour-matching circle is still paid (here −1); only the level gate drops.
 //!
-//! # Verdict — BLOCKED (hybrid), partial YAML
-//! Clauses 1 and 3 are authored and tested live. Clause 2 ([Main]) is BLOCKED
-//! on `G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST`: `effect_initiated_digivolve`
-//! only has `ignore_requirements: true`, which drops colour too AND zeroes the
-//! base cost (`matching_memory_cost = 0` in
-//! `game_actions/digivolve.rs::effect_initiated_digivolve_from_source_inner`),
-//! so "ignoring level, cost reduced by 1" cannot be expressed without a wrong
-//! cost. Its tests are `#[ignore]`d with the gap id; the clause is NOT
-//! authored (no approximation).
+//! # Verdict — IMPLEMENTED (2026-10-01)
+//! All three clauses are authored and tested live. The [Main] clause landed
+//! with `G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST`: `effect_initiated_digivolve
+//! { ignore_level: true }` waives only the level gate (colour-matching
+//! printed circle kept, its printed cost paid, then `cost: { reduce: 1 }`).
 //!
 //! # Patterns (RUST_DSL_TEST_API §4.3)
 //! - B Tamer [Start of Your Main Phase] + [On Play] shared clause; optional
 //!   ("you may") deck-top face-down placement; conditional memory gain.
 //! - B Tamer [Security] play self free.
-//! - C (BLOCKED) multi-cost material placement + effect digivolve.
+//! - C multi-cost material placement + effect digivolve ignoring level.
 
 #![allow(dead_code, unused_imports)]
 
@@ -279,33 +275,244 @@ fn ex13_071_security_plays_itself_free() {
     let _ = mem;
 }
 
+
 // ════════════════════════════════════════════════════════════════════════════
-// BLOCKED — [Main] [Once Per Turn] (G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST)
+// Section 4 — [Main] [Once Per Turn]: 3 face-down trashed + Lv.4/Lv.5 under a
+// [Kudamon] → it may digivolve into [Kentaurosmon] (hand/trash) ignoring
+// level, cost −1. G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST (resolved 2026-10-01).
 // ════════════════════════════════════════════════════════════════════════════
 
-#[test]
-#[ignore = "pending: G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST from qa/archetype-qa/engine-gaps.md"]
-fn ex13_071_main_places_materials_and_digivolves_kudamon_ignoring_level_cost_minus_one() {
-    // Expected once the gap closes: trash 3 bottom face-down cards from under
-    // Tamers (each pick surfaced), place 1 Lv.4 + 1 Lv.5 yellow [Holy Beast]
-    // Digimon from trash as a [Kudamon]'s bottom digivolution cards, then the
-    // optional digivolve into a [Kentaurosmon] in hand OR trash pays that
-    // Kentaurosmon's printed yellow-circle cost − 1 (level gate dropped,
-    // colour gate kept).
-    let r = runner(&[]);
-    let card = r.compiled_card(CARD_ID).expect("compiled");
-    assert!(
-        card.effects.iter().any(|c| matches!(
-            c,
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand)
-                || t.when.contains(&CompiledTiming::Main)
-        )),
-        "[Main] clause authored"
-    );
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{EFFECTS_PER_PERMANENT, FIELD_EFFECT_START};
+use digimon_engine::card_data::EvoCost;
+use digimon_engine::enums::GamePhase;
+use digimon_engine::selection::PendingSelectionView;
+
+fn holy_beast(id: &str, name: &str, level: u8) -> CardData {
+    let mut c = digimon(id, level, 1000 * level as i32);
+    c.card_name = name.to_string();
+    c.traits = vec!["Holy Beast".to_string()];
+    c
+}
+
+/// Kentaurosmon-named Lv.6 yellow; printed circle Yellow Lv.5 cost 3.
+fn kentaurosmon(id: &str) -> CardData {
+    let mut c = digimon(id, 6, 12000);
+    c.card_name = "Kentaurosmon".to_string();
+    c.play_cost = 12;
+    c.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 5,
+        memory_cost: 3,
+    }];
+    c
+}
+
+struct MainScene {
+    r: DebugRunner,
+    richard: PermanentHandle,
+    kudamon: PermanentHandle,
+}
+
+/// Richard on field with `face_down` face-down cards under him, a [Kudamon],
+/// Lv.4 / Lv.5 yellow [Holy Beast] cards in trash as requested, Kentaurosmon
+/// in hand (or trash), memory 5, Main phase.
+fn main_scene(face_down: usize, lv4: bool, lv5: bool, ken_in_trash: bool) -> MainScene {
+    let hand: Vec<&str> = if ken_in_trash { vec![] } else { vec!["KEN"] };
+    let mut r = builder()
+        .add_card(holy_beast("KUDA", "Kudamon", 3))
+        .add_card(holy_beast("HB4", "Reppamon", 4))
+        .add_card(holy_beast("HB5", "Chirinmon", 5))
+        .add_card(kentaurosmon("KEN"))
+        .hand(0, &hand)
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .security(0, &["FILL"; 3])
+        .security(1, &["FILL"; 3])
+        .memory(5)
+        .start();
+    let richard = r.place_on_field(0, CARD_ID, Some(0));
+    for _ in 0..face_down {
+        r.push_source(richard, "FILL");
+    }
+    {
+        let perm = &mut r.game.players[0].battle_area[richard.index as usize];
+        let n = perm.card_sources.len();
+        for c in perm.card_sources[..n - 1].iter_mut() {
+            c.face_down = true;
+        }
+    }
+    let kudamon = r.place_on_field(0, "KUDA", Some(0));
+    if lv4 {
+        r.inject_trash(0, "HB4");
+    }
+    if lv5 {
+        r.inject_trash(0, "HB5");
+    }
+    if ken_in_trash {
+        r.inject_trash(0, "KEN");
+    }
+    r.game.current_phase = GamePhase::Main;
+    MainScene { r, richard, kudamon }
+}
+
+fn main_offered(r: &DebugRunner, richard: PermanentHandle) -> bool {
+    let mask = build_action_mask(&r.game, 0);
+    let base = FIELD_EFFECT_START + richard.index as u16 * EFFECTS_PER_PERMANENT;
+    (base..base + EFFECTS_PER_PERMANENT).any(|a| mask[a as usize] == 1.0)
+}
+
+fn first_non_pass(v: &PendingSelectionView) -> u16 {
+    *v.valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("a non-PASS option")
+}
+
+/// Drive the [Main] body: `order` answers the bottom-order EffectChoice;
+/// `digivolve` accepts (first candidate) or PASSes the Kentaurosmon pick.
+/// Every other prompt (face-down trash picks, Kudamon, Lv.4 / Lv.5 picks)
+/// takes its first candidate. Returns the prompts seen.
+fn drive_main(r: &mut DebugRunner, order: usize, digivolve: bool) -> Vec<String> {
+    let mut seen = Vec::new();
+    for _ in 0..30 {
+        let Some(v) = r.pending_selection_view() else { break };
+        seen.push(v.prompt.clone());
+        if v.effect_choices.is_some() {
+            r.execute_branch(order).expect("order choice");
+        } else if v.prompt.contains("Kentaurosmon") {
+            assert!(v.is_optional, "the digivolve is optional (\"it may digivolve\")");
+            let a = if digivolve { first_non_pass(&v) } else { PASS };
+            r.execute_action(v.selecting_player, a).expect("kentaurosmon pick");
+        } else {
+            r.execute_action(v.selecting_player, first_non_pass(&v)).expect("pick");
+        }
+    }
+    seen
+}
+
+fn stack(r: &DebugRunner, h: PermanentHandle) -> Vec<String> {
+    r.game.players[0].battle_area[h.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect()
+}
+
+fn face_down_count(r: &DebugRunner, h: PermanentHandle) -> usize {
+    r.game.players[0].battle_area[h.index as usize]
+        .card_sources
+        .iter()
+        .filter(|c| c.face_down)
+        .count()
 }
 
 #[test]
-#[ignore = "pending: G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST from qa/archetype-qa/engine-gaps.md"]
+fn ex13_071_main_places_materials_and_digivolves_kudamon_ignoring_level_cost_minus_one() {
+    let MainScene {
+        mut r,
+        richard,
+        kudamon,
+    } = main_scene(3, true, true, false);
+    assert!(main_offered(&r, richard), "[Main] offered when the whole cost is payable");
+    let trash0 = r.trash_size(0);
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    let seen = drive_main(&mut r, 0, true);
+    assert!(seen.iter().any(|p| p.contains("Kentaurosmon")), "digivolve pick offered");
+    assert_eq!(face_down_count(&r, richard), 0, "3 bottom face-down cards trashed");
+    assert_eq!(
+        stack(&r, kudamon),
+        vec!["HB5", "HB4", "KUDA", "KEN"],
+        "Lv.4 placed first, Lv.5 at the very bottom; then digivolved into Kentaurosmon"
+    );
+    assert_eq!(
+        r.memory(),
+        5 - (3 - 1),
+        "level ignored, colour circle kept: printed cost 3 reduced by 1"
+    );
+    assert_eq!(r.trash_size(0), trash0 + 3 - 2, "+3 face-down, −Lv.4, −Lv.5");
+}
+
+#[test]
+fn ex13_071_main_bottom_order_is_the_players_choice() {
+    let MainScene {
+        mut r,
+        richard,
+        kudamon,
+    } = main_scene(3, true, true, false);
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    drive_main(&mut r, 1, true);
+    assert_eq!(stack(&r, kudamon), vec!["HB4", "HB5", "KUDA", "KEN"]);
+}
+
+#[test]
+fn ex13_071_main_digivolves_from_trash() {
+    let MainScene {
+        mut r,
+        richard,
+        kudamon,
+    } = main_scene(3, true, true, true);
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    drive_main(&mut r, 0, true);
+    assert_eq!(stack(&r, kudamon).last().map(String::as_str), Some("KEN"));
+    assert_eq!(r.memory(), 3);
+}
+
+#[test]
+fn ex13_071_main_digivolve_may_be_declined_after_the_cost_is_paid() {
+    let MainScene {
+        mut r,
+        richard,
+        kudamon,
+    } = main_scene(3, true, true, false);
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    drive_main(&mut r, 0, false);
+    assert_eq!(stack(&r, kudamon), vec!["HB5", "HB4", "KUDA"], "cost paid, no digivolve");
+    assert_eq!(face_down_count(&r, richard), 0);
+    assert_eq!(r.memory(), 5);
+    assert_eq!(r.hand_size(0), 1, "Kentaurosmon stays in hand");
+}
+
+#[test]
+fn ex13_071_main_needs_three_face_down_cards() {
+    let MainScene { r, richard, .. } = main_scene(2, true, true, false);
+    assert!(!main_offered(&r, richard), "2 face-down cards → cost unpayable");
+}
+
+#[test]
+fn ex13_071_main_needs_both_a_level_4_and_a_level_5_in_trash() {
+    let MainScene { r, richard, .. } = main_scene(3, true, false, false);
+    assert!(!main_offered(&r, richard), "no Lv.5 in trash");
+    let MainScene { r, richard, .. } = main_scene(3, false, true, false);
+    assert!(!main_offered(&r, richard), "no Lv.4 in trash");
+}
+
+#[test]
+fn ex13_071_main_needs_a_kudamon() {
+    let MainScene {
+        mut r,
+        richard,
+        kudamon,
+    } = main_scene(3, true, true, false);
+    // Replace the Kudamon with a non-Kudamon yellow [Holy Beast] Lv.3.
+    r.game.players[0].battle_area.remove(kudamon.index as usize);
+    assert!(!main_offered(&r, richard), "no [Kudamon] → no target for the placement");
+}
+
+#[test]
 fn ex13_071_main_is_once_per_turn() {
-    panic!("authored when G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST closes");
+    let MainScene {
+        mut r,
+        richard,
+        ..
+    } = main_scene(6, true, true, false);
+    r.inject_trash(0, "HB4");
+    r.inject_trash(0, "HB5");
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    drive_main(&mut r, 0, false);
+    assert!(
+        face_down_count(&r, richard) >= 3,
+        "a second activation's cost would still be payable"
+    );
+    assert!(!main_offered(&r, richard), "[Once Per Turn]");
 }

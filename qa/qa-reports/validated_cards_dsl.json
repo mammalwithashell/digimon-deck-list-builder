@@ -11372,17 +11372,17 @@
       "card_name": "Rie Kishibe",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Veedramon / CS (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_074.rs",
+      "test_count": 21,
       "patterns": [
         "F",
         "C"
       ],
-      "notes": "No DCGO script. Clause 3 ([Main][OPT] this TAMER may digivolve into [LordKnightmon] from hand/trash, fixed cost 3, ignoring requirements) needs a Tamer-base digivolve primitive \u2014 engine rejects level-less digivolve targets. Clause 2 also needs a place-hand/trash-card-under-this-Tamer cost step. See qa/archetype-qa/engine-gaps.md G-TAMER-DIGIVOLVE-INTO-DIGIMON."
+      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf."
     },
     "EX13-050": {
       "card_name": "Bokomon",
@@ -11555,17 +11555,17 @@
       "card_name": "Richard Sampson",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-071.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_071.rs",
-      "test_count": 10,
+      "test_count": 18,
       "patterns": [
         "B",
         "C"
       ],
-      "notes": "PARTIAL YAML: [Start of Your Main Phase][On Play] optional deck-top face-down placement (bottom of this Tamer) + gain 1 memory if opponent has a Digimon; [Security] play self \u2014 green. BLOCKED on G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST for the [Main][OPT] Kudamon\u2192Kentaurosmon digivolve ('ignoring level, cost -1' = DCGO IgnoreRequirement.Level; engine ignore_requirements zeroes cost and drops colour); clause not authored, 2 tests ignored with the gap id."
+      "notes": "All clauses green. [Start of Your Main Phase][On Play] optional deck-top face-down placement + memory; [Main][OPT] trash 3 bottom face-down under Tamers + Lv.4 & Lv.5 yellow [Holy Beast] from trash as a [Kudamon]'s bottom digivolution cards (player picks the bottom order) -> optional hand/trash [Kentaurosmon] digivolve via `effect_initiated_digivolve { ignore_level: true, cost: { reduce: 1 } }` (G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST resolved 2026-10-01); [Security] play self. Activation gated on the whole cost being payable (trash materials checked before the face-down cards are trashed)."
     },
     "EX13-001": {
       "card_name": "Gigimon",
@@ -11780,7 +11780,7 @@
         "B3",
         "F1"
       ],
-      "notes": "[Rie Kishibe] Tamer digivolve route gated \u22643 security (engine fix G-ENGINE-DIGIVOLVE-FROM-NAMED-TAMER); WD union hand|trash play-or-use \u22648 [Knightmon]-text free; [Your Turn] [Knightmon]-text Digimon gain Alliance+Piercing; [Your Turn][OPT] other Digimon/Tamer played \u2192 [Knightmon]-text Digimon may gain Rush+Collision and attack."
+      "notes": "[Rie Kishibe] Tamer digivolve route gated \u22643 security (engine fix G-ENGINE-DIGIVOLVE-FROM-NAMED-TAMER); WD union hand|trash play-or-use \u22648 [Knightmon]-text free; [Your Turn] [Knightmon]-text Digimon gain Alliance+Piercing; [Your Turn][OPT] other Digimon/Tamer played \u2192 [Knightmon]-text Digimon may gain Rush+Collision and attack. 2026-10-01: [Rie Kishibe] route additionally verified against the real EX13-074 (tests/cards_behavioral/ex13/ex13_074.rs), and EX13-074's own [Main] Tamer->LordKnightmon digivolve fires this card's [When Digivolving]."
     },
     "EX13-016": {
       "card_name": "Omnimon",

@@ -2136,6 +2136,7 @@ fn compile_replacement_process(
             from_hand: compile_binding_ref(&args.card),
             cost: CompiledCostDelta::Free,
             ignore_requirements: true,
+            ignore_level: false,
         });
         if r.choose.is_none() {
             errors.push(ValidationError {
@@ -3280,6 +3281,17 @@ fn compile_step(
             },
             cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
             ignore_requirements: a.ignore_requirements,
+            ignore_level: {
+                if a.ignore_level && a.ignore_requirements {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.effect_initiated_digivolve"),
+                        message: "effect_initiated_digivolve: ignore_level and ignore_requirements are mutually exclusive (ignore_requirements already waives level)"
+                            .to_string(),
+                    });
+                }
+                a.ignore_level
+            },
         },
         S::AppFuse(a) => CompiledStep::AppFuse {
             from_zone: match a.from {
@@ -4419,6 +4431,7 @@ effects:
                         from_hand: CompiledBindingRef::Named(card),
                         cost: CompiledCostDelta::Free,
                         ignore_requirements: true,
+                        ignore_level: false,
                     },
                     CompiledStep::CancelReplacement
                 ] if chosen == "chosen" && target == "replacement_subject" && card == "chosen"

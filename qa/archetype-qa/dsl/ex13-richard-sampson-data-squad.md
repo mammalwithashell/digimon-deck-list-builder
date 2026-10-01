@@ -31,7 +31,7 @@ named by gap id.
 | EX13-026 | Kudamon | IMPLEMENT | IMPLEMENTED | self-reviewed | 13/13 | [When Moving][On Play] reveal 3 → add 1 + place 1 face down at the bottom of a chosen [DATA SQUAD] Tamer; inherited [WA][OPT] Security A. −1 until end of opponent's turn |
 | EX13-030 | Reppamon | IMPLEMENT | IMPLEMENTED | self-reviewed | 16/16 | <Barrier> own + inherited; [OP][WD][WA][OPT] optional trash top security → may play [Richard Sampson] from hand or trash free |
 | EX13-032 | Chirinmon | IMPLEMENT | IMPLEMENTED (2026-10-01) | self-reviewed | 17/17 | [WD][WA][OPT] two-cost unsuspend + WD lock; both would-leave "top stacked card → top security" saves authored (G-TOP-STACKED-CARD-TO-SECURITY RESOLVED: the verb now moves the visible top card) |
-| EX13-071 | Richard Sampson | IMPLEMENT | BLOCKED (hybrid) | self-reviewed | 10/12 (2 ignored) | [SoYMP][On Play] optional face-down placement + memory, and [Security] play self, are green; [Main][OPT] Kudamon → Kentaurosmon "ignoring level, cost −1" blocked (G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST) |
+| EX13-071 | Richard Sampson | IMPLEMENT | IMPLEMENTED (2026-10-01; was BLOCKED hybrid, G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST resolved) | self-reviewed | 18/18 | [SoYMP][On Play] optional face-down placement + memory, and [Security] play self, are green; [Main][OPT] Kudamon → Kentaurosmon "ignoring level, cost −1" authored (ignore_level digivolve) |
 
 ## Engine-Gap Blocked Cards
 ### EX13-032 Chirinmon — RESOLVED 2026-10-01 (IMPLEMENTED)

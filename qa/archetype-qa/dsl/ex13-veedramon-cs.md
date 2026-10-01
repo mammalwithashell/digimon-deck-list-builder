@@ -23,7 +23,7 @@ Pipeline: batch-implement-cards-rust-dsl (author-set EX13 slice)
 | EX13-022 | AeroVeedramon | IMPLEMENT | IMPLEMENTED | self-reviewed (+ mutation check) | 19/19 | [OP][WD][WA] shared OPT free Tamer play; own Tamer played → opp Digimon/Tamer can't suspend; inherited OPT self-suspend → may unsuspend |
 | EX13-067 | Nokia Shiramine | IMPLEMENT | IMPLEMENTED | self-reviewed (+ mutation check) | 15/15 | No DCGO script. Start-of-main +1 memory; on_digivolve ≤1 Digimon, suspend → [Gabumon]/[Agumon] from hand/trash free; Q&A two-copy re-check pinned; [Security] play |
 | EX13-069 | Rina Shinomiya | IMPLEMENT | IMPLEMENTED | self-reviewed (+ mutation check) | 13/13 | Start-of-main +1 memory; own Digimon unsuspend → suspend, Draw 1, may digivolve into [Veedramon]-name −2; [Security] play |
-| EX13-074 | Rie Kishibe | IMPLEMENT | BLOCKED (engine) | — | 0 | Tamer digivolving into [LordKnightmon] (fixed cost 3, ignore reqs, hand/trash) — no Tamer-base digivolve primitive |
+| EX13-074 | Rie Kishibe | IMPLEMENT | IMPLEMENTED (2026-10-01) | self-reviewed | 21 | Tamer digivolving into [LordKnightmon] (fixed cost 3, ignore reqs, hand/trash) — unblocked by G-TAMER-DIGIVOLVE-INTO-DIGIMON (resolved 2026-10-01) |
 
 Mutation check: dropping the `on_move` self gate (017), the inherited name gate
 (022), the `≤1 Digimon` gate (067) and the own-Digimon event gate (069) each
