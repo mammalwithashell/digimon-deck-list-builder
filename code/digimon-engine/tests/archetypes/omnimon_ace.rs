@@ -197,8 +197,10 @@ fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool
 /// test runs on the REAL play path (`play_option_from_hand`) and is active and green.
 #[test]
 fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
-    // ST1-04 Dracomon — a real Red Lv3 colour anchor (satisfies BT17-095's
-    // Red+Blue colour requirement at Option-play time). ST1-02 Biyomon — vanilla
+    // ST1-04 Dracomon + ST2-04 Bearmon — real Red / Blue Lv3 colour anchors
+    // (together they satisfy BT17-095's Red+Blue colour requirement at
+    // Option-play time; 4-19-3 requires ALL of a multicolour Option's colours,
+    // DCGO CardSource.cs `colorsToCheck.Every(...)`). ST1-02 Biyomon — vanilla
     // deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
@@ -207,6 +209,8 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
         .expect("BT17-007 (Agumon) in embedded DSL pack")
         .dsl_card("ST1-04")
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST2-04")
+        .expect("ST2-04 (Bearmon) in embedded DSL pack")
         .dsl_card("ST1-02")
         .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-095"])
@@ -219,13 +223,14 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
     // Colour anchor on field; seed the real Agumon (BT17-007) ONLY into P0's
     // trash — the union pick must recur it from trash, not hand.
     runner.place_on_field(0, "ST1-04", Some(0));
+    runner.place_on_field(0, "ST2-04", Some(0));
     runner.inject_trash(0, "BT17-007");
     runner.game.enter_main_phase();
 
     let before = snapshot(&runner);
     assert_eq!(
-        before.field[0], 1,
-        "precondition: P0 has only the colour anchor on field"
+        before.field[0], 2,
+        "precondition: P0 has only the two colour anchors on field"
     );
 
     // Play BT17-095 through its REAL Option-play path (pays the cost-2 Option
@@ -297,7 +302,8 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
 /// [Agumon]/[Gabumon] union pick is declined. This test is active and green.
 #[test]
 fn combo1_mega_knight_declining_recursion_still_seats_delay() {
-    // ST1-04 Dracomon colour anchor + ST1-02 Biyomon deck filler (both real).
+    // ST1-04 Dracomon + ST2-04 Bearmon Red/Blue colour anchors (4-19-3: ALL of
+    // BT17-095's colours) + ST1-02 Biyomon deck filler (all real).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
@@ -305,6 +311,8 @@ fn combo1_mega_knight_declining_recursion_still_seats_delay() {
         .expect("BT17-007 (Agumon) in embedded DSL pack")
         .dsl_card("ST1-04")
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST2-04")
+        .expect("ST2-04 (Bearmon) in embedded DSL pack")
         .dsl_card("ST1-02")
         .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-095"])
@@ -317,6 +325,7 @@ fn combo1_mega_knight_declining_recursion_still_seats_delay() {
     // Colour anchor on field; seed an eligible Agumon in trash so the pick is
     // genuinely OPTIONAL (there IS a target to decline), then enter main.
     runner.place_on_field(0, "ST1-04", Some(0));
+    runner.place_on_field(0, "ST2-04", Some(0));
     runner.inject_trash(0, "BT17-007");
     runner.game.enter_main_phase();
 
@@ -343,7 +352,7 @@ fn combo1_mega_knight_declining_recursion_still_seats_delay() {
     drive_first_valid(&mut runner, 10);
     let after = snapshot(&runner);
 
-    // No body played: the Agumon stays in trash, P0's field holds only BT17-095.
+    // No body played: the Agumon stays in trash, no Agumon joins the colour anchors + BT17-095 on P0's field.
     assert_eq!(
         after.trash[0], before.trash[0],
         "declining the optional pick must leave the Agumon in trash"
@@ -475,13 +484,29 @@ fn combo2_mega_knight_delay_dna_digivolves_into_omnimon_from_hand() {
             .any(|c| c.handle() == wargreymon_card),
         "the leaving WarGreymon must be consumed into the merged Omnimon, not sent to trash"
     );
-    // Both hand cards (Omnimon result + L6 partner) left the hand.
+    // Both hand cards (Omnimon result + L6 partner) left the hand, and the DNA
+    // digivolution procedure drew 1 (§8-2-3-3; DCGO `PlayCardClass.PlayCard`
+    // draws on every `isEvolution`, incl. the effect-driven `SetJogress`):
+    // net hand −2 + 1, deck −1, and neither DNA material remains in hand.
     assert_eq!(
         after.hand[0],
-        before.hand[0] - 2,
-        "the Omnimon result and the L6 DNA partner must both leave hand (before={}, after={})",
+        before.hand[0] - 1,
+        "the Omnimon result and the L6 DNA partner must both leave hand, offset by the \
+         §8-2-3-3 DNA-digivolve draw (before={}, after={})",
         before.hand[0],
         after.hand[0],
+    );
+    assert_eq!(
+        after.deck[0],
+        before.deck[0] - 1,
+        "the DNA digivolution draws exactly 1 card (§8-2-3-3)"
+    );
+    assert!(
+        runner.game.players[0].hand.iter().all(|c| {
+            let id = c.card_id(&runner.game.card_data);
+            id != "BT17-078" && id != "BT17-027"
+        }),
+        "neither the Omnimon result nor the L6 DNA partner may remain in hand"
     );
 }
 

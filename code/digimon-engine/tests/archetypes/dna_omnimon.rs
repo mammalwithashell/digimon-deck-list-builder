@@ -232,8 +232,9 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 // Cards: BT17-095 (Option, played from hand → seats itself as a Delay) + an own
 //   Lv.6 [Greymon] (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7
 //   (EX4-060 Omnimon Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon)
-//   in hand + a Red colour anchor (ST1-04 Dracomon) on field for the
-//   Option-play colour requirement.
+//   in hand + Red and Blue colour anchors (ST1-04 Dracomon, ST2-04 Bearmon) on
+//   field for the Option-play colour requirement (4-19-3: a multicolour Option
+//   needs ALL of its colours on your field, not any one of them).
 // Expected outcome (model Combo B): BT17-095's [Main] (Clause A) plays no body
 //   here (no [Agumon]/[Gabumon] is eligible to recur — the optional union pick
 //   declines) and runs its mandatory "Then, place this card in the battle area"
@@ -356,6 +357,8 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
         .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST2-04") // Bearmon — vanilla Blue Lv.3 colour anchor
+        .expect("ST2-04 (Bearmon) in embedded DSL pack")
         // BT17-095 is in HAND so it is played through its real Option-play path.
         .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
@@ -364,9 +367,11 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .start();
     runner.game.turn_count = 1;
 
-    // Red colour anchor on field (satisfies BT17-095's Red+Blue colour
-    // requirement at Option-play time, mirroring omnimon_ace combo 1).
+    // Red + Blue colour anchors on field: BT17-095 is Red+Blue, and 4-19-3
+    // requires ALL of a multicolour Option's colours on your field (DCGO
+    // CardSource.cs `colorsToCheck.Every(...)`), mirroring omnimon_ace combo 1.
     runner.place_on_field(0, "ST1-04", Some(0));
+    runner.place_on_field(0, "ST2-04", Some(0));
     runner.game.enter_main_phase();
 
     // Seat BT17-095 as a Delay through its REAL Option-play [Main] body (Clause A
@@ -416,11 +421,22 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
          Omnimon — it must NOT proceed to the trash"
     );
 
-    // Both hand cards (result + partner) were consumed.
+    // Both hand cards (result + partner) were consumed, and the DNA
+    // digivolution procedure drew 1 (§8-2-3-3 "...draws 1 card, and the DNA
+    // digivolution process is resolved"; DCGO `PlayCardClass.PlayCard`
+    // `if (isEvolution) ... new DrawClass(card.Owner, 1, null).Draw()` covers
+    // the effect-driven `SetJogress` path too). The single card left in hand is
+    // that deck draw (a deck-only ST1-04), not a leftover DNA material.
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
     assert_eq!(
-        runner.game.players[0].hand.len(),
-        0,
-        "the Omnimon result and the DNA partner must both leave the hand"
+        hand_ids,
+        vec!["ST1-04".to_string()],
+        "the Omnimon result and the DNA partner must both leave the hand; only the \
+         §8-2-3-3 DNA-digivolve draw remains"
     );
 }
 
@@ -442,6 +458,8 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
         .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST2-04") // Bearmon — vanilla Blue Lv.3 colour anchor
+        .expect("ST2-04 (Bearmon) in embedded DSL pack")
         // BT17-095 is in HAND so it is played through its real Option-play path.
         .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
@@ -450,8 +468,10 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
         .start();
     runner.game.turn_count = 1;
 
-    // Red colour anchor on field for BT17-095's Option-play colour requirement.
+    // Red + Blue colour anchors on field for BT17-095's Option-play colour
+    // requirement (4-19-3: ALL of a multicolour Option's colours).
     runner.place_on_field(0, "ST1-04", Some(0));
+    runner.place_on_field(0, "ST2-04", Some(0));
     runner.game.enter_main_phase();
 
     // Seat BT17-095 as a Delay through its REAL Option-play [Main] body, arming
@@ -891,11 +911,21 @@ fn combo_e_nokia_cost6_lv6_jump() {
         "WarGreymon must be the top card of the Agumon stack after the [Hand][Main] jump"
     );
 
-    // WarGreymon left the hand.
+    // WarGreymon left the hand; the single card now in hand is the §8-1-3-3
+    // digivolution draw (the draw belongs to the PROCEDURE, so an
+    // effect-initiated digivolve draws like the main-phase action; DCGO
+    // `PlayCardClass.PlayCard` draws on every `isEvolution`) — a deck-only
+    // ST1-04, not the WarGreymon.
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
     assert_eq!(
-        runner.hand_size(0),
-        0,
-        "WarGreymon must leave the hand after digivolving onto the Agumon"
+        hand_ids,
+        vec!["ST1-04".to_string()],
+        "WarGreymon must leave the hand after digivolving onto the Agumon; only the \
+         §8-1-3-3 digivolve draw remains"
     );
 
     // The cost-6 digivolve actually deducted 6 memory — the memory delta proves
