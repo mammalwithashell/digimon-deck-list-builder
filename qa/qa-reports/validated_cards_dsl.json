@@ -11474,17 +11474,17 @@
       "card_name": "KingSukamon",
       "validated_date": "2026-10-01",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 Mutant (EX13)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_031.rs",
+      "test_count": 23,
       "patterns": [
         "C",
         "D"
       ],
-      "notes": "BLOCKED (dsl) \u2014 'change the base name, color and DP of 1 of your opponent's Digimon to [Sukamon], white and 3000 until their turn ends' needs ChangeBaseCardName (Name payload) + ChangeBaseCardColor (Colors payload) on a timed step; engine has both modifiers + payload consult sites, but `add_modifier` only accepts a payload for TreatAsDigimon (open 'Track C modifier payload YAML shape' entry in qa/dsl-vocab-gaps.md). No files written."
+      "notes": "IMPLEMENTED 2026-10-01 (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD resolved). [OP][WD][OD] optional union-zone cost (hand \u222a own Digimon sources, [Chuumon]/[Sukamon] in name; offered even with no opponent Digimon per general_rule 15-7-5) \u2192 mandatory opponent-Digimon pick \u2192 three typed-payload add_modifier steps: ChangeBaseCardName{name: Sukamon}, ChangeBaseCardColor{colors: [white]}, ChangeOriginDP{dp: 3000} (base set; ChangeDp still stacks), expiry end_of_opponents_turn. Assembly -4: three identical Lv.4-or-lower [Sukamon]-name Digimon slots from trash. Inherited [All Turns][OPT] on_any_deletion of another [Sukamon]-named Digimon (either player; last-known synth names, so a Digimon renamed by the main effect counts) \u2192 reveal 3, may play cost<=3 [Chuumon]/[Sukamon] Digimon free, trash rest. No DCGO script."
     },
     "EX13-003": {
       "card_name": "Kyaromon",

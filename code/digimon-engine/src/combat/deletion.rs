@@ -435,6 +435,14 @@ impl Game {
         let source_count = digisources.len();
         let dp_now = self.effective_dp(handle);
         let is_token = perm.top_card().is_token;
+        // Last-known names are the RULES names (synth identity): a Digimon whose
+        // base name was changed (`ChangeBaseCardName`, e.g. EX13-031 KingSukamon
+        // turning it into [Sukamon] until their turn ends) is deleted AS that
+        // name, so "when a Digimon with [Sukamon] in its name is deleted"
+        // observers see it. Without modifiers this is the top card's own names.
+        let names_just_before = perm
+            .synth_identity(&self.card_data, &self.modifiers, handle)
+            .card_names;
         Some(crate::trigger_context::DeletedObjectSnapshot {
             former_controller: handle.player,
             top_card: top_handle,
@@ -448,7 +456,7 @@ impl Game {
             dp_just_before: dp_now,
             level_just_before: data.level,
             cost_just_before: Some(data.play_cost),
-            names_just_before: vec![data.card_name.clone()],
+            names_just_before,
             traits_just_before: data.traits.clone(),
             source_count_just_before: source_count,
             digisources_just_before: digisources,

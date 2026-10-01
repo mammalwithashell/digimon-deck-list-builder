@@ -372,6 +372,8 @@ Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
 
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
+> **RESOLVED for `add_modifier` steps 2026-10-01** — see G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD (`payload: { name | colors | dp | traits }`). Aura-clause `modifier:` payloads beyond `synth_identity` remain open.
+
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
 the deferred Track C identity/metadata modifiers:
 `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
@@ -4439,6 +4441,8 @@ Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
 
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
+> **RESOLVED for `add_modifier` steps 2026-10-01** — see G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD (`payload: { name | colors | dp | traits }`). Aura-clause `modifier:` payloads beyond `synth_identity` remain open.
+
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
 the deferred Track C identity/metadata modifiers:
 `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
@@ -8365,7 +8369,10 @@ pins that the turn scan does not trash such a marker.
 - **Consumer:** EX13-044 Breakdramon "[On Play][When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend…" — the mandatory "Then" lock must run after a decline. Worked around faithfully with `select_effect_choice` [suspend / stop] gates before mandatory `select_any_permanent` picks (same choice set, one extra prompt per pick).
 - **Fix:** thread `continue_on_decline` through `install_select_any_permanent` (mirror the own/opponent installers' `on_decline` tail), or reject the field at validate time for `select_any_permanent`.
 
-## Timed base-name / base-color change on a target (Track C payload on `add_modifier`)  [G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD] — dsl, OPEN 2026-10-01
+## Timed base-name / base-color change on a target (Track C payload on `add_modifier`)  [G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD] — dsl, RESOLVED 2026-10-01
+
+> **RESOLVED 2026-10-01.** `add_modifier` gained a general typed `payload:` (`AddModifierArgs::payload` → `ModifierPayloadSpec` → `CompiledModifierPayload` → engine `ModifierPayload`): exactly one of `name:` (`ChangeBaseCardName` / `CanOnlyDigivolveInto` → `Name { base: true }`), `colors:` (`ChangeBaseCardColor` replace / `AddColor` gain → `Colors`), `dp:` (`ChangeOriginDP` / `ChangeCardDP` → `Dp { base: true }` — a base-DP SET; `ChangeDp` effects still add on top, DCGO `ChangeBaseDPClass` semantics) or `traits:` + `replace_traits` (`ChangeTraits` → `Traits`), with any expiry. Validator enforces one key, modifier compatibility, and requires a payload for `ChangeBaseCardName` / `ChangeBaseCardColor` / `ChangeTraits`. NOTE: the scalar `ChangeBaseDp` suggested below has NO engine consult site (it would silently no-op) — use `ChangeOriginDP` + `payload: { dp }`. Also widened: the deletion snapshot's `names_just_before` now holds the synth (rules) names, and `event_target_name_contains` on a deleted object also matches them, so a Digimon renamed by `ChangeBaseCardName` dies as that name (last-known info). EX13-031 KingSukamon IMPLEMENTED. Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- add_modifier_typed_payload`, `cargo test -p digimon-dsl -- typed_modifier change_base_card_name`, `cards_behavioral -- ex13::ex13_031`. The general "Track C modifier payload YAML shape" entry above is closed for the step path by the same change (the aura `modifier:` path still carries only `synth_identity`).
+
 
 - **Card (BLOCKED):** EX13-031 KingSukamon — "[On Play] [When Digivolving] [On Deletion] By trashing 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards, you may change the base name, color and DP of 1 of your opponent's Digimon to [Sukamon], white and 3000 until their turn ends." (slice "Mutant", EX13 author-set; no DCGO script).
 - **Missing DSL vocabulary:** `add_modifier` accepts a structured payload only for `TreatAsDigimon` (`synth_identity`), so `ChangeBaseCardName` (`ModifierPayload::Name { value, base }`) and `ChangeBaseCardColor` (`ModifierPayload::Colors`) can't be installed on a bound target with an expiry. This is the open "Track C modifier payload YAML shape" item above, now with a printed consumer. (`ChangeBaseDp` is scalar and already expressible as `value: 3000`.)

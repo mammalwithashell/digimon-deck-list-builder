@@ -1712,12 +1712,19 @@ fn eval_event_fields(
             .as_ref()
             .and_then(|trigger| trigger.deleted_object.as_ref())
         {
-            // Deleted object is gone from the field — match its snapshot name.
+            // Deleted object is gone from the field — match its snapshot name:
+            // the printed name, or any last-known rules name captured in
+            // `names_just_before` (synth identity — includes a
+            // `ChangeBaseCardName` overlay live at deletion time).
             let name_match = rctx
                 .game
                 .card_data_for_handle(snapshot.top_card)
                 .map(|data| data.card_name.to_lowercase().contains(&want))
-                .unwrap_or(false);
+                .unwrap_or(false)
+                || snapshot
+                    .names_just_before
+                    .iter()
+                    .any(|name| name.to_lowercase().contains(&want));
             if !name_match {
                 return false;
             }
