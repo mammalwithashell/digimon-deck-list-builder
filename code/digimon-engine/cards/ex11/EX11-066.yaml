@@ -1,0 +1,112 @@
+# EX11-066 Xeno — Tamer, Black, Cost 4. Traits: [LIBERATOR]
+#
+# Printed card text (official Bandai DB bundle data/card_bundles/EX11-066.md —
+# authoritative; matches the card image):
+#   [Start of Your Main Phase] [On Play] By trashing 1 card with [Vemmon] in its
+#     text from your hand, <Draw 1> and gain 1 memory.
+#   [All Turns] When your Digimon are played or digivolve, if any of them have
+#     [Vemmon] in their texts, by suspending this Tamer, reveal the top 2 cards
+#     of your deck. Place all [Vemmon] among them as any of those Digimon's
+#     bottom digivolution cards. Trash the rest.
+#   (Rule) Name: Also treated as [Zenith].
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Black/EX11_066.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Name rule: ChangeCardNamesClass adds "Zenith" → `also_treated_as: [Zenith]`
+#   (the Rule line is absent from cards.json; it is on the official bundle).
+# Shared [On Play]/[SOYMP]: ActivateClassesForSharedEffects(optional: false,
+#   isSkippable: true), additionalActivateCondition = hand has >=1 HasText
+#   ("Vemmon") card; body: SelectHandEffect(maxCount 1, canNoSelect: true, Mode
+#   Discard) → if trashed: Draw 1 + AddMemory 1. → non-optional clause gated by
+#   `count_gte` + `select_hand { optional, cost }` (PASS aborts the tail) +
+#   `trash_from_hand_by_index` + `draw` + `gain_memory`. `in_text_contains`
+#   = DCGO HasText (name + aliases + traits + all text; official Q&A on bundle).
+# [All Turns] (OnEnterFieldAnyone, isOptional: true): CanUseCondition = on
+#   field && (CanTriggerOnPermanentPlay || CanTriggerWhenPermanentDigivolving)
+#   over own battle-area Digimon whose TopCard.HasText("Vemmon");
+#   CanActivateCondition = CanActivateSuspendCostEffect (Tamer unsuspended).
+#   Body: suspend self; if deck >= 1: reveal 2, every card with
+#   EqualsCardName("Vemmon") is collected (exact NAME — not HasText), the rest
+#   trashed; the collected Vemmon are placed as bottom digivolution cards of a
+#   triggering Digimon (player orders them when >1). → `when:
+#   [on_enter_field_anyone, on_digivolve]` (BT21-083 / EX11-065 observer
+#   shape), `optional: true`, `active_when: all_turns + source_is_unsuspended +
+#   event_target_owner you + event_target_kind digimon +
+#   event_target_in_text_contains Vemmon`, `activation_cost: { suspend_self }`
+#   (EX12-066 shape), `reveal_top_deck 2` → two mandatory `choose_from_reveal
+#   { name_is: Vemmon, bottom_source_of: event_target }` (each silently skips
+#   when no Vemmon remains; two picks = "all" since only 2 are revealed, and the
+#   pick order surfaces DCGO's placement-order prompt) → `per_selected` trash
+#   the rest (BT21-097 shape).
+#   NOTE (simultaneous plays): the engine fans the play/digivolve observer out
+#   per permanent, so "any of those Digimon" resolves to the single triggering
+#   Digimon carried in the event context.
+# [Security]: PlaySelfTamerSecurityEffect → `play_from_security`.
+
+card: EX11-066
+name: Xeno
+kind: tamer
+color: [black]
+cost: 4
+traits: [LIBERATOR]
+also_treated_as: [Zenith]
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    summary: "[Start of Your Main Phase][On Play] By trashing 1 [Vemmon]-text card from hand, Draw 1 and gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          in_text_contains: "Vemmon"
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: { in_text_contains: "Vemmon" }
+          prompt: "You may trash 1 card with [Vemmon] in its text from your hand to <Draw 1> and gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_in_text_contains: "Vemmon"
+    summary: "[All Turns] When your [Vemmon]-text Digimon is played/digivolves, suspend this Tamer: reveal top 2, place all [Vemmon] as its bottom sources, trash the rest"
+    process:
+      - activation_cost: { suspend_self: true }
+      - reveal_top_deck: { of: you, count: 2, bind_as: revealed }
+      - choose_from_reveal:
+          of: you
+          filter: { name_is: "Vemmon" }
+          destination:
+            bottom_source_of: { target: event_target }
+          prompt: "Place [Vemmon] as that Digimon's bottom digivolution card"
+      - choose_from_reveal:
+          of: you
+          filter: { name_is: "Vemmon" }
+          destination:
+            bottom_source_of: { target: event_target }
+          prompt: "Place the other [Vemmon] as that Digimon's bottom digivolution card"
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

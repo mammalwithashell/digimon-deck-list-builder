@@ -1,0 +1,136 @@
+# P-244 Unique Emblem: Ragnarok Attainer — Option, Black, Cost 3. Traits: [LIBERATOR]
+#
+# Printed card text (card image + DCGO; the official bundle and cards.json are
+# EMPTY for this card — see "Data issues" in the worker report):
+#   [Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without
+#     paying the cost. Then, place this card in the battle area.
+#   [Your Turn] When effects place [Vemmon] as any of your Digimon's
+#     digivolution cards, <Delay>.
+#     ・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon
+#     card with [Vemmon] in its text in the hand or trash with the cost reduced
+#     by 3.
+#   [Security] Activate this card's [Main] effect.
+#
+#   Timing note: the fandom wiki transcribes the second clause as "[All Turns]";
+#   the card image (JP: 自分のターン) and DCGO (`IsOwnerTurn(card)`) both say
+#   [Your Turn]. Image + DCGO win.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Black/P_244.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# [Main] (OptionSkill, not optional): CanSelectCardCondition =
+#   EqualsCardName("Vemmon") || EqualsCardName("Zenith") (honours
+#   ChangeCardNames aliases, e.g. EX11-066 Xeno "also treated as [Zenith]") and
+#   CanPlayAsNewPermanent(free). hand/trash choice then PlayByEffect (may
+#   decline). Then PlaceDelayOptionCards unconditionally. → `select_union_zone`
+#   (optional, `name_is` — alias-aware) + `play_union_bound_free` +
+#   `place_self_as_delay_option` (BT22-098 / BT23-096 shape).
+# <Delay> (OnAddDigivolutionCards, isOptional: true): CanUseCondition =
+#   CanDeclareOptionDelayEffect (placing turn passed) && IsOwnerTurn &&
+#   CanTriggerOnAddDigivolutionCard(host = own battle-area Digimon, causing
+#   effect non-null, any added card EqualsCardName("Vemmon")). Body: trash self
+#   (cost); on success: SelectPermanent own Digimon with TopCard.HasText
+#   ("Vemmon") (canNoSelect: true); then DigivolveIntoHandOrTrashCard(IsDigimon
+#   && HasText("Vemmon"), cost reduced by 3, requirements respected).
+#   → `kind: delay`, `trigger: on_add_digivolution_cards` (event-gated; the
+#   engine supplies the optional accept/decline (16-16-2), the placing-turn gate
+#   and the trash-self cost), `active_when: your_turn + event_target_owner you
+#   + event_target_kind digimon + event_added_card_any { name_is: Vemmon }`
+#   (on_add_digivolution_cards only fires for effect-driven placement).
+#   Body = BT25-092 hand-or-trash digivolve shape: `select_own_permanent`
+#   (optional, `has_digivolve_candidate`) → `select_union_zone` (optional,
+#   `can_digivolve_onto: target`) → `effect_initiated_digivolve { source,
+#   cost: { reduce: 3 } }`.
+# [Security]: AddActivateMainOptionSecurityEffect → same [Main] body incl.
+#   placement → `scope: inherited`, `when: on_security`.
+
+card: P-244
+name: "Unique Emblem: Ragnarok Attainer"
+kind: option
+color: [black]
+cost: 3
+traits: [LIBERATOR]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] You may play 1 [Vemmon] or [Zenith] from hand or trash free; then place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - name_is: "Vemmon"
+                  - name_is: "Zenith"
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: pick }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_add_digivolution_cards
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_added_card_any: { name_is: "Vemmon" }
+    summary: "[Your Turn] When effects place [Vemmon] as your Digimon's digivolution cards, <Delay>: 1 [Vemmon]-text Digimon may digivolve into a [Vemmon]-text Digimon card in hand or trash, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: "Vemmon"
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand, trash]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - in_text_contains: "Vemmon"
+          prompt: "1 of your Digimon with [Vemmon] in its text may digivolve"
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: "Vemmon"
+              - can_digivolve_onto: target
+          prompt: "Digivolve into a Digimon card with [Vemmon] in its text from your hand or trash, with the cost reduced by 3"
+      - effect_initiated_digivolve:
+          target: target
+          source: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main]: may play 1 [Vemmon]/[Zenith] from hand or trash free; then place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - name_is: "Vemmon"
+                  - name_is: "Zenith"
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: sec_pick }
+      - place_self_as_delay_option: {}

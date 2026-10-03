@@ -1,0 +1,40 @@
+# BT4-111 Jack Raid — Option, Purple, Cost 0.
+#
+# Printed text (official Bandai DB):
+#   [Main] Gain 1 memory for every 10 cards in your trash.
+#   [Security] Gain 2 memory.
+#
+# Official Q&A: the Option goes to the trash only after its effect resolves, so
+# it never counts itself (9 cards in trash → no memory).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT4/Purple/BT4_111.cs
+#   OptionSkill: Owner.AddMemory(Owner.TrashCards.Count / 10)
+#   SecuritySkill: Owner.AddMemory(2)
+
+card: BT4-111
+name: Jack Raid
+kind: option
+color: [purple]
+cost: 0
+traits: []
+
+effects:
+  # [Main] floor(your trash count / 10) memory.
+  - when: main_from_hand
+    summary: "[Main] Gain 1 memory for every 10 cards in your trash"
+    process:
+      - gain_memory:
+          floor_div:
+            - base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: trash
+              delta: 1
+            - 10
+
+  # [Security] (blue security effect) Gain 2 memory.
+  - when: on_security
+    summary: "[Security] Gain 2 memory"
+    process:
+      - gain_memory: 2

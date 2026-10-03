@@ -1,8 +1,10 @@
-# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4. Traits: Vegetation, Iliad, TS.
+# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4.
+# Traits (official DB): Ancient Bird / Iliad / TS + (Rule) Trait: Has [Vegetation] Type.
 # Printed: [On Play][When Digivolving] You may suspend 1 Digimon. Then, if there are 2 or
 #   more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends.
 # Inherited: [Your Turn] All of your Digimon get +1000 DP.
-# Digivolve box: Lv.3 w/[TS] / cost 2 (cards.json evo_costs empty).
+# Digivolve (official DB): standard circle Green Lv.3 / cost 2; alt Lv.3 w/[TS] / cost 2
+# (cards.json evo_costs empty; card_overrides carries the green circle).
 # DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_050.cs
 #   Shared OP/WD: Step1 optional suspend ANY battle-area Digimon (canNoSelect true).
 #   Step2 gate SuspendedDigimon>=2 (both players) AND opp Digimon exists -> MANDATORY
@@ -21,8 +23,11 @@ level: 4
 color: [green]
 cost: 4
 dp: 4000
-traits: [Vegetation, Iliad, TS]
+traits: [Ancient Bird, Iliad, TS, Vegetation]
 alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }
     cost: 2
@@ -33,6 +38,8 @@ effects:
       - select_any_permanent:
           bind_as: suspend_target
           optional: true
+          # DCGO canNoSelect: a PASS continues to the "2+ suspended" check.
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon

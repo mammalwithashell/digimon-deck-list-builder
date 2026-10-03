@@ -1,0 +1,111 @@
+# P-209 Titamon — Digimon, Lv.6, Purple/Green, Cost 11, DP 11000,
+# Shaman/Titan/TS + (Rule) [Demon], Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/P-209.md):
+#   <Alliance>
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, suspend 1 of
+#   your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't
+#   unsuspend until their turn ends.
+#   [All Turns] [Once Per Turn] When your hand is trashed from, you may play 1
+#   level 4 or lower [Demon] or [Titan] trait card from your trash without
+#   paying the cost.
+#   (Rule) Trait: Has [Demon] Type.
+# Digivolution: Purple Lv.5 cost 3 / Green Lv.5 cost 3 (card_overrides.json),
+#   [Digivolve] Lv.5 w/[Demon]/[TS] trait: Cost 3 (alt path below).
+#
+# NOT a reprint of BT25-084 Titamon — different text; authored independently.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_209.cs
+#   - Alt digivolve: Lv.5 && (EqualsTraits("Demon") || HasTSTraits), cost 3.
+#   - AllianceSelfEffect.
+#   - OP / WD: SelectHandEffect discard (canNoSelect true = declinable cost);
+#     only if a card was trashed → mandatory SelectPermanent opp Digimon/Tamer
+#     → suspend; then mandatory SelectPermanent opp Digimon/Tamer →
+#     GainCanNotUnsuspend UntilOpponentTurnEnd. Not OPT.
+#   - OnDiscardHand (own hand, any cause), max 1/turn, isOptional (outer
+#     yes/no) → SelectCard from trash canNoSelect true: IsDigimon && Level<=4
+#     && (Demon || Titan) → play free.
+# Official Q&A: without performing the "by" cost, nothing else happens.
+
+card: P-209
+name: Titamon
+kind: digimon
+level: 6
+color: [purple, green]
+cost: 11
+dp: 11000
+traits: [Shaman, Titan, TS, Demon]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Demon
+            - trait_has: TS
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] By trashing 1 card in your hand, suspend 1 opponent Digimon/Tamer; then 1 of their Digimon/Tamers can't unsuspend until their turn ends"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to suspend 1 of your opponent's Digimon or Tamers"
+      # "By trashing" — only if a card was actually trashed (declined cost or
+      # empty hand → nothing else happens; official Q&A).
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+              - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+              - select_opponent_permanent:
+                  bind_as: suspend_target
+                  filter:
+                    any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+              - suspend: { target: suspend_target }
+              - select_opponent_permanent:
+                  bind_as: lock_target
+                  filter:
+                    any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  prompt: "Choose 1 of your opponent's Digimon or Tamers that can't unsuspend until their turn ends"
+              - add_modifier:
+                  target: lock_target
+                  modifier: CannotUnsuspend
+                  value: 1
+                  expiry: end_of_opponents_turn
+
+  - when: on_discard_hand
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    active_when: { event_discard_player: you }
+    summary: "[All Turns][Once Per Turn] When your hand is trashed from, you may play 1 level 4 or lower [Demon] or [Titan] card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Titan
+          prompt: "You may play 1 level 4 or lower [Demon] or [Titan] card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick }

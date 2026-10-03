@@ -1,0 +1,50 @@
+# EX1-072 Emergency Program Shutdown! — Option, White, Cost 3, no traits.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX1-072.md + card image):
+#   "[Main] Your opponent can't use Option cards until the end of their next
+#   turn."
+#   Security: "[Security] Your opponent can't use Option cards this turn.
+#   Then, add this card to its owner's hand."
+# Official Q&A: an Option's [Security] effect is not "using" an Option card,
+# so the lock does not stop security effects.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX1/White/EX1_072.cs
+#   - OptionSkill: AddEffectToPlayer(CanNotPlayClass(cardSource.Owner ==
+#     enemy && IsOption), EffectDuration.UntilOpponentTurnEnd).
+#   - SecuritySkill: AddEffectToPlayer(CanNotPlayClass(same), UntilEachTurnEnd);
+#     then AddThisCardToHand.
+#
+# ─── Option-use lock ─────────────────────────────────────────────────────────
+# `add_player_modifier { target_player: opponent, modifier:
+# CannotUseOptionCards }` — the player-scoped G-ENGINE-CANNOT-USE-OPTION-CARDS
+# restriction (hand PLAY bit, effect-driven use_option_*, hand Counter-timing
+# Options; Plug-In linking and [Security] effects are not "uses").
+#   [Main]: installed on the user's turn; `end_of_opponents_turn` expires at the
+#   end of the opponent's NEXT turn (DCGO EffectDuration.UntilOpponentTurnEnd).
+#   [Security]: installed on the attacker's (opponent's) turn; `end_of_turn`
+#   (DCGO UntilEachTurnEnd).
+
+card: EX1-072
+name: Emergency Program Shutdown!
+kind: option
+color: [white]
+cost: 3
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Your opponent can't use Option cards until the end of their next turn"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotUseOptionCards
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Your opponent can't use Option cards this turn. Then, add this card to its owner's hand"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotUseOptionCards
+          expiry: end_of_turn
+      - add_this_option_to_hand: {}

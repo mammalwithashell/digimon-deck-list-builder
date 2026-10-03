@@ -1,0 +1,110 @@
+# EX10-070 God Grade Unleashed — Option, Black, Cost 2, Traits: Appmon, Leviathan.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX10-070.md + card image):
+#   "While you have a Digimon or Tamer with the [Appmon] trait on the field,
+#   you can ignore this card's color requirements.
+#   [Main] <Draw 1>. Then, place this card in the battle area.
+#   [All Turns] When effects trash any of your Digimon's link cards, <Delay>.
+#   ・You may link 1 Digimon card with the [Appmon] trait from your trash to 1
+#   of those Digimon without paying the cost."
+#   Security: "[Security] Place this card in the battle area."
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX10/Black/EX10_070.cs
+#   - IgnoreColorConditionClass gated on own Appmon Digimon/Tamer.
+#   - OptionSkill: Draw 1 → PlaceDelayOptionCards (unconditional).
+#   - OnLinkCardDiscarded (isOptional: true): CanDeclareOptionDelayEffect &&
+#     CanTriggerOnTrashLinkedCard(host = own battle-area Digimon, cardEffect
+#     != null [trashed BY AN EFFECT], source != null); remembers the host
+#     (`trashedFrom`). Body: trash self; then optional SelectCardEffect from
+#     trash (HasAppmonTraits && CanLinkToTargetPermanent(trashedFrom)) →
+#     SelectPermanentEffect restricted to `permanent == trashedFrom` →
+#     AddLinkCard. (DCGO's outer gate reads HasMatchConditionOwnersHand — a
+#     DCGO typo; the selection root is Trash, matching the printed text.)
+#   - SecuritySkill: PlaceDelayOptionCards.
+#
+# ─── [All Turns] link-card-trashed <Delay> ───────────────────────────────────
+# `kind: delay, trigger: on_link_card_trashed` (EffectTiming::OnLinkedCardTrashed,
+# DelayTrigger::OnEvent — optional activation per 16-16-2, not on the placing
+# turn per 16-16-3). Gates (DCGO CanTriggerOnTrashLinkedCard):
+#   - event_host_is_own_digimon: "your Digimon's" — host is an own Digimon
+#     still in the battle area;
+#   - event_is_effect_initiated: "When EFFECTS trash" (a host-leave cascade or
+#     rule processing never dispatches this context).
+# Body: optional link of 1 [Appmon] Digimon card from trash, free, restricted
+# to "those Digimon" via `host_filter: { is_event_host: true }` (DCGO
+# `permanent == trashedFrom`). G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+
+card: EX10-070
+name: God Grade Unleashed
+kind: option
+color: [black]
+cost: 2
+traits: [Appmon, Leviathan]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: Appmon
+      - all_of:
+          - kind: tamer
+          - trait_has: Appmon
+
+effects:
+  # Clause 1 — field-side color bypass (BT24-097 / BT21-097 idiom).
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          - all_of:
+              - kind: tamer
+              - trait_has: Appmon
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "EX10-070" }
+    summary: "While you have an [Appmon] Digimon or Tamer, ignore this card's color requirements"
+
+  # Clause 2 — [Main] <Draw 1>. Then, place this card in the battle area.
+  - when: main_from_hand
+    summary: "[Main] <Draw 1>. Then, place this card in the battle area"
+    process:
+      - draw: { of: you, count: 1 }
+      - place_self_as_delay_option: {}
+
+  # Clause 3 — [All Turns] When effects trash any of your Digimon's link
+  # cards, <Delay>: you may link 1 [Appmon] Digimon card from your trash to
+  # 1 of those Digimon without paying the cost.
+  - kind: delay
+    trigger: on_link_card_trashed
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_host_is_own_digimon: true
+        - event_is_effect_initiated: true
+    summary: "[All Turns] When effects trash your Digimon's link cards, <Delay>: you may link 1 [Appmon] Digimon card from your trash to 1 of those Digimon free"
+    process:
+      - link_cards:
+          from: [trash]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          to: own_digimon
+          host_filter: { is_event_host: true }
+          count: { up_to: 1 }
+          cost: free
+          prompt: "Link 1 [Appmon] trait Digimon card from your trash to 1 of those Digimon without paying the cost"
+
+  # Clause 4 — [Security] Place this card in the battle area.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

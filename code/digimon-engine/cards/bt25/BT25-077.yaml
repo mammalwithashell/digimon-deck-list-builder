@@ -34,7 +34,8 @@
 # | Alt-source Lv.5 [TS] / Cost 3 ignore                       | IMPLEMENTED (alt_paths) |
 # | Cost -5 if total Digimon levels >= 12                      | IMPLEMENTED (cost_reduction + level_sum_gte) |
 # | [OP][WD] may play 1 [TS] <=6000 DP Digimon from hand free  | IMPLEMENTED (select_hand + play_from_hand_free) |
-# | [All Turns][OPT] suspend 1; if by effect, delete opp lowest DP | IMPLEMENTED (optional suspend + effect-gated lowest-DP delete) |
+# | [All Turns][OPT] suspend 1; if by effect, delete opp lowest DP | IMPLEMENTED (optional suspend + mandatory effect-gated lowest-DP delete) |
+# |   OPT refund when not by effect and nothing suspended       | IMPLEMENTED (refund_opt; DCGO RemoveUse) |
 
 card: BT25-077
 name: Bacchusmon
@@ -88,9 +89,11 @@ effects:
           prompt: "Play 1 [TS] Digimon with 6000 DP or less from your hand (free)"
       - play_from_hand_free: { of: you, hand_index: pick }
 
+  # DCGO: optional:false + isSkippable(!IsByEffect). Only the suspend is
+  # "you may" (canNoSelect); the by-effect lowest-DP delete is mandatory.
+  # RemoveUse() when NOT by effect AND nothing was suspended → refund_opt.
   - when: [on_enter_field_anyone, on_digivolve]
     once_per_turn: true
-    optional: true
     active_when:
       all_of:
         - all_turns: true
@@ -100,6 +103,9 @@ effects:
       - select_any_permanent:
           bind_as: to_suspend
           optional: true
+          # DCGO canNoSelect: a PASS continues the coroutine (the by-effect
+          # delete and the RemoveUse refund still run).
+          continue_on_decline: true
           filter: { kind: digimon }
           prompt: "You may suspend 1 Digimon"
       - suspend: { target: to_suspend }
@@ -117,3 +123,10 @@ effects:
                           scope: opponent
                 prompt: "Delete 1 of your opponent's lowest DP Digimon"
             - delete_permanent: { target: victim }
+      - if:
+          condition:
+            all_of:
+              - { not: { binding_present: to_suspend } }
+              - { not: { event_is_effect_initiated: true } }
+          then:
+            - refund_opt: {}

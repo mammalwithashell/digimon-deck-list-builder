@@ -1,6 +1,7 @@
 # BT25-087 Thomas H. Norstein — Tamer, Blue, Cost 4. Traits: DATA SQUAD.
 #
-# Printed card text (data/cards.json, confirmed vs DCGO BT25/Blue/BT25_087.cs):
+# Printed card text (official Bandai DB bundle data/card_bundles/BT25-087.md,
+# confirmed vs DCGO BT25/Blue/BT25_087.cs):
 #   [Start of Your Turn] If you have 2 or less memory, set it to 3.
 #   [All Turns] When effects add cards to your opponent's hand, by suspending
 #     this Tamer, you may place the top 2 cards of your deck face down under
@@ -19,6 +20,23 @@
 #     using the digivolve interactive cost-reduction path closed in #644
 #     (ST23-03/11 sisters). The FD-trash pay_cost parks and the engine defers
 #     the −1 credit to the parked Tamer-pick's success continuation.
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# OnStartTurn: SetMemoryTo3TamerEffect → start_of_your_turn + memory_lte 2.
+# OnAddHand: CanTriggerWhenAddHand(player == Enemy, cardEffect != null) → the
+#   effect-only gate (a rule draw never fires OnAddToHand in this engine) and
+#   the opponent-hand gate; CanActivateSuspendCostEffect → activation_cost
+#   suspend_self (already-suspended → unpayable, no prompt); NOT once-per-turn.
+#   Placement: AddDigivolutionCardsBottom(top 2, face down) → two
+#   place_as_bottom_source deck_top face_down (Q&A: placed on the bottom).
+#   DCGO's 3-way prompt also offers "suspend only, place nothing" — a strictly
+#   dominated line (pure self-cost, no gain) not exposed here; the printed
+#   "by suspending …, you may place" is a single may-with-cost.
+# BeforePayCost: OPT (hash BT25_087_YT), IsOwnerTurn, ANY own Digimon would
+#   digivolve into an IsDigimon && DATA SQUAD card; requires a Tamer with a
+#   face-down source; the Tamer pick is canNoSelect → optional: true; trash the
+#   bottom FD of the picked Tamer → -1.
+# SecuritySkill: PlaySelfTamerSecurityEffect → play_from_security.
 
 card: BT25-087
 name: "Thomas H. Norstein"
@@ -59,8 +77,12 @@ effects:
   # ─── [Your Turn][OPT] When any ally would digivolve into a [DATA SQUAD]
   #     Digimon card, by trashing a bottom FD card under a Tamer, reduce -1 ─────
   - kind: cost_reduction
+    reduction_timing: before_pay_cost
     active_when: { your_turn: true }
-    when_any_ally_digivolves_into: { trait_has: "DATA SQUAD" }
+    when_any_ally_digivolves_into:
+      all_of:
+        - kind: digimon
+        - trait_has: "DATA SQUAD"
     optional: true
     once_per_turn: true
     amount: 1

@@ -1,0 +1,84 @@
+# BT19-001 Pickmons — Digi-Egg, Lv.2, Red. Traits: Minor, Xros Heart.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT19-001.md):
+#   Inherited Effect:
+#   [When Attacking] [Once Per Turn] By placing 1 Digimon card with the
+#   [Xros Heart] or [Blue Flare] trait from your hand under any of your
+#   Tamers, ＜Draw 1＞.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Red/BT19_001.cs
+#   OnAllyAttack, maxCount 1, inherited. CanActivateCondition: hand holds a
+#   Digimon card with [Xros Heart]/[Blue Flare] AND an own Tamer exists.
+#   SelectHandEffect canNoSelect:true → SelectPermanentEffect (own Tamer)
+#   canNoSelect:true → AddDigivolutionCardsBottom → Draw 1 (draw only if
+#   the placement happened). DCGO flags the ActivateClass optional, so the
+#   clause is `optional: true`: declining does not spend the [Once Per Turn]
+#   use. The leading declinable hand pick is itself the decline point, so no
+#   extra outer accept prompt is installed.
+
+card: BT19-001
+name: Pickmons
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Minor, Xros Heart]
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    # DCGO SetUpActivateClass(..., isOptional: true): declining the
+    # activation must NOT consume the [Once Per Turn] use.
+    optional: true
+    condition:
+      all_of:
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - any_of:
+                    - trait_has: "Xros Heart"
+                    - trait_has: "Blue Flare"
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    summary: "Inherited [When Attacking][Once Per Turn] By placing 1 [Xros Heart]/[Blue Flare] Digimon card from your hand under any of your Tamers, <Draw 1>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: "Blue Flare"
+          prompt: "By placing 1 [Xros Heart]/[Blue Flare] Digimon card from your hand under any of your Tamers, <Draw 1>"
+      - if:
+          condition: { binding_present: placed_pick }
+          then:
+            - select_own_permanent:
+                bind_as: dest_tamer
+                optional: true
+                filter: { kind: tamer }
+                prompt: "Choose 1 of your Tamers to place the card under"
+            - if:
+                condition: { binding_present: dest_tamer }
+                then:
+                  - place_selected_card_under_tamer:
+                      card: placed_pick
+                      tamer: dest_tamer
+                  - draw: { of: you, count: 1 }
+      # Declining the placement = declining the optional activation (DCGO
+      # isOptional:true ActivateClass): the [Once Per Turn] use is NOT
+      # consumed (G-OPT-REFUND-ON-DECLINE idiom, BT25-060).
+      - if:
+          condition: { binding_absent: placed_pick }
+          then:
+            - refund_opt: {}

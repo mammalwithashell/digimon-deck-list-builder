@@ -1,0 +1,124 @@
+card: LM-060
+name: "Shadow Training"
+kind: option
+color: [green, purple]
+cost: 2
+
+# "While you don't have [Shadow Training] in the battle area, you can ignore
+# this card's color requirements."
+#
+# DCGO LM_060 `IgnoreColorConditionClass`: active while NO permanent in your
+# battle area has a top card NAMED [Shadow Training] (`TopCard.EqualsCardName`)
+# — a name check, so any printing named [Shadow Training] disables the bypass.
+# `use_requirement` is consulted by the Option action mask and execution path
+# before normal color matching; `no_permanent` scans your battle area only.
+use_requirement:
+  no_permanent:
+    of: you
+    name_is: "Shadow Training"
+
+effects:
+  # [Main] Reveal the top 2 cards of your deck. Add 1 green or purple card among
+  # them to the hand. Return the rest to the bottom of deck. Then, place this
+  # card in the battle area.
+  #
+  # DCGO `SimplifiedRevealDeckTopCardsAndSelect` — 1 card of ANY kind that has
+  # green or purple (multicolor cards qualify), remainder to deck bottom, then
+  # `PlaceDelayOptionCards`. The option pipeline parks this card as a Delay
+  # permanent after resolving a main_from_hand body when a `kind: delay`
+  # clause is present.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 green or purple card; place rest bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            any_of:
+              - color_is: green
+              - color_is: purple
+          prompt: "Add 1 green or purple card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # [Main] <Delay> (By trashing this card after the placing turn, activate the
+  # effect below.)
+  # ・1 of your Digimon may digivolve into a green or purple Digimon card in your
+  # hand for its digivolution cost. When it would digivolve by this effect,
+  # reduce the cost by 2.
+  #
+  # `trigger: delayed` — player-visible [Main]-phase activation (PUPPETS-G009).
+  # DCGO: `SelectPermanentEffect(canNoSelect: true)` over your Digimon that
+  # have a legal green/purple Digimon result card in hand (`CanPlayCardTargetFrame`)
+  # → `has_digivolve_candidate`; then `DigivolveIntoHandOrTrashCard(isHand,
+  # payCost, reduceCost 2)` whose hand pick is `canNoSelect: isOptional`
+  # (default true) and filtered by `CanPlayCardTargetFrame` →
+  # `can_digivolve_onto: target`.
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a green or purple Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - color_is: green
+                          - color_is: purple
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto: target
+              - any_of:
+                  - color_is: green
+                  - color_is: purple
+          prompt: "Digivolve into a green or purple Digimon card in your hand with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # Security Effect [Security] Reveal the top 2 cards of your deck. Add 1 green
+  # or purple card among them to the hand. Return the rest to the bottom of
+  # deck. Then, place this card in the battle area.
+  # DCGO `AddActivateMainOptionSecurityEffect` runs the [Main] body, including
+  # `PlaceDelayOptionCards` → `place_self_as_delay_option`.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Reveal top 2; add 1 green or purple card; bottom rest; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: sec_picked
+          optional: false
+          filter:
+            any_of:
+              - color_is: green
+              - color_is: purple
+          prompt: "Add 1 green or purple card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: sec_picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
