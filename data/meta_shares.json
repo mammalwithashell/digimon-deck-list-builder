@@ -1,0 +1,38 @@
+{
+  "_comment": "Hand-maintained archetype meta-share snapshots, one per format, transcribed from DigiLab's public format retrospectives (digilab.cards/blog). Consumed by code/tools/meta_coverage.py to weight the card-level coverage report by the real field share instead of by however many decklists our scrapers happened to collect. `library_archetypes` maps each DigiLab deck name onto the archetype keys in data/deck_library.json (a family maps onto several). Shares are percentages of tournament entries. Only shares the article prints explicitly are recorded; a deck whose share was not printed is omitted rather than guessed, and lands in the 'other' bucket weighted by sample counts. Subset rows (e.g. DATA SQUAD Ravemon inside the DATA SQUAD family, Dantemon inside Appmon) are NOT listed separately so no entry is counted twice.",
+  "formats": {
+    "BT26": {
+      "set_name": "BT26",
+      "start": "2026-09-04",
+      "end": null,
+      "source_url": "https://digilab.cards/blog/bt26-retrospective",
+      "source_window": "2026-09-04..2026-10-01",
+      "transcribed_at": "2026-10-03",
+      "field": {
+        "tournaments": 814,
+        "players": 3721,
+        "entries": 8186,
+        "matches": 6366
+      },
+      "archetypes": [
+        {"name": "Jupitermon", "share_pct": 10.5, "library_archetypes": ["TS Jupitermon"], "note": "769 entries"},
+        {"name": "Glowing Dawn", "share_pct": 8.1, "library_archetypes": ["Glowing Dawn"]},
+        {"name": "DATA SQUAD (family)", "share_pct": 7.5, "library_archetypes": ["Data Squad", "ShineGreymon"], "note": "includes DATA SQUAD Ravemon at 3.5%; the library's 'ShineGreymon' lists are DATA SQUAD ShineGreymon (ST24 + Marcus Damon)"},
+        {"name": "Toho Braves", "share_pct": 6.8, "library_archetypes": ["Toho Braves"]},
+        {"name": "Titans (family)", "share_pct": 6.4, "library_archetypes": ["Titans", "TS Titans"]},
+        {"name": "Chronomon", "share_pct": 5.7, "library_archetypes": ["Chronomon"], "note": "new in BT26"},
+        {"name": "TS Plutomon", "share_pct": 5.5, "library_archetypes": ["Plutomon"], "note": "new in BT26"},
+        {"name": "TS Mervamon", "share_pct": 4.8, "library_archetypes": ["TS Mervamon"], "note": "new in BT26"},
+        {"name": "Appmon (family)", "share_pct": 4.3, "library_archetypes": ["Apps Dantemon", "Apps Reboot", "Hero Appmon"], "note": "includes Dantemon at 2.5%"},
+        {"name": "Beelstarmon (3M)", "share_pct": 4.25, "library_archetypes": ["Three Musketeers"], "note": "derived: 348 entries / 8186 field entries; the article prints entries, not a share"},
+        {"name": "Saiyu Warriors", "share_pct": 1.8, "library_archetypes": ["Saiyu Warriors"]},
+        {"name": "Vegetation Ceresmon", "share_pct": 1.4, "library_archetypes": ["TS Ceresmon"]}
+      ]
+    }
+  },
+  "calendar": [
+    {"format": "BT25", "start": "2026-05-22", "end": "2026-07-02", "source_url": "https://digilab.cards/blog/bt25-retrospective"},
+    {"format": "EX12", "start": "2026-07-03", "end": "2026-09-03"},
+    {"format": "BT26", "start": "2026-09-04", "end": null, "source_url": "https://digilab.cards/blog/bt26-retrospective"}
+  ]
+}

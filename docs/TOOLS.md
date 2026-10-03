@@ -532,6 +532,29 @@ Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no
 
 ---
 
+### 5.7 Meta Coverage
+
+**Module:** `code/tools/meta_coverage.py` (standard library only; template `code/tools/meta_coverage_dashboard.html`)
+
+Answers "how much of the live meta can the engine play?" by joining tournament decklists (`data/deck_library.json`, inside the current format's window) against implementation status: **implemented** (a YAML spec under `code/digimon-engine/cards/`, the same set `digimon-engine-cli pool` prints), **tested** (referenced by a Rust test and not PARTIAL/BLOCKED in `validated_cards_dsl.json`) and **DCGO-verified** (every clause confirmed in the exam ledger, via `tools.clause_coverage.exam_binding.bind`). Lists are weighted so each archetype carries its DigiLab field share from `data/meta_shares.json` (transcribed from DigiLab's format retrospectives).
+
+```bash
+PYTHONPATH=code python -m tools.meta_coverage                  # current format, weighted to DigiLab shares
+PYTHONPATH=code python -m tools.meta_coverage --trend --html   # + weekly backfill (needs full git history) + dashboard
+PYTHONPATH=code python -m tools.meta_coverage --since 2026-07-03 --until 2026-09-03   # any window, equal weights
+```
+
+| Output (`qa/qa-reports/meta-coverage/`) | Contents |
+|---|---|
+| `latest.md` (committed) | Headline, launch-plan gates, per-set and per-archetype readiness, `implement_next` and `exam_next` queues |
+| `history.jsonl` (committed) | One headline row per run (repeat measurements skipped), so the figures roll |
+| `latest.json` (git-ignored) | Full report, including every meta card's status |
+| `dashboard.html` (git-ignored, `--html`) | Self-contained dashboard; `--artifact-out PATH` writes the body-only page for publishing as a claude.ai Artifact |
+
+`implement_next` is ordered by fractional unlock value (each unplayable list spreads its weight over its remaining missing cards), so it makes the most field share fully playable soonest. **Trainable** mirrors the RL deck pool's archetype gate (`gauntlet._load_fully_implemented_archetypes`). The hand-maintained `launch_plan.json` in the same folder defines milestone gates as dotted paths into `latest.json`; every run re-scores them. When a new format starts, add its shares to `data/meta_shares.json` and refresh the library with `meta_loader.py --scrape-dcg-nexus`.
+
+---
+
 ## 6. Model Export & Build
 
 ### 6.1 ONNX Export
