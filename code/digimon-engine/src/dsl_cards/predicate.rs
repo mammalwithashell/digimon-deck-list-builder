@@ -3221,8 +3221,17 @@ fn permanent_has_digivolve_candidate(
             };
             for card in cards {
                 let h = card.handle();
+                // Full predicate eval (not the bare `eval_card_fields` leaf
+                // path) so combinator filters — e.g. "a red OR blue Digimon
+                // card" (`all_of` + `any_of`) — are honoured. Same fix as the
+                // `source_count` leaf. G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER.
                 if let Some(filter) = &spec.filter {
-                    if !eval_card_fields(filter, rctx, h, false, None, bindings) {
+                    if !eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(h),
+                        bindings,
+                    ) {
                         continue;
                     }
                 }

@@ -720,6 +720,12 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnLoseSecurity => Effect::on_lose_security(card),
         EffectTiming::OnDiscardSecurity => Effect::on_discard_security(card),
         EffectTiming::OnPlaceSecurity => Effect::on_place_security(card),
+        // A DSL `[Counter]` clause is a Counter-window ability: the Counter
+        // window (`try_enter_counter`), the hand-Option scan and the mask all
+        // require `Effect.counter` alongside the `CounterEffect` timing.
+        // Without the flag no DSL field [Counter] ability was ever offered.
+        // G-ENGINE-DSL-FIELD-COUNTER-WINDOW.
+        EffectTiming::CounterEffect => EffectBuilder::new(card, EffectTiming::CounterEffect).counter(),
         other => EffectBuilder::new(card, other),
     }
 }
