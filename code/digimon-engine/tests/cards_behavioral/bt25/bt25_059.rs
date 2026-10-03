@@ -201,3 +201,29 @@ fn bt25_059_on_suspend_debuffs_opponent_digimon() {
         "on_suspend clause reduces an opponent Digimon's DP (before={opp_dp_before}, after={opp_dp_after})"
     );
 }
+
+// ─── Cost reduction: 2+ suspended Digimon (either player) → -5 ───────────────
+
+/// Positive: two suspended OPPONENT Digimon satisfy "if there are 2 or more
+/// suspended Digimon" (DCGO counts both players) → play cost 12 - 5 = 7.
+#[test]
+fn bt25_059_cost_reduced_with_two_suspended_opponent_digimon() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    let a = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    let b = runner.place_on_field(1, "OPP-DIGI2", Some(0));
+    runner.game.suspend(a);
+    runner.game.suspend(b);
+    runner.play(0, 0).expect("play Ceresmon");
+    assert_eq!(runner.memory(), 3, "2 suspended Digimon: paid 7 (12 - 5) from 10");
+}
+
+/// Negative: only one suspended Digimon → full cost 12.
+#[test]
+fn bt25_059_cost_not_reduced_with_one_suspended_digimon() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    let a = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    runner.place_on_field(1, "OPP-DIGI2", Some(0));
+    runner.game.suspend(a);
+    runner.play(0, 0).expect("play Ceresmon");
+    assert_eq!(runner.memory(), -2, "1 suspended Digimon: full cost 12 paid from 10");
+}

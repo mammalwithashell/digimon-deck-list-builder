@@ -1460,6 +1460,15 @@ Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](..
 
 ## G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED — trailing `if` step not executed after a parked selection resumes (2026-06-06)
 
+**RESOLVED 2026-10-03 — misdiagnosis, no engine change.** The trailing `if` step does
+resume. BT25-050's `count_gte` filter had no `owner`, and `count_gte` defaults to
+`owner: you`; the failing test suspended the OPPONENT's Digimon, so the controller-only
+count never reached 2. The gate is board-wide (DCGO counts both players), so the YAML
+now sets `owner: any` and the formerly-ignored lock test passes. BT25-059 Ceresmon's
+cost-reduction gate had the same default bug and was fixed alongside (it also lacked
+`reduction_timing: before_pay_cost` + `when_playing_this: true`, so the reduction never
+applied — now covered by behavioral tests). See qa/resolved-gaps.md.
+
 - **Card(s):** BT25-050 Kiwimon (orphan-b slice). Printed: "[On Play][When Digivolving] You may suspend 1 Digimon. Then, **if there are 2 or more suspended Digimon**, 1 of your opponent's Digimon can't unsuspend until their turn ends."
 - **What's broken:** when a DSL clause's `process` is `[ select_* (interactive), <mutation>, if { condition } { then: [...] } ]`, the trailing `if` step is **not executed** after the interactive selection parks-and-resumes. The process completes (`pending_selection` returns to `None`) without ever evaluating/entering the conditional block that follows the selection.
 - **Proof (tests/cards_behavioral/bt25/bt25_050.rs):** with `select_any_permanent` (suspend) followed by `if { count_gte suspended >= 2 } { select_opponent_permanent + add_modifier CannotUnsuspend }`, the lock select never installs (`pending=None` immediately after the suspend action; no CannotUnsuspend applied) even when 3 Digimon are suspended. Replacing the `if { ... }` wrapper with an **unconditional** `select_opponent_permanent + add_modifier` lock fires correctly (`pending=Some(OppField)`, lock applied). So the trailing UNCONDITIONAL step resumes fine; only the trailing CONDITIONAL (`if`) step is skipped on resume. (Contrast: BT25-058 Callismon, whose post-suspend lock is unconditional, works today.)

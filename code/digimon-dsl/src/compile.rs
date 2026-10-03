@@ -1422,6 +1422,15 @@ fn compile_predicate(
             )),
             n: compile_dp_constraint(&c.n, &format!("{prefix}.count_gte.n"), card_id, errors),
         }),
+        level_sum_gte: p.level_sum_gte.as_ref().map(|c| CompiledCountAggregate {
+            filter: Box::new(compile_predicate(
+                &c.filter,
+                &format!("{prefix}.level_sum_gte.filter"),
+                card_id,
+                errors,
+            )),
+            n: compile_dp_constraint(&c.n, &format!("{prefix}.level_sum_gte.n"), card_id, errors),
+        }),
         any_permanent: p.any_permanent.as_ref().map(|e| {
             Box::new(CompiledExistential {
                 of: compile_player_ref(e.of),

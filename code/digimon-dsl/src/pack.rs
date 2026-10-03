@@ -430,7 +430,11 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     if let Some(distinct) = &predicate.distinct_named_count_gte {
         collect_predicate_raw_rust_fns(&distinct.filter, names);
     }
-    for aggregate in [&predicate.count_lte, &predicate.count_gte]
+    for aggregate in [
+        &predicate.count_lte,
+        &predicate.count_gte,
+        &predicate.level_sum_gte,
+    ]
         .into_iter()
         .flatten()
     {

@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-09-21
+Last updated: 2026-10-03
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,16 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## No board-wide level-sum predicate (G-DSL-BOARD-LEVEL-SUM) — RESOLVED 2026-10-03
+- **Discovered in:** BT25-077 Bacchusmon — "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5." DCGO `BT25_077.cs` sums `permanent.Level` over every battle-area Digimon of BOTH players.
+- **Resolution:** predicate leaf `level_sum_gte: { filter, n }` (`PredicateSpec` / `CompiledPredicate`, compiled + validated like `count_gte`). The engine (`dsl_cards/predicate.rs::level_sum_matching`) sums `Permanent::level` over battle-area permanents matching `filter` (owner defaults to `you`; `owner: any` for both players; level-less permanents contribute 0). Subject-independent, so it works in `cost_reduction` `condition:` (subject `None`). BT25-077 also gained its second standard digivolve circle (Green Lv.5 / 4, official DB).
+- **Coverage:** `tests/cards_behavioral/bt25/bt25_077.rs` (`*_cost_reduced_with_twelve_levels_across_both_players`, `*_cost_not_reduced_below_twelve_levels`, `*_cost_reduced_by_opponent_levels_alone`).
+
+## Trailing `if` after a parked selection "not resumed" (G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED) — RESOLVED 2026-10-03 (misdiagnosis)
+- **Discovered in:** BT25-050 Kiwimon ("You may suspend 1 Digimon. Then, if there are 2 or more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends.").
+- **Root cause:** not an engine bug. `count_gte` defaults its filter owner to `you`; the card's gate is board-wide (DCGO counts both players) and the test suspended the opponent's Digimon, so the controller-only count stayed below 2 and the `if` correctly skipped.
+- **Resolution:** BT25-050's gate filter sets `owner: any`; the formerly-ignored lock test passes un-ignored. The same default bit BT25-059 Ceresmon's "2 or more suspended Digimon" cost reduction, which additionally lacked `reduction_timing: before_pay_cost` + `when_playing_this: true` (so it never applied); both fixed with new behavioral tests (`bt25_059_cost_reduced_with_two_suspended_opponent_digimon`, `bt25_059_cost_not_reduced_with_one_suspended_digimon`).
 
 ## `select_effect_choice` had no per-branch legality — a branch that could do nothing was still offered, and a one-legal-branch choice still prompted (G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY) — RESOLVED 2026-10-01
 - **Discovered in:** BT13-112 Omnimon ("You may delete 1 of your opponent's Digimon, or play … from the digivolution cards of your Digimon in the breeding area"). DCGO `BT13_112.cs` computes `canSelectDelete` / `canSelectPlay`, prompts only when both hold, and otherwise `SetBool(onlyLegalBranch)` — no prompt.

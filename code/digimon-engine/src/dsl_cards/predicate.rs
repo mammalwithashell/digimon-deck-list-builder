@@ -862,6 +862,12 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(agg) = &pred.level_sum_gte {
+        let floor = eval_int_constraint_read(&agg.n, rctx, None, bindings).max(0) as u32;
+        if level_sum_matching(agg, rctx, bindings) < floor {
+            return false;
+        }
+    }
 
     // `has_face_down_source` is a permanent-subject-only leaf: it reads a
     // permanent's `card_sources` stack. Only `Permanent` / `BreedingPermanent`
@@ -1239,6 +1245,46 @@ fn face_up_security_count(rctx: &EffectReadContext<'_>, player_id: PlayerId) -> 
         .iter()
         .filter(|card| player.face_up_security.contains(&card.card_index))
         .count()
+}
+
+/// Summed level of every battle-area permanent matching `aggregate.filter`
+/// (owner defaults to `you`, like `count_matching`). Level-less permanents
+/// (Tamers, field Options) contribute 0. Only the battle area holds "Digimon
+/// on the field", so a non-battle-area `zone` contributes nothing. Backs the
+/// `level_sum_gte` predicate (BT25-077 Bacchusmon). G-DSL-BOARD-LEVEL-SUM.
+fn level_sum_matching(
+    aggregate: &CompiledCountAggregate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> u32 {
+    let filter = aggregate.filter.as_ref();
+    if !filter.zone.is_empty() && !filter.zone.contains(&CompiledZone::BattleArea) {
+        return 0;
+    }
+    let owners = existential_players(filter.owner.unwrap_or(CompiledPlayerRef::You), rctx);
+    let mut subject_filter = filter.clone();
+    subject_filter.zone.clear();
+    subject_filter.owner = None;
+
+    let mut sum = 0u32;
+    for owner in owners {
+        let player = rctx.game.player(owner);
+        for (index, perm) in player.battle_area.iter().enumerate() {
+            let handle = PermanentHandle {
+                player: owner,
+                index: index as u8,
+            };
+            if eval_predicate_with_bindings(
+                &subject_filter,
+                rctx,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
+                sum += perm.level(rctx.card_data()).map(u32::from).unwrap_or(0);
+            }
+        }
+    }
+    sum
 }
 
 fn count_matching(

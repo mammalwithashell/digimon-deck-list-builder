@@ -67,14 +67,16 @@ alt_paths:
 
 effects:
   - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
     amount: 5
     condition:
       count_gte:
         filter:
-          all_of:
-            - zone: [battle_area]
-            - kind: digimon
-            - is_suspended: true
+          owner: any
+          zone: [battle_area]
+          kind: digimon
+          is_suspended: true
         n: 2
     summary: "When played, if there are 2 or more suspended Digimon, reduce cost by 5"
 

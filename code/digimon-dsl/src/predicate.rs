@@ -904,6 +904,15 @@ pub struct PredicateSpec {
     pub count_lte: Option<CountAggregate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub count_gte: Option<CountAggregate>,
+    /// Board stat aggregate: the summed level of every permanent matching
+    /// `filter` (zone defaults to the battle area, owner to `you`; use
+    /// `owner: any` for both players) is `>= n`. Permanents without a level
+    /// (Tamers, Options) contribute 0. YAML:
+    /// `level_sum_gte: { filter: { owner: any, kind: digimon }, n: 12 }`.
+    /// BT25-077 Bacchusmon: "if there are 12 or more levels' total worth of
+    /// Digimon". G-DSL-BOARD-LEVEL-SUM.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_sum_gte: Option<CountAggregate>,
 
     // Existential
     #[serde(skip_serializing_if = "Option::is_none")]

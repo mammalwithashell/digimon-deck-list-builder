@@ -9,16 +9,11 @@
 #   pick 1 opp Digimon -> GainCanNotUnsuspend(UntilOpponentTurnEnd).
 #   ESS inherited: ChangeDPStaticEffect(+1000) over owner Digimon, owner-turn.
 #
-# KNOWN ENGINE GAP (G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED): the count-gated lock
-# `if` step below DOES NOT FIRE at runtime. When the process resumes after the
-# interactive `select_any_permanent` (suspend) resolves, the engine does not execute
-# the trailing conditional (`if`) step — so the "Then, if 2+ suspended..." consequence
-# is silently skipped. Proven in tests/cards_behavioral/bt25/bt25_050.rs: an
-# UNCONDITIONAL lock after the suspend fires correctly; the same lock wrapped in
-# `if { count_gte ... }` never installs. The clause is authored faithfully (the
-# count gate is REQUIRED — locking unconditionally would lock even with <2 suspended,
-# which is unfaithful), and held BLOCKED until the gap closes rather than shipping the
-# unconditional (wrong) lock. Gap logged to docs/RUST_ENGINE_GAPS.md.
+# The count gate is board-wide ("2 or more suspended Digimon" — DCGO counts both
+# players), so its `count_gte` filter carries `owner: any` (count_gte defaults to
+# `owner: you`). The earlier "G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED" BLOCKED
+# diagnosis was a misread of exactly this default: the trailing `if` step did run,
+# but counted only the controller's suspended Digimon. Fixed 2026-10-03.
 card: BT25-050
 name: Kiwimon
 kind: digimon
@@ -48,10 +43,10 @@ effects:
           condition:
             count_gte:
               filter:
-                all_of:
-                  - zone: [battle_area]
-                  - kind: digimon
-                  - is_suspended: true
+                owner: any
+                zone: [battle_area]
+                kind: digimon
+                is_suspended: true
               n: 2
           then:
             - select_opponent_permanent:

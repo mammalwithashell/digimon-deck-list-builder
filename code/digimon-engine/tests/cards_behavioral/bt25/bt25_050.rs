@@ -209,17 +209,12 @@ fn bt25_050_declining_suspend_with_fewer_than_two_suspended_does_not_lock() {
 /// Positive lock: with 2+ suspended Digimon, Kiwimon's OnPlay locks 1 opponent
 /// Digimon from unsuspending.
 ///
-/// BLOCKED on G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED: the count-gated lock
-/// `if` step never installs because the engine does not execute a trailing
-/// conditional (`if`) step when the process resumes after the interactive
-/// `select_any_permanent` (suspend) resolves. Proven adjacent: replacing the
-/// `if { count_gte ... }` wrapper with an UNCONDITIONAL lock fires correctly,
-/// so the gap is specifically "conditional step after a parked selection is not
-/// resumed." Locking unconditionally would be unfaithful (it must require 2+
-/// suspended), so the card ships the faithful (count-gated) YAML and this test
-/// is ignored until the engine gap closes. See docs/RUST_ENGINE_GAPS.md.
+/// The suspended Digimon here are the OPPONENT's: the count is board-wide
+/// ("if there are 2 or more suspended Digimon" — DCGO counts both players),
+/// so the gate filter carries `owner: any`. (The former
+/// G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED diagnosis was a misread: the `if`
+/// step did resume, but `count_gte` defaulted to `owner: you` and saw 0–1.)
 #[test]
-#[ignore = "pending: G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED from docs/RUST_ENGINE_GAPS.md"]
 fn bt25_050_two_suspended_locks_an_opponent_digimon() {
     let mut runner = base().hand(0, &[CARD_ID]).memory(6).start();
     let opp_a = runner.place_on_field(1, "OPP-A", Some(0));

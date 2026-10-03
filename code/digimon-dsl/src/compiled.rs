@@ -685,6 +685,8 @@ pub struct CompiledPredicate {
     pub effect_added_any_card_to_hand: Option<bool>,
     pub count_lte: Option<CompiledCountAggregate>,
     pub count_gte: Option<CompiledCountAggregate>,
+    /// See `PredicateSpec::level_sum_gte`. G-DSL-BOARD-LEVEL-SUM.
+    pub level_sum_gte: Option<CompiledCountAggregate>,
     pub any_permanent: Option<Box<CompiledExistential>>,
     pub any_field_permanent: Option<Box<CompiledExistential>>,
     pub no_permanent: Option<Box<CompiledExistential>>,

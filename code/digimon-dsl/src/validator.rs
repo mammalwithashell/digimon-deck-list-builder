@@ -540,6 +540,10 @@ fn predicate_depends_on_dp(pred: &crate::predicate::PredicateSpec) -> bool {
             .as_ref()
             .is_some_and(|agg| predicate_depends_on_dp(&agg.filter))
         || pred
+            .level_sum_gte
+            .as_ref()
+            .is_some_and(|agg| predicate_depends_on_dp(&agg.filter))
+        || pred
             .has_inherited
             .as_deref()
             .is_some_and(predicate_depends_on_dp)
@@ -764,6 +768,24 @@ fn validate_predicate(
         validate_predicate(
             &agg.filter,
             &format!("{prefix}.count_gte.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(agg) = &pred.level_sum_gte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula(
+                formula,
+                &format!("{prefix}.level_sum_gte.n"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        validate_predicate(
+            &agg.filter,
+            &format!("{prefix}.level_sum_gte.filter"),
             card_id,
             ctx,
             errors,
@@ -2351,6 +2373,24 @@ fn validate_predicate_binding_scope(
             errors,
         );
     }
+    if let Some(agg) = &pred.level_sum_gte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula_binding_scope(
+                formula,
+                &format!("{prefix}.level_sum_gte.n"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        validate_predicate_binding_scope(
+            &agg.filter,
+            &format!("{prefix}.level_sum_gte.filter"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
 }
 
 fn validate_formula_binding_scope(
@@ -2739,7 +2779,7 @@ fn predicate_uses_dp_aggregate(pred: &crate::predicate::PredicateSpec) -> bool {
         .into_iter()
         .flatten()
         .any(|ex| predicate_uses_dp_aggregate(&ex.predicate))
-        || [&pred.count_lte, &pred.count_gte]
+        || [&pred.count_lte, &pred.count_gte, &pred.level_sum_gte]
             .into_iter()
             .flatten()
             .any(|agg| predicate_uses_dp_aggregate(&agg.filter))

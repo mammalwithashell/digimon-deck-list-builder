@@ -3,7 +3,7 @@
 //!
 //! # Card text (card image BT25-077 — authoritative for printed text)
 //! When this card would be played, if there are 12 or more levels' total worth
-//! of Digimon, reduce the cost by 5.   (OMITTED — G-DSL-BOARD-LEVEL-SUM)
+//! of Digimon, reduce the cost by 5.
 //! [On Play] [When Digivolving] You may play 1 [TS] trait Digimon card with 6000
 //! DP or less from your hand without paying the cost.
 //! [All Turns] [Once Per Turn] When any Digimon are played or digivolve, you may
@@ -15,10 +15,14 @@
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API 4.3)
 //! - C1 play-from-hand free; observer suspend; effect-gated lowest-DP delete
+//! - B-cost self play-cost reduction gated on a board-wide level sum
+//!   (`level_sum_gte`, both players' Digimon)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, CostDelta, PlaySource, PlayerId};
@@ -194,4 +198,51 @@ fn bt25_077_all_turns_no_fire_on_normal_hand_play() {
         opp_count >= 1,
         "normal hand play is not effect-initiated -> no lowest-DP delete"
     );
+}
+
+// ─── Cost reduction: 12+ total levels of Digimon (both players) → -5 ─────────
+
+#[test]
+fn bt25_077_has_level_sum_cost_reduction_clause() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let has = card.effects.iter().any(|c| {
+        matches!(c, CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { condition: Some(p), .. })
+            if p.level_sum_gte.is_some())
+    });
+    assert!(has, "cost reduction must be gated on level_sum_gte");
+}
+
+/// Positive: OWN Lv.5 + OPP Lv.4 + OPP Lv.3 = 12 levels across BOTH players
+/// (DCGO sums every battle-area Digimon) → play cost 12 - 5 = 7.
+#[test]
+fn bt25_077_cost_reduced_with_twelve_levels_across_both_players() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(0, "TS-BIG", Some(0)); // Lv.5 (own)
+    runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4 (opponent)
+    runner.place_on_field(1, "OPP-SMALL", Some(0)); // Lv.3 (opponent)
+    runner.play(0, 0).expect("play Bacchusmon");
+    assert_eq!(runner.memory(), 3, "12 levels on board: paid 7 (12 - 5) from 10");
+}
+
+/// Negative: 9 total levels (< 12) → no reduction, full cost 12.
+#[test]
+fn bt25_077_cost_not_reduced_below_twelve_levels() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(0, "TS-BIG", Some(0)); // Lv.5
+    runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4
+    runner.play(0, 0).expect("play Bacchusmon");
+    assert_eq!(runner.memory(), -2, "9 levels on board: full cost 12 paid from 10");
+}
+
+/// Board-wide: 12 levels on the OPPONENT's side alone still reduce (DCGO sums
+/// every battle-area Digimon of both players).
+#[test]
+fn bt25_077_cost_reduced_by_opponent_levels_alone() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(1, "TS-BIG", Some(0)); // Lv.5
+    runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4
+    runner.place_on_field(1, "OPP-SMALL", Some(0)); // Lv.3
+    runner.play(0, 0).expect("play Bacchusmon");
+    assert_eq!(runner.memory(), 3, "opponent's 12 levels count toward the total");
 }
