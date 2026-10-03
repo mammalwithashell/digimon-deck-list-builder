@@ -1,0 +1,1166 @@
+{
+  "set": "BT26",
+  "generated_from": "qa/qa-reports/meta-coverage/latest.json",
+  "window": "2026-09-04..2026-09-12",
+  "decklists": 108,
+  "weighting": "DigiLab BT26 archetype shares (8,186 entries)",
+  "current_playable_field_pct": 16.96,
+  "waves": [
+    {
+      "wave": "1",
+      "name": "Time Strangers core + Kunlun",
+      "cards": [
+        {
+          "card_id": "BT26-104",
+          "name": "Kunlun",
+          "kind": "Tamer",
+          "unlock_rank": 1,
+          "field_inclusion_pct": 6.21,
+          "copies_per_deck": 0.139,
+          "lists": 8,
+          "clauses": 4,
+          "playable_field_pct_after": 18.31,
+          "archetypes": [
+            "Toho Braves",
+            "Saiyu Warriors"
+          ]
+        },
+        {
+          "card_id": "BT26-081",
+          "name": "Mervamon",
+          "kind": "Digimon",
+          "unlock_rank": 2,
+          "field_inclusion_pct": 14.9,
+          "copies_per_deck": 0.44,
+          "lists": 13,
+          "clauses": 6,
+          "playable_field_pct_after": 18.31,
+          "archetypes": [
+            "TS Jupitermon",
+            "TS Mervamon",
+            "TS Toolbox"
+          ]
+        },
+        {
+          "card_id": "BT26-073",
+          "name": "Aegiochusmon: Dark",
+          "kind": "Digimon",
+          "unlock_rank": 3,
+          "field_inclusion_pct": 19.34,
+          "copies_per_deck": 0.386,
+          "lists": 16,
+          "clauses": 5,
+          "playable_field_pct_after": 18.31,
+          "archetypes": [
+            "TS Jupitermon",
+            "Chronomon",
+            "TS Mervamon"
+          ]
+        },
+        {
+          "card_id": "BT26-029",
+          "name": "Aegiochusmon: Holy",
+          "kind": "Digimon",
+          "unlock_rank": 4,
+          "field_inclusion_pct": 12.21,
+          "copies_per_deck": 0.292,
+          "lists": 13,
+          "clauses": 6,
+          "playable_field_pct_after": 18.31,
+          "archetypes": [
+            "TS Jupitermon",
+            "Chronomon",
+            "TS Angels"
+          ]
+        },
+        {
+          "card_id": "BT26-090",
+          "name": "Kanan Yuki",
+          "kind": "Tamer",
+          "unlock_rank": 5,
+          "field_inclusion_pct": 12.21,
+          "copies_per_deck": 0.23,
+          "lists": 17,
+          "clauses": 2,
+          "playable_field_pct_after": 19.19,
+          "archetypes": [
+            "TS Jupitermon",
+            "Chronomon",
+            "TS Toolbox"
+          ]
+        },
+        {
+          "card_id": "BT26-092",
+          "name": "Shota Kuroi",
+          "kind": "Tamer",
+          "unlock_rank": 6,
+          "field_inclusion_pct": 20.56,
+          "copies_per_deck": 0.483,
+          "lists": 18,
+          "clauses": 3,
+          "playable_field_pct_after": 19.19,
+          "archetypes": [
+            "Chronomon",
+            "Titans",
+            "TS Mervamon"
+          ]
+        },
+        {
+          "card_id": "BT26-033",
+          "name": "Jupitermon",
+          "kind": "DUAL",
+          "unlock_rank": 7,
+          "field_inclusion_pct": 10.14,
+          "copies_per_deck": 0.212,
+          "lists": 11,
+          "clauses": 10,
+          "playable_field_pct_after": 19.19,
+          "archetypes": [
+            "TS Jupitermon",
+            "Chronomon",
+            "TS Toolbox"
+          ]
+        },
+        {
+          "card_id": "BT26-103",
+          "name": "Jupitermon: Wrath Mode",
+          "kind": "Digimon",
+          "unlock_rank": 8,
+          "field_inclusion_pct": 6.12,
+          "copies_per_deck": 0.131,
+          "lists": 7,
+          "clauses": 8,
+          "playable_field_pct_after": 20.94,
+          "archetypes": [
+            "TS Jupitermon"
+          ]
+        },
+        {
+          "card_id": "BT26-083",
+          "name": "Junomon: Hysteric Mode",
+          "kind": "Digimon",
+          "unlock_rank": 9,
+          "field_inclusion_pct": 5.01,
+          "copies_per_deck": 0.069,
+          "lists": 5,
+          "clauses": 9,
+          "playable_field_pct_after": 22.69,
+          "archetypes": [
+            "TS Jupitermon",
+            "Three Musketeers",
+            "TS Angels"
+          ]
+        },
+        {
+          "card_id": "BT26-067",
+          "name": "Wizardmon",
+          "kind": "Digimon",
+          "unlock_rank": 10,
+          "field_inclusion_pct": 8.58,
+          "copies_per_deck": 0.21,
+          "lists": 6,
+          "clauses": 4,
+          "playable_field_pct_after": 22.69,
+          "archetypes": [
+            "TS Mervamon",
+            "TS Toolbox",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-088",
+          "name": "Hiroko Sagisaka",
+          "kind": "Tamer",
+          "unlock_rank": 11,
+          "field_inclusion_pct": 9.04,
+          "copies_per_deck": 0.172,
+          "lists": 6,
+          "clauses": 3,
+          "playable_field_pct_after": 23.66,
+          "archetypes": [
+            "TS Mervamon",
+            "Chronomon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-087",
+          "name": "Toya Kuga",
+          "kind": "Tamer",
+          "unlock_rank": 12,
+          "field_inclusion_pct": 12.25,
+          "copies_per_deck": 0.229,
+          "lists": 8,
+          "clauses": 3,
+          "playable_field_pct_after": 28.46,
+          "archetypes": [
+            "Chronomon",
+            "TS Mervamon",
+            "TS Jupitermon"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "2",
+      "name": "Chronomon line + Toho / Glowing Dawn stragglers",
+      "cards": [
+        {
+          "card_id": "BT26-078",
+          "name": "Cherubimon",
+          "kind": "Digimon",
+          "unlock_rank": 13,
+          "field_inclusion_pct": 16.2,
+          "copies_per_deck": 0.425,
+          "lists": 11,
+          "clauses": 4,
+          "playable_field_pct_after": 29.87,
+          "archetypes": [
+            "Chronomon",
+            "Plutomon",
+            "Titans"
+          ]
+        },
+        {
+          "card_id": "BT26-009",
+          "name": "Hyokomon",
+          "kind": "Digimon",
+          "unlock_rank": 14,
+          "field_inclusion_pct": 10.17,
+          "copies_per_deck": 0.354,
+          "lists": 9,
+          "clauses": 4,
+          "playable_field_pct_after": 30.75,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-016",
+          "name": "Chronomon: Holy Mode",
+          "kind": "Digimon",
+          "unlock_rank": 15,
+          "field_inclusion_pct": 10.17,
+          "copies_per_deck": 0.346,
+          "lists": 9,
+          "clauses": 6,
+          "playable_field_pct_after": 32.5,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-022",
+          "name": "Sorcermon",
+          "kind": "Digimon",
+          "unlock_rank": 16,
+          "field_inclusion_pct": 3.78,
+          "copies_per_deck": 0.077,
+          "lists": 4,
+          "clauses": 3,
+          "playable_field_pct_after": 33.47,
+          "archetypes": [
+            "TS Angels",
+            "TS Cosmic Area",
+            "TS Toolbox"
+          ]
+        },
+        {
+          "card_id": "BT26-011",
+          "name": "Buraimon",
+          "kind": "Digimon",
+          "unlock_rank": 17,
+          "field_inclusion_pct": 9.29,
+          "copies_per_deck": 0.322,
+          "lists": 8,
+          "clauses": 4,
+          "playable_field_pct_after": 34.34,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-012",
+          "name": "Manekimon",
+          "kind": "Digimon",
+          "unlock_rank": 18,
+          "field_inclusion_pct": 4.86,
+          "copies_per_deck": 0.126,
+          "lists": 5,
+          "clauses": 3,
+          "playable_field_pct_after": 34.34,
+          "archetypes": [
+            "Toho Braves"
+          ]
+        },
+        {
+          "card_id": "BT26-008",
+          "name": "Kotemon",
+          "kind": "Digimon",
+          "unlock_rank": 19,
+          "field_inclusion_pct": 2.91,
+          "copies_per_deck": 0.039,
+          "lists": 3,
+          "clauses": 4,
+          "playable_field_pct_after": 36.28,
+          "archetypes": [
+            "Toho Braves"
+          ]
+        },
+        {
+          "card_id": "BT26-014",
+          "name": "Darumamon",
+          "kind": "Digimon",
+          "unlock_rank": 20,
+          "field_inclusion_pct": 1.94,
+          "copies_per_deck": 0.019,
+          "lists": 2,
+          "clauses": 5,
+          "playable_field_pct_after": 38.23,
+          "archetypes": [
+            "Toho Braves"
+          ]
+        },
+        {
+          "card_id": "BT26-089",
+          "name": "Kyo Sawashiro",
+          "kind": "Tamer",
+          "unlock_rank": 21,
+          "field_inclusion_pct": 3.6,
+          "copies_per_deck": 0.099,
+          "lists": 4,
+          "clauses": 3,
+          "playable_field_pct_after": 39.13,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-015",
+          "name": "Butenmon",
+          "kind": "Digimon",
+          "unlock_rank": 23,
+          "field_inclusion_pct": 8.42,
+          "copies_per_deck": 0.323,
+          "lists": 7,
+          "clauses": 4,
+          "playable_field_pct_after": 40.28,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-060",
+          "name": "Chronomon: Destroy Mode",
+          "kind": "Digimon",
+          "unlock_rank": 24,
+          "field_inclusion_pct": 8.42,
+          "copies_per_deck": 0.281,
+          "lists": 7,
+          "clauses": 8,
+          "playable_field_pct_after": 40.28,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-001",
+          "name": "Yokomon",
+          "kind": "Digi-Egg",
+          "unlock_rank": 25,
+          "field_inclusion_pct": 7.45,
+          "copies_per_deck": 0.298,
+          "lists": 6,
+          "clauses": 1,
+          "playable_field_pct_after": 40.28,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon"
+          ]
+        },
+        {
+          "card_id": "BT26-085",
+          "name": "Giant Slayer",
+          "kind": "Digimon",
+          "unlock_rank": 26,
+          "field_inclusion_pct": 7.45,
+          "copies_per_deck": 0.232,
+          "lists": 6,
+          "clauses": 7,
+          "playable_field_pct_after": 40.28,
+          "archetypes": [
+            "Chronomon",
+            "TS Jupitermon"
+          ]
+        },
+        {
+          "card_id": "BT26-101",
+          "name": "Cross Arts",
+          "kind": "Option",
+          "unlock_rank": 27,
+          "field_inclusion_pct": 4.14,
+          "copies_per_deck": 0.06,
+          "lists": 4,
+          "clauses": 3,
+          "playable_field_pct_after": 42.03,
+          "archetypes": [
+            "TS Jupitermon",
+            "Chronomon",
+            "TS Vulcanusmon"
+          ]
+        },
+        {
+          "card_id": "BT26-032",
+          "name": "Ceresmon",
+          "kind": "DUAL",
+          "unlock_rank": 28,
+          "field_inclusion_pct": 3.85,
+          "copies_per_deck": 0.052,
+          "lists": 7,
+          "clauses": 7,
+          "playable_field_pct_after": 43.46,
+          "archetypes": [
+            "Chronomon",
+            "TS Ceresmon"
+          ]
+        },
+        {
+          "card_id": "BT26-021",
+          "name": "Gekomon",
+          "kind": "Digimon",
+          "unlock_rank": 29,
+          "field_inclusion_pct": 6.1,
+          "copies_per_deck": 0.127,
+          "lists": 5,
+          "clauses": 4,
+          "playable_field_pct_after": 44.88,
+          "archetypes": [
+            "Chronomon",
+            "Titans"
+          ]
+        },
+        {
+          "card_id": "BT26-096",
+          "name": "Kosuke Misono",
+          "kind": "Tamer",
+          "unlock_rank": 30,
+          "field_inclusion_pct": 3.82,
+          "copies_per_deck": 0.119,
+          "lists": 3,
+          "clauses": 3,
+          "playable_field_pct_after": 47.73,
+          "archetypes": [
+            "Chronomon",
+            "TS Cosmic Area"
+          ]
+        },
+        {
+          "card_id": "BT26-025",
+          "name": "Liollmon",
+          "kind": "Digimon",
+          "unlock_rank": 32,
+          "field_inclusion_pct": 2.7,
+          "copies_per_deck": 0.054,
+          "lists": 3,
+          "clauses": 4,
+          "playable_field_pct_after": 49.6,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-070",
+          "name": "NightChiropmon",
+          "kind": "Digimon",
+          "unlock_rank": 34,
+          "field_inclusion_pct": 2.7,
+          "copies_per_deck": 0.063,
+          "lists": 3,
+          "clauses": 5,
+          "playable_field_pct_after": 51.47,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-080",
+          "name": "Bacchusmon",
+          "kind": "DUAL",
+          "unlock_rank": 35,
+          "field_inclusion_pct": 2.17,
+          "copies_per_deck": 0.038,
+          "lists": 7,
+          "clauses": 8,
+          "playable_field_pct_after": 52.64,
+          "archetypes": [
+            "TS Ceresmon",
+            "TS Toolbox"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "3",
+      "name": "Titans / TS Plutomon package",
+      "cards": [
+        {
+          "card_id": "BT26-056",
+          "name": "Cerberusmon: Werewolf Mode",
+          "kind": "DUAL",
+          "unlock_rank": 31,
+          "field_inclusion_pct": 9.21,
+          "copies_per_deck": 0.184,
+          "lists": 6,
+          "clauses": 9,
+          "playable_field_pct_after": 48.7,
+          "archetypes": [
+            "Plutomon",
+            "Titans",
+            "TS Vulcanusmon"
+          ]
+        },
+        {
+          "card_id": "BT26-059",
+          "name": "Plutomon",
+          "kind": "Digimon",
+          "unlock_rank": 46,
+          "field_inclusion_pct": 11.9,
+          "copies_per_deck": 0.412,
+          "lists": 9,
+          "clauses": 5,
+          "playable_field_pct_after": 59.61,
+          "archetypes": [
+            "Titans",
+            "Plutomon"
+          ]
+        },
+        {
+          "card_id": "BT26-074",
+          "name": "Cerberusmon",
+          "kind": "Digimon",
+          "unlock_rank": 47,
+          "field_inclusion_pct": 11.9,
+          "copies_per_deck": 0.357,
+          "lists": 9,
+          "clauses": 3,
+          "playable_field_pct_after": 59.61,
+          "archetypes": [
+            "Titans",
+            "Plutomon"
+          ]
+        },
+        {
+          "card_id": "BT26-100",
+          "name": "Dark Field",
+          "kind": "Option",
+          "unlock_rank": 48,
+          "field_inclusion_pct": 11.9,
+          "copies_per_deck": 0.43,
+          "lists": 9,
+          "clauses": 4,
+          "playable_field_pct_after": 59.61,
+          "archetypes": [
+            "Titans",
+            "Plutomon"
+          ]
+        },
+        {
+          "card_id": "BT26-079",
+          "name": "ZombiePlutomon",
+          "kind": "Digimon",
+          "unlock_rank": 51,
+          "field_inclusion_pct": 10.99,
+          "copies_per_deck": 0.302,
+          "lists": 8,
+          "clauses": 10,
+          "playable_field_pct_after": 59.61,
+          "archetypes": [
+            "Plutomon",
+            "Titans"
+          ]
+        },
+        {
+          "card_id": "BT26-066",
+          "name": "Salamon",
+          "kind": "Digimon",
+          "unlock_rank": 54,
+          "field_inclusion_pct": 6.41,
+          "copies_per_deck": 0.119,
+          "lists": 5,
+          "clauses": 3,
+          "playable_field_pct_after": 62.36,
+          "archetypes": [
+            "Titans",
+            "Plutomon"
+          ]
+        },
+        {
+          "card_id": "BT26-045",
+          "name": "GranKuwagamon",
+          "kind": "Digimon",
+          "unlock_rank": 55,
+          "field_inclusion_pct": 4.63,
+          "copies_per_deck": 0.075,
+          "lists": 3,
+          "clauses": 5,
+          "playable_field_pct_after": 65.11,
+          "archetypes": [
+            "Plutomon",
+            "Green TyrantKabuterimon",
+            "Titans"
+          ]
+        },
+        {
+          "card_id": "BT26-069",
+          "name": "Dobermon",
+          "kind": "Digimon",
+          "unlock_rank": 59,
+          "field_inclusion_pct": 3.66,
+          "copies_per_deck": 0.091,
+          "lists": 4,
+          "clauses": 4,
+          "playable_field_pct_after": 66.02,
+          "archetypes": [
+            "Titans"
+          ]
+        },
+        {
+          "card_id": "BT26-047",
+          "name": "TyrantKabuterimon",
+          "kind": "Digimon",
+          "unlock_rank": 61,
+          "field_inclusion_pct": 5.6,
+          "copies_per_deck": 0.095,
+          "lists": 6,
+          "clauses": 5,
+          "playable_field_pct_after": 66.94,
+          "archetypes": [
+            "Titans",
+            "Green TyrantKabuterimon"
+          ]
+        },
+        {
+          "card_id": "BT26-042",
+          "name": "Okuwamon",
+          "kind": "Digimon",
+          "unlock_rank": 64,
+          "field_inclusion_pct": 3.77,
+          "copies_per_deck": 0.086,
+          "lists": 4,
+          "clauses": 4,
+          "playable_field_pct_after": 69.68,
+          "archetypes": [
+            "Green TyrantKabuterimon",
+            "Titans"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "4",
+      "name": "DATA SQUAD + Appmon (Dantemon)",
+      "cards": [
+        {
+          "card_id": "BT26-010",
+          "name": "Roleplaymon",
+          "kind": "Digimon",
+          "unlock_rank": 70,
+          "field_inclusion_pct": 4.3,
+          "copies_per_deck": 0.14,
+          "lists": 4,
+          "clauses": 7,
+          "playable_field_pct_after": 73.28,
+          "archetypes": [
+            "Apps Dantemon",
+            "Apps Reboot"
+          ]
+        },
+        {
+          "card_id": "BT26-086",
+          "name": "Dantemon",
+          "kind": "Digimon",
+          "unlock_rank": 71,
+          "field_inclusion_pct": 4.3,
+          "copies_per_deck": 0.15,
+          "lists": 4,
+          "clauses": 8,
+          "playable_field_pct_after": 73.28,
+          "archetypes": [
+            "Apps Dantemon",
+            "Apps Reboot"
+          ]
+        },
+        {
+          "card_id": "BT26-005",
+          "name": "Pinamon",
+          "kind": "Digi-Egg",
+          "unlock_rank": 77,
+          "field_inclusion_pct": 4.04,
+          "copies_per_deck": 0.15,
+          "lists": 7,
+          "clauses": 1,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-049",
+          "name": "Rosemon",
+          "kind": "Digimon",
+          "unlock_rank": 78,
+          "field_inclusion_pct": 4.04,
+          "copies_per_deck": 0.11,
+          "lists": 7,
+          "clauses": 4,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-072",
+          "name": "Peckmon",
+          "kind": "Digimon",
+          "unlock_rank": 79,
+          "field_inclusion_pct": 4.04,
+          "copies_per_deck": 0.156,
+          "lists": 7,
+          "clauses": 4,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-076",
+          "name": "Crowmon",
+          "kind": "Digimon",
+          "unlock_rank": 80,
+          "field_inclusion_pct": 4.04,
+          "copies_per_deck": 0.15,
+          "lists": 7,
+          "clauses": 4,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-091",
+          "name": "Yoshino Fujieda",
+          "kind": "Tamer",
+          "unlock_rank": 81,
+          "field_inclusion_pct": 4.04,
+          "copies_per_deck": 0.144,
+          "lists": 7,
+          "clauses": 3,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-082",
+          "name": "Ravemon",
+          "kind": "Digimon",
+          "unlock_rank": 82,
+          "field_inclusion_pct": 3.46,
+          "copies_per_deck": 0.138,
+          "lists": 6,
+          "clauses": 5,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-050",
+          "name": "Rosemon: Burst Mode",
+          "kind": "DUAL",
+          "unlock_rank": 83,
+          "field_inclusion_pct": 3.28,
+          "copies_per_deck": 0.091,
+          "lists": 7,
+          "clauses": 7,
+          "playable_field_pct_after": 76.3,
+          "archetypes": [
+            "Data Squad",
+            "TS Ceresmon"
+          ]
+        },
+        {
+          "card_id": "BT26-036",
+          "name": "Lalamon",
+          "kind": "Digimon",
+          "unlock_rank": 84,
+          "field_inclusion_pct": 3.11,
+          "copies_per_deck": 0.114,
+          "lists": 8,
+          "clauses": 4,
+          "playable_field_pct_after": 76.88,
+          "archetypes": [
+            "Data Squad",
+            "TS Ceresmon"
+          ]
+        },
+        {
+          "card_id": "BT26-039",
+          "name": "Sunflowmon",
+          "kind": "Digimon",
+          "unlock_rank": 85,
+          "field_inclusion_pct": 2.31,
+          "copies_per_deck": 0.063,
+          "lists": 4,
+          "clauses": 3,
+          "playable_field_pct_after": 77.45,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-094",
+          "name": "Keenan Crier",
+          "kind": "Tamer",
+          "unlock_rank": 86,
+          "field_inclusion_pct": 2.88,
+          "copies_per_deck": 0.058,
+          "lists": 5,
+          "clauses": 3,
+          "playable_field_pct_after": 78.61,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-065",
+          "name": "Falcomon",
+          "kind": "Digimon",
+          "unlock_rank": 87,
+          "field_inclusion_pct": 1.73,
+          "copies_per_deck": 0.069,
+          "lists": 3,
+          "clauses": 4,
+          "playable_field_pct_after": 79.76,
+          "archetypes": [
+            "Data Squad"
+          ]
+        },
+        {
+          "card_id": "BT26-007",
+          "name": "Swipemon",
+          "kind": "Digi-Egg",
+          "unlock_rank": 94,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.129,
+          "lists": 3,
+          "clauses": 1,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-019",
+          "name": "Mailmon",
+          "kind": "Digimon",
+          "unlock_rank": 95,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.129,
+          "lists": 3,
+          "clauses": 6,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-028",
+          "name": "Medicmon",
+          "kind": "Digimon",
+          "unlock_rank": 96,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.118,
+          "lists": 3,
+          "clauses": 8,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-037",
+          "name": "Weatherdramon",
+          "kind": "Digimon",
+          "unlock_rank": 97,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.129,
+          "lists": 3,
+          "clauses": 8,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-051",
+          "name": "Gomimon",
+          "kind": "Digimon",
+          "unlock_rank": 98,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.129,
+          "lists": 3,
+          "clauses": 7,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-063",
+          "name": "Tellermon",
+          "kind": "Digimon",
+          "unlock_rank": 99,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.118,
+          "lists": 3,
+          "clauses": 6,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-084",
+          "name": "Copipemon",
+          "kind": "Digimon",
+          "unlock_rank": 100,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.107,
+          "lists": 3,
+          "clauses": 6,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        },
+        {
+          "card_id": "BT26-102",
+          "name": "Seven Code PAD",
+          "kind": "Option",
+          "unlock_rank": 101,
+          "field_inclusion_pct": 3.22,
+          "copies_per_deck": 0.107,
+          "lists": 3,
+          "clauses": 3,
+          "playable_field_pct_after": 82.21,
+          "archetypes": [
+            "Apps Dantemon"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "fringe",
+      "name": "Single-list cards",
+      "cards": [
+        {
+          "card_id": "BT26-055",
+          "name": "Giromon",
+          "kind": "Digimon",
+          "unlock_rank": 41,
+          "field_inclusion_pct": 0.97,
+          "copies_per_deck": 0.019,
+          "lists": 1,
+          "clauses": 4,
+          "playable_field_pct_after": 58.64,
+          "archetypes": [
+            "Milleniummon"
+          ]
+        },
+        {
+          "card_id": "BT26-075",
+          "name": "ScourgeChiropmon",
+          "kind": "DUAL",
+          "unlock_rank": 68,
+          "field_inclusion_pct": 1.8,
+          "copies_per_deck": 0.027,
+          "lists": 2,
+          "clauses": 7,
+          "playable_field_pct_after": 72.38,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-093",
+          "name": "Reina Sakuya",
+          "kind": "Tamer",
+          "unlock_rank": 69,
+          "field_inclusion_pct": 0.9,
+          "copies_per_deck": 0.018,
+          "lists": 1,
+          "clauses": 3,
+          "playable_field_pct_after": 73.28,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-013",
+          "name": "Musyamon",
+          "kind": "Digimon",
+          "unlock_rank": 73,
+          "field_inclusion_pct": 0.97,
+          "copies_per_deck": 0.019,
+          "lists": 1,
+          "clauses": 4,
+          "playable_field_pct_after": 74.36,
+          "archetypes": [
+            "Toho Braves"
+          ]
+        },
+        {
+          "card_id": "BT26-017",
+          "name": "Zanbamon",
+          "kind": "Digimon",
+          "unlock_rank": 74,
+          "field_inclusion_pct": 0.97,
+          "copies_per_deck": 0.01,
+          "lists": 1,
+          "clauses": 7,
+          "playable_field_pct_after": 75.33,
+          "archetypes": [
+            "Toho Braves"
+          ]
+        },
+        {
+          "card_id": "BT26-026",
+          "name": "Cougarmon",
+          "kind": "Digimon",
+          "unlock_rank": 89,
+          "field_inclusion_pct": 0.9,
+          "copies_per_deck": 0.027,
+          "lists": 1,
+          "clauses": 4,
+          "playable_field_pct_after": 80.34,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-031",
+          "name": "Murasamemon",
+          "kind": "DUAL",
+          "unlock_rank": 90,
+          "field_inclusion_pct": 0.9,
+          "copies_per_deck": 0.018,
+          "lists": 1,
+          "clauses": 6,
+          "playable_field_pct_after": 81.24,
+          "archetypes": [
+            "Glowing Dawn"
+          ]
+        },
+        {
+          "card_id": "BT26-034",
+          "name": "Palmon",
+          "kind": "Digimon",
+          "unlock_rank": 110,
+          "field_inclusion_pct": 0.8,
+          "copies_per_deck": 0.024,
+          "lists": 4,
+          "clauses": 3,
+          "playable_field_pct_after": 87.37,
+          "archetypes": [
+            "TS Ceresmon"
+          ]
+        },
+        {
+          "card_id": "BT26-035",
+          "name": "Morphomon",
+          "kind": "Digimon",
+          "unlock_rank": 118,
+          "field_inclusion_pct": 1.94,
+          "copies_per_deck": 0.078,
+          "lists": 2,
+          "clauses": 4,
+          "playable_field_pct_after": 87.57,
+          "archetypes": [
+            "Green TyrantKabuterimon"
+          ]
+        },
+        {
+          "card_id": "BT26-038",
+          "name": "Kuwagamon",
+          "kind": "Digimon",
+          "unlock_rank": 119,
+          "field_inclusion_pct": 1.94,
+          "copies_per_deck": 0.078,
+          "lists": 2,
+          "clauses": 4,
+          "playable_field_pct_after": 87.57,
+          "archetypes": [
+            "Green TyrantKabuterimon"
+          ]
+        },
+        {
+          "card_id": "BT26-041",
+          "name": "Hudiemon",
+          "kind": "Digimon",
+          "unlock_rank": 120,
+          "field_inclusion_pct": 1.94,
+          "copies_per_deck": 0.058,
+          "lists": 2,
+          "clauses": 3,
+          "playable_field_pct_after": 87.57,
+          "archetypes": [
+            "Green TyrantKabuterimon"
+          ]
+        }
+      ]
+    }
+  ],
+  "skip_not_seen_in_lists": [
+    "BT26-002",
+    "BT26-003",
+    "BT26-004",
+    "BT26-006",
+    "BT26-018",
+    "BT26-020",
+    "BT26-023",
+    "BT26-024",
+    "BT26-027",
+    "BT26-030",
+    "BT26-040",
+    "BT26-043",
+    "BT26-044",
+    "BT26-046",
+    "BT26-048",
+    "BT26-052",
+    "BT26-053",
+    "BT26-054",
+    "BT26-057",
+    "BT26-058",
+    "BT26-061",
+    "BT26-062",
+    "BT26-064",
+    "BT26-068",
+    "BT26-071",
+    "BT26-077",
+    "BT26-095",
+    "BT26-097",
+    "BT26-098",
+    "BT26-099"
+  ]
+}
