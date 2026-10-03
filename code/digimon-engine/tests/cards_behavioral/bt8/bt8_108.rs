@@ -130,9 +130,7 @@ fn bt8_108_structure() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .expect("[Security] clause");
@@ -261,7 +259,10 @@ fn bt8_108_delay_activation_next_turn_gains_2_memory_and_trashes_self() {
     r.game.decode_action(bit as u16, 0);
     let _ = r.auto_resolve();
     assert_eq!(r.memory(), 2, "<Delay> gains 2 memory");
-    assert!(delayed_index(&r, 0).is_none(), "trashed as the <Delay> cost");
+    assert!(
+        delayed_index(&r, 0).is_none(),
+        "trashed as the <Delay> cost"
+    );
     assert!(r
         .game
         .player(0)

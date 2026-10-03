@@ -435,8 +435,8 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.count_gte,
         &predicate.level_sum_gte,
     ]
-        .into_iter()
-        .flatten()
+    .into_iter()
+    .flatten()
     {
         if let CompiledDpConstraint::Formula(formula) = &aggregate.n {
             collect_formula_raw_rust_fns(formula, names);

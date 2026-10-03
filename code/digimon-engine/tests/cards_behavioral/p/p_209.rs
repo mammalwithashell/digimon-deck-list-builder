@@ -140,7 +140,8 @@ fn push_trash(r: &mut DebugRunner, p: u8, id: &str) {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -152,7 +153,10 @@ fn pick_hand(r: &mut DebugRunner, p: u8, id: &str) {
         .unwrap_or_else(|| panic!("{id} not in hand"));
     let action = PLAY_HAND_START + idx as u16;
     let v = r.pending_selection_view().expect("hand selection pending");
-    assert!(v.valid_action_ids.contains(&action), "{id} not a legal hand pick");
+    assert!(
+        v.valid_action_ids.contains(&action),
+        "{id} not a legal hand pick"
+    );
     r.execute_action(p, action).expect("hand pick");
 }
 
@@ -316,7 +320,8 @@ fn p_209_on_play_from_hand_trash_suspend_and_lock() {
     while r.pending_kind() != Some(SelectionKind::OppField) {
         let k = r.pending_kind().expect("suspend pick pending");
         assert_ne!(k, SelectionKind::Trash, "no eligible trash card offered");
-        r.execute_action(0, PASS).expect("decline hand-trashed trigger");
+        r.execute_action(0, PASS)
+            .expect("decline hand-trashed trigger");
     }
     let v = r.pending_selection_view().unwrap();
     assert!(!v.is_optional, "suspend pick is mandatory once paid");
@@ -375,7 +380,8 @@ fn p_209_when_digivolving_suspends_tamer_and_locks_same_target() {
     fire(&mut r, EffectTiming::WhenDigivolving, tm);
     pick_hand(&mut r, 0, "FODDER");
     while r.pending_kind() != Some(SelectionKind::OppField) {
-        r.execute_action(0, PASS).expect("decline hand-trashed trigger");
+        r.execute_action(0, PASS)
+            .expect("decline hand-trashed trigger");
     }
     pick(&mut r, 0, opp_action(ot));
     assert!(suspended(&r, ot), "a Tamer can be suspended");
@@ -399,7 +405,10 @@ fn p_209_lock_lasts_through_opponents_turn() {
     pick(&mut r, 0, opp_action(oa));
     let _ = r.auto_resolve();
     r.end_turn(); // → opponent's turn: unsuspend phase must not unsuspend it
-    assert!(suspended(&r, oa), "can't unsuspend during their unsuspend phase");
+    assert!(
+        suspended(&r, oa),
+        "can't unsuspend during their unsuspend phase"
+    );
     assert!(r.modifiers().has(oa, ModifierType::CannotUnsuspend));
     r.end_turn(); // their turn ends → lock expires
     assert!(!r.modifiers().has(oa, ModifierType::CannotUnsuspend));
@@ -450,7 +459,10 @@ fn p_209_hand_trashed_offers_only_lv4_or_lower_demon_or_titan_digimon() {
         .filter(|a| *a != PASS)
         .collect();
     legal.sort();
-    let mut want = vec![trash_action(&r, 0, "DEMON-4"), trash_action(&r, 0, "TITAN-3")];
+    let mut want = vec![
+        trash_action(&r, 0, "DEMON-4"),
+        trash_action(&r, 0, "TITAN-3"),
+    ];
     want.sort();
     assert_eq!(legal, want, "only Lv.4- [Demon]/[Titan] Digimon");
     assert!(v.is_optional, "may choose none (DCGO canNoSelect)");

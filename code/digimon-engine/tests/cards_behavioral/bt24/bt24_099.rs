@@ -151,7 +151,10 @@ fn bt24_099_is_purple_appmon_option_cost_3_with_color_bypass() {
     let card = runner.compiled_card(CARD_ID).expect("compiled");
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(3));
-    assert!(card.use_requirement.is_some(), "Appmon color-bypass use requirement");
+    assert!(
+        card.use_requirement.is_some(),
+        "Appmon color-bypass use requirement"
+    );
     assert!(
         card.effects.iter().any(|c| matches!(
             c,
@@ -398,7 +401,10 @@ fn bt24_099_delay_on_deletion_links_appmon_from_trash_free() {
         .expect("host");
     assert_eq!(ids(&host_perm.linked_cards, &runner), vec!["APP-LINK"]);
     let _ = host;
-    assert!(trash_ids(&runner, 0).contains(&CARD_ID.to_string()), "Delay cost");
+    assert!(
+        trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
+        "Delay cost"
+    );
     assert!(delay_perm_state(&runner, 0).is_none());
     assert_eq!(runner.game.memory, memory_before, "without paying the cost");
 }
@@ -466,7 +472,10 @@ fn bt24_099_delay_declined_stays_parked() {
         .execute_action(view.selecting_player, PASS)
         .expect("decline");
     runner.auto_resolve().expect("settle");
-    assert!(delay_perm_state(&runner, 0).is_some(), "declined Delay stays");
+    assert!(
+        delay_perm_state(&runner, 0).is_some(),
+        "declined Delay stays"
+    );
     assert!(trash_ids(&runner, 0).contains(&"APP-LINK".to_string()));
 }
 

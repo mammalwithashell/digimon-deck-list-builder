@@ -139,7 +139,10 @@ fn ex1_072_main_locks_opponent_options_until_end_of_their_next_turn() {
     runner.place_on_field(1, "RED-MON", Some(0));
 
     assert!(option_usable(&mut runner, 0, CARD_ID), "EX1-072 is usable");
-    let slot = hand_ids(&runner, 0).iter().position(|c| c == CARD_ID).unwrap();
+    let slot = hand_ids(&runner, 0)
+        .iter()
+        .position(|c| c == CARD_ID)
+        .unwrap();
     let _ = runner.game.play_option_from_hand(0, slot);
     runner.auto_resolve().expect("resolve main");
     assert!(
@@ -176,7 +179,10 @@ fn ex1_072_security_locks_attackers_options_this_turn() {
         .start();
     let attacker = runner.place_on_field(0, "RED-MON", Some(0));
     runner.place_on_field(0, "RED-MON", Some(0));
-    assert!(option_usable(&mut runner, 0, OPP_OPTION), "usable before the check");
+    assert!(
+        option_usable(&mut runner, 0, OPP_OPTION),
+        "usable before the check"
+    );
     let _ = runner.attack_player(attacker, 1, false);
     assert!(
         !option_usable(&mut runner, 0, OPP_OPTION),
@@ -208,7 +214,10 @@ effects:
 
 fn play_ex1_072_main(runner: &mut DebugRunner) {
     runner.game.enter_main_phase();
-    let slot = hand_ids(runner, 0).iter().position(|c| c == CARD_ID).unwrap();
+    let slot = hand_ids(runner, 0)
+        .iter()
+        .position(|c| c == CARD_ID)
+        .unwrap();
     let _ = runner.game.play_option_from_hand(0, slot);
     runner.auto_resolve().expect("resolve main");
 }
@@ -347,13 +356,18 @@ fn ex1_072_control_dsl_use_option_offers_hand_option() {
     runner.place_on_field(1, "RED-MON", Some(0));
     runner.end_turn();
     runner.game.enter_main_phase();
-    let slot = hand_ids(&runner, 1).iter().position(|c| c == "USE-OPT-MON").unwrap();
+    let slot = hand_ids(&runner, 1)
+        .iter()
+        .position(|c| c == "USE-OPT-MON")
+        .unwrap();
     runner.play(1, slot);
     let view = runner
         .pending_selection_view()
         .expect("the use-option pick is offered");
     assert!(
-        view.valid_action_ids.iter().any(|a| *a != digimon_engine::action::space::PASS),
+        view.valid_action_ids
+            .iter()
+            .any(|a| *a != digimon_engine::action::space::PASS),
         "the hand Option is a legal candidate"
     );
 }
@@ -368,7 +382,10 @@ fn ex1_072_lock_hides_option_from_dsl_use_option_selection() {
     runner.end_turn();
     runner.game.enter_main_phase();
     assert!(runner.game.option_use_blocked(1));
-    let slot = hand_ids(&runner, 1).iter().position(|c| c == "USE-OPT-MON").unwrap();
+    let slot = hand_ids(&runner, 1)
+        .iter()
+        .position(|c| c == "USE-OPT-MON")
+        .unwrap();
     runner.play(1, slot);
     if let Some(view) = runner.pending_selection_view() {
         assert!(

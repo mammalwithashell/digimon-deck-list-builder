@@ -446,7 +446,9 @@ fn steps_contain_place_self_as_delay_option(steps: &[CompiledStep]) -> bool {
             _ => false,
         }
     }
-    serde_json::to_value(steps).map(|v| walk(&v)).unwrap_or(false)
+    serde_json::to_value(steps)
+        .map(|v| walk(&v))
+        .unwrap_or(false)
 }
 
 /// Recursive scan for a `refund_opt` step anywhere in a clause body
@@ -756,7 +758,9 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         // require `Effect.counter` alongside the `CounterEffect` timing.
         // Without the flag no DSL field [Counter] ability was ever offered.
         // G-ENGINE-DSL-FIELD-COUNTER-WINDOW.
-        EffectTiming::CounterEffect => EffectBuilder::new(card, EffectTiming::CounterEffect).counter(),
+        EffectTiming::CounterEffect => {
+            EffectBuilder::new(card, EffectTiming::CounterEffect).counter()
+        }
         other => EffectBuilder::new(card, other),
     }
 }

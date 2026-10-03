@@ -91,10 +91,9 @@ fn builder() -> DebugRunnerBuilder {
 }
 
 fn on_field(r: &DebugRunner, p: u8, id: &str) -> bool {
-    r.game.players[p as usize]
-        .battle_area
-        .iter()
-        .any(|perm| !perm.card_sources.is_empty() && perm.top_card().card_id(&r.game.card_data) == id)
+    r.game.players[p as usize].battle_area.iter().any(|perm| {
+        !perm.card_sources.is_empty() && perm.top_card().card_id(&r.game.card_data) == id
+    })
 }
 
 fn in_trash(r: &DebugRunner, p: u8, id: &str) -> bool {
@@ -157,7 +156,11 @@ fn p_244_structure() {
         })
         .expect("<Delay> clause");
     assert_eq!(delay.0, CompiledTiming::OnAddDigivolutionCards);
-    assert!(delay.1.contains("your_turn: Some(true)"), "[Your Turn] gate: {}", delay.1);
+    assert!(
+        delay.1.contains("your_turn: Some(true)"),
+        "[Your Turn] gate: {}",
+        delay.1
+    );
     assert!(delay.1.contains("Vemmon"), "added-card [Vemmon] gate");
     assert!(card.effects.iter().any(|c| matches!(
         c,
@@ -181,11 +184,18 @@ fn p_244_main_plays_vemmon_from_hand_free_then_places_self() {
     r.place_on_field(0, "ANCHOR", Some(0));
     r.game.enter_main_phase();
     let mem = r.memory();
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let view = r.pending_selection_view().expect("union pick");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(r.pending_is_optional(), "'you may play'");
-    assert_eq!(view.valid_action_ids.len(), 1, "only [Vemmon] (not [Vemmon]-text cards)");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only [Vemmon] (not [Vemmon]-text cards)"
+    );
     r.execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("pick Vemmon");
     r.auto_resolve().expect("resolve");
@@ -215,7 +225,10 @@ fn p_244_main_plays_zenith_or_xeno_alias_from_trash() {
     r.inject_trash(0, "VTXT");
     r.place_on_field(0, "ANCHOR", Some(0));
     r.game.enter_main_phase();
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let view = r.pending_selection_view().expect("union pick");
     assert_eq!(
         view.valid_action_ids.len(),
@@ -244,7 +257,8 @@ fn p_244_main_decline_still_places_self() {
     r.game.enter_main_phase();
     let _ = r.game.play_option_from_hand(0, 0);
     let view = r.pending_selection_view().expect("union pick");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
     r.auto_resolve().expect("resolve");
     assert!(in_hand(&r, 0, "VEM"));
     assert!(attainer_state(&r, 0).is_some(), "placed even when declined");
@@ -298,8 +312,14 @@ fn stage_delay(after_placing_turn: bool) -> (DebugRunner, PermanentHandle) {
 fn p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3() {
     let (mut r, _xeno) = stage_delay(true);
     // Xeno placed a [Vemmon] under VTXT → P-244's <Delay> is offered.
-    let view = r.pending_selection_view().expect("<Delay> activation prompt");
-    assert_eq!(view.kind, SelectionKind::Replacement, "16-16-2 accept/decline");
+    let view = r
+        .pending_selection_view()
+        .expect("<Delay> activation prompt");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Replacement,
+        "16-16-2 accept/decline"
+    );
     assert!(r.pending_is_optional());
     r.execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept Delay");
@@ -329,10 +349,16 @@ fn p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3() {
 #[test]
 fn p_244_delay_decline_keeps_option_parked() {
     let (mut r, _xeno) = stage_delay(true);
-    let view = r.pending_selection_view().expect("<Delay> activation prompt");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    let view = r
+        .pending_selection_view()
+        .expect("<Delay> activation prompt");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
     r.auto_resolve().expect("settle");
-    assert!(attainer_state(&r, 0).is_some(), "declined Delay stays parked");
+    assert!(
+        attainer_state(&r, 0).is_some(),
+        "declined Delay stays parked"
+    );
     assert!(in_hand(&r, 0, "EVO"));
 }
 
@@ -407,9 +433,11 @@ fn p_244_security_runs_main_then_places_self() {
         .expect("pick Vemmon");
     r.auto_resolve().expect("resolve");
     assert!(on_field(&r, 1, "VEM"), "Vemmon played free");
-    assert!(attainer_state(&r, 1).is_some(), "P-244 placed in the battle area");
+    assert!(
+        attainer_state(&r, 1).is_some(),
+        "P-244 placed in the battle area"
+    );
 }
-
 
 // ═══ <Delay> trigger gates — inline effect-placement fixture ═════════════════
 

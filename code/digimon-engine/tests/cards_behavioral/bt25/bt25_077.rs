@@ -191,7 +191,9 @@ fn pass(runner: &mut DebugRunner) {
 /// prompts (the "you may suspend"), and take the first legal id otherwise.
 fn drive_default(runner: &mut DebugRunner) {
     for _ in 0..32 {
-        let Some(v) = runner.pending_selection_view() else { return };
+        let Some(v) = runner.pending_selection_view() else {
+            return;
+        };
         let player = v.selecting_player;
         let id = match v.kind {
             SelectionKind::Hand | SelectionKind::Replacement => v
@@ -265,7 +267,10 @@ fn bt25_077_on_play_no_prompt_without_eligible_ts_card() {
 #[test]
 fn bt25_077_when_digivolving_plays_ts_low_from_hand_free() {
     let mut runner = base()
-        .add_card(colored(make_digimon("BLACK-5", 5, 7000, &[]), CardColor::Black))
+        .add_card(colored(
+            make_digimon("BLACK-5", 5, 7000, &[]),
+            CardColor::Black,
+        ))
         .hand(0, &[CARD_ID, "TS-LOW"])
         .memory(10)
         .start();
@@ -279,7 +284,9 @@ fn bt25_077_when_digivolving_plays_ts_low_from_hand_free() {
     assert_eq!(runner.memory(), 6, "standard black circle costs 4");
     let mut saw_hand_prompt = false;
     for _ in 0..32 {
-        let Some(v) = runner.pending_selection_view() else { break };
+        let Some(v) = runner.pending_selection_view() else {
+            break;
+        };
         if v.kind == SelectionKind::Hand {
             saw_hand_prompt = true;
         }
@@ -326,7 +333,10 @@ fn bt25_077_all_turns_effect_play_suspends_choice_then_deletes_lowest() {
     assert!(!v.is_optional, "the by-effect delete is mandatory");
     let small_id = pick_id(&runner, small);
     let big_id = pick_id(&runner, big);
-    assert!(v.valid_action_ids.contains(&small_id), "lowest-DP target offered");
+    assert!(
+        v.valid_action_ids.contains(&small_id),
+        "lowest-DP target offered"
+    );
     assert!(
         !v.valid_action_ids.contains(&big_id),
         "a non-lowest Digimon must not be offered"
@@ -394,10 +404,7 @@ fn bt25_077_all_turns_hand_play_suspends_but_never_deletes() {
 /// effect play the same turn gets no prompt.
 #[test]
 fn bt25_077_all_turns_once_per_turn_lockout() {
-    let mut runner = base()
-        .hand(0, &["OWN-PLAY", "OWN-PLAY"])
-        .memory(12)
-        .start();
+    let mut runner = base().hand(0, &["OWN-PLAY", "OWN-PLAY"]).memory(12).start();
     let _bac = runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(1, "OPP-SMALL", Some(0));
     runner.place_on_field(1, "OPP-BIG", Some(0));
@@ -422,10 +429,7 @@ fn bt25_077_all_turns_once_per_turn_lockout() {
 /// consume the once-per-turn, so the next (effect) play still triggers.
 #[test]
 fn bt25_077_all_turns_hand_play_pass_refunds_opt() {
-    let mut runner = base()
-        .hand(0, &["OWN-PLAY", "OWN-PLAY"])
-        .memory(12)
-        .start();
+    let mut runner = base().hand(0, &["OWN-PLAY", "OWN-PLAY"]).memory(12).start();
     let _bac = runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(1, "OPP-SMALL", Some(0));
     runner.place_on_field(1, "OPP-BIG", Some(0));
@@ -450,10 +454,7 @@ fn bt25_077_all_turns_hand_play_pass_refunds_opt() {
 /// the once-per-turn.
 #[test]
 fn bt25_077_all_turns_hand_play_with_suspend_spends_opt() {
-    let mut runner = base()
-        .hand(0, &["OWN-PLAY", "OWN-PLAY"])
-        .memory(12)
-        .start();
+    let mut runner = base().hand(0, &["OWN-PLAY", "OWN-PLAY"]).memory(12).start();
     let _bac = runner.place_on_field(0, CARD_ID, Some(0));
     let small = runner.place_on_field(1, "OPP-SMALL", Some(0));
     runner.place_on_field(1, "OPP-BIG", Some(0));
@@ -570,7 +571,11 @@ fn bt25_077_cost_reduced_with_twelve_levels_across_both_players() {
     runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4 (opponent)
     runner.place_on_field(1, "OPP-SMALL", Some(0)); // Lv.3 (opponent)
     runner.play(0, 0).expect("play Bacchusmon");
-    assert_eq!(runner.memory(), 3, "12 levels on board: paid 7 (12 - 5) from 10");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "12 levels on board: paid 7 (12 - 5) from 10"
+    );
 }
 
 /// Negative: 9 total levels (< 12) → no reduction, full cost 12.
@@ -580,7 +585,11 @@ fn bt25_077_cost_not_reduced_below_twelve_levels() {
     runner.place_on_field(0, "TS-BIG", Some(0)); // Lv.5
     runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4
     runner.play(0, 0).expect("play Bacchusmon");
-    assert_eq!(runner.memory(), -2, "9 levels on board: full cost 12 paid from 10");
+    assert_eq!(
+        runner.memory(),
+        -2,
+        "9 levels on board: full cost 12 paid from 10"
+    );
 }
 
 /// Board-wide: 12 levels on the OPPONENT's side alone still reduce (DCGO sums
@@ -592,5 +601,9 @@ fn bt25_077_cost_reduced_by_opponent_levels_alone() {
     runner.place_on_field(1, "OWN-PLAY", Some(0)); // Lv.4
     runner.place_on_field(1, "OPP-SMALL", Some(0)); // Lv.3
     runner.play(0, 0).expect("play Bacchusmon");
-    assert_eq!(runner.memory(), 3, "opponent's 12 levels count toward the total");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "opponent's 12 levels count toward the total"
+    );
 }

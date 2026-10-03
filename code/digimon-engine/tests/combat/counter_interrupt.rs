@@ -445,7 +445,10 @@ fn player_target_attack_opens_counter() {
     // Declining the Counter lets the attack proceed normally.
     r.game.resolve_selection(1, PASS).expect("decline counter");
     let _ = r.auto_resolve();
-    assert!(r.game.pending_attack.is_none(), "attack completes after decline");
+    assert!(
+        r.game.pending_attack.is_none(),
+        "attack completes after decline"
+    );
 }
 
 #[test]

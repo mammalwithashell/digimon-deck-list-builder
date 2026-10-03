@@ -66,7 +66,8 @@ fn not_galacticmon() -> CardData {
 /// Digimon card with [Vemmon] in its printed text (not named Vemmon).
 fn vemmon_text_digimon(id: &str, cost: u16) -> CardData {
     let mut c = digimon(id, "Snatchmon", 4, cost, 6000, CardColor::Black);
-    c.effect_text = "[On Play] Reveal the top 3 cards. Add 1 card with [Vemmon] in its text.".into();
+    c.effect_text =
+        "[On Play] Reveal the top 3 cards. Add 1 card with [Vemmon] in its text.".into();
     c
 }
 
@@ -87,7 +88,9 @@ fn on_field(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
     runner.game.players[player as usize]
         .battle_area
         .iter()
-        .any(|p| !p.card_sources.is_empty() && p.top_card().card_id(&runner.game.card_data) == card_id)
+        .any(|p| {
+            !p.card_sources.is_empty() && p.top_card().card_id(&runner.game.card_data) == card_id
+        })
 }
 
 fn in_trash(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
@@ -224,7 +227,11 @@ fn bt21_098_main_tied_lowest_cost_offers_both() {
     r.game.enter_main_phase();
     let _ = r.game.play_option_from_hand(0, 0);
     let view = r.pending_selection_view().expect("delete prompt");
-    assert_eq!(view.valid_action_ids.len(), 2, "both cost-3 Digimon are legal");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both cost-3 Digimon are legal"
+    );
     let pick = view.valid_action_ids[1];
     r.execute_action(view.selecting_player, pick).expect("pick");
     r.auto_resolve().expect("resolve");
@@ -265,7 +272,9 @@ fn bt21_098_delay_galacticmon_attack_deletes_lowest_cost() {
     let sec_before = r.security_count(1);
 
     r.attack_player(gala, 1, false);
-    let view = r.pending_selection_view().expect("<Delay> activation prompt");
+    let view = r
+        .pending_selection_view()
+        .expect("<Delay> activation prompt");
     assert_eq!(view.kind, SelectionKind::Replacement);
     assert!(r.pending_is_optional(), "<Delay> is optional (16-16-2)");
     r.execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -302,7 +311,9 @@ fn bt21_098_delay_without_delete_trims_security_to_one() {
     let checkpoint = r.event_checkpoint();
 
     r.attack_player(gala, 1, false);
-    let view = r.pending_selection_view().expect("<Delay> activation prompt");
+    let view = r
+        .pending_selection_view()
+        .expect("<Delay> activation prompt");
     r.execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept");
     r.auto_resolve().expect("finish the attack");
@@ -344,8 +355,11 @@ fn bt21_098_delay_decline_keeps_cannon_parked() {
     r.place_on_field(1, "LOW-A", Some(0));
 
     r.attack_player(gala, 1, false);
-    let view = r.pending_selection_view().expect("<Delay> activation prompt");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    let view = r
+        .pending_selection_view()
+        .expect("<Delay> activation prompt");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
     assert!(cannon_state(&r).is_some(), "declined Delay stays parked");
     assert!(on_field(&r, 1, "LOW-A"), "no deletion when declined");
 }
@@ -445,7 +459,8 @@ fn bt21_098_security_trash_origin_and_decline_still_adds_to_hand() {
     r.attack_player(atk, 1, false);
     let view = r.pending_selection_view().expect("security union pick");
     assert_eq!(view.valid_action_ids.len(), 1, "trash candidate offered");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
     r.auto_resolve().expect("resolve");
     assert!(in_trash(&r, 1, "VEM-6"), "declined: stays in trash");
     assert!(in_hand(&r, 1, CARD_ID), "Cannon still added to hand");

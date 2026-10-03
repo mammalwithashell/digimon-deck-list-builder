@@ -98,7 +98,8 @@ fn hand_slot(r: &DebugRunner, id: &str) -> u16 {
 
 fn digivolve_onto(r: &mut DebugRunner, base: PermanentHandle) {
     let slot = hand_slot(r, CARD_ID);
-    r.game.decode_action(encode_digivolve(slot, base.index as u16), 0);
+    r.game
+        .decode_action(encode_digivolve(slot, base.index as u16), 0);
 }
 
 fn field_ids(r: &DebugRunner, player: usize) -> Vec<String> {
@@ -132,7 +133,10 @@ fn fire(r: &mut DebugRunner, timing: EffectTiming, perm: PermanentHandle) {
 
 fn is_counter_clause_prompt(r: &DebugRunner) -> bool {
     r.pending_selection_view()
-        .map(|v| v.prompt.contains("trash any 1 digivolution card") || v.prompt.contains("end this attack"))
+        .map(|v| {
+            v.prompt.contains("trash any 1 digivolution card")
+                || v.prompt.contains("end this attack")
+        })
         .unwrap_or(false)
 }
 
@@ -142,7 +146,8 @@ fn resolve_trigger_order(r: &mut DebugRunner) {
     while matches!(r.pending_kind(), Some(SelectionKind::TriggerOrder)) {
         let v = r.pending_selection_view().unwrap();
         let a = v.valid_action_ids[0];
-        r.execute_action(v.selecting_player, a).expect("TriggerOrder");
+        r.execute_action(v.selecting_player, a)
+            .expect("TriggerOrder");
     }
 }
 
@@ -150,14 +155,19 @@ fn resolve_trigger_order(r: &mut DebugRunner) {
 fn pick_sources(r: &mut DebugRunner, n: usize) {
     for _ in 0..n {
         let v = r.pending_selection_view().expect("source prompt");
-        assert!(matches!(v.kind, SelectionKind::SourceMulti { .. }), "{:?}", v.kind);
+        assert!(
+            matches!(v.kind, SelectionKind::SourceMulti { .. }),
+            "{:?}",
+            v.kind
+        );
         let a = v
             .valid_action_ids
             .iter()
             .copied()
             .find(|&a| a != PASS)
             .expect("a source pick");
-        r.execute_action(v.selecting_player, a).expect("pick source");
+        r.execute_action(v.selecting_player, a)
+            .expect("pick source");
     }
 }
 
@@ -165,13 +175,18 @@ fn finish_source_picks(r: &mut DebugRunner) {
     if let Some(v) = r.pending_selection_view() {
         if matches!(v.kind, SelectionKind::SourceMulti { .. }) {
             assert!(v.valid_action_ids.contains(&PASS), "each pick is optional");
-            r.execute_action(v.selecting_player, PASS).expect("stop picking");
+            r.execute_action(v.selecting_player, PASS)
+                .expect("stop picking");
         }
     }
 }
 
 fn answer_end_attack(r: &mut DebugRunner, end: bool) {
-    assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice), "'you may end this attack'");
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "'you may end this attack'"
+    );
     r.execute_branch(if end { 0 } else { 1 }).unwrap();
 }
 
@@ -198,7 +213,9 @@ fn bt25_103_alt_paths_three_digivolve_and_dna() {
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
     assert_eq!(digi.len(), 3, "Red Lv.6, Blue Lv.6, Lv.6 w/[TS]");
-    assert!(digi.iter().all(|p| p.cost == Some(CompiledCost::Literal(5))));
+    assert!(digi
+        .iter()
+        .all(|p| p.cost == Some(CompiledCost::Literal(5))));
     let dna: Vec<_> = c
         .alt_paths
         .iter()
@@ -254,8 +271,12 @@ fn bt25_103_partition_apollomon_and_dianamon() {
         })
         .expect("Partition clause");
     assert_eq!(srcs.len(), 2);
-    assert!(srcs.iter().any(|p| p.name_is.as_deref() == Some("Apollomon")));
-    assert!(srcs.iter().any(|p| p.name_is.as_deref() == Some("Dianamon")));
+    assert!(srcs
+        .iter()
+        .any(|p| p.name_is.as_deref() == Some("Apollomon")));
+    assert!(srcs
+        .iter()
+        .any(|p| p.name_is.as_deref() == Some("Dianamon")));
     assert!(excl.iter().any(|c| c == "own_effect"));
     assert!(excl.iter().any(|c| c == "battle"));
 }
@@ -294,7 +315,10 @@ fn bt25_103_clause_shape() {
         .find(|t| t.when.contains(&CompiledTiming::WhenDigivolving))
         .expect("WD/WA bounce");
     assert!(bounce.when.contains(&CompiledTiming::WhenAttacking));
-    assert!(!bounce.optional && !bounce.once_per_turn, "mandatory, unlimited");
+    assert!(
+        !bounce.optional && !bounce.once_per_turn,
+        "mandatory, unlimited"
+    );
     let counter = t
         .iter()
         .find(|t| t.when.contains(&CompiledTiming::Counter))
@@ -302,7 +326,10 @@ fn bt25_103_clause_shape() {
     assert!(counter.when.contains(&CompiledTiming::WhenAttacking));
     assert!(!counter.when.contains(&CompiledTiming::WhenDigivolving));
     assert!(counter.once_per_turn);
-    assert!(!counter.optional, "DCGO optional:false — choices live in the body");
+    assert!(
+        !counter.optional,
+        "DCGO optional:false — choices live in the body"
+    );
 }
 
 // ─── Section 2 — [When Digivolving] bounce ──────────────────────────────────
@@ -316,19 +343,33 @@ fn bt25_103_when_digivolving_bottom_decks_opponent_with_as_many_or_fewer_sources
     digivolve_onto(&mut r, base);
     let v = r.pending_selection_view().expect("bounce prompt");
     assert!(!v.is_optional, "mandatory");
-    assert!(v.valid_action_ids.contains(&encode_attack(0, eq.index as u16)));
+    assert!(v
+        .valid_action_ids
+        .contains(&encode_attack(0, eq.index as u16)));
     assert!(
-        !v.valid_action_ids.contains(&encode_attack(0, more.index as u16)),
+        !v.valid_action_ids
+            .contains(&encode_attack(0, more.index as u16)),
         "more digivolution cards than GraceNovamon"
     );
     let deck_before = r.deck_size(1);
     let trash_before = r.trash_size(1);
-    r.execute_action(0, encode_attack(0, eq.index as u16)).unwrap();
+    r.execute_action(0, encode_attack(0, eq.index as u16))
+        .unwrap();
     let _ = r.auto_resolve();
     assert_eq!(field_ids(&r, 1), vec!["OPP-B".to_string()]);
-    assert_eq!(r.deck_size(1), deck_before + 1, "the Digimon card went to the deck");
-    assert_eq!(r.trash_size(1), trash_before + 2, "its digivolution cards are trashed");
-    let bottom = r.game.players[1].deck[0].card_id(&r.game.card_data).to_string();
+    assert_eq!(
+        r.deck_size(1),
+        deck_before + 1,
+        "the Digimon card went to the deck"
+    );
+    assert_eq!(
+        r.trash_size(1),
+        trash_before + 2,
+        "its digivolution cards are trashed"
+    );
+    let bottom = r.game.players[1].deck[0]
+        .card_id(&r.game.card_data)
+        .to_string();
     let top = r.game.players[1].deck[r.game.players[1].deck.len() - 1]
         .card_id(&r.game.card_data)
         .to_string();
@@ -352,9 +393,14 @@ fn bt25_103_when_attacking_bounce_trash_and_end_attack() {
     let mut r = start(&[], 5);
     r.set_turn(3);
     let me = r.place_stack(0, &["SRC", "SRC", "RED-L6", CARD_ID]); // 3 sources
-    // 6 sources: still > 3 even after 2 are trashed, so never bounceable
-    // whichever order the two [When Attacking] effects resolve in.
-    let a = r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-A"]);
+                                                                   // 6 sources: still > 3 even after 2 are trashed, so never bounceable
+                                                                   // whichever order the two [When Attacking] effects resolve in.
+    let a = r.place_stack(
+        1,
+        &[
+            "OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-A",
+        ],
+    );
     let b = r.place_stack(1, &["OPP-S", "OPP-B"]); // 1 — bounceable
     let _ = (a, b);
     let deck_before = r.deck_size(1);
@@ -363,10 +409,15 @@ fn bt25_103_when_attacking_bounce_trash_and_end_attack() {
     // Drive whichever clause surfaces first.
     let mut ended = false;
     for _ in 0..12 {
-        let Some(v) = r.pending_selection_view() else { break };
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
         match v.kind {
             SelectionKind::SourceMulti { max, .. } => {
-                assert_eq!(max as usize, 3, "one pick per GraceNovamon digivolution card");
+                assert_eq!(
+                    max as usize, 3,
+                    "one pick per GraceNovamon digivolution card"
+                );
                 pick_sources(&mut r, 2);
                 finish_source_picks(&mut r);
             }
@@ -389,7 +440,11 @@ fn bt25_103_when_attacking_bounce_trash_and_end_attack() {
         vec!["OPP-A".to_string()],
         "[When Attacking] bounce: OPP-B (<= 3 cards) left, OPP-A (> 3) stays"
     );
-    assert_eq!(r.deck_size(1), deck_before + 1, "OPP-B returned to the deck");
+    assert_eq!(
+        r.deck_size(1),
+        deck_before + 1,
+        "OPP-B returned to the deck"
+    );
     assert_eq!(r.security_count(1), 3, "attack ended — no security check");
     assert!(!r.game_over());
 }
@@ -450,12 +505,20 @@ fn bt25_103_trash_spans_multiple_opponent_digimon_and_is_capped_by_own_sources()
     }
     // Candidates include both opponent Digimon's stacks (cross-permanent).
     let v = r.pending_selection_view().unwrap();
-    assert!(v.valid_action_ids.len() >= 4 + 1, "4 sources + PASS: {:?}", v.valid_action_ids);
+    assert!(
+        v.valid_action_ids.len() >= 4 + 1,
+        "4 sources + PASS: {:?}",
+        v.valid_action_ids
+    );
     pick_sources(&mut r, 3);
     finish_source_picks(&mut r);
     answer_end_attack(&mut r, false);
     let _ = r.auto_resolve();
-    assert_eq!(opp_source_total(&r), 1, "4 − 3 trashed (cap = own 3 sources)");
+    assert_eq!(
+        opp_source_total(&r),
+        1,
+        "4 − 3 trashed (cap = own 3 sources)"
+    );
     let _ = (a, b);
 }
 
@@ -532,7 +595,10 @@ fn bt25_103_ending_attack_alone_spends_opt() {
     answer_end_attack(&mut r, true);
     let _ = r.auto_resolve();
     fire(&mut r, EffectTiming::CounterEffect, me);
-    assert!(r.game.pending_selection.is_none(), "OPT spent by ending the attack");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "OPT spent by ending the attack"
+    );
 }
 
 // ─── Section 5 — real [Counter]: opponent's attack ──────────────────────────
@@ -556,7 +622,9 @@ fn bt25_103_counter_on_opponent_attack_can_end_it() {
     // Counter window: the defender (player 0) may fire GraceNovamon's ability.
     let mut fired = false;
     for _ in 0..12 {
-        let Some(v) = r.pending_selection_view() else { break };
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
         match v.kind {
             SelectionKind::SourceMulti { max, .. } => {
                 fired = true;
@@ -605,7 +673,9 @@ fn bt25_103_counter_on_attack_on_player_can_end_it() {
     let mut fired = false;
     let mut ended = false;
     for _ in 0..12 {
-        let Some(v) = r.pending_selection_view() else { break };
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
         match v.kind {
             SelectionKind::SourceMulti { max, .. } => {
                 fired = true;

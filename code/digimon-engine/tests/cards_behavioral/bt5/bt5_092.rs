@@ -524,9 +524,10 @@ fn digivolve_and_measure_memory(
 ) -> i16 {
     let hand_idx = find_hand_index(runner, 0, target_id);
     let memory_before = runner.game.memory;
-    let ok = runner
-        .game
-        .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
     if !ok {
         // DCGO BT5_092.cs isOptional: true — the reducer parks on an
         // accept/decline prompt; accept it.
@@ -756,17 +757,19 @@ fn bt5_092_clause2_cost_reduction_is_optional_and_decline_pays_full_cost() {
     let ally = runner.place_on_field(0, "ALLY", Some(0));
     let hand_idx = find_hand_index(&runner, 0, "GREYMON");
     let memory_before = runner.game.memory;
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        ally.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
     assert!(!ok, "the optional reducer parks on an accept/decline offer");
     assert!(runner.pending_is_optional(), "the offer is declinable");
     runner.decline_optional_trigger().expect("decline");
     runner.game.drain_effect_queue();
-    assert_eq!(memory_before - runner.game.memory, 3, "declined → full cost 3");
+    assert_eq!(
+        memory_before - runner.game.memory,
+        3,
+        "declined → full cost 3"
+    );
     assert!(
         !runner.game.players[0].battle_area[nokia.index as usize].is_suspended,
         "declined → Nokia stays unsuspended"
@@ -798,12 +801,10 @@ fn bt5_092_clause2_no_offer_when_nokia_already_suspended() {
     let ally = runner.place_on_field(0, "ALLY", Some(0));
     runner.game.players[0].battle_area[nokia.index as usize].is_suspended = true;
     let hand_idx = find_hand_index(&runner, 0, "GREYMON");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        ally.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "no offer — the digivolve completes immediately");
     assert!(runner.pending_selection().is_none());
 }
@@ -813,7 +814,12 @@ fn bt5_092_clause2_no_offer_when_nokia_already_suspended() {
 /// into any of them gets no offer and pays the full cost.
 #[test]
 fn bt5_092_clause2_excluded_greymon_garurumon_names_pay_full_cost() {
-    for name in ["DoruGreymon", "BurningGreymon", "DexDoruGreymon", "KendoGarurumon"] {
+    for name in [
+        "DoruGreymon",
+        "BurningGreymon",
+        "DexDoruGreymon",
+        "KendoGarurumon",
+    ] {
         let mut runner = DebugRunner::builder()
             .dsl_card(CARD_ID)
             .expect("BT5-092 in DSL pack")
@@ -835,7 +841,10 @@ fn bt5_092_clause2_excluded_greymon_garurumon_names_pay_full_cost() {
             ally.index as usize,
             PlaySource::ByDigivolve,
         );
-        assert!(ok, "{name}: no reducer offer — digivolve completes immediately");
+        assert!(
+            ok,
+            "{name}: no reducer offer — digivolve completes immediately"
+        );
         runner.game.drain_effect_queue();
         assert_eq!(
             memory_before - runner.game.memory,
@@ -951,7 +960,11 @@ fn bt5_092_security_plays_self_free() {
         runner.game.players[0].security.is_empty(),
         "Nokia left the security stack"
     );
-    assert_eq!(runner.memory(), memory_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
 }
 
 /// G-DSL-COST-TARGET-FROM-HAND: "digivolve into a Digimon card IN YOUR HAND"
@@ -1020,7 +1033,11 @@ fn bt5_092_clause2_no_reduction_for_digivolve_from_trash() {
 // itself: without it a trash-sourced digivolve IS reduced; with it, it isn't.
 
 fn reducer_fixture(with_leaf: bool) -> String {
-    let leaf = if with_leaf { "        - cost_target_from_hand: true\n" } else { "" };
+    let leaf = if with_leaf {
+        "        - cost_target_from_hand: true\n"
+    } else {
+        ""
+    };
     format!(
         r#"
 card: FIX-REDUCER
@@ -1075,12 +1092,20 @@ fn trash_digivolve_spent(with_leaf: bool) -> i16 {
 
 #[test]
 fn cost_target_from_hand_control_without_leaf_trash_digivolve_is_reduced() {
-    assert_eq!(trash_digivolve_spent(false), 2, "control: reducer applies (3 - 1)");
+    assert_eq!(
+        trash_digivolve_spent(false),
+        2,
+        "control: reducer applies (3 - 1)"
+    );
 }
 
 #[test]
 fn cost_target_from_hand_leaf_blocks_trash_digivolve_reduction() {
-    assert_eq!(trash_digivolve_spent(true), 3, "leaf: not from hand → full cost");
+    assert_eq!(
+        trash_digivolve_spent(true),
+        3,
+        "leaf: not from hand → full cost"
+    );
 }
 
 #[test]

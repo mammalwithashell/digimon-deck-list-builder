@@ -83,14 +83,21 @@ fn base(hand: &[&str]) -> DebugRunner {
 }
 
 fn fire_attack(r: &mut DebugRunner, carrier: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     r.game.drain_effect_queue();
 }
 
 fn non_pass(r: &DebugRunner) -> Vec<u16> {
     r.pending_selection_view()
-        .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != PASS)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -153,7 +160,10 @@ fn bt19_001_places_xros_heart_digimon_under_tamer_then_draws_1() {
     assert_eq!(r.deck_size(0), deck_before - 1, "<Draw 1>");
     assert_eq!(r.hand_size(0), hand_before, "-1 placed +1 drawn");
     assert!(
-        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "PLAIN-DIGI"),
+        r.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "PLAIN-DIGI"),
         "the non-trait card stays in hand"
     );
 }
@@ -184,7 +194,10 @@ fn bt19_001_no_trait_digimon_in_hand_no_activation() {
     fire_attack(&mut r, carrier);
     let _ = r.auto_resolve();
 
-    assert!(r.game.pending_selection.is_none(), "no eligible card ⇒ no prompt");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no eligible card ⇒ no prompt"
+    );
     assert_eq!(r.deck_size(0), deck_before, "no draw");
     assert_eq!(r.hand_size(0), hand_before);
 }
@@ -215,7 +228,9 @@ fn bt19_001_declining_the_placement_skips_the_draw() {
     fire_attack(&mut r, carrier);
     // Decline every prompt.
     for _ in 0..4 {
-        let Some(v) = r.pending_selection_view() else { break };
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
         assert!(v.is_optional, "decline is legal");
         r.execute_action(0, PASS).expect("decline");
     }
@@ -263,7 +278,10 @@ fn bt19_001_once_per_turn_lockout() {
 
     fire_attack(&mut r, carrier);
     let _ = r.auto_resolve();
-    assert!(r.game.pending_selection.is_none(), "second activation gated by OPT");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "second activation gated by OPT"
+    );
     assert_eq!(r.deck_size(0), deck_after_first, "no second draw this turn");
 
     // Lockout clears: back to player 0's next turn, re-arm the hand, fire.
@@ -303,7 +321,11 @@ fn bt19_001_declining_does_not_consume_opt() {
         .expect("declined activation does not consume OPT — prompt offered again");
     assert!(view.is_optional);
     accept_place(&mut r);
-    assert_eq!(r.deck_size(0), deck_before - 1, "second attack places + draws");
+    assert_eq!(
+        r.deck_size(0),
+        deck_before - 1,
+        "second attack places + draws"
+    );
 }
 
 // ─── Integrated — real attack declaration ────────────────────────────────────

@@ -84,7 +84,8 @@ fn push_hand(r: &mut DebugRunner, p: u8, card_id: &str) -> usize {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -138,7 +139,8 @@ fn p_200_somp_with_4_memory_suspends_chosen_opponent_digimon() {
     assert_eq!(v.kind, SelectionKind::OppField);
     assert!(!r.pending_is_optional(), "canNoSelect: false");
     assert_eq!(v.valid_action_ids.len(), 2, "both opponent Digimon offered");
-    r.execute_action(0, encode_attack(0, b.index as u16)).unwrap();
+    r.execute_action(0, encode_attack(0, b.index as u16))
+        .unwrap();
     assert!(suspended(&r, b), "chosen opponent Digimon suspended");
     assert!(!suspended(&r, _a), "the other stays unsuspended");
     assert!(!suspended(&r, h), "Kanan is not suspended by this clause");
@@ -252,8 +254,14 @@ fn p_200_inactive_on_opponents_turn() {
     let done = r
         .game
         .digivolve_from_hand(0, hi, ally.index as usize, PlaySource::ByHand);
-    assert!(done, "P0's own Digimon digivolves on P1's turn with no offer");
-    assert!(r.pending_selection().is_none(), "[Your Turn] gate: no reducer offer");
+    assert!(
+        done,
+        "P0's own Digimon digivolves on P1's turn with no offer"
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "[Your Turn] gate: no reducer offer"
+    );
     r.game.drain_effect_queue();
     assert_eq!(field_ids(&r, 0)[ally.index as usize], "TS4");
     assert!(!suspended(&r, kanan), "Kanan stays unsuspended");
@@ -277,4 +285,3 @@ fn p_200_security_plays_itself_for_free() {
     );
     assert_eq!(r.memory(), mem, "played without paying the cost");
 }
-

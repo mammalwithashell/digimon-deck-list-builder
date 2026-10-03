@@ -766,7 +766,10 @@ impl Game {
             // full DSL evaluator, over every card instance the controller
             // could offer as a material.
             let candidates = self.digixros_material_candidate_handles(player);
-            for (slot, material) in transaction.recipe_slots.iter_mut().zip(path.materials.iter())
+            for (slot, material) in transaction
+                .recipe_slots
+                .iter_mut()
+                .zip(path.materials.iter())
             {
                 if let Some(residual) = residual_material_predicate(&material.filter) {
                     slot.eligible_cards = Some(
@@ -1106,7 +1109,11 @@ impl Game {
         p.hand
             .iter()
             .chain(p.trash.iter())
-            .chain(p.battle_area.iter().flat_map(|perm| perm.card_sources.iter()))
+            .chain(
+                p.battle_area
+                    .iter()
+                    .flat_map(|perm| perm.card_sources.iter()),
+            )
             .map(|c| c.handle())
             .collect()
     }

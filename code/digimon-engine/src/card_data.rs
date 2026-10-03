@@ -1132,7 +1132,11 @@ mod tests {
         );
         assert!(kws.is_empty());
         // A bare timing-attached Save is still innate.
-        let kws = parse_printed_keywords("[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)", "", "");
+        let kws = parse_printed_keywords(
+            "[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+            "",
+            "",
+        );
         assert_eq!(kws, vec![crate::enums::Keyword::Save]);
         let kws = parse_printed_keywords("＜Save＞", "", "");
         assert_eq!(kws, vec![crate::enums::Keyword::Save]);

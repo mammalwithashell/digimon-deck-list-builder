@@ -116,7 +116,11 @@ fn bt4_111_main_with_20_trash_gains_2_memory() {
     let mut r = runner_with_trash(20);
     use_jack_raid(&mut r);
     assert_eq!(r.memory(), 2, "20 trash cards → +2 memory");
-    assert_eq!(r.trash_size(0), 21, "Jack Raid itself goes to trash afterwards");
+    assert_eq!(
+        r.trash_size(0),
+        21,
+        "Jack Raid itself goes to trash afterwards"
+    );
 }
 
 #[test]
@@ -187,5 +191,9 @@ fn bt4_111_security_gains_owner_2_memory() {
         before - 2,
         "player 1 (security owner) gains 2 memory → turn player's gauge drops by 2"
     );
-    assert_eq!(r.trash_size(1), 1, "Jack Raid is trashed after its security effect");
+    assert_eq!(
+        r.trash_size(1),
+        1,
+        "Jack Raid is trashed after its security effect"
+    );
 }

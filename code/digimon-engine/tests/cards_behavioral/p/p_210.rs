@@ -82,7 +82,8 @@ fn push_trash(r: &mut DebugRunner, p: u8, card_id: &str) {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -183,9 +184,17 @@ fn p_210_on_play_no_eligible_card_no_prompt() {
     fire(&mut r, EffectTiming::OnPlay, h);
     let offered: Vec<u16> = r
         .pending_selection_view()
-        .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != PASS)
+                .collect()
+        })
         .unwrap_or_default();
-    assert!(offered.is_empty(), "no [TS] Digimon in trash → nothing to pick");
+    assert!(
+        offered.is_empty(),
+        "no [TS] Digimon in trash → nothing to pick"
+    );
 }
 
 #[test]

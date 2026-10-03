@@ -201,7 +201,11 @@ fn lm_060_main_offers_both_matching_colors_mandatorily() {
     assert!(runner.game.activate_hand_main(0, 0));
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Reveal));
     let reveal = runner.pending_selection_view().unwrap();
-    assert_eq!(reveal.valid_action_ids.len(), 2, "green and purple both qualify");
+    assert_eq!(
+        reveal.valid_action_ids.len(),
+        2,
+        "green and purple both qualify"
+    );
     assert!(!reveal.is_optional);
 }
 
@@ -223,7 +227,11 @@ fn lm_060_main_off_color_not_offered_and_bottomed() {
     );
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Reveal));
     let reveal = runner.pending_selection_view().unwrap();
-    assert_eq!(reveal.valid_action_ids.len(), 1, "off-color card is not eligible");
+    assert_eq!(
+        reveal.valid_action_ids.len(),
+        1,
+        "off-color card is not eligible"
+    );
     runner
         .execute_action(0, reveal.valid_action_ids[0])
         .expect("pick");
@@ -309,9 +317,10 @@ fn lm_060_delay_targets_and_hand_pick_filtered_cost_reduced_by_2() {
     // but can never be picked; only B-EVO can digivolve onto WHITE-BASE.
     let (mut runner, delay_perm) = delay_runner(&["B-EVO", "OFF-EVO", "A-OPT"]);
     runner.place_on_field(0, "WHITE-BASE", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
@@ -351,9 +360,10 @@ fn lm_060_delay_targets_and_hand_pick_filtered_cost_reduced_by_2() {
 fn lm_060_delay_color_a_result_eligible_and_decline_is_legal() {
     let (mut runner, delay_perm) = delay_runner(&["A-EVO"]);
     runner.place_on_field(0, "WHITE-BASE", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     let target_pick = runner.pending_selection_view().unwrap();
@@ -372,9 +382,10 @@ fn lm_060_delay_color_a_result_eligible_and_decline_is_legal() {
 fn lm_060_delay_target_excludes_digimon_with_only_off_color_candidate() {
     let (mut runner, delay_perm) = delay_runner(&["OFF-EVO"]);
     runner.place_on_field(0, "OFF-BASE", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.pending_kind(),

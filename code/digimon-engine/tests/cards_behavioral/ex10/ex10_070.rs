@@ -124,7 +124,10 @@ fn ex10_070_is_black_appmon_option_cost_2() {
     let card = runner.compiled_card(CARD_ID).expect("compiled");
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(2));
-    assert!(card.use_requirement.is_some(), "Appmon color-bypass use requirement");
+    assert!(
+        card.use_requirement.is_some(),
+        "Appmon color-bypass use requirement"
+    );
 }
 
 // ── §2 Color requirement gating ───────────────────────────────────────────
@@ -176,7 +179,10 @@ fn ex10_070_main_draws_one_then_places_self_in_battle_area() {
     play_from_hand(&mut runner);
     assert_eq!(hand_ids(&runner, 0), vec!["FILL"], "<Draw 1>");
     assert!(
-        matches!(delay_perm_state(&runner, 0), Some(OptionState::Delayed { owner: 0, .. })),
+        matches!(
+            delay_perm_state(&runner, 0),
+            Some(OptionState::Delayed { owner: 0, .. })
+        ),
         "placed in the battle area as a <Delay> Option"
     );
     assert!(!trash_ids(&runner, 0).contains(&CARD_ID.to_string()));
@@ -239,14 +245,27 @@ fn ex10_070_delay_links_appmon_from_trash_to_that_host_free() {
         .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept");
     let view = runner.pending_selection_view().expect("trash pick");
-    let picks: Vec<u16> = view.valid_action_ids.iter().copied().filter(|a| *a != PASS).collect();
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != PASS)
+        .collect();
     // APP-LINK and APP-LINKED (both Appmon Digimon) are in trash; PLAIN isn't.
     assert_eq!(picks.len(), 2);
     runner.execute_action(0, picks[0]).expect("pick");
     if let Some(view) = runner.pending_selection_view() {
-        let hosts: Vec<u16> =
-            view.valid_action_ids.iter().copied().filter(|a| *a != PASS).collect();
-        assert_eq!(hosts.len(), 1, "only 'those Digimon' — the link card's host");
+        let hosts: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|a| *a != PASS)
+            .collect();
+        assert_eq!(
+            hosts.len(),
+            1,
+            "only 'those Digimon' — the link card's host"
+        );
         runner.execute_action(0, hosts[0]).expect("host");
     }
     runner.auto_resolve().expect("settle");
@@ -318,7 +337,9 @@ fn ex10_070_delay_not_offered_when_host_is_deleted() {
 fn ex10_070_delay_declined_stays_parked() {
     let (mut runner, _host) = stage_link_trash();
     let view = runner.pending_selection_view().expect("activation prompt");
-    runner.execute_action(view.selecting_player, PASS).expect("decline");
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline");
     let _ = runner.auto_resolve();
     assert!(delay_perm_state(&runner, 0).is_some());
 }

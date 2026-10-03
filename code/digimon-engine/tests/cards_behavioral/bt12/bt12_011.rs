@@ -42,7 +42,8 @@ use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "BT12-011";
-const SAVE_TEXT: &str = "[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)";
+const SAVE_TEXT: &str =
+    "[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)";
 const PRINTED_EFFECT: &str = "[On Play] [When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano] or [Tagiru Akashi] from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -77,9 +78,30 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(tamer("TAGIRU", "Tagiru Akashi"))
         .add_card(tamer("OTHER-TAMER", "Kiriha Aonuma"))
         .add_card(tamer("TAMER", "Plain Tamer"))
-        .add_card(digimon("SAVE-DIGI", "Starmons", 3, 1000, CardColor::Yellow, SAVE_TEXT))
-        .add_card(digimon("PLAIN-DIGI", "Agumon", 3, 2000, CardColor::Yellow, ""))
-        .add_card(digimon("MSAVE-DIGI", "X4", 4, 8000, CardColor::Red, "＜Material Save 2＞"))
+        .add_card(digimon(
+            "SAVE-DIGI",
+            "Starmons",
+            3,
+            1000,
+            CardColor::Yellow,
+            SAVE_TEXT,
+        ))
+        .add_card(digimon(
+            "PLAIN-DIGI",
+            "Agumon",
+            3,
+            2000,
+            CardColor::Yellow,
+            "",
+        ))
+        .add_card(digimon(
+            "MSAVE-DIGI",
+            "X4",
+            4,
+            8000,
+            CardColor::Red,
+            "＜Material Save 2＞",
+        ))
         .add_card(digimon("RED-LV3", "Shoutmon", 3, 2000, CardColor::Red, ""))
         .add_card(digimon("OPP-4000", "Opp4k", 4, 4000, CardColor::Blue, ""))
         .add_card(digimon("OPP-5000", "Opp5k", 4, 5000, CardColor::Blue, ""))
@@ -97,13 +119,19 @@ fn base(hand: &[&str]) -> DebugRunner {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
 fn non_pass(r: &DebugRunner) -> Vec<u16> {
     r.pending_selection_view()
-        .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != PASS)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -115,11 +143,16 @@ fn seed_trash(r: &mut DebugRunner, p: u8, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
     let next = r.game.next_card_index();
-    r.game.players[p as usize].trash.push(CardSource::new(data_idx, p, next));
+    r.game.players[p as usize]
+        .trash
+        .push(CardSource::new(data_idx, p, next));
 }
 
 fn ids(r: &DebugRunner, cards: &[CardSource]) -> Vec<String> {
-    cards.iter().map(|c| c.card_id(&r.game.card_data).to_string()).collect()
+    cards
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect()
 }
 
 fn sources_of_field_card(r: &DebugRunner, p: u8, top_id: &str) -> Vec<String> {
@@ -191,8 +224,9 @@ fn bt12_011_clause_shape() {
     assert!(trig.iter().any(|t| t.scope != CompiledScope::Inherited
         && t.when.contains(&CompiledTiming::OnPlay)
         && t.when.contains(&CompiledTiming::WhenDigivolving)));
-    assert!(trig.iter().any(|t| t.scope != CompiledScope::Inherited
-        && t.when.contains(&CompiledTiming::OnDeletion)));
+    assert!(trig.iter().any(
+        |t| t.scope != CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnDeletion)
+    ));
     assert!(trig.iter().any(|t| t.scope == CompiledScope::Inherited
         && t.when.contains(&CompiledTiming::WhenAttacking)
         && t.once_per_turn));
@@ -295,9 +329,16 @@ fn bt12_011_on_deletion_save_then_places_save_text_card_from_trash() {
     // 2) Then — trash pick: only the <Save>-text Digimon card (not the
     //    plain one, not the <Material Save> one).
     let v = r.pending_selection_view().expect("trash pick");
-    assert!(!v.is_optional, "the trash placement is mandatory (canNoSelect:false)");
+    assert!(
+        !v.is_optional,
+        "the trash placement is mandatory (canNoSelect:false)"
+    );
     let picks = non_pass(&r);
-    assert_eq!(picks.len(), 1, "only the <Save>-text Digimon card is eligible");
+    assert_eq!(
+        picks.len(),
+        1,
+        "only the <Save>-text Digimon card is eligible"
+    );
     r.execute_action(0, picks[0]).unwrap();
 
     // 3) Tamer pick (mandatory).
@@ -309,8 +350,14 @@ fn bt12_011_on_deletion_save_then_places_save_text_card_from_trash() {
     let _ = r.auto_resolve();
 
     let srcs = sources_of_field_card(&r, 0, "TAMER");
-    assert!(srcs.iter().any(|c| c == CARD_ID), "Shoutmon saved under the Tamer");
-    assert!(srcs.iter().any(|c| c == "SAVE-DIGI"), "<Save>-text card placed under the Tamer");
+    assert!(
+        srcs.iter().any(|c| c == CARD_ID),
+        "Shoutmon saved under the Tamer"
+    );
+    assert!(
+        srcs.iter().any(|c| c == "SAVE-DIGI"),
+        "<Save>-text card placed under the Tamer"
+    );
     let trash = trash_ids(&r, 0);
     assert!(!trash.iter().any(|c| c == CARD_ID || c == "SAVE-DIGI"));
     assert!(trash.iter().any(|c| c == "PLAIN-DIGI"));
@@ -332,7 +379,9 @@ fn bt12_011_on_deletion_declined_save_still_places_and_self_is_eligible() {
     assert!(v.is_optional);
     r.execute_action(0, PASS).expect("decline <Save>");
 
-    let v = r.pending_selection_view().expect("the 'Then' trash pick still runs");
+    let v = r
+        .pending_selection_view()
+        .expect("the 'Then' trash pick still runs");
     assert!(!v.is_optional);
     assert_eq!(
         non_pass(&r).len(),
@@ -365,16 +414,26 @@ fn bt12_011_on_deletion_single_save_prompt_with_printed_text() {
 
     let mut prompts = 0;
     for _ in 0..8 {
-        let Some(v) = r.pending_selection_view() else { break };
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
         prompts += 1;
-        let a = v.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap_or(PASS);
+        let a = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(PASS);
         if r.execute_action(v.selecting_player, a).is_err() {
             break;
         }
     }
     // Save (Tamer pick) → nothing left in trash with <Save> (self is saved)
     // ⇒ exactly one prompt.
-    assert_eq!(prompts, 1, "exactly one <Save> decision, no duplicate keyword trigger");
+    assert_eq!(
+        prompts, 1,
+        "exactly one <Save> decision, no duplicate keyword trigger"
+    );
     let srcs = sources_of_field_card(&r, 0, "TAMER");
     assert_eq!(srcs.iter().filter(|c| *c == CARD_ID).count(), 1);
 }
@@ -422,7 +481,10 @@ fn bt12_011_inherited_no_save_text_no_delete() {
     let _ = r.auto_resolve();
 
     assert!(r.game.pending_selection.is_none());
-    assert!(on_field(&r, 1, "OPP-4000"), "carrier lacks <Save> in its text");
+    assert!(
+        on_field(&r, 1, "OPP-4000"),
+        "carrier lacks <Save> in its text"
+    );
 }
 
 #[test]
@@ -466,7 +528,11 @@ fn bt12_011_inherited_once_per_turn() {
     assert_eq!(picks.len(), 1, "OPT lock cleared — delete offered again");
     r.execute_action(0, picks[0]).unwrap();
     let _ = r.auto_resolve();
-    assert_eq!(r.battle_area_size(1), 0, "second 4000 DP Digimon deleted next turn");
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "second 4000 DP Digimon deleted next turn"
+    );
 }
 
 // ─── Integrated — real play / real attack ───────────────────────────────────
@@ -488,7 +554,11 @@ fn bt12_011_on_play_from_hand_plays_tamer_free() {
 
     assert!(on_field(&r, 0, CARD_ID), "Shoutmon (King Version) played");
     assert!(on_field(&r, 0, "TAIKI"), "Taiki Kudo played by the effect");
-    assert_eq!(mem - r.memory(), 5, "only Shoutmon's cost 5 is paid; Taiki is free");
+    assert_eq!(
+        mem - r.memory(),
+        5,
+        "only Shoutmon's cost 5 is paid; Taiki is free"
+    );
 }
 
 #[test]
@@ -507,7 +577,10 @@ fn bt12_011_attack_with_save_carrier_deletes_4000() {
     r.execute_action(0, picks[0]).unwrap();
     let _ = r.auto_resolve();
 
-    assert!(!on_field(&r, 1, "OPP-4000"), "4000 DP Digimon deleted on a real attack");
+    assert!(
+        !on_field(&r, 1, "OPP-4000"),
+        "4000 DP Digimon deleted on a real attack"
+    );
     assert!(on_field(&r, 1, "OPP-5000"));
 }
 
@@ -524,7 +597,10 @@ fn bt12_011_digivolve_from_non_red_lv3_with_save_text_cost_2() {
     let (mut r, b) = digivolve_runner("SAVE-DIGI"); // yellow Lv.3 w/ <Save>
     let action = encode_digivolve(0, b.index as u16);
     let mask = build_action_mask(&r.game, 0);
-    assert_eq!(mask[action as usize], 1.0, "Lv.3 w/<Save> in text route is legal");
+    assert_eq!(
+        mask[action as usize], 1.0,
+        "Lv.3 w/<Save> in text route is legal"
+    );
     let before = r.memory();
     r.game.decode_action(action, 0);
     assert_eq!(r.memory(), before - 2);
@@ -581,6 +657,12 @@ fn bt12_011_digixros_with_save_text_material_costs_3() {
 
     assert_eq!(mem - r.memory(), 3, "cost 5 − 2");
     let srcs = sources_of_field_card(&r, 0, CARD_ID);
-    assert!(srcs.iter().any(|c| c == "SAVE-DIGI"), "material placed under");
-    assert!(on_field(&r, 0, "PLAIN-DIGI"), "the plain Digimon stays on the field");
+    assert!(
+        srcs.iter().any(|c| c == "SAVE-DIGI"),
+        "material placed under"
+    );
+    assert!(
+        on_field(&r, 0, "PLAIN-DIGI"),
+        "the plain Digimon stays on the field"
+    );
 }

@@ -38,8 +38,8 @@ use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, ModifierType, PlaySource, PlayerId};
-use digimon_engine::selection::SelectionKind;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "BT25-050";
 
@@ -181,12 +181,24 @@ fn bt25_050_suspend_pick_is_optional_and_suspends_chosen_target() {
     let opp_b = runner.place_on_field(1, "OPP-B", Some(0));
 
     let _k = runner.play(0, 0).expect("play Kiwimon");
-    assert!(runner.pending_selection().is_some(), "OnPlay installs the suspend prompt");
-    assert!(runner.pending_is_optional(), "the you-may-suspend pick exposes PASS");
+    assert!(
+        runner.pending_selection().is_some(),
+        "OnPlay installs the suspend prompt"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "the you-may-suspend pick exposes PASS"
+    );
     pick(&mut runner, opp_b);
 
-    assert!(is_suspended(&runner, opp_b), "the chosen Digimon is suspended");
-    assert!(!is_suspended(&runner, opp_a), "the other Digimon is untouched");
+    assert!(
+        is_suspended(&runner, opp_b),
+        "the chosen Digimon is suspended"
+    );
+    assert!(
+        !is_suspended(&runner, opp_a),
+        "the other Digimon is untouched"
+    );
     // Only 1 suspended Digimon → no lock prompt.
     assert!(runner.pending_selection().is_none());
     assert!(!runner.modifiers().has(opp_a, ModifierType::CannotUnsuspend));
@@ -298,11 +310,7 @@ fn bt25_050_own_suspend_brings_count_to_two_and_locks() {
 fn bt25_050_digivolve_from_lv3_ts_base_fires_when_digivolving() {
     let mut base3 = make_digimon("TS-3", 3, 3000, &["TS"]); // Red by default
     base3.evo_costs.clear();
-    let mut runner = base()
-        .add_card(base3)
-        .hand(0, &[CARD_ID])
-        .memory(6)
-        .start();
+    let mut runner = base().add_card(base3).hand(0, &[CARD_ID]).memory(6).start();
     let host = runner.place_on_field(0, "TS-3", Some(0));
     let opp = runner.place_on_field(1, "OPP-A", Some(0));
 
@@ -371,13 +379,25 @@ fn bt25_050_inherited_aura_buffs_all_own_digimon_on_your_turn() {
     let carrier = runner.place_stack(0, &["BT25-050", "OWN-A"]);
     let other = runner.place_on_field(0, "OPP-B", Some(0)); // own, base 4000
     let opp = runner.place_on_field(1, "OPP-A", Some(0)); // opponent, base 5000
-    // Filtered (team-wide) auras materialize on a declarative tick; place_stack
-    // skips the play action, so tick explicitly before reading effective DP.
+                                                          // Filtered (team-wide) auras materialize on a declarative tick; place_stack
+                                                          // skips the play action, so tick explicitly before reading effective DP.
     runner.game.tick_declarative_effects();
 
-    assert_eq!(runner.effective_dp(carrier), Some(5000), "carrier 4000 + 1000");
-    assert_eq!(runner.effective_dp(other), Some(5000), "second own Digimon 4000 + 1000");
-    assert_eq!(runner.effective_dp(opp), Some(5000), "opponent Digimon unchanged (5000)");
+    assert_eq!(
+        runner.effective_dp(carrier),
+        Some(5000),
+        "carrier 4000 + 1000"
+    );
+    assert_eq!(
+        runner.effective_dp(other),
+        Some(5000),
+        "second own Digimon 4000 + 1000"
+    );
+    assert_eq!(
+        runner.effective_dp(opp),
+        Some(5000),
+        "opponent Digimon unchanged (5000)"
+    );
 }
 
 /// Gate (negative): the inherited aura is inactive on the opponent's turn.

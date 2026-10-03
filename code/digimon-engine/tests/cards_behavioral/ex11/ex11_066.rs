@@ -157,8 +157,10 @@ fn ex11_066_structure() {
             _ => None,
         })
         .collect();
-    assert!(triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
-        && t.when.contains(&CompiledTiming::StartOfYourMainPhase)));
+    assert!(triggered
+        .iter()
+        .any(|t| t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::StartOfYourMainPhase)));
     assert!(triggered.iter().any(|t| t.optional
         && t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
         && t.when.contains(&CompiledTiming::OnDigivolve)));
@@ -184,7 +186,11 @@ fn ex11_066_on_play_trash_vemmon_text_card_draws_and_gains_memory() {
     let view = r.pending_selection_view().expect("hand cost prompt");
     assert_eq!(view.kind, SelectionKind::Hand);
     assert!(r.pending_is_optional(), "'By trashing' cost is declinable");
-    assert_eq!(view.valid_action_ids.len(), 1, "only the [Vemmon]-text card");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only the [Vemmon]-text card"
+    );
     r.execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("trash VTXT");
     r.auto_resolve().expect("resolve");
@@ -205,7 +211,8 @@ fn ex11_066_on_play_decline_does_nothing() {
     let mem_before = r.memory();
     r.play(0, 0).expect("play Xeno");
     let view = r.pending_selection_view().expect("hand cost prompt");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
     r.auto_resolve().expect("resolve");
     assert!(hand_has(&r, 0, "VEM"), "card kept");
     assert!(!hand_has(&r, 0, "OTHER"), "no draw");
@@ -264,8 +271,13 @@ fn ex11_066_played_vemmon_text_digimon_suspend_reveal_places_vemmon_trashes_rest
     let xeno = r.place_on_field(0, CARD_ID, Some(0));
     let _ = r.play(0, 0);
 
-    let view = r.pending_selection_view().expect("optional activation prompt");
-    assert!(r.pending_is_optional(), "'by suspending this Tamer' is optional");
+    let view = r
+        .pending_selection_view()
+        .expect("optional activation prompt");
+    assert!(
+        r.pending_is_optional(),
+        "'by suspending this Tamer' is optional"
+    );
     r.accept_optional_trigger().expect("accept");
     r.auto_resolve().expect("resolve reveal");
 
@@ -275,7 +287,11 @@ fn ex11_066_played_vemmon_text_digimon_suspend_reveal_places_vemmon_trashes_rest
     );
     let host = find_perm(&r, 0, "VTXT").expect("played Digimon");
     let src = source_ids(&r, host);
-    assert_eq!(src.first().map(String::as_str), Some("VEM"), "Vemmon placed at bottom");
+    assert_eq!(
+        src.first().map(String::as_str),
+        Some("VEM"),
+        "Vemmon placed at bottom"
+    );
     assert_eq!(trash_count(&r, 0, "OTHER"), 1, "the rest trashed");
     assert_eq!(r.deck_size(0), 2, "exactly 2 revealed");
 }
@@ -370,7 +386,10 @@ fn ex11_066_non_vemmon_digimon_played_does_not_trigger() {
     r.game.enter_main_phase();
     r.place_on_field(0, CARD_ID, Some(0));
     let _ = r.play(0, 0);
-    assert!(r.pending_selection().is_none(), "no [Vemmon] in text → no trigger");
+    assert!(
+        r.pending_selection().is_none(),
+        "no [Vemmon] in text → no trigger"
+    );
     assert_eq!(r.deck_size(0), 4);
 }
 
@@ -388,7 +407,10 @@ fn ex11_066_suspended_tamer_cannot_pay_cost_no_trigger() {
     let xeno = r.place_on_field(0, CARD_ID, Some(0));
     r.game.players[0].battle_area[xeno.index as usize].is_suspended = true;
     let _ = r.play(0, 0);
-    assert!(r.pending_selection().is_none(), "already suspended → cost unpayable");
+    assert!(
+        r.pending_selection().is_none(),
+        "already suspended → cost unpayable"
+    );
     assert_eq!(r.deck_size(0), 4);
 }
 
@@ -435,7 +457,11 @@ fn ex11_066_digivolve_into_vemmon_text_digimon_triggers() {
     r.auto_resolve().expect("resolve");
     let host = find_perm(&r, 0, "VTXT5").expect("digivolved Digimon");
     let src = source_ids(&r, host);
-    assert_eq!(src.first().map(String::as_str), Some("VEM"), "Vemmon at bottom");
+    assert_eq!(
+        src.first().map(String::as_str),
+        Some("VEM"),
+        "Vemmon at bottom"
+    );
     assert_eq!(trash_count(&r, 0, "OTHER"), 1);
 }
 
@@ -457,7 +483,8 @@ fn ex11_066_security_plays_self() {
     let a = r.place_on_field(0, "ATK", Some(0));
     r.attack_player(a, 1, false);
     r.auto_resolve().expect("resolve");
-    assert!(find_perm(&r, 1, CARD_ID).is_some(), "Xeno played from security");
+    assert!(
+        find_perm(&r, 1, CARD_ID).is_some(),
+        "Xeno played from security"
+    );
 }
-
-

@@ -26,7 +26,9 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause};
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
+};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};

@@ -20,10 +20,10 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
+use digimon_dsl::compiled::CompiledColor;
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_dsl::compiled::CompiledColor;
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -222,7 +222,10 @@ fn bt25_059_suspend_picks_two_targets_and_both_suspend() {
 
     assert!(is_suspended(&runner, veg), "own Vegetation suspended");
     assert!(is_suspended(&runner, opp), "opponent Digimon suspended");
-    assert!(!is_suspended(&runner, ceres), "Ceresmon not picked → unsuspended");
+    assert!(
+        !is_suspended(&runner, ceres),
+        "Ceresmon not picked → unsuspended"
+    );
     assert!(!is_suspended(&runner, opp2));
     assert_eq!(runner.effective_dp(opp), Some(3000), "2 suspended → -6000");
 }
@@ -250,11 +253,23 @@ fn bt25_059_immunity_covers_only_own_suspended_veg_or_ts_digimon() {
     runner.auto_resolve().ok();
     runner.game.tick_declarative_effects();
 
-    assert!(immune(&runner, veg_s), "suspended [Vegetation] is protected");
+    assert!(
+        immune(&runner, veg_s),
+        "suspended [Vegetation] is protected"
+    );
     assert!(immune(&runner, ts_s), "suspended [TS] is protected");
-    assert!(!immune(&runner, veg_u), "UNsuspended [Vegetation] is not protected");
-    assert!(!immune(&runner, plain_s), "suspended non-trait Digimon is not protected");
-    assert!(!immune(&runner, ceres), "Ceresmon itself is unsuspended → not protected");
+    assert!(
+        !immune(&runner, veg_u),
+        "UNsuspended [Vegetation] is not protected"
+    );
+    assert!(
+        !immune(&runner, plain_s),
+        "suspended non-trait Digimon is not protected"
+    );
+    assert!(
+        !immune(&runner, ceres),
+        "Ceresmon itself is unsuspended → not protected"
+    );
     assert!(
         !runner
             .game
@@ -297,8 +312,14 @@ fn bt25_059_immunity_tracks_suspension_and_lasts_through_opponents_turn() {
     runner.auto_resolve().ok();
     runner.game.unsuspend(veg_a);
     runner.game.tick_declarative_effects();
-    assert!(immune(&runner, veg_b), "newly suspended [Vegetation] is covered");
-    assert!(!immune(&runner, veg_a), "unsuspended [Vegetation] drops out");
+    assert!(
+        immune(&runner, veg_b),
+        "newly suspended [Vegetation] is covered"
+    );
+    assert!(
+        !immune(&runner, veg_a),
+        "unsuspended [Vegetation] drops out"
+    );
 
     // Persists into the opponent's turn ("until their turn ends").
     runner.end_turn();
@@ -331,7 +352,11 @@ fn bt25_059_debuff_is_minus_3000_per_suspended_and_expires() {
     pick(&mut runner, opp);
     runner.auto_resolve().ok();
     assert_eq!(runner.effective_dp(opp), Some(3000), "9000 - 2 × 3000");
-    assert_eq!(runner.effective_dp(opp2), Some(6000), "only the chosen Digimon");
+    assert_eq!(
+        runner.effective_dp(opp2),
+        Some(6000),
+        "only the chosen Digimon"
+    );
 
     runner.end_turn(); // opponent's turn (their unsuspend phase un-suspends OPP-DIGI2)
     assert_eq!(runner.turn_player(), 1);
@@ -369,7 +394,11 @@ fn bt25_059_tamer_suspending_does_not_trigger() {
         "a Digimon suspending still triggers (OPT unspent)"
     );
     pick(&mut runner, opp);
-    assert_eq!(runner.effective_dp(opp), Some(6000), "1 suspended Digimon → -3000");
+    assert_eq!(
+        runner.effective_dp(opp),
+        Some(6000),
+        "1 suspended Digimon → -3000"
+    );
 }
 
 /// [Once Per Turn]: the second Digimon suspension in the same turn does not
@@ -422,7 +451,10 @@ fn bt25_059_no_opponent_digimon_still_spends_opt() {
     let _ceres = runner.place_on_field(0, CARD_ID, Some(0));
 
     runner.game.suspend(veg_a);
-    assert!(runner.pending_selection().is_none(), "no candidate → no prompt");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no candidate → no prompt"
+    );
 
     let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
     runner.game.suspend(veg_b);
@@ -439,7 +471,11 @@ fn bt25_059_no_opponent_digimon_still_spends_opt() {
 fn bt25_059_digivolves_from_yellow_lv5_for_cost_4() {
     let mut yellow5 = make_digimon("YELLOW-5", 5, 7000, &["Beast"]);
     yellow5.colors = vec![CardColor::Yellow];
-    let mut runner = base().add_card(yellow5).hand(0, &[CARD_ID]).memory(10).start();
+    let mut runner = base()
+        .add_card(yellow5)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
     let host = runner.place_on_field(0, "YELLOW-5", Some(0));
     assert!(
         runner
@@ -460,7 +496,11 @@ fn bt25_059_digivolves_from_yellow_lv5_for_cost_4() {
 fn bt25_059_cannot_digivolve_from_blue_lv5_without_trait() {
     let mut blue5 = make_digimon("BLUE-5", 5, 7000, &["Beast"]);
     blue5.colors = vec![CardColor::Blue];
-    let mut runner = base().add_card(blue5).hand(0, &[CARD_ID]).memory(10).start();
+    let mut runner = base()
+        .add_card(blue5)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
     let host = runner.place_on_field(0, "BLUE-5", Some(0));
     assert!(
         !runner
@@ -482,7 +522,11 @@ fn bt25_059_cost_reduced_with_two_suspended_opponent_digimon() {
     runner.game.suspend(a);
     runner.game.suspend(b);
     runner.play(0, 0).expect("play Ceresmon");
-    assert_eq!(runner.memory(), 3, "2 suspended Digimon: paid 7 (12 - 5) from 10");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "2 suspended Digimon: paid 7 (12 - 5) from 10"
+    );
 }
 
 /// Negative: only one suspended Digimon → full cost 12.
@@ -493,5 +537,9 @@ fn bt25_059_cost_not_reduced_with_one_suspended_digimon() {
     runner.place_on_field(1, "OPP-DIGI2", Some(0));
     runner.game.suspend(a);
     runner.play(0, 0).expect("play Ceresmon");
-    assert_eq!(runner.memory(), -2, "1 suspended Digimon: full cost 12 paid from 10");
+    assert_eq!(
+        runner.memory(),
+        -2,
+        "1 suspended Digimon: full cost 12 paid from 10"
+    );
 }

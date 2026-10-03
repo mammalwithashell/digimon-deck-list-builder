@@ -22,12 +22,14 @@
 //! mandatory target pick (repeat_effect_choice single-label loop); [Your Turn]
 //! self DP aura scaling by Tamer count.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
-use digimon_engine::{EffectTiming, TriggerSource};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::{EffectTiming, TriggerSource};
 
 const CARD_ID: &str = "BT2-041";
 
@@ -126,7 +128,10 @@ fn bt2_041_structure() {
 #[test]
 fn bt2_041_wd_suspends_all_unsuspended_yellow_tamers_only() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let ya = r.place_on_field(0, "Y-TAMER-A", Some(0));
     let yb = r.place_on_field(0, "Y-TAMER-B", Some(0));
     let red = r.place_on_field(0, "R-TAMER", Some(0));
@@ -141,7 +146,10 @@ fn bt2_041_wd_suspends_all_unsuspended_yellow_tamers_only() {
 #[test]
 fn bt2_041_wd_two_suspended_tamers_give_two_separate_mandatory_picks() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.place_on_field(0, "Y-TAMER-A", Some(0));
     r.place_on_field(0, "Y-TAMER-B", Some(0));
     let oa = r.place_on_field(1, "OPP-A", Some(0));
@@ -151,7 +159,10 @@ fn bt2_041_wd_two_suspended_tamers_give_two_separate_mandatory_picks() {
     // First activation.
     let p1 = r.pending_selection().expect("first -4000 pick");
     assert_eq!(p1.selecting_player, 0);
-    assert!(!p1.is_optional, "target pick is mandatory (canNoSelect false)");
+    assert!(
+        !p1.is_optional,
+        "target pick is mandatory (canNoSelect false)"
+    );
     assert_eq!(p1.valid_action_ids.len(), 2, "either opponent Digimon");
     let a = p1.valid_action_ids[0];
     r.execute_action(0, a).expect("pick 1");
@@ -172,7 +183,10 @@ fn bt2_041_wd_two_suspended_tamers_give_two_separate_mandatory_picks() {
 #[test]
 fn bt2_041_wd_same_target_may_be_chosen_twice() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.place_on_field(0, "Y-TAMER-A", Some(0));
     r.place_on_field(0, "Y-TAMER-B", Some(0));
     let oa = r.place_on_field(1, "OPP-A", Some(0));
@@ -189,7 +203,10 @@ fn bt2_041_wd_same_target_may_be_chosen_twice() {
 #[test]
 fn bt2_041_wd_already_suspended_yellow_tamer_does_not_count() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let ya = r.place_on_field(0, "Y-TAMER-A", Some(0));
     let yb = r.place_on_field(0, "Y-TAMER-B", Some(0));
     r.game.player_mut(0).battle_area[yb.index as usize].is_suspended = true;
@@ -209,20 +226,29 @@ fn bt2_041_wd_already_suspended_yellow_tamer_does_not_count() {
 #[test]
 fn bt2_041_wd_no_unsuspended_yellow_tamer_no_activation() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let ya = r.place_on_field(0, "Y-TAMER-A", Some(0));
     r.game.player_mut(0).battle_area[ya.index as usize].is_suspended = true;
     r.place_on_field(0, "R-TAMER", Some(0));
     let oa = r.place_on_field(1, "OPP-A", Some(0));
     digivolve(&mut r, base);
-    assert!(r.pending_selection().is_none(), "nothing suspended → no -DP pick");
+    assert!(
+        r.pending_selection().is_none(),
+        "nothing suspended → no -DP pick"
+    );
     assert_eq!(r.effective_dp(oa), Some(9000));
 }
 
 #[test]
 fn bt2_041_wd_three_tamers_three_activations() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.place_on_field(0, "Y-TAMER-A", Some(0));
     r.place_on_field(0, "Y-TAMER-B", Some(0));
     r.place_on_field(0, "Y-TAMER-C", Some(0));
@@ -245,7 +271,10 @@ fn bt2_041_wd_three_tamers_three_activations() {
 #[test]
 fn bt2_041_wd_no_opponent_digimon_still_suspends_tamers() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let ya = r.place_on_field(0, "Y-TAMER-A", Some(0));
     digivolve(&mut r, base);
     assert!(r.pending_selection().is_none(), "no target → no prompt");
@@ -255,7 +284,10 @@ fn bt2_041_wd_no_opponent_digimon_still_suspends_tamers() {
 #[test]
 fn bt2_041_wd_debuff_expires_at_end_of_turn() {
     let mut r = builder().start();
-    let base = PermanentHandle { player: 0, index: 0 };
+    let base = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.place_on_field(0, "Y-TAMER-A", Some(0));
     let oa = r.place_on_field(1, "OPP-A", Some(0));
     digivolve(&mut r, base);
@@ -263,7 +295,11 @@ fn bt2_041_wd_debuff_expires_at_end_of_turn() {
     r.execute_action(0, a).expect("pick");
     assert_eq!(r.effective_dp(oa), Some(5000));
     r.end_turn();
-    assert_eq!(r.effective_dp(oa), Some(9000), "-4000 lasts for the turn only");
+    assert_eq!(
+        r.effective_dp(oa),
+        Some(9000),
+        "-4000 lasts for the turn only"
+    );
 }
 
 // ── Section 3: [Your Turn] DP aura ─────────────────────────────────────────

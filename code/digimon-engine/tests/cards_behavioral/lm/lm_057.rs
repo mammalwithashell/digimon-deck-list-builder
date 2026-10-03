@@ -155,7 +155,10 @@ fn lm_057_is_red_blue_option_cost_2() {
     let runner = builder().start();
     let compiled = runner.compiled_card(CARD_ID).expect("registered");
     assert_eq!(compiled.kind, CompiledCardKind::Option);
-    assert_eq!(compiled.color, vec![CompiledColor::Red, CompiledColor::Blue]);
+    assert_eq!(
+        compiled.color,
+        vec![CompiledColor::Red, CompiledColor::Blue]
+    );
     assert_eq!(compiled.cost, Some(2));
 }
 
@@ -192,7 +195,9 @@ fn lm_057_has_main_delay_and_security_clauses() {
         other => panic!("clause 0 must be main_from_hand; got {other:?}"),
     }
     match &compiled.effects[1] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, process, .. }) => {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
+            trigger, process, ..
+        }) => {
             assert_eq!(*trigger, CompiledTiming::Delayed);
             assert!(process
                 .iter()
@@ -417,10 +422,14 @@ fn lm_057_main_no_match_bottoms_both_and_still_places() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    runner.auto_resolve().expect("resolve with no eligible reveal");
+    runner
+        .auto_resolve()
+        .expect("resolve with no eligible reveal");
 
     let hand = hand_ids(&runner, 0);
-    assert!(!hand.iter().any(|id| id == "YELLOW-DIGI" || id == "GREEN-DIGI"));
+    assert!(!hand
+        .iter()
+        .any(|id| id == "YELLOW-DIGI" || id == "GREEN-DIGI"));
     let deck = &runner.game.player(0).deck;
     let bottom_two: Vec<&str> = deck[..2]
         .iter()
@@ -471,7 +480,11 @@ fn lm_057_security_reveals_adds_and_places_self_in_battle_area() {
     assert_eq!(result, AttackResult::InProgress);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Reveal));
     let reveal = runner.pending_selection_view().unwrap();
-    assert_eq!(reveal.valid_action_ids.len(), 1, "only the red card qualifies");
+    assert_eq!(
+        reveal.valid_action_ids.len(),
+        1,
+        "only the red card qualifies"
+    );
     runner
         .execute_action(reveal.selecting_player, reveal.valid_action_ids[0])
         .expect("security pick resolves");
@@ -484,7 +497,11 @@ fn lm_057_security_reveals_adds_and_places_self_in_battle_area() {
         "unchosen card to deck bottom"
     );
     assert_eq!(runner.security_count(1), 0);
-    assert_eq!(runner.trash_size(1), 0, "placed in battle area, not trashed");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "placed in battle area, not trashed"
+    );
     assert!(delayed_self_in_battle_area(&runner, 1));
 }
 
@@ -496,7 +513,12 @@ fn delay_runner(hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::Perma
         .add_card(digimon("WHITE-BASE", CardColor::White, 3))
         .add_card(lv4_evo("BLUE-EVO", CardColor::Blue, CardColor::Red, 3))
         .add_card(lv4_evo("YELLOW-EVO", CardColor::Yellow, CardColor::Red, 3))
-        .add_card(lv4_evo("RED-WHITE-EVO", CardColor::Red, CardColor::White, 3))
+        .add_card(lv4_evo(
+            "RED-WHITE-EVO",
+            CardColor::Red,
+            CardColor::White,
+            3,
+        ))
         .add_card(option("RED-OPT", CardColor::Red))
         .add_card(filler("FILL"))
         .hand(0, hand)
@@ -516,14 +538,18 @@ fn lm_057_delay_target_only_digimon_with_legal_red_or_blue_hand_candidate() {
     runner.place_on_field(0, "RED-BASE", Some(0));
     runner.place_on_field(0, "WHITE-BASE", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     let target_pick = runner.pending_selection_view().unwrap();
-    assert!(target_pick.is_optional, "'may digivolve' — target pick is declinable");
+    assert!(
+        target_pick.is_optional,
+        "'may digivolve' — target pick is declinable"
+    );
     assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
     assert_eq!(
         target_pick.valid_action_ids.len(),
@@ -537,9 +563,10 @@ fn lm_057_delay_hand_pick_filters_red_or_blue_digimon_and_reduces_cost_by_2() {
     let (mut runner, delay_perm) = delay_runner(&["BLUE-EVO", "YELLOW-EVO", "RED-OPT"]);
     runner.place_on_field(0, "RED-BASE", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     let target_pick = runner.pending_selection_view().unwrap();
     runner
@@ -553,7 +580,10 @@ fn lm_057_delay_hand_pick_filters_red_or_blue_digimon_and_reduces_cost_by_2() {
         1,
         "only BLUE-EVO: YELLOW-EVO is the wrong color, RED-OPT is not a Digimon"
     );
-    assert!(evo_pick.is_optional, "DCGO isOptional default — hand pick declinable");
+    assert!(
+        evo_pick.is_optional,
+        "DCGO isOptional default — hand pick declinable"
+    );
 
     runner
         .execute_action(0, evo_pick.valid_action_ids[0])
@@ -577,9 +607,10 @@ fn lm_057_delay_red_digimon_result_also_eligible() {
     let (mut runner, delay_perm) = delay_runner(&["RED-WHITE-EVO"]);
     runner.place_on_field(0, "WHITE-BASE", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     let target_pick = runner.pending_selection_view().unwrap();
     assert_eq!(target_pick.valid_action_ids.len(), 1);
@@ -611,9 +642,10 @@ fn lm_057_delay_declining_target_does_not_digivolve() {
     let (mut runner, delay_perm) = delay_runner(&["BLUE-EVO"]);
     runner.place_on_field(0, "RED-BASE", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     runner.execute_action(0, PASS).expect("decline");
@@ -691,9 +723,10 @@ fn lm_057_delay_is_main_phase_action_after_placing_turn() {
 fn lm_057_delay_target_excludes_digimon_with_only_off_color_candidate() {
     let (mut runner, delay_perm) = delay_runner(&["YELLOW-EVO"]);
     runner.place_on_field(0, "RED-BASE", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.pending_kind(),

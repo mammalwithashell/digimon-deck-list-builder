@@ -96,7 +96,11 @@ fn perm(r: &DebugRunner, h: PermanentHandle) -> &digimon_engine::permanent::Perm
 }
 
 fn face_down_sources(r: &DebugRunner, h: PermanentHandle) -> usize {
-    perm(r, h).digivolution_cards().iter().filter(|s| s.face_down).count()
+    perm(r, h)
+        .digivolution_cards()
+        .iter()
+        .filter(|s| s.face_down)
+        .count()
 }
 
 fn source_count(r: &DebugRunner, h: PermanentHandle) -> usize {
@@ -165,7 +169,12 @@ fn bt25_087_start_of_turn_leaves_high_memory() {
 
 /// Thomas on P0's field, P1 has two Digimon to be bounced; P0's deck is
 /// [.., DECK-A, DECK-A] (distinct from filler so placement is observable).
-fn obs_runner() -> (DebugRunner, PermanentHandle, PermanentHandle, PermanentHandle) {
+fn obs_runner() -> (
+    DebugRunner,
+    PermanentHandle,
+    PermanentHandle,
+    PermanentHandle,
+) {
     let mut runner = builder()
         .deck(0, &["DECK-A"; 6])
         .deck(1, &["FILLER"; 6])
@@ -207,7 +216,10 @@ fn bt25_087_effect_bounce_decline_does_nothing() {
     assert!(runner.pending_is_optional());
     runner.decline_optional_trigger().expect("decline");
     assert!(runner.pending_selection().is_none());
-    assert!(!perm(&runner, thomas).is_suspended, "declined → not suspended");
+    assert!(
+        !perm(&runner, thomas).is_suspended,
+        "declined → not suspended"
+    );
     assert_eq!(source_count(&runner, thomas), 0);
     assert_eq!(runner.game.players[0].deck.len(), deck_before);
 }
@@ -237,7 +249,10 @@ fn bt25_087_opponent_draw_phase_draw_does_not_trigger() {
         opp_hand_before + 1,
         "precondition: the opponent drew in its draw phase"
     );
-    assert!(runner.pending_selection().is_none(), "rule draw is not an effect");
+    assert!(
+        runner.pending_selection().is_none(),
+        "rule draw is not an effect"
+    );
     assert!(!perm(&runner, thomas).is_suspended);
     assert_eq!(source_count(&runner, thomas), 0, "nothing placed");
 }
@@ -265,7 +280,10 @@ fn bt25_087_clause_two_has_no_once_per_turn() {
     // Unsuspend and trigger again in the same turn.
     runner.game.players[0].battle_area[thomas.index as usize].is_suspended = false;
     // opp_b shifted down to index 0 after opp_a left.
-    let opp_b = PermanentHandle { player: 1, index: 0 };
+    let opp_b = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
     bounce(&mut runner, opp_b, 0);
     assert!(
         runner.pending_is_optional(),
@@ -286,7 +304,10 @@ fn bt25_087_all_turns_fires_on_opponents_turn() {
     runner.pass_turn(); // → P1's turn
     let _ = runner.auto_resolve();
     // P1's own effect bounces P1's Digimon → P1 (Thomas's opponent) gains.
-    let opp = PermanentHandle { player: 1, index: 0 };
+    let opp = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
     bounce(&mut runner, opp, 1);
     assert!(
         runner.pending_is_optional(),
@@ -348,16 +369,19 @@ fn bt25_087_reducer_any_ally_into_data_squad_picks_any_tamer_and_credits_minus_o
     let (mut s, hand_idx) = dv_setup(true, true, "DS-LV5");
     let mem_before = s.runner.memory();
     let trash_before = s.runner.trash_size(0);
-    let ok = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    let ok =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     assert!(!ok, "digivolve parks on the reducer prompt");
     assert!(s.runner.pending_is_optional(), "the reducer is optional");
     s.runner.accept_optional_trigger().expect("accept reducer");
 
     // Two Tamers carry a face-down source → the player must choose which.
-    let sel = s.runner.pending_selection().expect("Tamer pick is surfaced");
+    let sel = s
+        .runner
+        .pending_selection()
+        .expect("Tamer pick is surfaced");
     let n_opts = sel.valid_action_ids.len();
     assert!(
         n_opts >= 2,
@@ -375,7 +399,9 @@ fn bt25_087_reducer_any_ally_into_data_squad_picks_any_tamer_and_credits_minus_o
     assert_eq!(s.runner.trash_size(0), trash_before + 1);
     assert_eq!(mem_before - s.runner.memory(), 3, "cost 4 - 1 = 3 paid");
     assert_eq!(
-        perm(&s.runner, s.base).top_card().card_id(&s.runner.game.card_data),
+        perm(&s.runner, s.base)
+            .top_card()
+            .card_id(&s.runner.game.card_data),
         "DS-LV5",
         "the ally digivolved"
     );
@@ -391,7 +417,11 @@ fn bt25_087_reducer_can_trash_from_a_non_thomas_tamer() {
         .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     s.runner.accept_optional_trigger().expect("accept");
     let _ = s.runner.auto_resolve();
-    assert_eq!(face_down_sources(&s.runner, s.other_tamer), 0, "trashed from the other Tamer");
+    assert_eq!(
+        face_down_sources(&s.runner, s.other_tamer),
+        0,
+        "trashed from the other Tamer"
+    );
     assert_eq!(mem_before - s.runner.memory(), 3);
 }
 
@@ -406,7 +436,11 @@ fn bt25_087_reducer_decline_pays_full_cost() {
     s.runner.decline_optional_trigger().expect("decline");
     let _ = s.runner.auto_resolve();
     assert!(s.runner.pending_selection().is_none());
-    assert_eq!(face_down_sources(&s.runner, s.thomas), 1, "FD stash untouched");
+    assert_eq!(
+        face_down_sources(&s.runner, s.thomas),
+        1,
+        "FD stash untouched"
+    );
     assert_eq!(mem_before - s.runner.memory(), 4, "full cost");
 }
 
@@ -414,10 +448,10 @@ fn bt25_087_reducer_decline_pays_full_cost() {
 fn bt25_087_reducer_inactive_for_non_data_squad_target() {
     let (mut s, hand_idx) = dv_setup(true, false, "PLAIN-LV5");
     let mem_before = s.runner.memory();
-    let ok = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    let ok =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     assert!(ok, "no reducer prompt → completes synchronously");
     assert!(s.runner.pending_selection().is_none());
     assert_eq!(face_down_sources(&s.runner, s.thomas), 1);
@@ -428,12 +462,16 @@ fn bt25_087_reducer_inactive_for_non_data_squad_target() {
 fn bt25_087_reducer_unpayable_without_face_down_source() {
     let (mut s, hand_idx) = dv_setup(false, false, "DS-LV5");
     let mem_before = s.runner.memory();
-    let _ = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    let _ =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     let _ = s.runner.auto_resolve();
-    assert_eq!(mem_before - s.runner.memory(), 4, "no FD source → full cost");
+    assert_eq!(
+        mem_before - s.runner.memory(),
+        4,
+        "no FD source → full cost"
+    );
 }
 
 #[test]
@@ -442,10 +480,10 @@ fn bt25_087_reducer_face_up_source_is_not_eligible() {
     // A FACE-UP source under the Tamer does not satisfy "face-down card".
     let t = s.runner.place_stack(0, &["STASH", "TAMER"]);
     let mem_before = s.runner.memory();
-    let _ = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    let _ =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     let _ = s.runner.auto_resolve();
     assert_eq!(source_count(&s.runner, t), 1, "face-up source not trashed");
     assert_eq!(mem_before - s.runner.memory(), 4, "full cost");
@@ -465,13 +503,17 @@ fn bt25_087_reducer_once_per_turn_lockout() {
 
     let hand2 = s.runner.add_to_hand(0, "DS-LV5-B");
     let mem1 = s.runner.memory();
-    let ok = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand2, second_base.index as usize, PlaySource::ByHand);
+    let ok =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand2, second_base.index as usize, PlaySource::ByHand);
     assert!(ok, "OPT used → no second reducer prompt");
     assert!(s.runner.pending_selection().is_none());
-    assert_eq!(mem1 - s.runner.memory(), 4, "second digivolve pays full cost");
+    assert_eq!(
+        mem1 - s.runner.memory(),
+        4,
+        "second digivolve pays full cost"
+    );
     assert_eq!(
         face_down_sources(&s.runner, s.thomas) + face_down_sources(&s.runner, s.other_tamer),
         1,
@@ -502,12 +544,10 @@ fn bt25_087_reducer_once_per_turn_clears_next_turn() {
     let hand2 = s.runner.add_to_hand(0, "DS-LV5-B");
     let mem_before = s.runner.memory();
     let trash_before = s.runner.trash_size(0);
-    let ok = s.runner.game.digivolve_from_hand(
-        0,
-        hand2,
-        fresh_base.index as usize,
-        PlaySource::ByHand,
-    );
+    let ok =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand2, fresh_base.index as usize, PlaySource::ByHand);
     assert!(!ok, "digivolve parks on the reducer prompt again");
     assert!(
         s.runner.pending_is_optional(),
@@ -534,10 +574,10 @@ fn bt25_087_reducer_inactive_on_opponents_turn() {
     let fd_before =
         face_down_sources(&s.runner, s.thomas) + face_down_sources(&s.runner, s.other_tamer);
     let cp = s.runner.event_checkpoint();
-    let ok = s
-        .runner
-        .game
-        .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    let ok =
+        s.runner
+            .game
+            .digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
     assert!(ok, "no reducer prompt → digivolve completes synchronously");
     assert!(
         s.runner.pending_selection().is_none(),
@@ -557,13 +597,19 @@ fn bt25_087_reducer_inactive_on_opponents_turn() {
         .events_since(cp)
         .iter()
         .filter_map(|e| match e {
-            digimon_engine::events::GameEvent::Digivolve { player: 0, memory_paid, .. } => {
-                Some(*memory_paid)
-            }
+            digimon_engine::events::GameEvent::Digivolve {
+                player: 0,
+                memory_paid,
+                ..
+            } => Some(*memory_paid),
             _ => None,
         })
         .collect();
-    assert_eq!(paid, vec![4], "full digivolve cost 4 paid (no -1 reduction)");
+    assert_eq!(
+        paid,
+        vec![4],
+        "full digivolve cost 4 paid (no -1 reduction)"
+    );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -592,5 +638,9 @@ fn bt25_087_security_plays_self_free() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
         "Thomas was played from security"
     );
-    assert_eq!(runner.memory(), mem_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "played without paying the cost"
+    );
 }

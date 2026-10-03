@@ -51,13 +51,38 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT8-095 compiles")
-        .add_card(digimon("ARMOR-BLUE", &[CardColor::Blue], &["Armor Form"], &[]))
+        .add_card(digimon(
+            "ARMOR-BLUE",
+            &[CardColor::Blue],
+            &["Armor Form"],
+            &[],
+        ))
         .add_card(digimon("PLAIN-BLUE", &[CardColor::Blue], &["Beast"], &[]))
         .add_card(digimon("RED", &[CardColor::Red], &[], &[]))
-        .add_card(digimon("RED-YEL", &[CardColor::Red, CardColor::Yellow], &[], &[]))
-        .add_card(digimon("BLU-GRN", &[CardColor::Blue, CardColor::Green], &[], &[]))
-        .add_card(digimon("OPP-BLOCKER", &[CardColor::Black], &[], &[Keyword::Blocker]))
-        .add_card(digimon("OPP-BLOCKER2", &[CardColor::Black], &[], &[Keyword::Blocker]))
+        .add_card(digimon(
+            "RED-YEL",
+            &[CardColor::Red, CardColor::Yellow],
+            &[],
+            &[],
+        ))
+        .add_card(digimon(
+            "BLU-GRN",
+            &[CardColor::Blue, CardColor::Green],
+            &[],
+            &[],
+        ))
+        .add_card(digimon(
+            "OPP-BLOCKER",
+            &[CardColor::Black],
+            &[],
+            &[Keyword::Blocker],
+        ))
+        .add_card(digimon(
+            "OPP-BLOCKER2",
+            &[CardColor::Black],
+            &[],
+            &[Keyword::Blocker],
+        ))
         .add_card(digimon("OPP-PLAIN", &[CardColor::Black], &[], &[]))
         .add_card(digimon("FILLER", &[CardColor::Red], &[], &[]))
         .deck(0, &["FILLER"; 6])
@@ -91,7 +116,10 @@ fn bt8_095_off_colour_without_armor_form_is_not_playable() {
     r.place_on_field(0, "PLAIN-BLUE", Some(0));
     let mask = digimon_engine::action::build_action_mask(&r.game, 0);
     assert_eq!(mask[PLAY_HAND_START as usize], 0.0);
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
     assert_eq!(r.game.players[0].hand.len(), 1);
 }
 
@@ -101,14 +129,20 @@ fn bt8_095_armor_form_digimon_lets_you_ignore_colour() {
     r.place_on_field(0, "ARMOR-BLUE", Some(0));
     let mask = digimon_engine::action::build_action_mask(&r.game, 0);
     assert_eq!(mask[PLAY_HAND_START as usize], 1.0);
-    assert_ne!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_ne!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
 }
 
 #[test]
 fn bt8_095_red_permanent_plays_normally() {
     let mut r = main_runner();
     r.place_on_field(0, "RED", Some(0));
-    assert_ne!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_ne!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
 }
 
 // ─── [Main] ──────────────────────────────────────────────────────────────────
@@ -119,16 +153,25 @@ fn bt8_095_main_grants_security_attack_to_chosen_multicolour_digimon() {
     let mono = r.place_on_field(0, "RED", Some(0));
     let a = r.place_on_field(0, "RED-YEL", Some(0));
     let b = r.place_on_field(0, "BLU-GRN", Some(0));
-    assert_ne!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
-    let v = r.pending_selection_view().expect("mandatory own-field pick");
+    assert_ne!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
+    let v = r
+        .pending_selection_view()
+        .expect("mandatory own-field pick");
     assert_eq!(v.kind, SelectionKind::OwnField);
     assert!(!r.pending_is_optional(), "canNoSelect: false");
     let mut offered = v.valid_action_ids.clone();
     offered.sort();
-    let mut want = vec![encode_attack(0, a.index as u16), encode_attack(0, b.index as u16)];
+    let mut want = vec![
+        encode_attack(0, a.index as u16),
+        encode_attack(0, b.index as u16),
+    ];
     want.sort();
     assert_eq!(offered, want, "only 2+ colour Digimon are eligible");
-    r.execute_action(0, encode_attack(0, b.index as u16)).unwrap();
+    r.execute_action(0, encode_attack(0, b.index as u16))
+        .unwrap();
     let _ = r.auto_resolve();
     assert_eq!(sa(&r, b), 1, "<Security A. +1>");
     assert_eq!(sa(&r, a), 0);
@@ -151,10 +194,19 @@ fn bt8_095_main_no_multicolour_digimon_no_effect() {
     let mut r = main_runner();
     let mono = r.place_on_field(0, "RED", Some(0));
     let res = r.game.play_option_from_hand(0, 0);
-    assert_ne!(res, OptionPlayResult::Invalid, "the Option can still be used");
+    assert_ne!(
+        res,
+        OptionPlayResult::Invalid,
+        "the Option can still be used"
+    );
     let offered: Vec<u16> = r
         .pending_selection_view()
-        .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != PASS)
+                .collect()
+        })
         .unwrap_or_default();
     assert!(offered.is_empty(), "no eligible target");
     let _ = r.auto_resolve();
@@ -186,16 +238,25 @@ fn bt8_095_security_deletes_chosen_opponent_blocker() {
         .filter(|&a| a != PASS)
         .collect();
     offered.sort();
-    let mut want = vec![encode_attack(0, b1.index as u16), encode_attack(0, b2.index as u16)];
+    let mut want = vec![
+        encode_attack(0, b1.index as u16),
+        encode_attack(0, b2.index as u16),
+    ];
     want.sort();
     assert_eq!(offered, want, "only <Blocker> Digimon are eligible");
     r.execute_action(v.selecting_player, encode_attack(0, b2.index as u16))
         .unwrap();
     let _ = r.auto_resolve();
     let opp = field_ids(&r, 1);
-    assert!(!opp.contains(&"OPP-BLOCKER2".to_string()), "chosen Blocker deleted");
+    assert!(
+        !opp.contains(&"OPP-BLOCKER2".to_string()),
+        "chosen Blocker deleted"
+    );
     assert!(opp.contains(&"OPP-BLOCKER".to_string()));
-    assert!(opp.contains(&"OPP-PLAIN".to_string()), "non-Blocker untouched");
+    assert!(
+        opp.contains(&"OPP-PLAIN".to_string()),
+        "non-Blocker untouched"
+    );
 }
 
 #[test]
@@ -204,7 +265,12 @@ fn bt8_095_security_without_opponent_blocker_does_nothing() {
     r.attack_player(attacker, 0, false);
     let offered: Vec<u16> = r
         .pending_selection_view()
-        .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != PASS)
+                .collect()
+        })
         .unwrap_or_default();
     assert!(offered.is_empty(), "no <Blocker> target");
     let _ = r.auto_resolve();
