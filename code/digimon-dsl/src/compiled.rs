@@ -645,6 +645,10 @@ pub struct CompiledPredicate {
     pub event_host_permanent_is_source: Option<bool>,
     /// G-SHARED-OPT-HETEROGENEOUS-TIMING: trash-event host is an own Tamer.
     pub event_host_is_own_tamer: Option<bool>,
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY: trash-event host is an own Digimon.
+    pub event_host_is_own_digimon: Option<bool>,
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY: subject permanent is the event host.
+    pub is_event_host: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
@@ -749,6 +753,9 @@ pub struct CompiledPredicate {
     /// "When THIS Digimon would digivolve into ..." printed semantics.
     /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
     pub source_is_cost_target_permanent: Option<bool>,
+    /// Card whose cost is being computed comes from the hand.
+    /// G-DSL-COST-TARGET-FROM-HAND.
+    pub cost_target_from_hand: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1437,6 +1444,7 @@ pub enum CompiledTiming {
     /// `active_when:` (`event_target_owner`, `event_card_trait_has`,
     /// `your_turn`). G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
     OnAnyLink,
+    OnLinkCardTrashed,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

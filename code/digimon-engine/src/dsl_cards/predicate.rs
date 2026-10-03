@@ -544,6 +544,13 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-DSL-COST-TARGET-FROM-HAND: subject-free cost-calc gate — the card
+    // whose cost is being computed comes from the hand (DCGO IsExistOnHand).
+    if let Some(want) = pred.cost_target_from_hand {
+        if rctx.cost_target_from_hand != want {
+            return false;
+        }
+    }
     if !eval_event_fields(pred, rctx, subject) {
         return false;
     }
@@ -2082,6 +2089,56 @@ fn eval_event_fields(
             .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
             .unwrap_or(false);
         if is_own_tamer != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_host_is_own_digimon {
+        // G-DSL-ON-LINK-CARD-TRASHED-DELAY: the trash event's host is a
+        // Digimon owned by the observer that still stands in the battle area.
+        // Located by the host's TOP CARD (`event_host_card`), not its index:
+        // the battle area compacts when a <Delay> carrier trashes itself.
+        let host_card = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_card);
+        let is_own_digimon = host_card
+            .and_then(|card| {
+                rctx.game
+                    .player(rctx.player)
+                    .battle_area
+                    .iter()
+                    .position(|perm| perm.top_card().handle() == card)
+            })
+            .map(|index| {
+                rctx.game.permanent_is_digimon_for_rules(crate::permanent::PermanentHandle {
+                    player: rctx.player,
+                    index: index as u8,
+                })
+            })
+            .unwrap_or(false);
+        if is_own_digimon != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.is_event_host {
+        // Subject permanent IS the event host ("1 of those Digimon").
+        let host_card = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_card);
+        let actual = match (subject, host_card) {
+            (PredicateSubject::Permanent(handle), Some(card)) => rctx
+                .game
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|perm| perm.top_card().handle() == card)
+                .unwrap_or(false),
+            _ => false,
+        };
+        if actual != want {
             return false;
         }
     }

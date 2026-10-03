@@ -673,6 +673,22 @@ pub struct PredicateSpec {
     /// 2; DCGO `CanTriggerOnTrashDigivolutionCard(IsPermanentExistsOnOwnerBattleAreaTamer)`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_host_is_own_tamer: Option<bool>,
+    /// Link/source-trash observer gate: true when the trashing event's host
+    /// permanent (located by its top card, `TriggerContext.event_host_card`)
+    /// is a **Digimon owned by the observer** still standing in the battle
+    /// area — "your Digimon's link cards" (EX10-070; DCGO
+    /// `CanTriggerOnTrashLinkedCard(IsPermanentExistsOnOwnerBattleAreaDigimon)`).
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_is_own_digimon: Option<bool>,
+    /// Subject-permanent gate: true when the evaluated permanent IS the
+    /// triggering event's host (its top card equals
+    /// `TriggerContext.event_host_card`; card-handle identity survives the
+    /// battle-area compaction a `<Delay>` self-trash causes). Used as a
+    /// `link_cards` `host_filter` for "… to 1 of THOSE Digimon" (EX10-070).
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_event_host: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     /// For `OnAddToHand` observers: the player whose hand gained cards
@@ -970,6 +986,15 @@ pub struct PredicateSpec {
     /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_cost_target_permanent: Option<bool>,
+
+    /// Subject-free cost-calc leaf: true when the card whose cost is being
+    /// computed comes FROM THE HAND (`EffectReadContext.cost_target_from_hand`).
+    /// Gates "digivolves into … from the hand" reducers so an effect-driven
+    /// digivolve from trash / sources / reveal is not reduced (DCGO
+    /// `IsExistOnHand`, BT5-092). Always false outside cost-calc dispatch.
+    /// G-DSL-COST-TARGET-FROM-HAND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target_from_hand: Option<bool>,
 
     /// Canonical uniform DP comparator (unify-dsl-scalar-and-comparators §2).
     /// `dp: { op: lte, value: 5000 }` or `dp: [{op: gte, value: 3000}, {op:

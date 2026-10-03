@@ -681,6 +681,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing (`OnLinkedCardTrashed`) fired after an EFFECT trashes a
+    /// link card from a host that stays in the battle area
+    /// (`Game::trash_specific_link_card`). Scans all players' battle areas
+    /// (and the event-gated `<Delay>` fan-out) while carrying the host
+    /// (`host` / `host_card`), the trashed link card (`card`) and the cause.
+    /// DCGO `OnLinkCardDiscarded` + `CanTriggerOnTrashLinkedCard`.
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    LinkCardTrashed {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing fired after a digivolution source is RETURNED to the
     /// BOTTOM of a player's deck (not trashed). Sibling of
     /// `SourceTrashedFromStack`: scans all players' battle areas while carrying

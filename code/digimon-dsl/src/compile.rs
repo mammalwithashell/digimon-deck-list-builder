@@ -349,6 +349,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
         S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
         S::OnAnyLink => CompiledTiming::OnAnyLink,
+        S::OnLinkCardTrashed => CompiledTiming::OnLinkCardTrashed,
     }
 }
 
@@ -1326,6 +1327,8 @@ fn compile_predicate(
         source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
         event_host_is_own_tamer: p.event_host_is_own_tamer,
+        event_host_is_own_digimon: p.event_host_is_own_digimon,
+        is_event_host: p.is_event_host,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1518,6 +1521,7 @@ fn compile_predicate(
             ))
         }),
         source_is_cost_target_permanent: p.source_is_cost_target_permanent,
+        cost_target_from_hand: p.cost_target_from_hand,
     }
 }
 

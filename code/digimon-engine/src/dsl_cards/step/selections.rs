@@ -5160,6 +5160,11 @@ fn install_use_option_from_hand(
             if !matches!(kind, CardKind::Option | CardKind::Dual) {
                 return false;
             }
+            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
+            // user can't use Option cards (the use would be `Invalid`).
+            if game.option_use_blocked(target_player) {
+                return false;
+            }
             if use_cost_lte_opponent_memory {
                 let opponent = game.next_clockwise(player);
                 let ceiling = player_visible_memory(game, opponent);
@@ -5314,6 +5319,11 @@ fn install_use_option_from_trash(
             };
             let kind = card.card_kind(&game.card_data);
             if !matches!(kind, CardKind::Option | CardKind::Dual) {
+                return false;
+            }
+            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
+            // user can't use Option cards (the use would be `Invalid`).
+            if game.option_use_blocked(target_player) {
                 return false;
             }
             let read_ctx = EffectReadContext::new_with_source_kind(
