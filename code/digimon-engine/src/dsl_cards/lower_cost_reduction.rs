@@ -222,6 +222,7 @@ pub fn lower_with_formula(
             .map(|f| evaluate_amount(f, rctx, amount_runtime.raw()))
             .unwrap_or(0)
     });
+    let pay_cost_self_suspend = pay_cost_is_self_suspend(&pay_cost);
     if !pay_cost.is_empty() {
         // When the `pay_cost` begins with a declinable (PASS-able) selection
         // — e.g. BT12-112's optional "place 1 [Shoutmon]" — running it
@@ -252,7 +253,7 @@ pub fn lower_with_formula(
         // cannot express the gate; route through `suspend_self_as_cost`,
         // which returns `false` for an already-suspended source.
         // `G-COST-REDUCTION-DIGIVOLVE-INTO` (BT5-092).
-        if pay_cost_is_self_suspend(&pay_cost) {
+        if pay_cost_self_suspend {
             builder = builder.pay_cost_fn(move |ctx| ctx.suspend_self_as_cost());
         } else {
             builder = builder.pay_cost_fn(move |ctx| {
@@ -273,7 +274,17 @@ pub fn lower_with_formula(
             });
         }
     }
-    builder.build()
+    let mut effect = builder.build();
+    // Data twin of the suspend-self pay_cost: lets the digivolve-path optional
+    // reducer prompt ask "is this cost payable?" WITHOUT paying it, so an
+    // already-suspended (or CannotSuspend) Tamer is never offered (DCGO
+    // `CanActivateSuspendCostEffect` gates CanActivate). Only the data field is
+    // set — no `activation_cost_fn` — so no triggered-effect path runs it.
+    // `G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE` (P-200).
+    if pay_cost_self_suspend {
+        effect.activation_cost_kind = Some(crate::effect::ActivationCostKind::SuspendSelf);
+    }
+    effect
 }
 
 /// True when `pay_cost` is exactly a single self-targeted `suspend` step —
