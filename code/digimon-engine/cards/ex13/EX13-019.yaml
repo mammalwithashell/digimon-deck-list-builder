@@ -1,0 +1,78 @@
+# EX13-019 Veedramon — Digimon, Lv.4, Blue, DP 6000, Cost 6.
+# Traits: Mythical Dragon, CS. Form: Champion. Attribute: Vaccine.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Blue Lv.3 / 2.  [Digivolve] Lv.3 w/[CS] trait: Cost 2
+#   <Jamming>
+#   [When Attacking] [Once Per Turn] You may play 1 Tamer card with [Veedramon]
+#   in its text from your hand with the cost reduced by 2.
+#   Inherited: <Jamming>
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_019.cs
+#   - Alt digivolve HasCSTraits, level 3, cost 2.
+#   - JammingSelfStaticEffect face-up and inherited.
+#   - OnAllyAttack ActivateClass, maxCountPerTurn 1, skippable; CanActivate
+#     needs an eligible hand Tamer (IsTamer && HasText("Veedramon")); the
+#     SelectHandEffect is canNoSelect → nothing picked → RemoveUse() (the OPT is
+#     not consumed). Modelled with a hand-count gate, an optional select_hand,
+#     play_from_hand cost_delta reduce 2, and refund_opt on decline (BT25-085).
+#     "in its text" → in_text_contains (official Q&A whole-card scan).
+
+card: EX13-019
+name: Veedramon
+kind: digimon
+level: 4
+color: [blue]
+cost: 6
+dp: 6000
+traits: [Mythical Dragon, CS]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - when: when_attacking
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: tamer
+          in_text_contains: Veedramon
+        n: 1
+    summary: "[When Attacking][OPT] You may play 1 [Veedramon]-text Tamer from hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - in_text_contains: Veedramon
+          prompt: "You may play 1 Tamer card with [Veedramon] in its text from your hand with the cost reduced by 2"
+      - play_from_hand:
+          of: you
+          hand_index: tamer_pick
+          cost_delta: { reduce: 2 }
+      - if:
+          condition: { binding_absent: tamer_pick }
+          then:
+            - refund_opt: {}
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "[Inherited] <Jamming>"

@@ -21,6 +21,35 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
+/// Which digivolution requirements an effect-initiated digivolve waives —
+/// the engine-side mirror of DCGO `CardEffectCommons.IgnoreRequirement`.
+///
+/// - `None`: every requirement applies (route machinery, printed cost).
+/// - `Color`: colour waived on printed circles (level still applies).
+/// - `Level`: level waived (colour-matching circles of any level and
+///   level-stripped alt-paths; the printed cost is still paid).
+///   G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+/// - `All`: "ignoring digivolution requirements" — no route needed, base
+///   cost 0 before the effect's `CostDelta` (normally `Fixed(n)`); also the
+///   only mode besides `Level` that accepts a level-less (Tamer) base.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DigivolveRequirementWaiver {
+    None,
+    Color,
+    Level,
+    All,
+}
+
+impl DigivolveRequirementWaiver {
+    fn color_if(ignore_color: bool) -> Self {
+        if ignore_color {
+            Self::Color
+        } else {
+            Self::None
+        }
+    }
+}
+
 /// make-engine-cloneable: resumable-VM frame state for the digivolve cost-choice
 /// prompt (rule 17 — when a base satisfies >1 of a hand card's digivolution
 /// requirements at different costs). Plain data mirroring
@@ -1477,8 +1506,7 @@ impl Game {
             crate::enums::CardSourceRef::Hand(player_id, hand_index),
             target,
             cost_delta,
-            ignore_color,
-            false,
+            DigivolveRequirementWaiver::color_if(ignore_color),
             source,
         )
     }
@@ -1496,8 +1524,7 @@ impl Game {
             crate::enums::CardSourceRef::Hand(player_id, hand_index),
             target,
             cost_delta,
-            true,
-            true,
+            DigivolveRequirementWaiver::All,
             source,
         )
     }
@@ -1519,8 +1546,7 @@ impl Game {
             source_ref,
             target,
             cost_delta,
-            ignore_color,
-            false,
+            DigivolveRequirementWaiver::color_if(ignore_color),
             source,
         )
     }
@@ -1534,7 +1560,40 @@ impl Game {
         source: PlaySource,
     ) -> bool {
         self.effect_initiated_digivolve_from_source_inner(
-            player_id, source_ref, target, cost_delta, true, true, source,
+            player_id,
+            source_ref,
+            target,
+            cost_delta,
+            DigivolveRequirementWaiver::All,
+            source,
+        )
+    }
+
+    /// Source-general script-initiated digivolve "ignoring level" (DCGO
+    /// `CardEffectCommons.IgnoreRequirement.Level`). Only the base's LEVEL
+    /// requirement is waived: the result card's colour-matching printed
+    /// circles (any level) and its DSL alt-digivolve paths (with their
+    /// subject-level leaves dropped) still decide whether the digivolve is
+    /// legal, and the cheapest such route's printed memory cost is the base
+    /// that `cost_delta` adjusts (e.g. EX13-071 "ignoring level and with the
+    /// cost reduced by 1" = `CostDelta::Reduce(1)` off that printed cost).
+    /// See `Game::digivolve_routes_ignoring_level`.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub fn effect_initiated_digivolve_from_source_ignore_level(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+    ) -> bool {
+        self.effect_initiated_digivolve_from_source_inner(
+            player_id,
+            source_ref,
+            target,
+            cost_delta,
+            DigivolveRequirementWaiver::Level,
+            source,
         )
     }
 
@@ -1544,10 +1603,14 @@ impl Game {
         source_ref: crate::enums::CardSourceRef,
         target: PermanentHandle,
         cost_delta: crate::enums::CostDelta,
-        ignore_color: bool,
-        ignore_requirements: bool,
+        waiver: DigivolveRequirementWaiver,
         source: PlaySource,
     ) -> bool {
+        let ignore_color = matches!(
+            waiver,
+            DigivolveRequirementWaiver::Color | DigivolveRequirementWaiver::All
+        );
+        let ignore_requirements = waiver == DigivolveRequirementWaiver::All;
         if source == PlaySource::ByEffect
             && self
                 .modifiers
@@ -1580,10 +1643,19 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        // A level-less target (BT26-085 Giant Slayer) can still digivolve
-        // through a special `alt_paths: kind: digivolve` route ("[Giant
-        // Slayer]: Cost 5"); only the printed level-matched circles need a
-        // level. G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS.
+        // A level-less target can still digivolve when it has no printed
+        // level-matched circle to satisfy: through a special `alt_paths:
+        // kind: digivolve` route (BT26-085 Giant Slayer "[Giant Slayer]:
+        // Cost 5", G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS), or when the
+        // level requirement is waived — "ignoring digivolution requirements"
+        // (EX13-074 Rie Kishibe "[Main] … this Tamer may digivolve into
+        // [LordKnightmon] … for a digivolution cost of 3, ignoring
+        // digivolution requirements") or "ignoring level". The Tamer card
+        // and every card under it simply become the new Digimon's
+        // digivolution cards (DCGO stacks onto `card.PermanentOfThisCard()`
+        // the same way, BT22_090.cs). G-TAMER-DIGIVOLVE-INTO-DIGIMON. Only
+        // the printed level-matched circles need a level; with none, the
+        // route scan below simply finds no printed match.
         let base_level: Option<u8> = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
@@ -1593,6 +1665,13 @@ impl Game {
 
         let matching_memory_cost = if ignore_requirements {
             Some(0)
+        } else if waiver == DigivolveRequirementWaiver::Level {
+            self.card_source_ref_peek(source_ref).and_then(|card| {
+                self.digivolve_routes_ignoring_level(card, target)
+                    .into_iter()
+                    .map(|route| route.memory_cost)
+                    .min()
+            })
         } else {
             // Route through the SAME machinery as the player main-phase
             // digivolve action (`all_digivolve_routes_for_card`) so
@@ -1633,8 +1712,8 @@ impl Game {
         };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
-                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={:?}, ignore_color={}, ignore_requirements={})",
-                base_level, ignore_color, ignore_requirements
+                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={:?}, waiver={:?})",
+                base_level, waiver
             ));
             return false;
         };

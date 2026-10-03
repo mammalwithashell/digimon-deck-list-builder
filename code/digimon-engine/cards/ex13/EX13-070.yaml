@@ -1,0 +1,130 @@
+# EX13-070 Davis Motomiya & Ken Ichijoji — Tamer, Blue/Green, play cost 4.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-070.md):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3. [End of
+#   Your Turn] By suspending this Tamer, activate 1 of the effects below:
+#   ・1 of your Digimon may digivolve into a Digimon card with [Imperialdramon]
+#     in its name or the [Free] trait in the hand. Reduce this effect's paid
+#     cost by 1 for each of your opponent's Digimon.
+#   ・2 of your Digimon may DNA digivolve into a [Free] trait Digimon card in
+#     the hand.
+#   Security: [Security] Play this card without paying the cost.
+#   Official Q&A: with no opponent Digimon you may still digivolve; the cost
+#   just isn't reduced.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_070.cs). Printed text governs.
+#
+# DSL:
+#   - Memory floor + security self-play: BT21-084.
+#   - [End of Your Turn]: optional clause, `source_is_unsuspended` gate,
+#     `activation_cost: { suspend_self: true }`, then `select_effect_choice`
+#     (choose-one, no auto-pick) with `equals` branches (EX13-030 shape).
+#   - Branch 1: optional `select_own_permanent` → optional `select_hand`
+#     (`can_digivolve_onto: evo_base`) → `effect_initiated_digivolve` with
+#     `cost: { reduce: base 0 + 1 per opponent battle-area Digimon }`.
+#   - Branch 2: optional `select_hand` ([Free] trait Digimon) →
+#     `select_dna_pair` (own Digimon) → `effect_initiated_dna_digivolve
+#     { cost: printed }` (recipe enforced — G-ENGINE-DNA-PRINTED-COST).
+#   - "[Free] trait": the corpus folds the Free attribute into traits
+#     (card_data combines type/form/attribute), so `trait_has: Free`.
+
+card: EX13-070
+name: Davis Motomiya & Ken Ichijoji
+kind: tamer
+color: [blue, green]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: end_of_your_turn
+    optional: true
+    condition: { source_is_unsuspended: true }
+    summary: "[End of Your Turn] By suspending this Tamer, activate 1: digivolve into [Imperialdramon]/[Free] (cost −1 per opponent Digimon), or 2 Digimon DNA digivolve into a [Free] Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "1 of your Digimon may digivolve into an [Imperialdramon]/[Free] Digimon card in the hand (cost −1 per opponent Digimon)"
+            - "2 of your Digimon may DNA digivolve into a [Free] trait Digimon card in the hand"
+          prompt: "Activate 1 of the effects below"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: evo_base
+                optional: true
+                filter: { kind: digimon }
+                prompt: "1 of your Digimon may digivolve into a Digimon card with [Imperialdramon] in its name or the [Free] trait"
+            - if:
+                condition: { binding_present: evo_base }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evo
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - any_of:
+                              - name_contains: Imperialdramon
+                              - trait_has: Free
+                          - can_digivolve_onto: evo_base
+                      prompt: "Digivolve into a Digimon card with [Imperialdramon] in its name or the [Free] trait (cost −1 per opponent Digimon)"
+                  - if:
+                      condition: { binding_present: evo }
+                      then:
+                        - effect_initiated_digivolve:
+                            target: evo_base
+                            from_hand: evo
+                            cost:
+                              reduce:
+                                base: 0
+                                per:
+                                  card_count_in_zone:
+                                    zone: battle_area
+                                    of: opponent
+                                    filter: { kind: digimon }
+                                delta: 1
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: dna_card
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Free
+                prompt: "2 of your Digimon may DNA digivolve into a [Free] trait Digimon card in the hand"
+            - if:
+                condition: { binding_present: dna_card }
+                then:
+                  - select_dna_pair:
+                      left_filter:
+                        all_of:
+                          - kind: digimon
+                          - of: you
+                      right_filter:
+                        all_of:
+                          - kind: digimon
+                          - of: you
+                      bind_left_as: dna_a
+                      bind_right_as: dna_b
+                      prompt: "Select 2 of your Digimon to DNA digivolve"
+                  - effect_initiated_dna_digivolve:
+                      target_a: dna_a
+                      target_b: dna_b
+                      from_hand: dna_card
+                      cost: printed
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

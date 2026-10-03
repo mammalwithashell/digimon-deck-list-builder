@@ -1,0 +1,27 @@
+{
+  "index": 4329,
+  "norm_id": 0.21645,
+  "card_id": "EX13-005",
+  "card_index": 5,
+  "card_name_eng": "Bebydomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_005",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Baby Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play or use 1 card with [Dracomon] or [Examon] in its text from your hand with the cost reduced by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

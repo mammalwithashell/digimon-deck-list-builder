@@ -26,7 +26,8 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledAuraEffectImmunity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
+    CompiledAuraEffectImmunity, CompiledDnaMaterialIdentity, CompiledEffectController, CompiledFormula,
+    CompiledGrantKeywordValue, CompiledPlayerRef,
     CompiledPredicate, CompiledScope, CompiledSynthIdentity,
 };
 
@@ -70,6 +71,8 @@ pub fn lower_all(
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    modifier_from: Option<CompiledEffectController>,
+    dna_material_identity: Option<CompiledDnaMaterialIdentity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
     if applies_to_opponent_security_dp || applies_to_own_security_dp {
@@ -105,6 +108,7 @@ pub fn lower_all(
         let supports = is_self_aura
             && target_player.is_none()
             && grant_traits.is_empty()
+            && dna_material_identity.is_none()
             && (dp_modifier.is_some()
                 || security_attack.is_some()
                 || modifier.is_some()
@@ -143,6 +147,8 @@ pub fn lower_all(
         modifier_name,
         synth_identity,
         effect_immunity,
+        modifier_from,
+        dna_material_identity,
         raw,
     ) {
         vec![effect]
@@ -273,8 +279,16 @@ pub fn lower(
     modifier_name: Option<String>,
     synth_identity: Option<CompiledSynthIdentity>,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
+    modifier_from: Option<CompiledEffectController>,
+    dna_material_identity: Option<CompiledDnaMaterialIdentity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
+    // G-ENGINE-STACKED-CARD-RETURN-PROTECTION — controller scope for the
+    // named `modifier` grant (`effect_immunity_filter`).
+    let modifier_immunity = modifier_from.map(|c| crate::modifiers::EffectImmunityFilter {
+        source_kind: None,
+        controller: crate::dsl_cards::step::modifiers::lower_effect_controller(c),
+    });
     // G-DSL-AURA-GRANT-TRAITS: shared `Arc` so both the self-aura and the
     // filtered-target closures can install the same trait overlay.
     let grant_traits: Option<Arc<Vec<String>>> = if grant_traits.is_empty() {
@@ -289,6 +303,20 @@ pub fn lower(
     let active_when = active_when.map(Arc::new);
 
     let mut builder: EffectBuilder = Effect::declarative(card).name("Aura");
+    // G-ENGINE-DP-DELETION-MAX-MODIFIER: a SELF-aura "add N to this Digimon's
+    // DP deletion effects' maximums" rides on the Effect itself and is read
+    // live from the host's stack by `Game::dp_delete_effect_max_bonus` —
+    // NOT materialized per tick — so a source that joins the stack mid-turn
+    // (Guilmon under a just-digivolved Growlmon) raises that Growlmon's
+    // [When Digivolving] deletion cap without waiting for the next tick.
+    let mut modifier = modifier;
+    if is_self_aura
+        && target_player.is_none()
+        && modifier.as_deref() == Some("ChangeDPDeleteEffectMaxDP")
+    {
+        builder = builder.dp_delete_effect_max_delta(modifier_value);
+        modifier = None;
+    }
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
@@ -310,6 +338,7 @@ pub fn lower(
         && security_attack.is_none()
         && effect_immunity.is_none()
         && grant_traits.is_none()
+        && dna_material_identity.is_none()
     {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
@@ -362,6 +391,14 @@ pub fn lower(
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
         let self_grant_traits = grant_traits.clone();
+        // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET — result-scoped DNA identity.
+        let self_dna_identity = dna_material_identity.clone().map(|d| {
+            crate::modifiers::ModifierPayload::DnaMaterialIdentity {
+                result_name: d.for_result,
+                level: d.level,
+                name: d.name,
+            }
+        });
         // task_69f10a66 Family 1: a SELF-aura keyword grant is semantically a
         // (possibly conditional) `grant_keyword` clause — advertise the
         // granted keyword on the Effect exactly like `lower_grant_keyword`
@@ -424,6 +461,14 @@ pub fn lower(
                                 base: false,
                             },
                         );
+                    } else if let Some(immunity) = modifier_immunity {
+                        ctx.add_declarative_modifier_with_immunity(
+                            handle,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            immunity,
+                        );
                     } else {
                         ctx.add_declarative_modifier(
                             handle,
@@ -432,6 +477,18 @@ pub fn lower(
                             Expiry::Permanent,
                         );
                     }
+                }
+                if let Some(payload) = &self_dna_identity {
+                    // "This Digimon is also treated as Lv.6 [X] for [Y]'s DNA
+                    // digivolution" — consulted only by the DNA material
+                    // matchers (`Game::dna_material_extras`).
+                    ctx.add_declarative_modifier_with_payload(
+                        handle,
+                        ModifierType::DnaMaterialIdentity,
+                        0,
+                        Expiry::Permanent,
+                        payload.clone(),
+                    );
                 }
                 if let Some(imm) = effect_immunity {
                     // Continuous filtered CannotBeAffected — "this Digimon
@@ -551,6 +608,14 @@ pub fn lower(
                                 value: name.as_ref().clone(),
                                 base: false,
                             },
+                        );
+                    } else if let Some(immunity) = modifier_immunity {
+                        ctx.add_declarative_modifier_with_immunity(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            immunity,
                         );
                     } else {
                         ctx.add_declarative_modifier(

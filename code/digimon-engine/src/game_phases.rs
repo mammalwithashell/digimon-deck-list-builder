@@ -105,10 +105,21 @@ impl Game {
         // permanent stays suspended. `cannot_unsuspend` also honors the
         // PLAYER-scoped mass lock ("none of their Digimon can unsuspend until
         // their turn ends" — ST24-11 Rosemon, G-PLAYER-MASS-CANNOT-UNSUSPEND).
-        // Like `Player::unsuspend_all`, this directly mutates `is_suspended`
-        // without firing `OnUnsuspend` observers (phase-start unsuspension is
-        // not a trigger-carrying event per the rules).
+        //
+        // G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND (2026-10-01): the turn
+        // player's battle-area unsuspension and the opponents' <Reboot>
+        // unsuspension below form ONE simultaneous batch (DCGO
+        // `TurnStateMachine.cs` collects both into a single
+        // `IUnsuspendPermanents(list, null).Unsuspend()`, which then stacks
+        // `OnUnTappedAnyone` for the whole batch). Every battle-area
+        // permanent that actually went suspended → unsuspended fires
+        // `OnUnsuspend` (non-effect-initiated). The breeding area unsuspends
+        // silently, as in DCGO (it is not in the batch list). Rule 6-1-3: the
+        // draw phase doesn't start until the triggered effects resolve, so a
+        // prompting observer parks the turn machine (resume kind
+        // `UnsuspendPhase`).
         self.set_turn_phase(GamePhase::Unsuspend);
+        let mut unsuspended_batch: Vec<PermanentHandle> = Vec::new();
         {
             let n = self.player(tp).battle_area.len();
             let mut unlocked: Vec<u8> = Vec::with_capacity(n);
@@ -117,7 +128,13 @@ impl Game {
                     player: tp,
                     index: i as u8,
                 };
-                if !self.cannot_unsuspend(h) {
+                // `CannotUnsuspendInUnsuspendPhase` ("can't unsuspend in their
+                // next unsuspend phase" — EX13-041) gates ONLY this bulk step.
+                if !self.cannot_unsuspend(h)
+                    && !self
+                        .modifiers
+                        .has(h, ModifierType::CannotUnsuspendInUnsuspendPhase)
+                {
                     unlocked.push(i as u8);
                 }
             }
@@ -129,6 +146,12 @@ impl Game {
             let player = self.player_mut(tp);
             for i in unlocked {
                 if let Some(perm) = player.battle_area.get_mut(i as usize) {
+                    if perm.is_suspended {
+                        unsuspended_batch.push(PermanentHandle {
+                            player: tp,
+                            index: i,
+                        });
+                    }
                     perm.is_suspended = false;
                 }
             }
@@ -145,13 +168,8 @@ impl Game {
         // opponent's battle area for Digimon with the Reboot keyword
         // (printed or granted) and unsuspend them. The `CannotUnsuspend`
         // modifier gates the scan — Reboot is effect-driven unsuspension
-        // and respects the suspend-lock.
-        //
-        // Note: like the standard turn-start bulk unsuspend
-        // (`unsuspend_all`), Reboot-driven unsuspension directly mutates
-        // `is_suspended` without firing `OnUnsuspend` observers.
-        // Phase-start unsuspension is not a trigger-carrying event per
-        // the Digimon TCG rules.
+        // and respects the suspend-lock. Reboot unsuspension joins the same
+        // `OnUnsuspend` batch as the turn player's (see above).
         //
         // Collect handles first to avoid a borrow conflict with
         // `has_keyword` / modifier reads, then mutate in a second pass.
@@ -191,10 +209,43 @@ impl Game {
                 .get_mut(h.player as usize)
                 .and_then(|p| p.battle_area.get_mut(h.index as usize))
             {
+                if perm.is_suspended {
+                    unsuspended_batch.push(h);
+                }
                 perm.is_suspended = false;
             }
         }
+
+        if !unsuspended_batch.is_empty() {
+            // Suspension-keyed auras re-materialize before observers read the
+            // board (same contract as `unsuspend_with_cause`).
+            self.tick_declarative_effects();
+            self.mark_until_condition_dirty();
+            self.enqueue_unsuspend_batch(&unsuspended_batch, false);
+            self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
+                    turn: self.turn_count,
+                    kind: DelayedOptionLifecycleResumeKind::UnsuspendPhase,
+                    pending_delete_key: None,
+                    skip_key: None,
+                });
+                return;
+            }
+            if self.game_over {
+                return;
+            }
+        }
         self.reevaluate_until_condition_modifiers_if_dirty();
+
+        self.continue_begin_turn_after_unsuspend_phase();
+    }
+
+    /// Draw → Breeding half of the turn start, split out so a prompting
+    /// `OnUnsuspend` observer fired by the unsuspend-phase batch can park the
+    /// turn machine and resume here (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND).
+    pub(crate) fn continue_begin_turn_after_unsuspend_phase(&mut self) {
+        let tp = self.turn_player();
 
         // Draw phase
         self.set_turn_phase(GamePhase::Draw);
@@ -307,6 +358,7 @@ impl Game {
         if self.game_over {
             return;
         }
+        self.turn_end_check_deferred = false;
 
         self.set_turn_phase(GamePhase::EndTurn);
 
@@ -1348,7 +1400,8 @@ impl Game {
 
                 match resume.kind {
                     DelayedOptionLifecycleResumeKind::Event { .. }
-                    | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
+                    | DelayedOptionLifecycleResumeKind::MainPhaseActivation
+                    | DelayedOptionLifecycleResumeKind::UnsuspendPhase => continue,
                     _ => {
                         let triggers = Self::delay_lifecycle_triggers(resume.kind);
                         if self
@@ -1388,6 +1441,14 @@ impl Game {
                     self.continue_end_turn_after_delays(ending_player);
                     return;
                 }
+                DelayedOptionLifecycleResumeKind::UnsuspendPhase => {
+                    self.reevaluate_until_condition_modifiers_if_dirty();
+                    if self.game_over {
+                        return;
+                    }
+                    self.continue_begin_turn_after_unsuspend_phase();
+                    return;
+                }
                 DelayedOptionLifecycleResumeKind::Event { .. }
                 | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
             }
@@ -1400,7 +1461,8 @@ impl Game {
             DelayedOptionLifecycleResumeKind::EndTurn { .. } => {
                 &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }
-            DelayedOptionLifecycleResumeKind::Event { .. } => &[],
+            DelayedOptionLifecycleResumeKind::Event { .. }
+            | DelayedOptionLifecycleResumeKind::UnsuspendPhase => &[],
             DelayedOptionLifecycleResumeKind::MainPhaseActivation => {
                 &[DelayTrigger::MainPhaseActivated]
             }

@@ -33,9 +33,13 @@ effects:
               - kind: digimon
               - materials_count_gte: 1
           prompt: "Trash the top 10 stacked cards of 1 opponent Digimon"
+      # "stacked cards" include the top card: DCGO `ITrashStack` trashes
+      # `TopCard` each pass until one card remains (official Q&A: the top
+      # card is trashed until there are no more stacked cards).
       - trash_top_stacked_sources:
           target: target
           count: 10
+          include_top_card: true
 
   - when: when_attacking
     once_per_turn: true

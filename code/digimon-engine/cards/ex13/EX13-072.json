@@ -1,0 +1,27 @@
+{
+  "index": 4396,
+  "norm_id": 0.2198,
+  "card_id": "EX13-072",
+  "card_index": 72,
+  "card_name_eng": "Kota Domoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_072",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 [Chronicle] trait card from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[Your Turn] When one of your [Chronicle] trait Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

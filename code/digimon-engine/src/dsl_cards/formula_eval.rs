@@ -147,6 +147,10 @@ pub fn evaluate_with_bindings(
                 Some(first) => it.fold(first, |acc, x| acc - x),
             }
         }
+        CompiledFormula::Multiply(args) => args
+            .iter()
+            .map(|a| evaluate_with_bindings(a, ctx, target, bindings))
+            .fold(1i32, |acc, x| acc.saturating_mul(x)),
         CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, CompiledPlayerRef::You, ctx),
         CompiledFormula::AggregateScoped { selector, scope } => {
             evaluate_aggregate(*selector, *scope, ctx)
@@ -326,6 +330,10 @@ fn evaluate_read_with_raw_and_bindings(
                 Some(first) => it.fold(first, |acc, x| acc - x),
             }
         }
+        CompiledFormula::Multiply(args) => args
+            .iter()
+            .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings))
+            .fold(1i32, |acc, x| acc.saturating_mul(x)),
         CompiledFormula::Aggregate(sel) => {
             evaluate_aggregate_read(*sel, CompiledPlayerRef::You, ctx)
         }
@@ -868,6 +876,17 @@ fn binding_play_cost(ctx: &EffectContext<'_>, name: &str, bindings: Option<&Bind
             .map(|data| i32::from(data.play_cost))
             .unwrap_or(0);
     }
+    // A `select_union_zone` pick (hand / trash / material) — the card handle
+    // is zone-independent, so this stays readable after the card was played
+    // (EX13-035 KingEtemon: "up to 6 total play cost" across 2 union picks).
+    // G-FORMULA-BINDING-PLAY-COST-UNION.
+    if let Some((card, _, _)) = bindings.get_union_card(name) {
+        return ctx
+            .game
+            .card_data_for_handle(card)
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
     if let Some(handle) = bindings.get_permanent(name) {
         return target_permanent(ctx, handle)
             .and_then(|perm| ctx.game.card_data_for_handle(perm.top_card().handle()))
@@ -912,6 +931,17 @@ fn binding_play_cost_read(
         return 0;
     };
     if let Some(card) = bindings.get_card(name) {
+        return ctx
+            .game
+            .card_data_for_handle(card)
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    // A `select_union_zone` pick (hand / trash / material) — the card handle
+    // is zone-independent, so this stays readable after the card was played
+    // (EX13-035 KingEtemon: "up to 6 total play cost" across 2 union picks).
+    // G-FORMULA-BINDING-PLAY-COST-UNION.
+    if let Some((card, _, _)) = bindings.get_union_card(name) {
         return ctx
             .game
             .card_data_for_handle(card)
@@ -1158,7 +1188,12 @@ fn distinct_colors_in_zone(
                 }) {
                     return None;
                 }
-                Some(perm.top_card().colors(ctx.card_data()).to_vec())
+                // Rules colors (synthesized identity: printed top card after
+                // `ChangeBaseCardColor` / `AddColor`) — DCGO
+                // `TopCard.CardColors`, which `ChangeCardColorClass` mutates.
+                // "your Digimon and Tamers' colors" counts a gained color
+                // (EX13-077 "gains all colors in its digivolution cards").
+                Some(perm.colors_for_rules(ctx.card_data(), &ctx.game.modifiers, handle))
             })
             .flatten()
             .collect(),
@@ -1574,6 +1609,8 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
+        || pred.can_change_orientation.is_some()
+        || pred.can_attack.is_some()
         || pred.has_face_down_source.is_some()
         || pred.owner.is_some()
         || pred.other.is_some()

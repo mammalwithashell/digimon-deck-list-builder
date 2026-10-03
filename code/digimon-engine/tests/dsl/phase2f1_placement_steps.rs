@@ -380,9 +380,10 @@ fn place_on_security_choice_prompt_clones_faithfully() {
 
 #[test]
 fn place_top_source_as_bottom_rotates_top_stacked_card_to_bottom() {
-    // Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. Build a 3-source stack
-    // [BASE, MID, TOP] and verify the verb rotates MID (the top stacked
-    // card — the one immediately beneath TOP) to position 0 → [MID, BASE, TOP].
+    // Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. Build a 3-card stack
+    // [BASE, MID, TOP] and verify the verb rotates TOP — "the top stacked
+    // card" is the visible top card itself (DCGO `TopCard`;
+    // G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE) — to position 0 → [TOP, BASE, MID].
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("T-BASE", "Base"))
         .add_card(make_test_card("T-MID", "Mid"))
@@ -425,8 +426,8 @@ fn place_top_source_as_bottom_rotates_top_stacked_card_to_bottom() {
     assert_eq!(perm.stack_size(), 3, "stack size is unchanged");
     assert_eq!(
         perm.card_sources[0].handle(),
-        mid_h,
-        "the rotated top stacked card lives at the bottom of the stack"
+        top_h,
+        "the rotated top stacked card (the old top) lives at the bottom"
     );
     assert_eq!(
         perm.card_sources[1].handle(),
@@ -435,8 +436,8 @@ fn place_top_source_as_bottom_rotates_top_stacked_card_to_bottom() {
     );
     assert_eq!(
         perm.card_sources[2].handle(),
-        top_h,
-        "the active top card stays on top"
+        mid_h,
+        "the card that was under the top is the new top"
     );
 }
 

@@ -51,7 +51,7 @@ impl<'a> EffectContext<'a> {
                 self.player,
             )
         {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.handle_replacement();
             }
             true
@@ -141,7 +141,7 @@ impl<'a> EffectContext<'a> {
         face_up: bool,
     ) -> bool {
         if self.place_self_at_security(position, face_up) {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
             true
@@ -354,7 +354,23 @@ impl<'a> EffectContext<'a> {
     /// This consumes `Game.pending_security`, so the security dispose phase
     /// cannot also trash the card. If the card was already played from
     /// security, the pending state is restored and this is a no-op.
+    ///
+    /// Every printed use is "add THIS card to the hand" (DCGO
+    /// `CardEffectCommons.AddThisCardToHand(card, …)` names the effect's own
+    /// card), so the pending card must be the resolving effect's source card.
+    /// When it is not — e.g. a removed security card's own trigger that waited
+    /// out an enclosing effect (15-8-3-2) after its removal already completed,
+    /// leaving `pending_security` holding an OUTER parked removal — this is a
+    /// no-op rather than moving that unrelated card.
     pub fn add_pending_security_to_hand(&mut self) -> bool {
+        if self
+            .game
+            .pending_security
+            .as_ref()
+            .is_some_and(|pending| pending.card.handle() != self.source_card)
+        {
+            return false;
+        }
         let Some(pending) = self.game.pending_security.take() else {
             return false;
         };
@@ -468,13 +484,23 @@ impl<'a> EffectContext<'a> {
         )
     }
 
-    /// Convenience: extract the **top stacked card** (the source one below
-    /// the visible top, i.e. `card_sources[len - 2]`) and place it in
-    /// `target_player`'s security at `position` / `face_up`. Mirrors
-    /// printed text like Puppets G027 "move the top stacked card to top
-    /// security card." When the carrier has fewer than 2 card_sources
-    /// (no stacked card below the top), returns `false` without mutating
-    /// state.
+    /// Move this permanent's **top stacked card** — the visible TOP card
+    /// itself, `card_sources[len - 1]` (DCGO `Permanent.TopCard`) — into
+    /// `target_player`'s security at `position` / `face_up`. The permanent
+    /// stays in play, now topped by the card that was directly under it.
+    /// Printed "place this Digimon's top stacked card as the top security
+    /// card" (BT20-084, BT20-055, EX13-032 Chirinmon's would-leave saves).
+    ///
+    /// "Stacked cards" are ALL the cards of the Digimon including its top
+    /// card (EX13-023 official Q&A: <De-Digivolve> "trashes the top stacked
+    /// cards"); DCGO's scripts move `card` / `TopCard` (`BT20_084.cs`,
+    /// `BT20_055.cs` `AddSecurityCard(card, …)`). G-TOP-STACKED-CARD-TO-
+    /// SECURITY (2026-10-01) — this previously extracted `card_sources
+    /// [len - 2]` (the card UNDER the top), which moved the wrong card.
+    ///
+    /// Requires at least one digivolution card under the top (DCGO gates on
+    /// `DigivolutionCards.Count > 0`) so the permanent survives; otherwise
+    /// returns `false` without mutating state.
     pub fn security_place_top_stacked_card(
         &mut self,
         carrier: PermanentHandle,
@@ -493,10 +519,11 @@ impl<'a> EffectContext<'a> {
             };
             let len = perm.card_sources.len();
             if len < 2 {
-                // No stacked card below the top.
+                // No digivolution card under the top — moving the top would
+                // empty the permanent.
                 return false;
             }
-            perm.card_sources[len - 2].handle()
+            perm.card_sources[len - 1].handle()
         };
         self.security_place_stacked_card(carrier, source_card, target_player, position, face_up)
     }

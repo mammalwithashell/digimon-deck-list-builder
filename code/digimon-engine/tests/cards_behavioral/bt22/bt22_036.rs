@@ -491,3 +491,54 @@ fn push_to_trash(runner: &mut DebugRunner, player: u8, card_id: &str) {
     let card = CardSource::new(data_idx, player, runner.game.next_card_index());
     runner.game.players[player as usize].trash.push(card);
 }
+
+/// W1 regression guard — the hand-[Main] condition used to read
+/// `any_field_permanent: { of: you, predicate: { name_is: ... } }`. `predicate`
+/// is not a DSL key (ExistentialPredicate flattens its predicate), so it was
+/// silently dropped and ANY own permanent satisfied both the [Arisa Kinosaki]
+/// and the [Shoemon] legs. DCGO BT22_036.cs CanActivateCondition requires an
+/// own battle-area [Arisa Kinosaki] AND an own battle-area [Shoemon].
+#[test]
+fn bt22_036_hand_main_is_masked_without_arisa() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-036")
+        .expect("BT22-036 YAML loads")
+        .dsl_card("BT22-029")
+        .expect("BT22-029 YAML loads")
+        .dsl_card("BT22-032")
+        .expect("BT22-032 YAML loads")
+        .add_card(make_tamer("OTHER-TAMER", "Thomas H. Norstein"))
+        .hand(0, &["BT22-036"])
+        .memory(10)
+        .start();
+    push_to_trash(&mut runner, 0, "BT22-032");
+    runner.place_on_field(0, "BT22-029", Some(0));
+    runner.place_on_field(0, "OTHER-TAMER", Some(0));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 0.0,
+        "hand [Main] must not be legal without [Arisa Kinosaki]"
+    );
+}
+
+#[test]
+fn bt22_036_hand_main_is_masked_without_shoemon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-036")
+        .expect("BT22-036 YAML loads")
+        .dsl_card("BT22-032")
+        .expect("BT22-032 YAML loads")
+        .add_card(make_tamer("ARISA", "Arisa Kinosaki"))
+        .hand(0, &["BT22-036"])
+        .memory(10)
+        .start();
+    push_to_trash(&mut runner, 0, "BT22-032");
+    runner.place_on_field(0, "ARISA", Some(0));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[HAND_EFFECT_START as usize], 0.0,
+        "hand [Main] must not be legal without a [Shoemon] on the battle area"
+    );
+}

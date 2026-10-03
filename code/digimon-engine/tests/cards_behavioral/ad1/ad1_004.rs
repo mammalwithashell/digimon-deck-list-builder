@@ -285,7 +285,7 @@ fn ad1_004_eot_attack_is_windowed_grant_not_synchronous() {
         .memory(10)
         .start();
     runner.game.turn_count = 3;
-    let wg = runner.place_on_field(0, "AD1-004", None);
+    let wg = runner.place_on_field(0, "AD1-004", Some(0)); // not summoning-sick (can attack)
     let sec_before = runner.game.players[1].security.len();
 
     runner
@@ -342,7 +342,7 @@ fn ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts() {
         .memory(10)
         .start();
     runner.game.turn_count = 3;
-    let wg = runner.place_on_field(0, "AD1-004", None);
+    let wg = runner.place_on_field(0, "AD1-004", Some(0)); // not summoning-sick (can attack)
     let sec_before = runner.game.players[1].security.len();
 
     // EOT: grant the windowed attack to WarGreymon.

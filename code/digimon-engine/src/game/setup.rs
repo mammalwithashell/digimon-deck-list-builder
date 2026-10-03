@@ -263,11 +263,14 @@ impl Game {
             pending_overclock_attack: None,
             declined_overclock_this_eot: HashSet::new(),
             current_dna_origin: None,
-            parked_replacement: None,
+            parked_replacement: Vec::new(),
+            parked_replacement_floor: 0,
             dsl_replacement_outcome: None,
             in_counter_window: false,
             effect_driven_option_use: false,
             active_deletion_batch: None,
+            pending_deletion_batch_rest: Vec::new(),
+            pending_deletion_batch_parked: None,
             dsl_outer_tail: None,
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
@@ -281,6 +284,8 @@ impl Game {
             pending_end_turn_resume: None,
             pending_enter_main_after_selection: false,
             draining_deferred: 0,
+            turn_end_check_deferred: false,
+            selection_resolution_depth: 0,
             play_enters_suspended: false,
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
@@ -412,10 +417,13 @@ impl Game {
         self.pending_overclock_attack = None;
         self.declined_overclock_this_eot = HashSet::new();
         self.current_dna_origin = None;
-        self.parked_replacement = None;
+        self.parked_replacement.clear();
+        self.parked_replacement_floor = 0;
         self.dsl_replacement_outcome = None;
         self.in_counter_window = false;
         self.active_deletion_batch = None;
+        self.pending_deletion_batch_rest.clear();
+        self.pending_deletion_batch_parked = None;
         self.dsl_outer_tail = None;
         self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;
@@ -429,6 +437,8 @@ impl Game {
         self.pending_end_turn_resume = None;
         self.pending_enter_main_after_selection = false;
         self.draining_deferred = 0;
+        self.turn_end_check_deferred = false;
+        self.selection_resolution_depth = 0;
         self.until_condition_dirty = false;
         self.until_condition_last_cycle_evaluations = 0;
         self.until_condition_total_evaluations = 0;

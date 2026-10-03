@@ -1,0 +1,55 @@
+# EX13-004 DemiMeramon — Digi-Egg, Lv.2, Yellow. Traits: Flame.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-004.md):
+#   Inherited: [When Attacking] [Once Per Turn] This Digimon may digivolve into
+#   a Digimon card with [Witchelny] in its text in the hand with the cost
+#   reduced by 1. If this effect digivolved, trash your top security card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_004.cs
+#   OnAllyAttack, inherited, OPT, optional. DigivolveIntoHandOrTrashCard
+#   (payCost, reduceCost 1, isHand) whose successProcess destroys the owner's
+#   top security card.
+#
+# DSL: optional `select_hand` (filter `in_text_contains: Witchelny` +
+# `can_digivolve_onto: source`) → `effect_initiated_digivolve { reduce: 1 }`;
+# the follow-up is gated on `effect_digivolved_any_digimon` (the step records
+# a digivolve only when it actually succeeds). Declining the pick = declining
+# the optional effect, so the OPT is refunded (EX13-043 idiom).
+
+card: EX13-004
+name: DemiMeramon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Flame]
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] This Digimon may digivolve into a [Witchelny]-text hand card with the cost reduced by 1; if it did, trash your top security card"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: Witchelny
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a Digimon card with [Witchelny] in its text with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: { reduce: 1 }
+            - if:
+                condition: { effect_digivolved_any_digimon: true }
+                then:
+                  - trash_top_security: { of: you }
+          else:
+            - refund_opt: {}

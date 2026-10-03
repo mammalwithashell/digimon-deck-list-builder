@@ -1662,9 +1662,11 @@ fn place_self_option_at_security_with_no_pending_option_returns_false() {
 
 // ─── security_place_stacked_card ─────────────────────────────────────────────
 
-/// TEST-SPSC-TOP: extract the top stacked source (one below visible top) and
-/// place it on top of own security stack face-down. Mirrors Puppets G027
-/// "move the top stacked card to top security card."
+/// TEST-SPSC-TOP: "place this Digimon's top stacked card as the top security
+/// card" moves the visible TOP card itself (DCGO `Permanent.TopCard`) to the
+/// top of security face-down; the permanent stays, topped by the card under
+/// it. G-TOP-STACKED-CARD-TO-SECURITY (2026-10-01) — previously this pinned the
+/// card UNDER the top (`card_sources[len - 2]`), which was the wrong card.
 #[test]
 fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
     use digimon_engine::effect_context::EffectContext;
@@ -1722,12 +1724,18 @@ fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
         assert!(ok, "security_place_top_stacked_card should succeed");
     }
 
-    // The carrier permanent still exists with a 2-source stack (BOTTOM + CARRIER).
-    let stack_size = r.game_mut().player(0).battle_area[0].stack_size();
+    // The permanent still exists with a 2-card stack (BOTTOM + UNDER), now
+    // topped by UNDER.
+    let (stack_size, new_top) = {
+        let g = r.game_mut();
+        let p = &g.player(0).battle_area[0];
+        (p.stack_size(), p.top_card().card_id(&g.card_data).to_string())
+    };
     assert_eq!(
         stack_size, 2,
-        "the top stacked card (UNDER) was extracted; carrier retains BOTTOM + CARRIER"
+        "the top card (CARRIER) left; the permanent keeps BOTTOM + UNDER"
     );
+    assert_eq!(new_top, "UNDER", "the card under the old top is the new top");
 
     // Security grew by 1; the new top of security is UNDER.
     assert_eq!(r.security_count(0), before_security + 1);
@@ -1741,13 +1749,13 @@ fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
             .to_string()
     };
     assert_eq!(
-        placed_id, "UNDER",
-        "the extracted source moved to security top"
+        placed_id, "CARRIER",
+        "the top stacked card (the visible top) moved to security top"
     );
 }
 
-/// `security_place_top_stacked_card` returns `false` when the carrier has
-/// fewer than 2 sources (no stacked card below the top).
+/// `security_place_top_stacked_card` returns `false` when the carrier has no
+/// digivolution card under its top (moving the top would empty it).
 #[test]
 fn security_place_top_stacked_card_returns_false_with_single_source() {
     use digimon_engine::effect_context::EffectContext;

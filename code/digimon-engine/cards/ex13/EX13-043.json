@@ -1,0 +1,36 @@
+{
+  "index": 4367,
+  "norm_id": 0.21835,
+  "card_id": "EX13-043",
+  "card_index": 43,
+  "card_name_eng": "Leopardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_043",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, you may return 1 of your opponent's lowest DP Digimon to the bottom of the deck.\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1 [Mammal], [Beast], [Beastkin] or [Royal Knight] trait card from your hand with the cost reduced by 4. For each suspended Digimon, further reduce it by 1.\r\n[All Turns] [Once Per Turn] When any of your suspended Digimon would leave the battle area other than by your effects, by unsuspending 1 of your Digimon, they don't leave.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

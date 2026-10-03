@@ -71,7 +71,8 @@ effects:
       - select_own_permanent:
           bind_as: attack_target
           optional: true
-          filter: { kind: digimon }
+          # DCGO EX12_014.cs IsYourDigimon: `permanent.CanAttack(activateClass)`.
+          filter: { kind: digimon, can_attack: { targets: any } }
           prompt: "1 of your Digimon may attack"
       - may_attack_now:
           attacker: attack_target

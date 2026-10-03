@@ -1,0 +1,115 @@
+# EX13-034 Wisemon — Digimon, Lv.5, Yellow/Black, 6000 DP, play cost 6.
+# Traits: Wizard. Ultimate / Virus.
+# Digivolve: Yellow Lv.4 / cost 4; Black Lv.4 / cost 4;
+#            [Digivolve] Lv.4 w/[Witchelny] in text: Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-034.md):
+#   <Barrier> [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   Until your opponent's turn ends, 1 of your Digimon gains <Reboot> and
+#   <Blocker>, and their <De-Digivolve> effects don't affect it. [All Turns]
+#   [Once Per Turn] When your security stack is removed from, <De-Digivolve 1>
+#   1 of your opponent's Digimon. Then, if you have 3 or fewer security cards,
+#   1 of their Digimon can't digivolve until their turn ends.
+#   Inherited: [All Turns] [Once Per Turn] When your security stack is removed
+#   from, this Digimon may unsuspend.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_034.cs). Printed text governs.
+#
+# DSL:
+#   - Protection grant: mandatory `select_own_permanent` → `grant_keyword`
+#     Reboot + Blocker and `add_modifier: CannotBeDeDigivolved` (its default
+#     cause filter is OpponentEffect = "their <De-Digivolve> effects"; BT21-074
+#     / EX10-031 idiom), all `expiry: end_of_opponents_turn`. One clause over
+#     the three timings shares the [Once Per Turn].
+#   - Security observer: `on_own_security_removed` (EX13-003 / AD1-017) →
+#     De-Digivolve 1 (EX13-053 idiom) → `security_count_lte: 3` gated
+#     `CannotDigivolve` (value 1, until their turn ends).
+#   - Inherited: optional self-unsuspend on the same observer.
+
+card: EX13-034
+name: Wisemon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 6
+dp: 6000
+traits: [Wizard]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  # Printed special condition: "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3".
+  - kind: digivolve
+    from:
+      level_eq: 4
+      in_text_contains: Witchelny
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][OPT] Until your opponent's turn ends, 1 of your Digimon gains <Reboot> and <Blocker> and isn't affected by their <De-Digivolve> effects"
+    process:
+      - select_own_permanent:
+          bind_as: protected
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gains <Reboot> and <Blocker>, and your opponent's <De-Digivolve> effects don't affect it, until your opponent's turn ends"
+      - grant_keyword:
+          target: protected
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: protected
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: protected
+          modifier: CannotBeDeDigivolved
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When your security stack is removed from, <De-Digivolve 1> 1 opp Digimon; then if you have 3 or fewer security cards, 1 of their Digimon can't digivolve until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+          stop_at_level: 3
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: no_evo
+                filter: { kind: digimon }
+                prompt: "1 of your opponent's Digimon can't digivolve until their turn ends"
+            - add_modifier:
+                target: no_evo
+                modifier: CannotDigivolve
+                value: 1
+                expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    condition:
+      not: { source_is_unsuspended: true }
+    summary: "Inherited [All Turns][OPT] When your security stack is removed from, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

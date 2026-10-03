@@ -175,6 +175,8 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
         prompt: "Pick 1 of each different name".to_string(),
         prompt_key: None,
         optional_zero: false,
+        min: 0,
+        same_by: None,
     }];
 
     {
@@ -277,6 +279,8 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
             prompt: "Pick 1 of each different name".to_string(),
             prompt_key: None,
             optional_zero: false,
+            min: 0,
+            same_by: None,
         },
         CompiledStep::PlayFromMaterials {
             target: CompiledBindingRef::Named("carrier".to_string()),
@@ -368,6 +372,8 @@ fn play_from_materials_can_suppress_on_play_for_picked_breeding_sources() {
             prompt: "Pick Royal Knight sources from the breeding carrier".to_string(),
             prompt_key: None,
             optional_zero: false,
+            min: 0,
+            same_by: None,
         },
         CompiledStep::PlayFromMaterials {
             target: CompiledBindingRef::Named("king_drasil".to_string()),
@@ -527,6 +533,8 @@ fn select_materials_empty_carrier_runs_tail_synchronously() {
             prompt: "Pick materials".to_string(),
             prompt_key: None,
             optional_zero: false,
+            min: 0,
+            same_by: None,
         },
         CompiledStep::GainMemory(3),
     ];
@@ -606,6 +614,8 @@ fn select_materials_breeding_carrier_installs_real_pending_selection() {
             prompt: "Pick Royal Knight sources from the breeding carrier".to_string(),
             prompt_key: None,
             optional_zero: false,
+            min: 0,
+            same_by: None,
         },
         CompiledStep::PerSelected {
             selection: "picked".to_string(),
@@ -729,6 +739,8 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
             prompt: "Pick 1 of each different name".to_string(),
             prompt_key: None,
             optional_zero: false,
+            min: 0,
+            same_by: None,
         },
         CompiledStep::PerSelected {
             selection: "picked".to_string(),

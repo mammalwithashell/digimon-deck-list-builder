@@ -209,3 +209,64 @@ fn bt24_047_suspending_opponent_digimon_does_not_unlock_own_unsuspend_tail() {
         "opponent Digimon should still be suspended by the first effect"
     );
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Green Lv.3" circle
+// used to say `from: { level_eq: 3, color: green }`. `color` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-3 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn bt24_047_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve BT24-047 (from hand) onto a level-3 base of `color`.
+fn bt24_047_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT24-047")
+        .expect("BT24-047 in embedded DSL pack")
+        .add_card(bt24_047_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["BT24-047"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT24-047")
+        .expect("BT24-047 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn bt24_047_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !bt24_047_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-3 base must NOT digivolve into BT24-047 via the Green Lv.3 alt path"
+    );
+}
+
+#[test]
+fn bt24_047_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        bt24_047_color_gate_try(digimon_engine::enums::CardColor::Green),
+        "a green level-3 base digivolves into BT24-047 via the Green Lv.3 alt path"
+    );
+}

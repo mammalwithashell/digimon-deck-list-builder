@@ -8,7 +8,7 @@ use crate::common::PlayerRef;
 use crate::predicate::{PredicateSpec, Zone};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum FormulaSpec {
     Literal(i32),
     BasePerDelta {
@@ -100,6 +100,11 @@ pub enum CompoundFormula {
     /// Left-associative subtraction: `subtract: [a, b]` → `a - b`. YAML:
     /// `{ subtract: [ {..}, {..} ] }`. G-DSL-FORMULA-SUBTRACT.
     Subtract(Vec<FormulaSpec>),
+    /// Product of every operand: `multiply(a, b, ...) = a * b * ...`. Composes
+    /// with `floor_div` so a card can scale a bucketed count, e.g. EX13-020
+    /// Magnamon's "-4000 DP for every 5000 DP this Digimon has" =
+    /// `multiply(floor_div(source_dp, 5000), -4000)`. G-DSL-FORMULA-MULTIPLY.
+    Multiply(Vec<FormulaSpec>),
     Aggregate(AggregateSelector),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -124,6 +129,11 @@ enum CompoundFormulaDeserialize {
     Max(Vec<FormulaSpec>),
     Min(Vec<FormulaSpec>),
     Subtract(Vec<FormulaSpec>),
+    /// Product of every operand: `multiply(a, b, ...) = a * b * ...`. Composes
+    /// with `floor_div` so a card can scale a bucketed count, e.g. EX13-020
+    /// Magnamon's "-4000 DP for every 5000 DP this Digimon has" =
+    /// `multiply(floor_div(source_dp, 5000), -4000)`. G-DSL-FORMULA-MULTIPLY.
+    Multiply(Vec<FormulaSpec>),
     Aggregate(AggregateFormulaPayload),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -147,6 +157,7 @@ impl<'de> Deserialize<'de> for CompoundFormula {
             CompoundFormulaDeserialize::Max(v) => Self::Max(v),
             CompoundFormulaDeserialize::Min(v) => Self::Min(v),
             CompoundFormulaDeserialize::Subtract(v) => Self::Subtract(v),
+            CompoundFormulaDeserialize::Multiply(v) => Self::Multiply(v),
             CompoundFormulaDeserialize::Aggregate(AggregateFormulaPayload::Legacy(selector)) => {
                 Self::Aggregate(selector)
             }
@@ -170,6 +181,7 @@ impl Serialize for CompoundFormula {
             Self::Max(v) => map.serialize_entry("max", v)?,
             Self::Min(v) => map.serialize_entry("min", v)?,
             Self::Subtract(v) => map.serialize_entry("subtract", v)?,
+            Self::Multiply(v) => map.serialize_entry("multiply", v)?,
             Self::Aggregate(selector) => map.serialize_entry("aggregate", selector)?,
             Self::AggregateScoped(spec) => map.serialize_entry("aggregate", spec)?,
             Self::RawRust(name) => map.serialize_entry("raw_rust", name)?,
@@ -188,7 +200,7 @@ pub struct CardCountInZoneSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum PerSelector {
     MaterialCount,
     StackSize,

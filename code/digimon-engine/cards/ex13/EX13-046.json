@@ -1,0 +1,35 @@
+{
+  "index": 4370,
+  "norm_id": 0.2185,
+  "card_id": "EX13-046",
+  "card_index": 46,
+  "card_name_eng": "Kokuwamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_046",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Mamemon] in its text and 1 card with the [Mutant] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,40 @@
+# EX13-002 DemiVeemon — Digi-Egg, Lv.2, Blue. Traits: Baby Dragon.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-002.md):
+#   Inherited: [Your Turn] [Once Per Turn] When any of your blue Tamers are
+#   played, this Digimon with [Veedramon] in its name may unsuspend.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_002.cs
+#   OnEnterFieldAnyone, inherited, OPT, optional. Trigger: own Tamer with a
+#   blue top card played, owner's turn. Activation gate: carrier top card
+#   ContainsCardName("Veedramon") && CanUnsuspend(carrier). Body: unsuspend
+#   the carrier.
+#
+# DSL: EX13-001 `on_ally_played` trigger idiom + BT20-045 optional
+# `unsuspend: { target: source }`. The carrier-name / suspended gates are
+# `condition:` so a non-qualifying carrier never offers (nor spends) the OPT.
+
+card: EX13-002
+name: DemiVeemon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Baby Dragon]
+
+effects:
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [blue]
+        - source_name_contains: Veedramon
+        - not: { source_is_unsuspended: true }
+    summary: "[Your Turn][OPT] When any of your blue Tamers are played, this [Veedramon]-named Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

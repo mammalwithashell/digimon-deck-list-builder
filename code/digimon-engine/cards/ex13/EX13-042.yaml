@@ -1,0 +1,66 @@
+# EX13-042 Bastemon — Digimon, Lv.5, Green, 7000 DP, play cost 7.
+# Traits: Beastkin. Ultimate / Virus. Digivolve: Green Lv.4 / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-042.md):
+#   <Alliance> [When Digivolving] [When Attacking] [Once Per Turn] You may play
+#   1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign],
+#   other than [Sea Animal], in any of its traits from your hand without
+#   paying the cost.
+#   Inherited: <Alliance>
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_042.cs). Printed text governs.
+#
+# DSL: shared-OPT `[when_digivolving, when_attacking]` clause; optional
+# `select_hand` → `play_from_hand_free`; decline refunds the OPT (EX13-012 /
+# DCGO RemoveUse convention). Trait test = BT11-089 idiom: substring
+# `trait_contains` (pluralization/compound tolerant) minus `[Sea Animal]`.
+
+card: EX13-042
+name: Bastemon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Beastkin]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] You may play 1 play cost 4 or lower [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) trait Digimon card from your hand for free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 4
+              - any_of:
+                  - trait_contains: Beast
+                  - trait_contains: Animal
+                  - trait_contains: Sovereign
+              - not:
+                  trait_has: "Sea Animal"
+          prompt: "You may play 1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign] (other than [Sea Animal]) in its traits without paying the cost"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: pick }
+          else:
+            - refund_opt: {}
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance

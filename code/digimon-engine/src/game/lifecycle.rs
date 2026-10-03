@@ -19,13 +19,50 @@ impl Game {
     /// End the turn if memory has crossed to the opponent's side.
     /// Call this after a batch of effects resolves (not synchronously inside
     /// `pay_memory`, which would starve effects of their turn).
+    ///
+    /// 6-1-4-1: the turn ends once memory is on the opponent's side AND all
+    /// processing in the current phase has resolved. So this is a no-op:
+    /// - while a selection is parked (the effect is not finished);
+    /// - during the End phase (`EndTurn` / `EndOfTurnAction`) — the turn is
+    ///   already ending and `end_turn`'s own continuation decides between
+    ///   rotation and the memory swing-back; re-entering `end_turn` from an
+    ///   [End of Your Turn] effect's body would rotate the turn mid-effect
+    ///   (DCGO `AutoProcessing.EndTurnCheck` skips `phase.End` likewise);
+    /// - while an effect is still resolving (`effect_drain_depth > 0` or a
+    ///   deferred-drain scope is open) — e.g. an Option used by an effect
+    ///   finishes its own lifecycle before the using effect's remaining steps
+    ///   ("Then, 1 of your Digimon may attack") run; likewise while a
+    ///   selection's resolution (callback + post-callback continuations) is
+    ///   still running, and while an attack is in progress (DCGO
+    ///   `EndTurnCheck` also requires `!attackProcess.ActiveAttack()`; the
+    ///   attack terminal re-checks once `pending_attack` clears). The check is recorded in
+    ///   `turn_end_check_deferred` and re-run by the outermost
+    ///   `drain_effect_queue` exit (DCGO only calls `EndTurnCheck` from the
+    ///   turn state machine, after auto-processing has settled).
+    ///   G-ENGINE-TURN-END-MID-EFFECT.
     pub fn check_turn_end(&mut self) {
         if self.pending_selection.is_some() {
             return;
         }
-        if self.memory < 0 && !self.game_over {
-            self.end_turn();
+        if self.memory >= 0 || self.game_over {
+            return;
         }
+        if matches!(
+            self.current_phase,
+            GamePhase::EndTurn | GamePhase::EndOfTurnAction
+        ) {
+            return;
+        }
+        if self.effect_drain_depth > 0
+            || self.draining_deferred > 0
+            || self.selection_resolution_depth > 0
+            || self.pending_attack.is_some()
+        {
+            self.turn_end_check_deferred = true;
+            return;
+        }
+        self.turn_end_check_deferred = false;
+        self.end_turn();
     }
 
     /// Eliminate a player (multiplayer modes).

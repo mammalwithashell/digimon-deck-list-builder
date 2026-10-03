@@ -2,16 +2,21 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod add_modifier_typed_payload;
 mod also_treated_as;
 mod assembly_play;
 mod attack_history_predicate;
 mod collapse_then_tail;
 mod cross_check;
+mod battle_deleter;
 mod delay;
 mod delay_union_play_flow;
-mod digivolve_target_predicates;
 mod digixros_aliases;
+mod dna_material_identity;
+mod digivolve_target_predicates;
 mod digixros_transaction_steps;
+mod dp_deletion_max_modifier;
+mod digivolve_ignore_level_and_tamer_base;
 mod effect_battle;
 mod effect_granted_attack;
 mod effect_immunity_step;
@@ -144,6 +149,7 @@ mod security_boundary;
 mod security_icon_lint;
 mod security_stack_steps;
 mod select_materials;
+mod stack_pair_and_protection;
 mod selection_dp_extrema;
 mod self_source_count_threshold;
 mod source_stack_aggregates;
@@ -158,6 +164,7 @@ mod trash_link_card_of_own_digimon;
 mod trash_option_from_own_stacks;
 mod union_zone_cost;
 mod union_zone_origin_play;
+mod unsuspend_phase_lock;
 mod validator;
 mod xros_reusable_primitives;
 mod zone_movement_verbs;

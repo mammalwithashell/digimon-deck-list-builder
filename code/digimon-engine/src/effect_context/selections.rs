@@ -165,6 +165,128 @@ pub enum DistinctByMode {
     CardNumber,
     Level,
     Name,
+    /// "w/different colors" — SET-level: the picks must admit an injective
+    /// assignment card → one of its printed colors (bipartite matching; a
+    /// multicolor card represents exactly one of its colors, a colorless card
+    /// none). Not a pairwise comparison — use [`DistinctByMode::admits`].
+    /// G-ASSEMBLY-DISTINCT-BY-COLOR (EX13-077).
+    Color,
+    /// "N same-level cards" — the opposite of the distinct modes: every pick
+    /// shares ONE level (a level-less card is never admissible). Not a
+    /// matroid, so per-pick masking alone could strand a pick; installers
+    /// additionally restrict the initial pool with
+    /// [`DistinctByMode::prune_pool`] to levels holding at least the required
+    /// number of candidates. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION
+    /// (EX13-016 Omnimon "trashing 2 same-level cards from its digivolution
+    /// cards").
+    SameLevel,
+}
+
+impl DistinctByMode {
+    /// True when `candidate` may join the already-`picked` cards without
+    /// violating this distinctness mode. The pairwise modes reject a candidate
+    /// sharing the attribute with any pick (a level-less card never collides
+    /// under `Level`); `Color` asks whether `picked ∪ {candidate}` still has a
+    /// perfect card → color assignment ([`colors_assignable`]).
+    ///
+    /// Every mode is a matroid constraint over a single selection (pairwise
+    /// modes = partition matroid, `Color` = transversal matroid), so greedy
+    /// per-pick masking with this predicate never dead-ends: any admissible
+    /// partial set extends to a maximum one.
+    pub fn admits(
+        self,
+        picked: &[&crate::card_data::CardData],
+        candidate: &crate::card_data::CardData,
+    ) -> bool {
+        match self {
+            DistinctByMode::CardNumber => picked.iter().all(|p| p.card_id != candidate.card_id),
+            DistinctByMode::Level => picked.iter().all(|p| {
+                !matches!((p.level, candidate.level), (Some(a), Some(b)) if a == b)
+            }),
+            DistinctByMode::Name => picked.iter().all(|p| p.card_name != candidate.card_name),
+            DistinctByMode::Color => {
+                let mut masks: Vec<u8> = picked.iter().map(|p| color_mask(&p.colors)).collect();
+                masks.push(color_mask(&candidate.colors));
+                colors_assignable(&masks)
+            }
+            DistinctByMode::SameLevel => {
+                candidate.level.is_some() && picked.iter().all(|p| p.level == candidate.level)
+            }
+        }
+    }
+
+    /// Install-time pool restriction: given every candidate that passed the
+    /// filter (in zone order) and the number of picks the selection needs to
+    /// reach its floor, return which candidates may be offered as a FIRST
+    /// pick. Only `SameLevel` prunes — a candidate stays iff its level is
+    /// held by at least `need` candidates, so once it is picked the
+    /// remaining same-level candidates can always complete the selection.
+    /// Every other mode is a matroid and keeps the whole pool.
+    pub fn prune_pool(self, pool: &[&crate::card_data::CardData], need: usize) -> Vec<bool> {
+        match self {
+            DistinctByMode::SameLevel => {
+                let need = need.max(1);
+                pool.iter()
+                    .map(|c| {
+                        c.level.is_some()
+                            && pool.iter().filter(|o| o.level == c.level).count() >= need
+                    })
+                    .collect()
+            }
+            _ => vec![true; pool.len()],
+        }
+    }
+}
+
+/// Bitmask (bit = `CardColor as u8`) of a card's printed colors.
+pub fn color_mask(colors: &[crate::enums::CardColor]) -> u8 {
+    colors.iter().fold(0u8, |m, c| m | (1u8 << (*c as u8)))
+}
+
+/// True when every card (given by its color bitmask) can be assigned a
+/// DISTINCT one of its own colors — a perfect matching of cards into the 7
+/// colors (Kuhn's augmenting paths; ≤ 7 cards can ever succeed). A colorless
+/// card (mask 0) can never be assigned. "N cards w/different colors".
+/// G-ASSEMBLY-DISTINCT-BY-COLOR.
+pub fn colors_assignable(masks: &[u8]) -> bool {
+    max_color_matching(masks) == masks.len()
+}
+
+/// Size of a maximum card → distinct-color matching over `masks` (the rank of
+/// the transversal matroid): the largest number of these cards that can be
+/// chosen "w/different colors".
+pub fn max_color_matching(masks: &[u8]) -> usize {
+    fn augment(card: usize, masks: &[u8], owner: &mut [Option<usize>; 8], seen: &mut u8) -> bool {
+        for color in 0..8usize {
+            let bit = 1u8 << color;
+            if masks[card] & bit == 0 || *seen & bit != 0 {
+                continue;
+            }
+            *seen |= bit;
+            match owner[color] {
+                None => {
+                    owner[color] = Some(card);
+                    return true;
+                }
+                Some(other) => {
+                    if augment(other, masks, owner, seen) {
+                        owner[color] = Some(card);
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+    let mut owner: [Option<usize>; 8] = [None; 8];
+    let mut matched = 0;
+    for card in 0..masks.len() {
+        let mut seen = 0u8;
+        if augment(card, masks, &mut owner, &mut seen) {
+            matched += 1;
+        }
+    }
+    matched
 }
 
 impl<'a> EffectContext<'a> {
@@ -1688,9 +1810,42 @@ impl<'a> EffectContext<'a> {
                         .clone()
                 }
             };
-            if filter(self.game, &card_clone) {
+            // A card that can't even start a `distinct_by` set (a colorless
+            // card under `Color`) is never a candidate. No-op for the
+            // pairwise modes (an empty pick set admits every card).
+            let admissible = distinct_by
+                .is_none_or(|mode| mode.admits(&[], &self.game.card_data[card_clone.data_index]));
+            if admissible && filter(self.game, &card_clone) {
                 candidate_indices.push(i);
             }
+        }
+
+        // Pool-level restriction (`SameLevel`: only levels that can still
+        // reach the floor). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+        if let Some(mode) = distinct_by {
+            let need = min.max(if is_optional_zero { 0 } else { 1 }) as usize;
+            let keep = {
+                let pool: Vec<&crate::card_data::CardData> = candidate_indices
+                    .iter()
+                    .map(|&i| {
+                        let data_index = match zone {
+                            CountCappedZone::Hand => self.game.player(of_player).hand[i].data_index,
+                            CountCappedZone::Trash => {
+                                self.game.player(of_player).trash[i].data_index
+                            }
+                            CountCappedZone::Material(perm_handle) => {
+                                material_zone_slice(self.game, perm_handle)
+                                    .expect("material carrier present")[i]
+                                    .data_index
+                            }
+                        };
+                        &self.game.card_data[data_index]
+                    })
+                    .collect();
+                mode.prune_pool(&pool, need)
+            };
+            let mut k = keep.into_iter();
+            candidate_indices.retain(|_| k.next().unwrap_or(true));
         }
 
         // Fewer candidates than the required minimum → the cost is unpayable.
@@ -3515,20 +3670,12 @@ fn install_count_capped_step(
                         }
                     };
                     let cand_data = &game.card_data[cand_data_idx];
-                    // Reject the candidate if it matches any accumulated pick.
-                    !accum_data_indices.iter().any(|&picked_data_idx| {
-                        let picked_data = &game.card_data[picked_data_idx];
-                        match mode {
-                            DistinctByMode::CardNumber => picked_data.card_id == cand_data.card_id,
-                            DistinctByMode::Level => {
-                                matches!(
-                                    (picked_data.level, cand_data.level),
-                                    (Some(p), Some(c)) if p == c
-                                )
-                            }
-                            DistinctByMode::Name => picked_data.card_name == cand_data.card_name,
-                        }
-                    })
+                    // Reject the candidate if it can't join the accumulated picks.
+                    let picked: Vec<&crate::card_data::CardData> = accum_data_indices
+                        .iter()
+                        .map(|&i| &game.card_data[i])
+                        .collect();
+                    mode.admits(&picked, cand_data)
                 })
                 .collect();
 
@@ -3595,4 +3742,50 @@ fn install_count_capped_step(
             }
         })),
     });
+}
+
+#[cfg(test)]
+mod distinct_color_tests {
+    use super::{colors_assignable, max_color_matching, DistinctByMode};
+    use crate::enums::CardColor::{self, *};
+
+    fn m(colors: &[CardColor]) -> u8 {
+        super::color_mask(colors)
+    }
+
+    #[test]
+    fn multicolor_card_takes_its_free_color() {
+        assert!(colors_assignable(&[m(&[Red]), m(&[Red, Blue])]));
+        assert!(!colors_assignable(&[m(&[Red]), m(&[Red])]));
+    }
+
+    #[test]
+    fn assignment_needs_augmenting_paths() {
+        // Greedy (first color) would give RB→Red then fail R; matching
+        // re-routes RB→Blue.
+        assert!(colors_assignable(&[m(&[Red, Blue]), m(&[Red])]));
+        // Hall violation: 3 cards over {Red, Blue}.
+        assert!(!colors_assignable(&[m(&[Red, Blue]), m(&[Red]), m(&[Blue])]));
+    }
+
+    #[test]
+    fn colorless_never_assignable_and_eight_cards_never_fit() {
+        assert!(!colors_assignable(&[0]));
+        let all = m(&[Red, Blue, Yellow, Green, White, Black, Purple]);
+        assert!(colors_assignable(&[all; 7]));
+        assert!(!colors_assignable(&[all; 8]));
+        assert_eq!(max_color_matching(&[all; 8]), 7);
+    }
+
+    #[test]
+    fn admits_routes_color_through_matching() {
+        let mut a = crate::debug_runner::make_test_card("A", "A");
+        a.colors = vec![Red];
+        let mut b = crate::debug_runner::make_test_card("B", "A");
+        b.colors = vec![Red, Blue];
+        assert!(DistinctByMode::Color.admits(&[&a], &b));
+        assert!(!DistinctByMode::Color.admits(&[&a], &a));
+        // Same name: Name rejects, Color does not care about names.
+        assert!(!DistinctByMode::Name.admits(&[&a], &b));
+    }
 }

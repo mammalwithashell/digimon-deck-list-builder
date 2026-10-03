@@ -1,0 +1,44 @@
+{
+  "index": 4344,
+  "norm_id": 0.2172,
+  "card_id": "EX13-020",
+  "card_index": 20,
+  "card_name_eng": "Magnamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_020",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +1000 DP until your opponent's turn ends for each color in trashes. Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends for every 5000 DP this Digimon has.\r\n[End of Your Turn] [Once Per Turn] 1 of your [Free] or [Royal Knight] trait Digimon may unsuspend.",
+  "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] 1 of your Digimon with the [Free] or [Royal Knight] trait may unsuspend.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]: Cost 3 \r\nAssembly Requirements [Assembly -2] [Veemon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

@@ -180,6 +180,40 @@ pub(crate) fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers
     }
 }
 
+/// Lower a compiled typed `add_modifier` payload to the engine's
+/// `ModifierPayload` (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD). `base: true`
+/// throughout: these steps replace / set the target's BASE identity (the
+/// consult site `Permanent::synth_identity` applies them before additive
+/// effects such as `AddColor` and before the `ChangeDp` sum in
+/// `Game::effective_dp`). `origin` mirrors the modifier for DP so the stored
+/// entry records which DP-setter installed it.
+pub(crate) fn build_typed_modifier_payload(
+    modifier: crate::enums::ModifierType,
+    p: &digimon_dsl::compiled::CompiledModifierPayload,
+) -> crate::modifiers::ModifierPayload {
+    use crate::modifiers::ModifierPayload as M;
+    use digimon_dsl::compiled::CompiledModifierPayload as P;
+    match p {
+        P::Name(value) => M::Name {
+            value: value.clone(),
+            base: true,
+        },
+        P::Colors(colors) => M::Colors {
+            value: colors.iter().copied().map(compiled_color_to_card_color).collect(),
+            base: true,
+        },
+        P::Dp(value) => M::Dp {
+            value: *value,
+            base: true,
+            origin: modifier == crate::enums::ModifierType::ChangeOriginDP,
+        },
+        P::Traits { add, replace } => M::Traits {
+            add: add.clone(),
+            replace: *replace,
+        },
+    }
+}
+
 /// Returns `true` if `step` is a modifier family handled here.
 /// Unknown steps fall through (the caller may try other families).
 pub fn try_run(
@@ -210,6 +244,7 @@ pub fn try_run(
             value,
             expiry,
             synth_identity,
+            payload: typed_payload,
             continuous,
         } => {
             let Some(expiry) = resolve_expiry("add_modifier", expiry) else {
@@ -221,7 +256,13 @@ pub fn try_run(
             };
             // `synth_identity:` (TreatAsDigimon) installs the structured
             // `ModifierPayload::SynthIdentity` instead of a bare scalar.
-            let payload = synth_identity.as_ref().map(build_synth_payload);
+            // `payload:` (name / colors / base DP / traits) installs the typed
+            // identity payload (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD).
+            let payload = synth_identity.as_ref().map(build_synth_payload).or_else(|| {
+                typed_payload
+                    .as_ref()
+                    .map(|p| build_typed_modifier_payload(modifier_ty, p))
+            });
             // Closure installs with-or-without payload depending on `payload`.
             let install = |ctx: &mut crate::effect_context::EffectContext, h, n| match &payload {
                 Some(p) => ctx.add_modifier_with_payload(h, modifier_ty, n, expiry, p.clone()),

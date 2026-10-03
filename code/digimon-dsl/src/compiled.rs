@@ -276,11 +276,21 @@ pub enum CompiledRepeat {
     Range { min: u8, max: u8 },
 }
 
+/// Compiled `select_materials { same_by: … }`. G-ENGINE-SAME-LEVEL-SOURCE-
+/// PAIR-SELECTION.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledSameBy {
+    Level,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledDistinctBy {
     CardNumber,
     Level,
     Name,
+    /// Set-level "different colors" (bipartite card → color assignment).
+    /// See `alt_path::DistinctBy::Color`. G-ASSEMBLY-DISTINCT-BY-COLOR.
+    Color,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -290,6 +300,40 @@ pub enum CompiledCost {
 }
 
 // ── Predicate tree ──────────────────────────────────────────────────
+
+impl CompiledPredicate {
+    /// A copy of this predicate with every SUBJECT-level leaf (`level_eq`,
+    /// `level_lte`, `level_gte`, their `*_binding` siblings, and
+    /// `level_matches_aggregate`) waived — in positive positions only: the
+    /// top level and nested `all_of` / `any_of` branches. Negated positions
+    /// (`none_of`, `not`) are left untouched, since waiving a leaf there
+    /// would flip "not level N" into "never".
+    ///
+    /// Drives "digivolve … ignoring level" (DCGO
+    /// `CardEffectCommons.IgnoreRequirement.Level`): an alt-digivolve path's
+    /// `from:` filter is evaluated with its level gate dropped while every
+    /// other requirement (colour, trait, name) still applies — matching
+    /// DCGO `AddDigivolutionRequirement.GetEvoCost`, whose `ignoreLevel`
+    /// skips only the level test. G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub fn without_subject_level_leaves(&self) -> CompiledPredicate {
+        let mut out = self.clone();
+        out.strip_subject_level_leaves_in_place();
+        out
+    }
+
+    fn strip_subject_level_leaves_in_place(&mut self) {
+        self.level_eq = None;
+        self.level_eq_binding = None;
+        self.level_lte_binding = None;
+        self.level_gte_binding = None;
+        self.level_lte = None;
+        self.level_gte = None;
+        self.level_matches_aggregate = None;
+        for child in self.all_of.iter_mut().chain(self.any_of.iter_mut()) {
+            child.strip_subject_level_leaves_in_place();
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CompiledPredicate {
@@ -331,6 +375,10 @@ pub struct CompiledPredicate {
     /// concatenated printed text (`effect_text` + `inherited_text` +
     /// `security_text`). G-DSL-PREDICATE-TEXT-CONTAINS.
     pub effect_text_contains: Option<String>,
+    /// Face-up printed keyword on the candidate card (effect-text keyword
+    /// line only). G-DSL-PREDICATE-PRINTED-KEYWORD.
+    #[serde(default)]
+    pub printed_keyword: Option<String>,
     /// Whole-card "[X] in its text" scan — the broad DCGO
     /// `CardSource.HasText` surface: name + also-treated-as / DigiXros
     /// aliases + traits (Type line) + all printed text (both dual faces).
@@ -369,6 +417,16 @@ pub struct CompiledPredicate {
     pub can_digivolve_onto: Option<String>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
+    /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
+    /// N DP or less"). Set by the compile-time pass in `deletion_cap.rs` (never
+    /// authored) when this predicate filters the candidates of a select whose
+    /// binding a `delete_*` step consumes, or the `over` of
+    /// `delete_all_permanents`. The engine then adds the effect source
+    /// permanent's `ChangeDPDeleteEffectMaxDP` delta to the cap ("add 2000 to
+    /// this Digimon's DP deletion effects' maximums" — DCGO
+    /// `Player.MaxDP_DeleteEffect`). G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    #[serde(default)]
+    pub dp_lte_deletion_cap: bool,
     pub dp_gte: Option<CompiledDpConstraint>,
     pub stack_size_lte: Option<CompiledDpConstraint>,
     pub stack_size_gte: Option<CompiledDpConstraint>,
@@ -396,6 +454,12 @@ pub struct CompiledPredicate {
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
+    /// See `PredicateSpec::can_change_orientation` (EX13-023).
+    #[serde(default)]
+    pub can_change_orientation: Option<bool>,
+    /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
+    #[serde(default)]
+    pub can_attack: Option<CompiledCanAttack>,
     pub has_keyword: Option<String>,
     /// Permanent-subject leaf for printed/granted/temporary Security A.
     /// deltas. Used by Venusmon-style text that cares about "with
@@ -516,6 +580,10 @@ pub struct CompiledPredicate {
     pub all_turns: Option<bool>,
     pub can_hatch: Option<CompiledPlayerRef>,
     pub digimon_attacked_this_turn: Option<CompiledPlayerRef>,
+    /// "If during an attack" — true while `Game::pending_attack` is set.
+    /// G-DSL-DURING-ATTACK.
+    #[serde(default)]
+    pub during_attack: Option<bool>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,
@@ -642,6 +710,14 @@ pub struct CompiledPredicate {
     pub event_winner_owner: Option<CompiledPlayerRef>,
     /// `on_ally_won_battle`: the battle winner's top card must carry this trait.
     pub event_winner_trait_has: Option<String>,
+    /// `on_ally_won_battle`: the battle winner is the effect carrier.
+    /// G-DSL-BATTLE-WINNER-IS-SOURCE.
+    #[serde(default)]
+    pub event_winner_is_source: Option<bool>,
+    /// `on_ally_won_battle`: the surviving combatant whose battle opponent was
+    /// actually deleted matches this permanent predicate. G-DSL-BATTLE-DELETER.
+    #[serde(default)]
+    pub event_battle_deleter: Option<Box<CompiledPredicate>>,
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
@@ -850,6 +926,8 @@ pub enum CompiledFormula {
     /// practice (`a - b`). Composes with the other compounds so a card can
     /// express e.g. "N minus your Digimon count". G-DSL-FORMULA-SUBTRACT.
     Subtract(Vec<CompiledFormula>),
+    /// Product of every operand (`multiply(a, b) = a * b`). G-DSL-FORMULA-MULTIPLY.
+    Multiply(Vec<CompiledFormula>),
     Aggregate(CompiledAggregateSelector),
     AggregateScoped {
         selector: CompiledAggregateSelector,
@@ -983,6 +1061,17 @@ pub enum CompiledModifierValue {
     Formula(CompiledFormula),
 }
 
+/// Compiled typed `add_modifier` payload (exactly one variant per step; the
+/// validator guarantees it matches the modifier). The engine lowers it to the
+/// corresponding `ModifierPayload` variant.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledModifierPayload {
+    Name(String),
+    Colors(Vec<CompiledColor>),
+    Dp(i32),
+    Traits { add: Vec<String>, replace: bool },
+}
+
 /// Compiled synthetic identity for a `TreatAsDigimon` modifier. Mirrors the
 /// engine's `ModifierPayload::SynthIdentity` fields; the engine lowering
 /// converts `kind`/`colors` to its own enums.
@@ -1089,6 +1178,17 @@ pub enum CompiledDeclarativeClause {
         /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
         #[serde(default)]
         effect_immunity: Option<CompiledAuraEffectImmunity>,
+        /// Effect-controller scope for the named `modifier` grant
+        /// (`effect_immunity_filter.controller`). `None` ⇒ unscoped.
+        /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023).
+        #[serde(default)]
+        modifier_from: Option<CompiledEffectController>,
+        /// Result-scoped DNA-material identity ("also treated as Lv.6
+        /// [Slayerdramon] for [Examon]'s DNA digivolution"). Self-aura only.
+        /// No `skip_serializing_if`: bincode round-trip.
+        /// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+        #[serde(default)]
+        dna_material_identity: Option<CompiledDnaMaterialIdentity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -1366,6 +1466,15 @@ pub struct CompiledAuraEffectImmunity {
     pub source_controller: CompiledEffectController,
 }
 
+/// Compiled `dna_material_identity:` aura payload.
+/// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledDnaMaterialIdentity {
+    pub for_result: String,
+    pub level: Option<u8>,
+    pub name: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompiledFieldSelector {
     LowestDp,
@@ -1394,6 +1503,14 @@ pub struct CompiledAttackCostUpgrade {
 pub enum CompiledAppFuseZone {
     Hand,
     Trash,
+}
+
+/// What an effect battle compares (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum CompiledBattleCompare {
+    #[default]
+    Dp,
+    DigivolutionCards,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
@@ -1770,6 +1887,9 @@ pub enum CompiledStep {
     TrashTopStackedSources {
         target: CompiledBindingRef,
         count: CompiledFormula,
+        /// See `TrashTopStackedSourcesArgs::include_top_card`.
+        #[serde(default)]
+        include_top_card: bool,
     },
     Hatch {
         of: CompiledPlayerRef,
@@ -1927,6 +2047,11 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+        /// Waive only the base's level requirement (DCGO
+        /// `IgnoreRequirement.Level`); printed cost still paid, then `cost`.
+        /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+        #[serde(default)]
+        ignore_level: bool,
     },
     /// Effect-initiated App Fuse: two engine-driven selections (own permanent,
     /// then result card from `from_zone`) routed through the app-fusion commit.
@@ -2110,6 +2235,11 @@ pub enum CompiledStep {
         /// the field must always be written or the byte stream desyncs.
         #[serde(default)]
         synth_identity: Option<CompiledSynthIdentity>,
+        /// Typed identity/metadata payload (name / colors / base DP / traits)
+        /// — G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD. `None` for scalar
+        /// modifiers. No `skip_serializing_if` (bincode, as above).
+        #[serde(default)]
+        payload: Option<CompiledModifierPayload>,
         /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
         /// target, register a source-independent floating effect re-applied each
         /// tick instead of a one-time scan. No `skip_serializing_if` for the
@@ -2238,14 +2368,15 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
-        /// Decline continues the clause tail (binding unresolved) instead of
-        /// dropping it. G-OPT-REFUND-ON-DECLINE (widened to the both-player
-        /// pick for BT26-038 Kuwagamon "You may suspend 1 Digimon. Then, …").
-        #[serde(default)]
-        continue_on_decline: bool,
         /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
         #[serde(default)]
         then: Vec<CompiledStep>,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it — parity with the own/opponent field selects.
+        /// G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE (also BT26-038 Kuwagamon
+        /// "You may suspend 1 Digimon. Then, …"). Appended at the tail.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectDnaPair {
         left_filter: CompiledPredicate,
@@ -2309,6 +2440,14 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional_zero: bool,
+        /// Minimum picks (0 ⇒ historical behaviour). G-ENGINE-SAME-LEVEL-
+        /// SOURCE-PAIR-SELECTION.
+        #[serde(default)]
+        min: u8,
+        /// "All picks share X" (`SameBy::Level`). G-ENGINE-SAME-LEVEL-
+        /// SOURCE-PAIR-SELECTION.
+        #[serde(default)]
+        same_by: Option<CompiledSameBy>,
     },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,
@@ -2349,6 +2488,13 @@ pub enum CompiledStep {
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,
+        /// The total-DP budget is a deletion effect's maximum (the picks are
+        /// consumed by a `delete_*` step) — set by `deletion_cap.rs`; the
+        /// engine adds the source permanent's `ChangeDPDeleteEffectMaxDP`
+        /// delta (DCGO `sumDP > MaxDP_DeleteEffect(..)`, e.g. ST7-12).
+        /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+        #[serde(default)]
+        deletion_cap: bool,
     },
     /// Play-cost-budget analog of `SelectOpponentDpBudget`.
     /// G-MULTI-SELECT-OPP-PLAY-COST-SUM. `play_cost_budget` is a
@@ -2407,6 +2553,13 @@ pub enum CompiledStep {
     TrashSelectedSources {
         source_refs: String,
     },
+    /// Trash the `cards` card-list binding from `target`'s digivolution
+    /// cards (`select_materials` sibling of `TrashSelectedSources`).
+    /// G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    TrashSelectedMaterials {
+        target: CompiledBindingRef,
+        cards: CompiledBindingRef,
+    },
     /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME — return each
     /// `SelectOwnSources`-bound digivolution source card to its owner's hand
     /// (mirror of `TrashSelectedSources`, hand destination instead of trash).
@@ -2419,6 +2572,12 @@ pub enum CompiledStep {
     /// bottom). A return, not a trash — fires no `OnDigivolutionCardTrashed`.
     ReturnSelectedSourcesToDeck {
         source_refs: String,
+        position: CompiledStackPosition,
+    },
+    /// Return every digivolution card of `target` to the deck (EX13-076).
+    /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT.
+    ReturnAllSourcesToDeck {
+        target: CompiledBindingRef,
         position: CompiledStackPosition,
     },
     BindPermanentProperty {
@@ -2512,6 +2671,10 @@ pub enum CompiledStep {
     },
     SelectEffectChoice {
         labels: Vec<String>,
+        /// Per-branch legality parallel to `labels`; `None` = all legal.
+        /// Exactly one legal branch auto-binds (no prompt); zero → no bind.
+        /// (No `skip_serializing_if`: the embedded pack is bincode.)
+        legal_when: Option<Vec<CompiledPredicate>>,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
@@ -2631,6 +2794,9 @@ pub enum CompiledStep {
     Battle {
         attacker: CompiledBindingRef,
         defender: CompiledBindingRef,
+        /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT — what the battle compares.
+        #[serde(default)]
+        compare: CompiledBattleCompare,
     },
     MayAttackNow {
         attacker: CompiledBindingRef,
@@ -2847,6 +3013,14 @@ pub enum CompiledRevealRemainder {
     /// Player-elected top/bottom — lowers the remainder placement through
     /// `CompiledStackPosition::Choice`.
     Choose,
+}
+
+/// Lowered `PredicateSpec::can_attack` options.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledCanAttack {
+    pub targets: CompiledAttackTargetSpec,
+    pub without_suspending: bool,
+    pub ignore_summoning_sickness: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

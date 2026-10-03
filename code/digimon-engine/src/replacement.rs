@@ -101,9 +101,25 @@ pub struct ReplacementContext<'g> {
     pub subject: ReplacementSubject,
     pub original_destination: Option<Zone>,
     pub(crate) outcome: ReplacementOutcome,
+    /// See [`Self::cancel_if_card_deleted`].
+    pub(crate) cancel_if_deleted: Option<(PlayerId, CardHandle)>,
 }
 
 impl<'g> ReplacementContext<'g> {
+    /// Defer a "by deleting X, it doesn't leave" cancel whose cost deletion
+    /// could not complete synchronously because X's OWN replacement window
+    /// parked a player selection (G-NESTED-PARKED-REPLACEMENT — e.g.
+    /// `<Guard>` deleting a carrier that has `<Decode>` / `<Evade>`). The
+    /// dispatcher parks this replacement with the condition; when it is
+    /// drained (after the inner event commits, LIFO) the outcome becomes
+    /// `Cancelled` iff `card` (owned by `owner`) ended in its owner's trash —
+    /// i.e. the cost deletion actually happened (DCGO
+    /// `DeletePeremanentAndProcessAccordingToResult` success branch). A
+    /// prevented / redirected deletion leaves the outcome untouched.
+    pub fn cancel_if_card_deleted(&mut self, owner: PlayerId, card: CardHandle) {
+        self.cancel_if_deleted = Some((owner, card));
+    }
+
     pub fn cancel(&mut self) {
         self.outcome = ReplacementOutcome::Cancelled;
     }
@@ -124,10 +140,10 @@ impl<'g> ReplacementContext<'g> {
 /// drained by `try_drain_parked_replacement_with_guard` in
 /// `effect_queue::resolve_generic_selection` after the user's callback runs.
 ///
-/// **Single-outstanding invariant:** at most one parked replacement at a time.
-/// The post-process hook `debug_assert!`s on entry. If a real card surfaces a
-/// nested-park (callback's body itself fires another deletion that parks),
-/// escalate to a follow-up plan that converts the slot to a `Vec`-stack.
+/// **Stacked (G-NESTED-PARKED-REPLACEMENT, 2026-10-01):** a process whose own
+/// event causes a nested replacement park (e.g. `<Guard>` deleting a carrier
+/// with `<Decode>`) leaves the inner entry above the outer one; entries drain
+/// LIFO in `try_drain_parked_replacement_with_guard`.
 ///
 /// **Coexistence with `Game.dsl_outer_tail`** (Phase 2d): independent slots
 /// for independent concerns. Both can be `Some(_)` simultaneously; cross-
@@ -158,6 +174,29 @@ pub struct ParkedReplacement {
     /// returns. Defaults to `ReplacementOutcome::None` — original event proceeds
     /// when no outcome-setter is called.
     pub outcome: ReplacementOutcome,
+    /// Deferred cost check (see `ReplacementContext::cancel_if_card_deleted`):
+    /// at drain time, if this card is in its owner's trash the outcome is
+    /// forced to `Cancelled`. `None` for ordinary parks.
+    pub cancel_if_deleted: Option<(PlayerId, CardHandle)>,
+}
+
+impl crate::game::Game {
+    /// The parked replacement the CURRENT scope may write its outcome into:
+    /// the top of the stack, unless that entry belongs to an enclosing event
+    /// (index below `parked_replacement_floor`, i.e. a process running
+    /// synchronously while an outer replacement is parked).
+    pub(crate) fn active_parked_replacement_mut(&mut self) -> Option<&mut ParkedReplacement> {
+        if self.parked_replacement.len() > self.parked_replacement_floor {
+            self.parked_replacement.last_mut()
+        } else {
+            None
+        }
+    }
+
+    /// `true` when [`Self::active_parked_replacement_mut`] would return an entry.
+    pub(crate) fn has_active_parked_replacement(&self) -> bool {
+        self.parked_replacement.len() > self.parked_replacement_floor
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -289,7 +328,7 @@ pub(crate) fn try_replace_impl(
     // from_hand_or_source`, which livelocked on exactly that cycle.
     if game.replacement_depth == 0
         && !game.in_replacement_commit
-        && game.parked_replacement.is_none()
+        && game.parked_replacement.is_empty()
     {
         game.replacement_fired.clear();
     }
@@ -342,12 +381,14 @@ pub(crate) fn try_replace_impl(
 
     game.replacement_depth = game.replacement_depth.saturating_add(1);
 
+    let parked_len_at_entry = game.parked_replacement.len();
     let outcome = try_replace_inner(game, timing, subject, cause, original_destination);
 
     // If that call PARKED (an optional replacement installed its selection),
     // record which window it parked on: the park site is several frames deeper
-    // and has no `timing`, this frame does.
-    if let Some(parked) = game.parked_replacement.as_mut() {
+    // and has no `timing`, this frame does. Only entries pushed DURING this
+    // call — an enclosing parked replacement keeps its own window.
+    for parked in game.parked_replacement.iter_mut().skip(parked_len_at_entry) {
         if parked.timing.is_none() {
             parked.timing = Some(timing);
         }
@@ -438,6 +479,35 @@ fn try_replace_inner(
 ///    modifiers, honoring `cause_filter` and `replacement_condition`. Emits
 ///    `PassiveCancel` candidates that synthesize `ReplacementOutcome::Cancelled`
 ///    at dispatch. See §10 of the spec.
+/// Stable identity of a replacement candidate: (source card, kind tag, slot).
+/// Used by the batched-deletion park (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST)
+/// to tell whether ONE optional replacement activation also covers another
+/// member of the same simultaneous batch ("… would leave …, they don't
+/// leave" — EX13-051 Guardromon).
+pub(crate) type CandidateIdentity = (CardHandle, u8, u8);
+
+pub(crate) fn candidate_identity(source_card: CardHandle, kind: &CandidateKind) -> CandidateIdentity {
+    match kind {
+        CandidateKind::EffectClosure { effect_slot, .. } => (source_card, 0, *effect_slot),
+        CandidateKind::GrantedKeywordEffect { effect_slot, .. } => (source_card, 1, *effect_slot),
+        CandidateKind::PassiveCancel => (source_card, 2, 0),
+    }
+}
+
+/// Identities of every replacement candidate currently active for `subject`
+/// at `timing` (no side effects; same collection the dispatcher uses).
+pub(crate) fn active_candidate_identities(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+) -> Vec<CandidateIdentity> {
+    collect_candidates(game, timing, subject, cause)
+        .iter()
+        .map(|c| candidate_identity(c.source_card, &c.kind))
+        .collect()
+}
+
 fn collect_candidates(
     game: &crate::game::Game,
     timing: EffectTiming,
@@ -1067,7 +1137,12 @@ fn run_effect_inner(
     // `game.pending_selection` and writes `game.parked_replacement`.
     // ReplacementContext holds `&mut EffectContext` which holds `&mut Game`,
     // so both must drop before we can re-borrow `game` mutably below.
-    let outcome = {
+    // Scope floor: while this process runs, entries already on the parked
+    // stack belong to ENCLOSING events — outcome writers must not touch them.
+    let prior_floor = game.parked_replacement_floor;
+    let stack_base = game.parked_replacement.len();
+    game.parked_replacement_floor = stack_base;
+    let (outcome, cancel_if_deleted) = {
         let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
         let mut rep_ctx = ReplacementContext {
             effect: &mut ctx,
@@ -1075,10 +1150,12 @@ fn run_effect_inner(
             subject,
             original_destination,
             outcome: ReplacementOutcome::None,
+            cancel_if_deleted: None,
         };
         process(&mut rep_ctx);
-        rep_ctx.outcome
+        (rep_ctx.outcome, rep_ctx.cancel_if_deleted)
     };
+    game.parked_replacement_floor = prior_floor;
 
     // Phase C §4.3 — POST-PROCESS HOOK: detect nested-select park.
     // If the process closure installed a PendingSelection (via ctx.select_*),
@@ -1087,7 +1164,11 @@ fn run_effect_inner(
     // EffectContext::cancel_leave / etc., and the post-callback hook in
     // resolve_generic_selection can drain the slot via commit_deferred_outcome.
     //
-    // Single-outstanding invariant: at most one parked replacement at a time.
+    // Nested parks (G-NESTED-PARKED-REPLACEMENT): the process's own event may
+    // have parked an INNER replacement (pushed during the process) or merely
+    // installed an inner optional prompt. Either way this entry is inserted at
+    // `stack_base` — beneath anything the process pushed — so the inner event
+    // drains (commits) first and this outcome is committed last (LIFO).
     //
     // Both mandatory and optional dispatch arm this hook. Mandatory parking
     // (post-Phase-C-substrate-mandatory) lets keywords like `Fragment(N)`
@@ -1096,19 +1177,12 @@ fn run_effect_inner(
     // The candidate-walk in `try_replace_inner` breaks on `pending_selection
     // .is_some()` after a mandatory candidate to mirror the optional yield.
     if game.pending_selection.is_some() {
-        debug_assert!(
-            game.parked_replacement.is_none(),
-            "nested replacement park; outer outcome would be lost. Phase C \
-             scope assumes a callback that itself fires a deletion will not \
-             also install a select_* selection. If a real card requires \
-             nested-park, extend ParkedReplacement into a Vec-stack."
-        );
         // Capture the active deletion-cause override while we are still
         // inside the synchronous fire-site scope (delete_permanent_with_cause
         // restores it to `None` on early-return). The deferred commit replays
         // it so OnDeletion observers see the same refined cause.
         let event_cause_override = game.current_deletion_event_cause_override;
-        game.parked_replacement = Some(ParkedReplacement {
+        let entry = ParkedReplacement {
             timing: None,
             subject,
             cause,
@@ -1123,7 +1197,10 @@ fn run_effect_inner(
             // write wins on parked.outcome); if it doesn't, the synchronous
             // outcome takes effect on commit.
             outcome,
-        });
+            cancel_if_deleted,
+        };
+        let at = stack_base.min(game.parked_replacement.len());
+        game.parked_replacement.insert(at, entry);
         // Caller (e.g. make_accept_callback) checks pending_selection.is_some()
         // and yields without committing — the parked outcome will be drained
         // after the user's select_* callback fires.
@@ -1332,9 +1409,27 @@ fn run_commit_with_flag<F>(
 /// intentionally avoids writing it. The `debug_assert!` catches future
 /// regressions that would leak a stale outcome.
 pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Game) {
-    let Some(parked) = game.parked_replacement.take() else {
-        return;
-    };
+    // LIFO: commit the innermost parked event first. A commit may open a new
+    // selection (e.g. a further Would* window of the same inner event); stop
+    // there — the next resolution re-enters this drain for the rest.
+    while game.pending_selection.is_none() {
+        let Some(parked) = game.parked_replacement.pop() else {
+            return;
+        };
+        drain_one_parked_replacement(game, parked);
+    }
+}
+
+fn drain_one_parked_replacement(game: &mut crate::game::Game, mut parked: ParkedReplacement) {
+    if let Some((owner, card)) = parked.cancel_if_deleted {
+        let deleted = game
+            .players
+            .get(owner as usize)
+            .is_some_and(|p| p.trash.iter().any(|c| c.handle() == card));
+        if deleted {
+            parked.outcome = ReplacementOutcome::Cancelled;
+        }
+    }
 
     debug_assert!(
         game.replacement_pending_outcome.is_none(),
@@ -1379,6 +1474,7 @@ fn make_accept_callback(
     original_destination: Option<Zone>,
 ) -> crate::selection::SelectionCallback {
     Box::new(move |game: &mut crate::game::Game, _action_id: u16| {
+        let stack_before = game.parked_replacement.len();
         let outcome = run_candidate_kind_inner(
             game,
             &candidate_kind,
@@ -1399,7 +1495,9 @@ fn make_accept_callback(
         // in `effect_queue.rs`, which `take()`s the slot and treats `None`
         // as "decline → original event proceeds") misinterpret.
         // Order matters: parked-check BEFORE the slot write.
-        let current_accept_parked = game.parked_replacement.as_ref().is_some_and(|parked| {
+        // This accept's own park (if any) sits at `stack_before`; entries a
+        // nested event pushed during the process may sit above it.
+        let current_accept_parked = game.parked_replacement.get(stack_before).is_some_and(|parked| {
             parked.subject == subject
                 && parked.cause == cause
                 && parked.original_destination == original_destination
@@ -1410,7 +1508,7 @@ fn make_accept_callback(
         if current_accept_parked {
             return;
         }
-        let has_unrelated_parked_replacement = game.parked_replacement.is_some();
+        let has_unrelated_parked_replacement = !game.parked_replacement.is_empty();
 
         game.replacement_pending_outcome = Some(outcome);
 
@@ -1490,6 +1588,7 @@ pub(crate) fn run_optional_replacement_step(
         return;
     }
 
+    let stack_before = game.parked_replacement.len();
     let outcome = run_candidate_kind_inner(
         game,
         &state.candidate_kind,
@@ -1501,7 +1600,7 @@ pub(crate) fn run_optional_replacement_step(
         state.original_destination,
     );
 
-    let current_accept_parked = game.parked_replacement.as_ref().is_some_and(|parked| {
+    let current_accept_parked = game.parked_replacement.get(stack_before).is_some_and(|parked| {
         parked.subject == state.subject
             && parked.cause == state.cause
             && parked.original_destination == state.original_destination
@@ -1510,9 +1609,20 @@ pub(crate) fn run_optional_replacement_step(
             && parked.controller == state.controller
     });
     if current_accept_parked {
+        // The accepted window's park was created here, after the original
+        // `try_replace_impl` frame unwound, so nothing stamped its window.
+        // Stamp it: the drain commits with it as the commit key, so an
+        // accepted replacement whose outcome ends up `None` (e.g. <Guard>
+        // whose cost deletion was prevented) is not re-offered for the same
+        // event (rule 15-8-5-4 — an activated effect is spent).
+        if let Some(parked) = game.parked_replacement.get_mut(stack_before) {
+            if parked.timing.is_none() {
+                parked.timing = Some(state.timing);
+            }
+        }
         return;
     }
-    let has_unrelated_parked_replacement = game.parked_replacement.is_some();
+    let has_unrelated_parked_replacement = !game.parked_replacement.is_empty();
 
     game.replacement_pending_outcome = Some(outcome);
     // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —

@@ -711,7 +711,7 @@ fn bt17_081_clause2_opt_lockout_blocks_second_activation_same_turn() {
         .card_data
         .push(make_named_digimon("OWN-OMN", "Omnimon", 6, 13000));
     let owen = runner.place_on_field(0, "BT17-081", Some(0));
-    runner.place_on_field(0, "OWN-OMN", Some(0));
+    let omn = runner.place_on_field(0, "OWN-OMN", Some(0));
 
     // ── First fire: the trigger installs a prompt; resolving it consumes OPT.
     runner
@@ -750,6 +750,10 @@ fn bt17_081_clause2_opt_lockout_blocks_second_activation_same_turn() {
     // turn player's permanents at the start of each turn. (Sibling idiom:
     // `st9_05_when_attacking_opt_resets_after_turn_end`.)
     runner.game.players[0].battle_area[owen.index as usize].new_turn();
+    // The first activation's attack suspended the Omnimon; the clause needs an
+    // Omnimon that can attack (DCGO `IsOmnimonPermanentCondition` →
+    // `CanAttack`, G-DSL-CAN-ATTACK-PREDICATE), so ready it again.
+    runner.game.players[0].battle_area[omn.index as usize].is_suspended = false;
 
     runner
         .game

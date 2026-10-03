@@ -1,0 +1,41 @@
+{
+  "index": 4368,
+  "norm_id": 0.2184,
+  "card_id": "EX13-044",
+  "card_index": 44,
+  "card_name_eng": "Breakdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_044",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Machine Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.\r\n[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

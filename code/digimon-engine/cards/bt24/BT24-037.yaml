@@ -9,7 +9,7 @@ traits: [Beastkin, Iliad, TS]
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, color: yellow }
+    from: { level_eq: 4, color_is: yellow }
     cost: 4
 
   - kind: digivolve
@@ -18,11 +18,11 @@ alt_paths:
 
   - kind: dna_digivolve
     materials:
-      - { level_eq: 4, color: yellow }
+      - { level_eq: 4, color_is: yellow }
       - level_eq: 4
         any_of:
-          - color: red
-          - color: green
+          - color_is: red
+          - color_is: green
     cost: 0
 
 effects:
@@ -49,7 +49,8 @@ effects:
       - optional:
           - select_own_permanent:
               bind_as: attacker
-              filter: { kind: digimon }
+              # DCGO BT24_037.cs CanSelectAttackPermanentCondition: CanAttack.
+              filter: { kind: digimon, can_attack: { targets: any } }
               prompt: "Select 1 of your Digimon that may attack"
               optional: true
           - may_attack_now:

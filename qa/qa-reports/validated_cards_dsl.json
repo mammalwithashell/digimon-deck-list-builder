@@ -698,7 +698,7 @@
         "G2-adjacent",
         "H11"
       ],
-      "notes": "Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works). Merge 2026-05-22: bt20_016_dna_on_deletion raw_rust placeholder removed."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` AND DNA materials used non-key `color:` (dropped -> any-colour Lv.4 base / any Lv.4 DNA pair); now `color_is`. +4 colour-gate tests. | Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works). Merge 2026-05-22: bt20_016_dna_on_deletion raw_rust placeholder removed."
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
@@ -916,7 +916,7 @@
         "H_PROGRESS",
         "H3-PIERCING"
       ],
-      "notes": "Re-attempt 2026-05-21: fully completed. [When Digivolving] delete-lowest-DP + return-2-opponent-trash-to-deck-bottom (DSL verb return_trash_list_to_deck_bottom; G-ZONE-TRASH-TO-DECK actually resolved) + opponent plays 2 Petrification Tokens + per-opponent-count DP buff until opp turn end. Raid/Progress/Piercing keywords. 16/16 tests pass, 0 ignored. Reviewer APPROVED."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color_includes:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | Re-attempt 2026-05-21: fully completed. [When Digivolving] delete-lowest-DP + return-2-opponent-trash-to-deck-bottom (DSL verb return_trash_list_to_deck_bottom; G-ZONE-TRASH-TO-DECK actually resolved) + opponent plays 2 Petrification Tokens + per-opponent-count DP buff until opp turn end. Raid/Progress/Piercing keywords. 16/16 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "EX11-012": {
       "card_name": "Medusamon",
@@ -933,7 +933,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00c3\u00a2\u00e2\u20ac\u00a0\u00e2\u20ac\u2122 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color_includes:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00c3\u00a2\u00e2\u20ac\u00a0\u00e2\u20ac\u2122 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -1550,7 +1550,7 @@
         "H10",
         "H4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.5 base); now `color_is`. +2 colour-gate tests. | DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-010": {
       "card_name": "Garurumon",
@@ -2112,12 +2112,12 @@
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_008.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
         "H9",
         "D4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. | 2026-10-01 G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE: the [Main][OPT] cost now moves the visible TOP card (this card) to the bottom (DCGO TopCard); previously moved the card under it. +2 tests (rotation, then play [Gabumon])."
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
@@ -2143,12 +2143,12 @@
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_018.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
         "H2",
         "D4"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. | 2026-10-01 G-TOP-STACKED-CARD-TO-BOTTOM-SOURCE: the [Main][OPT] cost now moves the visible TOP card (this card) to the bottom (DCGO TopCard); previously moved the card under it. +2 tests (rotation, then play [Agumon])."
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
@@ -4107,7 +4107,7 @@
         "HAND-MAIN",
         "INHERITED-REPLACEMENT"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G020 (hand-[Main] trash-cost preflight + bottom-source placement + self-digivolve) closed. All tests pass including the Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source digivolve chain."
+      "notes": "[W1 2026-10-01 silent-key fix] hand-[Main] condition used `any_field_permanent: { predicate: {...} }` (`predicate` dropped -> any own permanent satisfied the Arisa AND Shoemon legs); now flat battle-area `any_permanent` name gates (DCGO). +2 tests. | Substrate sweep 2026-05-20: PUPPETS-G020 (hand-[Main] trash-cost preflight + bottom-source placement + self-digivolve) closed. All tests pass including the Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source digivolve chain."
     },
     "EX11-022": {
       "card_name": "Karakurumon",
@@ -4858,21 +4858,20 @@
     },
     "BT13-112": {
       "card_name": "Omnimon",
-      "validated_date": "2026-06-14",
+      "validated_date": "2026-10-01",
       "report": "royal-knights-audit-2026-06-14",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-112.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_112.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-STUB",
-        "GAP-STUB"
+        "MODAL-EFFECT-CHOICE"
       ],
-      "notes": "Load-only gap stub; modal delete or different-name Royal Knight source play from breeding remains blocked.",
+      "notes": "[W5 2026-10-01] breeding branch now gated on a breeding DIGIMON with >=1 [Royal Knight] Digimon source (was materials_count_gte: 1; DCGO CanSelectPermanentCondition1) via source_count, whose combinator filters were silently ignored engine-wide (fixed); select_effect_choice gains legal_when -- illegal branch masked, single legal branch runs without a prompt (DCGO SetBool); added optional: true for printed \"You may\" (DCGO isOptional); played Royal Knights now activate their own [On Play] (suppress_on_play: false, DCGO activateETB: true); color corrected black->white. +5 tests, 2 updated. | [W1 2026-10-01 silent-key fix] activation condition used `any_permanent: { predicate: {...} }` (`predicate` dropped -> any opp permanent, e.g. a lone Tamer, satisfied it); now flat `kind: digimon` (DCGO CanActivateCondition). +1 test.",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
     },
     "BT15-092": {
@@ -5550,15 +5549,15 @@
       "archetype": "TS Olympos",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-020.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_020.rs",
-      "test_count": 6,
-      "tests_passing": 6,
+      "test_count": 7,
+      "tests_passing": 7,
       "tests_ignored": 0,
       "patterns": [
         "A1",
         "SELECT_REVEAL_BUCKETS",
         "INHERITED_ON_UNSUSPEND"
       ],
-      "notes": "Reveal-3 two-bucket Sea Beast/Shaman/Aqua/Sea Animal Digimon plus TS card search with no duplicate selected card; blue Lv2 and TS Lv2 alt paths; inherited Your Turn OPT hand-size gated draw."
+      "notes": "Reveal-3 two-bucket Sea Beast/Shaman/Aqua/Sea Animal Digimon plus TS card search with no duplicate selected card; blue Lv2 and TS Lv2 alt paths; inherited Your Turn OPT hand-size gated draw. 2026-10-01: inherited OnUnsuspend clause gained the missing `event_permanent_is_source` self-gate (DCGO BT24_020.cs) now that the unsuspend phase fires OnUnsuspend (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND)."
     },
     "BT24-043": {
       "card_name": "Tapirmon",
@@ -6545,7 +6544,7 @@
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "thomas-data-squad",
-      "notes": "Alt-digivolve onto DATA SQUAD lvl4 cost3; WD/WA bounce opp lvl<=4 then trash FD-under-Tamer to unsuspend self; main+inherited leave-prevention replacement paying FD-trash cost. 5 behavioral tests pass (run via isolated target due to concurrent cards_behavioral breakage; modules wired).",
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | Alt-digivolve onto DATA SQUAD lvl4 cost3; WD/WA bounce opp lvl<=4 then trash FD-under-Tamer to unsuspend self; main+inherited leave-prevention replacement paying FD-trash cost. 5 behavioral tests pass (run via isolated target due to concurrent cards_behavioral breakage; modules wired).",
       "patterns": [
         "alt-digivolve",
         "WD/WA-shared",
@@ -7448,7 +7447,7 @@
         "H1",
         "H10"
       ],
-      "notes": "[OP][WD] treat 1 Marcus Damon as 3000 DP Digimon (TreatAsDigimon+synth_identity \u2014 NEW DSL substrate) + CannotDigivolve + Rush + Alliance (end_of_turn) then may_attack_now; [All Turns][OPT] own+inherited yellow/red-Tamer-deletion -> place Marcus from trash as top security; GeoGreymon alt-path cost3. Reviewer APPROVED."
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.4 base); now `color_is`. +2 colour-gate tests. | [OP][WD] treat 1 Marcus Damon as 3000 DP Digimon (TreatAsDigimon+synth_identity \u2014 NEW DSL substrate) + CannotDigivolve + Rush + Alliance (end_of_turn) then may_attack_now; [All Turns][OPT] own+inherited yellow/red-Tamer-deletion -> place Marcus from trash as top security; GeoGreymon alt-path cost3. Reviewer APPROVED."
     },
     "BT13-020": {
       "card_name": "ShineGreymon: Burst Mode",
@@ -8542,7 +8541,7 @@
         "BARRIER-FACE-AND-INHERITED",
         "ALL-TURNS-OPT-GAIN-MEMORY-ON-OWN-SECURITY-REMOVED"
       ],
-      "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch \u2014 the Q9 activation-site crux).",
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.3 base); now `color_is`. +2 colour-gate tests. | <Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch \u2014 the Q9 activation-site crux).",
       "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
     },
     "AD1-024": {
@@ -9704,7 +9703,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/st24/ST24-10.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_10.rs",
-      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
     },
     "ST24-12": {
       "card_name": "Falcomon",
@@ -9781,7 +9780,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/st24/ST24-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_06.rs",
-      "notes": "TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
+      "notes": "[W1 2026-10-01 silent-key fix] inherited save name gate used non-key `source_permanent_name_contains` (silently dropped -> save fired for ANY carrier); now `source_name_contains` (DCGO TopCard.ContainsCardName). +2 gate tests. | TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
     },
     "ST24-11": {
       "card_name": "Rosemon",
@@ -10039,7 +10038,7 @@
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_015.rs",
       "test_count": null,
-      "notes": "workflow wave, Opus-approved; full-suite green 2026-07-02"
+      "notes": "[W1 2026-10-01 silent-key fix] alt-path `from` used non-key `color:` (dropped -> any-colour Lv.4 base); now `color_is`. +2 colour-gate tests. | workflow wave, Opus-approved; full-suite green 2026-07-02"
     },
     "BT9-041": {
       "card_name": "RizeGreymon (X Antibody)",
@@ -12040,6 +12039,1350 @@
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_102.rs",
       "notes": "[Main] exactly-6 [Seven Code] materials from battle area / link cards / trash in one pick (select_zone_cards + place_cards_as_bottom_sources), optional free digivolve into Dantemon; [Security] free Appmon <=5 from hand/trash then to hand."
+    },
+    "EX13-008": {
+      "card_name": "Dracomon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_008.rs",
+      "test_count": 13,
+      "patterns": [
+        "A1",
+        "G2",
+        "F"
+      ],
+      "notes": "[When Moving][On Play] reveal 3 \u2192 1 [Dracomon]/[Examon]-text card to hand (in_text_contains), rest to bottom (player-ordered); [Bebydomon] cost-0 alt digivolve; inherited EoT may-DNA (BT17-007 idiom, requirements + DNA cost enforced)."
+    },
+    "EX13-018": {
+      "card_name": "Coredramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_018.rs",
+      "test_count": 15,
+      "patterns": [
+        "C",
+        "F",
+        "D1"
+      ],
+      "notes": "[OP][WD] optional trash-1 text card \u2192 Draw 2 (BT24-008 idiom); [Your Turn] on own other text-Digimon played \u2192 may digivolve into [Examon]-text hand card cost \u22122 (EX12-002 idiom, no OPT); inherited [Your Turn] +2000; Lv.3 [Dracomon]-name alt digivolve cost 2."
+    },
+    "EX13-039": {
+      "card_name": "Coredramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_039.rs",
+      "test_count": 16,
+      "patterns": [
+        "B",
+        "F",
+        "D1"
+      ],
+      "notes": "[OP][WD] may return 1 non-Digi-Egg [Dracomon]/[Examon]-text card from trash (BT21-056 idiom); [Your Turn] digivolve observer identical to EX13-018; inherited +2000; Lv.3 [Dracomon]-name alt cost 2."
+    },
+    "EX13-044": {
+      "card_name": "Breakdramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_044.rs",
+      "test_count": 22,
+      "patterns": [
+        "H3",
+        "E2",
+        "F"
+      ],
+      "notes": "Piercing/Blocker; Assembly -5 (Lv.5\u00d7Lv.4\u00d7Lv.3 text materials from trash); [OP][WD] up-to-2 any-side suspend via effect-choice gates + select_any_permanent (G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE workaround), then clamp-to-available 2-target CannotUnsuspend; face+inherited [All Turns][OPT] own-Digimon-suspend \u2192 chosen text Digimon battles chosen opp Digimon (optional gate: declining does not burn OPT, matching DCGO RemoveUse)."
+    },
+    "EX13-021": {
+      "card_name": "Wingdramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_021.rs",
+      "test_count": 18,
+      "patterns": [
+        "H",
+        "G2"
+      ],
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: [All Turns] Lv.6 [Slayerdramon] for [Examon]'s DNA = `dna_material_identity` self-aura (ModifierType::DnaMaterialIdentity, Game::dna_material_extras; Main DNA, Blast DNA, EoT/effect DNA all honor it; name result-scoped per printed text, DCGO adds it globally). <Jamming>; [OP][WD] two independent mandatory picks: trash bottom 2 sources, then CannotSuspend until their turn ends; [Coredramon] alt cost 3; inherited OPT optional self-unsuspend gated on carrier [Dracomon]/[Examon] text. Combo tests: tests/archetypes/dracomon_ex13.rs Combo 7."
+    },
+    "EX13-041": {
+      "card_name": "Groundramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Dracomon / dragon (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_041.rs",
+      "test_count": 18,
+      "patterns": [
+        "H",
+        "G2"
+      ],
+      "notes": "G-DNA-MATERIAL-TREATED-AS-FOR-TARGET RESOLVED 2026-10-01: Lv.6 [Breakdramon] for [Examon]'s DNA via `dna_material_identity`. <Fortitude>; [OP][WD] suspend 1 opp Digimon/Tamer, then CannotUnsuspendInUnsuspendPhase (new modifier: blocks only their next unsuspend phase, effect unsuspends stay legal; DCGO isOnlyActivePhase) with end_of_opponents_next_turn; [Coredramon] alt cost 3; inherited OPT `on_ally_won_battle` + new `event_battle_deleter` leaf (G-DSL-BATTLE-DELETER: surviving own [Dracomon]/[Examon]-text combatant whose opponent was actually deleted) \u2192 trash opponent's top security."
+    },
+    "EX13-017": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_017.rs",
+      "test_count": 16,
+      "patterns": [
+        "A1",
+        "G2"
+      ],
+      "notes": "[On Play][When Moving] (self-scoped on_move) reveal 3 \u2192 1 [Veedramon]-text/[Royal Knight] card to hand, rest to bottom; Blue Lv.2 + Lv.2 [CS] cost-0 alt digivolve; inherited [All Turns][OPT] would-leave-by-opponent-effect replacement gated on carrier name [Veedramon] + unsuspended, suspend cost \u2192 cancel."
+    },
+    "EX13-019": {
+      "card_name": "Veedramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_019.rs",
+      "test_count": 10,
+      "patterns": [
+        "D",
+        "E"
+      ],
+      "notes": "<Jamming> face + inherited; [When Attacking][OPT] optional [Veedramon]-text Tamer from hand, cost -2, refund_opt on decline (DCGO RemoveUse); Lv.3 [CS] cost-2 alt digivolve."
+    },
+    "EX13-022": {
+      "card_name": "AeroVeedramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_022.rs",
+      "test_count": 19,
+      "patterns": [
+        "E",
+        "F",
+        "D"
+      ],
+      "notes": "[OP][WD][WA] shared OPT free [Veedramon]-text Tamer play (refund_opt on decline); [All Turns][OPT] own Tamer played \u2192 1 opp Digimon/Tamer CannotSuspend until end of their turn; inherited [All Turns][OPT] name-gated self on_suspend \u2192 may unsuspend; Lv.4 [CS] cost-3 alt digivolve."
+    },
+    "EX13-067": {
+      "card_name": "Nokia Shiramine",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_067.rs",
+      "test_count": 15,
+      "patterns": [
+        "F",
+        "C"
+      ],
+      "notes": "No DCGO script (b9a0638cd). [Start of Your Main Phase] opp has a Digimon \u2192 +1 memory; [Your Turn] on_digivolve, <=1 own Digimon, suspend-self cost \u2192 [Gabumon] (if [Greymon]) / [Agumon] (if [Garurumon]) from hand/trash free via select_union_zone; Q&A two-copy re-check pinned; [Security] play self."
+    },
+    "EX13-069": {
+      "card_name": "Rina Shinomiya",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_069.rs",
+      "test_count": 15,
+      "patterns": [
+        "F",
+        "C"
+      ],
+      "notes": "[Start of Your Main Phase] [Veemon]/[Veedramon]-name Digimon \u2192 +1 memory; [Your Turn] own Digimon unsuspend (effect OR unsuspend phase \u2014 G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND RESOLVED 2026-10-01; triggers once per simultaneous unsuspend-phase batch) \u2192 suspend-self cost, Draw 1, then optional own Digimon digivolve into [Veedramon]-name hand card cost -2 (has_digivolve_candidate / can_digivolve_onto); [Security] play self."
+    },
+    "EX13-074": {
+      "card_name": "Rie Kishibe",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Veedramon / CS (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_074.rs",
+      "test_count": 21,
+      "patterns": [
+        "F",
+        "C"
+      ],
+      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf."
+    },
+    "EX13-050": {
+      "card_name": "Bokomon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_050.rs",
+      "test_count": 11,
+      "patterns": [
+        "F",
+        "H5"
+      ],
+      "notes": "No DCGO script. [All Turns] flood_gate CannotGainMemoryExceptFromTamers with target_player: any (both players, official Q&A); Tamer-sourced gains still allowed; inherited <Blocker>."
+    },
+    "EX13-053": {
+      "card_name": "Thundermon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_053.rs",
+      "test_count": 15,
+      "patterns": [
+        "A4",
+        "D",
+        "F"
+      ],
+      "notes": "No DCGO script. [OP][OD] up to 3 chained optional select_union_zone{trash} picks, each returned to deck top in pick order (in_text_contains Mamemon, Digimon only); mandatory delete with cap 3+returned (binding_present branches); (Rule) name \u2192 also_treated_as ['Mamemon Thundermon'] (DCGO EX12_041 'Mamemon <name>' idiom: contains, not equals); inherited [OD] De-Digivolve 1."
+    },
+    "EX13-054": {
+      "card_name": "Nanimon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_054.rs",
+      "test_count": 12,
+      "patterns": [
+        "G",
+        "F",
+        "H"
+      ],
+      "notes": "No DCGO script. [Security] play_from_security (after battle; its [On Play] fires); [OP][OD] mandatory opp pick \u2192 CannotAttackPlayer until end of opponent's turn (OD on opp turn expires that turn); inherited +1000 DP aura; Rule [Mutant] trait in traits."
+    },
+    "EX13-059": {
+      "card_name": "BigMamemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_059.rs",
+      "test_count": 19,
+      "patterns": [
+        "A1",
+        "A3",
+        "E",
+        "F"
+      ],
+      "notes": "No DCGO script. [WD][OD] reveal 3 \u2192 optional free play cost<=7 Digimon w/[Mamemon] name or [Mutant] (cap on both, official Q&A), trash rest; [EoYT][OPT] optional processing condition (outer_prompt) delete own [Mamemon]-named Digimon (self allowed; payable without opp Digimon per \u00a715-7-4) \u2192 delete 1 opp lowest play cost (selector, ties = choice); inherited [EoYT][OPT] same cost \u2192 delete ALL opp lowest (BT23-058 sweep)."
+    },
+    "EX13-063": {
+      "card_name": "PrinceMamemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_063.rs",
+      "test_count": 19,
+      "patterns": [
+        "A1",
+        "A3",
+        "C",
+        "H"
+      ],
+      "notes": "All clauses faithful and green (19/19, 0 ignored). Assembly -4 '3 Lv.5 or lower [Mamemon] text cards w/different names' now enforced (G-ASSEMBLY-NO-DISTINCT-BY RESOLVED 2026-10-01 via EX13-061; the two former #[ignore] pins un-ignored and passing: duplicate names rejected in eligibility/mask, a second same-name card masked per pick). Reveal 3 free play cost<=10 [Mamemon]/[Mutant], [On Deletion] delete 1 opp highest play cost (selector), [All Turns] <Blocker> + granted <Guard> aura to own [Mamemon]-named Digimon (Guard replacement verified), Black Lv.5/3 digivolve, Assembly needs all 3 cards."
+    },
+    "EX13-031": {
+      "card_name": "KingSukamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Mutant (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_031.rs",
+      "test_count": 23,
+      "patterns": [
+        "C",
+        "D"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01 (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD resolved). [OP][WD][OD] optional union-zone cost (hand \u222a own Digimon sources, [Chuumon]/[Sukamon] in name; offered even with no opponent Digimon per general_rule 15-7-5) \u2192 mandatory opponent-Digimon pick \u2192 three typed-payload add_modifier steps: ChangeBaseCardName{name: Sukamon}, ChangeBaseCardColor{colors: [white]}, ChangeOriginDP{dp: 3000} (base set; ChangeDp still stacks), expiry end_of_opponents_turn. Assembly -4: three identical Lv.4-or-lower [Sukamon]-name Digimon slots from trash. Inherited [All Turns][OPT] on_any_deletion of another [Sukamon]-named Digimon (either player; last-known synth names, so a Digimon renamed by the main effect counts) \u2192 reveal 3, may play cost<=3 [Chuumon]/[Sukamon] Digimon free, trash rest. No DCGO script."
+    },
+    "EX13-003": {
+      "card_name": "Kyaromon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_003.rs",
+      "test_count": 10,
+      "patterns": [
+        "G4",
+        "E2"
+      ],
+      "notes": "Inherited [Your Turn][OPT] on_own_security_removed \u2192 optional hand pick ([Kentaurosmon]-name or [Holy Beast] Digimon) \u2192 carrier digivolves, printed cost -1 (requirements enforced). No DCGO script; ST24-01 idiom."
+    },
+    "EX13-026": {
+      "card_name": "Kudamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_026.rs",
+      "test_count": 13,
+      "patterns": [
+        "A2",
+        "A3",
+        "G4"
+      ],
+      "notes": "[When Moving][On Play] reveal 3 \u2192 add 1 + place 1 face down at the BOTTOM of a chosen [DATA SQUAD] Tamer (ST23-06 idiom; Official Q&A); no DS Tamer \u2192 add-only. Inherited [WA][OPT] SecurityAttackChange -1 until end of opponent's turn. Yellow Lv.2 + Lv.2 w/[DATA SQUAD] alt digivolve."
+    },
+    "EX13-030": {
+      "card_name": "Reppamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_030.rs",
+      "test_count": 16,
+      "patterns": [
+        "H",
+        "E2",
+        "A"
+      ],
+      "notes": "<Barrier> own + inherited. [OP][WD][WA][OPT] optional+outer_prompt trash top security (gated security>=1) \u2192 may play [Richard Sampson] from hand or trash free (payable without Richard per Official Q&A / 15-7-4). Cost firing pinned via EX13-003's on_own_security_removed observer (no GameEvent for security trash)."
+    },
+    "EX13-032": {
+      "card_name": "Chirinmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_032.rs",
+      "test_count": 17,
+      "patterns": [
+        "E2",
+        "F"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement."
+    },
+    "EX13-071": {
+      "card_name": "Richard Sampson",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Richard Sampson / DATA SQUAD (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_071.rs",
+      "test_count": 18,
+      "patterns": [
+        "B",
+        "C"
+      ],
+      "notes": "All clauses green. [Start of Your Main Phase][On Play] optional deck-top face-down placement + memory; [Main][OPT] trash 3 bottom face-down under Tamers + Lv.4 & Lv.5 yellow [Holy Beast] from trash as a [Kudamon]'s bottom digivolution cards (player picks the bottom order) -> optional hand/trash [Kentaurosmon] digivolve via `effect_initiated_digivolve { ignore_level: true, cost: { reduce: 1 } }` (G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST resolved 2026-10-01); [Security] play self. Activation gated on the whole cost being payable (trash materials checked before the face-down cards are trashed)."
+    },
+    "EX13-001": {
+      "card_name": "Gigimon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_001.rs",
+      "test_count": 10,
+      "patterns": [
+        "G4",
+        "B3",
+        "E2",
+        "D2"
+      ],
+      "notes": "Inherited [Your Turn][OPT] red Tamer played \u2192 may digivolve into [Growlmon]/[Gallantmon]-named hand card \u22122 (EX12-002 idiom)."
+    },
+    "EX13-020": {
+      "card_name": "Magnamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_020.rs",
+      "test_count": 15,
+      "patterns": [
+        "H5",
+        "D1",
+        "E3",
+        "F7"
+      ],
+      "notes": "Blocker/Armor Purge; OP/WD/WA OPT +1000 per distinct trash colour (both trashes) then 1 opp \u22124000 per 5000 DP (new `multiply` formula); face-up + inherited EoT OPT unsuspend Free/Royal Knight (refund on decline); Assembly \u22122 [Veemon]; [Veemon] digivolve 3."
+    },
+    "EX13-014": {
+      "card_name": "Jesmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_014.rs",
+      "test_count": 13,
+      "patterns": [
+        "E2",
+        "B3",
+        "C-assembly"
+      ],
+      "notes": "WD/WA OPT union hand|sources free use-cost\u22645 [Huckmon]-text Option (BT25-085 idiom, refund on decline); [All Turns][OPT] own Digimon played \u2192 may delete lowest DP, then yes/no Atho, Ren\u00e9 & Por token if none; Assembly 5/4/3 [Huckmon] text."
+    },
+    "EX13-015": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-015.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_015.rs",
+      "test_count": 15,
+      "patterns": [
+        "H9",
+        "F3",
+        "E3",
+        "C-assembly"
+      ],
+      "notes": "OP/WD/WA/Counter OPT delete 1 opp \u226512000 (DCGO filter is inverted \u226412000 \u2014 printed text governs), else trash their top security (result-log predicate); [All Turns][OPT] leave-replacement (not own effects) by deleting opp \u22649000; Assembly Guilmon/Growlmon line."
+    },
+    "EX13-036": {
+      "card_name": "Kentaurosmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_036.rs",
+      "test_count": 12,
+      "patterns": [
+        "D1",
+        "F5",
+        "C-assembly"
+      ],
+      "notes": "[Security][On Play] \u22127000 / 'instead' all \u22127000 at \u22646 total security; WD 3-way most-security trash choice \u2192 re-runs its single printed [Security] body inline (engine refire is OnPlay/WD-only); WD/EoA/Counter OPT optional place 1 of each player's Digimon on top security. Needed the 15-8-3-2 security-removal deferral fix."
+    },
+    "EX13-037": {
+      "card_name": "Dynasmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_037.rs",
+      "test_count": 11,
+      "patterns": [
+        "H9",
+        "H3",
+        "F5"
+      ],
+      "notes": "OP/WD/WA OPT trash own top security + 10000, \u22643 \u2192 trash theirs; [All Turns][OPT] security-removed (either stack) \u2192 1 opp \u221212000, \u22643 \u2192 Recovery +1. Engine fix: security-removed observers now wait for the resolving effect (G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT)."
+    },
+    "EX13-043": {
+      "card_name": "Leopardmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_043.rs",
+      "test_count": 13,
+      "patterns": [
+        "F3",
+        "D2",
+        "C-assembly"
+      ],
+      "notes": "OP/WD may suspend any Digimon (Q&A) then may bottom-deck opp lowest DP (select_any_permanent continue_on_decline \u2014 fixed this run); WD/WA OPT play-or-use [Mammal]/[Beast]/[Beastkin]/[Royal Knight] \u2212(4+suspended count); [All Turns][OPT] own suspended Digimon leave-replacement by unsuspending (per-subject, BT25-043 precedent); Assembly green trait line."
+    },
+    "EX13-045": {
+      "card_name": "Examon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_045.rs",
+      "test_count": 12,
+      "patterns": [
+        "H9",
+        "H3",
+        "H4",
+        "H5",
+        "H8",
+        "G2",
+        "F1"
+      ],
+      "notes": "DNA green+blue Lv6; WD if DNA: all own +10000 + forced attack, then may battle (effect battle); [Your Turn][OPT] wins a battle (on_ally_won_battle + new event_winner_is_source) \u2192 play/use \u226412 [Dracomon]/[Examon]-text from hand|sources free (binding_card_kind over union bindings). Engine fix: <Evade> candidate self-scope."
+    },
+    "EX13-060": {
+      "card_name": "Alphamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_060.rs",
+      "test_count": 16,
+      "patterns": [
+        "D1",
+        "B3",
+        "F1",
+        "C-assembly"
+      ],
+      "notes": "WD \u22128000, opponent \u22655 memory \u2192 gain 2; [Your Turn][OPT] [Chronicle] Digimon/Tamer played \u2192 own Digimon may attack, then may refire WD; EoT OPT play [Chronicle] (no [Alphamon] name) \u22126 + Rush (refund on decline); Assembly [Chronicle] line; no DCGO script."
+    },
+    "EX13-061": {
+      "card_name": "Gankoomon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_061.rs",
+      "test_count": 12,
+      "patterns": [
+        "H7",
+        "H5",
+        "F6",
+        "E2",
+        "C-assembly"
+      ],
+      "notes": "OP/WD yes/no Hinukamuy token then mandatory white Digimon immune to opp Digimon effects until their turn ends; [All Turns][OPT] own white Digimon suspends \u2192 union hand|sources free [Huckmon] Option; Assembly 3 [Huckmon]-text distinct names (engine fix G-ASSEMBLY-NO-DISTINCT-BY)."
+    },
+    "EX13-062": {
+      "card_name": "Craniamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_062.rs",
+      "test_count": 18,
+      "patterns": [
+        "H5",
+        "H7",
+        "F6",
+        "C-assembly"
+      ],
+      "notes": "Reboot/Blocker; OP/WD opponent-effect immunity; [All Turns][OPT] on self suspend may batch-delete opp lowest play cost; [All Turns] on self unsuspend +3000 until your turn ends \u2014 fires for effect unsuspension AND own unsuspend-phase / opponent's-unsuspend-phase <Reboot> unsuspension (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND RESOLVED 2026-10-01). Assembly 'all black w/<Blocker>' via printed_keyword predicate."
+    },
+    "EX13-064": {
+      "card_name": "LordKnightmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_064.rs",
+      "test_count": 14,
+      "patterns": [
+        "D4",
+        "B3",
+        "F1"
+      ],
+      "notes": "[Rie Kishibe] Tamer digivolve route gated \u22643 security (engine fix G-ENGINE-DIGIVOLVE-FROM-NAMED-TAMER); WD union hand|trash play-or-use \u22648 [Knightmon]-text free; [Your Turn] [Knightmon]-text Digimon gain Alliance+Piercing; [Your Turn][OPT] other Digimon/Tamer played \u2192 [Knightmon]-text Digimon may gain Rush+Collision and attack. 2026-10-01: [Rie Kishibe] route additionally verified against the real EX13-074 (tests/cards_behavioral/ex13/ex13_074.rs), and EX13-074's own [Main] Tamer->LordKnightmon digivolve fires this card's [When Digivolving]."
+    },
+    "EX13-016": {
+      "card_name": "Omnimon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_016.rs",
+      "test_count": 11,
+      "patterns": [
+        "A",
+        "C",
+        "E",
+        "F"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01: all clauses. Raid/Blocker; [OP][WD][WA][OPT] 2 opp Digimon/Tamers CannotSuspend until their turn ends (select_count_capped_multi clamp + per-pick modifier); [OP][WD][Counter][OPT] may delete opp Digimon with <= this Digimon's source count; [All Turns] would-leave save via select_materials {min: 2, max: 2, same_by: level} + trash_selected_materials + cancel_replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION RESOLVED; only offered when a same-level pair exists). DNA + Assembly -7 routes authored (structural test). [Counter] timing covered structurally only (no live counter-window test)."
+    },
+    "EX13-023": {
+      "card_name": "UlforceVeedramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_023.rs",
+      "test_count": 12,
+      "patterns": [
+        "A",
+        "C",
+        "D",
+        "E"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01: all clauses. Blocker/Evade; [OP][WD][WA][OPT] 1 own Digimon may change orientation (new can_change_orientation predicate; decline refunds OPT per DCGO RemoveUse); [OP][WD] may return all fewest-source opp Digimon to deck bottom (BT24-030 idiom); [All Turns] three self-auras ImmuneFromDPMinus / ImmuneFromStackReturn / ImmuneFromStackTrashing with modifier_from: opponent, active_when source_is_unsuspended (G-ENGINE-STACKED-CARD-RETURN-PROTECTION RESOLVED; de-digivolve + selected-source trash + source returns consult it)."
+    },
+    "EX13-077": {
+      "card_name": "Omnimon: Merciful Mode",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Examon / holy warrior (Royal Knights Assembly) [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_077.rs",
+      "test_count": 22,
+      "patterns": [
+        "C-assembly",
+        "F3",
+        "H"
+      ],
+      "notes": "Assembly -8 '6 [ADVENTURE] trait Digimon cards w/different colors' via new `distinct_by: color` (G-ASSEMBLY-DISTINCT-BY-COLOR RESOLVED 2026-10-01): bipartite card->colour matching in eligibility (incl. the mask's hidden -8 availability) and per-pick masking; multicolour cards stand for one free colour, Hall violations rejected. [Omnimon]: Cost 2 digivolve (name_is). [OP][WD] optional own attacker + may_attack_now without suspending (continue_on_decline), then repeat_effect_choice floor(own Digimon+Tamer rules colours / 2): optional effect battle (BT25-058 idiom) or yes/no 'by returning 5 opp trash cards to deck bottom' -> <Recovery +1>. [All Turns] AddColor (source colours) + 1000 DP per distinct own Digimon/Tamer colour; distinct_colors_count now reads synthesized (rules) colours so gained colours count. No DCGO EX13_077.cs. | 2026-10-01 G-DSL-CAN-ATTACK-PREDICATE: the attacker pick only offers Digimon that can attack without suspending (`can_attack: { without_suspending: true }`; DCGO CanAttack(withoutTap)); no eligible Digimon => no prompt, the Then still runs. +2 tests."
+    },
+    "EX13-006": {
+      "card_name": "Dorimon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Chronicle [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_006.rs",
+      "test_count": 9,
+      "patterns": [
+        "G-inherited-EoT",
+        "OPT",
+        "memory-cost",
+        "optional-own-pick"
+      ],
+      "notes": "Inherited [End of Your Turn][OPT] pay 1 memory (outer accept/decline) -> optional pick of a suspended [X Antibody]/[Chronicle] Digimon to unsuspend (DCGO EX13_006.cs)."
+    },
+    "EX13-049": {
+      "card_name": "Dorumon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Chronicle [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_049.rs",
+      "test_count": 16,
+      "patterns": [
+        "A1",
+        "on_move+on_play",
+        "order_remainder top/bottom",
+        "inherited-when-attacking",
+        "OPT",
+        "alt-digivolve"
+      ],
+      "notes": "Reveal 3 add 1 [X Antibody]/[Chronicle], rest top-or-bottom (EffectChoice + ordering); inherited [When Attacking][OPT] -2000; [Dorimon] / Black Lv.2 w/[X Antibody] cost-0 routes (engine prompts the route vs the cost-1 circle). No DCGO script."
+    },
+    "EX13-055": {
+      "card_name": "Raptordramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Chronicle [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_055.rs",
+      "test_count": 15,
+      "patterns": [
+        "OP+WD -DP",
+        "when-attacking effect-digivolve hand|trash",
+        "inherited Barrier",
+        "alt-digivolve"
+      ],
+      "notes": "[OP][WD] -3000 for the turn; [When Attacking] optional digivolve into a [Chronicle] card from hand \u222a trash paying the printed cost (uses new can_digivolve_onto: source); inherited <Barrier>. No DCGO script."
+    },
+    "EX13-057": {
+      "card_name": "Grademon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Chronicle [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_057.rs",
+      "test_count": 22,
+      "patterns": [
+        "OP+WD own-target grant",
+        "during_attack rider",
+        "effect immunity",
+        "end-of-attack effect-digivolve",
+        "OPT",
+        "inherited leave replacement"
+      ],
+      "notes": "Reboot+Blocker until opp turn ends; 'if during an attack' adds opp-Digimon-effect immunity + +5000 (new during_attack predicate, BT20-053 DCGO precedent); [End of Attack][OPT] digivolve into [Chronicle] from hand/trash; inherited [All Turns][OPT] any own [Chronicle] Digimon would leave -> trash top security (BT24-101 shape). No DCGO script."
+    },
+    "EX13-072": {
+      "card_name": "Kota Domoto",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Chronicle [EX13 author-set]",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_072.rs",
+      "test_count": 13,
+      "patterns": [
+        "start-of-main hand-trash cost",
+        "ally-attack suspend-self",
+        "use option from hand cost -1",
+        "security play self"
+      ],
+      "notes": "[Start of Your Main Phase] trash 1 [Chronicle] card -> Draw 1 + 1 memory (offer gated on a payable hand: G-DSL-COST-SELECT-NO-CANDIDATES-RUNS-TAIL workaround); [Your Turn] [Chronicle] ally attacks -> suspend to use [X Antibody] (by name) or a [Chronicle] Option from hand cost -1; [Security] play free. No DCGO script."
+    },
+    "EX13-027": {
+      "card_name": "Chuumon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 EX13 Sukamon / beast",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_027.rs",
+      "test_count": 16,
+      "patterns": [
+        "A2",
+        "A3",
+        "F3",
+        "G-inherited-replacement"
+      ],
+      "notes": "[When Moving][On Play] reveal_search (hand bucket then trash bucket, de-dup; lone match -> hand per Q&A); inherited [All Turns][OPT] self-scoped leave-prevention by deleting another [Sukamon]-named Digimon (cost-gated, not own effects)."
+    },
+    "EX13-028": {
+      "card_name": "Sukamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 EX13 Sukamon / beast",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_028.rs",
+      "test_count": 13,
+      "patterns": [
+        "H1",
+        "A2",
+        "F3",
+        "G-inherited-replacement"
+      ],
+      "notes": "<Blocker>; [On Deletion] reveal 3, may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free, trash rest (EX13-059 idiom); inherited identical to EX13-027."
+    },
+    "EX13-038": {
+      "card_name": "Salamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 EX13 Sukamon / beast",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-038.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_038.rs",
+      "test_count": 12,
+      "patterns": [
+        "A2",
+        "F-aura"
+      ],
+      "notes": "[On Play] reveal_search two hand buckets: in_text_contains Leopardmon + Digimon with trait_contains Beast/Sovereign/(Animal && !Sea Animal) per DCGO HasAvianBeastAnimalTraits; (Rule) Beast trait; inherited aura +1000 DP to own suspended Digimon."
+    },
+    "EX13-040": {
+      "card_name": "Mikemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 EX13 Sukamon / beast",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_040.rs",
+      "test_count": 13,
+      "patterns": [
+        "E-lock",
+        "G-on-suspend",
+        "F-aura"
+      ],
+      "notes": "[On Play][When Digivolving] 1 opp Digimon/Tamer CannotUnsuspend until end of their turn; [All Turns] self-scoped on_suspend -> suspend 1 opp Digimon/Tamer; inherited aura +1000 DP to own suspended Digimon."
+    },
+    "EX13-007": {
+      "card_name": "Guilmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Guilmon / reptile (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_007.rs",
+      "test_count": 11,
+      "patterns": [
+        "A3",
+        "D-inherited-modifier"
+      ],
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited '[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums' is an inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP` / `modifier_value: 2000` (read live by Game::dp_delete_effect_max_bonus; deletion caps flagged by digimon_dsl::deletion_cap). [When Moving][On Play] declinable cost `select_hand` (clause gated on hand >= 1, DCGO CanActivate) -> optional trash pick ([Gallantmon]-named Digimon | red Tamer; the just-trashed card is eligible) -> add to hand."
+    },
+    "EX13-048": {
+      "card_name": "Kotemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Guilmon / reptile (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_048.rs",
+      "test_count": 19,
+      "patterns": [
+        "A2",
+        "A3",
+        "F3"
+      ],
+      "notes": "On Play reveal_search two hand buckets ([Knightmon] in text, [Knightmon] in name; cross-bucket de-dup) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon, not vs own-effect removal. No DCGO file."
+    },
+    "EX13-068": {
+      "card_name": "Takato Matsuki",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Guilmon / reptile (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_068.rs",
+      "test_count": 13,
+      "patterns": [
+        "G-start-of-turn",
+        "E-activation-cost",
+        "H-security-play"
+      ],
+      "notes": "Start of turn memory<=2 -> 3; Start of Main Phase optional return-self cost -> optional free [Takato Matsuki] from hand -> if no Digimon, optional free [Guilmon] from trash (Q&A: decline cost skips 'after'); Security play self. No DCGO file."
+    },
+    "EX13-065": {
+      "card_name": "Sistermon Blanc (Awakened)",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Puppet (Sistermon Awakened DUALs) (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_065.rs",
+      "test_count": 18,
+      "patterns": [
+        "DUAL",
+        "ARTS",
+        "DECODE",
+        "GUARD",
+        "A-UNION",
+        "FORMULA"
+      ],
+      "notes": "IMPLEMENTED 2026-10-01 after G-NESTED-PARKED-REPLACEMENT RESOLVED (Game::parked_replacement is now a LIFO stack + scope floor; <Guard> defers its cancel via ReplacementContext::cancel_if_card_deleted until the carrier's own deletion commits). Signature line green: <Guard> deletes this Digimon -> nested <Decode> plays the [Sistermon Blanc] under it (ex13_065_guard_deletion_then_decode_plays_sistermon_blanc, un-ignored) and the Decode-declined variant still saves the ally. Other clauses: no-standard-circle digivolve ([Sistermon Blanc] cost 0 via name_is, Lv.2 [Huckmon]-text cost 1), <Decode ([Sistermon Blanc])> name_is replacement (non-battle only), <Guard>, Option [Main] optional hand/trash free play of a play cost<=4 [Sistermon] card then 1 opp Digimon -3000 DP per own Digimon, <Arts Digivolve> onto alt-path-only bases (G-ENGINE-ARTS-ALT-PATH-BASE). No DCGO script at b9a0638cd; Guard cost-success semantics per DCGO Guard.cs (DeletePeremanentAndProcessAccordingToResult)."
+    },
+    "EX13-066": {
+      "card_name": "Sistermon Noir (Awakened)",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Puppet (Sistermon Awakened DUALs) (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_066.rs",
+      "test_count": 18,
+      "patterns": [
+        "DUAL",
+        "ARTS",
+        "DECODE",
+        "WD-DELETE",
+        "A-UNION",
+        "FORMULA"
+      ],
+      "notes": "No DCGO script (b9a0638cd). Digivolve [Sistermon Noir]/[Sistermon Ciel] cost 1 (name_in) + Lv.3 [Huckmon]-text cost 3, no standard circles; also_treated_as [Sistermon Ciel (Awakened)] (Data attribute via attribute_eng); <Decode> name_in replacement; [WD] mandatory delete opp Digimon play cost<=4; Option [Main] optional hand/trash free play cost<=4 [Sistermon] then <De-Digivolve N> (N = own Digimon count, formula amount, stop at Lv.3); <Arts Digivolve> onto alt-path-only bases (engine fix G-ENGINE-ARTS-ALT-PATH-BASE)."
+    },
+    "EX13-035": {
+      "card_name": "KingEtemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Puppet (Sistermon Awakened DUALs) (EX13)",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-035.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_035.rs",
+      "test_count": 18,
+      "patterns": [
+        "A-UNION",
+        "BUDGET",
+        "COST-CHOICE",
+        "H-AURA"
+      ],
+      "notes": "No DCGO script (b9a0638cd). [OP][WD] per official Q&A: optional return-10 [Chuumon]/[Sukamon]/[Etemon] Digimon from trash to deck bottom (EffectChoice, offered only when >=10 such cards) -> budget 12 else 6; then up to 2 optional hand/trash free plays under a running play-cost budget (play_cost_lte: subtract [B, binding_play_cost <first union pick>] \u2014 new G-FORMULA-BINDING-PLAY-COST-UNION). [All Turns] count_gte owner: any ('there are' = both fields, KingEtemon counts itself) -> all opp Digimon -3000 DP + Security A. -1 aura. Yellow/Black Lv.5 cost 5 + Lv.5 [Sukamon]/[Etemon]-name cost 4 (cost choice surfaced)."
+    },
+    "EX13-025": {
+      "card_name": "Candlemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Witchelny",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_025.rs",
+      "test_count": 20,
+      "patterns": [
+        "start-of-main",
+        "effect-choice",
+        "hand-to-bottom-security",
+        "F3"
+      ],
+      "notes": "[Start of Your Main Phase] 3+ security: top/bottom security trash (EffectChoice) + Draw 1 + memory; then <=2 security: optional [Witchelny]-text hand card to bottom security. Inherited OPT opponent-effect leave save by trashing top security, gated on carrier [Dynasmon]/[Witchelny] in text (BT18-030 DCGO idiom)."
+    },
+    "EX13-029": {
+      "card_name": "FlameWizardmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Witchelny",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_029.rs",
+      "test_count": 16,
+      "patterns": [
+        "keyword",
+        "WD/WA-shared-OPT",
+        "optional-by-cost",
+        "dp-threshold-delete",
+        "F3"
+      ],
+      "notes": "<Armor Purge>; WD/WA shared OPT optional 'by trashing top security' (outer_prompt) -> -4000 for the turn, then <=3 security delete 1 opp Digimon <=4000 DP; also_treated_as Wizardmon; inherited Witchelny/Dynasmon-text leave save."
+    },
+    "EX13-033": {
+      "card_name": "Mistymon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice \u2014 Witchelny",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_033.rs",
+      "test_count": 19,
+      "patterns": [
+        "keyword",
+        "OP/WD",
+        "hand-to-bottom-security",
+        "optional-by-cost",
+        "may-attack",
+        "own-security-removed-observer"
+      ],
+      "notes": "<Barrier>; OP/WD optional [Witchelny]-text hand card to bottom security, then optional pay (EffectChoice) trash top security -> 1 own Digimon may attack; [All Turns][OPT] own security removed -> -6000 for the turn, then <=3 security delete opp Digimon <=6000 DP; inherited OPT may unsuspend."
+    },
+    "EX13-002": {
+      "card_name": "DemiVeemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_002.rs",
+      "test_count": 10,
+      "patterns": [
+        "G4",
+        "B3",
+        "E2"
+      ],
+      "notes": "Inherited [Your Turn][OPT] optional self-unsuspend on own blue Tamer play; [Veedramon]-name + suspended gates (DCGO CanActivate)."
+    },
+    "EX13-004": {
+      "card_name": "DemiMeramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_004.rs",
+      "test_count": 7,
+      "patterns": [
+        "G4",
+        "D2",
+        "D1",
+        "E2"
+      ],
+      "notes": "Inherited WA OPT digivolve into [Witchelny]-text hand card cost -1; effect_digivolved_any_digimon -> trash own top security; decline refunds OPT."
+    },
+    "EX13-005": {
+      "card_name": "Bebydomon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_005.rs",
+      "test_count": 7,
+      "patterns": [
+        "G4",
+        "A3",
+        "E2"
+      ],
+      "notes": "Inherited WA OPT play-or-use [Dracomon]/[Examon]-text card cost -1; decline refunds OPT (DCGO RemoveUse convention)."
+    },
+    "EX13-009": {
+      "card_name": "Huckmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_009.rs",
+      "test_count": 11,
+      "patterns": [
+        "A1",
+        "G4",
+        "B3"
+      ],
+      "notes": "Reveal 3 two buckets (Digimon / Tamer-or-Option w/ [Huckmon]/[Sistermon] text); inherited OPT +1 memory on own white Digimon play."
+    },
+    "EX13-046": {
+      "card_name": "Kokuwamon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_046.rs",
+      "test_count": 8,
+      "patterns": [
+        "A1",
+        "G4",
+        "F2"
+      ],
+      "notes": "Reveal 3 ([Mamemon] text / [Mutant] trait); inherited On Deletion De-Digivolve 1. No DCGO script."
+    },
+    "EX13-047": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_047.rs",
+      "test_count": 9,
+      "patterns": [
+        "H",
+        "A1",
+        "D3",
+        "G4"
+      ],
+      "notes": "Blocker; reveal [Royal Knight] / printed <Blocker> (inherited Blocker excluded per Q&A); WA lose 2 memory; inherited opp-turn +2000."
+    },
+    "EX13-011": {
+      "card_name": "BaoHuckmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_011.rs",
+      "test_count": 12,
+      "patterns": [
+        "H",
+        "C",
+        "B2",
+        "G4"
+      ],
+      "notes": "Raid; OP/WD <=1 Tamer optional free [Mon]; Lv.3 w/[Huckmon] in text special digivolve; inherited your-turn +2000."
+    },
+    "EX13-051": {
+      "card_name": "Guardromon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_051.rs",
+      "test_count": 16,
+      "patterns": [
+        "H",
+        "F4",
+        "G4",
+        "E2"
+      ],
+      "notes": "Blocker; would-leave replacement for other live-<Blocker> allies (not own effects) by suspending this, batch-saves all (Q&A); inherited opp-turn OPT unsuspend. Live keyword vs DCGO printed HasBlocker noted."
+    },
+    "EX13-052": {
+      "card_name": "Gladimon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_052.rs",
+      "test_count": 11,
+      "patterns": [
+        "H",
+        "F2",
+        "F4",
+        "G4"
+      ],
+      "notes": "<Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting another [Knightmon]-text Digimon. No DCGO script."
+    },
+    "EX13-012": {
+      "card_name": "SaviorHuckmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_012.rs",
+      "test_count": 9,
+      "patterns": [
+        "H",
+        "C",
+        "A3"
+      ],
+      "notes": "Alliance face-up + inherited; WD/WA shared OPT play-or-use white [Huckmon]-text card cost -3, RemoveUse refund; text-gated special digivolve."
+    },
+    "EX13-013": {
+      "card_name": "WarGrowlmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_013.rs",
+      "test_count": 14,
+      "patterns": [
+        "H",
+        "F1",
+        "A4",
+        "G4"
+      ],
+      "notes": "Engage; WD/WA mandatory <=5000 delete else Piercing +3000 for the turn; EoA/OD free [Guilmon]-text Tamer from hand/trash; inherited OPT [Gallantmon]-carrier opp security trash."
+    },
+    "EX13-034": {
+      "card_name": "Wisemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-034.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_034.rs",
+      "test_count": 14,
+      "patterns": [
+        "H",
+        "C",
+        "D4",
+        "F2",
+        "G4"
+      ],
+      "notes": "Barrier; OP/WD/WA OPT Reboot+Blocker+CannotBeDeDigivolved on 1 ally until opp turn ends; security-removed OPT De-Digivolve then <=3 sec CannotDigivolve; inherited OPT unsuspend. No DCGO script."
+    },
+    "EX13-042": {
+      "card_name": "Bastemon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_042.rs",
+      "test_count": 6,
+      "patterns": [
+        "H",
+        "A2"
+      ],
+      "notes": "Alliance face-up + inherited; WD/WA shared OPT free cost<=4 Beast/Animal/Sovereign (not Sea Animal, BT11-089 reading) Digimon; refund on decline. No DCGO script."
+    },
+    "EX13-056": {
+      "card_name": "Giromon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-056.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_056.rs",
+      "test_count": 10,
+      "patterns": [
+        "H",
+        "A1",
+        "G4",
+        "E2"
+      ],
+      "notes": "Collision, Blocker, Rule [Machine]; self-suspend OPT reveal 3 play Lv.4- black printed-Blocker free, trash rest (colour gate kept vs DCGO); inherited opp-turn OPT Lv.5- black Blocker from hand, refund on decline."
+    },
+    "EX13-058": {
+      "card_name": "Knightmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-058.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_058.rs",
+      "test_count": 10,
+      "patterns": [
+        "C",
+        "A3",
+        "D4",
+        "G4"
+      ],
+      "notes": "WA/OD free play-or-use [Knightmon]-text cost<=4; opp-turn Reboot+Blocker aura for own [Knightmon]-text Digimon; inherited OPT De-Digivolve on [Knightmon]-text play. No DCGO script."
+    },
+    "EX13-024": {
+      "card_name": "Slayerdramon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_024.rs",
+      "test_count": 13,
+      "patterns": [
+        "H",
+        "C",
+        "F3",
+        "F4"
+      ],
+      "notes": "Raid, Blocker, Assembly -5, [Wingdramon]/[Groundramon] digivolve; OP/WD trash N opp sources (N = own sources, clamped) then optional fewest-source deck-bottom (0-source counts, printed text over DCGO); face-up + inherited OPT replacements."
+    },
+    "EX13-070": {
+      "card_name": "Davis Motomiya & Ken Ichijoji",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_070.rs",
+      "test_count": 11,
+      "patterns": [
+        "B1",
+        "E1",
+        "D2",
+        "C2",
+        "H"
+      ],
+      "notes": "Memory floor; EoT suspend-self -> choose-one: digivolve into [Imperialdramon]/[Free] (cost -1 per opp Digimon) or DNA into [Free] (printed DNA cost); security play. No DCGO script."
+    },
+    "EX13-073": {
+      "card_name": "Tai Kamiya & Matt Ishida",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_073.rs",
+      "test_count": 13,
+      "patterns": [
+        "B1",
+        "B3",
+        "E2",
+        "D4",
+        "H"
+      ],
+      "notes": "SoMP +1 with ADVENTURE Digimon; ally-played suspend-self Draw 1 + trash 1 (own play triggers per Q&A); Lv.5+ ADVENTURE Rush/Blocker auras; security play. No DCGO script."
+    },
+    "EX13-075": {
+      "card_name": "Mon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_075.rs",
+      "test_count": 6,
+      "patterns": [
+        "B1",
+        "A1",
+        "H"
+      ],
+      "notes": "Memory floor; reveal 3 add [Huckmon]-text card; security play. No DCGO script."
+    },
+    "EX13-010": {
+      "card_name": "Growlmon",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_010.rs",
+      "test_count": 10,
+      "patterns": [
+        "F1",
+        "G4"
+      ],
+      "notes": "G-ENGINE-DP-DELETION-MAX-MODIFIER resolved 2026-10-01: inherited +2000 DP-deletion maximum via inherited self-aura `modifier: ChangeDPDeleteEffectMaxDP`. WM/WD mandatory delete (<=4000, auto-flagged as a deletion cap so a Guilmon EX13-007 source raises it to 6000) + `effect_deleted_any_opponent_digimon: false` -> <Raid> and +3000 for the turn. Tests cover EX13-013 WarGrowlmon cap 5000->7000 over this Growlmon and 9000 with Guilmon+Growlmon sources."
+    },
+    "EX13-076": {
+      "card_name": "Imperialdramon: Paladin Mode",
+      "validated_date": "2026-10-01",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 slice \u2014 orphan staples",
+      "yaml_path": "code/digimon-engine/cards/ex13/EX13-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_076.rs",
+      "test_count": 17,
+      "patterns": [
+        "C",
+        "F3",
+        "H"
+      ],
+      "notes": "Piercing/Vortex/Blocker/Evade; Blue Lv.6 / Green Lv.6 cost 6 + Lv.6 [Free]/[Royal Knight] cost 5; Assembly -8 six [Free]/[Royal Knight] distinct_by name; [OP][WD][WA] shared OPT: optional suspend 1 unsuspended opp Digimon, then optional pick \u2192 return_all_sources_to_deck bottom + battle { compare: digivolution_cards } (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT RESOLVED 2026-10-01), refund_opt when nothing done; [All Turns][OPT] win a battle \u2192 optional bottom-deck 1 opp Digimon, then (if suspended) yes/no unsuspend, refund_opt when nothing done. DCGO EX13_076.cs trashes the stripped sources; the official printed text returns them to the deck bottom (implemented). Tie + <Evade> exposed G-ENGINE-BATCH-DELETION-PARK-DROPS-REST (fixed same commit)."
     }
   }
 }

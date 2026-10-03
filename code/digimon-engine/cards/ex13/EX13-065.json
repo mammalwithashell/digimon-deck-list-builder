@@ -1,0 +1,60 @@
+{
+  "index": 4389,
+  "norm_id": 0.21945,
+  "card_id": "EX13-065",
+  "card_index": 65,
+  "card_name_eng": "Sistermon Blanc (Awakened)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_065",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 3,
+  "card_kind": 4,
+  "rarity": 2,
+  "card_colors": [
+    4,
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Decode ([Sistermon Blanc])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)\r\n＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Sistermon Blanc]: Cost 0 \r\n[Digivolve] Lv.2 w/[Huckmon] in text: Cost 1",
+  "dual": {
+    "digimon": {
+      "level": 3,
+      "dp": 5000,
+      "colors": [
+        "White",
+        "Yellow"
+      ],
+      "traits": [
+        "Puppet"
+      ],
+      "evo_costs": [],
+      "effect_text": "＜Decode ([Sistermon Blanc])＞\r\n＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)",
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    },
+    "option": {
+      "use_cost": 5,
+      "colors": [
+        "White"
+      ],
+      "effect_text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon.",
+      "security_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    }
+  }
+}

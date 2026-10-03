@@ -1,0 +1,206 @@
+# EX13-032 Chirinmon — Digimon, Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Holy Beast / DATA SQUAD. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Yellow Lv.4 / cost 3; [Digivolve] Lv.4 w/[DATA SQUAD] trait: Cost 3
+#   [When Digivolving] [When Attacking] [Once Per Turn] By trashing your top
+#   security card or the bottom face-down card from under any of your Tamers,
+#   this Digimon unsuspends. After, 1 of your opponent's Digimon can't activate
+#   [When Digivolving] effects until their turn ends.
+#   [All Turns] When this Digimon would leave the battle area, by placing its
+#   top stacked card as the top security card, it doesn't leave.
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon with
+#   [Kentaurosmon] in its name would leave the battle area, by placing its top
+#   stacked card as the top security card, it doesn't leave.
+#   Official Q&A: the "After" part resolves ONLY if one of the costs was paid.
+#
+# DCGO: no EX13_032.cs at b9a0638cd.
+#
+# ─── Status: IMPLEMENTED (all clauses) ─────────────────────────────────────
+# Clauses 2 and 3 unblocked by G-TOP-STACKED-CARD-TO-SECURITY (RESOLVED
+# 2026-10-01): "top stacked card" is DCGO's Permanent.TopCard (BT20_084.cs
+# AddSecurityCard(card), BT20_055.cs, BT23_008.cs, BT26_058.cs) — the visible
+# top card itself. `security_place_top_stacked_card` now moves
+# card_sources[len-1] (it previously moved the card UNDER the top), so the
+# Digimon stays in play topped by the card that was under it.
+#
+# ─── Clauses 2 / 3 modelling ────────────────────────────────────────────────
+# kind: replacement on when_would_leave_battle_area, optional (the "by
+# placing…" processing cost is a choice). Payability: at least one
+# digivolution card under the top (the top must leave without emptying the
+# Digimon; DCGO BT20_084 gates on DigivolutionCards.Count > 0) — face-up
+# clause: `materials_count_gte: 1` + `is_source_permanent` (self only);
+# inherited clause: the host carries Chirinmon as a source, so it always has
+# one, gated on `source_name_contains: Kentaurosmon` (carrier top-card name) + OPT.
+# Process: security_place_top_stacked_card (face-down top: printed text gives
+# no face-up instruction) then cancel_replacement.
+
+# ─── Clause 1 modelling ──────────────────────────────────────────────────────
+# Optional processing condition with two alternative costs:
+# - `optional` + `outer_prompt`: accept/decline confirm surfaces before any
+#   cost moves (15-7-4; BT23-035 idiom).
+# - `condition`: at least one cost payable (15-7-2) — otherwise nothing offers.
+# - Both payable → `select_effect_choice` picks which cost; only one payable →
+#   that cost directly (no dead menu entry).
+# - `trash_bottom_face_down_source_under_tamer` surfaces the Tamer pick ("any
+#   of your Tamers") and runs its tail only when the trash happened, so the
+#   unsuspend + "After" lock are gated on payment (Official Q&A).
+# - Lock: CannotActivateWhenDigivolvingEffects, expiry end_of_opponents_turn
+#   ("until their turn ends"; BT19-038 idiom), guarded so an empty opponent
+#   field installs no dead prompt.
+
+card: EX13-032
+name: Chirinmon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Holy Beast, DATA SQUAD]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      any_of:
+        - security_count_gte: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            has_face_down_source: true
+    summary: "[When Digivolving][When Attacking][OPT] By trashing your top security card or a bottom face-down card under a Tamer, this Digimon unsuspends; after, 1 opponent Digimon can't activate [When Digivolving] effects until their turn ends"
+    process:
+      - if:
+          condition:
+            all_of:
+              - security_count_gte: 1
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: tamer
+                  has_face_down_source: true
+          then:
+            - select_effect_choice:
+                bind_as: cost_choice
+                labels:
+                  - "Trash your top security card"
+                  - "Trash the bottom face-down card from under 1 of your Tamers"
+                prompt: "Choose which cost to pay"
+            - if:
+                condition: { equals: [cost_choice, 0] }
+                then:
+                  - trash_top_security: { of: you }
+                  - unsuspend: { target: source }
+                  - if:
+                      condition:
+                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: lock_a
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
+                        - add_modifier:
+                            target: lock_a
+                            modifier: CannotActivateWhenDigivolvingEffects
+                            value: 1
+                            expiry: end_of_opponents_turn
+            - if:
+                condition: { equals: [cost_choice, 1] }
+                then:
+                  - trash_bottom_face_down_source_under_tamer: { of: you }
+                  - unsuspend: { target: source }
+                  - if:
+                      condition:
+                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: lock_b
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
+                        - add_modifier:
+                            target: lock_b
+                            modifier: CannotActivateWhenDigivolvingEffects
+                            value: 1
+                            expiry: end_of_opponents_turn
+          else:
+            - if:
+                condition: { security_count_gte: 1 }
+                then:
+                  - trash_top_security: { of: you }
+                  - unsuspend: { target: source }
+                  - if:
+                      condition:
+                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: lock_c
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
+                        - add_modifier:
+                            target: lock_c
+                            modifier: CannotActivateWhenDigivolvingEffects
+                            value: 1
+                            expiry: end_of_opponents_turn
+                else:
+                  - trash_bottom_face_down_source_under_tamer: { of: you }
+                  - unsuspend: { target: source }
+                  - if:
+                      condition:
+                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: lock_d
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
+                        - add_modifier:
+                            target: lock_d
+                            modifier: CannotActivateWhenDigivolvingEffects
+                            value: 1
+                            expiry: end_of_opponents_turn
+
+  # ─── [All Turns] would-leave save (face-up) ────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - is_source_permanent: true
+        - materials_count_gte: 1
+    summary: "[All Turns] When this Digimon would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave"
+    process:
+      - security_place_top_stacked_card:
+          carrier: replacement_subject
+          of: you
+          position: top
+          face: down
+      - cancel_replacement: {}
+
+  # ─── Inherited [All Turns][OPT] would-leave save ([Kentaurosmon] carrier) ──
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      source_name_contains: "Kentaurosmon"
+    summary: "Inherited [All Turns][OPT] When this [Kentaurosmon]-named Digimon would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave"
+    process:
+      - security_place_top_stacked_card:
+          carrier: replacement_subject
+          of: you
+          position: top
+          face: down
+      - cancel_replacement: {}

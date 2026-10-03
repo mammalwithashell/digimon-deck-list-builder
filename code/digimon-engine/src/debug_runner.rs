@@ -606,6 +606,18 @@ impl DebugRunner {
         self.game.battle_digimon(attacker, defender)
     }
 
+    /// Resolve a direct effect battle with an explicit comparison
+    /// (`BattleComparison::DigivolutionCards` = compare digivolution-card
+    /// counts instead of DP — G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+    pub fn battle_digimon_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: crate::combat::BattleComparison,
+    ) -> crate::combat::AttackResult {
+        self.game.battle_digimon_with(attacker, defender, comparison)
+    }
+
     /// Attack the opposing player's security. See [`Self::attack_digimon`]
     /// for the `vortex` flag.
     pub fn attack_player(

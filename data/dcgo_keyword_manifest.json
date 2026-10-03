@@ -13,10 +13,13 @@
     "collision",
     "decode",
     "decoy",
+    "detach",
+    "engage",
     "evade",
     "execute",
     "fortitude",
     "fragment",
+    "guard",
     "iceclad",
     "jamming",
     "link",
@@ -32,6 +35,7 @@
     "rush",
     "save",
     "scapegoat",
+    "succession",
     "training",
     "vortex"
   ],
@@ -102,6 +106,7 @@
     "ignorecolorcondition",
     "immunefromdedigivolve",
     "immunefromdpminus",
+    "immunefromstackreturntolibrary",
     "immunefromstacktrashing",
     "invertsattack",
     "optionresolution",
@@ -132,12 +137,15 @@
     "decode",
     "decoy",
     "dedigivolve",
+    "detach",
     "digiburst",
     "drawx",
+    "engage",
     "evade",
     "execute",
     "fortitude",
     "fragment",
+    "guard",
     "iceclad",
     "jamming",
     "link",
@@ -155,6 +163,7 @@
     "scapegoat",
     "securityattackminus",
     "securityattackplus",
+    "succession",
     "training",
     "vortex"
   ],
@@ -181,10 +190,12 @@
     "dedigivolve",
     "digiburst",
     "drawx",
+    "engage",
     "evade",
     "execute",
     "fortitude",
     "fragment",
+    "guard",
     "iceclad",
     "jamming",
     "materialsave",
@@ -206,9 +217,14 @@
   ],
   "auto_ingest_candidates": [
     "blastdnadigivolve",
-    "link"
+    "detach",
+    "link",
+    "succession"
   ],
-  "auto_ingest_simple": [],
+  "auto_ingest_simple": [
+    "detach",
+    "succession"
+  ],
   "auto_ingest_subsystem": [
     "blastdnadigivolve",
     "link"

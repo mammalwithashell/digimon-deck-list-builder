@@ -1,0 +1,72 @@
+# EX13-012 SaviorHuckmon — Digimon, Lv.5, Red/White, 7000 DP, play cost 7.
+# Traits: Dragonkin. Ultimate / Data.
+# Digivolve: Red Lv.4 / cost 3; [Digivolve] Lv.4 w/[Huckmon] in text: Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-012.md):
+#   <Alliance> [When Digivolving] [When Attacking] [Once Per Turn] You may play
+#   or use 1 white card with [Huckmon] in its text from your hand with the
+#   cost reduced by 3.
+#   Inherited: <Alliance>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_012.cs
+#   AllianceSelfEffect (face-up + inherited); special digivolve
+#   TopCard.HasText("Huckmon") Lv.4 cost 3. Shared WD/WA clause (one hash,
+#   1/turn): optional pick of a white HasText("Huckmon") card, played/used at
+#   cost − 3; nothing picked → RemoveUse() (OPT refunded).
+#
+# DSL: EX13-043 idiom — one clause `when: [when_digivolving, when_attacking]`
+# (shared OPT), optional `select_hand` → `play_or_use_from_hand { reduce: 3 }`,
+# `refund_opt` on decline.
+
+card: EX13-012
+name: SaviorHuckmon
+kind: digimon
+level: 5
+color: [red, white]
+cost: 7
+dp: 7000
+traits: [Dragonkin]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+  # Printed special condition: "[Digivolve] Lv.4 w/[Huckmon] in text: Cost 3".
+  - kind: digivolve
+    from:
+      level_eq: 4
+      in_text_contains: Huckmon
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] You may play or use 1 white [Huckmon]-text card from your hand with the cost reduced by 3"
+    process:
+      - select_hand:
+          of: you
+          bind_as: card
+          optional: true
+          filter:
+            all_of:
+              - color_is: white
+              - in_text_contains: Huckmon
+          prompt: "You may play or use 1 white card with [Huckmon] in its text with the cost reduced by 3"
+      - if:
+          condition: { binding_present: card }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: card
+                cost_delta: { reduce: 3 }
+          else:
+            - refund_opt: {}
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance

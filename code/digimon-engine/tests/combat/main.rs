@@ -17,6 +17,7 @@ mod on_ally_opponent_attack;
 mod on_block_observer;
 mod overclock;
 mod phase9_end_to_end;
+mod phase_unsuspend_trigger;
 mod piercing_security;
 mod progress_mutation_gates;
 mod progress_partial;

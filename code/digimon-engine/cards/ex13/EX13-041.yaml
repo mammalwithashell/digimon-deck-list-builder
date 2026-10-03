@@ -1,0 +1,120 @@
+# EX13-041 Groundramon — Digimon, Lv.5, Green/Red, DP 7000, Cost 7.
+# Traits: Earth Dragon. Form: Ultimate. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle, data/card_bundles/EX13-041.md):
+#   Digivolve: Green Lv.4 / 4; Red Lv.4 / 4.  [Digivolve] [Coredramon]: Cost 3
+#   <Fortitude>
+#   [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or
+#   Tamers. Then, 1 of their Digimon or Tamers can't unsuspend in their next
+#   unsuspend phase.
+#   [All Turns] This Digimon is also treated as Lv.6 [Breakdramon] for
+#   [Examon]'s DNA digivolution.
+#   Inherited: [All Turns] [Once Per Turn] When any of your Digimon with
+#   [Dracomon] or [Examon] in their texts delete your opponent's Digimon in
+#   battle, trash their top security card.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_041.cs
+#   - AddSelfDigivolutionRequirementStaticEffect: TopCard.EqualsCardName
+#     ("Coredramon"), cost 3 → alt `digivolve` from `name_is: Coredramon`.
+#   - FortitudeSelfEffect → grant_keyword Fortitude.
+#   - Shared [OP]/[WD] (optional: false), two INDEPENDENT picks over opponent
+#     Digimon/Tamers (canNoSelect: false; no unsuspended filter):
+#       1. Mode.Tap → suspend it.
+#       2. GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase: true,
+#          UntilOwnerActivePhase) — blocks ONLY that player's next unsuspend
+#          (Active) phase; effect unsuspends stay legal. →
+#          `CannotUnsuspendInUnsuspendPhase` (gates only the turn-start bulk
+#          unsuspend) with `end_of_opponents_next_turn`, which survives to
+#          their NEXT unsuspend phase whether it lands on our turn (On Play /
+#          When Digivolving) or theirs (an On Play after <Fortitude>).
+#   - AddJogressLevelsClass (+Lv.6 when the DNA result is [Examon]) +
+#     ChangeCardNamesClass (+[Breakdramon]) → `dna_material_identity`
+#     self-aura (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET); name result-scoped per
+#     the printed text (see EX13-021's header for the DCGO scope note).
+#   - Inherited OnEndBattle, OPT (hash EX13_041_ESS_TrashSecurity), mandatory:
+#     CanTriggerWhenDeleteOpponentDigimonByBattle(winner = own permanent whose
+#     REAL top card HasText Dracomon/Examon, loser = opponent permanent
+#     actually destroyed) → IDestroySecurity(enemy, 1, fromTop). →
+#     `on_ally_won_battle` + `event_battle_deleter { owner: you, … text }`
+#     (G-DSL-BATTLE-DELETER): the surviving combatant whose battle opponent was
+#     really deleted. Security-Digimon battles never qualify (the loser is a
+#     card, not a permanent; they never fire EndOfBattle here either).
+
+card: EX13-041
+name: Groundramon
+kind: digimon
+level: 5
+color: [green, red]
+cost: 7
+dp: 7000
+traits: [Earth Dragon]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Coredramon }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Fortitude
+    summary: "<Fortitude>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 1 opponent Digimon or Tamer; then 1 opponent Digimon or Tamer can't unsuspend in their next unsuspend phase"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - if:
+          condition: { binding_present: suspend_target }
+          then:
+            - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers that can't unsuspend in their next unsuspend phase"
+      - if:
+          condition: { binding_present: lock_target }
+          then:
+            - add_modifier:
+                target: lock_target
+                modifier: CannotUnsuspendInUnsuspendPhase
+                value: 1
+                expiry: end_of_opponents_next_turn
+
+  - kind: aura
+    target: {}
+    dna_material_identity:
+      for_result: Examon
+      level: 6
+      name: Breakdramon
+    summary: "[All Turns] This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution"
+
+  - scope: inherited
+    when: on_ally_won_battle
+    once_per_turn: true
+    condition:
+      event_battle_deleter:
+        owner: you
+        kind: digimon
+        any_of:
+          - in_text_contains: Dracomon
+          - in_text_contains: Examon
+    summary: "Inherited [All Turns][OPT] When any of your [Dracomon]/[Examon]-text Digimon delete an opponent's Digimon in battle, trash their top security card"
+    process:
+      - trash_top_security: { of: opponent }

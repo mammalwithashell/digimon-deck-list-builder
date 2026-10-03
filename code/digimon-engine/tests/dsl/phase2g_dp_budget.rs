@@ -22,6 +22,7 @@ fn dsl_select_dp_budget_binds_opponent_permanents() {
     let target = runner.place_on_field(p1, "TARGET", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
+        deletion_cap: false,
         dp_budget: CompiledFormula::Literal(5000),
         min_picks: 1,
         filter: CompiledPredicate::default(),
@@ -70,6 +71,7 @@ fn dsl_select_dp_budget_updates_remaining_budget_and_deletes_picked_targets() {
     let nine = runner.place_on_field(p1, "OPP-9K", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
+        deletion_cap: false,
         dp_budget: CompiledFormula::Literal(15000),
         min_picks: 1,
         filter: CompiledPredicate::default(),
@@ -146,6 +148,7 @@ fn dsl_select_dp_budget_min_pick_hides_pass_until_first_pick() {
     runner.place_on_field(p1, "OPP-7K", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
+        deletion_cap: false,
         dp_budget: CompiledFormula::Literal(15000),
         min_picks: 1,
         filter: CompiledPredicate::default(),

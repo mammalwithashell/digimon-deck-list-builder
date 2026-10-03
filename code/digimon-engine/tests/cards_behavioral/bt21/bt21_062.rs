@@ -352,10 +352,25 @@ fn bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free() {
         .expect("use the Ragnarok Cannon for free");
     runner.auto_resolve().expect("finish resolution");
 
+    // The 4 Vemmon went under Galacticmon; the used Option resolves and is
+    // then placed in the trash (an Option goes to the trash after use), so
+    // the trash ends holding exactly the Ragnarok Cannon.
     assert_eq!(
         runner.trash_size(0),
-        0,
-        "the Ragnarok Cannon left the trash when used"
+        1,
+        "only the used Ragnarok Cannon is in the trash afterwards"
+    );
+    let trash_ids: Vec<&str> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data))
+        .collect();
+    assert_eq!(trash_ids, vec!["CANNON"], "the trash card is the used Ragnarok Cannon");
+    let stack = &runner.game.players[0].battle_area[galacticmon.index as usize];
+    assert_eq!(
+        stack.card_sources.len(),
+        5,
+        "the 4 Vemmon were placed under Galacticmon (card_sources includes the top card)"
     );
     assert_eq!(
         runner.game.memory, memory_before,
@@ -458,8 +473,11 @@ fn bt21_062_when_digivolving_decline_pick_one_aborts_whole_clause() {
         "declining leaves all 5 trash cards untouched (4 Vemmon + 1 Cannon)"
     );
     let stack = &runner.game.players[0].battle_area[galacticmon.index as usize];
-    assert!(
-        stack.card_sources.is_empty(),
+    // `card_sources` includes the top card itself, so "nothing placed" means
+    // the stack is still just Galacticmon.
+    assert_eq!(
+        stack.card_sources.len(),
+        1,
         "no digivolution sources were placed after declining"
     );
 }

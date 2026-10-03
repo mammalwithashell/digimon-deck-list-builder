@@ -7,8 +7,9 @@
 //!
 //! NOTE: this struct deliberately does NOT set `deny_unknown_fields`
 //! because it is flattened into several call-sites (MaterialSpec, field
-//! predicates). Typos in leaf-predicate fields are silently dropped at
-//! parse time; the semantic validator (Task 12) must re-check.
+//! predicates). Unknown keys instead land in the `extra` sink, which is
+//! deserialized through `deny_unknown_predicate_keys` — so a typo'd or
+//! invented predicate key is still a hard parse error.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -111,6 +112,16 @@ pub struct PredicateSpec {
     /// G-DSL-PREDICATE-TEXT-CONTAINS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_text_contains: Option<String>,
+    /// Card-scope "has <Keyword>" test against the candidate card's
+    /// PRINTED face-up keyword line — the innate keywords parsed from its
+    /// `effect_text` only (not inherited / security text, not granted
+    /// modifiers). Mirrors DCGO `CardSource.HasBlocker` (`BlockerClass`,
+    /// `!IsInheritedEffect && !IsSecurityEffect`). Distinct from
+    /// `has_keyword`, which reads a battle-area permanent's live keywords.
+    /// Drives EX13-062 Craniamon's Assembly "all black w/＜Blocker＞".
+    /// G-DSL-PREDICATE-PRINTED-KEYWORD.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub printed_keyword: Option<String>,
     /// Whole-card "[X] in its text" scan — the broad DCGO
     /// `CardSource.HasText` surface (`CardSource.cs`). Unlike
     /// `effect_text_contains` (which scans ONLY effect / inherited /
@@ -186,6 +197,9 @@ pub struct PredicateSpec {
     /// binding is absent or no longer a battle-area permanent.
     /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The magic name `source` resolves to the effect's own carrier
+    /// permanent ("THIS Digimon may digivolve into ..."), with no `bind_as`
+    /// needed. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE (EX13-055 / EX13-057).
     pub can_digivolve_onto: Option<String>,
 
     // Leaf — permanent-only
@@ -244,6 +258,26 @@ pub struct PredicateSpec {
     pub is_suspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_unsuspended: Option<bool>,
+    /// Permanent-subject leaf: the permanent can change orientation — a
+    /// suspended one can unsuspend (no `CannotUnsuspend`), an unsuspended one
+    /// can suspend (no `CannotSuspend`). DCGO `Permanent.CanChangeOrientation`
+    /// (`IsSuspended ? CanUnsuspend : CanSuspend`). Driver EX13-023
+    /// UlforceVeedramon "1 of your Digimon may change orientation".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_change_orientation: Option<bool>,
+    /// Permanent-subject leaf: the permanent can attack right now via an
+    /// effect-granted attack — i.e. the engine would offer at least one legal
+    /// attack target for `may_attack_now` with the same `targets` /
+    /// `without_suspending` / `ignore_summoning_sickness` options (suspended /
+    /// can't-suspend, summoning sickness vs <Rush>, `CannotAttack`, Raid /
+    /// `CanAttackUnsuspended` / `CannotAttackTarget` target legality). DCGO
+    /// `Permanent.CanAttack(cardEffect,
+    /// withoutTap)` — the `canTargetCondition` every "1 of your Digimon may
+    /// attack" pick uses (EX12_014.cs, BT24_037.cs, BT25_016.cs, …), so an
+    /// unable-to-attack Digimon is never offered and an all-ineligible board
+    /// shows no prompt. G-DSL-CAN-ATTACK-PREDICATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_attack: Option<CanAttackPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
     /// Permanent-subject predicate. True when the candidate currently has
@@ -526,6 +560,13 @@ pub struct PredicateSpec {
     /// turn".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub digimon_attacked_this_turn: Option<PlayerRef>,
+    /// Game-level "if during an attack" gate: true (`during_attack: true`)
+    /// while an attack is in flight (`Game::pending_attack` is set — DCGO
+    /// `GManager.instance.attackProcess.IsAttacking`). `false` asserts no
+    /// attack is in progress. Drives EX13-057 Grademon's "If during an
+    /// attack, it also ..." rider (BT20-053 precedent). G-DSL-DURING-ATTACK.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub during_attack: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_breeding: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -649,6 +690,28 @@ pub struct PredicateSpec {
     /// carry this trait (case-insensitive). G-DSL-BATTLE-WINNER-BOARDWIDE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_winner_trait_has: Option<String>,
+    /// For `on_ally_won_battle` observers: the battle winner is (`true`) / is
+    /// not (`false`) the effect's own carrier permanent — the carrier-scoped
+    /// "When THIS Digimon wins a battle". Unlike the `on_any_deletion` +
+    /// `source_deleted_battle_opponent` idiom (which needs a live attack to
+    /// resolve the battle opponent), this reads `TriggerContext.battle_winner`,
+    /// so it also fires for effect-initiated battles ("this Digimon may battle
+    /// 1 of your opponent's Digimon" — EX13-045 Examon). Never matches on a tie.
+    /// G-DSL-BATTLE-WINNER-IS-SOURCE.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_winner_is_source: Option<bool>,
+    /// For `on_ally_won_battle` (EndOfBattle) observers: the battle's
+    /// DELETER — the combatant that survived the battle while its battle
+    /// opponent was actually deleted — must exist and match this permanent
+    /// predicate (e.g. `{ owner: you, in_text_contains: Dracomon }`). Fails
+    /// when the loser's deletion was prevented, or when both combatants were
+    /// deleted (a tie with no survivor). Printed "When any of your Digimon
+    /// with [X] in their texts delete your opponent's Digimon in battle"
+    /// (EX13-041 Groundramon; DCGO `CanTriggerWhenDeleteOpponentDigimonByBattle`
+    /// with `winnerRealCondition`, `LoserPermanents` fixed to the actually
+    /// destroyed ones). G-DSL-BATTLE-DELETER.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_battle_deleter: Option<Box<PredicateSpec>>,
     /// For `on_discard_hand` observers: the player whose HAND was trashed
     /// (`TriggerContext.discard_hand_player`) must match this player-ref
     /// ("your hand is trashed from" ⇒ `you`). G-ENGINE-ON-DISCARD-HAND.
@@ -941,11 +1004,39 @@ pub struct PredicateSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub event_target_level: Option<MetricComparators>,
 
-    /// Captures unrecognized fields for controlled extension. Validator
-    /// (Task 12) checks this for typos in inline predicate positions.
-    #[serde(flatten)]
+    /// Leftover-key sink. `PredicateSpec` cannot use `deny_unknown_fields`
+    /// (it is `#[serde(flatten)]`'d into `MaterialSpec` / `ExistentialPredicate`,
+    /// and serde forbids combining the two), so unrecognized keys land here —
+    /// and `deny_unknown_predicate_keys` turns any non-empty sink into a hard
+    /// deserialize error. Historically this map was "checked by the validator"
+    /// but nothing ever checked it, so a typo'd / invented predicate key
+    /// (e.g. `source_permanent_name_contains` on ST24-06 / ST24-10 / BT25-027)
+    /// silently became an always-true empty predicate. Always empty after a
+    /// successful parse; kept as a field so the flatten plumbing stays intact.
+    #[serde(flatten, deserialize_with = "deny_unknown_predicate_keys")]
     #[schemars(skip)]
     pub extra: IndexMap<String, serde_yml::Value>,
+}
+
+/// Reject any predicate key that is not a declared `PredicateSpec` field.
+/// See the doc on `PredicateSpec::extra`.
+fn deny_unknown_predicate_keys<'de, D>(
+    deserializer: D,
+) -> Result<IndexMap<String, serde_yml::Value>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let extra = IndexMap::<String, serde_yml::Value>::deserialize(deserializer)?;
+    if extra.is_empty() {
+        Ok(extra)
+    } else {
+        let keys: Vec<&str> = extra.keys().map(String::as_str).collect();
+        Err(serde::de::Error::custom(format!(
+            "unknown predicate key(s): {} (not a PredicateSpec field — check the spelling \
+             against code/digimon-dsl/src/predicate.rs)",
+            keys.join(", ")
+        )))
+    }
 }
 
 impl PredicateSpec {
@@ -1034,7 +1125,7 @@ pub enum DpConstraint {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 enum DpConstraintDeserialize {
     Literal(i32),
     WrappedFormula { formula: FormulaSpec },
@@ -1188,7 +1279,7 @@ pub enum EventCauseSpec {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum PlayerRefSelector {
     Player(PlayerRef),
     Scoped { of: PlayerRef },
@@ -1208,7 +1299,7 @@ pub enum SourceStackScopeOf {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum SourceStackScope {
     /// `{ of: self }` — the carrier's own non-flipped source stack.
     Scoped { of: SourceStackScopeOf },
@@ -1270,6 +1361,24 @@ pub struct DigivolveCandidatePredicate {
     /// as a `Card` subject). Omit to accept any Digimon card with a route.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter: Option<Box<PredicateSpec>>,
+}
+
+/// Options for the `can_attack` permanent leaf — mirror the
+/// `may_attack_now` step that will consume the pick.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(deny_unknown_fields)]
+pub struct CanAttackPredicate {
+    /// Which attack targets count (`any` / `player` / `digimon`).
+    #[serde(default)]
+    pub targets: crate::step::AttackTargetSpec,
+    /// The attack will be made without suspending.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub without_suspending: bool,
+    /// The attack ignores summoning sickness.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_summoning_sickness: bool,
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.

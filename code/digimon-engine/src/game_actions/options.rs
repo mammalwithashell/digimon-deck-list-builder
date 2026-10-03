@@ -92,17 +92,19 @@ impl Game {
     /// Use an Option from hand without paying its use cost while preserving
     /// the normal Option lifecycle (OnUseOption, OptionMain/mode selection,
     /// and subtype disposal). Intended for card effects such as BT24-085.
+    ///
+    /// Effect-driven, so the Main-phase gate is lifted exactly like
+    /// `use_option_from_hand_with_cost` (which this delegates to): BT24-085
+    /// uses the Option from its [End of Your Turn] effect, i.e. during the
+    /// End phase, where the gate previously returned `Invalid` and silently
+    /// dropped the rest of the effect ("Then, 1 of your [TS] Digimon may
+    /// attack"). G-ENGINE-TURN-END-MID-EFFECT.
     pub fn use_option_from_hand_without_paying_cost(
         &mut self,
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
-        self.play_option_core(
-            player_id,
-            OptionSource::Hand(hand_index),
-            None,
-            OptionCostPolicy::Free,
-        )
+        self.use_option_from_hand_with_cost(player_id, hand_index, crate::enums::CostDelta::Free)
     }
 
     /// Use an Option from `player`'s hand with `cost_delta` applied to its

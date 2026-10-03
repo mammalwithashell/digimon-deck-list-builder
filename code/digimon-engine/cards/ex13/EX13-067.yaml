@@ -1,0 +1,117 @@
+# EX13-067 Nokia Shiramine — Tamer, Red/Blue, Cost 4. Traits: CS.
+#
+# Printed text (official Bandai DB bundle; data/card_overrides.json carries the
+# "... or 1 [Agumon]" correction; the corpus files the [Security] line under
+# inherited_effect_description_eng):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any of your Digimon digivolve, if you have 1 or fewer
+#   Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon
+#   has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name
+#   from your hand or trash without paying the cost.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: with two copies, once the first copy's [Your Turn] effect has
+#   resolved you no longer have 1 or fewer Digimon, so the second can't activate.
+#
+# DCGO: none — DCGO b9a0638cd ships no EX13_067.cs. Authored from the printed
+# text + Q&A with the established idioms:
+#   - [Your Turn] on_digivolve observer (BT24-082) gated on the digivolved
+#     permanent being yours, the own-Digimon count (<= 1), this Tamer being
+#     unsuspended (payable suspend cost), and the matching branch having a
+#     playable card. "that Digimon has [X] in its name" reads the digivolved
+#     permanent's new top card (event_target_name_contains).
+#   - optional clause + activation_cost suspend_self (BT24-084 idiom), then one
+#     select_union_zone over [hand, trash] (EX12-074 idiom) whose filter is the
+#     branch the digivolved name allows (both names → either card), and
+#     play_union_bound_free.
+#   - "1 [Gabumon]" / "1 [Agumon]" are exact card names → name_is.
+
+card: EX13-067
+name: Nokia Shiramine
+kind: tamer
+color: [red, blue]
+cost: 4
+traits: [CS]
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - source_is_unsuspended: true
+        - count_lte:
+            filter:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+            n: 1
+        - any_of:
+            - all_of:
+                - event_target_name_contains: Greymon
+                - count_gte:
+                    filter:
+                      of: you
+                      zone: [hand, trash]
+                      name_is: Gabumon
+                    n: 1
+            - all_of:
+                - event_target_name_contains: Garurumon
+                - count_gte:
+                    filter:
+                      of: you
+                      zone: [hand, trash]
+                      name_is: Agumon
+                    n: 1
+    summary: "[Your Turn] When your Digimon digivolves, if you have 1 or fewer Digimon, by suspending this Tamer, play [Gabumon] (if [Greymon]) or [Agumon] (if [Garurumon]) from hand or trash free"
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition:
+            all_of:
+              - event_target_name_contains: Greymon
+              - event_target_name_contains: Garurumon
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: partner
+                filter:
+                  any_of:
+                    - name_is: Gabumon
+                    - name_is: Agumon
+                prompt: "Play 1 [Gabumon] or [Agumon] from your hand or trash without paying the cost"
+          else:
+            - if:
+                condition: { event_target_name_contains: Greymon }
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      bind_as: partner
+                      filter: { name_is: Gabumon }
+                      prompt: "Play 1 [Gabumon] from your hand or trash without paying the cost"
+                else:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      bind_as: partner
+                      filter: { name_is: Agumon }
+                      prompt: "Play 1 [Agumon] from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: partner
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,28 @@
+{
+  "index": 4398,
+  "norm_id": 0.2199,
+  "card_id": "EX13-074",
+  "card_index": 74,
+  "card_name_eng": "Rie Kishibe",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_074",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] [Once Per Turn] When any of your [Knightmon] text Digimon are played or deleted, by placing 1 such card from your hand or trash under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] [Once Per Turn] If this Tamer has 3 or more [Knightmon] text cards under it, it may digivolve into [LordKnightmon] in the hand or trash for a digivolution cost of 3, ignoring digivolution requirements.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -95,8 +95,11 @@ fn bt20_055_face_up_security_check_may_place_top_stacked_card_bottom_security_fa
         .memory(0)
         .start();
     let invisimon = runner.place_stack(0, &["BT1-010", "BT20-055"]);
+    // "This Digimon's top stacked card" = BT20-055 itself (DCGO
+    // `AddSecurityCard(card, toTop: false, faceUp: true)`) —
+    // G-TOP-STACKED-CARD-TO-SECURITY.
     let moved_source =
-        runner.game.players[0].battle_area[invisimon.index as usize].card_sources[0].handle();
+        runner.game.players[0].battle_area[invisimon.index as usize].card_sources[1].handle();
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
     let checked_security = runner.game.players[1].security[0].handle();
     runner.game.players[1]
@@ -126,20 +129,24 @@ fn bt20_055_face_up_security_check_may_place_top_stacked_card_bottom_security_fa
             .expect("bottom security")
             .handle(),
         moved_source,
-        "top stacked card under BT20-055 should move to bottom security"
+        "BT20-055 (its own top stacked card) should move to bottom security"
     );
     assert!(
         runner.game.players[0]
             .face_up_security
             .contains(&moved_source.0),
-        "the moved BT20-055 source should be face-up in security"
+        "the moved BT20-055 should be face-up in security"
+    );
+    let remaining = &runner.game.players[0].battle_area[invisimon.index as usize].card_sources;
+    assert_eq!(
+        remaining.len(),
+        1,
+        "the Digimon stays after moving its top stacked card"
     );
     assert_eq!(
-        runner.game.players[0].battle_area[invisimon.index as usize]
-            .card_sources
-            .len(),
-        1,
-        "BT20-055 itself remains on field after moving its top stacked card"
+        remaining[0].card_id(&runner.game.card_data),
+        "BT1-010",
+        "the card that was under BT20-055 is the new top"
     );
 }
 

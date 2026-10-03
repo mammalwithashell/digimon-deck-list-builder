@@ -1,5 +1,5 @@
 {
-  "count": 4326,
+  "count": 4403,
   "failed": [],
   "cards": {
     "AD1-001": {
@@ -113421,6 +113421,2374 @@
         }
       ],
       "special_digivolution_condition": "[Digivolve] Lv.5 w/[Angoramon] in text or w/[NSp] trait: Cost 3"
+    },
+    "EX13-001": {
+      "card_id": "EX13-001",
+      "digivolve_costs": [],
+      "colors": "Red",
+      "form": "In-Training",
+      "type": "Lesser",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2."
+        }
+      ]
+    },
+    "EX13-002": {
+      "card_id": "EX13-002",
+      "digivolve_costs": [],
+      "colors": "Blue",
+      "form": "In-Training",
+      "type": "Baby Dragon",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When any of your blue Tamers are played, this Digimon with [Veedramon] in its name may unsuspend."
+        }
+      ]
+    },
+    "EX13-003": {
+      "card_id": "EX13-003",
+      "digivolve_costs": [],
+      "colors": "Yellow",
+      "form": "In-Training",
+      "type": "Lesser/DATA SQUAD",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a Digimon card with [Kentaurosmon] in its name or the [Holy Beast] trait in the hand with the cost reduced by 1."
+        }
+      ]
+    },
+    "EX13-004": {
+      "card_id": "EX13-004",
+      "digivolve_costs": [],
+      "colors": "Yellow",
+      "form": "In-Training",
+      "type": "Flame",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card."
+        }
+      ]
+    },
+    "EX13-005": {
+      "card_id": "EX13-005",
+      "digivolve_costs": [],
+      "colors": "Green",
+      "form": "In-Training",
+      "type": "Baby Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] You may play or use 1 card with [Dracomon] or [Examon] in its text from your hand with the cost reduced by 1."
+        }
+      ]
+    },
+    "EX13-006": {
+      "card_id": "EX13-006",
+      "digivolve_costs": [],
+      "colors": "Black",
+      "form": "In-Training",
+      "type": "Lesser/X Antibody/Chronicle",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Your Turn] [Once Per Turn] By paying 1 cost, 1 of your Digimon with the [X Antibody] or [Chronicle] trait may unsuspend."
+        }
+      ]
+    },
+    "EX13-007": {
+      "card_id": "EX13-007",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Virus",
+      "type": "Reptile",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] By trashing 1 card in your hand, you may return 1 Digimon card with [Gallantmon] in its name or 1 red Tamer card from your trash to the hand."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums."
+        }
+      ]
+    },
+    "EX13-008": {
+      "card_id": "EX13-008",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Bebydomon]: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Bebydomon]: Cost 0"
+    },
+    "EX13-009": {
+      "card_id": "EX13-009",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Red White",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Mini Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Huckmon] or [Sistermon] in its text and 1 such Tamer card or Option card among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When any of your white Digimon are played, gain 1 memory."
+        }
+      ]
+    },
+    "EX13-010": {
+      "card_id": "EX13-010",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Dark Dragon",
+      "qa": [
+        "No. If your opponent has a Digimon with 4000 DP or less, then you must select that card and delete it."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[When Moving] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, this Digimon gains ＜Raid＞ and +3000 DP for the turn."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums."
+        }
+      ]
+    },
+    "EX13-011": {
+      "card_id": "EX13-011",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Red White",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Data",
+      "type": "Dinosaur",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Huckmon] in text: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ [On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mon] from your hand without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon gets +2000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Huckmon] in text: Cost 2"
+    },
+    "EX13-012": {
+      "card_id": "EX13-012",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Red White",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Data",
+      "type": "Dragonkin",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Huckmon] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Alliance＞ [When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1 white card with [Huckmon] in its text from your hand with the cost reduced by 3."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Huckmon] in text: Cost 3"
+    },
+    "EX13-013": {
+      "card_id": "EX13-013",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Cyborg",
+      "qa": [
+        "No. If your opponent has a Digimon with 5000 DP or less, then you must select that card and delete it."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Engage＞ (At the end of your turn, this Digimon may attack.) [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 5000 DP or less. If this effect didn't delete, this Digimon gains ＜Piercing＞ and +3000 DP for the turn. [End of Attack] [On Deletion] You may play 1 Tamer card with [Guilmon] in its text from your hand or trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, if this Digimon has [Gallantmon] in its name, trash their top security card."
+        }
+      ]
+    },
+    "EX13-014": {
+      "card_id": "EX13-014",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Red White",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "Yes, it will be removed from the stack."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 use cost 5 or lower [Huckmon] text Option card from your hand or this Digimon's digivolution cards without paying the cost. [All Turns] [Once Per Turn] When any of your Digimon are played, you may delete 1 of your opponent's lowest DP Digimon. Then, if you don't have [Atho, René & Por], you may play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy(Red)/(Black)＞)"
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3"
+    },
+    "EX13-015": {
+      "card_id": "EX13-015",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "No, it leaves the battle area. If the \"by doing X\" condition isn't met, the rest of the effect isn't processed. In this case, this card leaves the battle area if the deletion isn't possible."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Progress＞ ＜Blocker＞ [On Play] [When Digivolving] [When Attacking] [Counter] [Once Per Turn] Delete 1 of your opponent's 12000 DP or higher Digimon. If this effect didn't delete, trash their top security card. [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your opponent's 9000 DP or lower Digimon, it doesn't leave."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Guilmon]/[Growlmon] in name"
+        }
+      ]
+    },
+    "EX13-016": {
+      "card_id": "EX13-016",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Red White Blue",
+      "play_cost": "15",
+      "dp": "15000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/Royal Knight/CS",
+      "qa": [
+        "No, you can't. Only 1 [Counter] effect can be activated per an attack."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Blocker＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] 2 of your opponent's Digimon or Tamers can't suspend until their turn ends. [On Play] [When Digivolving] [Counter] [Once Per Turn] You may delete 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer. [All Turns] When this Digimon would leave the battle area, by trashing 2 same-level cards from its digivolution cards, it doesn't leave."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -7: [WarGreymon]×[MetalGarurumon]×[Agumon]×[Gabumon]"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+    },
+    "EX13-017": {
+      "card_id": "EX13-017",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Free",
+      "type": "Mini Dragon/CS",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Veedramon] in its text or the [Royal Knight] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending it, it doesn't leave."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+    },
+    "EX13-018": {
+      "card_id": "EX13-018",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Blue Red",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Vaccine",
+      "type": "Dragon",
+      "qa": [
+        "The [When Digivolving] effect is activated first. When your Digimon was played, the [On Play] effect and the [Your Turn] effect triggered simultaneously. Activating this card's [Your Turn] effect to digivolve the Digimon caused its [When Digivolving] effect to newly trigger, so it is activated first according to the derived triggering rule."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] By trashing 1 card with [Dracomon] or [Examon] in its text from your hand, ＜Draw 2＞. [Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon gets +2000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+    },
+    "EX13-019": {
+      "card_id": "EX13-019",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Champion",
+      "attribute": "Vaccine",
+      "type": "Mythical Dragon/CS",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Jamming＞ [When Attacking] [Once Per Turn] You may play 1 Tamer card with [Veedramon] in its text from your hand with the cost reduced by 2."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+    },
+    "EX13-020": {
+      "card_id": "EX13-020",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Yellow",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Armor Form",
+      "attribute": "Free",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "Yes."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Veemon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ ＜Armor Purge＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +1000 DP until your opponent's turn ends for each color in trashes. Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends for every 5000 DP this Digimon has. [End of Your Turn] [Once Per Turn] 1 of your [Free] or [Royal Knight] trait Digimon may unsuspend."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -2: [Veemon]"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Your Turn] [Once Per Turn] 1 of your Digimon with the [Free] or [Royal Knight] trait may unsuspend."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Veemon]: Cost 3"
+    },
+    "EX13-021": {
+      "card_id": "EX13-021",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Red",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Sky Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Coredramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Jamming＞ [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend until their turn ends. [All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Coredramon]: Cost 3"
+    },
+    "EX13-022": {
+      "card_id": "EX13-022",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Holy Dragon/CS",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[CS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 Tamer card with [Veedramon] in its text from your hand without paying the cost. [All Turns] [Once Per Turn] When any of your Tamers are played, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name suspends, it may unsuspend."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[CS] trait: Cost 3"
+    },
+    "EX13-023": {
+      "card_id": "EX13-023",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/Royal Knight/CS",
+      "qa": [
+        "This means that the effect prevents processing of \"(perform XX on) stacked cards.\" For example, a \"can't trash stacked cards\" effect prevents trashing the top stacked cards by (which trashes the top stacked cards) or similar effects, and it prevents trashing the bottom stacked cards by \"trash a digivolution card\" or similar effects. However, because the effect only prevents processing \"(perform XX on) stacked cards,\" XX is still permitted to be performed on the Digimon itself, for instance by effects that tell you to \"perform XX\" on the Digimon."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ ＜Evade＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] 1 of your Digimon may change orientation. [On Play] [When Digivolving] You may return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck. [All Turns] Your opponent's effects can't reduce this unsuspended Digimon's DP, return its stacked cards to the hand or deck, or trash them."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Veemon]/[Veedramon] in name"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+    },
+    "EX13-024": {
+      "card_id": "EX13-024",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Red",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Dragonkin",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Blocker＞ [On Play] [When Digivolving] For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon. Then, you may return all of their Digimon with the fewest digivolution cards to the bottom of the deck. [All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3"
+    },
+    "EX13-025": {
+      "card_id": "EX13-025",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Flame",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If you have 3 or more security cards, trash your top or bottom security card, ＜Draw 1＞ and gain 1 memory. Then, if you have 2 or fewer security cards, you may place 1 card with [Witchelny] in its text from your hand as the bottom security card. (Rule) Trait: Has [Witchelny]."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Dynasmon] or [Witchelny] in its text would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+        }
+      ]
+    },
+    "EX13-026": {
+      "card_id": "EX13-026",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Vaccine",
+      "type": "Holy Beast/DATA SQUAD",
+      "qa": [
+        "The card is placed on the bottom of the cards under the Tamer."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 [Holy Beast], [Royal Knight] or [DATA SQUAD] trait card to the hand and place 1 such card face down under any of your [DATA SQUAD] trait Tamers. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] Give 1 of your opponent's Digimon ＜Security A. -1＞ until their turn ends."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0"
+    },
+    "EX13-027": {
+      "card_id": "EX13-027",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Virus",
+      "type": "Beast",
+      "qa": [
+        "That card is added to the hand."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Sukamon] or [Etemon] in its name to the hand and trash 1 such card. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave."
+        }
+      ]
+    },
+    "EX13-028": {
+      "card_id": "EX13-028",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Abnormal",
+      "qa": [
+        "Yes."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 3 or lower Digimon card with [Chuumon] or [Sukamon] in its name among them without paying the cost. Trash the rest."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave."
+        }
+      ]
+    },
+    "EX13-029": {
+      "card_id": "EX13-029",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Yellow Red",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Armor Form",
+      "attribute": "Virus",
+      "type": "Wizard/Witchelny",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Witchelny] in text: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Armor Purge＞ [When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, 1 of your opponent's Digimon gets -4000 DP for the turn. After, if you have 3 or fewer security cards, delete 1 of your opponent's Digimon with 4000 DP or less. (Rule) Name: Also treated as [Wizardmon]."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Dynasmon] or [Witchelny] in its text would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Witchelny] in text: Cost 2"
+    },
+    "EX13-030": {
+      "card_id": "EX13-030",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Vaccine",
+      "type": "Holy Beast/DATA SQUAD",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[DATA SQUAD] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Barrier＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, you may play 1 [Richard Sampson] from your hand or trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[DATA SQUAD] trait: Cost 2"
+    },
+    "EX13-031": {
+      "card_id": "EX13-031",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Mutant",
+      "qa": [
+        "This effect changes 1 of your opponent's Digimon into a Digimon whose original name is [Sukamon], its original color is white, and its original DP is 3000."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] [On Deletion] By trashing 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards, you may change the base name, color and DP of 1 of your opponent’s Digimon to [Sukamon], white and 3000 until their turn ends."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -4: 3 Lv.4 or lower Digimon cards w/[Sukamon] in name"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any other Digimon with [Sukamon] in their names are deleted, reveal the top 3 cards of your deck. You may play 1 play cost 3 or lower Digimon card with [Chuumon] or [Sukamon] in its name among them without paying the cost. Trash the rest."
+        }
+      ]
+    },
+    "EX13-032": {
+      "card_id": "EX13-032",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Holy Beast/DATA SQUAD",
+      "qa": [
+        "No, you can't. You can only resolve the portion following \"After\" in this card's [When Digivolving] [When Attacking] effect if you trash the top card of your security stack or trash the bottom face-down card from under any of your Tamers."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[DATA SQUAD] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card or the bottom face-down card from under any of your Tamers, this Digimon unsuspends. After, 1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends. [All Turns] When this Digimon would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon with [Kentaurosmon] in its name would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[DATA SQUAD] trait: Cost 3"
+    },
+    "EX13-033": {
+      "card_id": "EX13-033",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Red",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Magic Warrior/Witchelny",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Barrier＞ [On Play] [When Digivolving] You may place 1 [Witchelny] text card from your hand as the bottom security card. Then, by trashing your top security card, 1 of your Digimon may attack. [All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -6000 DP for the turn. Then, if you have 3 or fewer security cards, delete 1 of their 6000 DP or lower Digimon."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+    },
+    "EX13-034": {
+      "card_id": "EX13-034",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Black",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Wizard",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Barrier＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of your Digimon gains ＜Reboot＞ and ＜Blocker＞, and their ＜De-Digivolve＞ effects don't affect it. [All Turns] [Once Per Turn] When your security stack is removed from, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of their Digimon can't digivolve until their turn ends."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+    },
+    "EX13-035": {
+      "card_id": "EX13-035",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "13",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Puppet",
+      "qa": [
+        "If activated, first choose if you are going to return 10 specified cards from your trash to the bottom of your deck. If you do, this effect's play cost maximum is increased by 6. Afterwards, you can play up to 6 total play cost worth of specified cards from your hand or trash without paying the costs."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Sukamon]/[Etemon] in name: Cost 4"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] You may play up to 2 Digimon cards with [Chuumon], [Sukamon] or [Etemon] in their names and up to 6 total play cost from your hand or trash without paying the costs. By returning 10 such cards from your trash to the bottom of the deck, add 6 to the play cost maximum. [All Turns] While there are 3 or more Digimon with [Sukamon] or [Etemon] in their names, give all of your opponent's Digimon ＜Security A. -1＞ and -3000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Sukamon]/[Etemon] in name: Cost 4"
+    },
+    "EX13-036": {
+      "card_id": "EX13-036",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/Royal Knight/DATA SQUAD",
+      "qa": [
+        "The processing shown after \"instead\" in the effect replaces the standard processing. For example, if an effect reads \"Delete your opponent's Digimon with 6000 DP or less. If you have a Digimon with [Greymon] in its name, instead delete 1 of your opponent's Digimon with the lowest DP,\" and you have a Digimon with [Greymon] in its name, you delete 1 of your opponent's Digimon with the lowest DP instead of deleting 1 of their Digimon with 6000 DP or less."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[Security] [On Play] 1 of your opponent's Digimon gets -7000 DP for the turn. If there are 6 or fewer total cards in both players' security stacks, instead all of their Digimon get -7000 DP for the turn. [When Digivolving] By trashing the top security card of 1 player with the most security cards, you may activate 1 of this Digimon's [Security] effects. [When Digivolving] [End of Attack] [Counter] [Once Per Turn] You may place 1 of each player's Digimon as the top security cards."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: Cost 3"
+    },
+    "EX13-037": {
+      "card_id": "EX13-037",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Red",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Witchelny] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Piercing＞ ＜Blocker＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] Trash your top security card and this Digimon gets +10000 DP until your opponent's turn ends. Then, if you have 3 or fewer security cards, trash their top security card. [All Turns] [Once Per Turn] When security stacks are removed from, 1 of your opponent's Digimon gets -12000 DP until their turn ends. Then, if you have 3 or fewer security cards, ＜Recovery +1＞."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Witchelny] in text: Cost 3"
+    },
+    "EX13-038": {
+      "card_id": "EX13-038",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Vaccine",
+      "type": "Mammal",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Leopardmon] in its text and 1 Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits among them to the hand. Return the rest to the bottom of the deck. (Rule) Trait: Has [Beast] Type."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] All of your suspended Digimon get +1000 DP."
+        }
+      ]
+    },
+    "EX13-039": {
+      "card_id": "EX13-039",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Green Red",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Dragon",
+      "qa": [
+        "The [When Digivolving] effect is activated first. When your Digimon was played, the [On Play] effect and the [Your Turn] effect triggered simultaneously. Activating this card's [Your Turn] effect to digivolve the Digimon caused its [When Digivolving] effect to newly trigger, so it is activated first according to the derived triggering rule."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand. [Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon gets +2000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+    },
+    "EX13-040": {
+      "card_id": "EX13-040",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "4",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Data",
+      "type": "Beast",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. [All Turns] When this Digimon suspends, suspend 1 of your opponent's Digimon or Tamers."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] All of your suspended Digimon get +1000 DP."
+        }
+      ]
+    },
+    "EX13-041": {
+      "card_id": "EX13-041",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Green Red",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Earth Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Coredramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Fortitude＞ [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend in their next unsuspend phase. [All Turns] This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Coredramon]: Cost 3"
+    },
+    "EX13-042": {
+      "card_id": "EX13-042",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Virus",
+      "type": "Beastkin",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Alliance＞ [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits from your hand without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+        }
+      ]
+    },
+    "EX13-043": {
+      "card_id": "EX13-043",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "Yes, either can be suspended."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, you may return 1 of your opponent's lowest DP Digimon to the bottom of the deck. [When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1 [Mammal], [Beast], [Beastkin] or [Royal Knight] trait card from your hand with the cost reduced by 4. For each suspended Digimon, further reduce it by 1. [All Turns] [Once Per Turn] When any of your suspended Digimon would leave the battle area other than by your effects, by unsuspending 1 of your Digimon, they don't leave."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1"
+    },
+    "EX13-044": {
+      "card_id": "EX13-044",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Green Red",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Machine Dragon",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Blocker＞ [On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. [All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+    },
+    "EX13-045": {
+      "card_id": "EX13-045",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Green Red Blue",
+      "play_cost": "15",
+      "dp": "15000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Evade＞ [When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon. [Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+    },
+    "EX13-046": {
+      "card_id": "EX13-046",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Machine",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Mamemon] in its text and 1 card with the [Mutant] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ]
+    },
+    "EX13-047": {
+      "card_id": "EX13-047",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "3000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Rock",
+      "qa": [
+        "It refers to a card that always has . Cards that gain from effects, or cards that have as an inherited effect can't be referenced."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Royal Knight] trait and 1 card with ＜Blocker＞ among them to the hand. Return the rest to the bottom of the deck. [When Attacking] Lose 2 memory."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Opponent's Turn] This Digimon gets +2000 DP."
+        }
+      ]
+    },
+    "EX13-048": {
+      "card_id": "EX13-048",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Reptile",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Knightmon] in its text and 1 card with [Knightmon] in its name among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't leave."
+        }
+      ]
+    },
+    "EX13-049": {
+      "card_id": "EX13-049",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 1
+        }
+      ],
+      "colors": "Black Yellow",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Beast/X Antibody/Chronicle",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Dorimon]/Black Lv.2 w/[X Antibody] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [X Antibody] or [Chronicle] trait among them to the hand. Return the rest to the top or bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Dorimon]/Black Lv.2 w/[X Antibody] trait: Cost 0"
+    },
+    "EX13-050": {
+      "card_id": "EX13-050",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Rookie",
+      "attribute": "Vaccine",
+      "type": "Mutant",
+      "qa": [
+        "With this effect, each player's memory can no longer be increased by any effects except Tamer effects. This effect affects both players."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[All Turns] Players can't gain memory other than by Tamer effects."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+        }
+      ]
+    },
+    "EX13-051": {
+      "card_id": "EX13-051",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Machine",
+      "qa": [
+        "This effect triggers and can be activated when a Digimon specified by it leaves the battle area under the specified conditions. When activated, all Digimon matching its trigger conditions are prevented from leaving."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [All Turns] When any of your other Digimon with ＜Blocker＞ would leave the battle area other than by your effects, by suspending this Digimon, they don't leave."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Opponent's Turn] [Once Per Turn] When any of your Digimon suspend, this Digimon may unsuspend."
+        }
+      ]
+    },
+    "EX13-052": {
+      "card_id": "EX13-052",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Champion",
+      "attribute": "Vaccine",
+      "type": "Warrior",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.) [On Play] [On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't leave."
+        }
+      ]
+    },
+    "EX13-053": {
+      "card_id": "EX13-053",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Champion",
+      "attribute": "Data",
+      "type": "Mutant",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] [On Deletion] You may return up to 3 Digimon cards with [Mamemon] in their texts from your trash to the top of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 3 or less. For each one this effect returned, add 1 to this effect's play cost maximum. (Rule) Name: Treated as including [Mamemon]."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ]
+    },
+    "EX13-054": {
+      "card_id": "EX13-054",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "3000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Invader",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [On Deletion] 1 of your opponent's Digimon can't attack players until their turn ends. (Rule) Trait: Has [Mutant] Type."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] This Digimon gets +1000 DP."
+        }
+      ]
+    },
+    "EX13-055": {
+      "card_id": "EX13-055",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black Yellow",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Vaccine",
+      "type": "Cyborg/X Antibody/Chronicle",
+      "qa": [
+        "Yes, it triggers. Related Cards"
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Dorumon]/Lv.3 w/[Chronicle] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. [When Attacking] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Dorumon]/Lv.3 w/[Chronicle] trait: Cost 2"
+    },
+    "EX13-056": {
+      "card_id": "EX13-056",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Mine",
+      "qa": [
+        "It refers to a card that always has . Cards that gain from effects, or cards that have as an inherited effect can't be referenced."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Collision＞ ＜Blocker＞ [All Turns] [Once Per Turn] When this Digimon suspends, reveal the top 3 cards of your deck. You may play 1 level 4 or lower black Digimon card with ＜Blocker＞ among them without paying the cost. Trash the rest. (Rule) Trait: Has [Machine] Type."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Opponent's Turn] [Once Per Turn] When any of your Digimon suspend, you may play 1 level 5 or lower black Digimon card with ＜Blocker＞ from your hand without paying the cost."
+        }
+      ]
+    },
+    "EX13-057": {
+      "card_id": "EX13-057",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Black Yellow",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Warrior/X Antibody/Chronicle",
+      "qa": [
+        "This effect prevents a card from being affected by effects. For example, your Digimon won't suspend if it's chosen for a \"suspend 1 of your opponent's Digimon\" effect, and its DP won't be reduced by 3000 if it's chosen for a \"1 of your opponent's Digimon gets -3000 DP\" effect."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Raptordramon]/Lv.4 w/[Chronicle] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody] or [Chronicle] trait Digimon gains ＜Reboot＞ and ＜Blocker＞. If during an attack, it also isn't affected by their Digimon effects and gets +5000 DP. [End of Attack] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your [Chronicle] trait Digimon would leave the battle area, by trashing your top security card, they don't leave."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Raptordramon]/Lv.4 w/[Chronicle] trait: Cost 3"
+    },
+    "EX13-058": {
+      "card_id": "EX13-058",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Data",
+      "type": "Warrior",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Knightmon] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Attacking] [On Deletion] You may play or use 1 card with [Knightmon] in its text and a play or use cost of 4 or less from your hand without paying the cost. [Opponent's Turn] All of your Digimon with [Knightmon] in their texts gain ＜Reboot＞ and ＜Blocker＞."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your Digimon with [Knightmon] in their texts are played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Knightmon] in text: Cost 3"
+    },
+    "EX13-059": {
+      "card_id": "EX13-059",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ultimate",
+      "attribute": "Data",
+      "type": "Mutant",
+      "qa": [
+        "Yes, both have to be XX. For example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait among them without paying the cost. Trash the rest. [End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with [Mamemon] in its name, delete 1 of your opponent's Digimon with the lowest play cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with [Mamemon] in its name, delete all of your opponent's Digimon with the lowest play cost."
+        }
+      ]
+    },
+    "EX13-060": {
+      "card_id": "EX13-060",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Black Yellow",
+      "play_cost": "13",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/X Antibody/Royal Knight/Chronicle",
+      "qa": [
+        "No, it is not immediately deleted at this point in time. All activated effects are resolved, after which a rule check occurs. At that point in time, all Digimon with 0 DP are deleted simultaneously."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory. [Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects. [End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4"
+    },
+    "EX13-061": {
+      "card_id": "EX13-061",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Black White",
+      "play_cost": "13",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 4"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Reboot＞ ＜Blocker＞ [On Play] [When Digivolving] You may play 1 [Hinukamuy] Token. (Digimon/White/6000 DP/＜Alliance＞ ＜Reboot＞ ＜Blocker＞) Then, until your opponent's turn ends, their Digimon effects don't affect 1 of your white Digimon. [All Turns] [Once Per Turn] When any of your white Digimon suspend, you may use 1 use cost 5 or lower Option card with [Huckmon] in its text from your hand or this Digimon's digivolution cards without paying the cost."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: 3 [Huckmon] text Digimon cards w/different names"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 4"
+    },
+    "EX13-062": {
+      "card_id": "EX13-062",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/Royal Knight",
+      "qa": [
+        "This effect prevents a card from being affected by effects. For example, your Digimon won't suspend if it's chosen for a \"suspend 1 of your opponent's Digimon\" effect, and its DP won't be reduced by 3000 if it's chosen for a \"1 of your opponent's Digimon gets -3000 DP\" effect."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Reboot＞ ＜Blocker＞ [On Play] [When Digivolving] Your opponent's effects don't affect this Digimon until their turn ends. [All Turns] [Once Per Turn] When this Digimon suspends, you may delete all of your opponent's Digimon with the lowest play cost. [All Turns] When this Digimon unsuspends, it gets +3000 DP until your turn ends."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all black w/＜Blocker＞"
+        }
+      ]
+    },
+    "EX13-063": {
+      "card_id": "EX13-063",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "11",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Mutant",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 10 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait among them without paying the cost. Trash the rest. [On Deletion] Delete 1 of your opponent's highest play cost Digimon. [All Turns] All of your Digimon with [Mamemon] in their names gain ＜Blocker＞ and ＜Guard＞. (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)"
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -4: 3 Lv.5 or lower [Mamemon] text cards w/different names"
+        }
+      ]
+    },
+    "EX13-064": {
+      "card_id": "EX13-064",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple Black",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Holy Warrior/Royal Knight/CS",
+      "qa": [
+        "Yes, both have to be XX. For example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Knightmon] in text: Cost 3 [Digivolve] While you have 3 or fewer security cards, [Rie Kishibe]: Cost 5"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost. [Your Turn] All of your [Knightmon] text Digimon gain ＜Alliance＞ and ＜Piercing＞. [Your Turn] [Once Per Turn] When any of your other Digimon or Tamers are played, 1 of your [Knightmon] text Digimon may gain ＜Rush＞ and ＜Collision＞ for the turn and attack."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Knightmon] in text: Cost 3 [Digivolve] While you have 3 or fewer security cards, [Rie Kishibe]: Cost 5"
+    },
+    "EX13-065": {
+      "card_id": "EX13-065",
+      "digivolve_costs": [],
+      "colors": "White Yellow",
+      "play_cost": "D",
+      "dp": "5000",
+      "form": "Rookie",
+      "attribute": "Vaccine",
+      "type": "Puppet",
+      "dual_colors": "White",
+      "dual_cost": "5",
+      "qa": [
+        "Yes, it can. \"Text\" references the entire card, so it refers to any card with the specified word or icon printed on it."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Sistermon Blanc]: Cost 0/Lv.2 w/[Huckmon] in text: Cost 1"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Decode ([Sistermon Blanc])＞ ＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)"
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Sistermon Blanc]: Cost 0/Lv.2 w/[Huckmon] in text: Cost 1"
+    },
+    "EX13-066": {
+      "card_id": "EX13-066",
+      "digivolve_costs": [],
+      "colors": "White Black",
+      "play_cost": "D",
+      "dp": "6000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Puppet",
+      "dual_colors": "White",
+      "dual_cost": "5",
+      "qa": [
+        "Yes, it can. \"Text\" references the entire card, so it refers to any card with the specified word or icon printed on it."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Sistermon Noir]/[Sistermon Ciel]: Cost 1 [Digivolve] Lv.3 w/[Huckmon] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Decode ([Sistermon Noir]/[Sistermon Ciel])＞ [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less. (Rule) Also treated as Name: [Sistermon Ciel (Awakened)] and Trait: [Data] Attribute."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your Digimon."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Sistermon Noir]/[Sistermon Ciel]: Cost 1 [Digivolve] Lv.3 w/[Huckmon] in text: Cost 3"
+    },
+    "EX13-067": {
+      "card_id": "EX13-067",
+      "digivolve_costs": [],
+      "colors": "Red Blue",
+      "play_cost": "4",
+      "type": "CS",
+      "qa": [
+        "No. The moment you activate the first copy of this card's [Your Turn] effect, you no longer have one or fewer Digimon, therefore the second copy's effect can't be activated."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory. [Your Turn] When any of your Digimon digivolve, if you have 1 or fewer Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name from your hand or trash without paying the cost."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-068": {
+      "card_id": "EX13-068",
+      "digivolve_costs": [],
+      "colors": "Red",
+      "play_cost": "4",
+      "qa": [
+        "No, you can't. If you don't return this card to the bottom of your deck, you can't process the part after \"after\" in this card's [Start of Your Main Phase] effect."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Takato Matsuki] from your hand without paying the cost. After, if you don't have a Digimon, you may play 1 [Guilmon] from your trash without paying the cost."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-069": {
+      "card_id": "EX13-069",
+      "digivolve_costs": [],
+      "colors": "Blue",
+      "play_cost": "3",
+      "type": "CS",
+      "qa": [
+        "No, you can't. If you don't suspend this card, you can't process the part after \"after\" in this card's [Your Turn] effect."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If you have a Digimon with [Veemon] or [Veedramon] in its name, gain 1 memory. [Your Turn] When any of your Digimon unsuspend, by suspending this Tamer, ＜Draw 1＞. After, 1 of your Digimon may digivolve into a Digimon card with [Veedramon] in its name in the hand with the cost reduced by 2."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-070": {
+      "card_id": "EX13-070",
+      "digivolve_costs": [],
+      "colors": "Blue Green",
+      "play_cost": "4",
+      "qa": [
+        "You can activate the effect and digivolve, but its cost won't be reduced. Related Cards"
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [End of Your Turn] By suspending this Tamer, activate 1 of the effects below: ・1 of your Digimon may digivolve into a Digimon card with [Imperialdramon] in its name or the [Free] trait in the hand. Reduce this effect's paid cost by 1 for each of your opponent's Digimon. ・2 of your Digimon may DNA digivolve into a [Free] trait Digimon card in the hand."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-071": {
+      "card_id": "EX13-071",
+      "digivolve_costs": [],
+      "colors": "Yellow",
+      "play_cost": "4",
+      "type": "DATA SQUAD",
+      "qa": [
+        "The card is placed on the bottom of the cards under the Tamer."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] [On Play] You may place your deck's top card face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory. [Main] [Once Per Turn] By trashing 3 bottom face-down cards from under any of your Tamers and placing 1 each of level 4 and level 5 [Holy Beast] trait yellow Digimon cards from your trash as 1 of your [Kudamon]'s bottom digivolution cards, it may digivolve into [Kentaurosmon] in the hand or trash, ignoring level and with the cost reduced by 1."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-072": {
+      "card_id": "EX13-072",
+      "digivolve_costs": [],
+      "colors": "Black",
+      "play_cost": "4",
+      "type": "Chronicle",
+      "qa": [
+        "No, you can't. You can't simultaneously activate multiple effects that use a card."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] By trashing 1 [Chronicle] trait card from your hand, ＜Draw 1＞ and gain 1 memory. [Your Turn] When one of your [Chronicle] trait Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-073": {
+      "card_id": "EX13-073",
+      "digivolve_costs": [],
+      "colors": "Black Purple",
+      "play_cost": "4",
+      "type": "ADVENTURE",
+      "qa": [
+        "Yes, it triggers."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If you have an [ADVENTURE] trait Digimon, gain 1 memory. [Your Turn] When your [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, ＜Draw 1＞ and trash 1 card in your hand. [All Turns] All of your level 5 or higher [ADVENTURE] trait Digimon gain ＜Rush＞ and ＜Blocker＞."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-074": {
+      "card_id": "EX13-074",
+      "digivolve_costs": [],
+      "colors": "Purple Black",
+      "play_cost": "4",
+      "type": "CS",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [All Turns] [Once Per Turn] When any of your [Knightmon] text Digimon are played or deleted, by placing 1 such card from your hand or trash under this Tamer, ＜Draw 1＞. [Main] [Once Per Turn] If this Tamer has 3 or more [Knightmon] text cards under it, it may digivolve into [LordKnightmon] in the hand or trash for a digivolution cost of 3, ignoring digivolution requirements."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-075": {
+      "card_id": "EX13-075",
+      "digivolve_costs": [],
+      "colors": "White",
+      "play_cost": "4",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its text among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "EX13-076": {
+      "card_id": "EX13-076",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
+      "colors": "White Blue Green",
+      "play_cost": "16",
+      "dp": "16000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Ancient Holy Warrior",
+      "qa": [
+        "This effect immediately initiates a battle. If this effect is activated, the chosen Digimon battle according to the standard rules."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Vortex＞ ＜Blocker＞ ＜Evade＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon. Then, you may return all digivolution cards of 1 of their Digimon to the bottom of the deck and have this Digimon battle it. Compare the number of digivolution cards instead of DP in this battle. [All Turns] [Once Per Turn] When this Digimon wins a battle, you may return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may unsuspend. (Rule) Trait: Has [Free] Attribute."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -8: 6 [Free]/[Royal Knight] trait Digimon cards w/different names"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5"
+    },
+    "EX13-077": {
+      "card_id": "EX13-077",
+      "digivolve_costs": [],
+      "colors": "White",
+      "play_cost": "16",
+      "dp": "16000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Holy Warrior/ADVENTURE",
+      "qa": [
+        "This effect immediately initiates a battle. If this effect is activated, the chosen Digimon battle according to the standard rules."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Omnimon]: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] 1 of your Digimon may attack without suspending. Then, for every 2 of your Digimon and Tamers' colors, activate 1 effect below: ・This Digimon may battle 1 of your opponent's Digimon. ・By returning 5 cards from your opponent's trash to the bottom of the deck, ＜Recovery +1＞. [All Turns] This Digimon gains all colors in its digivolution cards, and +1000 DP for each of your Digimon and Tamers' colors."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Omnimon]: Cost 2"
     }
   }
 }

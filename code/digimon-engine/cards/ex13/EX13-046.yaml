@@ -1,0 +1,62 @@
+# EX13-046 Kokuwamon — Digimon, Lv.3, Black, 2000 DP, play cost 3.
+# Traits: Machine. Rookie / Data. Digivolve: Black Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-046.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Mamemon] in
+#   its text and 1 card with the [Mutant] trait among them to the hand. Return
+#   the rest to the bottom of the deck.
+#   Inherited: [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_046.cs). Printed text governs;
+# the reveal mirrors EX13-009's two-bucket SimplifiedRevealDeckTopCardsAndSelect
+# and the inherited mirrors EX13-053 (shipped).
+#
+# DSL: `reveal_search` two-bucket idiom (EX13-027) + inherited on_deletion
+# `select_opponent_permanent` → `de_digivolve { amount: 1 }` (EX13-053).
+
+card: EX13-046
+name: Kokuwamon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Machine]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Mamemon]-text card and 1 [Mutant] trait card to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter: { in_text_contains: Mamemon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Mamemon] in its text to the hand"
+            - filter: { trait_has: Mutant }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with the [Mutant] trait to the hand"
+          remainder: bottom
+
+  - scope: inherited
+    when: on_deletion
+    summary: "Inherited [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+          stop_at_level: 3

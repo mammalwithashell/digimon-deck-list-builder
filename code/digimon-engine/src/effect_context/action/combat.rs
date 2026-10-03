@@ -305,6 +305,19 @@ impl<'a> EffectContext<'a> {
         self.game.battle_digimon(attacker, defender)
     }
 
+    /// [`Self::battle_digimon`] with an explicit battle comparison — e.g.
+    /// "Compare the number of digivolution cards instead of DP in this
+    /// battle" (EX13-076; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+    pub fn battle_digimon_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: crate::combat::BattleComparison,
+    ) -> AttackResult {
+        self.game
+            .battle_digimon_with(attacker, defender, comparison)
+    }
+
     pub fn may_attack_now(
         &mut self,
         attacker: PermanentHandle,

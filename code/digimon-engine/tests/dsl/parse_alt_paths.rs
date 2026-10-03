@@ -210,11 +210,12 @@ alt_paths:
 }
 
 #[test]
-fn material_inline_predicate_typo_is_silently_accepted() {
-    // Documents a known serde limitation: MaterialSpec cannot use
-    // `#[serde(deny_unknown_fields)]` because it combines with `#[serde(flatten)]`
-    // of the inline PredicateSpec. Typos in inline predicate fields are silently
-    // dropped at parse time. Semantic validator (Task 12) must re-check.
+fn material_inline_predicate_typo_is_rejected() {
+    // MaterialSpec cannot use `#[serde(deny_unknown_fields)]` (it flattens the
+    // inline PredicateSpec), but every key it does not own is forwarded to that
+    // PredicateSpec, whose `extra` sink rejects unrecognized keys
+    // (`deny_unknown_predicate_keys`). This used to be a silently-dropped
+    // blindspot (the typo vanished and `level_eq` stayed None).
     let yaml = r#"
 card: X-1
 name: Test
@@ -228,14 +229,10 @@ alt_paths:
     from: { name_is: Koromon }
     cost: 0
     materials:
-      - levle_eq: 6     # typo — silently dropped
+      - levle_eq: 6     # typo — must be a hard parse error
         name_contains: Greymon
 "#;
-    let spec: digimon_engine::dsl::spec::CardSpec =
-        serde_yml::from_str(yaml).expect("must parse despite typo (documents blindspot)");
-    // Material parsed with only the valid field populated; the typo is gone.
-    let m = &spec.alt_paths[0].materials[0];
-    assert_eq!(m.inline_filter.name_contains.as_deref(), Some("Greymon"));
-    // level_eq stays None because `levle_eq` was dropped.
-    assert_eq!(m.inline_filter.level_eq, None);
+    let err = serde_yml::from_str::<digimon_engine::dsl::spec::CardSpec>(yaml)
+        .expect_err("an unknown inline-material predicate key must not parse");
+    assert!(err.to_string().contains("levle_eq"), "{err}");
 }

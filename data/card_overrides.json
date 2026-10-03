@@ -17585,5 +17585,569 @@
         ]
       }
     }
+  },
+  "EX13-025": {
+    "type_eng": [
+      "Flame",
+      "Witchelny"
+    ]
+  },
+  "EX13-038": {
+    "type_eng": [
+      "Mammal",
+      "Beast"
+    ]
+  },
+  "EX13-054": {
+    "type_eng": [
+      "Invader",
+      "Mutant"
+    ],
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  "EX13-056": {
+    "type_eng": [
+      "Mine",
+      "Machine"
+    ]
+  },
+  "EX13-076": {
+    "attribute_eng": [
+      "Vaccine",
+      "Free"
+    ],
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "card_colors": [
+      4,
+      1,
+      3
+    ],
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5 \r\nAssembly Requirements [Assembly -8] 6 [Free]/[Royal Knight] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-001": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2.",
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ]
+  },
+  "EX13-002": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your blue Tamers are played, this Digimon with [Veedramon] in its name may unsuspend."
+  },
+  "EX13-003": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a Digimon card with [Kentaurosmon] in its name or the [Holy Beast] trait in the hand with the cost reduced by 1."
+  },
+  "EX13-004": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card.",
+    "type_eng": [
+      "Flame"
+    ]
+  },
+  "EX13-005": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play or use 1 card with [Dracomon] or [Examon] in its text from your hand with the cost reduced by 1."
+  },
+  "EX13-006": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] By paying 1 cost, 1 of your Digimon with the [X Antibody] or [Chronicle] trait may unsuspend."
+  },
+  "EX13-014": {
+    "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 use cost 5 or lower [Huckmon] text Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[All Turns] [Once Per Turn] When any of your Digimon are played, you may delete 1 of your opponent's lowest DP Digimon. Then, if you don't have [Atho, René & Por], you may play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy(Red)/(Black)＞)",
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-015": {
+    "effect_description_eng": "＜Raid＞\r\n＜Progress＞\r\n＜Blocker＞\r\n[On Play] [When Digivolving] [When Attacking] [Counter] [Once Per Turn] Delete 1 of your opponent's 12000 DP or higher Digimon. If this effect didn't delete, trash their top security card.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your opponent's 9000 DP or lower Digimon, it doesn't leave.",
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-016": {
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "card_colors": [
+      0,
+      4,
+      1
+    ],
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\nAssembly Requirements [Assembly -7] [WarGreymon]×[MetalGarurumon]×[Agumon]×[Gabumon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-018": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX13-020": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 4
+      }
+    ],
+    "xros_req": "[Digivolve] [Veemon]: Cost 3 \r\nAssembly Requirements [Assembly -2] [Veemon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-021": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX13-023": {
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Veemon]/[Veedramon] in name\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-024": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "xros_req": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-027": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ]
+  },
+  "EX13-028": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  "EX13-029": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX13-031": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX13-033": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "card_colors": [
+      2,
+      0
+    ]
+  },
+  "EX13-034": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "effect_description_eng": "＜Barrier＞\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of your Digimon gains ＜Reboot＞ and ＜Blocker＞, and their ＜De-Digivolve＞ effects don't affect it.\r\n[All Turns] [Once Per Turn] When your security stack is removed from, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of their Digimon can't digivolve until their turn ends."
+  },
+  "EX13-035": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-036": {
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-037": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.5 w/[Witchelny] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-039": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX13-041": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX13-043": {
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] [Leopardmon: Leopard Mode]: Cost 1 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all green w/[Mammal]/[Beast]/[Beastkin] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-044": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-045": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "card_colors": [
+      3,
+      0,
+      1
+    ],
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-049": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ]
+  },
+  "EX13-053": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  "EX13-055": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX13-057": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX13-060": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-061": {
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 4 \r\nAssembly Requirements [Assembly -5] 3 [Huckmon] text Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-062": {
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-063": {
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-064": {
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "effect_description_eng": "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost.\r\n[Your Turn] All of your [Knightmon] text Digimon gain ＜Alliance＞ and ＜Piercing＞.\r\n[Your Turn] [Once Per Turn] When any of your other Digimon or Tamers are played, 1 of your [Knightmon] text Digimon may gain ＜Rush＞ and ＜Collision＞ for the turn and attack.",
+    "inherited_effect_description_eng": ""
+  },
+  "EX13-065": {
+    "dual": {
+      "digimon": {
+        "level": 3,
+        "dp": 5000,
+        "colors": [
+          "White",
+          "Yellow"
+        ],
+        "traits": [
+          "Puppet"
+        ],
+        "evo_costs": [],
+        "effect_text": "＜Decode ([Sistermon Blanc])＞\r\n＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)",
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      },
+      "option": {
+        "use_cost": 5,
+        "colors": [
+          "White"
+        ],
+        "effect_text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon.",
+        "security_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      }
+    }
+  },
+  "EX13-066": {
+    "dual": {
+      "digimon": {
+        "level": 4,
+        "dp": 6000,
+        "colors": [
+          "White",
+          "Black"
+        ],
+        "traits": [
+          "Puppet"
+        ],
+        "evo_costs": [],
+        "effect_text": "＜Decode ([Sistermon Noir]/[Sistermon Ciel])＞\r\n[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      },
+      "option": {
+        "use_cost": 5,
+        "colors": [
+          "White"
+        ],
+        "effect_text": "[Main] You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your Digimon.",
+        "security_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      }
+    },
+    "attribute_eng": [
+      "Virus",
+      "Data"
+    ]
+  },
+  "EX13-071": {
+    "effect_description_eng": "[Start of Your Main Phase] [On Play] You may place your deck's top card face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory.\r\n[Main] [Once Per Turn] By trashing 3 bottom face-down cards from under any of your Tamers and placing 1 each of level 4 and level 5 [Holy Beast] trait yellow Digimon cards from your trash as 1 of your [Kudamon]'s bottom digivolution cards, it may digivolve into [Kentaurosmon] in the hand or trash, ignoring level and with the cost reduced by 1."
+  },
+  "EX13-077": {
+    "evo_costs": [],
+    "inherited_effect_description_eng": "",
+    "xros_req": "[Digivolve] [Omnimon]: Cost 2 \r\nAssembly Requirements [Assembly -8] 6 [ADVENTURE] trait Digimon cards w/different colors\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  },
+  "EX13-067": {
+    "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve, if you have 1 or fewer Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name from your hand or trash without paying the cost."
+  },
+  "EX13-051": {
+    "type_eng": [
+      "Machine"
+    ]
   }
 }

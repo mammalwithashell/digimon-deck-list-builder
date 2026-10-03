@@ -36,11 +36,11 @@ impl<'a> EffectContext<'a> {
     /// "you may pick a Tamer to slide under instead of being deleted").
     pub fn cancel_leave(&mut self) {
         debug_assert!(
-            self.game.parked_replacement.is_some(),
+            self.game.has_active_parked_replacement(),
             "cancel_leave called outside a replacement-process callback; \
              the outcome would be silently dropped"
         );
-        if let Some(parked) = self.game.parked_replacement.as_mut() {
+        if let Some(parked) = self.game.active_parked_replacement_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
         }
     }
@@ -61,10 +61,10 @@ impl<'a> EffectContext<'a> {
     /// panic in dev builds; release builds silently no-op.
     pub fn handle_replacement(&mut self) {
         debug_assert!(
-            self.game.parked_replacement.is_some(),
+            self.game.has_active_parked_replacement(),
             "handle_replacement called outside a replacement-process callback"
         );
-        if let Some(parked) = self.game.parked_replacement.as_mut() {
+        if let Some(parked) = self.game.active_parked_replacement_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::CustomHandled;
         }
     }
@@ -78,10 +78,10 @@ impl<'a> EffectContext<'a> {
     /// in dev builds; release builds silently no-op.
     pub fn redirect_replacement(&mut self, zone: crate::enums::Zone) {
         debug_assert!(
-            self.game.parked_replacement.is_some(),
+            self.game.has_active_parked_replacement(),
             "redirect_replacement called outside a replacement-process callback"
         );
-        if let Some(parked) = self.game.parked_replacement.as_mut() {
+        if let Some(parked) = self.game.active_parked_replacement_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::Redirected(zone);
         }
     }
@@ -95,10 +95,10 @@ impl<'a> EffectContext<'a> {
     /// in dev builds; release builds silently no-op.
     pub fn substitute_replacement(&mut self, subject: crate::replacement::ReplacementSubject) {
         debug_assert!(
-            self.game.parked_replacement.is_some(),
+            self.game.has_active_parked_replacement(),
             "substitute_replacement called outside a replacement-process callback"
         );
-        if let Some(parked) = self.game.parked_replacement.as_mut() {
+        if let Some(parked) = self.game.active_parked_replacement_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::Substituted(subject);
         }
     }

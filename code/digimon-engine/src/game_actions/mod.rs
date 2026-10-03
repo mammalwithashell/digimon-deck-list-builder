@@ -675,8 +675,11 @@ impl Game {
         };
 
         // Per-element (filter, count). Assembly materials come from trash and
-        // stack under the played card.
+        // stack under the played card. `distinct_by` is carried per element
+        // (G-ASSEMBLY-NO-DISTINCT-BY): "3 [Huckmon] text Digimon cards
+        // w/different names" — EX13-061 Gankoomon / EX13-063 / EX12-076.
         let mut elements: Vec<(digimon_dsl::compiled::CompiledPredicate, u8)> = Vec::new();
+        let mut distincts: Vec<Option<digimon_dsl::compiled::CompiledDistinctBy>> = Vec::new();
         for m in &path.materials {
             if !m.stack_under || !m.zones.iter().any(|z| matches!(z, CompiledZone::Trash)) {
                 return None; // unsupported material shape for assembly
@@ -688,14 +691,16 @@ impl Game {
                 _ => return None,
             };
             elements.push((m.filter.clone(), count));
+            distincts.push(m.distinct_by);
         }
         if elements.is_empty() {
             return None;
         }
 
         // Eligibility: each element satisfiable from trash with distinct cards
-        // (DCGO `CanFulfillConditions` / recursive distinct-assignment check).
-        if !self.assembly_can_fulfill(player_id, target_card, &elements) {
+        // (DCGO `CanFulfillConditions` / recursive distinct-assignment check),
+        // honoring each element's `distinct_by` key.
+        if !self.assembly_can_fulfill(player_id, target_card, &elements, &distincts) {
             return None;
         }
 
@@ -810,17 +815,21 @@ impl Game {
         player_id: PlayerId,
         source_card: CardHandle,
         elements: &[(digimon_dsl::compiled::CompiledPredicate, u8)],
+        distincts: &[Option<digimon_dsl::compiled::CompiledDistinctBy>],
     ) -> bool {
         use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 
         let rctx = EffectReadContext::new(self, source_card, None, player_id);
         let trash = &self.player(player_id).trash;
 
-        // Expand elements into one slot per required card.
+        // Expand elements into one slot per required card, remembering each
+        // slot's element index (for the per-element `distinct_by` key).
         let mut slots: Vec<&digimon_dsl::compiled::CompiledPredicate> = Vec::new();
-        for (pred, count) in elements {
+        let mut slot_element: Vec<usize> = Vec::new();
+        for (e, (pred, count)) in elements.iter().enumerate() {
             for _ in 0..*count {
                 slots.push(pred);
+                slot_element.push(e);
             }
         }
         // For each slot, the trash indices that satisfy its filter.
@@ -838,70 +847,51 @@ impl Game {
             })
             .collect();
 
-        let mut used = vec![false; trash.len()];
-        if !assembly_assign(&match_table, 0, &mut used) {
-            return false;
-        }
+        // Per-element distinctness constraint over trash indices.
+        let element_distinct: Vec<AssemblyDistinct> = (0..elements.len())
+            .map(|e| match distincts.get(e).copied().flatten() {
+                None => AssemblyDistinct::None,
+                Some(digimon_dsl::compiled::CompiledDistinctBy::Color) => AssemblyDistinct::Colors(
+                    trash
+                        .iter()
+                        .map(|cs| {
+                            crate::effect_context::selections::color_mask(
+                                &self.card_data[cs.data_index].colors,
+                            )
+                        })
+                        .collect(),
+                ),
+                Some(mode) => AssemblyDistinct::Keys(
+                    trash
+                        .iter()
+                        .map(|cs| assembly_distinct_key(mode, &self.card_data[cs.data_index]))
+                        .collect(),
+                ),
+            })
+            .collect();
 
-        // `distinct_by` materials (BT26-085 Giant Slayer "5 different-level
-        // cards"): the element's picks must be pairwise distinct on the key,
-        // so the trash must hold at least `count` distinct keys among the
-        // element's matches. G-ENGINE-ASSEMBLY-DISTINCT-BY.
-        let mut slot = 0usize;
-        for (element_idx, (_, count)) in elements.iter().enumerate() {
-            let matches = &match_table[slot];
-            slot += *count as usize;
-            let Some(mode) = self.assembly_element_distinct_by(source_card, element_idx) else {
-                continue;
-            };
-            let mut keys: Vec<Option<String>> = Vec::new();
-            let mut keyless = 0usize;
-            for &t in matches {
-                let data = &self.card_data[trash[t].data_index];
-                let key = match mode {
-                    crate::effect_context::DistinctByMode::CardNumber => Some(data.card_id.clone()),
-                    crate::effect_context::DistinctByMode::Name => Some(data.card_name.clone()),
-                    crate::effect_context::DistinctByMode::Level => {
-                        data.level.map(|l| l.to_string())
-                    }
+        // Cheap necessary condition for a `Color` element: its filter-passing
+        // cards must contain `count` cards w/different colors (the transversal
+        // matroid's rank). Rejects the common unaffordable case without the
+        // backtracking search below (mask hot path).
+        for (e, (_, count)) in elements.iter().enumerate() {
+            if let AssemblyDistinct::Colors(masks) = &element_distinct[e] {
+                let Some(first_slot) = slot_element.iter().position(|&se| se == e) else {
+                    continue;
                 };
-                match key {
-                    Some(k) if !keys.contains(&Some(k.clone())) => keys.push(Some(k)),
-                    Some(_) => {}
-                    // A keyless card never conflicts (count_capped_rejects_distinct).
-                    None => keyless += 1,
+                let element_masks: Vec<u8> =
+                    match_table[first_slot].iter().map(|&t| masks[t]).collect();
+                if crate::effect_context::selections::max_color_matching(&element_masks)
+                    < usize::from(*count)
+                {
+                    return false;
                 }
             }
-            if keys.len() + keyless < *count as usize {
-                return false;
-            }
         }
-        true
-    }
 
-    /// The `distinct_by` key of assembly element `element_idx` on
-    /// `target_card`'s Assembly alt-path, if any. G-ENGINE-ASSEMBLY-DISTINCT-BY.
-    #[cfg(feature = "dsl-yaml-loader")]
-    fn assembly_element_distinct_by(
-        &self,
-        target_card: CardHandle,
-        element_idx: usize,
-    ) -> Option<crate::effect_context::DistinctByMode> {
-        use digimon_dsl::compiled::{CompiledAltPathKind, CompiledDistinctBy};
-        let card_id = self.card_data_for_handle(target_card)?.card_id.clone();
-        let path = self
-            .alt_path_registry
-            .get(&card_id)?
-            .iter()
-            .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
-        path.materials
-            .get(element_idx)?
-            .distinct_by
-            .map(|d| match d {
-                CompiledDistinctBy::CardNumber => crate::effect_context::DistinctByMode::CardNumber,
-                CompiledDistinctBy::Level => crate::effect_context::DistinctByMode::Level,
-                CompiledDistinctBy::Name => crate::effect_context::DistinctByMode::Name,
-            })
+        let mut used = vec![false; trash.len()];
+        let mut chosen: Vec<Option<usize>> = vec![None; slots.len()];
+        assembly_assign_keyed(&match_table, &slot_element, &element_distinct, 0, &mut used, &mut chosen)
     }
 
     pub(crate) fn commit_pending_would_play(
@@ -1060,6 +1050,30 @@ impl Game {
         modes
     }
 
+    /// <Arts Digivolve> base check: "your cards may digivolve into this card"
+    /// honours EVERY printed digivolution requirement of the DUAL card's
+    /// Digimon face — the standard level/colour circles (`can_digivolve`) AND
+    /// the special conditions authored as DSL alt-digivolve paths
+    /// ("[Digivolve] [Sistermon Blanc]: Cost 0", "Lv.2 w/[Huckmon] in text").
+    /// EX13-065 / EX13-066 print NO standard circles, so a circles-only check
+    /// left their Arts clause with no legal base. G-ENGINE-ARTS-ALT-PATH-BASE.
+    fn arts_can_digivolve_onto(
+        &self,
+        card: &crate::card_source::CardSource,
+        base: &crate::permanent::Permanent,
+        base_handle: PermanentHandle,
+    ) -> bool {
+        self.can_digivolve(card, base)
+            || !self.all_digivolve_routes_for_card(card, base_handle).is_empty()
+    }
+
+    fn arts_breeding_handle(owner: PlayerId) -> PermanentHandle {
+        PermanentHandle {
+            player: owner,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        }
+    }
+
     pub(crate) fn pending_option_can_arts_digivolve(&self) -> bool {
         let Some(pending) = self.pending_option.as_ref() else {
             return false;
@@ -1095,7 +1109,7 @@ impl Game {
                 if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
                     return None;
                 }
-                if self.can_digivolve(&pending.card, perm) {
+                if self.arts_can_digivolve_onto(&pending.card, perm, handle) {
                     Some(handle)
                 } else {
                     None
@@ -1111,7 +1125,7 @@ impl Game {
         let Some(breeding) = self.player(owner).breeding_area.as_ref() else {
             return false;
         };
-        self.can_digivolve(&pending.card, breeding)
+        self.arts_can_digivolve_onto(&pending.card, breeding, Self::arts_breeding_handle(owner))
     }
 
     pub(crate) fn install_arts_digivolve_selection(&mut self) -> bool {
@@ -1240,7 +1254,7 @@ impl Game {
         if self.modifiers.has(target, ModifierType::CannotDigivolve) {
             return false;
         }
-        if !self.can_digivolve(&pending_ref.card, perm) {
+        if !self.arts_can_digivolve_onto(&pending_ref.card, perm, target) {
             return false;
         }
         // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): honor a `CanOnlyDigivolveInto`
@@ -1307,7 +1321,7 @@ impl Game {
         let Some(breeding) = self.player(owner).breeding_area.as_ref() else {
             return false;
         };
-        if !self.can_digivolve(&pending_ref.card, breeding) {
+        if !self.arts_can_digivolve_onto(&pending_ref.card, breeding, Self::arts_breeding_handle(owner)) {
             return false;
         }
 
@@ -3596,24 +3610,98 @@ pub struct AssemblyPlayParams {
     pub(crate) assembly_reduction: i32,
 }
 
-/// Recursive system-of-distinct-representatives check: can each assembly
-/// slot be matched to a DISTINCT trash card? `match_table[slot]` lists the
-/// trash indices satisfying that slot's filter. Tiny inputs (≤ a few slots,
-/// trash bounded by deck size) keep the backtracking cheap.
+/// Recursive system-of-distinct-representatives check, extended with
+/// per-element distinctness keys (see `assembly_assign_keyed`). Tiny inputs
+/// (≤ a few slots, trash bounded by deck size) keep the backtracking cheap.
+///
+/// Distinctness key of a trash card under an Assembly element's `distinct_by`
+/// mode (`None` key ⇒ the card carries no value for the mode, e.g. a
+/// level-less card under `level`, and never collides).
 #[cfg(feature = "dsl-yaml-loader")]
-fn assembly_assign(match_table: &[Vec<usize>], slot: usize, used: &mut [bool]) -> bool {
+fn assembly_distinct_key(
+    mode: digimon_dsl::compiled::CompiledDistinctBy,
+    data: &crate::card_data::CardData,
+) -> Option<String> {
+    use digimon_dsl::compiled::CompiledDistinctBy as D;
+    match mode {
+        D::Name => Some(data.card_name.clone()),
+        D::CardNumber => Some(data.card_id.clone()),
+        D::Level => data.level.map(|l| l.to_string()),
+        // Set-level — handled by `AssemblyDistinct::Colors`, never keyed.
+        D::Color => None,
+    }
+}
+
+/// An Assembly element's distinctness constraint, pre-resolved per trash index.
+#[cfg(feature = "dsl-yaml-loader")]
+enum AssemblyDistinct {
+    /// No constraint beyond handle-distinctness.
+    None,
+    /// Pairwise key equality (`name` / `card_number` / `level`); a `None` key
+    /// never collides.
+    Keys(Vec<Option<String>>),
+    /// "w/different colors": per trash index the printed-color bitmask; the
+    /// element's chosen cards must be perfectly color-assignable.
+    Colors(Vec<u8>),
+}
+
+/// `assembly_assign` with per-element distinctness: a slot whose element has
+/// a `distinct_by` key may not take a card whose key matches a card already
+/// chosen for ANOTHER slot of the same element (G-ASSEMBLY-NO-DISTINCT-BY);
+/// a `Color` element's chosen cards must stay perfectly color-assignable
+/// (G-ASSEMBLY-DISTINCT-BY-COLOR).
+///
+/// Slots of one element are interchangeable (same filter, symmetric
+/// constraint), so a slot only takes trash indices ABOVE the previous
+/// same-element slot's pick — combinations, not permutations.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_assign_keyed(
+    match_table: &[Vec<usize>],
+    slot_element: &[usize],
+    element_distinct: &[AssemblyDistinct],
+    slot: usize,
+    used: &mut [bool],
+    chosen: &mut [Option<usize>],
+) -> bool {
     if slot >= match_table.len() {
         return true;
     }
+    let element = slot_element[slot];
+    let same_element_prev: Vec<usize> = (0..slot)
+        .filter(|&prev| slot_element[prev] == element)
+        .filter_map(|prev| chosen[prev])
+        .collect();
+    let floor = same_element_prev.last().copied();
     for &t in &match_table[slot] {
-        if !used[t] {
-            used[t] = true;
-            if assembly_assign(match_table, slot + 1, used) {
-                used[t] = false;
-                return true;
-            }
-            used[t] = false;
+        if used[t] || floor.is_some_and(|f| t <= f) {
+            continue;
         }
+        match &element_distinct[element] {
+            AssemblyDistinct::None => {}
+            AssemblyDistinct::Keys(keys) => {
+                if let Some(key) = &keys[t] {
+                    if same_element_prev.iter().any(|&c| keys[c].as_ref() == Some(key)) {
+                        continue;
+                    }
+                }
+            }
+            AssemblyDistinct::Colors(masks) => {
+                let mut set: Vec<u8> = same_element_prev.iter().map(|&c| masks[c]).collect();
+                set.push(masks[t]);
+                if !crate::effect_context::selections::colors_assignable(&set) {
+                    continue;
+                }
+            }
+        }
+        used[t] = true;
+        chosen[slot] = Some(t);
+        if assembly_assign_keyed(match_table, slot_element, element_distinct, slot + 1, used, chosen) {
+            used[t] = false;
+            chosen[slot] = None;
+            return true;
+        }
+        used[t] = false;
+        chosen[slot] = None;
     }
     false
 }
@@ -3642,6 +3730,7 @@ fn install_assembly_element(
     let is_first = element_idx == 0;
     let is_last = element_idx + 1 >= elements.len();
     let source_card = target_card;
+    let distinct_by = assembly_element_distinct_mode(game, target_card, element_idx);
 
     // Distinctness across elements: exclude handles already picked.
     let exclude = picked_so_far.clone();
@@ -3664,8 +3753,6 @@ fn install_assembly_element(
 
     let elements_for_cb = std::sync::Arc::clone(&elements);
     let picked_so_far_for_resume = picked_so_far.clone();
-    // Per-element pairwise distinctness (G-ENGINE-ASSEMBLY-DISTINCT-BY).
-    let distinct_by = game.assembly_element_distinct_by(target_card, element_idx);
     let mut ctx = EffectContext::new(game, source_card, None, player);
     let prov = crate::resume::ResumeProvenance {
         source_card: ctx.source_card,
@@ -3742,6 +3829,32 @@ fn install_assembly_element(
             )],
         });
     }
+}
+
+/// The `distinct_by` mode of the hand card's Assembly element `element_idx`,
+/// read back from the alt-path registry (so the per-element tuple type that
+/// threads through the resume frames stays unchanged).
+/// G-ASSEMBLY-NO-DISTINCT-BY.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_element_distinct_mode(
+    game: &Game,
+    target_card: CardHandle,
+    element_idx: usize,
+) -> Option<crate::effect_context::DistinctByMode> {
+    use digimon_dsl::compiled::{CompiledAltPathKind, CompiledDistinctBy as D};
+    use crate::effect_context::DistinctByMode;
+    let card_id = game.card_data_for_handle(target_card)?.card_id.clone();
+    let path = game
+        .alt_path_registry
+        .get(&card_id)?
+        .iter()
+        .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
+    path.materials.get(element_idx)?.distinct_by.map(|d| match d {
+        D::CardNumber => DistinctByMode::CardNumber,
+        D::Level => DistinctByMode::Level,
+        D::Name => DistinctByMode::Name,
+        D::Color => DistinctByMode::Color,
+    })
 }
 
 #[cfg(feature = "dsl-yaml-loader")]

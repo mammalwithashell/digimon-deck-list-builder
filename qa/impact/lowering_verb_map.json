@@ -188,6 +188,7 @@
       "place_self_under_permanent",
       "play_selected_sources_free",
       "recover",
+      "return_all_sources_to_deck",
       "return_all_trash_to_deck_bottom",
       "return_selected_sources_to_deck",
       "return_selected_sources_to_hand",
