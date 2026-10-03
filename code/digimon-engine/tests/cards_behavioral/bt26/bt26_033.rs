@@ -7,8 +7,9 @@
 //! [All Turns] When any of your [TS] trait Digimon or Tamers would leave the
 //! battle area, by placing this Digimon's top stacked card as the bottom
 //! security card, they don't leave.
-//! Option face (use cost +1 per own security card) is BLOCKED
-//! (G-ENGINE-OPTION-SELF-USE-COST-INCREASE) and left unauthored.
+//! Option face: use cost +1 per own security card
+//! (G-ENGINE-OPTION-SELF-USE-COST-INCREASE); [Main] delete all opponent's
+//! lowest-DP Digimon, then <Recovery +1>; <Arts Digivolve>.
 //!
 //! DCGO: BT26/Yellow/BT26_033.cs.
 
@@ -182,14 +183,49 @@ fn bt26_033_no_protection_without_stacked_cards_or_for_non_ts() {
 }
 
 #[test]
-fn bt26_033_option_face_is_not_usable_while_blocked() {
+fn bt26_033_option_use_cost_grows_with_own_security() {
+    // Use cost 2 + 1 per own security card (3) = 5.
     let mut r = setup();
+    push_hand(&mut r, 0, CARD_ID);
+    let card = r.game.players[0].hand.last().unwrap().clone();
+    assert_eq!(r.game.option_use_cost(&card, 0), 5);
+    r.game.players[0].security.pop();
+    assert_eq!(r.game.option_use_cost(&card, 0), 4, "re-read live");
+}
+
+#[test]
+fn bt26_033_option_unaffordable_at_the_increased_cost() {
+    // Memory -7: the printed 2 would end at -9 (legal), but 2 + 3 security
+    // ends at -12, past the -10 floor.
+    let mut r = setup();
+    r.game.memory = -7;
     r.place_on_field(0, "TS-T", Some(0));
     push_hand(&mut r, 0, CARD_ID);
     let idx = r.game.players[0].hand.len() - 1;
+    r.game.enter_main_phase();
+    let res = r.game.play_option_from_hand(0, idx);
+    assert_eq!(format!("{res:?}"), "Invalid");
+    assert!(hand_ids(&r, 0).contains(&CARD_ID.to_string())); // Control: with no security cards the cost is the printed 2 → usable.
+    r.game.players[0].security.clear();
+    let idx = r.game.players[0].hand.len() - 1;
+    let res = r.game.play_option_from_hand(0, idx);
+    assert_ne!(format!("{res:?}"), "Invalid");
+}
+
+#[test]
+fn bt26_033_option_main_deletes_all_lowest_dp_then_recovers() {
+    let mut r = setup();
+    r.game.memory = 10;
+    r.place_on_field(0, "TS-T", Some(0));
+    r.place_on_field(1, "PLAIN", Some(0)); // 4000 DP
+    r.place_on_field(1, "PLAIN", Some(0)); // 4000 DP (tie: both deleted)
+    r.place_on_field(1, "TS5", Some(0)); // 5000 DP
+    push_hand(&mut r, 0, CARD_ID);
+    let idx = r.game.players[0].hand.len() - 1;
+    r.game.enter_main_phase();
     let _ = r.game.play_option_from_hand(0, idx);
-    assert!(
-        hand_ids(&r, 0).contains(&CARD_ID.to_string()),
-        "Option face unauthored ⇒ not used"
-    );
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 1), vec!["TS5".to_string()]);
+    assert_eq!(r.security_count(0), 4, "<Recovery +1>");
+    assert_eq!(r.memory(), 10 - 5, "paid 2 + 3 security");
 }

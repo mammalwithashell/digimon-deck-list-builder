@@ -1029,6 +1029,11 @@ pub(crate) fn run_resume(
         ResumeFrame::LinkPickStep(state) => {
             crate::dsl_cards::step::link_cards::run_link_pick_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::ZoneCardPickStep(state) => {
+            crate::dsl_cards::step::zone_cards::run_zone_card_pick_step(
+                game, state, action_id, is_pass,
+            );
+        }
         ResumeFrame::DigivolveCostChoice(state) => {
             game.run_digivolve_cost_choice_step(state, action_id);
         }
@@ -5053,10 +5058,7 @@ fn install_use_option_from_hand(
             if use_cost_lte_opponent_memory {
                 let opponent = game.next_clockwise(player);
                 let ceiling = player_visible_memory(game, opponent);
-                let use_cost = card
-                    .option_use_cost(&game.card_data)
-                    .unwrap_or_else(|| card.play_cost(&game.card_data))
-                    as i16;
+                let use_cost = game.option_use_cost(card, target_player) as i16;
                 if use_cost > ceiling {
                     return false;
                 }

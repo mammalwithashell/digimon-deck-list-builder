@@ -33,6 +33,39 @@ use crate::permanent::PermanentHandle;
 pub(crate) const ADOPTED_OPT_KEY_BIT: u8 = 0x40;
 
 impl crate::game::Game {
+    /// The Option use cost of `card` for `player`: its printed use cost (a
+    /// DUAL's Option face, else the play cost) plus every self use-cost
+    /// increase printed on the card (G-ENGINE-OPTION-SELF-USE-COST-INCREASE,
+    /// DCGO `ChangeCostClass` on the card itself). Cost REDUCTIONS are applied
+    /// later, at payment.
+    pub fn option_use_cost(
+        &self,
+        card: &crate::card_source::CardSource,
+        player: crate::enums::PlayerId,
+    ) -> u16 {
+        let base = card
+            .option_use_cost(&self.card_data)
+            .unwrap_or_else(|| card.play_cost(&self.card_data)) as i32;
+        let card_id = card.card_id(&self.card_data).to_string();
+        let increase: i32 = self
+            .effects_for_card(&card_id, card.handle())
+            .map(|effects| {
+                let ctx = crate::effect_context::EffectReadContext::new(
+                    self,
+                    card.handle(),
+                    None,
+                    player,
+                );
+                effects
+                    .iter()
+                    .filter_map(|e| e.use_cost_increase_fn.as_ref())
+                    .map(|f| f(&ctx))
+                    .sum()
+            })
+            .unwrap_or(0);
+        (base + increase).clamp(0, u16::MAX as i32) as u16
+    }
+
     /// Indices into the battle-area permanent's `card_sources` whose
     /// non-inherited effects the permanent gains via `<Succession>` printed on
     /// its top card: for each Succession clause, the TOPMOST below-top card

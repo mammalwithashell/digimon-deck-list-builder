@@ -42,12 +42,11 @@
 # Option face: UseRequirements([TS]); ChangeCostClass +SecurityCards.Count on
 #   this card's own use cost; [Main] delete all opp Digimon with the lowest DP,
 #   then IRecovery(1); ArtsDigivolveEffect.
-#   → BLOCKED: the engine has no consult for a self use-cost INCREASE (cost
-#   reducers clamp at >= 0 and `ChangePlayCost` is never consulted on the
-#   Option-use path). The Option face is left unauthored (no [Main] clause), so
-#   the card cannot be used as an Option rather than being usable at a wrong
-#   (too cheap) cost. Gap: G-ENGINE-OPTION-SELF-USE-COST-INCREASE
-#   (docs/RUST_ENGINE_GAPS.md).
+#   → `kind: use_cost_increase { amount: own security count }` (read by
+#   Game::option_use_cost at affordability, payment and cost filters;
+#   G-ENGINE-OPTION-SELF-USE-COST-INCREASE) + `main_from_hand`:
+#   delete_all_permanents { opponent Digimon, lowest_dp } then recover 1;
+#   option.keywords [ArtsDigivolve].
 
 card: BT26-033
 name: "Jupitermon"
@@ -77,6 +76,7 @@ dual:
         trait_has: TS
     effect_text: "For each of your security cards, add 1 to this card's use cost. <Use Req. ([TS] trait)> [Main] Delete all of your opponent's Digimon with the lowest DP. Then, <Recovery +1>. <Arts Digivolve>"
     security_text: ""
+    keywords: [ArtsDigivolve]
 
 alt_paths:
   - kind: digivolve
@@ -147,3 +147,27 @@ effects:
           position: bottom
           face: down
       - cancel_replacement: {}
+
+  # ─── Option face: use cost +1 per own security card ─────────────────────────
+  - kind: use_cost_increase
+    amount:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: security
+      delta: 1
+    summary: "For each of your security cards, add 1 to this card's use cost"
+
+  # ─── Option face [Main]: delete all opponent's lowest-DP Digimon; then
+  #     <Recovery +1> ───────────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Delete all of your opponent's Digimon with the lowest DP. Then, <Recovery +1>"
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+          selector: lowest_dp
+      - recover: { of: you, count: 1 }

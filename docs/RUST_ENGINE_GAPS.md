@@ -4210,7 +4210,7 @@ suspend call — two *separate* suspend actions inside one effect body would als
 collapse. No printed card in the pool is known to do that; add an event id to
 `QueuedEffect` if one appears.
 
-## G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH — OPEN (found 2026-10-03, BT26-081 Mervamon)
+## G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH — RESOLVED (found 2026-10-03, BT26-081 Mervamon)
 
 BT26-081 Mervamon [On Play][When Digivolving]: "You may play up to 8 play cost's total
 worth of [Iliad] trait cards from your hand or trash without paying the costs. Then, ...".
@@ -4233,7 +4233,14 @@ approximation). The card's other clauses map onto existing vocabulary: alt paths
 `card_count_in_zone`), and the [All Turns] Iliad aura (grant_keyword Alliance / Reboot
 / Blocker + DP +2000 over `of: you, kind: digimon, trait_has: Iliad`).
 
-## G-ENGINE-OPTION-SELF-USE-COST-INCREASE — OPEN (found 2026-10-03, BT26-033 Jupitermon)
+
+**Fix (2026-10-03).** DSL `select_zone_cards { zones: [hand, trash], play_cost_budget }`
+— one prompt over both zones (PlayCostBudget kind, hand + trash ids), resumable
+`ZoneCardPickStep` frame — then `play_cards_free` (`Game::play_cards_from_zones_free`: all
+picks enter before any play trigger resolves). DCGO's zone-choice loop reaches exactly the
+same sets of cards. BT26-081 ships. Tests: bt26_081_*.
+
+## G-ENGINE-OPTION-SELF-USE-COST-INCREASE — RESOLVED (found 2026-10-03, BT26-033 Jupitermon)
 
 BT26-033's Option face (DUAL): "For each of your security cards, add 1 to this card's use
 cost." (BT26-097 prints the same shape.) DCGO: a `ChangeCostClass` on the card itself
@@ -4248,6 +4255,15 @@ delivered by auras but never read on the Option-use path (`play_option_core`,
 adjustment (formula over the controller's state) applied at every one of those sites.
 BT26-033 ships the Digimon face only (PARTIAL); its Option face is left unauthored so it
 is not usable at a too-cheap cost.
+
+
+**Fix (2026-10-03).** `Effect::use_cost_increase_fn` + `Game::option_use_cost(card, player)`
+(printed use cost + the card's own increases) now feeds every use-cost read: legal play
+modes / affordability (`option_legal_play_modes`), payment (`play_option_core`), the
+`play_or_use_cost_lte` / `affordable_with_cost_reduce` predicate leaves and the
+use-cost-vs-memory filter of effect uses. DSL: `kind: use_cost_increase { amount: <formula> }`.
+BT26-033's Option face ships ([Main] delete-all-lowest + Recovery +1, Arts Digivolve).
+Tests: bt26_033_option_*.
 
 ## G-ENGINE-SUCCESSION-KEYWORD — RESOLVED (found 2026-10-03, BT26-103 Jupitermon: Wrath Mode)
 
@@ -4327,7 +4343,7 @@ matches. Limitation: distinctness is per ELEMENT; cross-element distinctness (EX
 separate `distinct_by: name` entries) is still not enforced. Test:
 bt26_085_assembly_picks_five_different_levels_and_reduces_cost_by_five.
 
-## G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK — OPEN (found 2026-10-03, BT26-060 Chronomon: Destroy Mode)
+## G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK — RESOLVED (found 2026-10-03, BT26-060 Chronomon: Destroy Mode)
 
 BT26-060 [On Play][When Digivolving]: "Return the top 5 stacked cards of 3 of your opponent's
 Digimon to the top of the deck." DCGO (`BT26_060.cs`): mandatory pick of min(3, n) opponent
@@ -4341,6 +4357,16 @@ BLOCKED (also on G-ENGINE-SUCCESSION-KEYWORD for <Succession (Lv.6 w/[Chronomon]
 YAML shipped. Its other clauses map onto existing vocabulary: alt paths (Lv.6 w/[Chronomon] in
 text: 5; [Giant Slayer]: 5), Security A. +1 / Reboot / Blocker, and the [All Turns][OPT]
 `on_add_to_deck` may-delete (optional pick + `refund_opt`).
+
+
+**Fix (2026-10-03).** DSL `return_top_stacked_to_deck { targets, count, position }`
+(dsl_cards/step/zone_cards.rs): per target (skipping can't-be-affected and
+opponent-scoped `CannotBeReturnedToDeck`), the top min(count, stack - 1) cards (top card
+included); 2+ cards → an ORDERED pick (`OrderedPermutation`, SelectPermutation) over the
+cards still on the field, encoded as SOURCE_SELECT ids with `zone_owner` = their owner
+(fits the fixed action space — the 10-slot reveal range could not order 15 cards); then
+the return in pick order (pick 1 drawn first) and an own-effect `OnAddToDeck`. BT26-060
+ships (with `<Succession>`). Tests: bt26_060_*.
 
 ## G-ENGINE-LOSE-SECURITY-BY-EFFECT — RESOLVED (2026-10-03, BT26-089 Kyo Sawashiro)
 

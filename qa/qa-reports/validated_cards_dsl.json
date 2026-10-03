@@ -11411,12 +11411,12 @@
       "card_name": "Mervamon",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "TS / Iliad / Olympos XII",
-      "yaml_path": null,
-      "test_path": null,
-      "notes": "OP/WD \"play up to 8 play cost total worth of [Iliad] cards from hand or trash free\" needs an own-card play-cost-budget multi-select over hand+trash + simultaneous mixed-zone free play: G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH (docs/RUST_ENGINE_GAPS.md). No YAML shipped (omitting the clause would approximate). Other clauses map to existing vocab."
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Mervamon",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_081.rs",
+      "notes": "OP/WD up to 8 play cost of [Iliad] from hand+trash in one budget pick, played simultaneously (select_zone_cards + play_cards_free); DP tail per Q&A; Iliad aura; alt paths + Assembly."
     },
     "BT26-073": {
       "card_name": "Aegiochusmon: Dark",
@@ -11444,12 +11444,12 @@
       "card_name": "Jupitermon",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "TS Jupitermon / Aegiochusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-033.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_033.rs",
-      "notes": "Digimon face complete (Raid/Alliance/Engage, WD sec->hand + play/use Iliad/TS -5, TS leave-protection via new security_place_top_card). Option face BLOCKED on G-ENGINE-OPTION-SELF-USE-COST-INCREASE (use cost +1 per own security) - left unauthored so it is not usable at a wrong cost."
+      "notes": "Digimon face + Option face: use cost +1 per own security (kind: use_cost_increase, G-ENGINE-OPTION-SELF-USE-COST-INCREASE resolved); [Main] delete all lowest-DP opp Digimon + Recovery +1; Arts Digivolve."
     },
     "BT26-103": {
       "card_name": "Jupitermon: Wrath Mode",
@@ -11609,12 +11609,12 @@
       "card_name": "Chronomon: Destroy Mode",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "TS / Iliad (Chronomon line)",
-      "yaml_path": null,
-      "test_path": null,
-      "notes": "<Succession (Lv.6 w/[Chronomon] in name)> now expressible (kind: succession); OP/WD 'return the top 5 stacked cards of 3 opponent Digimon to the top of the deck' (player-ordered, keep >=1, stack-return immunity) blocked on G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK (docs/RUST_ENGINE_GAPS.md). No YAML shipped. The [All Turns][OPT] on_add_to_deck may-delete, alt paths and keywords map onto existing vocab (on_add_to_deck added this slice)."
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronomon",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_060.rs",
+      "notes": "<Succession (Lv.6 [Chronomon])>; OP/WD return top 5 stacked of 3 opp Digimon to deck top in a controller-ordered pick (return_top_stacked_to_deck, G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK resolved); [All Turns][OPT] own deck add -> may delete with refund."
     },
     "BT26-085": {
       "card_name": "Giant Slayer",
@@ -12034,12 +12034,12 @@
       "card_name": "Seven Code PAD",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "BLOCKED",
-      "gap_kind": "dsl_vocab",
-      "archetype": "Appmon Dantemon (Seven Code)",
-      "yaml_path": null,
-      "test_path": null,
-      "notes": "[Main] needs a multi-zone 'place exactly 6 Seven Code Digimon cards from battle area / link cards / trash as bottom digivolution cards' cost + ignore-requirements free digivolve into [Dantemon] \u2014 no DSL step (G-DSL-PLACE-MATERIALS-MULTI-ZONE). Not shipped with only its [Security] half (no approximations)."
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Apps Dantemon",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_102.rs",
+      "notes": "[Main] exactly-6 [Seven Code] materials from battle area / link cards / trash in one pick (select_zone_cards + place_cards_as_bottom_sources), optional free digivolve into Dantemon; [Security] free Appmon <=5 from hand/trash then to hand."
     }
   }
 }

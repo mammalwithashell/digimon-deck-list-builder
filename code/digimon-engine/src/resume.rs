@@ -474,6 +474,10 @@ pub enum ResumeFrame {
     /// closure callbacks. The post-attach `install_pick(K+1)` runs inline exactly
     /// as the closure path does. See [`crate::dsl_cards::step::link_cards::LinkPickState`].
     LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    /// Zone-card multi-pick (`select_zone_cards` / `return_top_stacked_to_deck`):
+    /// concrete cards across hand / trash / stacks / link cards, set or ordered,
+    /// optional play-cost budget. See `dsl_cards::step::zone_cards`.
+    ZoneCardPickStep(crate::dsl_cards::step::zone_cards::ZoneCardPickState),
     /// Digivolve cost-choice (rule 17 — a base satisfies >1 of a hand card's
     /// digivolution requirements at different costs). A top-level player action,
     /// so it carries no `outer_conts` and is never nested in a DSL clause;

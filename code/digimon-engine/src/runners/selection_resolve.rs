@@ -425,6 +425,31 @@ fn source_multi_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, St
     )
 }
 
+/// `(action_id, card_id)` pairs of a parked zone-card pick
+/// (`select_zone_cards` / `return_top_stacked_to_deck`): candidates span hand,
+/// trash, stack and link cards, so each live option is decoded through the
+/// frame itself (`dsl_cards::step::zone_cards`). `None` when the live prompt is
+/// not a zone-card pick.
+fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
+    use crate::resume::ResumeFrame;
+    let stack = game.pending_selection_resume.as_ref()?;
+    let state = stack.frames.iter().rev().find_map(|f| match f {
+        ResumeFrame::ZoneCardPickStep(s) => Some(s),
+        _ => None,
+    })?;
+    let pairs: Vec<(u16, String)> = state
+        .candidates
+        .iter()
+        .filter(|c| !state.picked.contains(c))
+        .filter_map(|c| {
+            let id = crate::dsl_cards::step::zone_cards::encode_zone_card(game, *c)?;
+            let card_id = game.card_data_for_handle(*c)?.card_id.clone();
+            valid.contains(&id).then_some((id, card_id))
+        })
+        .collect();
+    (!pairs.is_empty()).then_some(pairs)
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -639,6 +664,18 @@ pub fn resolve_next(
                 .map(|c| c.card_id(&game.card_data).to_string())
                 .collect()
         };
+        // A zone-card pick (hand / trash / stack / link cards in one prompt)
+        // carries its own candidate list; it is answered from the parked frame
+        // whatever kind tag it shows (CountCappedMultiSelect / PlayCostBudget /
+        // OrderedPermutation).
+        if let Some(pairs) = zone_card_candidate_ids(game, valid) {
+            if let Some(id) = pairs
+                .iter()
+                .find_map(|(id, cid)| (cid == want && accepts(*id)).then_some(*id))
+            {
+                return Ok(Some(id));
+            }
+        }
         let hit = match pending.kind {
             SelectionKind::Hand | SelectionKind::UnionZone { .. } => find_id(
                 &zone_card_ids(&game.player(zone_owner).hand),

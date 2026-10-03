@@ -1015,9 +1015,7 @@ impl Game {
         let effects = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
             .unwrap_or_default();
-        let use_cost = card
-            .option_use_cost(&self.card_data)
-            .unwrap_or_else(|| card.play_cost(&self.card_data));
+        let use_cost = self.option_use_cost(card, player_id);
         let memory_min = self.rules.memory_range.0;
         let mut modes = classify_option_modes(&effects);
         modes.retain(|mode| {
@@ -2120,6 +2118,11 @@ impl Game {
                 .get(h.index as usize)
                 .and_then(|perm| perm.card_sources.get(i)),
             CardSourceRef::Reveal(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
+            CardSourceRef::Link(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.linked_cards.get(i)),
         }
     }
 
@@ -2171,6 +2174,12 @@ impl Game {
                 .iter()
                 .find(|c| c.handle() == h)
                 .map(|c| (c.handle(), c.data_index, Zone::Reveal)),
+            CardSourceRef::Link(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.linked_cards.get(i))
+                .map(|c| (c.handle(), c.data_index, Zone::BattleArea)),
         }
     }
 

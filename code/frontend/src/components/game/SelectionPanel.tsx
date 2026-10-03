@@ -159,7 +159,9 @@ export function SelectionPanel({
     cards = (cardZoneSelectionTiles(pendingSelection, zoneCtx) ?? []).map((t) => ({
       cardId: t.cardId,
       actionId: t.actionId,
-      isValid: actionMask[t.actionId] === 1,
+      // The pending selection is the click-routing authority (the mask can
+      // lag a render), as for hand picks.
+      isValid: validActionIds.has(t.actionId),
       label: t.zone === 'hand' ? 'Hand' : t.zone === 'trash' ? 'Trash' : undefined,
     }));
   } else if (isSourceSelect) {

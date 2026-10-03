@@ -8623,7 +8623,7 @@ pins that the turn scan does not trash such a marker.
   `select_reveal_buckets` bucket) so the pick can be kind-routed to
   `use_option_from_revealed` / `play_from_revealed_free`. Tests `bt26_084_*`.
 
-## Multi-zone "place N cards as bottom digivolution cards" from battle area / link cards / trash  [G-DSL-PLACE-MATERIALS-MULTI-ZONE] — OPEN (BLOCKS BT26-102)
+## Multi-zone "place N cards as bottom digivolution cards" from battle area / link cards / trash  [G-DSL-PLACE-MATERIALS-MULTI-ZONE] — RESOLVED 2026-10-03
 
 - Found 2026-10-03 (BT26-102 Seven Code PAD [Main] "By placing 6 [Seven Code] trait Digimon cards
   from your battle area, link cards or trash as 1 of your [Seven Code] trait Digimon's bottom
@@ -8637,3 +8637,9 @@ pins that the turn scan does not trash such a marker.
   single "exactly N" cost; the fate of a consumed permanent's remaining stack is also
   unspecified in DCGO (it only moves `TopCard`). BT26-102 left unimplemented (BLOCKED) rather
   than shipping only its [Security] half.
+- **Resolved.** `select_zone_cards { zones: [battle_area, link_cards, trash], min: 6, max: 6,
+  optional_zero: true, exclude: host }` — one prompt over all three zones (battle-area
+  Digimon as their stack's top SOURCE_SELECT id, link cards past the stack, trash ids);
+  "0 or exactly 6"; then `place_cards_as_bottom_sources` (a moved single-card Digimon leaves
+  the field without being deleted; the `target` binding is re-pointed at the host).
+  `CardSourceRef::Link` added for link-card moves. BT26-102 ships. Tests: bt26_102_*.

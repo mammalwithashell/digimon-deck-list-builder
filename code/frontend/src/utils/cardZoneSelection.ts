@@ -57,6 +57,8 @@ export function cardZoneSelectionTiles(
   const area = opponentZone ? ctx.opponentBattleArea : ctx.ownBattleArea;
   const tiles: CardZoneTile[] = [];
   for (const id of pending.validIndices) {
+    // Optional picks list PASS among their valid ids; it is the Decline button.
+    if (id === SELECTION.DECLINE) continue;
     if (isHandAction(id)) {
       // An opponent's hand is hidden: never a card-zone pick for us.
       if (opponentZone) return null;
@@ -88,13 +90,20 @@ export function isCardZoneSelection(
   ctx: CardZoneContext,
 ): boolean {
   if (!pending || pending.keywordPrompt) return false;
-  if (pending.validIndices.length === 0) return false;
+  if (!pending.validIndices.some((id) => id !== SELECTION.DECLINE))
+    return false;
   if (
     isFieldSelectionKind(pending.kind) ||
     isAnyFieldSelectionKind(pending.kind)
   )
     return false;
   // Trash-only prompts belong to TrashSelectModal.
-  if (pending.validIndices.every(isTrashAction)) return false;
+  if (
+    pending.validIndices
+      .filter((id) => id !== SELECTION.DECLINE)
+      .every(isTrashAction)
+  ) {
+    return false;
+  }
   return cardZoneSelectionTiles(pending, ctx) !== null;
 }

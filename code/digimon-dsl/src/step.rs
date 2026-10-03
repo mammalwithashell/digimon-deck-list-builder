@@ -443,6 +443,10 @@ pub enum StepSpec {
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOpponentPlayCostBudget(SelectOpponentPlayCostBudgetArgs),
+    SelectZoneCards(SelectZoneCardsArgs),
+    PlayCardsFree(PlayCardsFreeArgs),
+    PlaceCardsAsBottomSources(PlaceCardsAsBottomSourcesArgs),
+    ReturnTopStackedToDeck(ReturnTopStackedToDeckArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
     SelectRevealBuckets(SelectRevealBucketsArgs),
@@ -755,6 +759,10 @@ impl Serialize for StepSpec {
             StepSpec::SelectOpponentSources(v) => kv!(s, "select_opponent_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
+            StepSpec::SelectZoneCards(v) => kv!(s, "select_zone_cards", v),
+            StepSpec::PlayCardsFree(v) => kv!(s, "play_cards_free", v),
+            StepSpec::PlaceCardsAsBottomSources(v) => kv!(s, "place_cards_as_bottom_sources", v),
+            StepSpec::ReturnTopStackedToDeck(v) => kv!(s, "return_top_stacked_to_deck", v),
             StepSpec::SelectOpponentPlayCostBudget(v) => {
                 kv!(s, "select_opponent_play_cost_budget", v)
             }
@@ -1043,6 +1051,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_opponent_sources" => StepSpec::SelectOpponentSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
+            "select_zone_cards" => StepSpec::SelectZoneCards(map.next_value()?),
+            "play_cards_free" => StepSpec::PlayCardsFree(map.next_value()?),
+            "place_cards_as_bottom_sources" => {
+                StepSpec::PlaceCardsAsBottomSources(map.next_value()?)
+            }
+            "return_top_stacked_to_deck" => StepSpec::ReturnTopStackedToDeck(map.next_value()?),
             "select_opponent_play_cost_budget" => {
                 StepSpec::SelectOpponentPlayCostBudget(map.next_value()?)
             }
@@ -3389,6 +3403,119 @@ pub struct SelectOpponentDpBudgetArgs {
 /// play cost exceeds the budget is excluded outright. Models card text of
 /// the form "delete up to N play cost's total worth of their Digimon".
 /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+/// A zone a `select_zone_cards` candidate may come from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ZoneCardZone {
+    Hand,
+    Trash,
+    /// The TOP card of each of the player's battle-area permanents (a
+    /// "[X] Digimon card from your battle area").
+    BattleArea,
+    /// Every link card of the player's battle-area permanents.
+    LinkCards,
+}
+
+fn zone_cards_unbounded() -> u8 {
+    u8::MAX
+}
+
+fn is_zone_cards_unbounded(v: &u8) -> bool {
+    *v == u8::MAX
+}
+
+/// `select_zone_cards:` — pick concrete CARDS across several zones in ONE
+/// prompt (one card per decision, PASS to finish), bound as a card list.
+/// G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH (BT26-081 "up to 8 play cost's
+/// total worth of [Iliad] cards from your hand or trash"),
+/// G-DSL-PLACE-MATERIALS-MULTI-ZONE (BT26-102 "6 [Seven Code] Digimon cards
+/// from your battle area, link cards or trash").
+///
+/// Action ids reuse the existing ranges (hand, trash, digivolution-source —
+/// a battle-area top card is its stack's top index, a link card follows the
+/// stack), so the selection is fully in the RL action space and the UI's
+/// card-zone picker renders it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectZoneCardsArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub zones: Vec<ZoneCardZone>,
+    pub filter: PredicateSpec,
+    /// Picks required before PASS can finish (see `optional_zero`).
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub min: u8,
+    /// Most cards that may be picked (default: unbounded).
+    #[serde(
+        default = "zone_cards_unbounded",
+        skip_serializing_if = "is_zone_cards_unbounded"
+    )]
+    pub max: u8,
+    /// PASS is also legal with zero picks: "0 or at least `min`" (an
+    /// all-or-nothing cost such as BT26-102's "by placing 6 …").
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional_zero: bool,
+    /// "Up to N play cost's total worth": each pick's play cost must fit the
+    /// remaining budget.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub play_cost_budget: Option<crate::formula::FormulaSpec>,
+    /// Exclude this permanent as a `battle_area` pick (e.g. the Digimon the
+    /// materials go under). Its link cards stay eligible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exclude: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+/// `play_cards_free:` — play every card of a card-list binding (hand and/or
+/// trash) SIMULTANEOUSLY without paying their costs; their play triggers form
+/// one event. Cards that can no longer be played (moved, no field slot, an
+/// effect forbids it) are skipped. BT26-081 Mervamon.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayCardsFreeArgs {
+    pub cards: BindingRef,
+}
+
+/// `place_cards_as_bottom_sources:` — place every card of a card-list binding
+/// (hand / trash / a battle-area stack / a link card) under `target` as its
+/// bottom digivolution cards, in list order. A battle-area Digimon whose only
+/// card is moved leaves the field (it is not deleted). BT26-102.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceCardsAsBottomSourcesArgs {
+    pub cards: BindingRef,
+    pub target: BindingRef,
+}
+
+fn stack_position_top() -> StackPosition {
+    StackPosition::Top
+}
+
+/// `return_top_stacked_to_deck:` — from each permanent of `targets`, return
+/// its top `count` stacked cards (top card included; at least 1 card always
+/// stays) to their owner's deck, in an order the controller chooses (one
+/// ordered pick per card over the cards still on the field). Permanents
+/// immune to having stacked cards trashed/returned by the opponent's effects
+/// are skipped. An own-effect deck add (`on_add_to_deck` fires).
+/// G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK (BT26-060 Chronomon: Destroy Mode).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnTopStackedToDeckArgs {
+    pub targets: BindingRef,
+    pub count: crate::formula::FormulaSpec,
+    #[serde(default = "stack_position_top")]
+    pub position: StackPosition,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentPlayCostBudgetArgs {

@@ -149,6 +149,10 @@ pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 /// Predicate used by parameterized `<Overclock (...)>` to decide which own
 /// battle-area permanents can be deleted as the cost.
+/// A card's own use-cost INCREASE, read from the controller's state
+/// (BT26-033 Jupitermon's Option face: "For each of your security cards, add 1
+/// to this card's use cost"). G-ENGINE-OPTION-SELF-USE-COST-INCREASE.
+pub type UseCostFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 /// `<Succession ([X])>` source filter: does the digivolution card at
 /// `source` (a below-top card of the carrier) match the keyword's `[X]`?
 pub type SuccessionFilterFn = Box<
@@ -411,6 +415,9 @@ pub struct Effect {
     /// TOPMOST digivolution card this filter matches — see
     /// `Game::succession_source_indices`.
     pub succession_filter: Option<SuccessionFilterFn>,
+    /// Self use-cost increase (see [`UseCostFn`]); summed by
+    /// `Game::option_use_cost`.
+    pub use_cost_increase_fn: Option<UseCostFn>,
     pub alt_path_registration: Option<AltPathRegistrationEffect>,
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
@@ -874,6 +881,7 @@ impl EffectBuilder {
                 link_cost: None,
                 link_filter: None,
                 succession_filter: None,
+                use_cost_increase_fn: None,
                 alt_path_registration: None,
                 training: false,
                 linked: false,
@@ -1351,6 +1359,15 @@ impl EffectBuilder {
             + 'static,
     {
         self.inner.succession_filter = Some(Box::new(filter));
+        self
+    }
+
+    /// Mark this declarative effect as a self use-cost increase.
+    pub fn use_cost_increase<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.use_cost_increase_fn = Some(Box::new(f));
         self
     }
 

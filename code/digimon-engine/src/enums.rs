@@ -1064,6 +1064,9 @@ pub enum CardSourceRef {
     PendingSecurity,
     Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
+    /// A LINK card of a battle-area permanent: `(host, index into
+    /// linked_cards)` (BT26-102 Seven Code PAD materials from link cards).
+    Link(crate::permanent::PermanentHandle, usize),
 }
 
 /// Facet #9 — the source zone a chosen card is lifted from when an effect

@@ -1675,6 +1675,98 @@ impl Game {
         true
     }
 
+    /// The battle-area permanent whose TOP card is `card`, if any.
+    pub fn permanent_with_top_card(
+        &self,
+        card: crate::card_source::CardHandle,
+    ) -> Option<PermanentHandle> {
+        for (pid, player) in self.players.iter().enumerate() {
+            for (i, perm) in player.battle_area.iter().enumerate() {
+                if perm.card_sources.last().is_some_and(|c| c.handle() == card) {
+                    return Some(PermanentHandle {
+                        player: pid as PlayerId,
+                        index: i as u8,
+                    });
+                }
+            }
+        }
+        None
+    }
+
+    /// Effect-initiated SIMULTANEOUS free play of `controller`'s hand / trash
+    /// cards (`play_cards_free`, BT26-081 Mervamon "play up to 8 play cost's
+    /// total worth of [Iliad] trait cards from your hand or trash without
+    /// paying the costs" — DCGO `PlayPermanentCards` over the whole list).
+    /// Only Digimon / Tamer cards are played; a card no longer in its zone,
+    /// or one an effect forbids playing / without a free field slot, is
+    /// skipped. All cards enter before any of their play triggers resolve.
+    pub fn play_cards_from_zones_free(
+        &mut self,
+        controller: PlayerId,
+        cards: &[crate::card_source::CardHandle],
+    ) -> usize {
+        use crate::enums::{CardKind, CardSourceRef};
+        let mut taken_cards: Vec<CardSource> = Vec::new();
+        let mut required_slots = 0usize;
+        for &card in cards {
+            let Some(src) = self.locate_card_source_ref(card) else {
+                continue;
+            };
+            let in_own_zone = matches!(
+                src,
+                CardSourceRef::Hand(p, _) | CardSourceRef::Trash(p, _) if p == controller
+            );
+            if !in_own_zone {
+                continue;
+            }
+            if !matches!(
+                self.card_kind_for_handle(card),
+                Some(CardKind::Digimon) | Some(CardKind::Tamer)
+            ) {
+                continue;
+            }
+            if !self.can_play_card_from_effect_without_cost(controller, card, required_slots + 1) {
+                continue;
+            }
+            let _ = src;
+            if let Some(taken) = self.take_card_by_handle(card) {
+                required_slots += 1;
+                taken_cards.push(taken);
+            }
+        }
+
+        let turn = self.turn_count;
+        let mut entered = Vec::with_capacity(taken_cards.len());
+        for mut card_source in taken_cards {
+            card_source.face_down = false;
+            let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let emitted_card_name = card_source.card_name(&self.card_data).to_string();
+            let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
+            let player = self.player_mut(controller);
+            player
+                .battle_area
+                .push(crate::permanent::Permanent::new(card_source, turn));
+            let field_index = player.battle_area.len() - 1;
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Play {
+                seq,
+                player: controller,
+                card_id: emitted_card_id,
+                card_name: emitted_card_name,
+                field_index: field_index as u8,
+                cost_paid: 0,
+                cost_printed,
+                via_alt_path: None,
+            });
+            entered.push(field_index);
+        }
+        let n = entered.len();
+        for field_index in entered {
+            self.fire_play_event_triggers(controller, field_index, true, false);
+        }
+        n
+    }
+
     pub fn can_play_card_from_effect_without_cost(
         &self,
         player_id: PlayerId,

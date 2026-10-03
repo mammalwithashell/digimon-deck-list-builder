@@ -21,6 +21,7 @@ pub mod play_digivolve;
 pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
+pub mod zone_cards;
 pub mod zone_moves;
 
 use digimon_dsl::compiled::{
@@ -285,6 +286,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromTrashStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::ZoneCardPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DigivolveReducerPrompt(_))
             | Some(ResumeFrame::DigivolveReducerSuspend(_))
@@ -613,6 +615,16 @@ fn run_steps_with_runtime_inner(
         // pick loop of chained selections. It always either parks on a pending
         // selection or runs the captured tail synchronously — in both cases the
         // outer loop must stop (the tail was consumed inside the step).
+        // `select_zone_cards` / `return_top_stacked_to_deck` capture the tail
+        // like `link_cards` (parked selection or tail already run).
+        if zone_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+            return if ctx.game.pending_selection.is_some() {
+                RunOutcome::Parked
+            } else {
+                RunOutcome::Synchronous
+            };
+        }
+
         if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
             return if ctx.game.pending_selection.is_some() {
                 RunOutcome::Parked
@@ -671,6 +683,40 @@ pub fn run_step_with_runtime(
     }
     if draw::try_run(step, ctx, bindings) {
         return;
+    }
+    match step {
+        CompiledStep::PlayCardsFree { cards } => {
+            if let Some(list) = resolve_card_list(cards, ctx, bindings) {
+                zone_cards::play_cards_free(ctx, &list);
+            }
+            return;
+        }
+        CompiledStep::PlaceCardsAsBottomSources {
+            cards,
+            target: target_ref,
+        } => {
+            let target =
+                match crate::dsl_cards::binding_ref::resolve_binding_ref(target_ref, ctx, bindings)
+                {
+                    Some(crate::dsl_cards::binding_ref::ResolvedBinding::Permanent(h)) => Some(h),
+                    _ => None,
+                };
+            if let (Some(list), Some(target_handle)) =
+                (resolve_card_list(cards, ctx, bindings), target)
+            {
+                // Keep a named target binding pointing at the host after
+                // indices shift (a moved battle-area Digimon leaves the field).
+                if let Some(host) =
+                    zone_cards::place_cards_as_bottom_sources(ctx, &list, target_handle)
+                {
+                    if let digimon_dsl::compiled::CompiledBindingRef::Named(name) = target_ref {
+                        bindings.insert_permanent(name, host);
+                    }
+                }
+            }
+            return;
+        }
+        _ => {}
     }
     if zone_moves::try_run(step, ctx, bindings, runtime) {
         return;
@@ -880,4 +926,18 @@ fn try_run_link_step_from_security(
     ctx.game
         .install_link_host_selection(owner, source_card, candidates, optional);
     true
+}
+
+/// Resolve a binding to a list of card handles (a single card, or a card list).
+fn resolve_card_list(
+    r: &digimon_dsl::compiled::CompiledBindingRef,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<Vec<crate::card_source::CardHandle>> {
+    use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+    match resolve_binding_ref(r, ctx, bindings)? {
+        ResolvedBinding::Card(h) => Some(vec![h]),
+        ResolvedBinding::CardList(v) => Some(v),
+        _ => None,
+    }
 }

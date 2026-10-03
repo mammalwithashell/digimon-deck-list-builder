@@ -355,6 +355,8 @@ pub enum DeclarativeKind {
     // `<Succession ([X])>` — G-ENGINE-SUCCESSION-KEYWORD. (A plain comment: a
     // doc comment here turns the schema's string enum into a oneOf.)
     Succession,
+    // G-ENGINE-OPTION-SELF-USE-COST-INCREASE.
+    UseCostIncrease,
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +380,7 @@ pub enum TypedDeclarativeBody {
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
     Succession(SuccessionBody),
+    UseCostIncrease(UseCostIncreaseBody),
 }
 
 impl DeclarativeClause {
@@ -428,6 +431,9 @@ impl DeclarativeClause {
             }
             DeclarativeKind::Succession => {
                 TypedDeclarativeBody::Succession(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::UseCostIncrease => {
+                TypedDeclarativeBody::UseCostIncrease(serde_yml::from_value(value)?)
             }
         })
     }
@@ -860,6 +866,16 @@ pub struct FloodGateBody {
 #[serde(deny_unknown_fields)]
 pub struct SuccessionBody {
     pub filter: PredicateSpec,
+}
+
+/// Body for `kind: use_cost_increase` — "add N to this card's use cost"
+/// (BT26-033 Jupitermon's Option face: "For each of your security cards, add 1
+/// to this card's use cost"). `amount` is evaluated for the card's owner
+/// whenever the use cost is read (affordability, payment, cost filters).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseCostIncreaseBody {
+    pub amount: crate::formula::FormulaSpec,
 }
 
 /// Body for `kind: alt_path_registration`.

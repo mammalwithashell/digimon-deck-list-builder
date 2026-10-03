@@ -28,6 +28,8 @@ interface SourceLike {
 }
 interface PermLike {
   sources: SourceLike[];
+  /** Link cards; a source index past the stack addresses `linkedCardIds[i - stack length]`. */
+  linkedCardIds?: string[];
 }
 export interface SourceTile {
   actionId: number;
@@ -63,8 +65,14 @@ export function sourceSelectionCards(
     const top = perm.sources.find((s) => s.isTop);
     const stack = [...perm.sources.filter((s) => !s.isTop), ...(top ? [top] : [])];
     const card = stack[sourceIndex];
-    if (!card) continue;
-    tiles.push({ actionId: id, cardId: card.cardId, cardName: card.cardName });
+    if (card) {
+      tiles.push({ actionId: id, cardId: card.cardId, cardName: card.cardName });
+      continue;
+    }
+    // Past the stack: the engine's zone-card picks encode a LINK card there
+    // (`zone_cards.rs`, BT26-102 Seven Code PAD materials).
+    const linkId = perm.linkedCardIds?.[sourceIndex - stack.length];
+    if (linkId) tiles.push({ actionId: id, cardId: linkId, cardName: null });
   }
   return tiles;
 }

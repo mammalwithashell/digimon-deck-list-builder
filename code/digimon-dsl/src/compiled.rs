@@ -1170,6 +1170,13 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    /// `kind: use_cost_increase`.
+    UseCostIncrease {
+        scope: CompiledScope,
+        amount: CompiledFormula,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     /// `<Succession ([X])>` (`kind: succession`).
     Succession {
         scope: CompiledScope,
@@ -2349,6 +2356,35 @@ pub enum CompiledStep {
     /// budget can scale at run time — e.g. P-094 Destromon's "3 + 1 per [Vemmon]
     /// in this Digimon's digivolution cards". A bare integer YAML literal
     /// compiles to `CompiledFormula::Literal`, preserving scalar users (EX4-073).
+    /// `select_zone_cards` (see `crate::step::SelectZoneCardsArgs`).
+    SelectZoneCards {
+        of: CompiledPlayerRef,
+        zones: Vec<crate::step::ZoneCardZone>,
+        filter: CompiledPredicate,
+        min: u8,
+        max: u8,
+        optional_zero: bool,
+        play_cost_budget: Option<CompiledFormula>,
+        exclude: Option<CompiledBindingRef>,
+        bind_as: Option<String>,
+        prompt: String,
+    },
+    /// `play_cards_free` (see `crate::step::PlayCardsFreeArgs`).
+    PlayCardsFree {
+        cards: CompiledBindingRef,
+    },
+    /// `place_cards_as_bottom_sources`.
+    PlaceCardsAsBottomSources {
+        cards: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
+    /// `return_top_stacked_to_deck`.
+    ReturnTopStackedToDeck {
+        targets: CompiledBindingRef,
+        count: CompiledFormula,
+        position: CompiledStackPosition,
+        prompt: String,
+    },
     SelectOpponentPlayCostBudget {
         play_cost_budget: CompiledFormula,
         min_picks: u8,

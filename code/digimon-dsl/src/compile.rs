@@ -2403,6 +2403,12 @@ fn compile_declarative(
             summary,
             summary_key,
         },
+        B::UseCostIncrease(u) => CompiledDeclarativeClause::UseCostIncrease {
+            scope,
+            amount: compile_formula(&u.amount, &format!("{prefix}.amount"), card_id, errors),
+            summary,
+            summary_key,
+        },
         B::Succession(sc) => CompiledDeclarativeClause::Succession {
             scope,
             active_when,
@@ -3789,6 +3795,33 @@ fn compile_step(
                 .enumerate()
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
+        },
+        S::SelectZoneCards(a) => CompiledStep::SelectZoneCards {
+            of: compile_player_ref(a.of),
+            zones: a.zones.clone(),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            min: a.min,
+            max: a.max,
+            optional_zero: a.optional_zero,
+            play_cost_budget: a.play_cost_budget.as_ref().map(|f| {
+                compile_formula(f, &format!("{prefix}.play_cost_budget"), card_id, errors)
+            }),
+            exclude: a.exclude.as_ref().map(compile_binding_ref),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+        },
+        S::PlayCardsFree(a) => CompiledStep::PlayCardsFree {
+            cards: compile_binding_ref(&a.cards),
+        },
+        S::PlaceCardsAsBottomSources(a) => CompiledStep::PlaceCardsAsBottomSources {
+            cards: compile_binding_ref(&a.cards),
+            target: compile_binding_ref(&a.target),
+        },
+        S::ReturnTopStackedToDeck(a) => CompiledStep::ReturnTopStackedToDeck {
+            targets: compile_binding_ref(&a.targets),
+            count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
+            position: compile_stack_position(a.position),
+            prompt: a.prompt.clone(),
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: compile_formula(

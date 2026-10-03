@@ -1,0 +1,140 @@
+# BT26-081 Mervamon — Digimon, Lv.6, Purple/Yellow/Black, DP 13000, Cost 13.
+#   Traits: Shaman, Olympos XII, Iliad, TS. Form Mega. Attribute: Virus.
+# Printed digivolve box: Purple / Yellow / Black Lv.5 / cost 5 (card data);
+#   [Digivolve] [Minervamon]: Cost 2; [Digivolve] Lv.5 w/[TS] trait: Cost 4.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-081.md):
+#   [On Play] [When Digivolving] You may play up to 8 play cost's total worth of
+#     [Iliad] trait cards from your hand or trash without paying the costs.
+#     Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends
+#     for each of your [Iliad] or [TS] trait Digimon or Tamers.
+#   [All Turns] All of your [Iliad] trait Digimon gain <Alliance>, <Reboot>,
+#     <Blocker> and +2000 DP.
+#   Special Play Condition: Assembly -5: [Minervamon].
+#   Official Q&A: the DP reduction still happens when nothing is played.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/*/BT26_081.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard EqualsCardName("Minervamon"), cost 2; Lv.5 + TopCard
+#   HasTSTraits, cost 4.
+# Assembly: 1× [Minervamon] (EqualsCardName), reduce 5.
+# OP / WD (not optional overall): loop zone choice (hand / trash / stop) →
+#   multi-pick under the running cap (EqualsTraits("Iliad") && HasPlayCost &&
+#   GetCostItself <= remaining && CanPlayAsNewPermanent), canNoSelect /
+#   canEndNotMax; then PlayPermanentCards(all picks) — ONE simultaneous play,
+#   free. Then, if an opponent Digimon exists and 4000 × (own Digimon/Tamers
+#   with [Iliad] or [TS]) != 0: mandatory pick of 1 opponent Digimon →
+#   ChangeDigimonDP(-that, UntilOpponentTurnEnd).
+#   → `select_zone_cards { zones: [hand, trash], play_cost_budget: 8 }` (one
+#   prompt over both zones — every subset the zone loop can reach is reachable;
+#   G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH) + `play_cards_free` (one
+#   simultaneous play); then the count-scaled DP pick.
+# All Turns: Alliance / Reboot / Blocker / +2000 DP over own [Iliad] Digimon
+#   (EqualsTraits) → four auras.
+
+card: BT26-081
+name: "Mervamon"
+kind: digimon
+level: 6
+color: [purple, yellow, black]
+cost: 13
+dp: 13000
+traits: [Shaman, Olympos XII, Iliad, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Minervamon" }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 4
+  - kind: assembly
+    materials:
+      - { name_is: "Minervamon", zones: [trash], stack_under: true }
+    cost: 5
+
+effects:
+  # ─── [On Play][When Digivolving] may play ≤ 8 cost's worth of [Iliad] cards
+  #     from hand or trash, free; then -4000 DP per own [Iliad]/[TS] ─────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play up to 8 play cost's total worth of [Iliad] trait cards from your hand or trash without paying the costs. Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends for each of your [Iliad] or [TS] trait Digimon or Tamers"
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          filter:
+            all_of:
+              - trait_has: Iliad
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          play_cost_budget: 8
+          bind_as: iliad_plays
+          prompt: "You may play up to 8 play cost's total worth of [Iliad] trait cards from your hand or trash without paying the costs"
+      - play_cards_free: { cards: iliad_plays }
+      - if:
+          condition:
+            all_of:
+              - any_field_permanent:
+                  of: opponent
+                  kind: digimon
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [battle_area]
+                    all_of:
+                      - any_of:
+                          - kind: digimon
+                          - kind: tamer
+                      - any_of:
+                          - trait_has: Iliad
+                          - trait_has: TS
+                  n: 1
+          then:
+            - select_opponent_permanent:
+                bind_as: shrunk
+                filter: { kind: digimon }
+                prompt: "Give 1 of your opponent's Digimon -4000 DP for each of your [Iliad] or [TS] trait Digimon or Tamers"
+            - add_dp_modifier:
+                target: shrunk
+                value:
+                  formula:
+                    base: 0
+                    per:
+                      card_count_in_zone:
+                        of: you
+                        zone: battle_area
+                        filter:
+                          all_of:
+                            - any_of:
+                                - kind: digimon
+                                - kind: tamer
+                            - any_of:
+                                - trait_has: Iliad
+                                - trait_has: TS
+                    delta: -4000
+                expiry: end_of_opponents_turn
+
+  # ─── [All Turns] own [Iliad] Digimon gain <Alliance>, <Reboot>, <Blocker>,
+  #     +2000 DP ───────────────────────────────────────────────────────────────
+  - kind: aura
+    target: { of: you, kind: digimon, trait_has: Iliad }
+    grant_keyword: { keyword: Alliance }
+    summary: "[All Turns] All of your [Iliad] trait Digimon gain <Alliance>"
+  - kind: aura
+    target: { of: you, kind: digimon, trait_has: Iliad }
+    grant_keyword: { keyword: Reboot }
+    summary: "[All Turns] All of your [Iliad] trait Digimon gain <Reboot>"
+  - kind: aura
+    target: { of: you, kind: digimon, trait_has: Iliad }
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] All of your [Iliad] trait Digimon gain <Blocker>"
+  - kind: aura
+    target: { of: you, kind: digimon, trait_has: Iliad }
+    dp_modifier: 2000
+    summary: "[All Turns] All of your [Iliad] trait Digimon get +2000 DP"

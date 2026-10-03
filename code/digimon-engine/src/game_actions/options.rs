@@ -400,8 +400,7 @@ impl Game {
             }
             (
                 card.handle(),
-                card.option_use_cost(&self.card_data)
-                    .unwrap_or_else(|| card.play_cost(&self.card_data)),
+                self.option_use_cost(card, player_id),
                 card.card_id(&self.card_data).to_string(),
             )
         };

@@ -1183,6 +1183,47 @@ fn validate_step(
                 );
             }
         }
+        StepSpec::SelectZoneCards(args) => {
+            if args.zones.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zones"),
+                    message: "select_zone_cards needs at least one zone".to_string(),
+                });
+            }
+            if args.max == 0 || args.min > args.max {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.max"),
+                    message: "select_zone_cards needs 0 < max and min <= max".to_string(),
+                });
+            }
+            if let Some(budget) = &args.play_cost_budget {
+                validate_formula(
+                    budget,
+                    &format!("{prefix}.play_cost_budget"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        StepSpec::ReturnTopStackedToDeck(args) => {
+            validate_formula(
+                &args.count,
+                &format!("{prefix}.count"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectCountCappedMulti(args) => {
             if let crate::step::CountBound::Formula { formula } = &args.max {
                 validate_formula(
@@ -1653,6 +1694,25 @@ fn validate_step_binding_scope(
                 validate_formula_binding_scope(
                     formula,
                     &format!("{prefix}.max.formula"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectZoneCards(args) => {
+            if let Some(budget) = &args.play_cost_budget {
+                validate_formula_binding_scope(
+                    budget,
+                    &format!("{prefix}.play_cost_budget"),
                     card_id,
                     scope,
                     errors,

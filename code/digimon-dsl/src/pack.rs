@@ -226,6 +226,9 @@ fn collect_declarative_raw_rust_fns(
         CompiledDeclarativeClause::LinkCondition { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledDeclarativeClause::UseCostIncrease { amount, .. } => {
+            collect_formula_raw_rust_fns(amount, names);
+        }
         CompiledDeclarativeClause::Succession {
             active_when,
             filter,
@@ -283,6 +286,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectReveal { filter, .. }
         | CompiledStep::SelectSecurity { filter, .. }
         | CompiledStep::SelectCountCappedMulti { filter, .. }
+        | CompiledStep::SelectZoneCards { filter, .. }
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }

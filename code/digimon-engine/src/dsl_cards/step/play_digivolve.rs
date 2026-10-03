@@ -249,6 +249,13 @@ fn peek_card_source_ref_handle(
             .and_then(|perm| perm.card_sources.get(i))
             .map(|c| c.handle()),
         CardSourceRef::Reveal(h) => Some(h),
+        CardSourceRef::Link(h, i) => ctx
+            .game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .and_then(|perm| perm.linked_cards.get(i))
+            .map(|c| c.handle()),
     }
 }
 

@@ -2898,7 +2898,13 @@ fn eval_card_fields(
         // `option_use_cost()` is `None` so the bound is `play_cost`; for a pure
         // Option both coincide; for a Dual it is the max of the two faces.
         let play = i32::from(data.play_cost);
-        let use_cost = data.option_use_cost().map(i32::from).unwrap_or(play);
+        // The effective use cost includes the card's own use-cost increase
+        // (G-ENGINE-OPTION-SELF-USE-COST-INCREASE).
+        let use_cost = if data.option_use_cost().is_some() {
+            effective_use_cost(rctx, card).unwrap_or(play)
+        } else {
+            play
+        };
         let cost = play.max(use_cost);
         if cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
             return false;
@@ -2909,7 +2915,9 @@ fn eval_card_fields(
         // controller's own memory must stay at or above the floor after paying
         // max(0, cost - N). Option → use cost; otherwise play cost.
         let cost = if data.card_kind == crate::enums::CardKind::Option {
-            data.option_use_cost().unwrap_or(data.play_cost)
+            effective_use_cost(rctx, card)
+                .map(|c| c as u16)
+                .unwrap_or(data.option_use_cost().unwrap_or(data.play_cost))
         } else {
             data.play_cost
         };
@@ -4064,4 +4072,21 @@ fn color_matches(want: CompiledColor, got: CardColor) -> bool {
             | (CompiledColor::Purple, CardColor::Purple)
             | (CompiledColor::White, CardColor::White)
     )
+}
+
+/// Effective Option use cost of the concrete card `card` (printed + its own
+/// use-cost increase), for the card's owner. `None` if the card can't be found.
+fn effective_use_cost(rctx: &EffectReadContext<'_>, card: CardHandle) -> Option<i32> {
+    let game = rctx.game;
+    for player in game.players.iter() {
+        for zone in [&player.hand, &player.trash, &player.security, &player.deck] {
+            if let Some(c) = zone.iter().find(|c| c.handle() == card) {
+                return Some(i32::from(game.option_use_cost(c, c.owner)));
+            }
+        }
+    }
+    game.revealed_cards
+        .iter()
+        .find(|c| c.handle() == card)
+        .map(|c| i32::from(game.option_use_cost(c, c.owner)))
 }

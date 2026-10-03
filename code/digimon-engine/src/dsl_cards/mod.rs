@@ -480,6 +480,25 @@ impl CardEffect for DslCardEffect {
                         }
                         out.push(builder.build());
                     }
+                    CompiledDeclarativeClause::UseCostIncrease {
+                        amount, summary, ..
+                    } => {
+                        // G-ENGINE-OPTION-SELF-USE-COST-INCREASE: read by
+                        // `Game::option_use_cost` wherever the use cost is read.
+                        let amount = amount.clone();
+                        let mut builder =
+                            Effect::declarative(card).use_cost_increase(move |rctx| {
+                                let target = crate::permanent::PermanentHandle {
+                                    player: rctx.player,
+                                    index: 0,
+                                };
+                                crate::dsl_cards::formula_eval::evaluate_read(&amount, rctx, target)
+                            });
+                        if let Some(summary) = summary {
+                            builder = builder.name(summary);
+                        }
+                        out.push(builder.build());
+                    }
                     CompiledDeclarativeClause::Succession {
                         scope,
                         active_when,
