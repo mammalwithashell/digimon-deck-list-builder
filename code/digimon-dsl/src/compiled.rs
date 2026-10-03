@@ -1170,6 +1170,14 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    /// `<Succession ([X])>` (`kind: succession`).
+    Succession {
+        scope: CompiledScope,
+        active_when: Option<CompiledPredicate>,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,

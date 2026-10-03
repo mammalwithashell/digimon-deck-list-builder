@@ -149,6 +149,14 @@ pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 /// Predicate used by parameterized `<Overclock (...)>` to decide which own
 /// battle-area permanents can be deleted as the cost.
+/// `<Succession ([X])>` source filter: does the digivolution card at
+/// `source` (a below-top card of the carrier) match the keyword's `[X]`?
+pub type SuccessionFilterFn = Box<
+    dyn Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+        + Send
+        + Sync
+        + 'static,
+>;
 pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
@@ -397,6 +405,12 @@ pub struct Effect {
     /// Filter closure selecting legal host Digimon for a Link Option.
     /// Set by `.link(cost, filter)`.
     pub link_filter: Option<LinkFilterFn>,
+    /// `<Succession ([X])>` (G-ENGINE-SUCCESSION-KEYWORD): set on the
+    /// declarative clause of a card printing the keyword. While that card is
+    /// the top card, its permanent gains every non-inherited effect of the
+    /// TOPMOST digivolution card this filter matches — see
+    /// `Game::succession_source_indices`.
+    pub succession_filter: Option<SuccessionFilterFn>,
     pub alt_path_registration: Option<AltPathRegistrationEffect>,
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
@@ -859,6 +873,7 @@ impl EffectBuilder {
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
+                succession_filter: None,
                 alt_path_registration: None,
                 training: false,
                 linked: false,
@@ -1326,6 +1341,19 @@ impl EffectBuilder {
     /// (`Effect::link_condition(card).link_host(cost, filter)`), where the
     /// link metadata must coexist with `EffectTiming::LinkCondition` rather
     /// than the Option `OptionMain` body timing.
+    /// Mark this declarative effect as `<Succession ([X])>`: `filter` picks
+    /// which digivolution cards qualify as `[X]` (the topmost one is adopted).
+    pub fn succession<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.inner.succession_filter = Some(Box::new(filter));
+        self
+    }
+
     pub fn link_host<F>(mut self, cost: u16, digimon_filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,

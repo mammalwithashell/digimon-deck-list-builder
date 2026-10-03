@@ -480,6 +480,42 @@ impl CardEffect for DslCardEffect {
                         }
                         out.push(builder.build());
                     }
+                    CompiledDeclarativeClause::Succession {
+                        scope,
+                        active_when,
+                        filter,
+                        summary,
+                        ..
+                    } => {
+                        // `<Succession ([X])>` (G-ENGINE-SUCCESSION-KEYWORD): a
+                        // static marker read by `Game::succession_source_indices`.
+                        // The filter sees each digivolution card as a SOURCE
+                        // subject (source-stack leaves work; card-identity
+                        // leaves degrade to the card).
+                        let filter = filter.clone();
+                        let mut builder = Effect::declarative(card).succession(move |ctx, sref| {
+                            eval_predicate(&filter, ctx, PredicateSubject::Source(sref))
+                        });
+                        if let Some(aw) = active_when.clone() {
+                            builder = builder.condition(move |rctx| {
+                                let subject = rctx
+                                    .source_permanent
+                                    .map(PredicateSubject::Permanent)
+                                    .unwrap_or(PredicateSubject::None);
+                                eval_predicate(&aw, rctx, subject)
+                            });
+                        }
+                        // Only a face-up (top-card) Succession is meaningful; an
+                        // inherited-scope one is inert (the adoption scan only
+                        // reads the top card's non-inherited markers).
+                        if !matches!(scope, CompiledScope::FaceUp) {
+                            builder = builder.inherited();
+                        }
+                        if let Some(summary) = summary {
+                            builder = builder.name(summary);
+                        }
+                        out.push(builder.build());
+                    }
                     CompiledDeclarativeClause::AltPathRegistration {
                         scope,
                         active_when,

@@ -9,7 +9,7 @@
 //! delete all of your opponent's unsuspended Digimon with the lowest DP.
 //! <Arts Digivolve>.
 //!
-//! <Succession> is NOT implemented (G-ENGINE-SUCCESSION-KEYWORD) — PARTIAL.
+//! <Succession ([Bacchusmon])>: G-ENGINE-SUCCESSION-KEYWORD.
 //!
 //! DCGO: BT26/Purple/BT26_080.cs.
 
@@ -26,6 +26,16 @@ fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT26-080")
+        .dsl_card("BT25-077")
+        .expect("BT25-077 Bacchusmon")
+        .add_card(digimon(
+            "TS-SMALL",
+            "Ts Small",
+            CardColor::Black,
+            3,
+            4,
+            &["TS"],
+        ))
         .add_card(filler("FILLER"))
         .add_card(digimon("D1", "One", CardColor::Red, 1, 1, &[]))
         .add_card(digimon("D3", "Three", CardColor::Red, 3, 3, &[]))
@@ -217,4 +227,48 @@ fn bt26_080_option_unsuspend_changes_lowest() {
         vec!["D3".to_string()],
         "D1 now lowest unsuspended"
     );
+}
+
+// ─── <Succession ([Bacchusmon])> ────────────────────────────────────────────
+
+fn resolve_all(r: &mut DebugRunner) {
+    for _ in 0..20 {
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
+        let a = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(PASS);
+        r.execute_action(v.selecting_player, a).unwrap();
+    }
+    let _ = r.auto_resolve();
+}
+
+#[test]
+fn bt26_080_succession_adopts_bacchusmon_when_digivolving() {
+    let mut r = setup();
+    r.game.players[0].hand.clear();
+    let h = r.place_stack(0, &["BT25-077", CARD_ID]);
+    r.add_to_hand(0, "TS-SMALL");
+    fire(&mut r, EffectTiming::WhenDigivolving, h);
+    resolve_all(&mut r);
+    assert!(
+        alive(&r, 0).contains(&"TS-SMALL".to_string()),
+        "BT25-077's [WD] free play ran from the carrier: {:?}",
+        alive(&r, 0)
+    );
+}
+
+#[test]
+fn bt26_080_without_bacchusmon_source_no_free_play() {
+    let mut r = setup();
+    r.game.players[0].hand.clear();
+    let h = r.place_stack(0, &["MINE", CARD_ID]);
+    r.add_to_hand(0, "TS-SMALL");
+    fire(&mut r, EffectTiming::WhenDigivolving, h);
+    resolve_all(&mut r);
+    assert!(!alive(&r, 0).contains(&"TS-SMALL".to_string()));
 }

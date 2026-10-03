@@ -9,7 +9,7 @@
 //! opponent's Digimon or Tamers. Then, 3 of their Digimon or Tamers can't
 //! unsuspend until their turn ends. <Arts Digivolve>.
 //!
-//! <Succession> is NOT implemented (G-ENGINE-SUCCESSION-KEYWORD) — PARTIAL.
+//! <Succession ([Ceresmon])>: G-ENGINE-SUCCESSION-KEYWORD.
 //!
 //! DCGO: BT26/Yellow/BT26_032.cs.
 
@@ -25,6 +25,8 @@ fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT26-032")
+        .dsl_card("BT25-059")
+        .expect("BT25-059 Ceresmon")
         .add_card(filler("FILLER"))
         .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
         .add_card(digimon("BIG", "Big", CardColor::Red, 9, 9, &[]))
@@ -205,4 +207,67 @@ fn bt26_032_option_main_suspends_exactly_two() {
         .filter(|h| r.game.players[1].battle_area[h.index as usize].is_suspended)
         .count();
     assert_eq!(n, 2);
+}
+
+// ─── <Succession ([Ceresmon])> ──────────────────────────────────────────────
+
+#[test]
+fn bt26_032_succession_adopts_ceresmon_all_turns_suspend_observer() {
+    let mut r = setup();
+    let c = r.place_stack(0, &["BT25-059", CARD_ID]);
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    let before = r.effective_dp(opp).unwrap();
+    // -3000 per suspended Digimon: suspend the carrier, as its own suspend would.
+    r.game.players[0].battle_area[c.index as usize].is_suspended = true;
+    fire(&mut r, EffectTiming::OnSuspend, c);
+    assert!(
+        r.pending_selection_view().is_some(),
+        "BT25-059's [All Turns] OnSuspend debuff is the carrier's own now"
+    );
+    while r.pending_selection_view().is_some() {
+        pick_first(&mut r, 0);
+    }
+    let _ = r.auto_resolve();
+    assert!(r.effective_dp(opp).unwrap() < before);
+}
+
+#[test]
+fn bt26_032_succession_copy_has_its_own_once_per_turn() {
+    // DCGO builds a fresh ActivateClass per copy: Ceresmon (BT25-059) using
+    // its [Once Per Turn] while it was the top card does not lock out the copy
+    // the same permanent gains once BT26-032 is put on top.
+    let mut r = setup();
+    let h = r.place_on_field(0, "BT25-059", Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    fire(&mut r, EffectTiming::OnSuspend, h);
+    assert!(r.pending_selection_view().is_some(), "BT25-059's own OPT");
+    while r.pending_selection_view().is_some() {
+        pick_first(&mut r, 0);
+    }
+    let _ = r.auto_resolve();
+    fire(&mut r, EffectTiming::OnSuspend, h);
+    assert!(r.pending_selection_view().is_none(), "own OPT spent");
+
+    put_on_top(&mut r, h, CARD_ID);
+    fire(&mut r, EffectTiming::OnSuspend, h);
+    assert!(
+        r.pending_selection_view().is_some(),
+        "the copy has its own counter"
+    );
+    while r.pending_selection_view().is_some() {
+        pick_first(&mut r, 0);
+    }
+    let _ = r.auto_resolve();
+    fire(&mut r, EffectTiming::OnSuspend, h);
+    assert!(r.pending_selection_view().is_none(), "copy's OPT spent");
+}
+
+#[test]
+fn bt26_032_without_a_ceresmon_source_adopts_nothing() {
+    let mut r = setup();
+    let c = r.place_stack(0, &["MINE", CARD_ID]);
+    r.place_on_field(1, "OPP", Some(0));
+    assert!(r.game.succession_source_indices(c).is_empty());
+    fire(&mut r, EffectTiming::OnSuspend, c);
+    assert!(r.pending_selection_view().is_none());
 }

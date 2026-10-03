@@ -167,7 +167,14 @@ impl Game {
                     index: index as u8,
                 };
                 let top = perm.top_card();
-                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
+                sources.push((
+                    top.data_index,
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                    false,
+                ));
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
@@ -180,6 +187,20 @@ impl Game {
                         Some(handle),
                         player_id,
                         true,
+                        false,
+                    ));
+                }
+                // `<Succession>`: an adopted source's top-scope declaratives
+                // also materialize onto the carrier.
+                for source_index in self.succession_source_indices(handle) {
+                    let source = &perm.card_sources[source_index];
+                    sources.push((
+                        source.data_index,
+                        source.handle(),
+                        Some(handle),
+                        player_id,
+                        false,
+                        true,
                     ));
                 }
             }
@@ -190,7 +211,14 @@ impl Game {
                     index: crate::action::space::BREEDING_TARGET as u8,
                 };
                 let top = perm.top_card();
-                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
+                sources.push((
+                    top.data_index,
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                    false,
+                ));
             }
 
             // Track H §5 — security-zone-sourced auras. Face-up security
@@ -209,11 +237,26 @@ impl Game {
                 if !player.face_up_security.contains(&card.card_index) {
                     continue;
                 }
-                sources.push((card.data_index, card.handle(), None, player_id, false));
+                sources.push((
+                    card.data_index,
+                    card.handle(),
+                    None,
+                    player_id,
+                    false,
+                    false,
+                ));
             }
         }
 
-        for (data_index, source_card, source_permanent, controller, inherited_source) in sources {
+        for (
+            data_index,
+            source_card,
+            source_permanent,
+            controller,
+            inherited_source,
+            adopted_copy,
+        ) in sources
+        {
             let Some(effects) =
                 self.effects_for_card(&self.card_data[data_index].card_id, source_card)
             else {
@@ -221,6 +264,9 @@ impl Game {
             };
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if adopted_copy && !Game::is_adoptable_effect(effect) {
                     continue;
                 }
                 // A `.linked()` declarative is Link-ESS: it applies to the HOST

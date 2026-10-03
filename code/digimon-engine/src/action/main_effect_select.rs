@@ -82,8 +82,9 @@ pub(crate) fn field_main_match(
         index: perm_index as u8,
     };
     let stack_size = perm.card_sources.len();
+    let adopted = game.succession_source_indices(perm_handle);
     for (source_index, source) in perm.card_sources.iter().enumerate() {
-        let is_under = source_index + 1 < stack_size;
+        let is_adopted = adopted.contains(&source_index);
         let card_id = source.card_id(&game.card_data);
         let Some(effects) = game.effects_for_card(card_id, source.handle()) else {
             continue;
@@ -92,12 +93,19 @@ pub(crate) fn field_main_match(
             if effect.timing != EffectTiming::MainOnField {
                 continue;
             }
-            if is_under != effect.inherited {
+            if !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect) {
                 continue;
             }
             // G-OPT-MULTI-TIMING-SHARED-LOCKOUT: a multi-timing OPT cluster
-            // shares one counter via `shared_opt_group`.
-            let opt_key = effect.shared_opt_group.unwrap_or(slot as u8);
+            // shares one counter via `shared_opt_group` (a `<Succession>` copy
+            // keeps its own).
+            let opt_key = game.opt_key_for_source(
+                perm_handle,
+                source.handle(),
+                effect.inherited,
+                effect.linked,
+                effect.shared_opt_group.unwrap_or(slot as u8),
+            );
             if effect.max_per_turn > 0
                 && perm.activation_count(source.handle(), opt_key) >= effect.max_per_turn
             {

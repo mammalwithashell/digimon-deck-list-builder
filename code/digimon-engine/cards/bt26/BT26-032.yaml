@@ -25,9 +25,7 @@
 #   → from { name_is Ceresmon, play_cost 12 }.
 # <Alliance>: AllianceSelfEffect → grant_keyword Alliance.
 # <Succession ([Ceresmon])>: SuccessionSelfEffect(EqualsCardName "Ceresmon")
-#   → NOT IMPLEMENTED — G-ENGINE-SUCCESSION-KEYWORD (docs/RUST_ENGINE_GAPS.md):
-#   no engine machinery lets a permanent adopt the top-card effects of one of
-#   its digivolution SOURCE cards. Not stubbed (card ships PARTIAL).
+#   → `kind: succession { filter: { name_is: Ceresmon } }` (G-ENGINE-SUCCESSION-KEYWORD).
 # [When Digivolving] (not optional): ChangeDigimonDPPlayerEffect over
 #   "opponent's battle-area Digimon && IsSuspended" (-5000,
 #   UntilOpponentTurnEnd — a PLAYER-level conditional effect, re-evaluated
@@ -92,6 +90,11 @@ effects:
   # ─── <Alliance> ────────────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Alliance
+
+  # ─── <Succession ([Ceresmon])> ────────────────────────────────────────────────
+  - kind: succession
+    filter: { name_is: "Ceresmon" }
+    summary: "<Succession ([Ceresmon])>"
 
   # ─── [When Digivolving] opp suspended Digimon -5000 DP until their turn
   #     ends; then by suspending 1 Digimon, on your turn, may play/use 1

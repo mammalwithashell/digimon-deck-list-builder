@@ -512,3 +512,20 @@ pub fn stack_deck_top(r: &mut DebugRunner, p: u8, ids: &[&str]) {
             .push(CardSource::new(idx, p, next));
     }
 }
+
+/// Put `card_id` on TOP of `host`'s stack (a cost-free stand-in for digivolving
+/// onto the SAME permanent, so per-permanent state such as once-per-turn
+/// counters carries over). No triggers fire.
+pub fn put_on_top(r: &mut DebugRunner, host: PermanentHandle, card_id: &str) {
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("put_on_top: unknown card_id {card_id}"));
+    let next_idx = r.game.next_card_index();
+    let card = CardSource::new(data_idx, host.player, next_idx);
+    r.game.player_mut(host.player).battle_area[host.index as usize]
+        .card_sources
+        .push(card);
+}

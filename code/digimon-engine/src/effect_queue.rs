@@ -2807,7 +2807,13 @@ impl Game {
         // keying (Track C) and predicates that read source identity remain
         // per-source-slot stable. `allow_below_top_liveness: true` lets the
         // liveness gate accept the stacked source as a valid origin.
-        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
+        //
+        // `<Succession>` (G-ENGINE-SUCCESSION-KEYWORD): an ADOPTED source also
+        // dispatches its top-scope effects through the carrier. Same entry
+        // shape; `run_queued_effect_inner`'s liveness gate re-checks the card
+        // is still the adopted one at activation time.
+        let adopted = self.succession_source_indices(handle);
+        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind, bool)> = {
             let Some(perm) = self
                 .players
                 .get(handle.player as usize)
@@ -2818,22 +2824,26 @@ impl Game {
             let stack_len = perm.card_sources.len();
             perm.card_sources
                 .iter()
+                .enumerate()
                 .take(stack_len.saturating_sub(1))
-                .map(|c| {
+                .map(|(i, c)| {
                     (
                         c.card_id(&self.card_data).to_string(),
                         c.handle(),
                         source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        adopted.contains(&i),
                     )
                 })
                 .collect()
         };
-        for (source_card_id, inherited_source, inherited_source_kind) in inherited_sources {
+        for (source_card_id, inherited_source, inherited_source_kind, is_adopted) in
+            inherited_sources
+        {
             let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
-                if !effect.inherited {
+                if !(effect.inherited || (is_adopted && Game::is_adoptable_effect(effect))) {
                     continue;
                 }
                 if !timing_flag_matches(effect, timing) {
@@ -3251,7 +3261,7 @@ impl Game {
 
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 let Some(activation_count) =
                     self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
                 else {
@@ -3338,7 +3348,7 @@ impl Game {
         let mut activation_cost_paid = false;
         if effect.activation_cost_fn.is_some() {
             let max_per_turn = effect.max_per_turn;
-            let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+            let opt_key = self.queued_opt_key(effect, &qe);
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
@@ -3396,7 +3406,7 @@ impl Game {
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3447,7 +3457,7 @@ impl Game {
             return;
         }
 
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3691,6 +3701,13 @@ impl Game {
             .any(|c| c.card_index == qe.source_card.0);
         let inherited_source_matches =
             below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
+        // `<Succession>`: a copied effect is live only while its card is STILL
+        // the adopted source (DCGO `ValidCardSourceAtActivate`).
+        let adopted_source_matches = below_top_source_matches
+            && qe.allow_below_top_liveness
+            && !effect.inherited
+            && Game::is_adoptable_effect(effect)
+            && self.is_adopted_source_card(perm_handle, qe.source_card);
         let training_matches = self
             .players
             .get(perm_handle.player as usize)
@@ -3713,7 +3730,11 @@ impl Game {
                 })
             })
             .unwrap_or(false);
-        top_matches || linked_matches || inherited_source_matches || training_matches
+        top_matches
+            || linked_matches
+            || inherited_source_matches
+            || adopted_source_matches
+            || training_matches
     }
 
     /// Resolve the once-per-turn counter key for an effect. A multi-timing
@@ -3722,6 +3743,18 @@ impl Game {
     /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
         effect.shared_opt_group.unwrap_or(effect_slot)
+    }
+
+    /// [`Game::opt_slot_key`] for a queued entry, with a `<Succession>`-adopted
+    /// copy moved onto its own counter (`Game::opt_key_for_source`).
+    fn queued_opt_key(&self, effect: &crate::effect::Effect, qe: &QueuedEffect) -> u8 {
+        let key = Self::opt_slot_key(effect, qe.effect_slot);
+        match qe.source_permanent {
+            Some(perm) if qe.allow_below_top_liveness => {
+                self.opt_key_for_source(perm, qe.source_card, effect.inherited, effect.linked, key)
+            }
+            _ => key,
+        }
     }
 
     fn source_permanent_activation_count(
@@ -4186,7 +4219,7 @@ impl Game {
         }
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 match self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key) {
                     Some(count) if count >= effect.max_per_turn => return false,
                     None => return false,

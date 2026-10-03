@@ -1180,12 +1180,13 @@ impl Game {
             }
             return;
         }
+        let opt_slot = self.observer_opt_slot(info);
         if let Some(perm) = self
             .player_mut(source.player)
             .battle_area
             .get_mut(source.index as usize)
         {
-            perm.record_activation(info.source_card, info.effect_slot);
+            perm.record_activation(info.source_card, opt_slot);
         }
     }
 }

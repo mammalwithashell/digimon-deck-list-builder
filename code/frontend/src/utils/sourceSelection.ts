@@ -4,8 +4,8 @@
 // source from under 1 of your Digimon") park the engine on a selection whose
 // `valid_action_ids` live in the SOURCE_SELECT range:
 //   battle-area source:  SOURCE_SELECT_START + field*SOURCES_PER_FIELD + source
-// where `source` indexes the NON-TOP digivolution cards of the permanent at
-// `field`, bottom→top. These helpers map those ids back to the card they act
+// where `source` indexes the permanent's stack at `field`, bottom→top (the top
+// card is the last index; most effects only offer the non-top ones). These helpers map those ids back to the card they act
 // on so the UI can render a clickable picker — there is no board affordance for
 // picking a card *inside* a stack (the board's SelectMaterial path is for the
 // raw-field-index DNA-digivolve pick, a different mechanism).
@@ -55,8 +55,14 @@ export function sourceSelectionCards(
     const sourceIndex = offset % SOURCES_PER_FIELD;
     const perm = battleArea[field];
     if (!perm) continue;
-    const nonTop = perm.sources.filter((s) => !s.isTop);
-    const card = nonTop[sourceIndex];
+    // Engine `card_sources` order: the NON-TOP cards bottom→top, then the top
+    // card last. Rebuild that from `sources` (independent of where the wire
+    // puts the top) so a non-top index resolves exactly as before and an
+    // effect that also offers the TOP card (BT26-060 returning the top 5
+    // stacked cards) resolves to it.
+    const top = perm.sources.find((s) => s.isTop);
+    const stack = [...perm.sources.filter((s) => !s.isTop), ...(top ? [top] : [])];
+    const card = stack[sourceIndex];
     if (!card) continue;
     tiles.push({ actionId: id, cardId: card.cardId, cardName: card.cardName });
   }

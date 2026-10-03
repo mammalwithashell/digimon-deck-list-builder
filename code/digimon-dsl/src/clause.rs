@@ -352,6 +352,9 @@ pub enum DeclarativeKind {
     FloodGate,
     AltPathRegistration,
     RawRust,
+    // `<Succession ([X])>` — G-ENGINE-SUCCESSION-KEYWORD. (A plain comment: a
+    // doc comment here turns the schema's string enum into a oneOf.)
+    Succession,
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +377,7 @@ pub enum TypedDeclarativeBody {
     FloodGate(FloodGateBody),
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
+    Succession(SuccessionBody),
 }
 
 impl DeclarativeClause {
@@ -421,6 +425,9 @@ impl DeclarativeClause {
             }
             DeclarativeKind::RawRust => {
                 TypedDeclarativeBody::RawRust(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::Succession => {
+                TypedDeclarativeBody::Succession(serde_yml::from_value(value)?)
             }
         })
     }
@@ -842,6 +849,17 @@ pub struct FloodGateBody {
     pub target_player: Option<crate::common::PlayerRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expiry: Option<String>,
+}
+
+/// Body for `kind: succession` — `<Succession ([X])>`: "This Digimon gains all
+/// effects other than <Succession> on its topmost specified digivolution
+/// card." `filter` is the `[X]` card predicate, evaluated against each
+/// digivolution card (a source subject, so source-stack leaves work too);
+/// the TOPMOST match is adopted while this card is the top card.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SuccessionBody {
+    pub filter: PredicateSpec,
 }
 
 /// Body for `kind: alt_path_registration`.

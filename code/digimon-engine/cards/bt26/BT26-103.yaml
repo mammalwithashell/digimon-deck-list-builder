@@ -22,10 +22,8 @@
 # Succession: CopyDigivolutionCardEffects(cardCondition EqualsCardName
 #   "Jupitermon", isSuccession) — the permanent adopts every effect (other than
 #   Succession) printed on its topmost [Jupitermon] digivolution card.
-#   → BLOCKED: no DSL/engine machinery grants a permanent the effects of a
-#   digivolution SOURCE card (same family as EX10-059's
-#   G-DSL-GAIN-ALL-TURNS-FROM-SOURCES). Logged as G-ENGINE-SUCCESSION-KEYWORD
-#   (docs/RUST_ENGINE_GAPS.md). Not stubbed.
+#   → `kind: succession { filter: { name_is: Jupitermon } }`
+#   (G-ENGINE-SUCCESSION-KEYWORD, Game::succession_source_indices).
 # Shared WD / Counter (maxCountPerTurn 1, one shared hash, optional:false):
 #   IDestroySecurity(top, 1) then IRecovery(2).
 #   → `when: [when_digivolving, counter]` + once_per_turn (one lockout across
@@ -73,6 +71,9 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
+  - kind: succession
+    filter: { name_is: "Jupitermon" }
+    summary: "<Succession ([Jupitermon])>"
 
   # ─── [When Digivolving][Counter][Once Per Turn] trash top security,
   #     <Recovery +2> ──────────────────────────────────────────────────────────

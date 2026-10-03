@@ -27,8 +27,8 @@
 #   (The Black Lv.5 circle is a card_overrides.json-carried printed circle.)
 # <Security A. +1>: ChangeSelfSAttackStaticEffect(+1) → aura security_attack.
 # <Succession ([Bacchusmon])>: SuccessionSelfEffect(EqualsCardName
-#   "Bacchusmon") → NOT IMPLEMENTED — G-ENGINE-SUCCESSION-KEYWORD
-#   (docs/RUST_ENGINE_GAPS.md). Not stubbed (card ships PARTIAL).
+#   "Bacchusmon") → `kind: succession { filter: { name_is: Bacchusmon } }`
+#   (G-ENGINE-SUCCESSION-KEYWORD).
 # [When Digivolving] (skippable; activate condition = an unsuspended Digimon
 #   exists on either side): pick canNoSelect: true over unsuspended Digimon →
 #   SuspendPeremanentAndProcessAccordingToResult → on success
@@ -96,6 +96,11 @@ effects:
     target: {}
     security_attack: 1
     summary: "<Security A. +1>"
+
+  # ─── <Succession ([Bacchusmon])> ────────────────────────────────────────────────
+  - kind: succession
+    filter: { name_is: "Bacchusmon" }
+    summary: "<Succession ([Bacchusmon])>"
 
   # ─── [When Digivolving] by suspending 1 Digimon, may attack without
   #     suspending ─────────────────────────────────────────────────────────

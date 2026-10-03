@@ -4249,7 +4249,7 @@ adjustment (formula over the controller's state) applied at every one of those s
 BT26-033 ships the Digimon face only (PARTIAL); its Option face is left unauthored so it
 is not usable at a too-cheap cost.
 
-## G-ENGINE-SUCCESSION-KEYWORD — OPEN (found 2026-10-03, BT26-103 Jupitermon: Wrath Mode)
+## G-ENGINE-SUCCESSION-KEYWORD — RESOLVED (found 2026-10-03, BT26-103 Jupitermon: Wrath Mode)
 
 <Succession ([X])>: "This Digimon gains all effects other than <Succession> on its
 topmost specified digivolution card." DCGO: `SuccessionSelfEffect` →
@@ -4265,6 +4265,21 @@ Succession, also enumerates the topmost matching source's own (non-inherited) ef
 with the carrier as `source_permanent`. BT26-103 ships without <Succession> (PARTIAL).
 BT26-032 Ceresmon and BT26-080 Bacchusmon (2026-10-03, bt26-priority wave 2) likewise ship
 every other clause and omit <Succession> (PARTIAL).
+
+**Fix.** DSL `kind: succession { filter: <card predicate> }` lowers to a declarative
+`Effect` carrying `succession_filter`. `Game::succession_source_indices` (game/succession.rs)
+finds, for each Succession on the permanent's TOP card, the topmost below-top card the filter
+matches (a source subject, so source-stack leaves work). Every top/inherited stack walk asks
+`Game::source_effect_is_active` instead of `inherited == !is_top`, so an adopted card's
+adoptable effects (`is_adoptable_effect`: not inherited / linked / trash / security /
+Succession) reach triggers (+ liveness re-check at activation), keyword queries, declarative
+auras and DP formulas, replacements, field `[Main]` (mask + dispatcher) and field cost
+reducers / observers. A copied once-per-turn effect keeps its own counter
+(`opt_key_for_source`, key `^ 0x40`; also the `refund_opt` path), matching DCGO's fresh
+`ActivateClass` per copy. Tests: bt26_103_succession_* (keywords, adopted WD, topmost only,
+adopted replacement), bt26_032_succession_* (adopted [All Turns] observer, independent OPT),
+bt26_080_succession_*. BT26-032/080/103 are IMPLEMENTED; BT26-060 still waits on
+G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK.
 
 ## G-ENGINE-FIELD-MAIN-OPT-KEY — RESOLVED (found 2026-10-03, BT26-021 Gekomon)
 

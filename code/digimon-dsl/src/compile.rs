@@ -2403,6 +2403,13 @@ fn compile_declarative(
             summary,
             summary_key,
         },
+        B::Succession(sc) => CompiledDeclarativeClause::Succession {
+            scope,
+            active_when,
+            filter: compile_predicate(&sc.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
         B::FloodGate(fg) => CompiledDeclarativeClause::FloodGate {
             scope,
             active_when,

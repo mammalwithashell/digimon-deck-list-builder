@@ -3,6 +3,7 @@ import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/ga
 import { SELECTION } from '@/utils/constants';
 import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
 import { usePeekStore } from '@/stores/peekStore';
+import { cardZoneSelectionTiles, isCardZoneSelection } from '@/utils/cardZoneSelection';
 
 interface SelectionPanelProps {
   currentPhase: GamePhase;
@@ -20,6 +21,12 @@ interface SelectionPanelProps {
   opponentSecurityCount: number;
   /** The local player's battle-area permanents (for source-card picks). */
   battleArea: PermanentInfo[];
+  /** The opponent's battle-area permanents — source picks whose `zoneOwner`
+   *  is the opponent (BT26-060 ordering their returned stacked cards). */
+  opponentBattleArea?: PermanentInfo[];
+  /** Trash card ids, for mixed-zone picks (hand + trash). */
+  trashIds?: string[];
+  opponentTrashIds?: string[];
   onAction: (actionId: number) => void;
   localPlayer: number;
   /** Right-click a card in the panel to open the enlarged card detail. */
@@ -51,6 +58,9 @@ export function SelectionPanel({
   securityCount,
   opponentSecurityCount,
   battleArea,
+  opponentBattleArea = [],
+  trashIds = [],
+  opponentTrashIds = [],
   onAction,
   localPlayer,
   onInspectCard,
@@ -69,7 +79,23 @@ export function SelectionPanel({
   // SelectSource. Gate the modal on the id range so it opens for source picks
   // but stays out of the DNA flow (which is board-clicked by raw field index).
   const isSourceSelect = pendingSelection.validIndices.some(isSourceSelectAction);
-  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect) return null;
+  // Card-zone picks that no other surface owns (hand + trash unions, budgeted
+  // multi-picks over hand/trash, opponent-stack orderings) — any phase.
+  const zoneCtx = {
+    localPlayer,
+    ownHandIds: handIds,
+    ownTrashIds: trashIds,
+    opponentTrashIds,
+    ownBattleArea: battleArea,
+    opponentBattleArea,
+  };
+  const isCardZone =
+    !PANEL_PHASES.has(currentPhase) && isCardZoneSelection(pendingSelection, zoneCtx);
+  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect && !isCardZone) return null;
+  const sourceArea =
+    pendingSelection.zoneOwner != null && pendingSelection.zoneOwner !== localPlayer
+      ? opponentBattleArea
+      : battleArea;
 
   const isEffectChoice = currentPhase === GamePhase.SelectEffectChoice;
   const validActionIds = new Set(pendingSelection.validIndices);
@@ -129,11 +155,18 @@ export function SelectionPanel({
         label: `Effect ${i + 1}`,
       }));
     }
+  } else if (isCardZone) {
+    cards = (cardZoneSelectionTiles(pendingSelection, zoneCtx) ?? []).map((t) => ({
+      cardId: t.cardId,
+      actionId: t.actionId,
+      isValid: actionMask[t.actionId] === 1,
+      label: t.zone === 'hand' ? 'Hand' : t.zone === 'trash' ? 'Trash' : undefined,
+    }));
   } else if (isSourceSelect) {
     // Pick a specific digivolution card from under one of your Digimon
     // (`select_material`). Each SOURCE_SELECT id resolves to the non-top
     // source card the engine would act on.
-    cards = sourceSelectionCards(pendingSelection.validIndices, battleArea).map((t) => ({
+    cards = sourceSelectionCards(pendingSelection.validIndices, sourceArea).map((t) => ({
       cardId: t.cardId,
       actionId: t.actionId,
       isValid: actionMask[t.actionId] === 1,
@@ -238,6 +271,11 @@ export function SelectionPanel({
                       entry.faceDown ? undefined : inspectOnRightClick(entry.cardId)
                     }
                   />
+                  {entry.label && (
+                    <span className="block mt-1 text-[10px] uppercase tracking-wide text-[var(--ib-bone-dd)] text-center">
+                      {entry.label}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

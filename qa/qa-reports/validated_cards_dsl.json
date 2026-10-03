@@ -11455,12 +11455,12 @@
       "card_name": "Jupitermon: Wrath Mode",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "TS Jupitermon / Aegiochusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-103.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_103.rs",
-      "notes": "Piercing/Reboot/Blocker, WD/Counter OPT trash sec + Recovery +2, any-security-removed -15000 implemented. <Succession ([Jupitermon])> BLOCKED on G-ENGINE-SUCCESSION-KEYWORD (no source-card effect adoption)."
+      "notes": "Piercing/Reboot/Blocker, WD/Counter OPT trash sec + Recovery +2, any-security-removed -15000 implemented. <Succession> via kind: succession (G-ENGINE-SUCCESSION-KEYWORD resolved)."
     },
     "BT26-083": {
       "card_name": "Junomon: Hysteric Mode",
@@ -11532,23 +11532,23 @@
       "card_name": "Ceresmon",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Chronomon support / Ceresmon / Bacchusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-032.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_032.rs",
-      "notes": "DUAL. Alliance, alt digivolve from play-cost-12 [Ceresmon] (cost 2), WD continuous -5000 on opp suspended Digimon + by-suspending-1 (either side) your-turn play/use [Vegetation]/[TS] from hand cost-5, Option [Main] may suspend 0-or-2 then lock 3 can't unsuspend, Use Req TS, Arts Digivolve implemented. <Succession ([Ceresmon])> BLOCKED on G-ENGINE-SUCCESSION-KEYWORD."
+      "notes": "DUAL. Alliance, alt digivolve from play-cost-12 [Ceresmon] (cost 2), WD continuous -5000 on opp suspended Digimon + by-suspending-1 (either side) your-turn play/use [Vegetation]/[TS] from hand cost-5, Option [Main] may suspend 0-or-2 then lock 3 can't unsuspend, Use Req TS, Arts Digivolve implemented. <Succession> via kind: succession (G-ENGINE-SUCCESSION-KEYWORD resolved)."
     },
     "BT26-080": {
       "card_name": "Bacchusmon",
       "validated_date": "2026-10-03",
       "report": "bt26-priority",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Chronomon support / Ceresmon / Bacchusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-080.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_080.rs",
-      "notes": "DUAL. Security A.+1, alt digivolve from play-cost-12 [Bacchusmon] (cost 2), WD by-suspending-1 may attack without suspending, WA OPT delete 1 opp Digimon of same orientation, Option [Main] may unsuspend 1 then delete all opp unsuspended lowest-DP Digimon (new delete_all_permanents selector, G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER), Use Req TS, Arts Digivolve implemented. <Succession ([Bacchusmon])> BLOCKED on G-ENGINE-SUCCESSION-KEYWORD."
+      "notes": "DUAL. Security A.+1, alt digivolve from play-cost-12 [Bacchusmon] (cost 2), WD by-suspending-1 may attack without suspending, WA OPT delete 1 opp Digimon of same orientation, Option [Main] may unsuspend 1 then delete all opp unsuspended lowest-DP Digimon (new delete_all_permanents selector, G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER), Use Req TS, Arts Digivolve implemented. <Succession> via kind: succession (G-ENGINE-SUCCESSION-KEYWORD resolved)."
     },
     "BT26-001": {
       "card_name": "Yokomon",
@@ -11614,7 +11614,7 @@
       "archetype": "TS / Iliad (Chronomon line)",
       "yaml_path": null,
       "test_path": null,
-      "notes": "<Succession (Lv.6 w/[Chronomon] in name)> blocked on G-ENGINE-SUCCESSION-KEYWORD; OP/WD 'return the top 5 stacked cards of 3 opponent Digimon to the top of the deck' (player-ordered, keep >=1, stack-return immunity) blocked on G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK (docs/RUST_ENGINE_GAPS.md). No YAML shipped. The [All Turns][OPT] on_add_to_deck may-delete, alt paths and keywords map onto existing vocab (on_add_to_deck added this slice)."
+      "notes": "<Succession (Lv.6 w/[Chronomon] in name)> now expressible (kind: succession); OP/WD 'return the top 5 stacked cards of 3 opponent Digimon to the top of the deck' (player-ordered, keep >=1, stack-return immunity) blocked on G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK (docs/RUST_ENGINE_GAPS.md). No YAML shipped. The [All Turns][OPT] on_add_to_deck may-delete, alt paths and keywords map onto existing vocab (on_add_to_deck added this slice)."
     },
     "BT26-085": {
       "card_name": "Giant Slayer",

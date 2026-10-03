@@ -5,13 +5,13 @@
 //! and <Recovery +2>.
 //! [All Turns] [Once Per Turn] When security stacks are removed from, 1 of your
 //! opponent's Digimon gets -15000 DP until their turn ends.
-//! <Succession> is BLOCKED (G-ENGINE-SUCCESSION-KEYWORD).
+//! <Succession ([Jupitermon])>: G-ENGINE-SUCCESSION-KEYWORD.
 //!
 //! DCGO: BT26/Yellow/BT26_103.cs.
 
 use super::support::*;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectTiming};
+use digimon_engine::enums::{CardColor, EffectTiming, Keyword};
 
 const CARD_ID: &str = "BT26-103";
 
@@ -19,7 +19,10 @@ fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT26-103")
+        .dsl_card("BT26-033")
+        .expect("BT26-033 Jupitermon")
         .add_card(filler("FILLER"))
+        .add_card(tamer("TS-T", "Ts Tamer", CardColor::Yellow, &["TS"]))
         .add_card({
             let mut c = digimon("OPP", "Opp", CardColor::Red, 6, 9, &[]);
             c.dp = Some(20000);
@@ -114,4 +117,95 @@ fn bt26_103_opponent_security_removal_debuffs_until_their_turn_ends() {
         r.effective_dp(opp) == Some(5000),
         "still debuffed on their turn"
     );
+}
+
+// ─── <Succession ([Jupitermon])> ────────────────────────────────────────────
+
+#[test]
+fn bt26_103_succession_gains_jupitermon_keywords() {
+    let mut r = setup();
+    let w = r.place_stack(0, &["BT26-033", CARD_ID]);
+    for kw in [Keyword::Raid, Keyword::Alliance, Keyword::Engage] {
+        assert!(r.game.has_keyword(w, kw), "adopted {kw:?}");
+    }
+    // Its own keywords are still there.
+    assert!(r.game.has_keyword(w, Keyword::Blocker));
+}
+
+#[test]
+fn bt26_103_no_jupitermon_source_gains_nothing() {
+    let mut r = setup();
+    let w = r.place_stack(0, &["OLY", CARD_ID]);
+    assert!(!r.game.has_keyword(w, Keyword::Raid));
+    assert!(r.game.succession_source_indices(w).is_empty());
+}
+
+#[test]
+fn bt26_103_succession_fires_adopted_when_digivolving() {
+    let mut r = setup();
+    let w = r.place_stack(0, &["BT26-033", CARD_ID]);
+    let hand = r.game.players[0].hand.len();
+    fire(&mut r, EffectTiming::WhenDigivolving, w);
+    drain(&mut r);
+    // Jupitermon's WD: top security to hand. Wrath Mode's own WD: trash top
+    // security, <Recovery +2>.  3 - 1 - 1 + 2 = 3.
+    assert_eq!(r.game.players[0].hand.len(), hand + 1, "adopted WD ran");
+    assert_eq!(r.security_count(0), 3);
+}
+
+#[test]
+fn bt26_103_succession_adopts_only_the_topmost_jupitermon() {
+    let mut r = setup();
+    let w = r.place_stack(0, &["BT26-033", "BT26-033", CARD_ID]);
+    assert_eq!(r.game.succession_source_indices(w), vec![1], "topmost only");
+    let hand = r.game.players[0].hand.len();
+    fire(&mut r, EffectTiming::WhenDigivolving, w);
+    drain(&mut r);
+    assert_eq!(
+        r.game.players[0].hand.len(),
+        hand + 1,
+        "adopted WD ran once"
+    );
+}
+
+#[test]
+fn bt26_103_jupitermon_on_top_does_not_adopt_itself() {
+    // Succession only works from the card PRINTING it while it is the top card.
+    let mut r = setup();
+    let j = r.place_stack(0, &[CARD_ID, "BT26-033"]);
+    assert!(r.game.succession_source_indices(j).is_empty());
+    assert!(
+        !r.game.has_keyword(j, Keyword::Blocker),
+        "Wrath Mode is only a source"
+    );
+}
+
+#[test]
+fn bt26_103_succession_gains_jupitermon_leave_protection() {
+    // Jupitermon's [All Turns] replacement, now Wrath Mode's: "by placing THIS
+    // Digimon's top stacked card as the bottom security card" — this Digimon
+    // is the carrier, so its top card is Wrath Mode itself.
+    let mut r = setup();
+    let w = r.place_stack(0, &["BT26-033", CARD_ID]);
+    let t = r.place_on_field(0, "TS-T", Some(0));
+    r.game.delete_permanents_batch(
+        vec![t],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    let v = r
+        .pending_selection_view()
+        .expect("adopted replacement prompt");
+    assert!(v.is_optional);
+    let accept = non_pass(&r)[0];
+    r.execute_action(0, accept).unwrap();
+    let _ = r.auto_resolve();
+    let ids = field_ids(&r, 0);
+    assert!(ids.contains(&"TS-T".to_string()), "tamer stayed: {ids:?}");
+    assert!(
+        ids.contains(&"BT26-033".to_string()),
+        "carrier de-stacked to Jupitermon"
+    );
+    let bottom = &r.game.players[0].security[0];
+    assert_eq!(bottom.card_id(&r.game.card_data), CARD_ID);
+    let _ = w;
 }

@@ -90,6 +90,9 @@ pub struct StepRuntime {
     /// un-record the activation — DCGO `RemoveUse` (G-OPT-REFUND-ON-DECLINE).
     /// Cloned into parked tails, so it survives mid-process selections.
     opt_key: Option<u8>,
+    /// The running clause is inherited/linked-scope: its OPT key is never
+    /// moved onto a `<Succession>` adopted-copy counter.
+    opt_key_inherited: bool,
 }
 
 impl Default for StepRuntime {
@@ -104,6 +107,7 @@ impl StepRuntime {
             raw,
             dna_origin: None,
             opt_key: None,
+            opt_key_inherited: false,
         }
     }
 
@@ -123,6 +127,11 @@ impl StepRuntime {
 
     pub fn opt_key(&self) -> Option<u8> {
         self.opt_key
+    }
+
+    pub fn with_opt_key_inherited(mut self, inherited: bool) -> Self {
+        self.opt_key_inherited = inherited;
+        self
     }
 }
 
@@ -697,6 +706,15 @@ pub fn run_step_with_runtime(
     if matches!(step, CompiledStep::RefundOpt) {
         if let (Some(opt_key), Some(perm)) = (runtime.opt_key(), ctx.source_permanent) {
             let source_card = ctx.source_card;
+            // A `<Succession>` copy refunds its OWN counter, not the source
+            // card's (DCGO `PushUseTrackingRedirectTarget`).
+            let opt_key = ctx.game.opt_key_for_source(
+                perm,
+                source_card,
+                runtime.opt_key_inherited,
+                false,
+                opt_key,
+            );
             ctx.game
                 .unrecord_source_permanent_activation(perm, source_card, opt_key);
         }

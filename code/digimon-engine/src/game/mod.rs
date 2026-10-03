@@ -1170,6 +1170,7 @@ mod queries;
 mod setup;
 mod snapshot;
 mod staging;
+mod succession;
 mod suspend;
 mod triggers;
 mod until_condition;
@@ -3084,6 +3085,19 @@ impl Game {
                         Some(host),
                         player_id,
                         inherited_source,
+                        false,
+                    ));
+                }
+                // `<Succession>`: an adopted source's top-scope formula auras.
+                for source_index in self.succession_source_indices(host) {
+                    let source = &perm.card_sources[source_index];
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(host),
+                        player_id,
+                        false,
+                        true,
                     ));
                 }
             }
@@ -3100,18 +3114,24 @@ impl Game {
                     Some(host),
                     player_id,
                     false,
+                    false,
                 ));
             }
         }
 
         let mut total = 0;
         let mut found = false;
-        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+        for (card_id, source_card, source_permanent, controller, inherited_source, adopted_copy) in
+            sources
+        {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if adopted_copy && !Game::is_adoptable_effect(effect) {
                     continue;
                 }
                 let Some(formula_fn) = (if security_attack {
