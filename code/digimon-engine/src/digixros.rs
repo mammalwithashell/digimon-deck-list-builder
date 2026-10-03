@@ -95,9 +95,25 @@ pub struct DigiXrosRecipeSlot {
     pub distinct_by: Option<DigiXrosDistinctBy>,
     pub allowed_zones: BTreeSet<DigiXrosMaterialZone>,
     pub cost_delta_per_material: i16,
+    /// G-ENGINE-DIGIXROS-SLOT-PREDICATE — card instances that satisfy the
+    /// slot's RESIDUAL material predicate (every authored filter field other
+    /// than the name/trait fast path above: `kind`, `effect_text_contains`,
+    /// level/colour/DP leaves, `none_of`/`not` combinators, …). Evaluated
+    /// once with the full DSL predicate evaluator when the transaction is
+    /// built (`Game::build_digixros_transaction_for_hand_card`). `None` = the
+    /// filter is fully expressed by `names`/`traits` (no residual), so every
+    /// name/trait match is accepted as before.
+    pub eligible_cards: Option<Vec<CardHandle>>,
 }
 
 impl DigiXrosRecipeSlot {
+    /// Residual-predicate gate (see `eligible_cards`).
+    pub fn admits_card_instance(&self, card: CardHandle) -> bool {
+        self.eligible_cards
+            .as_ref()
+            .is_none_or(|eligible| eligible.contains(&card))
+    }
+
     pub fn new(slot_index: usize) -> Self {
         Self {
             slot_index,
@@ -108,6 +124,7 @@ impl DigiXrosRecipeSlot {
             distinct_by: None,
             allowed_zones: BTreeSet::new(),
             cost_delta_per_material: -1,
+            eligible_cards: None,
         }
     }
 }
@@ -410,7 +427,7 @@ impl DigiXrosTransaction {
         let mut found_matching_full_slot = false;
         let mut found_distinctness_violation = false;
         for slot in &self.recipe_slots {
-            if !slot_accepts_card(slot, card) {
+            if !slot_accepts_card(slot, card) || !slot.admits_card_instance(origin.card()) {
                 continue;
             }
             if self.recipe_slot_is_full(slot.slot_index) {
@@ -744,6 +761,30 @@ impl Game {
                 path.kind,
                 digimon_dsl::compiled::CompiledAltPathKind::DigiXros
             );
+            // G-ENGINE-DIGIXROS-SLOT-PREDICATE: gate each slot on its residual
+            // material predicate (kind / text / level / combinators …) via the
+            // full DSL evaluator, over every card instance the controller
+            // could offer as a material.
+            let candidates = self.digixros_material_candidate_handles(player);
+            for (slot, material) in transaction.recipe_slots.iter_mut().zip(path.materials.iter())
+            {
+                if let Some(residual) = residual_material_predicate(&material.filter) {
+                    slot.eligible_cards = Some(
+                        candidates
+                            .iter()
+                            .copied()
+                            .filter(|&c| {
+                                self.card_satisfies_material_residual(
+                                    player,
+                                    played_card,
+                                    &residual,
+                                    c,
+                                )
+                            })
+                            .collect(),
+                    );
+                }
+            }
             // Gap 4 (BT18-065) — conditionally enable extra material origin
             // zones. Each `extra_material_zones` entry's `while:` predicate is
             // evaluated ONCE at transaction build (DCGO
@@ -1039,9 +1080,105 @@ impl Game {
         let Some(candidate_data) = self.card_data_for_handle(candidate) else {
             return false;
         };
-        recipe
+        let residuals = self.digixros_residual_predicates_for_card(carrier);
+        recipe.iter().any(|slot| {
+            slot_accepts_card(slot, candidate_data)
+                && residuals
+                    .get(slot.slot_index)
+                    .and_then(|r| r.as_ref())
+                    .is_none_or(|(controller, residual)| {
+                        self.card_satisfies_material_residual(
+                            *controller,
+                            carrier,
+                            residual,
+                            candidate,
+                        )
+                    })
+        })
+    }
+
+    /// Every card instance `player` could offer as a DigiXros material:
+    /// hand, battle-area cards (tops and digivolution cards — under-Tamer
+    /// origins included) and trash. Zone legality is enforced separately by
+    /// the transaction's origin checks.
+    fn digixros_material_candidate_handles(&self, player: PlayerId) -> Vec<CardHandle> {
+        let p = self.player(player);
+        p.hand
             .iter()
-            .any(|slot| slot_accepts_card(slot, candidate_data))
+            .chain(p.trash.iter())
+            .chain(p.battle_area.iter().flat_map(|perm| perm.card_sources.iter()))
+            .map(|c| c.handle())
+            .collect()
+    }
+
+    /// Per-slot residual predicates (with the carrier's controller) for the
+    /// carrier's DigiXros path, index-aligned with
+    /// `digixros_recipe_slots_for_card`.
+    #[allow(clippy::type_complexity)]
+    fn digixros_residual_predicates_for_card(
+        &self,
+        card: CardHandle,
+    ) -> Vec<Option<(PlayerId, ResidualMaterialPredicate)>> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(data) = self.card_data_for_handle(card) else {
+                return Vec::new();
+            };
+            let controller = self
+                .card_source_for_handle(card)
+                .map(|c| c.owner)
+                .unwrap_or(0);
+            let Some(path) = self.alt_path_registry.get(&data.card_id).and_then(|paths| {
+                paths.iter().find(|path| {
+                    matches!(
+                        path.kind,
+                        digimon_dsl::compiled::CompiledAltPathKind::DigiXros
+                    )
+                })
+            }) else {
+                return Vec::new();
+            };
+            path.materials
+                .iter()
+                .map(|m| residual_material_predicate(&m.filter).map(|r| (controller, r)))
+                .collect()
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = card;
+            Vec::new()
+        }
+    }
+
+    /// Evaluate a residual material predicate against one card instance with
+    /// the full DSL predicate evaluator (combinators honoured).
+    fn card_satisfies_material_residual(
+        &self,
+        controller: PlayerId,
+        played_card: CardHandle,
+        residual: &ResidualMaterialPredicate,
+        candidate: CardHandle,
+    ) -> bool {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let rctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                self,
+                played_card,
+                None,
+                crate::enums::EffectSourceKind::Digimon,
+                controller,
+            );
+            crate::dsl_cards::predicate::eval_predicate(
+                residual,
+                &rctx,
+                crate::dsl_cards::predicate::PredicateSubject::Card(candidate),
+            )
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (controller, played_card, residual, candidate);
+            true
+        }
     }
 }
 
@@ -1123,6 +1260,7 @@ fn compiled_path_transaction(
                 }),
                 allowed_zones: BTreeSet::new(),
                 cost_delta_per_material: material.cost_delta.unwrap_or(default_delta),
+                eligible_cards: None,
             };
             if let Some(name) = material.filter.name_is.as_ref() {
                 slot.names.push(name.clone());
@@ -1185,6 +1323,45 @@ fn collect_nested_recipe_identity(
         }
         collect_nested_recipe_identity(child, slot);
     }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+type ResidualMaterialPredicate = digimon_dsl::compiled::CompiledPredicate;
+#[cfg(not(feature = "dsl-yaml-loader"))]
+type ResidualMaterialPredicate = ();
+
+/// G-ENGINE-DIGIXROS-SLOT-PREDICATE — the part of a DigiXros material filter
+/// NOT already enforced by the slot's name/trait fast path. Mirrors
+/// `collect_nested_recipe_identity`: the name/trait leaves it lifts (top level
+/// and inside `all_of`/`any_of`, recursively) are cleared — they keep their
+/// DigiXros-alias-aware matching in `slot_accepts_card` — and whatever remains
+/// (`kind`, `effect_text_contains`, level / colour / DP leaves, `none_of`,
+/// `not`, …) is returned for the full predicate evaluator. `None` when nothing
+/// remains (pure name/trait recipe — the historical behaviour).
+#[cfg(feature = "dsl-yaml-loader")]
+fn residual_material_predicate(
+    filter: &digimon_dsl::compiled::CompiledPredicate,
+) -> Option<digimon_dsl::compiled::CompiledPredicate> {
+    fn strip(pred: &mut digimon_dsl::compiled::CompiledPredicate) {
+        pred.name_is = None;
+        pred.name_contains = None;
+        pred.name_in = None;
+        pred.trait_has = None;
+        for child in pred.all_of.iter_mut().chain(pred.any_of.iter_mut()) {
+            strip(child);
+        }
+        let empty = digimon_dsl::compiled::CompiledPredicate::default();
+        pred.all_of.retain(|c| *c != empty);
+        // An `any_of` with an emptied (always-true) alternative is satisfied
+        // by the name/trait fast path for that alternative — drop the whole
+        // disjunction rather than let the remaining alternatives narrow it.
+        if pred.any_of.iter().any(|c| *c == empty) {
+            pred.any_of.clear();
+        }
+    }
+    let mut residual = filter.clone();
+    strip(&mut residual);
+    (residual != digimon_dsl::compiled::CompiledPredicate::default()).then_some(residual)
 }
 
 #[cfg(test)]

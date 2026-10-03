@@ -515,6 +515,24 @@ fn strip_leading_keyword_headers(text: &str) -> &str {
     s
 }
 
+/// True when the text right after a `＜kw＞` token — past an optional
+/// `(reminder)` and an optional `.` — continues with `Then`, i.e. the token
+/// is the first step of a sequenced effect body rather than an innate
+/// keyword attribute. G-ENGINE-INNATE-SAVE-SEQUENCED-DUPLICATE.
+fn keyword_token_continues_into_then(after: &str) -> bool {
+    let mut rest = after.trim_start();
+    if rest.starts_with('(') {
+        match rest.find(')') {
+            Some(close) => rest = rest[close + 1..].trim_start(),
+            None => return false,
+        }
+    }
+    if let Some(r) = rest.strip_prefix('.') {
+        rest = r.trim_start();
+    }
+    rest.starts_with("Then")
+}
+
 /// Extract printed (INNATE) keywords from a card's text fields.
 ///
 /// Innate keywords appear as a `＜Keyword＞` keyword LINE at the START of a
@@ -576,6 +594,18 @@ pub fn parse_printed_keywords(
                 || left.ends_with(')')
                 || left.ends_with('＞');
             if !innate {
+                continue;
+            }
+            // A timing-attached token that the printed text CONTINUES with
+            // "Then," is a step in that timing's effect body, not a standalone
+            // keyword attribute: `[On Deletion] ＜Save＞. Then, place …`
+            // (BT12-011 / BT12-051 / BT11-031 …) is ONE On Deletion effect
+            // whose first step is <Save> — DCGO registers a single
+            // OnDestroyedAnyone effect. Treating it as innate auto-installed a
+            // second, independent <Save> trigger beside the card's own clause
+            // (TriggerOrder prompt + double Save).
+            // G-ENGINE-INNATE-SAVE-SEQUENCED-DUPLICATE.
+            if keyword_token_continues_into_then(&field[from..]) {
                 continue;
             }
 
@@ -1084,6 +1114,28 @@ mod tests {
             kws.is_empty(),
             "DP-and-keyword grant must not be innate, got {kws:?}"
         );
+    }
+
+    #[test]
+    fn sequenced_then_keyword_is_not_innate() {
+        // G-ENGINE-INNATE-SAVE-SEQUENCED-DUPLICATE (BT12-011).
+        let kws = parse_printed_keywords(
+            "[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+            "",
+            "",
+        );
+        assert!(!kws.contains(&crate::enums::Keyword::Save));
+        let kws = parse_printed_keywords(
+            "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card in your hand.",
+            "",
+            "",
+        );
+        assert!(kws.is_empty());
+        // A bare timing-attached Save is still innate.
+        let kws = parse_printed_keywords("[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)", "", "");
+        assert_eq!(kws, vec![crate::enums::Keyword::Save]);
+        let kws = parse_printed_keywords("＜Save＞", "", "");
+        assert_eq!(kws, vec![crate::enums::Keyword::Save]);
     }
 
     #[test]
