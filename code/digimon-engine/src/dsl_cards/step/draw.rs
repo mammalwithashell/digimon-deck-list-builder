@@ -2,10 +2,11 @@
 
 use digimon_dsl::compiled::CompiledStep;
 
+use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 
-pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
+pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
     match step {
         CompiledStep::Draw { of, count } => {
             let p = resolve_player(ctx, *of);
@@ -75,7 +76,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.move_from_breeding_by_effect(p);
             true
         }
-        CompiledStep::TrashTopSecurity { of, count, leave } => {
+        CompiledStep::TrashTopSecurity {
+            of,
+            count,
+            leave,
+            bind_count_as,
+        } => {
             let p = resolve_player(ctx, *of);
             let target = ctx
                 .source_permanent
@@ -99,11 +105,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
                         .max(0) as usize,
                 }
             };
+            let before = ctx.game.player(p).security.len();
             for _ in 0..n {
                 if ctx.game.player(p).security.is_empty() {
                     break;
                 }
                 ctx.trash_top_security(p);
+            }
+            if let Some(name) = bind_count_as {
+                // G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING — cards actually
+                // removed by this step (replacements may cancel some).
+                let after = ctx.game.player(p).security.len();
+                bindings.insert_literal(name, before.saturating_sub(after) as i64);
             }
             true
         }

@@ -1,0 +1,86 @@
+# BT26-013 Musyamon — Digimon, Lv.4, Red/Purple, DP 5000, Cost 4. Traits:
+#   Wizard, Shambala, TB, TS. Form Champion. Attribute: Virus.
+# Printed digivolve box: Red Lv.3 / cost 3; Purple Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[Shambala]/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-013.md):
+#   <Blocker> [On Play] [On Deletion] By trashing 1 card in your hand, delete 1
+#     of your opponent's Digimon with 6000 DP or less.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_013.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + (EqualsTraits Shambala || HasTSTraits), cost 2.
+# Blocker: BlockerSelfStaticEffect → grant_keyword Blocker.
+# Shared OP/OD (optional:false, additionalActivateCondition: hand >= 1):
+#   canNoSelect:true pick of ANY hand card → TrashHandAndProcessAccordingTo-
+#   Result; on success, if an opp Digimon with DP <= 6000 exists, mandatory
+#   (canNoSelect:false) Destroy pick.
+#   → `when: [on_play, on_deletion]` + condition hand >= 1; optional
+#   select_hand (the "by" cost) + trash_from_hand_by_index + mandatory
+#   select_opponent_permanent { dp_lte: 6000 } + delete_permanent. The cost
+#   may be paid with no delete target (DCGO only gates the delete pick).
+# Inherit: ChangeSelfDPStaticEffect(2000, inherited, IsOwnerTurn).
+
+card: BT26-013
+name: "Musyamon"
+kind: digimon
+level: 4
+color: [red, purple]
+cost: 4
+dp: 5000
+traits: [Wizard, Shambala, TB, TS]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - trait_has: "Shambala"
+            - trait_has: "TS"
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [On Play][On Deletion] By trashing 1 hand card, delete 1 opp Digimon
+  #     with ≤ 6000 DP ────────────────────────────────────────────────────────
+  - when: [on_play, on_deletion]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][On Deletion] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with 6000 DP or less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discarded
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete 1 of your opponent's Digimon with 6000 DP or less"
+      - if:
+          condition: { binding_present: discarded }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discarded }
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 6000
+                prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+            - delete_permanent: { target: victim }
+
+  # ─── Inherited [Your Turn] +2000 DP ───────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

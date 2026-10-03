@@ -154978,7 +154978,8 @@
     ],
     "type_eng": [
       "Amphibian",
-      "TS"
+      "TS",
+      "Titan"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -158489,7 +158490,10 @@
       4
     ],
     "type_eng": [
-      "Shambala"
+      "Shambala",
+      "SW",
+      "TB",
+      "TS"
     ],
     "form_eng": [],
     "attribute_eng": [],

@@ -362,6 +362,9 @@ pub fn lower_for_kind_with_clause_index(
                     ActivationCostKind::ReturnSelfToDeckBottom
                 }
                 CompiledActivationCostKind::TrashSelf => ActivationCostKind::TrashSelf,
+                CompiledActivationCostKind::PlaceSelfAtSecurityBottom => {
+                    ActivationCostKind::PlaceSelfAtSecurityBottom
+                }
             });
         }
 

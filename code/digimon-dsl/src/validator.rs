@@ -985,7 +985,7 @@ fn validate_step(
                 validate_binding_ref(source, &format!("{prefix}.source"), card_id, errors);
             }
         }
-        StepSpec::SecurityPlaceTopStackedCard(args) => {
+        StepSpec::SecurityPlaceTopStackedCard(args) | StepSpec::SecurityPlaceTopCard(args) => {
             validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
         }
         StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
@@ -1350,6 +1350,22 @@ fn validate_step_binding_scope(
             // `bind_count_as` DECLARES a literal binding (the count trashed) for
             // consumption by LATER steps' `binding_value` formulas.
             // G-DSL-TRASH-COUNT-RESULT-BINDING.
+            declare_optional_binding(scope, &args.bind_count_as);
+        }
+        StepSpec::TrashTopSecurity(args) => {
+            for (f, key) in [(&args.count, "count"), (&args.leave, "leave")] {
+                if let Some(f) = f {
+                    validate_formula_binding_scope(
+                        f,
+                        &format!("{prefix}.{key}"),
+                        card_id,
+                        scope,
+                        errors,
+                    );
+                }
+            }
+            // `bind_count_as` DECLARES the number of security cards actually
+            // trashed. G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING (BT26-083).
             declare_optional_binding(scope, &args.bind_count_as);
         }
         StepSpec::DeDigivolve(args) => {
@@ -2319,6 +2335,7 @@ fn validate_binding_ref(
         source_permanent,
         of_permanent,
         deck_top,
+        security_top,
         own_breeding,
         ..
     }) = binding_ref
@@ -2339,6 +2356,7 @@ fn validate_binding_ref(
         permanent.is_some(),
         of_permanent.is_some(),
         deck_top.is_some(),
+        security_top.is_some(),
         matches!(own_breeding, Some(true)),
     ]
     .iter()

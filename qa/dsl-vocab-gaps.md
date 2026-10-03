@@ -8400,3 +8400,240 @@ pins that the turn scan does not trash such a marker.
   named-binding resolution and `binding_play_cost` re-locate the card by handle, and a
   pinned card that has left the trash resolves to nothing. BT26-098 is back on plain
   `select_trash` picks (its test is the regression).
+
+## `activation_cost` "by placing this Digimon as the bottom security card"  [G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY]
+
+- Found 2026-10-03 (BT26-022 Sorcermon [End of Your Turn]: "by placing this Digimon as
+  the bottom security card, you may play 1 blue or red [Iliad] ... from your hand").
+- `place_on_security: { source: self }` has no success gate, so a failed placement
+  (`CannotAddSecurityByEffect`, would-leave replacement) still let the payoff run.
+- **RESOLVED 2026-10-03.** New activation-cost kind
+  `activation_cost: { place_self_at_security_bottom: true }` →
+  `ActivationCostKind::PlaceSelfAtSecurityBottom` (pays via
+  `EffectContext::place_self_at_security(Bottom, face down)`; `is_payable` refuses under
+  the owner's `CannotAddSecurityByEffect`). Test
+  `bt26_022_eot_cost_fails_when_security_cannot_be_added`.
+
+## Opponent-scoped stack protection  [G-DSL-STACK-PROTECTION-FROM-OPPONENT-EFFECTS]
+
+- Found 2026-10-03 (BT26-029 Aegiochusmon: Holy [On Play][When Digivolving]: "until your
+  opponent's turn ends, their effects can't reduce the DP of 1 of your Digimon, trash any
+  of its stacked cards, or return them to hands or decks").
+- `add_modifier` installs `ModifierEntry::simple` (no cause filter), so
+  `CannotBeReturnedToHand/Deck` blocked OWN effects too, and the `ImmuneFromStackTrashing`
+  consult ignored any controller scope.
+- **RESOLVED 2026-10-03.** New step `grant_stack_protection_from_opponent_effects
+  { target, expiry }` → `EffectContext::grant_stack_protection_from_opponent_effects`:
+  `ImmuneFromStackTrashing` with an `OpponentOnly` immunity filter + passive-replacement
+  (opponent-effect) `CannotBeDeDigivolved` / `CannotBeReturnedToHand` /
+  `CannotBeReturnedToDeck`. The stack-trash consult sites (`trash_top_source`,
+  `trash_bottom_sources`, `trash_top_n_stacked_sources`) now honor the entry's
+  controller filter, and opponent-controlled `trash_card_source` / `trash_all_sources`
+  consult it too. Pair with `grant_narrow_opponent_effect_protection` for the DP half.
+  Test `bt26_029_on_play_trashes_security_and_protects_one_digimon`.
+
+## Place the VISIBLE top card into security  [G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD]
+
+- Found 2026-10-03 (BT26-033 Jupitermon [All Turns]: "by placing this Digimon's top
+  stacked card as the bottom security card, they don't leave"; DCGO moves `card` — the
+  permanent's TOP card — leaving the rest of the stack on the field).
+- `security_place_top_stacked_card` moves `card_sources[len - 2]` (the card just BELOW the
+  top), so it cannot express this (same mismatch BT24-093 recorded).
+- **RESOLVED 2026-10-03.** New step `security_place_top_card { carrier, of, position,
+  face }` → `EffectContext::security_place_top_card` (moves `card_sources[len - 1]`;
+  no-op without ≥1 digivolution card). The legacy step is unchanged (BT20-084 still uses
+  it). Test `bt26_033_protects_ts_permanent_by_placing_top_card_to_bottom_security`.
+
+## Count of security cards actually trashed  [G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING]
+
+- Found 2026-10-03 (BT26-083 Junomon: Hysteric Mode: "Trash all of your security cards.
+  For each card this effect trashed, delete 1 of your opponent's Digimon").
+- **RESOLVED 2026-10-03.** `trash_top_security` gained `bind_count_as: <name>` (literal
+  binding = cards actually removed; read with `{ binding_value: <name> }`), the
+  `trash_opponent_hand_to_count` sibling. Test
+  `bt26_083_on_play_trashes_all_deletes_that_many_then_recovers_three`.
+
+## Union-zone play with a cost reduction  [G-DSL-PLAY-UNION-BOUND-COST-DELTA]
+
+- Found 2026-10-03 (BT26-096 Kosuke Misono [Main]: "play 1 Digimon card with [Chronomon]
+  in its text or 1 [TS] Tamer card from your hand or trash with the cost reduced by 2").
+- `play_union_bound_free` (the origin-preserving play of a `select_union_zone` pick) could
+  only play for free.
+- **RESOLVED 2026-10-03.** `play_union_bound_free` gained `cost_delta:` (omitted → free,
+  the historical behavior; `{ reduce: N }` pays the printed cost minus N from the card's
+  TRUE origin zone — hand, trash or material). New ctx helper
+  `EffectContext::play_from_hand_with_cost_suppress_on_play`. Test
+  `bt26_096_main_bounces_self_and_plays_from_trash_reduced` /
+  `bt26_096_main_plays_ts_tamer_from_hand_reduced`.
+
+## "Delete all … with the lowest DP" over a FILTERED set  [G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER]
+
+- Found 2026-10-03 (BT26-080 Bacchusmon // Reversal of the Dead [Main]: "delete all of
+  your opponent's UNSUSPENDED Digimon with the lowest DP" — DCGO
+  `IsMinDP(permanent, enemy, unsuspendedCondition)`).
+- The `aggregate: { selector: lowest_dp }` DP bound is computed over ALL of a player's
+  Digimon (no filter), so it cannot express "lowest among the unsuspended ones".
+- **RESOLVED 2026-10-03.** `delete_all_permanents` gained `selector:` (a
+  `FieldSelector` — `lowest_dp`, `highest_dp`, `lowest_play_cost`, …): the `over`
+  matches are narrowed to those holding the extreme value AMONG the matches (ties all
+  deleted, one batch). Test `bt26_080_option_deletes_all_lowest_unsuspended`.
+
+## `select_any_permanent` silently drops `continue_on_decline`  [G-DSL-SELECT-ANY-CONTINUE-ON-DECLINE]
+
+- Found 2026-10-03 (BT26-080 Bacchusmon Option: "You may unsuspend 1 Digimon. Then, …").
+- `select_any_permanent` shares `SelectFieldArgs`, so `continue_on_decline: true` parses,
+  but the compiled `SelectAnyPermanent` step has no such field and the engine installer
+  (`install_select_any_permanent`) ignores it: a PASS still drops the rest of the clause.
+  A silent no-op key — the validator should reject it or the engine should honor it.
+- **OPEN.** Workaround used: `select_count_capped_multi { of: any, min: 1, max: 1,
+  clamp_to_available, optional_zero }` + `per_selected` (a declined pick continues).
+
+
+## `return_top_security_to_deck`  [G-DSL-RETURN-TOP-SECURITY-TO-DECK]
+
+- Found 2026-10-03 (BT26-016 Chronomon: Holy Mode "by returning your top security card to the
+  bottom of the deck, it doesn't leave"). Only `return_selected_security_to_deck` (a bound card)
+  existed.
+- **RESOLVED 2026-10-03.** `return_top_security_to_deck: { of, position }` →
+  `CompiledStep::ReturnTopSecurityToDeck`; moves `security.last()` via
+  `EffectContext::return_security_card_to_deck` (security-removed observers + `on_add_to_deck`).
+  Test `bt26_016_would_leave_returns_top_security_and_stays_once_per_turn`.
+
+## `grant_keyword_continuous`  [G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT]
+
+- Found 2026-10-03 (BT26-101 Cross Arts "all of your [TS] trait Digimon gain <Blocker> and +3000
+  DP until your opponent's turn ends"; DCGO `GainBlockerPlayerEffect` is a player effect
+  re-evaluated over its condition). `add_modifier { continuous: true }` covers the DP half, but
+  keywords live in a separate store (the `GrantBlocker` ModifierType is dead).
+- **RESOLVED 2026-10-03.** `grant_keyword_continuous: { targets, keyword, expiry }` →
+  `Game::add_floating_mass_keyword` (a `FloatingMassModifier` with `keyword: Some(..)`; the
+  declarative tick grants it to every live match). Test
+  `bt26_101_buff_is_continuous_over_later_ts_digimon`.
+
+## `grant_stack_trash_immunity_from_opponent_effects`  [G-DSL-STACK-TRASH-IMMUNITY-FROM-OPPONENT-EFFECTS]
+
+- Found 2026-10-03 (BT26-085 Giant Slayer [On Play] "your opponent's effects can't reduce this
+  Digimon's DP or trash its stacked cards"). `grant_stack_protection_from_opponent_effects`
+  (BT26-029) also locks return-to-hand/deck, which this card does not print; plain
+  `add_modifier ImmuneFromStackTrashing` has no opponent-only filter.
+- **RESOLVED 2026-10-03.** New step installs opponent-scoped `ImmuneFromStackTrashing` +
+  `CannotBeDeDigivolved` (paired with `grant_narrow_opponent_effect_protection` for the DP half).
+  Test `bt26_085_on_play_grants_opponent_scoped_dp_and_stack_trash_immunity`.
+
+## `replacement_subject_is_mine` widens "this Digimon would leave"  [G-DSL-REPLACEMENT-SELF-SCOPE-WIDENED] — OPEN
+
+- Found 2026-10-03 while authoring BT26-016. A `kind: replacement` clause whose `active_when`
+  reads ANY replacement-subject leaf (e.g. `replacement_subject_is_mine: true`) is lowered with
+  `can_match_cross_permanent_subject`, so the window opens for EVERY own permanent, not just
+  "this Digimon" (measured: deleting another own Digimon offered BT26-016's prompt until the
+  leaf was dropped). Self-scoped printed text should omit subject leaves (the lowering then
+  defaults to the source permanent) or add `is_source_permanent: true`. Suspects to audit:
+  BT25-027 MachGaogamon (main clause), BT26-044 (inherited clause) — both print "this Digimon".
+
+## `{ security_top: <player> }` card-source binding  [G-DSL-SECURITY-TOP-AS-SOURCE]
+
+- Found 2026-10-03 (BT26-025 Liollmon "By placing your top security card face down under any of
+  your [Glowing Dawn] trait Tamers, <Recovery +1>"). `place_as_bottom_source` could take
+  `{ deck_top: you }` but had no way to address the TOP security card without a player pick
+  (`select_security` lets the player choose ANY card — not the printed top).
+- **RESOLVED 2026-10-03.** `StructuredBindingRef.security_top` → `CompiledBindingRef::SecurityTop`
+  → `CardSourceRef::Security(p, top)` (nothing on an empty stack). The placement runs through the
+  existing effect-security-removal path (fires `OnLoseSecurity` as an effect removal) and now
+  honors `face_down` (G-ENGINE-SECURITY-AS-SOURCE-FACE-DOWN). Tests
+  `bt26_025_on_play_places_top_security_face_down_and_recovers`,
+  `bt26_025_placement_is_an_effect_removal_for_kyo`.
+
+## `kind: dual` in card-zone searches  [G-DSL-KIND-DUAL-CARD-SEARCH]
+
+- Found 2026-10-03 (BT26-075 ScourgeChiropmon "play 1 [Glowing Dawn] trait card with a play cost
+  of 5 or less from your trash"): a DUAL card in trash matched `kind: digimon` + `play_cost_lte`,
+  but a DUAL has no play cost ("Play cost: D"; DCGO `HasPlayCost` false). `kind: dual` matched
+  nothing in card zones, so it could not be excluded.
+- **RESOLVED 2026-10-03.** `kind_matches` now matches `kind: dual` against `CardKind::Dual`, so
+  `not: { kind: dual }` excludes it. Test
+  `bt26_075_on_deletion_trashes_face_down_and_plays_from_trash`.
+
+## security-icon lint: `[Security] [On Deletion]` is BLUE  [G-LINT-SECURITY-EVENT-TIMING]
+
+- Found 2026-10-03 (BT26-075). The spelling heuristic counted any `[Security]` followed by a
+  timing bracket as the pink face-up icon. `[Security] [On Deletion] …` is a security-check
+  trigger sharing its body with an `[On Deletion]` trigger (a face-up security card is never
+  deleted; DCGO `SecuritySkill`). **RESOLVED 2026-10-03:** event timings (`[On …]` / `[When …]`)
+  after `[Security]` now classify as blue. Test
+  `security_icon_lint::security_followed_by_an_event_timing_is_the_blue_icon`.
+
+## `play_from_trash` on the card itself  [G-DSL-PLAY-SELF-FROM-TRASH-WITH-COST]
+
+- Found 2026-10-03 (BT26-079 ZombiePlutomon "{Trash} [Main] … play this card with the cost
+  reduced by 4"): the cost-paying `play_from_trash` resolved only trash-INDEX bindings, so
+  `hand_index: self` (a card-handle binding) silently no-op'd.
+- **RESOLVED 2026-10-03.** `play_from_trash` now also accepts a card-handle binding (`self`,
+  `event_card`, …) and locates it in its owner's trash (the `play_from_trash_free` behavior).
+  Tests `bt26_079_trash_main_plays_itself_at_minus_four`,
+  `bt26_079_trash_main_needs_hand_of_five_or_fewer`.
+
+## `select_any_permanent` ignored `continue_on_decline`  [G-DSL-ANY-PERMANENT-CONTINUE-ON-DECLINE]
+
+- Found 2026-10-03 (BT26-038 Kuwagamon "You may suspend 1 Digimon. Then, 1 of your [Insectoid] or
+  [Titan] Digimon gets +3000 DP"): the both-player pick (`select_any_permanent`) accepted
+  `continue_on_decline: true` in YAML (shared `SelectFieldArgs`) but the compiled step dropped it,
+  so a PASS discarded the mandatory "Then, …" leg.
+- **RESOLVED 2026-10-03.** `CompiledStep::SelectAnyPermanent` now carries `continue_on_decline`
+  (lowered in `compile.rs`); the engine arm wires both the closure `on_decline` and the resume
+  frame's `ResumeDecline::RunTail` (`attach_any_permanent_continue_on_decline` in
+  `dsl_cards/step/selections.rs`, mirroring `install_select_opponent_permanent`). Test
+  `bt26_038_decline_suspend_still_buffs`.
+
+## `<Detach ([X] trait)>` — trait-filtered leave-replacement link-card cost  [G-DSL-DETACH-LINK-CARD-FILTER]
+
+- Found 2026-10-03 (BT26 Seven Code Appmon: BT26-010/019/028/037/051/063/084 — "<Detach ([Seven
+  Code] trait)> When this Digimon would leave the battle area other than by your effects, by
+  trashing 1 of its specified link cards, it doesn't leave"). `cost: { trash_own_link_card }`
+  offered EVERY link card.
+- **RESOLVED 2026-10-03.** `ReplacementCostBody.link_card_filter` (card predicate) lowers to the
+  new `CompiledStep::TrashOwnLinkCardMatchingAndCancelLeave { filter }`; the engine pre-filters the
+  leaving permanent's link cards (`EffectContext::trash_own_link_card_among_and_cancel_leave`) and
+  the replacement preflight gates the accept prompt on ≥1 matching link card. "Other than by your
+  effects" = `active_when: none_of: [replacement_cause: own_effect]` (BT23-032 idiom). Tests
+  `bt26_019_detach_*`.
+
+## `link_cards` `cost: { reduce: N }` paid 0; `to: self` ignored the card's own `<Link>` condition  [G-DSL-LINK-CARDS-REDUCED-COST]
+
+- Found 2026-10-03 (BT26-007 Swipemon "link 1 [Seven Code] Digimon card … with the cost reduced
+  by 2" — Seven Code link cost 3 → pays 1). `reduce: N` compiled to a flat 0.
+- **RESOLVED 2026-10-03.** `CompiledStep::LinkCards.cost_reduce` — each linked card pays its OWN
+  printed link cost (after `ChangeLinkCost` deltas) minus N; unaffordable cards are not offered.
+  For `to: self`, a card that carries its own link condition is offered only if that condition
+  accepts the host and the host has link room (`LinkGate`, DCGO `CanLinkToTargetPermanent`);
+  cards without a link condition keep the legacy unrestricted behaviour. Tests `bt26_007_*`.
+
+## "with different names" across a multi-pick loop  [G-DSL-NAME-NOT-IN-BINDING]
+
+- Found 2026-10-03 (BT26-086 Dantemon "link up to 7 [Appmon] trait cards with different names").
+- **RESOLVED 2026-10-03.** Card-subject predicate leaf `name_not_in_binding: <CardList binding>`
+  (absent binding ⇒ pass); pair with the loop step's `bind_as`. Test
+  `bt26_086_on_play_links_different_names_only`.
+
+## "play or use … with the cost reduced by N" affordability  [G-DSL-AFFORDABLE-WITH-COST-REDUCE]
+
+- Found 2026-10-03 (BT26-084 Copipemon reveal-3 "you may play or use 1 [Seven Code] trait card
+  among them with the cost reduced by 3"). DCGO only offers cards the player can pay for.
+- **RESOLVED 2026-10-03.** Card-subject leaf `affordable_with_cost_reduce: N`; also
+  `binding_card_kind` now resolves a single-card `CardList` (a min:0/max:1
+  `select_reveal_buckets` bucket) so the pick can be kind-routed to
+  `use_option_from_revealed` / `play_from_revealed_free`. Tests `bt26_084_*`.
+
+## Multi-zone "place N cards as bottom digivolution cards" from battle area / link cards / trash  [G-DSL-PLACE-MATERIALS-MULTI-ZONE] — OPEN (BLOCKS BT26-102)
+
+- Found 2026-10-03 (BT26-102 Seven Code PAD [Main] "By placing 6 [Seven Code] trait Digimon cards
+  from your battle area, link cards or trash as 1 of your [Seven Code] trait Digimon's bottom
+  digivolution cards, that Digimon may digivolve into [Dantemon] in the hand, ignoring
+  digivolution requirements and without paying the cost"). DCGO loops a zone choice {Battle area
+  | Link cards | Trash | Cancel} with per-zone up-to-remaining multi-picks (battle-area picks are
+  whole OTHER Seven Code permanents — their top card becomes material; link picks go through a
+  host select), exactly 6 or nothing, then `AddDigivolutionCardsBottom` +
+  `DigivolveIntoHandOrTrashCard(ignoreRequirements: All, payCost: false)`.
+- No DSL step gathers materials across battle-area permanents + link cards + trash into a
+  single "exactly N" cost; the fate of a consumed permanent's remaining stack is also
+  unspecified in DCGO (it only moves `TopCard`). BT26-102 left unimplemented (BLOCKED) rather
+  than shipping only its [Security] half.

@@ -1,0 +1,100 @@
+# BT26-103 Jupitermon: Wrath Mode — Digimon, Lv.7, Yellow/Red/Black, DP 16000,
+#   Cost 16. Traits: Shaman, Olympos XII, Iliad, TS. Form Mega. Attribute:
+#   Vaccine.
+# Printed digivolve box: Yellow / Red / Black Lv.6 / cost 6;
+#   [Digivolve] Lv.6 w/[Olympos XII] trait: Cost 5.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-103.md):
+#   <Piercing> <Reboot> <Blocker> <Succession ([Jupitermon])> (This Digimon
+#     gains all effects other than <Succession> on its topmost specified
+#     digivolution card.)
+#   [When Digivolving] [Counter] [Once Per Turn] Trash your top security card
+#     and <Recovery +2>.
+#   [All Turns] [Once Per Turn] When security stacks are removed from, 1 of your
+#     opponent's Digimon gets -15000 DP until their turn ends.
+#   Official Q&A: only 1 [Counter] effect can be activated during 1 attack.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_103.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 6 + EqualsTraits("Olympos XII"), cost 5.
+# Piercing / Reboot / Blocker → grant_keyword ×3.
+# Succession: CopyDigivolutionCardEffects(cardCondition EqualsCardName
+#   "Jupitermon", isSuccession) — the permanent adopts every effect (other than
+#   Succession) printed on its topmost [Jupitermon] digivolution card.
+#   → BLOCKED: no DSL/engine machinery grants a permanent the effects of a
+#   digivolution SOURCE card (same family as EX10-059's
+#   G-DSL-GAIN-ALL-TURNS-FROM-SOURCES). Logged as G-ENGINE-SUCCESSION-KEYWORD
+#   (docs/RUST_ENGINE_GAPS.md). Not stubbed.
+# Shared WD / Counter (maxCountPerTurn 1, one shared hash, optional:false):
+#   IDestroySecurity(top, 1) then IRecovery(2).
+#   → `when: [when_digivolving, counter]` + once_per_turn (one lockout across
+#   both timings, BT20-056 multi-timing idiom); trash_top_security + recover 2.
+# All Turns OPT (OnLoseSecurity, EITHER player): mandatory pick of 1 opponent
+#   Digimon → ChangeDigimonDP(-15000, UntilOpponentTurnEnd).
+#   → `when: [on_own_security_removed, on_opponent_security_removed]` +
+#   once_per_turn; add_dp_modifier -15000 / end_of_opponents_turn.
+
+card: BT26-103
+name: "Jupitermon: Wrath Mode"
+kind: digimon
+level: 7
+color: [yellow, red, black]
+cost: 16
+dp: 16000
+traits: [Shaman, Olympos XII, Iliad, TS]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 6
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: "Olympos XII"
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [When Digivolving][Counter][Once Per Turn] trash top security,
+  #     <Recovery +2> ──────────────────────────────────────────────────────────
+  - when: [when_digivolving, counter]
+    once_per_turn: true
+    summary: "[When Digivolving] [Counter] [Once Per Turn] Trash your top security card and <Recovery +2>"
+    process:
+      - trash_top_security: { of: you }
+      - recover: { of: you, count: 2 }
+
+  # ─── [All Turns][Once Per Turn] security stacks removed → 1 opp Digimon
+  #     -15000 DP until their turn ends ─────────────────────────────────────
+  - when: [on_own_security_removed, on_opponent_security_removed]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns] [Once Per Turn] When security stacks are removed from, 1 of your opponent's Digimon gets -15000 DP until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -15000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -15000
+          expiry: end_of_opponents_turn

@@ -170,6 +170,12 @@ pub(crate) struct PendingHandDiscard {
     /// first-seen order. Almost always a single player, but an effect that
     /// trashes from both hands in one body fires one event per affected owner.
     pub(crate) trashed_players: Vec<PlayerId>,
+    /// Every card this window moved hand→trash, with its owner, in trash
+    /// order. Drives the self-scoped "When this card is trashed from the
+    /// hand" trigger (BT26-069 Dobermon; DCGO `CanTriggerOnTrashSelfHand`):
+    /// on flush, each still-in-trash card's `scope: trash` `on_discard_hand`
+    /// clauses are enqueued. G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) trashed_cards: Vec<(PlayerId, crate::card_source::CardHandle)>,
 }
 
 /// One host's share of an open `OnAddDigivolutionCards` batch window
@@ -1088,6 +1094,12 @@ pub struct Game {
     /// the whole discard list before firing the trigger once.
     pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
 
+    /// Open coalescing window for the `OnAddToDeck` batch trigger
+    /// (G-ENGINE-ON-ADD-TO-DECK): the controller of the effect that added
+    /// cards to a deck during the current effect body. Flushed (fires the
+    /// trigger once) at the outermost drain, alongside `pending_hand_discard`.
+    pub(crate) pending_deck_add: Option<PlayerId>,
+
     /// Open coalescing windows for the `OnAddDigivolutionCards` batch trigger
     /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS), one per host permanent that an
     /// effect placed sources under during the current effect body. Flushed
@@ -1105,6 +1117,20 @@ pub struct Game {
     /// the `BottomSource` / `TopSource` destination is seated. `None`
     /// otherwise. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub(crate) pending_security_source_cause_card: Option<crate::card_source::CardHandle>,
+    /// `true` only around the `OnLoseSecurity` enqueue inside
+    /// `fire_effect_security_removal` (every caller of which is an EFFECT
+    /// removal — the combat security check enqueues its own drain). Read by
+    /// `trigger_context_for_source` so `event_is_effect_initiated` can tell
+    /// "removed from by effects" apart from a security check (BT26-089 Kyo
+    /// Sawashiro; DCGO `CardEffectCommons.IsByEffect`).
+    /// G-ENGINE-LOSE-SECURITY-BY-EFFECT.
+    pub(crate) pending_security_loss_effect_initiated: bool,
+    /// Face-down flag for an in-flight effect-driven security→digivolution
+    /// source placement (`place_as_source_observed`'s Security branch);
+    /// consumed when `complete_effect_security_removal` seats the card
+    /// (BT26-025 Liollmon "place your top security card face down under …").
+    /// G-DSL-SECURITY-TOP-AS-SOURCE.
+    pub(crate) pending_security_source_face_down: bool,
 
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
@@ -1911,10 +1937,47 @@ impl Game {
                 .get_or_insert_with(|| crate::game::PendingHandDiscard {
                     cause_controller,
                     trashed_players: Vec::new(),
+                    trashed_cards: Vec::new(),
                 });
         if !window.trashed_players.contains(&trashing_player) {
             window.trashed_players.push(trashing_player);
         }
+    }
+
+    /// Record that an EFFECT controlled by `cause_controller` just added a
+    /// (non-Digi-Egg) card to a deck from outside it, opening or extending the
+    /// `OnAddToDeck` batch window (G-ENGINE-ON-ADD-TO-DECK). A window open
+    /// with a DIFFERENT controller is flushed first so two effect bodies never
+    /// merge. The trigger fires when the window is flushed after the causing
+    /// effect body completes (`flush_pending_deck_add`).
+    pub(crate) fn note_effect_deck_add(&mut self, cause_controller: crate::enums::PlayerId) {
+        if let Some(open) = self.pending_deck_add {
+            if open != cause_controller {
+                self.flush_pending_deck_add();
+            }
+        }
+        self.pending_deck_add = Some(cause_controller);
+    }
+
+    /// `note_effect_deck_add` for Game-level deck sinks: records only when an
+    /// effect is currently resolving (`effect_source_player`), so rule-driven
+    /// deck moves (mulligan, setup) never fire the observer.
+    pub(crate) fn note_effect_deck_add_if_resolving(&mut self) {
+        if let Some(cause) = self.effect_source_player {
+            self.note_effect_deck_add(cause);
+        }
+    }
+
+    /// Fire the `OnAddToDeck` batch trigger for the open window, then close it.
+    /// G-ENGINE-ON-ADD-TO-DECK.
+    pub(crate) fn flush_pending_deck_add(&mut self) {
+        let Some(cause_controller) = self.pending_deck_add.take() else {
+            return;
+        };
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAddToDeck,
+            crate::selection::TriggerSource::DeckGained { cause_controller },
+        );
     }
 
     /// Fire the `OnDiscardHand` batch trigger (once per affected owner) for the
@@ -1933,6 +1996,25 @@ impl Game {
                     cause_controller,
                 },
             );
+        }
+        // "When this card is trashed from the hand" (BT26-069 Dobermon):
+        // the trashed cards' own `scope: trash` clauses.
+        // G-ENGINE-SELF-TRASHED-FROM-HAND.
+        for (owner, card) in window.trashed_cards {
+            self.enqueue_self_trashed_from_hand(owner, card, cause_controller);
+        }
+    }
+
+    /// Record the specific card an effect just moved from `owner`'s hand to
+    /// the trash into the open `OnDiscardHand` window (call right after
+    /// `note_effect_hand_discard`). G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) fn note_effect_hand_discard_card(
+        &mut self,
+        owner: crate::enums::PlayerId,
+        card: crate::card_source::CardHandle,
+    ) {
+        if let Some(window) = self.pending_hand_discard.as_mut() {
+            window.trashed_cards.push((owner, card));
         }
     }
 
@@ -2798,6 +2880,37 @@ impl Game {
                 pending_skips,
                 effect_immunity,
                 payload,
+                keyword: None,
+            });
+        self.tick_declarative_effects();
+    }
+
+    /// Continuous mass KEYWORD grant (G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT):
+    /// every declarative tick grants `keyword` to each battle-area permanent
+    /// matching `filter` (relative to `source_player`) until `expiry`, so a
+    /// matching permanent that enters during the window is covered too.
+    pub fn add_floating_mass_keyword(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        keyword: crate::enums::Keyword,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+    ) {
+        let pending_skips =
+            crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
+        self.floating_mass_modifiers
+            .push(crate::floating_modifier::FloatingMassModifier {
+                filter,
+                modifier: ModifierType::ChangeDp,
+                value: 0,
+                source_card,
+                source_player,
+                expiry,
+                pending_skips,
+                effect_immunity: None,
+                payload: None,
+                keyword: Some(keyword),
             });
         self.tick_declarative_effects();
     }

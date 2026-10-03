@@ -31,6 +31,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::TrashOwnLinkCardMatchingAndCancelLeave { filter } => {
+            // BT26 <Detach ([X] trait)> — as above, but only link cards matching
+            // `filter` are offered (DCGO `DetachProcess` `cardCondition`).
+            if let Some(host) = bindings.get_permanent("replacement_subject") {
+                let cards = matching_link_cards(ctx, bindings, host, filter);
+                ctx.trash_own_link_card_among_and_cancel_leave(host, cards);
+            }
+            true
+        }
         CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave => {
             // EX11-027 — sibling of the trash cost: place a chosen link card of
             // the leaving permanent (the `replacement_subject`) under it as the
@@ -132,6 +141,46 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         }
         _ => false,
     }
+}
+
+/// `host`'s link cards matching the card predicate `filter` (BT26 Detach).
+pub(crate) fn matching_link_cards(
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+    host: crate::permanent::PermanentHandle,
+    filter: &digimon_dsl::compiled::CompiledPredicate,
+) -> Vec<crate::card_source::CardHandle> {
+    let read = ctx.as_read();
+    matching_link_cards_read(&read, bindings, host, filter)
+}
+
+/// Read-context form of [`matching_link_cards`] (the replacement preflight).
+pub(crate) fn matching_link_cards_read(
+    read: &crate::effect_context::EffectReadContext<'_>,
+    bindings: &Bindings,
+    host: crate::permanent::PermanentHandle,
+    filter: &digimon_dsl::compiled::CompiledPredicate,
+) -> Vec<crate::card_source::CardHandle> {
+    let Some(perm) = read
+        .game
+        .player(host.player)
+        .battle_area
+        .get(host.index as usize)
+    else {
+        return Vec::new();
+    };
+    perm.linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .filter(|h| {
+            crate::dsl_cards::predicate::eval_predicate_with_bindings(
+                filter,
+                read,
+                crate::dsl_cards::predicate::PredicateSubject::Card(*h),
+                Some(bindings),
+            )
+        })
+        .collect()
 }
 
 fn set_outcome(ctx: &mut EffectContext<'_>, outcome: ReplacementOutcome) {

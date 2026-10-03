@@ -103,6 +103,13 @@ pub enum StepSpec {
     /// LM-020 Quantumon ("place 1 card among them on top of your opponent's
     /// deck"). YAML: `return_selected_security_to_deck: { of, card, position }`.
     ReturnSelectedSecurityToDeck(ReturnToDeckArgs),
+    /// Move the TOP card of a player's security stack to that player's deck
+    /// (top or bottom). "By returning your top security card to the bottom of
+    /// the deck" (BT26-016 Chronomon: Holy Mode). Fires the security-removed
+    /// observers and, as an effect deck add, `on_add_to_deck`. No-op on an
+    /// empty stack. YAML: `return_top_security_to_deck: { of, position }`.
+    /// G-DSL-RETURN-TOP-SECURITY-TO-DECK.
+    ReturnTopSecurityToDeck(ReturnTopSecurityToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -361,6 +368,13 @@ pub enum StepSpec {
     PlaceSelfUnderPermanent(PlaceSelfUnderPermanentArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
+    /// G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD (BT26-033 Jupitermon) — place
+    /// the carrier's VISIBLE top card ("this Digimon's top stacked card")
+    /// into security, leaving the rest of its stack on the field (the next
+    /// card becomes the top). No-op unless the carrier has ≥1 digivolution
+    /// card. Distinct from `security_place_top_stacked_card`, which moves
+    /// the card just BELOW the top (`card_sources[len - 2]`).
+    SecurityPlaceTopCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
     ReturnTrashListToDeckBottom(ReturnTrashListToDeckBottomArgs),
     MoveTrashCardToDeckTop(MoveTrashCardToDeckTopArgs),
@@ -376,6 +390,15 @@ pub enum StepSpec {
     AddModifier(AddModifierArgs),
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
+    /// CONTINUOUS mass keyword grant — "all of your [TS] trait Digimon gain
+    /// <Blocker> ... until your opponent's turn ends" (BT26-101 Cross Arts;
+    /// DCGO `GainBlockerPlayerEffect`, a player effect re-evaluated over its
+    /// permanent condition). Installs a source-independent floating
+    /// descriptor re-applied to the live `targets` set every declarative
+    /// tick, so a matching Digimon that enters during the window gains the
+    /// keyword too — the keyword sibling of `add_modifier { continuous: true }`.
+    /// G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT.
+    GrantKeywordContinuous(GrantKeywordContinuousArgs),
     AllowDigixrosMaterialZone(AllowDigixrosMaterialZoneArgs),
     AddDigixrosCostDelta(DigixrosCostDeltaArgs),
     PreattachDigixrosMaterial(PreattachDigixrosMaterialArgs),
@@ -388,6 +411,17 @@ pub enum StepSpec {
     /// reduced by your opponent's effects and isn't affected by
     /// ＜De-Digivolve＞ effects".
     GrantNarrowOpponentEffectProtection(GrantNarrowOpponentEffectProtectionArgs),
+    /// G-DSL-STACK-PROTECTION-FROM-OPPONENT-EFFECTS (BT26-029) — "your
+    /// opponent's effects can't trash any of its stacked cards, or return
+    /// them to hands or decks": opponent-scoped ImmuneFromStackTrashing +
+    /// CannotBeDeDigivolved + CannotBeReturnedToHand + CannotBeReturnedToDeck.
+    GrantStackProtectionFromOpponentEffects(GrantNarrowOpponentEffectProtectionArgs),
+    /// G-DSL-STACK-TRASH-IMMUNITY-FROM-OPPONENT-EFFECTS (BT26-085 Giant
+    /// Slayer) — "your opponent's effects can't ... trash its stacked cards"
+    /// ONLY (no return-to-hand/deck clause): opponent-scoped
+    /// ImmuneFromStackTrashing + CannotBeDeDigivolved (de-digivolve trashes
+    /// the top stacked cards — official Q&A).
+    GrantStackTrashImmunityFromOpponentEffects(GrantNarrowOpponentEffectProtectionArgs),
     /// Track H §3 — install a granted triggered effect on each
     /// permanent matching `target`. The granted body fires on the
     /// carrier's matching `timing` (DCGO `AddSkillClass.cs` analog).
@@ -543,6 +577,7 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSecurityToDeck(v) => {
                 kv!(s, "return_selected_security_to_deck", v)
             }
+            StepSpec::ReturnTopSecurityToDeck(v) => kv!(s, "return_top_security_to_deck", v),
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -658,6 +693,7 @@ impl Serialize for StepSpec {
             StepSpec::SecurityPlaceTopStackedCard(v) => {
                 kv!(s, "security_place_top_stacked_card", v)
             }
+            StepSpec::SecurityPlaceTopCard(v) => kv!(s, "security_place_top_card", v),
             StepSpec::ReturnAllTrashToDeckBottom(v) => {
                 kv!(s, "return_all_trash_to_deck_bottom", v)
             }
@@ -680,6 +716,7 @@ impl Serialize for StepSpec {
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
             StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
+            StepSpec::GrantKeywordContinuous(v) => kv!(s, "grant_keyword_continuous", v),
             StepSpec::AllowDigixrosMaterialZone(v) => {
                 kv!(s, "allow_digixros_material_zone", v)
             }
@@ -697,6 +734,12 @@ impl Serialize for StepSpec {
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             StepSpec::GrantNarrowOpponentEffectProtection(v) => {
                 kv!(s, "grant_narrow_opponent_effect_protection", v)
+            }
+            StepSpec::GrantStackProtectionFromOpponentEffects(v) => {
+                kv!(s, "grant_stack_protection_from_opponent_effects", v)
+            }
+            StepSpec::GrantStackTrashImmunityFromOpponentEffects(v) => {
+                kv!(s, "grant_stack_trash_immunity_from_opponent_effects", v)
             }
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
@@ -823,6 +866,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_security_to_deck" => {
                 StepSpec::ReturnSelectedSecurityToDeck(map.next_value()?)
             }
+            "return_top_security_to_deck" => StepSpec::ReturnTopSecurityToDeck(map.next_value()?),
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -939,6 +983,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "security_place_top_stacked_card" => {
                 StepSpec::SecurityPlaceTopStackedCard(map.next_value()?)
             }
+            "security_place_top_card" => StepSpec::SecurityPlaceTopCard(map.next_value()?),
             "return_all_trash_to_deck_bottom" => {
                 StepSpec::ReturnAllTrashToDeckBottom(map.next_value()?)
             }
@@ -960,6 +1005,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
             "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
+            "grant_keyword_continuous" => StepSpec::GrantKeywordContinuous(map.next_value()?),
             "allow_digixros_material_zone" => {
                 StepSpec::AllowDigixrosMaterialZone(map.next_value()?)
             }
@@ -975,6 +1021,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
             "grant_narrow_opponent_effect_protection" => {
                 StepSpec::GrantNarrowOpponentEffectProtection(map.next_value()?)
+            }
+            "grant_stack_protection_from_opponent_effects" => {
+                StepSpec::GrantStackProtectionFromOpponentEffects(map.next_value()?)
+            }
+            "grant_stack_trash_immunity_from_opponent_effects" => {
+                StepSpec::GrantStackTrashImmunityFromOpponentEffects(map.next_value()?)
             }
 
             // Selection
@@ -1066,6 +1118,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_security_card",
                         "trash_selected_security",
                         "return_selected_security_to_deck",
+                        "return_top_security_to_deck",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
@@ -1135,6 +1188,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_self_under_permanent",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
+                        "security_place_top_card",
                         "return_all_trash_to_deck_bottom",
                         "return_trash_list_to_deck_bottom",
                         "move_trash_card_to_deck_top",
@@ -1147,8 +1201,11 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_dp_modifier",
                         "add_modifier",
                         "grant_keyword",
+                        "grant_keyword_continuous",
                         "grant_effect_immunity",
                         "grant_narrow_opponent_effect_protection",
+                        "grant_stack_protection_from_opponent_effects",
+                        "grant_stack_trash_immunity_from_opponent_effects",
                         "select_own_permanent",
                         "select_opponent_permanent",
                         "select_any_permanent",
@@ -1245,6 +1302,15 @@ pub struct DeletePermanentsArgs {
 #[serde(deny_unknown_fields)]
 pub struct DeleteAllPermanentsArgs {
     pub over: PredicateSpec,
+    /// Narrow the matches to those holding the extreme value (lowest/highest
+    /// DP, play cost, …) AMONG the `over` matches — DCGO
+    /// `IsMinDP(permanent, player, condition)` over a filtered set: "delete
+    /// all of your opponent's UNSUSPENDED Digimon with the lowest DP"
+    /// (BT26-080 Bacchusmon // Reversal of the Dead). Ties are all deleted.
+    /// `None` (the default) deletes every match.
+    /// G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selector: Option<FieldSelector>,
 }
 
 /// Args for `delete_one_per_opponent_color`
@@ -1379,6 +1445,13 @@ pub struct StructuredBindingRef {
     /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_top: Option<PlayerRef>,
+    /// Top card of a player's SECURITY stack — a card-source binding (not a
+    /// permanent). Used by `place_as_bottom_source` to place "your top
+    /// security card face down under any of your [X] Tamers" (BT26-025
+    /// Liollmon). YAML: `{ security_top: you }`. Resolves to nothing on an
+    /// empty stack. G-DSL-SECURITY-TOP-AS-SOURCE.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_top: Option<PlayerRef>,
     /// The controller's own breeding-area permanent, resolved directly to the
     /// breeding carrier handle (`index = BREEDING_TARGET`) with NO selection
     /// prompt — the breeding area holds at most one Digimon. Used by
@@ -1395,6 +1468,14 @@ pub struct StructuredBindingRef {
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
     pub of: PlayerRef,
+}
+
+/// Args for `return_top_security_to_deck` (G-DSL-RETURN-TOP-SECURITY-TO-DECK).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnTopSecurityToDeckArgs {
+    pub of: PlayerRef,
+    pub position: StackPosition,
 }
 
 /// Args for `trash_top_security`. The optional `count` field trashes N cards
@@ -1421,6 +1502,13 @@ pub struct TrashTopSecurityArgs {
     /// fromTop: true)`. G-DSL-TRASH-TOP-SECURITY-LEAVE (driver BT21-098).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub leave: Option<crate::formula::FormulaSpec>,
+    /// Record the number of security cards ACTUALLY trashed into a named
+    /// literal binding (read later via `{ binding_value: <name> }`). BT26-083
+    /// Junomon: Hysteric Mode — "Trash all of your security cards. For each
+    /// card this effect trashed, delete 1 of your opponent's Digimon."
+    /// G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_count_as: Option<String>,
 }
 
 /// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of
@@ -1560,6 +1648,13 @@ pub struct ActivationCostArgs {
     /// 16-16-2. G-ACTIVATION-COST-TRASH-SELF.
     #[serde(default, skip_serializing_if = "is_false")]
     pub trash_self: bool,
+    /// "by placing this Digimon as the bottom security card ..." — pays the
+    /// cost by moving the source permanent's top card face down to the
+    /// bottom of its owner's security (digivolution cards trashed). Fails
+    /// under `CannotAddSecurityByEffect` / a would-leave replacement.
+    /// G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY (BT26-022 Sorcermon).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub place_self_at_security_bottom: bool,
 }
 
 fn is_false(b: &bool) -> bool {
@@ -2570,6 +2665,13 @@ pub struct PlayUnionBoundFreeArgs {
     /// When true, the played Digimon's own On Play effects do not activate.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
+    /// Cost adjustment for the play. Omitted (the default) plays WITHOUT
+    /// paying the cost — the historical behavior this verb is named for;
+    /// `{ reduce: N }` pays the printed cost minus N from the card's true
+    /// origin zone ("play 1 ... from your hand or trash with the cost reduced
+    /// by 2" — BT26-096 Kosuke Misono). G-DSL-PLAY-UNION-BOUND-COST-DELTA.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2845,6 +2947,19 @@ where
 #[serde(deny_unknown_fields)]
 pub struct GrantKeywordArgs {
     pub target: BindingRef,
+    pub keyword: String,
+    pub expiry: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<i32>,
+}
+
+/// Args for `grant_keyword_continuous` (G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantKeywordContinuousArgs {
+    /// Battle-area predicate evaluated relative to the installing controller
+    /// every tick (e.g. `{ of: you, kind: digimon, trait_has: TS }`).
+    pub targets: crate::predicate::PredicateSpec,
     pub keyword: String,
     pub expiry: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

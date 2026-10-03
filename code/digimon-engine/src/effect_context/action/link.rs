@@ -91,6 +91,22 @@ impl<'a> EffectContext<'a> {
         }
         let cards: Vec<crate::card_source::CardHandle> =
             perm.linked_cards.iter().map(|c| c.handle()).collect();
+        self.trash_own_link_card_among_and_cancel_leave(host, cards);
+    }
+
+    /// BT26 `<Detach ([X] trait)>` — the filtered sibling of
+    /// [`Self::trash_own_link_card_and_cancel_leave`]: the selection is
+    /// restricted to `cards` (the caller pre-filters `host`'s link cards by
+    /// the keyword's card condition, DCGO `DetachProcess` `cardCondition`).
+    /// No-op when `cards` is empty.
+    pub fn trash_own_link_card_among_and_cancel_leave(
+        &mut self,
+        host: PermanentHandle,
+        cards: Vec<crate::card_source::CardHandle>,
+    ) {
+        if cards.is_empty() {
+            return;
+        }
         let labels: Vec<String> = cards
             .iter()
             .map(|h| {

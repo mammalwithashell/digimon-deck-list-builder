@@ -403,6 +403,7 @@ impl<'a> EffectContext<'a> {
             // the effect performing the discard.
             let cause_controller = self.player;
             self.game.note_effect_hand_discard(cause_controller, player);
+            self.game.note_effect_hand_discard_card(player, card_handle);
         }
         trashed
     }
@@ -457,6 +458,12 @@ impl<'a> EffectContext<'a> {
     /// Token cards (`is_token == true`) are still pushed to trash; the
     /// caller's gate is responsible for any token-aware filtering.
     pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
+        // Opponent-scoped stack-trash protection (BT26-029): an opponent's
+        // effect can't trash a selected stacked card of a protected Digimon.
+        // Own-effect trashing (e.g. a cost) is unaffected here.
+        if self.player != perm.player && self.stack_trashing_blocked(perm) {
+            return false;
+        }
         let (removed, host_card) = {
             // Soft-fail: carrier missing (DCGO: `if (_permanent == null) yield break;`).
             let permanent = match self
@@ -504,6 +511,9 @@ impl<'a> EffectContext<'a> {
     /// Trash every digivolution source below `target`'s top card, preserving
     /// the live permanent and dispatching source-trash observers per source.
     pub fn trash_all_sources(&mut self, target: PermanentHandle) -> bool {
+        if self.player != target.player && self.stack_trashing_blocked(target) {
+            return false;
+        }
         let Some(permanent) = self
             .game
             .player(target.player)
@@ -559,17 +569,38 @@ impl<'a> EffectContext<'a> {
     ///
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
+    /// `ImmuneFromStackTrashing` consult honoring each entry's
+    /// `effect_immunity_filter` controller scope: an `OpponentOnly` entry
+    /// (BT26-029's "their effects can't trash any of its stacked cards")
+    /// blocks only effects controlled by the protected permanent's opponent;
+    /// an unfiltered / `Any` entry blocks every effect (legacy behavior).
+    fn stack_trashing_blocked(&self, target: PermanentHandle) -> bool {
+        use crate::modifiers::EffectControllerFilter;
+        let from_opponent = self.player != target.player;
+        self.game
+            .modifiers
+            .get(target, ModifierType::ImmuneFromStackTrashing)
+            .iter()
+            .any(|entry| {
+                match entry
+                    .effect_immunity_filter
+                    .map(|f| f.controller)
+                    .unwrap_or(EffectControllerFilter::Any)
+                {
+                    EffectControllerFilter::Any => true,
+                    EffectControllerFilter::OpponentOnly => from_opponent,
+                    EffectControllerFilter::OwnOnly => !from_opponent,
+                }
+            })
+    }
+
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
         // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
         // on the host permanent blocks the inherited stack-peel mutation.
         // Distinct from `CannotBeDestroyed` (which protects the live top
         // card from deletion) — this protects the digivolution sources
         // sitting beneath the top from being peeled off and trashed.
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trashing_blocked(target) {
             return false;
         }
         // Validate target slot.
@@ -616,11 +647,7 @@ impl<'a> EffectContext<'a> {
         if count == 0 {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trashing_blocked(target) {
             return 0;
         }
 
@@ -665,11 +692,7 @@ impl<'a> EffectContext<'a> {
         if count == 0 || !self.can_affect_permanent(target) {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trashing_blocked(target) {
             return 0;
         }
 

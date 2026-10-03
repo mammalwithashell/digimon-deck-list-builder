@@ -223,6 +223,15 @@ impl Game {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
+                // A `.linked()` declarative is Link-ESS: it applies to the HOST
+                // only while this card is a link card (the linked-card pass
+                // below). A standing / digivolution-source copy of the card
+                // must not grant it to itself (BT26-010 Roleplaymon's linked
+                // <Progress>/<Piercing>; DCGO `SetIsLinkedEffect(true)` gates
+                // on `IsLinked`).
+                if effect.linked {
+                    continue;
+                }
                 if !effect.materializes_declarative_state || effect.process.is_none() {
                     continue;
                 }
@@ -373,7 +382,11 @@ impl Game {
                     // is the sole lifetime authority. Using `fm.expiry` here would
                     // expire the entry one turn-end early relative to the descriptor
                     // (`*NextTurn` skips live on the descriptor, not the entry).
-                    if let Some(payload) = &fm.payload {
+                    if let Some(kw) = fm.keyword {
+                        // Continuous mass keyword grant (BT26-101 Cross Arts).
+                        // G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT.
+                        ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
+                    } else if let Some(payload) = &fm.payload {
                         // Continuous mass structured-payload aura (BT25-104:
                         // "all of your [Marcus Damon]s are also treated as 12000
                         // DP Digimon"): the materialized entry carries the

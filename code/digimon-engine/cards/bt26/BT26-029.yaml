@@ -1,0 +1,152 @@
+# BT26-029 Aegiochusmon: Holy — Digimon, Lv.5, Yellow/Black, DP 8000, Cost 8.
+# Traits: Shaman, Iliad, TS + (Rule) Angel. Form Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Yellow Lv.4 / cost 4; Black Lv.4 / cost 4;
+#   [Digivolve] [Aegiomon]: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-029.md):
+#   <Decode ([Aegiomon])> <Ascension> (When this Digimon is deleted, you may
+#     place this card as the top security card.)
+#   [On Play] [When Digivolving] By trashing your top security card, until your
+#     opponent's turn ends, their effects can't reduce the DP of 1 of your
+#     Digimon, trash any of its stacked cards, or return them to hands or decks.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, 3 of
+#     your opponent's Digimon get -5000 DP for the turn.
+#   (Rule) Trait: Has [Angel] Type.
+#   Inherited: [All Turns] [Once Per Turn] When your security stack is removed
+#     from, <De-Digivolve 1> 1 of your opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_029.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Aegiomon"), cost 3.
+# Decode: DecodeSelfEffect(source EqualsCardName "Aegiomon") → BT25-025
+#   non-cancelling replacement (play 1 [Aegiomon] source free, non-battle leave).
+# Ascension: AscensionSelfEffect → grant_keyword Ascension.
+# Shared OP / WD (optional:true; CanActivate requires Owner security > 0):
+#   IDestroySecurity(top, 1); then MANDATORY (canNoSelect:false) pick of 1 own
+#   Digimon → GainImmuneFromDPMinus (opponent effects) + ImmuneStackTrashing
+#   (opponent effects; DCGO consults it in Degeneration / TrashDigivolutionCards
+#   / TrashStack) + CanNotBeReturnedToLibrary-of-stack (opponent effects), all
+#   UntilOpponentTurnEnd.
+#   → clause optional + `security_count_gte: 1`; trash_top_security; then
+#   grant_narrow_opponent_effect_protection (DP-minus + De-Digivolve, opp) +
+#   grant_stack_protection_from_opponent_effects (stack-trash + De-Digivolve +
+#   return-to-hand + return-to-deck, opp). DCGO does not consult its stack-
+#   return immunity on a plain bounce; the printed "return them [its stacked
+#   cards] to hands or decks" covers returning the Digimon's cards, so the
+#   bounce protection follows the printed text.
+# All Turns OPT (OnLoseSecurity, own): mandatory pick of min(3, n) opponent
+#   Digimon → ChangeDigimonDP(-5000, UntilEachTurnEnd).
+#   → select_count_capped_multi { of: opponent, min/max 3, clamp }.
+# Inherited All Turns OPT (OnLoseSecurity, own): mandatory De-Digivolve 1 of 1
+#   opponent Digimon (mode Degenerate).
+
+card: BT26-029
+name: "Aegiochusmon: Holy"
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 8
+dp: 8000
+traits: [Shaman, Iliad, TS, Angel]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "Aegiomon" }
+    cost: 3
+
+effects:
+  # ─── <Decode ([Aegiomon])> ─────────────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── <Ascension> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension> (When this Digimon is deleted, you may place this card as the top security card)"
+
+  # ─── [On Play][When Digivolving] by trashing your top security card, protect
+  #     1 of your Digimon from the opponent's effects until their turn ends ────
+  - when: [on_play, when_digivolving]
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[On Play][When Digivolving] By trashing your top security card, until your opponent's turn ends, their effects can't reduce the DP of 1 of your Digimon, trash any of its stacked cards, or return them to hands or decks"
+    process:
+      - trash_top_security: { of: you }
+      - select_own_permanent:
+          bind_as: protected
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon: until your opponent's turn ends, their effects can't reduce its DP, trash any of its stacked cards, or return them to hands or decks"
+      - grant_narrow_opponent_effect_protection:
+          target: protected
+          expiry: end_of_opponents_turn
+      - grant_stack_protection_from_opponent_effects:
+          target: protected
+          expiry: end_of_opponents_turn
+
+  # ─── [All Turns][Once Per Turn] your security removed → 3 opp Digimon -5000 ─
+  - when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][Once Per Turn] When your security stack is removed from, 3 of your opponent's Digimon get -5000 DP for the turn"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 3
+          max: 3
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: debuffed
+          prompt: "3 of your opponent's Digimon get -5000 DP for the turn"
+      - per_selected:
+          selection: debuffed
+          bind_as: d
+          body:
+            - add_dp_modifier:
+                target: d
+                value: -5000
+                expiry: end_of_turn
+
+  # ─── Inherited [All Turns][Once Per Turn] your security removed →
+  #     <De-Digivolve 1> 1 opp Digimon ───────────────────────────────────────
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][Once Per Turn] When your security stack is removed from, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3

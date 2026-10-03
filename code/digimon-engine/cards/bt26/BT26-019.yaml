@@ -1,0 +1,115 @@
+# BT26-019 Mailmon — Digimon, Lv.3, Blue, DP 4000, Cost 4.
+# Form: Stnd./Appmon. Type: Mail/Seven Code. Attribute: Social.
+#   (BT21-009 / BT25-052 convention: every trait-line segment, the form
+#    segments and the attribute go in `traits` — predicate `trait_has`
+#    consults only `traits`, and DCGO EqualsTraits matches all of them.)
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-019.md):
+#   Digivolve: Blue Lv.2 / cost 0; [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#     area other than by your effects, by trashing 1 of its specified link
+#     cards, it doesn't leave.)
+#   [When Attacking] If your hand has 7 or fewer cards, <Draw 1>.
+#   Link DP: DP+3000.
+#   Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: [When Linking] 1 of your opponent's Digimon or Tamers can't
+#     suspend until their turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Blue/BT26_019.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits,
+#   cost 0, level 2) → alt_paths digivolve from { level_eq: 2, trait_has:
+#   Appmon } cost 0 (+ the printed Blue Lv.2 / 0 circle).
+# Detach: DetachSelfEffect(cardCondition: EqualsTraits("Seven Code")) —
+#   WhenRemoveField, CanTriggerDetach = this permanent leaving AND
+#   !IsByEffect(owner's effect); optional (SetUpActivateClass(..., true));
+#   DetachProcess = SelectCardEffect over LinkedCards matching the condition →
+#   trash it, the permanent doesn't leave. → `kind: replacement`
+#   when_would_leave_battle_area, optional, `active_when: none_of:
+#   [replacement_cause: own_effect]` (BT23-032 "other than by your effects"
+#   idiom), `cost: { trash_own_link_card: true, link_card_filter: { trait_has:
+#   Seven Code } }`, outcome prevent.
+# When Attacking: CanActivate checks HandCards.Count <= 7, then DrawClass(1).
+#   Not optional. → when_attacking + active_when count_lte hand 7 + draw 1.
+# Link condition: AddSelfLinkConditionStaticEffect(HasAppmonTraits, 3) →
+#   kind: link_condition cost 3.
+# Link DP (+3000): data-driven LinkDP → scope: linked aura dp_modifier 3000.
+# When Linking (SetIsLinkedEffect): mandatory (canNoSelect false) pick of an
+#   opponent Digimon/Tamer → GainCantSuspendUntilOpponentTurnEnd. Skipped when
+#   no candidate. → scope: linked, when_linked, select_opponent_permanent +
+#   add_modifier CannotSuspend expiry end_of_opponents_turn (EX12-032 idiom).
+
+card: BT26-019
+name: Mailmon
+kind: digimon
+level: 3
+color: [blue]
+cost: 4
+dp: 4000
+traits: ["Stnd.", Appmon, Social, Mail, Seven Code]
+attribute: Social
+
+alt_paths:
+  # Printed circle: Blue Lv.2 / cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  # [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [When Attacking] If hand <= 7, <Draw 1> ────────────────────────────────
+  - when: when_attacking
+    active_when:
+      count_lte:
+        filter: { owner: you, zone: [hand] }
+        n: 7
+    summary: "[When Attacking] If your hand has 7 or fewer cards, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── [When Linking] 1 opp Digimon/Tamer can't suspend until their turn ends ─
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers that can't suspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

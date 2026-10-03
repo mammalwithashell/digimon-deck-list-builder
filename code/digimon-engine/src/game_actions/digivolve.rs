@@ -1580,16 +1580,15 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        let base_level = {
+        // A level-less target (BT26-085 Giant Slayer) can still digivolve
+        // through a special `alt_paths: kind: digivolve` route ("[Giant
+        // Slayer]: Cost 5"); only the printed level-matched circles need a
+        // level. G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS.
+        let base_level: Option<u8> = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
-            let Some(base_level) = identity.level else {
-                self.logger
-                    .log("[Rejected] effect_initiated_digivolve: target top card has no level");
-                return false;
-            };
-            base_level
+            identity.level
         };
 
         let matching_memory_cost = if ignore_requirements {
@@ -1621,7 +1620,7 @@ impl Game {
                 let waived = self.card_data[evo_card_data_index]
                     .evo_costs
                     .iter()
-                    .filter(|ec| ec.level == base_level)
+                    .filter(|ec| Some(ec.level) == base_level)
                     .map(|ec| ec.memory_cost)
                     .min();
                 match (route_cost, waived) {
@@ -1634,7 +1633,7 @@ impl Game {
         };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
-                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, ignore_color={}, ignore_requirements={})",
+                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={:?}, ignore_color={}, ignore_requirements={})",
                 base_level, ignore_color, ignore_requirements
             ));
             return false;

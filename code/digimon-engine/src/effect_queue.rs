@@ -684,7 +684,9 @@ impl Game {
                     Some(trigger_context),
                 );
             }
-            TriggerSource::BattleResolved { .. } | TriggerSource::HandDiscarded { .. } => {
+            TriggerSource::BattleResolved { .. }
+            | TriggerSource::HandDiscarded { .. }
+            | TriggerSource::DeckGained { .. } => {
                 // Board-wide observer fan-out: scan EVERY player's battle area
                 // so both own-side and opponent-reactive observers see the
                 // event. The winner/owner/trait (BattleResolved) or trashing
@@ -884,6 +886,76 @@ impl Game {
         }
     }
 
+    /// Enqueue the `scope: trash` `OnDiscardHand` clauses of ONE card that an
+    /// effect just moved from `owner`'s hand to the trash — the self-scoped
+    /// "When this card is trashed from the hand, …" trigger (BT26-069
+    /// Dobermon; DCGO `CanTriggerOnTrashSelfHand`). Called once per trashed
+    /// card from `flush_pending_hand_discard`; a card that already left the
+    /// trash is skipped. A `scope: trash` + `when: on_discard_hand` clause is
+    /// therefore reached ONLY on the discarded card itself (a card already
+    /// lying in the trash never sees it). G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) fn enqueue_self_trashed_from_hand(
+        &mut self,
+        owner: PlayerId,
+        card: CardHandle,
+        cause_controller: PlayerId,
+    ) {
+        let timing = EffectTiming::OnDiscardHand;
+        let Some((card_id, source_kind)) = self
+            .players
+            .get(owner as usize)
+            .and_then(|p| p.trash.iter().find(|c| c.handle() == card))
+            .map(|c| {
+                (
+                    c.card_id(&self.card_data).to_string(),
+                    source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                )
+            })
+        else {
+            return;
+        };
+        let Some(effects) = self.effects_for_card(&card_id, card) else {
+            return;
+        };
+        let trigger_context = TriggerContext {
+            event_card: Some(card),
+            discard_hand_player: Some(owner),
+            discard_cause_controller: Some(cause_controller),
+            affected_player: Some(owner),
+            source_player: Some(cause_controller),
+            effect_initiated: true,
+            ..TriggerContext::default()
+        };
+        let is_turn_player = owner == self.turn_player();
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.inherited || effect.linked || !effect.trash_zone {
+                continue;
+            }
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card,
+                source_permanent: None,
+                source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                controller: owner,
+                timing,
+                trigger_context: Some(trigger_context.clone()),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
+                keyword_effect: None,
+            });
+        }
+    }
+
     /// Open a deferred-drain scope. While `draining_deferred > 0`, every
     /// `fire_on_*` observer helper that previously inline-drained should
     /// route through `maybe_drain_effect_queue()` instead — enqueue but
@@ -1075,6 +1147,23 @@ impl Game {
                     }
                     discard_guard += 1;
                     if discard_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
+            // Flush the OnAddToDeck batch window the same way
+            // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
+            // deck has finished, so fire the observer ONCE (DCGO
+            // `FireOnAddLibraryAnyone` once per added list), then drain.
+            if self.pending_selection.is_none() {
+                let mut deck_guard: u16 = 0;
+                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                    self.flush_pending_deck_add();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    deck_guard += 1;
+                    if deck_guard > MAX_CHAIN_DEPTH {
                         break;
                     }
                 }
@@ -1578,6 +1667,10 @@ impl Game {
                 event_card: Some(card),
                 source_player: Some(defender),
                 was_security_skill: true,
+                // "if removed from by effects" (BT26-089) — see
+                // `pending_security_loss_effect_initiated`.
+                effect_initiated: timing == EffectTiming::OnLoseSecurity
+                    && self.pending_security_loss_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityStackCard { player, card } => TriggerContext {
@@ -1933,6 +2026,20 @@ impl Game {
                 discard_cause_controller: Some(cause_controller),
                 affected_player: Some(player),
                 source_player: Some(cause_controller),
+                effect_initiated: true,
+                ..TriggerContext::default()
+            },
+            TriggerSource::DeckGained { cause_controller } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The causing effect's controller ("when YOUR effects add to
+                // decks" -> `event_caused_by_own_effect`). G-ENGINE-ON-ADD-TO-DECK.
+                source_player: Some(cause_controller),
+                event_cause_effect: Some(crate::trigger_context::EffectAttribution {
+                    controller: cause_controller,
+                    source_card: None,
+                    source_permanent: None,
+                }),
                 effect_initiated: true,
                 ..TriggerContext::default()
             },
@@ -3758,8 +3865,20 @@ impl Game {
                 }
             }
         }
-        if let Some(security) = self.pending_security.take() {
+        if let Some(mut security) = self.pending_security.take() {
             if !security.played {
+                // G-DSL-SECURITY-TOP-AS-SOURCE: an effect placing a security
+                // card "face down" under a permanent (BT26-025) — consumed for
+                // every destination so a stale flag never leaks.
+                if std::mem::take(&mut self.pending_security_source_face_down)
+                    && matches!(
+                        pending.destination,
+                        SecurityRemovalDestination::BottomSource(_)
+                            | SecurityRemovalDestination::TopSource(_)
+                    )
+                {
+                    security.card.face_down = true;
+                }
                 match pending.destination {
                     SecurityRemovalDestination::Trash => {
                         let owner = security.card.owner;
@@ -3784,6 +3903,9 @@ impl Game {
                             deck.insert(0, security.card);
                         } else {
                             deck.push(security.card);
+                        }
+                        if !is_egg {
+                            self.note_effect_deck_add_if_resolving();
                         }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
@@ -3998,6 +4120,10 @@ impl Game {
             played: false,
         });
 
+        // Every caller of this function is an EFFECT removal: tag the
+        // OnLoseSecurity trigger contexts (built at enqueue time) so
+        // `event_is_effect_initiated` reads true. G-ENGINE-LOSE-SECURITY-BY-EFFECT.
+        self.pending_security_loss_effect_initiated = true;
         self.enqueue_triggered(
             EffectTiming::OnLoseSecurity,
             TriggerSource::SecurityRevealed {
@@ -4005,6 +4131,7 @@ impl Game {
                 card: card_handle,
             },
         );
+        self.pending_security_loss_effect_initiated = false;
         self.drain_effect_queue();
 
         let pending = PendingEffectSecurityRemoval {

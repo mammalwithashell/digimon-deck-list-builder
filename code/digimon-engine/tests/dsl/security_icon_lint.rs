@@ -212,3 +212,21 @@ fn older_bracket_spelling_of_the_pink_icon_is_recognised() {
     assert_eq!(f.len(), 1, "{f:?}");
     assert_eq!(f[0].rule, SecurityIconRule::PinkIconWithoutPinkClause);
 }
+
+#[test]
+fn security_followed_by_an_event_timing_is_the_blue_icon() {
+    // BT26-075 ScourgeChiropmon: "[Security] [On Deletion] By trashing …" — a
+    // security-check trigger sharing its body with an [On Deletion] trigger
+    // (a card face up in security can never be deleted). DCGO: SecuritySkill.
+    let printed = [sec(
+        "Effect",
+        "<Execute> [Security] [On Deletion] By trashing the bottom face-down card from under any of your Tamers, you may play 1 card.",
+    )];
+    assert!(
+        check_security_icons(&spec(PINK_AS_BLUE), &printed).is_empty(),
+        "`when: on_security` is the right shape"
+    );
+    let f = check_security_icons(&spec(PINK_OK), &printed);
+    assert_eq!(f.len(), 1, "{f:?}");
+    assert_eq!(f[0].rule, SecurityIconRule::PinkClauseWithoutPinkIcon);
+}

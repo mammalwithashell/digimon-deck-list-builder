@@ -113,7 +113,7 @@ fn collect_matching_any_permanents(
 
 /// Read a permanent's value in the unit of the given field selector:
 /// effective DP for DP selectors, printed play cost for play-cost selectors.
-fn field_value(
+pub(crate) fn field_value(
     game: &crate::game::Game,
     handle: PermanentHandle,
     selector: CompiledFieldSelector,
@@ -135,7 +135,7 @@ fn field_value(
     }
 }
 
-fn selected_field_extreme(
+pub(crate) fn selected_field_extreme(
     game: &crate::game::Game,
     handles: &[PermanentHandle],
     selector: CompiledFieldSelector,
@@ -3728,9 +3728,20 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             then,
             ..
         } => {
+            // `continue_on_decline` runs the OUTER tail on PASS (the binding
+            // stays unresolved) — captured before the install consumes it.
+            let decline_tail = (*optional && *continue_on_decline).then(|| {
+                (
+                    Arc::new(tail.to_vec()),
+                    bindings.clone(),
+                    runtime.clone(),
+                    ctx.game.current_trigger_context.clone(),
+                )
+            });
             install_select_any_permanent(
                 ctx,
                 filter.clone(),
@@ -3743,6 +3754,11 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
+            if let Some((d_tail, d_bindings, d_runtime, d_trigger)) = decline_tail {
+                attach_any_permanent_continue_on_decline(
+                    ctx, d_tail, d_bindings, d_runtime, d_trigger,
+                );
+            }
             selection_result(ctx)
         }
         CompiledStep::SelectDnaPair {
@@ -6639,6 +6655,57 @@ fn install_select_opponent_permanent(
                 decline,
             }],
         });
+    }
+}
+
+/// `select_any_permanent { optional: true, continue_on_decline: true }` —
+/// PASS leaves the binding unresolved and CONTINUES the clause with `tail`
+/// (DCGO's declined `SelectPermanentEffect` resolves with an empty list and the
+/// coroutine continues; BT26-038 Kuwagamon "You may suspend 1 Digimon. Then,
+/// …"). Wires both the closure `on_decline` and the resumable-VM frame's
+/// `ResumeDecline::RunTail`, mirroring `install_select_opponent_permanent`.
+/// No-op when the install short-circuited (no candidates → no pending).
+fn attach_any_permanent_continue_on_decline(
+    ctx: &mut EffectContext<'_>,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+) {
+    if ctx.game.pending_selection.is_none() {
+        return;
+    }
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let tail_for_decline = Arc::clone(&tail);
+    if let Some(pending) = ctx.game.pending_selection.as_mut() {
+        pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+            let mut decline_ctx = EffectContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            let mut b = bindings.clone();
+            run_tail_preserving_trigger_context(
+                &mut decline_ctx,
+                trigger_context.clone(),
+                &tail_for_decline,
+                &mut b,
+                &runtime,
+            );
+        }));
+    }
+    if let Some(stack) = ctx.game.pending_selection_resume.as_mut() {
+        if let Some(crate::resume::ResumeFrame::RunTail { decline, .. }) = stack.frames.last_mut() {
+            *decline = crate::resume::ResumeDecline::RunTail {
+                tail,
+                aborts_clause: false,
+            };
+        }
     }
 }
 

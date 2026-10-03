@@ -142,6 +142,16 @@ pub enum Timing {
     /// own-effect-only ("one of YOUR effects", ST16-14 Matt Ishida),
     /// `event_caused_by_own_effect: true`.
     OnDiscardHand,
+    /// Deck-add observer: "[Your Turn] When your effects add to decks, …"
+    /// (`when: on_add_to_deck`, BT26-001 Yokomon / BT26-015 Butenmon /
+    /// BT26-060 Chronomon: Destroy Mode). Fires ONCE after an EFFECT adds ≥1
+    /// card to either player's deck (top or bottom) from outside it — a
+    /// permanent / stack, trash, hand, security or digivolution card. Cards
+    /// revealed from the deck and put back, and Digi-Eggs routed to the
+    /// Digi-Egg deck, never fire it. Gate "your effects" with
+    /// `event_caused_by_own_effect: true` in `active_when:`. Mirrors DCGO
+    /// `OnAddLibraryAnyone` + `CanTriggerOnAddLibrary`. G-ENGINE-ON-ADD-TO-DECK.
+    OnAddToDeck,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -642,6 +652,13 @@ pub struct ReplacementCostBody {
     /// `cancel_replacement` is emitted).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub trash_own_link_card: bool,
+
+    /// BT26 `<Detach ([X] trait)>` — restrict `trash_own_link_card` to link
+    /// cards matching this card predicate ("by trashing 1 of its specified
+    /// link cards"). Empty ⇒ any link card (the BT25 shape). Only valid with
+    /// `trash_own_link_card: true`. DCGO `DetachSelfEffect.cardCondition`.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub link_card_filter: PredicateSpec,
 
     /// EX11-027 Maquinamon — pay the leave by placing 1 of the LEAVING
     /// permanent's own link cards as its BOTTOM digivolution card ("by placing

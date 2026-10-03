@@ -1,0 +1,111 @@
+# BT26-063 Tellermon — Digimon, Lv.3, Purple, DP 4000, Cost 4.
+# Form: Stnd./Appmon. Type: Fortune Telling/Seven Code. Attribute: Entertainment.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-063.md):
+#   Digivolve: Purple Lv.2 / cost 0; [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#     area other than by your effects, by trashing 1 of its specified link
+#     cards, it doesn't leave.)
+#   [Your Turn] [Once Per Turn] When this Digimon gets linked, reveal the top 3
+#     cards of your deck. Add 1 card with the [Entertainment], [Open] or [Seven
+#     Code] trait among them to the hand. Return the rest to the top or bottom
+#     of the deck.
+#   Link DP: DP+3000. Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: [When Linking] Delete 1 of your opponent's Digimon with the
+#     lowest level.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_063.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: HasAppmonTraits, level 2, cost 0.
+# Detach: DetachSelfEffect(EqualsTraits("Seven Code")) — BT26-019 idiom.
+# Your Turn When Linked: WhenLinked, maxCount 1, IsOwnerTurn &&
+#   CanTriggerWhenLinked(permanent == this). SimplifiedRevealDeckTopCardsAndSelect
+#   (3, Entertainment/Open/Seven Code, AddHand, maxCount 1) with
+#   RemainingCardsPlace.DeckTopOrBottom.
+#   → when_card_linked_to_this + once_per_turn + your_turn; reveal_top_deck 3 +
+#   choose_from_reveal → hand + order_remainder [deck_top, deck_bottom]
+#   (BT25-063 idiom).
+# Link condition [Appmon] cost 3; Link DP +3000 (linked aura).
+# When Linking (linked effect): mandatory (canNoSelect false) Destroy pick of
+#   an opponent Digimon with IsMinLevel. → select_opponent_permanent
+#   { level_matches_aggregate: lowest_level of opponent } + delete_permanent.
+
+card: BT26-063
+name: Tellermon
+kind: digimon
+level: 3
+color: [purple]
+cost: 4
+dp: 4000
+traits: ["Stnd.", Appmon, Entertainment, Fortune Telling, Seven Code]
+attribute: Entertainment
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked → reveal 3 ──────────────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck; add 1 [Entertainment]/[Open]/[Seven Code] card to hand; return the rest to the top or bottom of the deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - choose_from_reveal:
+          of: you
+          filter:
+            any_of:
+              - trait_has: Entertainment
+              - trait_has: Open
+              - trait_has: Seven Code
+          destination: hand
+          bind_as: picked
+          prompt: "Add 1 card with the [Entertainment], [Open] or [Seven Code] trait to your hand"
+      - order_remainder:
+          of: you
+          destinations: [deck_top, deck_bottom]
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── [When Linking] Delete 1 opp Digimon with the lowest level ──────────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Delete 1 of your opponent's Digimon with the lowest level"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Delete 1 of your opponent's Digimon with the lowest level"
+      - delete_permanent: { target: delete_target }

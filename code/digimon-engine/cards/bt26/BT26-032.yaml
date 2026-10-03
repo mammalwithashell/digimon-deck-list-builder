@@ -1,0 +1,187 @@
+# BT26-032 Ceresmon // Famis — DUAL (Digimon Lv.6 Yellow/Green DP 13000 //
+#   Option Green use cost 5). Traits: Shaman, Olympos XII, Iliad, TS +
+#   (Rule) Vegetation. Attribute: Data. Form: Mega.
+# Printed digivolve box: Yellow Lv.5 / cost 5; Green Lv.5 / cost 5;
+#   [Digivolve] Play cost 12 [Ceresmon]: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-032.md):
+#   Digimon face:
+#   <Alliance> <Succession ([Ceresmon])> (This Digimon gains all effects other
+#     than <Succession> on its topmost specified digivolution card.)
+#   [When Digivolving] All of your opponent's suspended Digimon get -5000 DP
+#     until their turn ends. Then, by suspending 1 Digimon, if it's your turn,
+#     you may play or use 1 [Vegetation] or [TS] trait card from your hand with
+#     the cost reduced by 5. (Rule) Trait: Has [Vegetation] Type.
+#   Option face (DUAL): <Use Req. ([TS] trait)> [Main] You may suspend 2 of
+#     your opponent's Digimon or Tamers. Then, 3 of their Digimon or Tamers
+#     can't unsuspend until their turn ends.
+#   DUAL Rule: <Arts Digivolve>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_032.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Ceresmon") && HasPlayCost &&
+#   GetCostItself == 12, cost 2 (no level gate).
+#   → from { name_is Ceresmon, play_cost 12 }.
+# <Alliance>: AllianceSelfEffect → grant_keyword Alliance.
+# <Succession ([Ceresmon])>: SuccessionSelfEffect(EqualsCardName "Ceresmon")
+#   → NOT IMPLEMENTED — G-ENGINE-SUCCESSION-KEYWORD (docs/RUST_ENGINE_GAPS.md):
+#   no engine machinery lets a permanent adopt the top-card effects of one of
+#   its digivolution SOURCE cards. Not stubbed (card ships PARTIAL).
+# [When Digivolving] (not optional): ChangeDigimonDPPlayerEffect over
+#   "opponent's battle-area Digimon && IsSuspended" (-5000,
+#   UntilOpponentTurnEnd — a PLAYER-level conditional effect, re-evaluated
+#   continuously); then, if an unsuspended Digimon exists (either side): Tap
+#   pick canNoSelect: true; if picked AND owner's turn AND the hand holds a
+#   [Vegetation]/[TS] card playable/usable at cost-5: SelectHand canNoSelect:
+#   true → PlayOptionCards / PlayPermanentCards paying cost-5.
+#   → add_modifier { continuous: true, ChangeDp -5000 } over opponent's
+#   suspended Digimon (EX4-074 G-CONTINUOUS-MASS-DP-DEBUFF idiom);
+#   select_any_permanent (optional) + suspend; `if your_turn` → optional
+#   select_hand → play_or_use_from_hand { cost_delta: { reduce: 5 } }
+#   (kind-routing play/use verb, BT25-041).
+# Option [Main]: (a) Tap pick of min(2, n) opponent Digimon/Tamers with
+#   canNoSelect: true, canEndNotMax: false → 0 or exactly min(2, n); (b)
+#   mandatory pick of min(3, n) opponent Digimon/Tamers → GainCanNotUnsuspend
+#   (UntilOpponentTurnEnd) each.
+#   → `select_count_capped_multi { clamp_to_available, optional_zero }` +
+#   per_selected suspend; mandatory clamp pick of 3 + CannotUnsuspend
+#   (BT26-050 idiom).
+# Use Req ([TS]) + <Arts Digivolve>: BT26-050 idiom.
+
+card: BT26-032
+name: Ceresmon
+kind: dual
+
+level: 6
+color: [yellow, green]
+dp: 13000
+traits: [Shaman, Olympos XII, Iliad, TS, Vegetation]
+form: Mega
+attribute: Data
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [yellow, green]
+    traits: [Shaman, Olympos XII, Iliad, TS, Vegetation]
+    effect_text: "<Alliance> <Succession ([Ceresmon])> (This Digimon gains all effects other than <Succession> on its topmost specified digivolution card.) [When Digivolving] All of your opponent's suspended Digimon get -5000 DP until their turn ends. Then, by suspending 1 Digimon, if it's your turn, you may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5. (Rule) Trait: Has [Vegetation] Type."
+    inherited_text: ""
+  option:
+    use_cost: 5
+    colors: [green]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: TS
+    effect_text: "<Use Req. ([TS] trait)> [Main] You may suspend 2 of your opponent's Digimon or Tamers. Then, 3 of their Digimon or Tamers can't unsuspend until their turn ends. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - name_is: "Ceresmon"
+        - play_cost_gte: 12
+        - play_cost_lte: 12
+    cost: 2
+
+effects:
+  # ─── <Alliance> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # ─── [When Digivolving] opp suspended Digimon -5000 DP until their turn
+  #     ends; then by suspending 1 Digimon, on your turn, may play/use 1
+  #     [Vegetation]/[TS] card from hand at cost -5 ────────────────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] All of your opponent's suspended Digimon get -5000 DP until their turn ends. Then, by suspending 1 Digimon, if it's your turn, you may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5"
+    process:
+      - add_modifier:
+          # CONTINUOUS: DCGO installs a player-level effect conditioned on
+          # IsSuspended, so an opponent Digimon that becomes suspended later
+          # in the window also gets -5000 (G-CONTINUOUS-MASS-DP-DEBUFF).
+          continuous: true
+          target:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - is_suspended: true
+          modifier: ChangeDp
+          value: -5000
+          expiry: end_of_opponents_turn
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "By suspending 1 Digimon, if it's your turn, you may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+            - if:
+                condition: { your_turn: true }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: pick
+                      optional: true
+                      filter:
+                        any_of:
+                          - trait_has: Vegetation
+                          - trait_has: TS
+                      prompt: "You may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5"
+                  - play_or_use_from_hand:
+                      of: you
+                      hand_index: pick
+                      cost_delta: { reduce: 5 }
+
+  # ─── Option face [Main] may suspend 2 opp Digimon/Tamers; then 3 of theirs
+  #     can't unsuspend until their turn ends ─────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] You may suspend 2 of your opponent's Digimon or Tamers. Then, 3 of their Digimon or Tamers can't unsuspend until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 2
+          max: 2
+          clamp_to_available: true
+          optional_zero: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: main_suspend
+          prompt: "You may suspend 2 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: main_suspend
+          bind_as: ms
+          body:
+            - suspend: { target: ms }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 3
+          max: 3
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: main_lock
+          prompt: "3 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+      - per_selected:
+          selection: main_lock
+          bind_as: ml
+          body:
+            - add_modifier:
+                target: ml
+                modifier: CannotUnsuspend
+                value: 1
+                expiry: end_of_opponents_turn

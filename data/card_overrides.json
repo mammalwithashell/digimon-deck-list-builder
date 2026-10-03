@@ -16684,6 +16684,11 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Amphibian",
+      "TS",
+      "Titan"
     ]
   },
   "BT26-022": {
@@ -17408,7 +17413,13 @@
     "xros_req": "[Digivolve] Lv.6 w/[Olympos XII] trait: Cost 5"
   },
   "BT26-104": {
-    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+    "type_eng": [
+      "Shambala",
+      "SW",
+      "TB",
+      "TS"
+    ]
   },
   "EX12-033": {
     "evo_costs": [

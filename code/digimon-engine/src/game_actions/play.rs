@@ -460,9 +460,14 @@ impl Game {
                 if is_under != effect.inherited {
                     continue;
                 }
+                // G-OPT-MULTI-TIMING-SHARED-LOCKOUT / G-OPT-REFUND-ON-DECLINE:
+                // key the OPT counter exactly as the mask
+                // (`main_effect_select`) and the `refund_opt` step do — the
+                // clause's `shared_opt_group` when set, else the slot.
+                let opt_key = effect.shared_opt_group.unwrap_or(slot as u8);
                 if effect.max_per_turn > 0 {
                     let perm = &self.players[player_id as usize].battle_area[field_index];
-                    if perm.activation_count(source_handle, slot as u8) >= effect.max_per_turn {
+                    if perm.activation_count(source_handle, opt_key) >= effect.max_per_turn {
                         continue;
                     }
                 }
@@ -479,7 +484,7 @@ impl Game {
                     .battle_area
                     .get_mut(field_index)
                 {
-                    perm.record_activation(source_handle, slot as u8);
+                    perm.record_activation(source_handle, opt_key);
                 }
                 // Printed "By <cost>, …" gate — an OPTIONAL PROCESSING
                 // CONDITION (general_rule.pdf 15-7-1). 15-7-2: "If the content

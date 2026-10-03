@@ -413,6 +413,90 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    /// G-DSL-STACK-PROTECTION-FROM-OPPONENT-EFFECTS (BT26-029 Aegiochusmon:
+    /// Holy) — "until your opponent's turn ends, their effects can't ...
+    /// trash any of its stacked cards, or return them to hands or decks."
+    ///
+    /// Installs, all opponent-effect-scoped:
+    ///   - `ImmuneFromStackTrashing` with an `OpponentOnly` immunity filter
+    ///     (the stack-peel consult sites honor the filter, so the
+    ///     controller's own source trashing still applies);
+    ///   - `CannotBeDeDigivolved` (de-digivolve trashes the top stacked card);
+    ///   - `CannotBeReturnedToHand` / `CannotBeReturnedToDeck`.
+    /// The three replacement modifiers use `passive_replacement()` so their
+    /// default `OpponentEffect` cause filter applies.
+    pub fn grant_stack_protection_from_opponent_effects(
+        &mut self,
+        target: PermanentHandle,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(
+                ModifierType::ImmuneFromStackTrashing,
+                0,
+                expiry,
+                self.player,
+            )
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: None,
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+        );
+        for modifier in [
+            ModifierType::CannotBeDeDigivolved,
+            ModifierType::CannotBeReturnedToHand,
+            ModifierType::CannotBeReturnedToDeck,
+        ] {
+            self.game.modifiers.add(
+                target,
+                ModifierEntry::passive_replacement(modifier, expiry, self.player),
+            );
+        }
+        self.game.mark_until_condition_dirty();
+    }
+
+    /// G-DSL-STACK-TRASH-IMMUNITY-FROM-OPPONENT-EFFECTS (BT26-085 Giant
+    /// Slayer) — "your opponent's effects can't ... trash its stacked cards".
+    /// The stack-trash half of `grant_stack_protection_from_opponent_effects`
+    /// WITHOUT its return-to-hand / return-to-deck locks: opponent-scoped
+    /// `ImmuneFromStackTrashing` + `CannotBeDeDigivolved` (the official Q&A
+    /// counts trashing the top stacked cards, i.e. de-digivolve).
+    pub fn grant_stack_trash_immunity_from_opponent_effects(
+        &mut self,
+        target: PermanentHandle,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(
+                ModifierType::ImmuneFromStackTrashing,
+                0,
+                expiry,
+                self.player,
+            )
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: None,
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::passive_replacement(
+                ModifierType::CannotBeDeDigivolved,
+                expiry,
+                self.player,
+            ),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     pub fn ignore_option_color_requirement(&mut self, target_player: PlayerId, expiry: Expiry) {
         self.game.modifiers.add_player_modifier(
             target_player,

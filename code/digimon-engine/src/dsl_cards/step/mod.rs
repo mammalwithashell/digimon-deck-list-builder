@@ -660,7 +660,7 @@ pub fn run_step_with_runtime(
     if memory::try_run(step, ctx, bindings) {
         return;
     }
-    if draw::try_run(step, ctx) {
+    if draw::try_run(step, ctx, bindings) {
         return;
     }
     if zone_moves::try_run(step, ctx, bindings, runtime) {

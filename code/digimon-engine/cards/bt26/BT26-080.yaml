@@ -1,0 +1,183 @@
+# BT26-080 Bacchusmon // Reversal of the Dead — DUAL (Digimon Lv.6
+#   Purple/Green DP 13000 // Option Purple use cost 5). Traits: Shaman,
+#   Olympos XII, Iliad, TS. Attribute: Virus. Form: Mega.
+# Printed digivolve box: Purple Lv.5 / cost 5; Green Lv.5 / cost 5; Black
+#   Lv.5 / cost 5; [Digivolve] Play cost 12 [Bacchusmon]: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-080.md):
+#   Digimon face:
+#   <Security A. +1> <Succession ([Bacchusmon])> (This Digimon gains all
+#     effects other than <Succession> on its topmost specified digivolution
+#     card.)
+#   [When Digivolving] By suspending 1 Digimon, this Digimon may attack
+#     without suspending.
+#   [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with
+#     the same orientation as this Digimon.
+#   Option face (DUAL): <Use Req. ([TS] trait)> [Main] You may unsuspend 1
+#     Digimon. Then, delete all of your opponent's unsuspended Digimon with the
+#     lowest DP.
+#   DUAL Rule: <Arts Digivolve>.
+#   Official Q&A: "orientation" = the suspended / unsuspended state.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_080.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Bacchusmon") && HasPlayCost &&
+#   GetCostItself == 12, cost 2 → from { name_is Bacchusmon, play_cost 12 }.
+#   (The Black Lv.5 circle is a card_overrides.json-carried printed circle.)
+# <Security A. +1>: ChangeSelfSAttackStaticEffect(+1) → aura security_attack.
+# <Succession ([Bacchusmon])>: SuccessionSelfEffect(EqualsCardName
+#   "Bacchusmon") → NOT IMPLEMENTED — G-ENGINE-SUCCESSION-KEYWORD
+#   (docs/RUST_ENGINE_GAPS.md). Not stubbed (card ships PARTIAL).
+# [When Digivolving] (skippable; activate condition = an unsuspended Digimon
+#   exists on either side): pick canNoSelect: true over unsuspended Digimon →
+#   SuspendPeremanentAndProcessAccordingToResult → on success
+#   SelectAttackEffect(this, any player/defender).SetWithoutTap().
+#   → condition any_field_permanent unsuspended Digimon; optional
+#   select_any_permanent; `if binding_present` → suspend → may_attack_now
+#   { attacker: source, without_suspending: true, optional: true }.
+# [When Attacking] [Once Per Turn] (not optional; no target needed to
+#   activate): if an opponent Digimon with IsSuspended == this.IsSuspended
+#   exists, mandatory Destroy pick of 1.
+#   → once_per_turn; `if source_is_unsuspended` → pick an unsuspended opp
+#   Digimon, else a suspended one; delete_permanent.
+# Option [Main]: if any battle-area Digimon exists, UnTap pick canNoSelect:
+#   true (any Digimon, either side); then DestroyPermanentsClass over the
+#   opponent's Digimon that are unsuspended AND IsMinDP among the opponent's
+#   unsuspended Digimon (all ties, one batch).
+#   → `select_count_capped_multi { of: any, max 1, optional_zero }` +
+#   per_selected unsuspend (a decline still reaches the delete);
+#   `delete_all_permanents { over: opp unsuspended Digimon, selector:
+#   lowest_dp }` (G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER).
+# Use Req ([TS]) + <Arts Digivolve>: BT26-050 idiom.
+
+card: BT26-080
+name: Bacchusmon
+kind: dual
+
+level: 6
+color: [purple, green]
+dp: 13000
+traits: [Shaman, Olympos XII, Iliad, TS]
+form: Mega
+attribute: Virus
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [purple, green]
+    traits: [Shaman, Olympos XII, Iliad, TS]
+    effect_text: "<Security A. +1> <Succession ([Bacchusmon])> (This Digimon gains all effects other than <Succession> on its topmost specified digivolution card.) [When Digivolving] By suspending 1 Digimon, this Digimon may attack without suspending. [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the same orientation as this Digimon."
+    inherited_text: ""
+  option:
+    use_cost: 5
+    colors: [purple]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: TS
+    effect_text: "<Use Req. ([TS] trait)> [Main] You may unsuspend 1 Digimon. Then, delete all of your opponent's unsuspended Digimon with the lowest DP. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - name_is: "Bacchusmon"
+        - play_cost_gte: 12
+        - play_cost_lte: 12
+    cost: 2
+
+effects:
+  # ─── <Security A. +1> ──────────────────────────────────────────────────────
+  - kind: aura
+    target: {}
+    security_attack: 1
+    summary: "<Security A. +1>"
+
+  # ─── [When Digivolving] by suspending 1 Digimon, may attack without
+  #     suspending ─────────────────────────────────────────────────────────
+  - when: when_digivolving
+    condition:
+      any_field_permanent:
+        of: any
+        kind: digimon
+        is_unsuspended: true
+    summary: "[When Digivolving] By suspending 1 Digimon, this Digimon may attack without suspending"
+    process:
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "By suspending 1 Digimon, this Digimon may attack without suspending"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+            - may_attack_now:
+                attacker: source
+                targets: any
+                without_suspending: true
+                optional: true
+
+  # ─── [When Attacking][Once Per Turn] delete 1 opp Digimon with the same
+  #     orientation as this Digimon ────────────────────────────────────────
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] Delete 1 of your opponent's Digimon with the same orientation as this Digimon"
+    process:
+      - if:
+          condition: { source_is_unsuspended: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_unsuspended: true
+                prompt: "Delete 1 of your opponent's unsuspended Digimon (same orientation as this Digimon)"
+            - delete_permanent: { target: victim }
+          else:
+            - select_opponent_permanent:
+                bind_as: victim_s
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: true
+                prompt: "Delete 1 of your opponent's suspended Digimon (same orientation as this Digimon)"
+            - delete_permanent: { target: victim_s }
+
+  # ─── Option face [Main] may unsuspend 1 Digimon; then delete all opp
+  #     unsuspended Digimon with the lowest DP ─────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] You may unsuspend 1 Digimon. Then, delete all of your opponent's unsuspended Digimon with the lowest DP"
+    process:
+      # "0 or exactly 1" over BOTH battle areas; declining continues to the
+      # delete (DCGO's canNoSelect pick is followed unconditionally by it).
+      - select_count_capped_multi:
+          of: any
+          zone: battle_area
+          min: 1
+          max: 1
+          clamp_to_available: true
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: wake
+          prompt: "You may unsuspend 1 Digimon"
+      - per_selected:
+          selection: wake
+          bind_as: wk
+          body:
+            - unsuspend: { target: wk }
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - is_unsuspended: true
+          selector: lowest_dp

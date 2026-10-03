@@ -501,6 +501,40 @@ impl<'a> EffectContext<'a> {
         self.security_place_stacked_card(carrier, source_card, target_player, position, face_up)
     }
 
+    /// G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD (BT26-033 Jupitermon) — move the
+    /// carrier's VISIBLE top card (`card_sources[len - 1]`, DCGO
+    /// `Permanent.TopCard`) into `target_player`'s security, leaving the rest
+    /// of the stack on the field so the next card becomes the new top.
+    /// Requires ≥1 digivolution card below the top (an empty-under stack
+    /// returns `false` without mutating), matching DCGO's
+    /// `DigivolutionCards.Count > 0` gate. Routes through
+    /// `security_place_stacked_card`, so `CannotAddSecurityByEffect` and
+    /// `WhenWouldPlaceInSecurity` replacements apply.
+    pub fn security_place_top_card(
+        &mut self,
+        carrier: PermanentHandle,
+        target_player: PlayerId,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        let top_card = {
+            let Some(perm) = self
+                .game
+                .player(carrier.player)
+                .battle_area
+                .get(carrier.index as usize)
+            else {
+                return false;
+            };
+            let len = perm.card_sources.len();
+            if len < 2 {
+                return false;
+            }
+            perm.card_sources[len - 1].handle()
+        };
+        self.security_place_stacked_card(carrier, top_card, target_player, position, face_up)
+    }
+
     /// (Track A) Move a battle-area permanent to a player's security stack
     /// through the normal leave-field replacement window. This is for
     /// effects that initiate a new move to security, not replacement bodies

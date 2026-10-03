@@ -323,7 +323,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
                 collect_step_raw_rust_fns(step, names);
             }
         }
-        CompiledStep::DeleteAllPermanents { over } => {
+        CompiledStep::DeleteAllPermanents { over, .. } => {
             collect_predicate_raw_rust_fns(over, names);
         }
         CompiledStep::PerSelected { body, .. }

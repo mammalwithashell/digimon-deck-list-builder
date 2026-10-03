@@ -839,7 +839,69 @@ impl Game {
             .collect();
 
         let mut used = vec![false; trash.len()];
-        assembly_assign(&match_table, 0, &mut used)
+        if !assembly_assign(&match_table, 0, &mut used) {
+            return false;
+        }
+
+        // `distinct_by` materials (BT26-085 Giant Slayer "5 different-level
+        // cards"): the element's picks must be pairwise distinct on the key,
+        // so the trash must hold at least `count` distinct keys among the
+        // element's matches. G-ENGINE-ASSEMBLY-DISTINCT-BY.
+        let mut slot = 0usize;
+        for (element_idx, (_, count)) in elements.iter().enumerate() {
+            let matches = &match_table[slot];
+            slot += *count as usize;
+            let Some(mode) = self.assembly_element_distinct_by(source_card, element_idx) else {
+                continue;
+            };
+            let mut keys: Vec<Option<String>> = Vec::new();
+            let mut keyless = 0usize;
+            for &t in matches {
+                let data = &self.card_data[trash[t].data_index];
+                let key = match mode {
+                    crate::effect_context::DistinctByMode::CardNumber => Some(data.card_id.clone()),
+                    crate::effect_context::DistinctByMode::Name => Some(data.card_name.clone()),
+                    crate::effect_context::DistinctByMode::Level => {
+                        data.level.map(|l| l.to_string())
+                    }
+                };
+                match key {
+                    Some(k) if !keys.contains(&Some(k.clone())) => keys.push(Some(k)),
+                    Some(_) => {}
+                    // A keyless card never conflicts (count_capped_rejects_distinct).
+                    None => keyless += 1,
+                }
+            }
+            if keys.len() + keyless < *count as usize {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// The `distinct_by` key of assembly element `element_idx` on
+    /// `target_card`'s Assembly alt-path, if any. G-ENGINE-ASSEMBLY-DISTINCT-BY.
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn assembly_element_distinct_by(
+        &self,
+        target_card: CardHandle,
+        element_idx: usize,
+    ) -> Option<crate::effect_context::DistinctByMode> {
+        use digimon_dsl::compiled::{CompiledAltPathKind, CompiledDistinctBy};
+        let card_id = self.card_data_for_handle(target_card)?.card_id.clone();
+        let path = self
+            .alt_path_registry
+            .get(&card_id)?
+            .iter()
+            .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
+        path.materials
+            .get(element_idx)?
+            .distinct_by
+            .map(|d| match d {
+                CompiledDistinctBy::CardNumber => crate::effect_context::DistinctByMode::CardNumber,
+                CompiledDistinctBy::Level => crate::effect_context::DistinctByMode::Level,
+                CompiledDistinctBy::Name => crate::effect_context::DistinctByMode::Name,
+            })
     }
 
     pub(crate) fn commit_pending_would_play(
@@ -2241,6 +2303,7 @@ impl Game {
             // The placing effect's carrier, read back by
             // `complete_effect_security_removal` when it seats the card.
             self.pending_security_source_cause_card = effect_source_card;
+            self.pending_security_source_face_down = face_down;
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
@@ -3542,6 +3605,8 @@ fn install_assembly_element(
 
     let elements_for_cb = std::sync::Arc::clone(&elements);
     let picked_so_far_for_resume = picked_so_far.clone();
+    // Per-element pairwise distinctness (G-ENGINE-ASSEMBLY-DISTINCT-BY).
+    let distinct_by = game.assembly_element_distinct_by(target_card, element_idx);
     let mut ctx = EffectContext::new(game, source_card, None, player);
     let prov = crate::resume::ResumeProvenance {
         source_card: ctx.source_card,
@@ -3557,7 +3622,7 @@ fn install_assembly_element(
         max,
         &prompt,
         is_first, // is_optional_zero: only the gate (element 0) may finish at 0 picks
-        None,
+        distinct_by,
         filter,
         move |cctx, picks| {
             let game: &mut Game = cctx.game;
@@ -3600,7 +3665,7 @@ fn install_assembly_element(
                     min,
                     max,
                     is_optional_zero: is_first,
-                    distinct_by: None,
+                    distinct_by,
                     candidate_actions: pending.valid_action_ids.clone(),
                     accum: Vec::new(),
                     prompt: pending.prompt.clone(),

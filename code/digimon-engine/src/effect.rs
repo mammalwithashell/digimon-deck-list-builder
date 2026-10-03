@@ -87,6 +87,9 @@ pub enum ActivationCostKind {
     ReturnSelfToDeckBottom,
     /// "By trashing this card, …" (`<Delay>` bodies).
     TrashSelf,
+    /// "By placing this Digimon as the bottom security card, …"
+    /// (BT26-022 Sorcermon). G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY.
+    PlaceSelfAtSecurityBottom,
 }
 
 impl ActivationCostKind {
@@ -125,6 +128,15 @@ impl ActivationCostKind {
             // refuse only when the source permanent is already gone, which
             // the lookup above has just ruled out.
             ActivationCostKind::ReturnSelfToDeckBottom | ActivationCostKind::TrashSelf => true,
+            // `place_self_at_security` refuses under the owner's
+            // player-scoped `CannotAddSecurityByEffect` (DCGO
+            // `Owner.CanAddSecurity`). A would-leave / would-place
+            // replacement can still intercept at payment time; that is a
+            // resolution-time cost failure, not a mask-time one.
+            ActivationCostKind::PlaceSelfAtSecurityBottom => !game.modifiers.player_has(
+                handle.player,
+                crate::enums::ModifierType::CannotAddSecurityByEffect,
+            ),
         }
     }
 }
@@ -1261,6 +1273,9 @@ impl EffectBuilder {
             ActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
             ActivationCostKind::ReturnSelfToDeckBottom => ctx.return_self_to_deck_bottom_as_cost(),
             ActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
+            ActivationCostKind::PlaceSelfAtSecurityBottom => {
+                ctx.place_self_at_security(crate::enums::StackPosition::Bottom, false)
+            }
         }));
         self
     }

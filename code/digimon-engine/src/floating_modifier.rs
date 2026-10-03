@@ -71,4 +71,8 @@ pub struct FloatingMassModifier {
     /// (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH / BT25-104) — the live re-scan
     /// re-applies the synth identity to permanents that enter the window.
     pub payload: Option<crate::modifiers::ModifierPayload>,
+    /// When `Some`, this descriptor is a continuous mass KEYWORD grant: each
+    /// tick grants this keyword declaratively to every match and `modifier` /
+    /// `value` are unused. G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT (BT26-101).
+    pub keyword: Option<crate::enums::Keyword>,
 }

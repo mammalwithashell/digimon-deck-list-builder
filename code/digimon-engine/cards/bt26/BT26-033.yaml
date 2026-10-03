@@ -1,0 +1,149 @@
+# BT26-033 Jupitermon — DUAL (Digimon Lv.6 Yellow/Red DP 13000 // Option
+#   Yellow/Red use cost 2). Traits: Shaman, Olympos XII, Iliad, TS. Form Mega.
+#   Attribute: Vaccine.
+# Printed digivolve box: Yellow Lv.5 / cost 5; Red Lv.5 / cost 5;
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 4.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-033.md):
+#   Digimon face:
+#   <Raid> <Alliance> <Engage> (At the end of your turn, this Digimon may attack.)
+#   [When Digivolving] Add your top security card to the hand. Then, if it's
+#     your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand
+#     with the cost reduced by 5.
+#   [All Turns] When any of your [TS] trait Digimon or Tamers would leave the
+#     battle area, by placing this Digimon's top stacked card as the bottom
+#     security card, they don't leave.
+#   Option face (DUAL): For each of your security cards, add 1 to this card's
+#     use cost. <Use Req. ([TS] trait)> [Main] Delete all of your opponent's
+#     Digimon with the lowest DP. Then, <Recovery +1>.
+#   DUAL Rule: <Arts Digivolve>.
+#   Official Q&A: the play-cost reduction stacks (e.g. a total of 10).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_033.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5 + HasTSTraits, cost 4.
+# Raid / Alliance (OnAllyAttack) / Engage (OnEndTurn) → grant_keyword ×3.
+# WD (not optional): if Owner has security, AddHandCards(top) +
+#   ReduceSecurity; then if IsOwnerTurn: canNoSelect:true hand pick over
+#   [Iliad]/[TS] cards playable/usable at cost-5 → PlayOptionCards /
+#   PlayPermanentCards paying the reduced cost.
+#   → add_top_security_to_hand + `your_turn`-gated optional select_hand +
+#   play_or_use_from_hand { reduce: 5 } (BT25-041 idiom).
+# All Turns (WhenRemoveField, optional:true): subjects = own battle-area
+#   Digimon/Tamers with [TS]; CanActivate requires DigivolutionCards.Count > 0
+#   and CanAddSecurity. Removes `card` (this Digimon's TOP card — DCGO
+#   `topStacked = card`) from the stack and AddSecurityCard(bottom, face down);
+#   each protected permanent's willBeRemoveField is cleared.
+#   → kind: replacement on when_would_leave_battle_area (subject own TS
+#   Digimon/Tamer; carrier `self_source_count >= 1`), process
+#   security_place_top_card { carrier: source, bottom, down } +
+#   cancel_replacement (BT23-058 pay-then-cancel idiom).
+# Option face: UseRequirements([TS]); ChangeCostClass +SecurityCards.Count on
+#   this card's own use cost; [Main] delete all opp Digimon with the lowest DP,
+#   then IRecovery(1); ArtsDigivolveEffect.
+#   → BLOCKED: the engine has no consult for a self use-cost INCREASE (cost
+#   reducers clamp at >= 0 and `ChangePlayCost` is never consulted on the
+#   Option-use path). The Option face is left unauthored (no [Main] clause), so
+#   the card cannot be used as an Option rather than being usable at a wrong
+#   (too cheap) cost. Gap: G-ENGINE-OPTION-SELF-USE-COST-INCREASE
+#   (docs/RUST_ENGINE_GAPS.md).
+
+card: BT26-033
+name: "Jupitermon"
+kind: dual
+
+level: 6
+color: [yellow, red]
+dp: 13000
+traits: [Shaman, Olympos XII, Iliad, TS]
+form: Mega
+attribute: Vaccine
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [yellow, red]
+    traits: [Shaman, Olympos XII, Iliad, TS]
+    effect_text: "<Raid> <Alliance> <Engage> (At the end of your turn, this Digimon may attack.) [When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5. [All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+    inherited_text: ""
+  option:
+    use_cost: 2
+    colors: [yellow, red]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: TS
+    effect_text: "For each of your security cards, add 1 to this card's use cost. <Use Req. ([TS] trait)> [Main] Delete all of your opponent's Digimon with the lowest DP. Then, <Recovery +1>. <Arts Digivolve>"
+    security_text: ""
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage>"
+
+  # ─── [When Digivolving] top security → hand; then (your turn) may play/use
+  #     1 [Iliad]/[TS] card from hand with the cost reduced by 5 ────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - if:
+          condition: { your_turn: true }
+          then:
+            - select_hand:
+                of: you
+                bind_as: iliad_pick
+                optional: true
+                filter:
+                  any_of:
+                    - trait_has: Iliad
+                    - trait_has: TS
+                prompt: "You may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5"
+            - play_or_use_from_hand:
+                of: you
+                hand_index: iliad_pick
+                cost_delta: { reduce: 5 }
+
+  # ─── [All Turns] your [TS] Digimon/Tamer would leave → by placing this
+  #     Digimon's top stacked card as the bottom security card, it doesn't ───
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - any_of:
+            - kind: digimon
+            - kind: tamer
+        - trait_has: TS
+        - self_source_count: { op: gte, value: 1 }
+    summary: "[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave"
+    process:
+      - security_place_top_card:
+          carrier: source
+          of: you
+          position: bottom
+          face: down
+      - cancel_replacement: {}

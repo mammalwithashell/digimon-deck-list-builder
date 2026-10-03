@@ -1,0 +1,98 @@
+# BT26-092 Shota Kuroi — Tamer, Black, Cost 3. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-092.md):
+#   [Start of Your Main Phase] By trashing 1 [TS] trait card from your hand,
+#     <Draw 1> and gain 1 memory.
+#   [Opponent's Turn] When one of your opponent's Digimon attacks, by returning
+#     1 of your [TS] trait Tamers to the bottom of the deck, you may change the
+#     attack target to 1 of your Digimon with the [TS] trait.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_092.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional, skippable): IsOwnerTurn; CanActivate
+#   requires a HasTSTraits (= EqualsTraits "TS") hand card. canNoSelect:true
+#   hand pick → trash → on success Draw 1 + AddMemory 1.
+#   → condition + optional cost select_hand + trash + draw + gain_memory.
+# Redirect (OnAllyAttack, optional TRUE): !IsOwnerTurn && an OPPONENT Digimon
+#   attacks. Body: canNoSelect:true pick of 1 own TS Tamer (this Tamer itself
+#   qualifies) → DeckBounce (bottom) → on success, if an own TS Digimon exists,
+#   canNoSelect:true pick of 1 own TS Digimon → SwitchDefender.
+#   → on_opponent_attack + opponents_turn + optional; select_own_permanent
+#   (optional) → return_to_deck bottom → gated on effect_returned_any_card →
+#   optional select_own_permanent → redirect_attack_target { new_target }.
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT26-092
+name: "Shota Kuroi"
+kind: tamer
+color: [black]
+cost: 3
+traits: [TS]
+
+effects:
+  # ─── [Start of Your Main Phase] trash 1 [TS] hand card → Draw 1 + 1 memory ─
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "TS"
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 [TS] trait card from your hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: "TS" }
+          prompt: "Trash 1 [TS] trait card from your hand to <Draw 1> and gain 1 memory"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── [Opponent's Turn] When an opp Digimon attacks, by bottom-decking 1 own
+  #     [TS] Tamer, may change the attack target to 1 own [TS] Digimon ───────
+  - when: on_opponent_attack
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Opponent's Turn] When an opponent's Digimon attacks, by returning 1 of your [TS] Tamers to the bottom of the deck, you may change the attack target to 1 of your [TS] Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: bounced_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "TS"
+          prompt: "Return 1 of your [TS] trait Tamers to the bottom of the deck"
+      - if:
+          condition: { binding_present: bounced_tamer }
+          then:
+            - return_to_deck: { target: bounced_tamer, position: bottom }
+            - if:
+                condition: { effect_returned_any_card: true }
+                then:
+                  - select_own_permanent:
+                      bind_as: new_defender
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - trait_has: "TS"
+                      prompt: "Change the attack target to 1 of your [TS] trait Digimon"
+                  - if:
+                      condition: { binding_present: new_defender }
+                      then:
+                        - redirect_attack_target: { new_target: new_defender }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,141 @@
+# BT26-084 Copipemon — Digimon, Lv.3, White, DP 4000, Cost 4.
+# Form: Stnd./Appmon. Type: Copy & Paste/Seven Code. Attribute: System.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-084.md):
+#   Digivolve: Purple Lv.2 / cost 0 (official DB circle colour); [Digivolve]
+#     Lv.2 w/[Appmon] trait: Cost 0.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#     area other than by your effects, by trashing 1 of its specified link
+#     cards, it doesn't leave.)
+#   [Your Turn] [Once Per Turn] When this Digimon gets linked, reveal the top 3
+#     cards of your deck. You may play or use 1 [Seven Code] trait card among
+#     them with the cost reduced by 3. Return the rest to the top or bottom of
+#     the deck.
+#   Link DP: DP+3000. Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: [When Linking] You may link 1 non-white level 4 or lower
+#     [System] or [Seven Code] trait card from your trash to this Digimon
+#     without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/White/BT26_084.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: HasAppmonTraits, level 2, cost 0 (+ printed circle).
+# Detach: DetachSelfEffect(EqualsTraits("Seven Code")) — BT26-019 idiom.
+# Your Turn When Linked: WhenLinked, maxCount 1, IsOwnerTurn &&
+#   CanTriggerWhenLinked(this). If the deck is non-empty:
+#   SimplifiedRevealDeckTopCardsAndSelect(3, Mode.Custom, maxCount 1,
+#   canNoSelect: true) over EqualsTraits("Seven Code") && (Option that can be
+#   used || HasPlayCost && CanPlayAsNewPermanent(payCost, fixedCost cost-3)),
+#   remainder DeckTopOrBottom; then the pick is used (Option) or played
+#   (permanent) with payCost: true under a temporary -3 ChangeCostClass.
+#   → reveal_top_deck 3 + select_reveal_buckets (min 0 / max 1; filter
+#   trait_has Seven Code + affordable_with_cost_reduce 3) + kind-routed
+#   use_option_from_revealed / play_from_revealed_free with { reduce: 3 } +
+#   place_remainder_on_deck { position: choice } (EX7-048 idiom: the bucket
+#   form keeps the remainder placement on the decline path).
+# Link condition [Appmon] cost 3; Link DP +3000 (linked aura).
+# When Linking (linked effect, SetIsSkippable): CanActivate needs a trash card
+#   with HasLevel && Level <= 4 && !White && (System || Seven Code); a
+#   canNoSelect:true trash pick → ILinkCard(payCost: false, card, this
+#   permanent). → scope: linked when_linked + link_cards { from: [trash],
+#   to: self, count: { up_to: 1 }, cost: free }.
+
+card: BT26-084
+name: Copipemon
+kind: digimon
+level: 3
+color: [white]
+cost: 4
+dp: 4000
+traits: ["Stnd.", Appmon, System, Copy & Paste, Seven Code]
+attribute: System
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked → reveal 3, play/use -3 ─
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck; you may play or use 1 [Seven Code] trait card among them with the cost reduced by 3; return the rest to the top or bottom of the deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: copied
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - trait_has: Seven Code
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                      - kind: option
+                  - affordable_with_cost_reduce: 3
+          prompt: "You may play or use 1 [Seven Code] trait card among them with the cost reduced by 3"
+      - if:
+          condition: { binding_card_kind: { binding: copied, kind: option } }
+          then:
+            - use_option_from_revealed:
+                of: you
+                card: copied
+                cost: { reduce: 3 }
+          else:
+            - play_from_revealed_free:
+                of: you
+                card: copied
+                cost_delta: { reduce: 3 }
+      - place_remainder_on_deck: { of: you, position: choice }
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── [When Linking] may link 1 non-white Lv.4- [System]/[Seven Code] from trash
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon without paying the cost"
+    process:
+      - link_cards:
+          from: [trash]
+          filter:
+            all_of:
+              - level_lte: 4
+              - none_of:
+                  - color_is: white
+              - any_of:
+                  - trait_has: System
+                  - trait_has: Seven Code
+          to: self
+          count: { up_to: 1 }
+          cost: free
+          prompt: "You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon"

@@ -1,0 +1,156 @@
+# BT26-055 Giromon — Digimon, Lv.5, Black, DP 7000, Cost 7.
+# Traits: Mine, DM, Ver.3. Form: Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Black Lv.4 / cost 3; [Digivolve] Lv.4 w/[DM] trait:
+#   Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-055.md):
+#   <Fragment <2>>
+#   [On Play] [When Digivolving] [Counter] [Once Per Turn] You may place 1 card
+#     in your hand face down as this Digimon's bottom digivolution card. Then,
+#     you may delete 1 of your Digimon with the [Ver.3] trait and all of your
+#     opponent's Digimon with the lowest play cost.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon would leave the
+#     battle area, trash your opponent's top security card.
+#   Official Q&A: only 1 [Counter] effect can be activated during 1 attack.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_055.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 && TopCard.HasDMTraits, cost 3.
+# <Fragment <2>>: FragmentSelfEffect(trashValue 2) → grant_keyword Fragment 2.
+# Shared OP / WD / Counter (maxCountPerTurn 1, optional false, skippable):
+#   if hand >= 1, canNoSelect:true hand pick → AddDigivolutionCardsBottom(
+#   face down). Then, if an own [Ver.3] Digimon OR an opponent Digimon exists,
+#   a Yes/No; on Yes: mandatory (canNoSelect:false) pick of 1 own [Ver.3]
+#   Digimon (when one exists) + every opponent Digimon that IsMinCost
+#   (Digimon only) → ONE DestroyPermanentsClass batch. RemoveUse when neither
+#   the placement nor the deletion happened.
+#   → when [on_play, when_digivolving, counter] + once_per_turn; optional
+#   select_hand → place_as_bottom_source face_down; gated 2-way
+#   select_effect_choice; select_own_permanent (Ver.3); one
+#   delete_all_permanents over (the picked Ver.3 OR opponent Digimon whose
+#   play cost <= the opponent's lowest Digimon play cost) — a single batch;
+#   refund_opt when nothing was placed and "No" was chosen.
+# Inherited (WhenRemoveField, maxCountPerTurn 1, NOT optional, carrier must
+#   be this permanent): IDestroySecurity(opponent, 1, fromTop).
+#   → scope inherited, kind replacement, trigger
+#   when_would_leave_battle_area (non-cancelling — the BT23-032 idiom),
+#   once_per_turn → trash_top_security { of: opponent }.
+
+card: BT26-055
+name: Giromon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Mine, DM, Ver.3]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: DM
+    cost: 3
+
+effects:
+  # ─── <Fragment <2>> ────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 2
+
+  # ─── [On Play][When Digivolving][Counter][OPT] may place 1 hand card face
+  #     down as bottom source; then may delete 1 own [Ver.3] Digimon + all
+  #     opponent's lowest-play-cost Digimon ─────────────────────────────────
+  - when: [on_play, when_digivolving, counter]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your [Ver.3] Digimon and all of your opponent's Digimon with the lowest play cost"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [hand] }
+              n: 1
+          then:
+            - select_hand:
+                of: you
+                bind_as: placed
+                optional: true
+                filter: {}
+                prompt: "You may place 1 card in your hand face down as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - place_as_bottom_source:
+                source: placed
+                target: source
+                face_down: true
+      - if:
+          condition:
+            any_of:
+              - any_field_permanent:
+                  of: you
+                  kind: digimon
+                  trait_has: "Ver.3"
+              - any_field_permanent:
+                  of: opponent
+                  kind: digimon
+          then:
+            - select_effect_choice:
+                bind_as: del_choice
+                labels:
+                  - "Delete 1 of your [Ver.3] Digimon and all of your opponent's lowest play cost Digimon"
+                  - "Don't delete"
+                prompt: "Delete 1 of your [Ver.3] trait Digimon and all of your opponent's Digimon with the lowest play cost?"
+      - if:
+          condition:
+            all_of:
+              - equals: [del_choice, 0]
+              - any_field_permanent:
+                  of: you
+                  kind: digimon
+                  trait_has: "Ver.3"
+          then:
+            - select_own_permanent:
+                bind_as: ver3
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Ver.3"
+                prompt: "Select 1 of your [Ver.3] trait Digimon to delete"
+      # One DestroyPermanentsClass batch: the picked [Ver.3] + every opponent
+      # Digimon at the opponent's lowest Digimon play cost (ties all go).
+      - if:
+          condition: { equals: [del_choice, 0] }
+          then:
+            - delete_all_permanents:
+                over:
+                  any_of:
+                    - of_permanent: ver3
+                    - all_of:
+                        - of: opponent
+                        - kind: digimon
+                        - play_cost_lte:
+                            aggregate:
+                              selector: lowest_play_cost
+                              scope: opponent
+      - if:
+          condition:
+            all_of:
+              - binding_absent: placed
+              - not: { equals: [del_choice, 0] }
+          then:
+            - refund_opt: {}
+
+  # ─── Inherited [All Turns][OPT] when this Digimon would leave the battle
+  #     area, trash your opponent's top security card ────────────────────────
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    once_per_turn: true
+    summary: "[Inherited][All Turns][Once Per Turn] When this Digimon would leave the battle area, trash your opponent's top security card"
+    process:
+      - trash_top_security: { of: opponent }

@@ -754,6 +754,13 @@ pub enum TriggerSource {
     /// whole added batch (fires ONCE per host per batch — rule 15-5-2 / DCGO
     /// `AddDigivolutionCards*` once per list); `cause` is the placing effect
     /// (DCGO's non-null hashtable `CardEffect`). Mirrors `HandDiscarded`.
+    /// `OnAddToDeck` observer fan-out fired after an EFFECT controlled by
+    /// `cause_controller` added one or more cards to a deck (either
+    /// player's). Scans EVERY battle-area permanent of both players; the
+    /// scope gate lives in each observer's `active_when:`
+    /// (`event_caused_by_own_effect`). Mirrors DCGO `FireOnAddLibraryAnyone`.
+    /// G-ENGINE-ON-ADD-TO-DECK.
+    DeckGained { cause_controller: PlayerId },
     SourcesAddedToStack {
         host: PermanentHandle,
         host_card: CardHandle,

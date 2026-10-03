@@ -4209,3 +4209,194 @@ Limitation: the batch boundary is the drain bundle (one resolving effect), not t
 suspend call — two *separate* suspend actions inside one effect body would also
 collapse. No printed card in the pool is known to do that; add an event id to
 `QueuedEffect` if one appears.
+
+## G-ENGINE-PLAY-COST-BUDGET-FROM-HAND-OR-TRASH — OPEN (found 2026-10-03, BT26-081 Mervamon)
+
+BT26-081 Mervamon [On Play][When Digivolving]: "You may play up to 8 play cost's total
+worth of [Iliad] trait cards from your hand or trash without paying the costs. Then, ...".
+DCGO (`BT26_081.cs` SharedActivateCoroutine) loops: choose zone (hand / trash / stop,
+asked only when both zones have a candidate) → multi-pick from that zone under the
+running cap (`GetCostItself <= remaining`, `canEndNotMax`, `canNoSelect`) → repeat until
+stop or no candidate; then plays ALL picked cards SIMULTANEOUSLY for free
+(`PlayPermanentCards`, one batch, ETBs fire together), then the DP-debuff tail runs
+regardless (Q&A).
+
+The engine has only the opponent-permanent analog (`SelectionKind::PlayCostBudget` /
+`select_opponent_play_cost_budget`). Missing: an own-CARD budget multi-select spanning
+hand ∪ trash (action encoding over both zones, resumable `BudgetStep` frame for cards,
+clone-safe) plus a "play this mixed hand/trash card list simultaneously, free" step
+(`play_union_bound_free` plays one card). Too large to widen inside the BT26 priority
+slice; BT26-081 is BLOCKED (no YAML shipped — omitting the clause would be an
+approximation). The card's other clauses map onto existing vocabulary: alt paths
+(`[Minervamon]` cost 2, Lv.5 [TS] cost 4), `kind: assembly` (1× [Minervamon], -5),
+-4000 × own [Iliad]/[TS] Digimon-or-Tamer count (`base_per_delta` +
+`card_count_in_zone`), and the [All Turns] Iliad aura (grant_keyword Alliance / Reboot
+/ Blocker + DP +2000 over `of: you, kind: digimon, trait_has: Iliad`).
+
+## G-ENGINE-OPTION-SELF-USE-COST-INCREASE — OPEN (found 2026-10-03, BT26-033 Jupitermon)
+
+BT26-033's Option face (DUAL): "For each of your security cards, add 1 to this card's use
+cost." (BT26-097 prints the same shape.) DCGO: a `ChangeCostClass` on the card itself
+(+`Owner.SecurityCards.Count`, `isUpDown`, `isChangePayingCost: false`) so the higher
+cost gates both affordability and payment.
+
+The engine has no consult for a self use-cost INCREASE: `BeforePayCost` reducers clamp
+at `>= 0` (`inspect_cost_reduction_candidate`), and `ModifierType::ChangePlayCost` is
+delivered by auras but never read on the Option-use path (`play_option_core`,
+`option_legal_play_modes`, the action mask's option affordability, and effect-driven
+`play_or_use_from_hand` / `use_option_from_*`). Needs a per-card dynamic use-cost
+adjustment (formula over the controller's state) applied at every one of those sites.
+BT26-033 ships the Digimon face only (PARTIAL); its Option face is left unauthored so it
+is not usable at a too-cheap cost.
+
+## G-ENGINE-SUCCESSION-KEYWORD — OPEN (found 2026-10-03, BT26-103 Jupitermon: Wrath Mode)
+
+<Succession ([X])>: "This Digimon gains all effects other than <Succession> on its
+topmost specified digivolution card." DCGO: `SuccessionSelfEffect` →
+`CopyDigivolutionCardEffects(cardCondition, isSuccession: true)` — the permanent adopts
+every effect (keywords, triggered, static) printed on the topmost matching source card.
+Cards: BT26-103 (Jupitermon), BT26-032, BT26-060, BT26-080.
+
+The engine has no way for a permanent to run the TOP-CARD effects of one of its
+digivolution SOURCE cards (same family as EX10-059's G-DSL-GAIN-ALL-TURNS-FROM-SOURCES):
+effect lookup is by the top card's id (inherited text only for sources). Needs an
+effect-adoption layer in the trigger / keyword / aura scans that, for a carrier with
+Succession, also enumerates the topmost matching source's own (non-inherited) effects
+with the carrier as `source_permanent`. BT26-103 ships without <Succession> (PARTIAL).
+BT26-032 Ceresmon and BT26-080 Bacchusmon (2026-10-03, bt26-priority wave 2) likewise ship
+every other clause and omit <Succession> (PARTIAL).
+
+## G-ENGINE-FIELD-MAIN-OPT-KEY — RESOLVED (found 2026-10-03, BT26-021 Gekomon)
+
+A field `[Main] [Once Per Turn]` activated through the action space
+(`Game::activate_field_main` in `game_actions/play.rs`, the FIELD_EFFECT +2
+sub-slot) checked and recorded the OPT counter under the raw effect SLOT, while the action
+mask (`main_effect_select`) and the `refund_opt` step key it by
+`effect.shared_opt_group.unwrap_or(slot)`. A `once_per_turn` [Main] whose body contains
+`refund_opt` (DCGO `RemoveUse` on a declined pick — forced into its own shared-opt group)
+therefore never locked out after a successful use (the mask read the group key, the
+activation recorded the slot key). Fixed: the activation path now checks and records the
+same `shared_opt_group.unwrap_or(slot)` key. Tests `bt26_021_main_plays_ts_tamer_from_trash_reduced_once_per_turn`
+/ `bt26_021_main_decline_refunds_once_per_turn`.
+
+
+## G-ENGINE-ON-ADD-TO-DECK — RESOLVED (2026-10-03, BT26 Chronomon line)
+
+"When your effects add to decks" (BT26-001 Yokomon, BT26-015 Butenmon, BT26-060 Chronomon:
+Destroy Mode; DCGO `EffectTiming.OnAddLibraryAnyone` + `CanTriggerOnAddLibrary`) had no engine
+timing. Added `EffectTiming::OnAddToDeck` + `TriggerSource::DeckGained { cause_controller }`
+(board-wide fan-out; the cause rides in `TriggerContext.event_cause_effect`, so
+`event_caused_by_own_effect` gates "your effects"). Batched like `OnDiscardHand`: deck sinks
+call `Game::note_effect_deck_add(cause)` (EffectContext paths: trash/hand→deck
+`move_card_to_deck`, `return_to_deck` / `return_stack_to_deck` wrappers) or
+`note_effect_deck_add_if_resolving()` (Game paths: `insert_card_into_deck`,
+`insert_stack_into_deck`, source→deck, security→deck), and the window is flushed ONCE at the
+outermost `drain_effect_queue` (DCGO fires once per added list). Excluded per DCGO: reveal-zone
+round trips (`return_to_deck_from_reveal` / `place_remainder_on_deck` never note) and Digi-Eggs
+routed to the Digi-Egg deck. DSL: `when: on_add_to_deck`. Tests: bt26_001 / bt26_015.
+
+## G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS — RESOLVED (2026-10-03, BT26-085 Giant Slayer)
+
+`Game::effect_initiated_digivolve_from_source` rejected any target whose top card has no level,
+so a level-less Digimon (BT26-085 Giant Slayer) could never digivolve through its special
+"[Giant Slayer]: Cost 5" alt route. The level is now optional and only consulted by the
+color-waived printed-circle scan; route enumeration (`all_digivolve_routes_for_card`) decides
+legality. Test: bt26_085_would_leave_digivolves_into_destroy_mode_from_trash_free.
+
+## G-ENGINE-ASSEMBLY-DISTINCT-BY — RESOLVED (2026-10-03, BT26-085 Giant Slayer)
+
+The Assembly play path ignored a material's `distinct_by` ("5 different-level cards"). Now
+`install_assembly_element` passes the element's key to the count-capped trash pick (and its
+resume frame), and `assembly_can_fulfill` requires >= `count` distinct keys among the element's
+matches. Limitation: distinctness is per ELEMENT; cross-element distinctness (EX9-074's seven
+separate `distinct_by: name` entries) is still not enforced. Test:
+bt26_085_assembly_picks_five_different_levels_and_reduces_cost_by_five.
+
+## G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK — OPEN (found 2026-10-03, BT26-060 Chronomon: Destroy Mode)
+
+BT26-060 [On Play][When Digivolving]: "Return the top 5 stacked cards of 3 of your opponent's
+Digimon to the top of the deck." DCGO (`BT26_060.cs`): mandatory pick of min(3, n) opponent
+Digimon; from each, `StackCards.GetRange(0, min(count - 1, 5))` (top card included, at least one
+card always stays), skipping `ImmuneFromStackReturnToLibrary` / `CanNotBeAffected`; then the
+controller orders ALL returned cards face-down and `AddLibraryTopCards` puts them on the owners'
+deck tops (an own-effect deck add — fires `OnAddToDeck`). Missing: a "peel the top N stacked
+cards (keep >= 1) to the deck top" primitive with the stack-return immunity checks and a
+player-ordered multi-card deck-top placement that is NOT a reveal-zone round trip. BT26-060 is
+BLOCKED (also on G-ENGINE-SUCCESSION-KEYWORD for <Succession (Lv.6 w/[Chronomon] in name)>); no
+YAML shipped. Its other clauses map onto existing vocabulary: alt paths (Lv.6 w/[Chronomon] in
+text: 5; [Giant Slayer]: 5), Security A. +1 / Reboot / Blocker, and the [All Turns][OPT]
+`on_add_to_deck` may-delete (optional pick + `refund_opt`).
+
+## G-ENGINE-LOSE-SECURITY-BY-EFFECT — RESOLVED (2026-10-03, BT26-089 Kyo Sawashiro)
+
+"When your security stack is removed from … if removed from by effects" (DCGO
+`CardEffectCommons.IsByEffect`) had no way to tell an effect removal from a security check:
+the `OnLoseSecurity` trigger context never carried `effect_initiated`. Now
+`fire_effect_security_removal` (every caller of which is an effect removal; the combat check
+enqueues its own `OnLoseSecurityDrain`) raises `Game::pending_security_loss_effect_initiated`
+around the enqueue and `trigger_context_for_source` copies it onto the `SecurityRevealed`
+context, so `event_is_effect_initiated` reads true/false correctly. Tests:
+bt26_089_effect_removal_places_deck_top_and_gives_security_minus_one /
+bt26_089_battle_removal_places_deck_top_without_security_debuff.
+
+## G-ENGINE-SECURITY-AS-SOURCE-FACE-DOWN — RESOLVED (2026-10-03, BT26-025 Liollmon)
+
+`place_as_source_observed`'s Security branch dropped the `face_down` flag (the card is seated
+later by `complete_effect_security_removal`). It now rides `Game::pending_security_source_face_down`
+(same hand-off as `pending_security_source_cause_card`) and the Bottom/TopSource seat marks the
+card face down. Test: bt26_025_on_play_places_top_security_face_down_and_recovers.
+
+## G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS — OPEN (observed 2026-10-03, BT26-075 ScourgeChiropmon)
+
+Trashing a digivolution card mid-effect drains the effect queue inline (the EX10-036
+`OnDigivolutionCardTrashed` contract). That drain also resolves UNRELATED triggers that were
+already pending from the same event batch: with BT26-075's `[On Deletion]` chosen first, its
+"trash the bottom face-down card from under a Tamer" cost surfaces the simultaneously-triggered
+`<Ascension>` prompt BEFORE the `[On Deletion]` body finishes (rules 15-4: a triggered effect
+resolves completely before the next pending one). The player still gets every choice and the
+`[On Deletion]` completes, so outcomes match except for ordering (Ascension can move the card
+to security before the trash play). Fix direction: scope the inline drain to triggers newly
+enqueued by the in-flight effect. Tests tolerate the interleave
+(bt26_075 `decline_ascension_if_pending`).
+
+## G-ENGINE-SELF-TRASHED-FROM-HAND — RESOLVED (2026-10-03, BT26-069 Dobermon)
+
+"When this card is trashed from the hand, …" (DCGO `CanTriggerOnTrashSelfHand`) had no
+dispatch: the `OnDiscardHand` batch only fans out to battle-area permanents. The discard
+window (`PendingHandDiscard`) now also records each trashed card
+(`note_effect_hand_discard_card`, called from `EffectContext::trash_from_hand_by_index`), and
+`flush_pending_hand_discard` enqueues, per still-in-trash card, that card's `scope: trash`
+`on_discard_hand` clauses (`Game::enqueue_self_trashed_from_hand`, trigger context carries
+`event_card` + `discard_hand_player`). A card already lying in the trash never sees the event,
+so a `scope: trash` + `when: on_discard_hand` clause means exactly "this card was trashed from
+the hand". Tests: bt26_069_trashed_from_hand_draws_one /
+bt26_069_already_in_trash_does_not_fire_on_other_discards /
+bt26_069_opponent_effect_trashing_it_still_draws_for_owner.
+
+## G-ENGINE-LINKED-ESS-SELF-APPLIED — RESOLVED (2026-10-03, BT26-010 Roleplaymon)
+
+A `scope: linked` declarative (`Effect.linked`, Link-ESS such as "<Progress> <Piercing>" or a
+Link-DP aura) was also materialized by the top-card pass of `tick_declarative_effects`, so a
+STANDING (unlinked) card granted its link effect to itself. The top/source pass in
+`game/triggers.rs` now skips `.linked()` effects (they reach the host only through the
+linked-card pass), and the DebugRunner's compiled-card native-keyword synthesis excludes
+`scope: linked` grants. Test `bt26_010_unlinked_has_no_progress`.
+
+## G-ENGINE-LINK-MAX-BASE — OPEN (2026-10-03, noted on BT26-086 Dantemon)
+
+`link_host_candidates` / `can_insert_plug_in_at` use a base link max of 5 (`5 +
+link_max_delta`), while DCGO `Permanent.LinkedMax` starts at 1 (`<Link +N>` raises it). With
+the engine's base, a Digimon can hold up to 5 link cards without any `<Link +N>`, and Dantemon's
+`<Link +6>` yields 11 instead of 7. Verify against `general_rule.pdf` §10 before changing — the
+change affects every link card in the pool.
+
+## G-ENGINE-LINK-TEXT-IN-INHERITED-SLOT — OPEN (2026-10-03, BT26 Seven Code Appmon)
+
+`cards.json` / `card_overrides.json` store a Link Digimon's LINK EFFECT text in
+`inherited_effect_description_eng` (e.g. BT26-010 "<Progress> <Piercing>", BT21-009 "<Raid>").
+`CardData.inherited_text` feeds `inherited_keywords`, which `has_keyword_from_card_sources`
+applies from every BELOW-TOP digivolution source — so in production a Roleplaymon lying under
+another Digimon grants that Digimon <Progress>/<Piercing>, although the text only applies to a
+link host. (DebugRunner/DSL-pack card data has empty text, so behavioral tests don't see it.)
+Fix direction: a separate `link_text` slot on CardData (official DB labels the section "Link
+Effect"), with `inherited_keywords` reading only true inherited text.

@@ -23,10 +23,14 @@
 //!
 //! The colour itself is not in the data, so this lint keys on spelling:
 //! - pink: the literal `{Security}`, OR (older printings, e.g. ST20-15 "Island of
-//!   Adventure") `[Security]` immediately followed by another `[Timing]` bracket
-//!   OUTSIDE the "Security Effect" section — `[Security] [All Turns] …`;
+//!   Adventure") `[Security]` immediately followed by a turn/state `[Timing]`
+//!   bracket OUTSIDE the "Security Effect" section — `[Security] [All Turns] …`;
 //! - blue: a "Security Effect" section, or a `[Security]` NOT followed by a
-//!   timing bracket (`[Security] Play this card …`).
+//!   timing bracket (`[Security] Play this card …`), or one followed by an EVENT
+//!   timing (`[On …]` / `[When …]`) that shares the effect body —
+//!   `[Security] [On Deletion] …` (BT26-075: a security-check trigger AND an
+//!   on-deletion trigger; a card face up in security can never be deleted, so
+//!   it cannot be a pink face-up effect; DCGO implements it as SecuritySkill).
 
 use crate::clause::{ClauseScope, ClauseSpec, Timing, TimingSet};
 use crate::spec::CardSpec;
@@ -102,14 +106,18 @@ fn is_security_effect_section(s: &PrintedSection) -> bool {
 }
 
 /// For each literal `[Security]` in `text`, whether it is immediately followed
-/// (after whitespace) by another `[...]` timing bracket. Older printings render
-/// the pink face-up icon that way inside the main effect box —
-/// `[Security] [All Turns] …` (ST20-15, ST21-15, EX8-068/069/071, BT19-100,
-/// BT26-075) — while a blue security effect reads `[Security] Play this card …`.
+/// (after whitespace) by a turn/state `[...]` timing bracket. Older printings
+/// render the pink face-up icon that way inside the main effect box —
+/// `[Security] [All Turns] …` (ST20-15, ST21-15, EX8-068/069/071, BT19-100) —
+/// while a blue security effect reads `[Security] Play this card …`. An EVENT
+/// timing right after it (`[Security] [On Deletion] …`, BT26-075) is a second
+/// trigger sharing the blue security effect's body, so it does NOT count.
 fn security_tags(text: &str) -> impl Iterator<Item = bool> + '_ {
     const TAG: &str = "[Security]";
-    text.match_indices(TAG)
-        .map(move |(i, _)| text[i + TAG.len()..].trim_start().starts_with('['))
+    text.match_indices(TAG).map(move |(i, _)| {
+        let rest = text[i + TAG.len()..].trim_start();
+        rest.starts_with('[') && !rest.starts_with("[On ") && !rest.starts_with("[When ")
+    })
 }
 
 /// Check one spec against its printed sections. Returns no findings when the

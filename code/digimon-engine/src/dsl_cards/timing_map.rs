@@ -27,6 +27,8 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         // Hand-discard observer maps 1:1 to the new engine timing.
         // G-ENGINE-ON-DISCARD-HAND.
         CompiledTiming::OnDiscardHand => EffectTiming::OnDiscardHand,
+        // Deck-add observer maps 1:1. G-ENGINE-ON-ADD-TO-DECK.
+        CompiledTiming::OnAddToDeck => EffectTiming::OnAddToDeck,
         CompiledTiming::OnEnterFieldAnyone => EffectTiming::OnEnterFieldAnyone,
         CompiledTiming::OnAnyDigimonPlayed => EffectTiming::OnEnterFieldAnyone,
         CompiledTiming::OnAllyPlayed => EffectTiming::OnAllyPlayed,

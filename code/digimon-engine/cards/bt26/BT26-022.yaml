@@ -1,0 +1,91 @@
+# BT26-022 Sorcermon — Digimon Lv.4, Blue/Yellow, DP 4000, Cost 4.
+# Traits: Wizard, Witchelny, Iliad, TS. Form: Champion. Attribute: Vaccine.
+# Printed digivolve box: Blue Lv.3 / cost 3; Yellow Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-022.md):
+#   [On Play] [When Digivolving] Add your top security card to the hand and
+#     <Recovery +1>.
+#   [End of Your Turn] If you have a red or purple Digimon, by placing this
+#     Digimon as the bottom security card, you may play 1 blue or red [Iliad]
+#     trait Digimon card from your hand with the cost reduced by 4.
+#   Inherited: <Barrier>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Blue/BT26_022.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + HasTSTraits (EqualsTraits "TS"), cost 2.
+# OP/WD (shared, not optional): if security >= 1, AddHandCards(top security)
+#   + ReduceSecurity; then Recovery +1 unconditionally.
+#   → add_top_security_to_hand (no-op on empty security) + recover 1.
+# EOT (OnEndTurn, optional TRUE): IsOwnerTurn; CanActivate = an own Digimon
+#   whose top card is red or purple + Owner.CanAddSecurity. Body:
+#   PlacePermanentInSecurity(bottom) → on success, canNoSelect:true hand pick
+#   of 1 Digimon card EqualsTraits "Iliad" that is blue or red (playable at
+#   cost-4, floored at 0) → PlayPermanentCards(payCost, -4).
+#   → optional + condition + activation_cost { place_self_at_security_bottom }
+#   (G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY — fails, cancelling the
+#   body, under CannotAddSecurityByEffect / a leave replacement) + optional
+#   select_hand + play_from_hand { cost_delta: reduce 4 }.
+# Inherited: BarrierSelfEffect → grant_keyword Barrier (inherited).
+
+card: BT26-022
+name: "Sorcermon"
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 4
+dp: 4000
+traits: [Wizard, Witchelny, Iliad, TS]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "TS" }
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] top security → hand; <Recovery +1> ───────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Add your top security card to the hand and <Recovery +1>"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+
+  # ─── [End of Your Turn] with a red/purple Digimon, place this Digimon as the
+  #     bottom security card → may play 1 blue/red [Iliad] Digimon from hand
+  #     at -4 ─────────────────────────────────────────────────────────────────
+  - when: end_of_your_turn
+    optional: true
+    condition:
+      any_field_permanent:
+        of: you
+        kind: digimon
+        any_of:
+          - color_is: red
+          - color_is: purple
+    summary: "[End of Your Turn] If you have a red or purple Digimon, by placing this Digimon as the bottom security card, you may play 1 blue or red [Iliad] Digimon card from your hand with the cost reduced by 4"
+    process:
+      - activation_cost: { place_self_at_security_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: iliad_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Iliad"
+              - any_of:
+                  - color_is: blue
+                  - color_is: red
+          prompt: "You may play 1 blue or red [Iliad] trait Digimon card from your hand with the cost reduced by 4"
+      - play_from_hand:
+          of: you
+          hand_index: iliad_pick
+          cost_delta: { reduce: 4 }
+
+  # ─── Inherited <Barrier> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

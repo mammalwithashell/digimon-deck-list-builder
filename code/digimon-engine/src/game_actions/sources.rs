@@ -419,6 +419,9 @@ impl Game {
                 deck.push(removed);
             }
         }
+        if !is_egg {
+            self.note_effect_deck_add_if_resolving();
+        }
 
         // The source has left the stack — refresh materialized declaratives so
         // continuous grants sourced from the departed card stop applying
