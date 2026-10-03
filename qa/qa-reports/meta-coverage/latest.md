@@ -2,7 +2,7 @@
 
 **Generated — do not hand-edit.** Regenerate with `PYTHONPATH=code python -m tools.meta_coverage`.
 
-- Generated: 2026-10-03T06:09:47+00:00 (git `0abb5a25f`)
+- Generated: 2026-10-03T08:35:56+00:00 (git `0bbfdc083`)
 - Window: **BT26** — 2026-09-04 → 2026-09-12 · 108 decklists · 650 distinct cards · sources dcg_nexus 108
 - Weighting: **digilab** — DigiLab names 67.05% of the field explicitly; the other 32.95% is spread over unnamed archetypes by list count
 - ⚠️ Only 108 decklists fall in this window (< 150); card-level figures are a small sample. Refresh data/deck_library.json (meta_loader.py --scrape-dcg-nexus) and re-run.
@@ -20,7 +20,6 @@
 Clauses on meta cards: 2458 — confirmed 242, diverged 2, unreachable 13, unavailable 0, unmeasured 2201 (9.8% confirmed; 15.7% weighted by field play rate).
 
 Whole pool: 927/4472 cards implemented (20.7%), 19 flagged PARTIAL/BLOCKED, 100 DCGO-verified.
-Deck-builder allowlist (`data/tested_cards.json`) lags the engine by 107 implemented card(s) — regenerate with `python code/tools/build_tested_cards.py`.
 
 ## Launch plan
 
@@ -33,9 +32,9 @@ Goal: Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMe
   - [ ] Field share of fully playable decks: 16.96 (target >= 75 %)
   - [ ] BT26 cards seen in meta lists that are implemented: 0 (target >= 60 cards)
   - [ ] Deck library holds at least 300 BT26-window lists: 108 (target >= 300 lists)
-- **M2 · Let training see the meta** (next) — 0/2 gates met
+- **M2 · Let training see the meta** (next) — 1/2 gates met
   - [ ] Playable decks the training pool rejects (field share): 15.02 (target <= 1 %)
-  - [ ] Implemented cards missing from the deck-builder allowlist: 107 (target <= 0 cards)
+  - [x] Implemented cards missing from the deck-builder allowlist: 0 (target <= 0 cards)
 - **M3 · Verify what the field plays** (next) — 0/2 gates met
   - [ ] Meta card copies that are DCGO-verified: 13.13 (target >= 40 %)
   - [ ] Clauses confirmed, weighted by how often the field plays each card: 15.74 (target >= 50 %)
