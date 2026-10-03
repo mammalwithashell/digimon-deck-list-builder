@@ -551,7 +551,7 @@ PYTHONPATH=code python -m tools.meta_coverage --since 2026-07-03 --until 2026-09
 | `latest.json` (git-ignored) | Full report, including every meta card's status |
 | `dashboard.html` (git-ignored, `--html`) | Self-contained dashboard; `--artifact-out PATH` writes the body-only page for publishing as a claude.ai Artifact |
 
-`implement_next` is ordered by fractional unlock value (each unplayable list spreads its weight over its remaining missing cards), so it makes the most field share fully playable soonest. **Trainable** mirrors the RL deck pool's archetype gate (`gauntlet._load_fully_implemented_archetypes`). The hand-maintained `launch_plan.json` in the same folder defines milestone gates as dotted paths into `latest.json`; every run re-scores them. When a new format starts, add its shares to `data/meta_shares.json` and refresh the library with `meta_loader.py --scrape-dcg-nexus`.
+`implement_next` is ordered by fractional unlock value (each unplayable list spreads its weight over its remaining missing cards), so it makes the most field share fully playable soonest. **Trainable** mirrors the RL deck pool's per-list gate (`digimon_gym.agents.gauntlet`): a playable list in which no card is flagged `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS` in `validated_cards_dsl.json`. The hand-maintained `launch_plan.json` in the same folder defines milestone gates as dotted paths into `latest.json`; every run re-scores them. When a new format starts, add its shares to `data/meta_shares.json` and refresh the library with `meta_loader.py --scrape-dcg-nexus`.
 
 ---
 

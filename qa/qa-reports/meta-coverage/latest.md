@@ -2,7 +2,7 @@
 
 **Generated — do not hand-edit.** Regenerate with `PYTHONPATH=code python -m tools.meta_coverage`.
 
-- Generated: 2026-10-03T19:03:13+00:00 (git `531ac39fe`)
+- Generated: 2026-10-03T20:15:58+00:00 (git `781a57ff9`)
 - Window: **BT26** — 2026-09-04 → 2026-09-12 · 108 decklists · 650 distinct cards · sources dcg_nexus 108
 - Weighting: **digilab** — DigiLab names 67.05% of the field explicitly; the other 32.95% is spread over unnamed archetypes by list count
 - ⚠️ Only 108 decklists fall in this window (< 150); card-level figures are a small sample. Refresh data/deck_library.json (meta_loader.py --scrape-dcg-nexus) and re-run.
@@ -15,7 +15,7 @@
 | Distinct meta cards | 488/650 (75.1%) | 481/650 (74.0%) | 50/650 (7.7%) |
 | Field share of decks with every card at this level | 57.7% (62 lists) | 52.5% (54 lists) | 0.0% (0 lists) |
 
-**Trainable today**: 25.4% of the field (22 lists) — fully playable AND admitted by the training deck pool's archetype gate (`gauntlet._load_fully_implemented_archetypes`, which matches free-form ledger labels).
+**Trainable today**: 52.5% of the field (54 lists) — fully playable AND no card flagged PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS in `validated_cards_dsl.json`: the training deck pool's per-list gate (`digimon_gym.agents.gauntlet`).
 
 Clauses on meta cards: 2458 — confirmed 242, diverged 2, unreachable 13, unavailable 0, unmeasured 2201 (9.8% confirmed; 15.7% weighted by field play rate).
 
@@ -34,13 +34,13 @@ Goal: Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMe
   - [x] BT26 cards seen in meta lists that are implemented: 74 (target >= 60 cards)
   - [ ] Deck library holds at least 300 BT26-window lists: 108 (target >= 300 lists)
 - **M2 · Let training see the meta** (next) — 0/2 gates met
-  - [ ] Playable decks the training pool rejects (field share): 32.32 (target <= 1 %)
+  - [ ] Playable decks the training pool rejects (field share): 5.24 (target <= 1 %)
   - [ ] Implemented cards missing from the deck-builder allowlist: 77 (target <= 0 cards)
 - **M3 · Verify what the field plays** (next) — 0/2 gates met
   - [ ] Meta card copies that are DCGO-verified: 13.13 (target >= 40 %)
   - [ ] Clauses confirmed, weighted by how often the field plays each card: 15.74 (target >= 50 %)
 - **M4 · Meta training pilot** (later) — 0/3 gates met
-  - [ ] Field share the training pool can use: 25.4 (target >= 60 %)
+  - [ ] Field share the training pool can use: 52.48 (target >= 60 %)
   - [ ] 2026-07-02 anchored baselines re-measured on the current engine
   - [ ] A BT26 generalist clears 55% anchored vs greedy and the frozen champions
 - **M5 · Deck optimization loop** (later) — 0/2 gates met
@@ -70,33 +70,33 @@ Goal: Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMe
 
 ## Archetypes
 
-| Archetype | Field share | Lists | Implemented | Tested | Verified | Clauses confirmed | Playable lists | Training gate | Closest list missing |
+| Archetype | Field share | Lists | Implemented | Tested | Verified | Clauses confirmed | Playable lists | Trainable lists | Closest list missing |
 |---|---|---|---|---|---|---|---|---|---|
-| TS Jupitermon | 10.5% | 12 | 99.8% | 99.1% | 4.2% | 7.1% | 11/12 | fail | 0 |
-| Glowing Dawn | 8.1% | 9 | 100.0% | 100.0% | 0.0% | 0.0% | 9/9 | pass | 0 |
-| Toho Braves | 6.8% | 7 | 99.2% | 99.2% | 77.2% | 71.6% | 6/7 | pass | 0 |
-| Titans | 6.4% | 7 | 53.7% | 48.9% | 6.6% | 9.8% | 0/7 | fail | 8 (BT24-009, BT24-021, BT24-023, BT24-026, BT24-045, BT24-075…) |
-| Data Squad | 5.8% | 10 | 98.9% | 98.2% | 0.7% | 0.9% | 8/10 | fail | 0 |
-| Chronomon | 5.7% | 4 | 100.0% | 100.0% | 7.4% | 13.1% | 4/4 | pass | 0 |
-| Plutomon | 5.5% | 2 | 60.2% | 59.3% | 13.0% | 9.7% | 0/2 | fail | 7 (BT24-009, BT24-021, BT24-023, BT24-026, BT24-042, BT24-045…) |
-| TS Mervamon | 4.8% | 2 | 100.0% | 100.0% | 5.6% | 9.9% | 2/2 | pass | 0 |
-| Three Musketeers | 4.2% | 3 | 100.0% | 100.0% | 94.4% | 93.2% | 3/3 | fail | 0 |
-| Apps Dantemon | 3.2% | 3 | 93.8% | 93.8% | 4.3% | 5.2% | 0/3 | pass | 1 (BT24-099) |
-| Omni Ladder | 2.9% | 3 | 100.0% | 100.0% | 1.9% | 3.8% | 3/3 | fail | 0 |
-| TS Toolbox | 2.9% | 3 | 100.0% | 95.7% | 2.5% | 4.0% | 3/3 | fail | 0 |
-| Accel | 1.9% | 2 | 38.0% | 38.0% | 0.0% | 0.0% | 0/2 | fail | 11 (BT20-004, BT20-030, BT20-031, BT20-033, BT20-038, BT20-039…) |
-| Gammamon | 1.9% | 2 | 29.6% | 29.6% | 0.9% | 1.9% | 0/2 | fail | 13 (BT21-002, BT21-077, BT21-080, BT21-090, BT22-045, EX10-042…) |
-| Green TyrantKabuterimon | 1.9% | 2 | 50.9% | 50.9% | 0.0% | 0.0% | 0/2 | pass | 7 (BT15-004, BT15-043, BT15-085, BT16-042, BT16-045, BT16-048…) |
-| Red Hybrid (AncientGreymon) | 1.9% | 2 | 43.1% | 35.8% | 3.7% | 8.6% | 0/2 | pass | 12 (AD1-020, BT12-088, BT17-012, BT17-014, BT18-011, BT18-022…) |
-| Styracomon | 1.9% | 2 | 97.2% | 97.2% | 4.6% | 15.5% | 1/2 | fail | 0 |
-| TS Cosmic Area | 1.9% | 2 | 93.5% | 93.5% | 13.0% | 14.1% | 0/2 | fail | 1 (BT25-103) |
-| TS Vulcanusmon | 1.9% | 2 | 98.2% | 98.2% | 15.7% | 28.1% | 1/2 | fail | 0 |
-| Virus Busters | 1.9% | 2 | 98.2% | 98.2% | 0.0% | 0.0% | 1/2 | fail | 0 |
-| Xros | 1.9% | 2 | 94.4% | 94.4% | 0.9% | 1.8% | 1/2 | fail | 0 |
-| Saiyu Warriors | 1.8% | 4 | 100.0% | 100.0% | 7.4% | 36.0% | 4/4 | fail | 0 |
-| ShineGreymon | 1.7% | 3 | 93.2% | 93.2% | 4.3% | 5.4% | 0/3 | fail | 1 (LM-059) |
-| TS Ceresmon | 1.4% | 7 | 78.6% | 67.5% | 1.6% | 2.1% | 2/7 | fail | 0 |
-| Apps Reboot | 1.1% | 1 | 96.3% | 96.3% | 3.7% | 6.2% | 0/1 | fail | 1 (EX1-072) |
+| TS Jupitermon | 10.5% | 12 | 99.8% | 99.1% | 4.2% | 7.1% | 11/12 | 9/12 | 0 |
+| Glowing Dawn | 8.1% | 9 | 100.0% | 100.0% | 0.0% | 0.0% | 9/9 | 9/9 | 0 |
+| Toho Braves | 6.8% | 7 | 99.2% | 99.2% | 77.2% | 71.6% | 6/7 | 6/7 | 0 |
+| Titans | 6.4% | 7 | 53.7% | 48.9% | 6.6% | 9.8% | 0/7 | 0/7 | 8 (BT24-009, BT24-021, BT24-023, BT24-026, BT24-045, BT24-075…) |
+| Data Squad | 5.8% | 10 | 98.9% | 98.2% | 0.7% | 0.9% | 8/10 | 6/10 | 0 |
+| Chronomon | 5.7% | 4 | 100.0% | 100.0% | 7.4% | 13.1% | 4/4 | 4/4 | 0 |
+| Plutomon | 5.5% | 2 | 60.2% | 59.3% | 13.0% | 9.7% | 0/2 | 0/2 | 7 (BT24-009, BT24-021, BT24-023, BT24-026, BT24-042, BT24-045…) |
+| TS Mervamon | 4.8% | 2 | 100.0% | 100.0% | 5.6% | 9.9% | 2/2 | 2/2 | 0 |
+| Three Musketeers | 4.2% | 3 | 100.0% | 100.0% | 94.4% | 93.2% | 3/3 | 3/3 | 0 |
+| Apps Dantemon | 3.2% | 3 | 93.8% | 93.8% | 4.3% | 5.2% | 0/3 | 0/3 | 1 (BT24-099) |
+| Omni Ladder | 2.9% | 3 | 100.0% | 100.0% | 1.9% | 3.8% | 3/3 | 3/3 | 0 |
+| TS Toolbox | 2.9% | 3 | 100.0% | 95.7% | 2.5% | 4.0% | 3/3 | 1/3 | 0 |
+| Accel | 1.9% | 2 | 38.0% | 38.0% | 0.0% | 0.0% | 0/2 | 0/2 | 11 (BT20-004, BT20-030, BT20-031, BT20-033, BT20-038, BT20-039…) |
+| Gammamon | 1.9% | 2 | 29.6% | 29.6% | 0.9% | 1.9% | 0/2 | 0/2 | 13 (BT21-002, BT21-077, BT21-080, BT21-090, BT22-045, EX10-042…) |
+| Green TyrantKabuterimon | 1.9% | 2 | 50.9% | 50.9% | 0.0% | 0.0% | 0/2 | 0/2 | 7 (BT15-004, BT15-043, BT15-085, BT16-042, BT16-045, BT16-048…) |
+| Red Hybrid (AncientGreymon) | 1.9% | 2 | 43.1% | 35.8% | 3.7% | 8.6% | 0/2 | 0/2 | 12 (AD1-020, BT12-088, BT17-012, BT17-014, BT18-011, BT18-022…) |
+| Styracomon | 1.9% | 2 | 97.2% | 97.2% | 4.6% | 15.5% | 1/2 | 1/2 | 0 |
+| TS Cosmic Area | 1.9% | 2 | 93.5% | 93.5% | 13.0% | 14.1% | 0/2 | 0/2 | 1 (BT25-103) |
+| TS Vulcanusmon | 1.9% | 2 | 98.2% | 98.2% | 15.7% | 28.1% | 1/2 | 1/2 | 0 |
+| Virus Busters | 1.9% | 2 | 98.2% | 98.2% | 0.0% | 0.0% | 1/2 | 1/2 | 0 |
+| Xros | 1.9% | 2 | 94.4% | 94.4% | 0.9% | 1.8% | 1/2 | 1/2 | 0 |
+| Saiyu Warriors | 1.8% | 4 | 100.0% | 100.0% | 7.4% | 36.0% | 4/4 | 4/4 | 0 |
+| ShineGreymon | 1.7% | 3 | 93.2% | 93.2% | 4.3% | 5.4% | 0/3 | 0/3 | 1 (LM-059) |
+| TS Ceresmon | 1.4% | 7 | 78.6% | 67.5% | 1.6% | 2.1% | 2/7 | 0/7 | 0 |
+| Apps Reboot | 1.1% | 1 | 96.3% | 96.3% | 3.7% | 6.2% | 0/1 | 0/1 | 1 (EX1-072) |
 
 ## Implement next
 

@@ -75,7 +75,6 @@ DEFAULT_LIBRARY = REPO_ROOT / "data" / "deck_library.json"
 DEFAULT_SHARES = REPO_ROOT / "data" / "meta_shares.json"
 DEFAULT_CARDS_JSON = REPO_ROOT / "data" / "cards.json"
 DEFAULT_TESTED_CARDS = REPO_ROOT / "data" / "tested_cards.json"
-DEFAULT_ALIASES = REPO_ROOT / "data" / "archetype_aliases.json"
 DEFAULT_CARDS_DIR = REPO_ROOT / "code" / "digimon-engine" / "cards"
 DEFAULT_TESTS_DIR = REPO_ROOT / "code" / "digimon-engine" / "tests"
 DEFAULT_TRACKER = REPO_ROOT / "qa" / "qa-reports" / "validated_cards_dsl.json"
@@ -95,9 +94,9 @@ STAGES = ("missing", "known_gap", "untested", "tested", "verified")
 
 KNOWN_GAP_STATUSES = frozenset({"PARTIAL", "BLOCKED"})
 
-#: Ledger verdicts the training deck pool treats as ready -- mirrors
-#: ``digimon_gym.agents.gauntlet._TRAINING_READY_DSL_STATUSES``.
-TRAINING_READY_STATUSES = frozenset({"IMPLEMENTED", "AUDITED-OK"})
+#: Ledger verdicts that keep a list out of the training deck pool -- mirrors
+#: ``digimon_gym.agents.gauntlet._NOT_READY_DSL_STATUSES``.
+NOT_READY_STATUSES = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
 
 #: ``card_kind`` codes in ``cards.json``.
 CARD_KINDS = {0: "Digimon", 1: "Tamer", 2: "Option", 3: "Digi-Egg", 4: "DUAL"}
@@ -380,42 +379,18 @@ def card_stage(implemented: bool, has_test: bool, known_gap: bool, exam: dict | 
     return "tested"
 
 
-def load_alias_map(path: Path) -> dict[str, str]:
-    """``{lowercase alias or canonical: canonical}`` from ``archetype_aliases.json``."""
-    raw = load_json(path, {}) or {}
-    out: dict[str, str] = {}
-    for canonical, aliases in raw.items():
-        out[canonical.lower()] = canonical
-        for alias in aliases or []:
-            out[str(alias).lower()] = canonical
-    return out
+def not_ready_card_ids(tracker: dict[str, dict]) -> set[str]:
+    """Card ids whose ledger verdict keeps a list out of the training deck pool.
 
-
-def canonicalize_archetype(name: str, alias_map: dict[str, str]) -> str:
-    folded = (name.replace("’", "'").replace("‘", "'")
-              .replace("“", '"').replace("”", '"'))
-    return alias_map.get(folded.lower(), folded)
-
-
-def training_gate_archetypes(tracker: dict[str, dict], alias_map: dict[str, str]) -> set[str]:
-    """Archetypes the training deck pool admits today (its "Gate 1").
-
-    Mirrors ``digimon_gym.agents.gauntlet._load_fully_implemented_archetypes``
-    (which cannot be imported here -- it pulls in numpy, gymnasium and the PyO3
-    engine): ledger entries are grouped by their free-form ``archetype`` label,
-    canonicalised through the alias map, and a label is admitted when every
-    entry under it is ``IMPLEMENTED`` or ``AUDITED-OK``. A library archetype
-    whose name matches no admitted label is excluded from training even when
-    every card in its lists is implemented -- which is why this is reported
-    next to "playable".
+    Mirrors ``digimon_gym.agents.gauntlet._load_not_ready_card_ids`` (which
+    cannot be imported here -- it pulls in numpy, gymnasium and the PyO3
+    engine). The pool admits a list when every card is implemented (a spec and
+    a ``cards.json`` entry, as in this report) and none is returned here; the
+    ledger's free-form ``archetype`` label plays no part, and a card with no
+    ledger entry counts as ready.
     """
-    by_label: dict[str, list[str]] = defaultdict(list)
-    for row in tracker.values():
-        label, status = row.get("archetype"), row.get("status")
-        if label and status:
-            by_label[canonicalize_archetype(str(label), alias_map)].append(str(status))
-    return {label for label, statuses in by_label.items()
-            if statuses and all(s in TRAINING_READY_STATUSES for s in statuses)}
+    return {cid for cid, row in tracker.items()
+            if (row.get("status") or "").strip().upper() in NOT_READY_STATUSES}
 
 
 def stage_at_least(stage: str, floor: str) -> bool:
@@ -504,9 +479,7 @@ def build_report(*, decks: list[Deck], weights: list[float], weighting: dict,
                  cards_index: dict, implemented: dict[str, str], test_refs: set[str],
                  tracker: dict[str, dict], exam: dict[str, dict], window: dict,
                  tested_cards_snapshot: list[str] | None = None,
-                 alias_map: dict[str, str] | None = None,
                  queue_limit: int = 60) -> dict:
-    alias_map = alias_map or {}
     copies: dict[str, float] = defaultdict(float)
     incl: dict[str, float] = defaultdict(float)
     lists: Counter = Counter()
@@ -562,16 +535,12 @@ def build_report(*, decks: list[Deck], weights: list[float], weighting: dict,
     tested_deck_pct, tested_lists = deck_share("tested")
     verified_deck_pct, verified_lists = deck_share("verified")
 
-    # What the training deck pool would actually admit today: its archetype
-    # gate (ledger labels) AND every card in the registry.
-    gate_ready = training_gate_archetypes(tracker, alias_map)
-
-    def passes_gate(archetype: str) -> bool:
-        return canonicalize_archetype(archetype, alias_map) in gate_ready
-
-    trainable_pct = sum(w for d, w, m in zip(decks, weights, missing_by_deck)
-                        if not m and passes_gate(d.archetype)) * 100
-    trainable_lists = sum(1 for d, m in zip(decks, missing_by_deck) if not m and passes_gate(d.archetype))
+    # What the training deck pool would actually admit today: every card in the
+    # registry AND none with a not-ready ledger verdict.
+    not_ready = not_ready_card_ids(tracker)
+    trainable = [not m and not (d.counts.keys() & not_ready) for d, m in zip(decks, missing_by_deck)]
+    trainable_pct = sum(w for w, ok in zip(weights, trainable) if ok) * 100
+    trainable_lists = sum(trainable)
 
     # Clauses: each clause counts once per card, weighted by how much of the
     # field plays that card (copies do not change what a clause does).
@@ -679,7 +648,7 @@ def build_report(*, decks: list[Deck], weights: list[float], weighting: dict,
                                             if stage_at_least(statuses[c]["stage"], "verified")), a_total),
             "clause_confirmed_pct": _pct(a_clause_conf, a_clause_total),
             "playable_lists": sum(1 for m in miss_counts if m == 0),
-            "training_gate": passes_gate(arch),
+            "trainable_lists": sum(1 for i in idx if trainable[i]),
             "min_missing": min(miss_counts),
             "closest_list_missing": sorted(missing_by_deck[closest]),
             "top_missing": [{"card_id": c, **card_meta(c, cards_index),
@@ -987,8 +956,9 @@ def render_markdown(report: dict) -> str:
         f"({h['decks']['verified_lists']} lists) |",
         "",
         f"**Trainable today**: {_fmt_pct(h['decks']['trainable_pct'])} of the field "
-        f"({h['decks']['trainable_lists']} lists) — fully playable AND admitted by the training deck pool's "
-        "archetype gate (`gauntlet._load_fully_implemented_archetypes`, which matches free-form ledger labels).",
+        f"({h['decks']['trainable_lists']} lists) — fully playable AND no card flagged PARTIAL, BLOCKED, "
+        "AUDITED-DRIFT or AUDITED-MISSING-TESTS in `validated_cards_dsl.json`: the training deck pool's per-list "
+        "gate (`digimon_gym.agents.gauntlet`).",
         "",
         f"Clauses on meta cards: {h['clauses']['total']} — "
         + ", ".join(f"{v} {h['clauses']['by_verdict'][v]}" for v in VERDICTS)
@@ -1040,7 +1010,7 @@ def render_markdown(report: dict) -> str:
         "## Archetypes",
         "",
         "| Archetype | Field share | Lists | Implemented | Tested | Verified | Clauses confirmed | "
-        "Playable lists | Training gate | Closest list missing |",
+        "Playable lists | Trainable lists | Closest list missing |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in report["archetypes"][:25]:
@@ -1049,7 +1019,7 @@ def render_markdown(report: dict) -> str:
             f"| {row['archetype']} | {_fmt_pct(row['field_share_pct'])} | {row['lists']} | "
             f"{_fmt_pct(row['implemented_copies_pct'])} | {_fmt_pct(row['tested_copies_pct'])} | "
             f"{_fmt_pct(row['verified_copies_pct'])} | {_fmt_pct(row['clause_confirmed_pct'])} | "
-            f"{row['playable_lists']}/{row['lists']} | {'pass' if row['training_gate'] else 'fail'} | "
+            f"{row['playable_lists']}/{row['lists']} | {row['trainable_lists']}/{row['lists']} | "
             f"{row['min_missing']}" + (f" ({closest})" if closest else "") + " |")
     lines += [
         "",
@@ -1210,7 +1180,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shares", type=Path, default=DEFAULT_SHARES)
     parser.add_argument("--cards-json", type=Path, default=DEFAULT_CARDS_JSON)
     parser.add_argument("--tested-cards", type=Path, default=DEFAULT_TESTED_CARDS)
-    parser.add_argument("--aliases", type=Path, default=DEFAULT_ALIASES)
     parser.add_argument("--cards-dir", type=Path, default=DEFAULT_CARDS_DIR)
     parser.add_argument("--tests-dir", type=Path, default=DEFAULT_TESTS_DIR)
     parser.add_argument("--tracker", type=Path, default=DEFAULT_TRACKER)
@@ -1273,7 +1242,6 @@ def main(argv: list[str] | None = None) -> int:
     implemented = scan_implemented(args.cards_dir)
     test_refs = scan_test_refs(args.tests_dir)
     tracker = load_tracker(args.tracker)
-    alias_map = load_alias_map(args.aliases)
     tested_snapshot = (load_json(args.tested_cards, {}) or {}).get("card_ids")
 
     exam_cards = {c for d in decks for c in d.counts} | {c for c in implemented if c in cards_index}
@@ -1296,7 +1264,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     report = build_report(decks=decks, weights=weights, weighting=weighting, cards_index=cards_index,
                           implemented=implemented, test_refs=test_refs, tracker=tracker, exam=exam,
-                          window=window, tested_cards_snapshot=tested_snapshot, alias_map=alias_map)
+                          window=window, tested_cards_snapshot=tested_snapshot)
     report["generated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     report["git_head"] = _git_head()
     report["calendar"] = shares.get("calendar", [])

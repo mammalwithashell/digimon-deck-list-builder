@@ -558,7 +558,10 @@ function renderHero() {
   const lines = [];
   if (bt) lines.push(`${bt.set} is ${pct(bt.share_of_meta_copies_pct)} of every card the field registers, and ${bt.meta_cards_implemented} of the ${bt.meta_cards} ${bt.set} cards seen in lists are implemented. That one set is most of the gap.`);
   if (m50 && m75) lines.push(`Implementing the next ${m50.cards} cards in unlock order makes half the field playable; ${m75.cards} cards reach three quarters (${R.unlock_total_cards} missing in all).`);
-  lines.push(`Only ${hl.decks.trainable_lists} of the ${hl.decks.playable_lists} fully playable lists pass the training pool's archetype gate, which matches free-form ledger labels instead of cards.`);
+  const heldBack = hl.decks.playable_lists - hl.decks.trainable_lists;
+  lines.push(heldBack > 0
+    ? `${heldBack} of the ${hl.decks.playable_lists} fully playable lists play a card the DSL ledger flags as not ready (PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS), so the training pool holds them back.`
+    : `The training pool admits all ${hl.decks.playable_lists} fully playable lists.`);
   lines.push(`${pct(hl.clauses.field_weighted_confirmed_pct)} of printed clauses are DCGO-confirmed, weighted by play rate` +
     (topVerified.length ? `; the confirmations sit mostly in ${topVerified.map((a) => `${a.archetype} (${pct(a.verified_copies_pct, 0)})`).join(", ")}.` : "."));
   body.appendChild(h("ul", { class: "narrative" }, lines.map((t) => h("li", { text: t }))));
@@ -675,7 +678,7 @@ function renderArchetypes() {
   const body = byId("arch-body");
   const rows = R.archetypes.slice(0, 18);
   byId("arch-meta").textContent = `top ${rows.length} of ${R.archetypes.length} by field share`;
-  body.appendChild(h("p", { class: "muted small", text: "Readiness bars split each archetype's card copies by stage. A list is playable when every card in it is implemented; the training gate is what the RL deck pool admits today." }));
+  body.appendChild(h("p", { class: "muted small", text: "Readiness bars split each archetype's card copies by stage. A list is playable when every card in it is implemented, and trainable when it is also free of cards the DSL ledger flags as not ready; trainable lists are what the RL deck pool admits today." }));
   const cols = [
     { label: "Archetype", render: (a) => h("span", {}, a.archetype, a.digilab_deck && a.digilab_deck !== a.archetype ? h("span", { class: "sub-line", text: `DigiLab: ${a.digilab_deck}` }) : null) },
     { label: "Field share", num: true, render: (a) => pct(a.field_share_pct) },
@@ -683,7 +686,7 @@ function renderArchetypes() {
     { label: "Implemented", num: true, render: (a) => pct(a.implemented_copies_pct, 0) },
     { label: "Verified", num: true, render: (a) => pct(a.verified_copies_pct, 0) },
     { label: "Playable lists", num: true, render: (a) => `${a.playable_lists}/${a.lists}` },
-    { label: "Training gate", render: (a) => h("span", { class: "chip " + (a.training_gate ? "good" : "bad"), text: a.training_gate ? "admitted" : "rejected" }) },
+    { label: "Trainable lists", num: true, render: (a) => `${a.trainable_lists}/${a.lists}` },
     { label: "Closest list needs", render: (a) => {
         if (a.min_missing === 0) return h("span", { class: "chip good", text: "nothing" });
         const ids = a.closest_list_missing.slice(0, 4).join(", ") + (a.closest_list_missing.length > 4 ? "…" : "");
@@ -778,7 +781,7 @@ function renderTraining() {
   const hl = R.headline;
   body.appendChild(h("p", { text: t.summary }));
   const facts = [{ label: "Meta deck gate", state: hl.decks.trainable_gap_pct > 1 ? "bad" : "good",
-    detail: `${hl.decks.trainable_lists} of ${hl.decks.playable_lists} fully playable lists (${pct(hl.decks.trainable_pct)} of the field, against ${pct(hl.decks.playable_pct)} playable) pass the training pool's archetype gate.` }, ...t.facts];
+    detail: `${hl.decks.trainable_lists} of ${hl.decks.playable_lists} fully playable lists (${pct(hl.decks.trainable_pct)} of the field, against ${pct(hl.decks.playable_pct)} playable) pass the training pool's per-list gate: no card flagged as not ready in the DSL ledger.` }, ...t.facts];
   body.appendChild(h("ul", { class: "facts" }, facts.map((f) => h("li", {}, h("span", { class: "chip " + (STATUS_CHIP[f.state] || ""), text: f.label }), h("span", { class: "small", text: f.detail })))));
   if (t.baselines && t.baselines.length) {
     body.appendChild(h("h3", { text: "Anchored baselines (2026-07-02)" }));
@@ -845,7 +848,7 @@ function renderFooter() {
     h("dt", { text: "Tested" }), h("dd", { text: "Implemented, referenced by a Rust test, and not flagged PARTIAL or BLOCKED in validated_cards_dsl.json." }),
     h("dt", { text: "DCGO-verified" }), h("dd", { text: "Tested, and every printed clause has an exam verdict, none unmeasured or diverged." }),
     h("dt", { text: "Playable" }), h("dd", { text: "Every card in the list is implemented, so the engine can run the deck." }),
-    h("dt", { text: "Trainable" }), h("dd", { text: "Playable and admitted by the training deck pool's archetype gate (gauntlet._load_fully_implemented_archetypes)." }),
+    h("dt", { text: "Trainable" }), h("dd", { text: "Playable, and no card in the list is flagged PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS in validated_cards_dsl.json: the training deck pool's per-list gate (digimon_gym.agents.gauntlet)." }),
     h("dt", { text: "Field share" }), h("dd", { text: "Lists are weighted so each archetype carries its DigiLab share of entries; copies are expected copies per deck in the field." }))));
 }
 
