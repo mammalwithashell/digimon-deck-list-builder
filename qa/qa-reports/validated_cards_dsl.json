@@ -5958,16 +5958,14 @@
     },
     "BT25-080": {
       "card_name": "Witchmon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "titan (BT25)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "inherited OnDiscardHand trigger + main-clause played_by_effect condition \u2014 both missing. See docs/RUST_ENGINE_GAPS.md OnDiscardHand entry."
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-080.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_080.rs",
+      "notes": "Was BLOCKED. OP/WA shared OPT trash-1 -> may return [Titan] trash card; after, if played by effect, delete opp Lv.5-; decline refunds OPT (Q&A). Inherited [All Turns][OPT] hand trashed + Titan host -> delete opp Lv.4-."
     },
     "BT25-083": {
       "status": "IMPLEMENTED",
@@ -7249,17 +7247,14 @@
     },
     "BT25-084": {
       "card_name": "Titamon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
-      "archetype": "Slice \u2014 aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_084.rs",
-      "patterns": [
-        "F3"
-      ],
-      "notes": "Trash-1-hand -> delete all opp highest DP (+ effect-gated opp sec trash) + trash-2-hand leave-prevention IMPLEMENTED. Clause 3 (on-hand-trashed -> delete opp lowest DP) omitted \u2014 G-ENGINE-ON-DISCARD-HAND. Titamon-3-color cost-2 alt-path omitted \u2014 G-DSL-SELF-COLOR-COUNT-LTE. 7 tests."
+      "notes": "Was PARTIAL. Added [All Turns] on-hand-trashed delete opp lowest DP, '[Titamon] w/o 3 colors' cost-2 path (self_color_count_lte), Red/Green circles; colours fixed to Purple/Red/Green (+card_colors override). Fixed leave-prevention gate (owner: you hand count never matched, so it never fired)."
     },
     "BT25-075": {
       "status": "IMPLEMENTED",
@@ -13394,6 +13389,170 @@
       ],
       "notes": "Piercing/Vortex/Blocker/Evade; Blue Lv.6 / Green Lv.6 cost 6 + Lv.6 [Free]/[Royal Knight] cost 5; Assembly -8 six [Free]/[Royal Knight] distinct_by name; [OP][WD][WA] shared OPT: optional suspend 1 unsuspended opp Digimon, then optional pick \u2192 return_all_sources_to_deck bottom + battle { compare: digivolution_cards } (G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT RESOLVED 2026-10-01), refund_opt when nothing done; [All Turns][OPT] win a battle \u2192 optional bottom-deck 1 opp Digimon, then (if suspended) yes/no unsuspend, refund_opt when nothing done. DCGO EX13_076.cs trashes the stripped sources; the official printed text returns them to the deck bottom (implemented). Tie + <Evade> exposed G-ENGINE-BATCH-DELETION-PARK-DROPS-REST (fixed same commit)."
     },
+    "BT24-007": {
+      "card_name": "Tsunomon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_007.rs",
+      "notes": "Inherited OnDiscardHand play-1-of-them (cost -2) needed G-ENGINE-DISCARDED-HAND-CARDS (resolved: event_discarded_card_any + in_event_discarded_cards). Decline refunds the OPT."
+    },
+    "BT24-009": {
+      "card_name": "Shamanmon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_009.rs",
+      "notes": "OP trash [Demon]/[Shaman]/[Titan] card -> Draw 2; inherited hand-trash digivolve (Demon or Titan host, DCGO-checked). All printed colour circles authored as alt_paths."
+    },
+    "BT24-021": {
+      "card_name": "SnowGoblimon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_021.rs",
+      "notes": "Reveal 3 with two buckets (Demon/Shaman Digimon + Titan card) -> if added, trash 1. 'If added' counts bucket picks (binding_present is true for an empty reveal bucket)."
+    },
+    "BT24-023": {
+      "card_name": "Calmaramon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_023.rs",
+      "notes": "Blocker, Decode([Lanamon]) replacement, OP/WD bottom-deck Lv.4-; played_by_effect tail -> CannotSuspend until their turn ends. Printed text (mandatory) followed over DCGO isOptional."
+    },
+    "BT24-042": {
+      "card_name": "Goblimon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_042.rs",
+      "notes": "[Your Turn] cost_reduction -1 when this digivolves into a [Demon]/[Titan] Digimon (any root, stacks with effect digivolves)."
+    },
+    "BT24-026": {
+      "card_name": "Hyogamon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_026.rs",
+      "notes": "Self trashed-from-hand Draw 1; OP/WA shared OPT trash-1 -> Jamming+Blocker until opp turn ends; Rule trait Demon. Declining the cost spends the OPT (DCGO)."
+    },
+    "BT24-045": {
+      "card_name": "Ogremon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_045.rs",
+      "notes": "OP/WA shared OPT trash-1 -> suspend + CannotUnsuspendInUnsuspendPhase until end of opp's NEXT turn (only their next unsuspend phase)."
+    },
+    "BT24-013": {
+      "card_name": "Fugamon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_013.rs",
+      "notes": "OP/WA shared OPT trash-1 -> delete opp DP<=6000. Own OPT bucket (DCGO shares Hyogamon's hash string \u2014 copy-paste bug, not followed)."
+    },
+    "BT24-072": {
+      "card_name": "SkullGreymon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_072.rs",
+      "notes": "OP/WD trash-1 -> Blocker+Retaliation until opp turn ends; On Deletion (post-trash) may play Lv.4- Demon/Titan from trash; inherited [Your Turn] Security A.+1 on Titamon/[Titan] carrier."
+    },
+    "BT24-075": {
+      "card_name": "SkullBaluchimon",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_075.rs",
+      "notes": "OP/WD trash-1 -> delete 1 opp Lv.3 and 1 opp Lv.4 (two picks, one delete batch); inherited Security A.+1."
+    },
+    "BT24-098": {
+      "card_name": "Invasion of the Titans",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_098.rs",
+      "notes": "[Main] draw 2 + trash 2 + place as Delay; [Your Turn] Titan played -> Delay: if opp memory>=5 may play Lv.5- Titan from trash; [Security] may play Lv.4- Titan from hand/trash, then add to hand."
+    },
+    "P-209": {
+      "card_name": "Titamon",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/p/P-209.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_209.rs",
+      "test_count": 14,
+      "patterns": [
+        "alliance",
+        "cost-gated-suspend-lock",
+        "on_discard_hand"
+      ],
+      "notes": "Promo printing (not a reprint of BT25-084). Alliance; trash-cost suspend + CannotUnsuspend; OPT play Lv<=4 [Demon]/[Titan] from trash on hand trash."
+    },
+    "BT4-086": {
+      "card_name": "Cerberusmon: Werewolf Mode",
+      "validated_date": "2026-10-03",
+      "report": "titans-plutomon-support-package",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Titans / Plutomon",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-086.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_086.rs",
+      "notes": "Rush; OP may delete own exact-name [Cerberusmon] (not itself, per Q&A) -> gain 9 memory."
+    },
+    "BT4-111": {
+      "card_name": "Jack Raid",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-111.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_111.rs",
+      "test_count": 8,
+      "patterns": [
+        "gain-memory-formula"
+      ],
+      "notes": "Gain 1 memory per 10 trash cards; [Security] gain 2."
+    },
     "EX10-070": {
       "card_name": "God Grade Unleashed",
       "validated_date": "2026-10-03",
@@ -13457,38 +13616,6 @@
         "D-aura-count"
       ],
       "notes": "Suspend all own yellow Tamers, then repeat once per Tamer actually suspended (new per: effect_suspended_count); [Your Turn] +1000 per Tamer."
-    },
-    "P-209": {
-      "card_name": "Titamon",
-      "validated_date": "2026-10-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "BT26 meta blockers (2026-10-03)",
-      "yaml_path": "code/digimon-engine/cards/p/P-209.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_209.rs",
-      "test_count": 14,
-      "patterns": [
-        "alliance",
-        "cost-gated-suspend-lock",
-        "on_discard_hand"
-      ],
-      "notes": "Promo printing (not a reprint of BT25-084). Alliance; trash-cost suspend + CannotUnsuspend; OPT play Lv<=4 [Demon]/[Titan] from trash on hand trash."
-    },
-    "BT4-111": {
-      "card_name": "Jack Raid",
-      "validated_date": "2026-10-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "BT26 meta blockers (2026-10-03)",
-      "yaml_path": "code/digimon-engine/cards/bt4/BT4-111.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_111.rs",
-      "test_count": 8,
-      "patterns": [
-        "gain-memory-formula"
-      ],
-      "notes": "Gain 1 memory per 10 trash cards; [Security] gain 2."
     },
     "BT8-108": {
       "card_name": "Mist Memory Boost!",

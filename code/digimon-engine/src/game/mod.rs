@@ -2153,11 +2153,18 @@ impl Game {
         };
         let cause_controller = window.cause_controller;
         for trashing_player in window.trashed_players {
+            let cards = window
+                .trashed_cards
+                .iter()
+                .filter(|(owner, _)| *owner == trashing_player)
+                .map(|(_, card)| *card)
+                .collect();
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnDiscardHand,
                 crate::selection::TriggerSource::HandDiscarded {
                     player: trashing_player,
                     cause_controller,
+                    cards,
                 },
             );
         }

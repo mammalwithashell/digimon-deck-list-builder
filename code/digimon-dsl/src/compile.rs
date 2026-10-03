@@ -1075,6 +1075,7 @@ fn compile_predicate(
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
+        self_color_count_lte: p.self_color_count_lte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
         distinct_named_count_gte: p.distinct_named_count_gte.as_ref().map(|d| {
@@ -1318,6 +1319,15 @@ fn compile_predicate(
                 errors,
             ))
         }),
+        event_discarded_card_any: p.event_discarded_card_any.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_discarded_card_any"),
+                card_id,
+                errors,
+            ))
+        }),
+        in_event_discarded_cards: p.in_event_discarded_cards,
         played_by_effect: p.played_by_effect,
         event_target_color_any_of: p
             .event_target_color_any_of

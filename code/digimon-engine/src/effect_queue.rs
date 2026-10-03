@@ -2087,6 +2087,7 @@ impl Game {
             TriggerSource::HandDiscarded {
                 player,
                 cause_controller,
+                ref cards,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
@@ -2099,6 +2100,13 @@ impl Game {
                 affected_player: Some(player),
                 source_player: Some(cause_controller),
                 effect_initiated: true,
+                // The trashed batch itself — "you may play 1 of them"
+                // (BT24-007). G-ENGINE-DISCARDED-HAND-CARDS.
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
+                    from: Some(crate::enums::Zone::Hand),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
                 ..TriggerContext::default()
             },
             TriggerSource::DeckGained { cause_controller } => TriggerContext {

@@ -1,0 +1,238 @@
+{
+  "_comment": "Hand-maintained launch plan (the /pm chat updates it). NOT generated. code/tools/meta_coverage.py reads it, evaluates every gate that names a `metric` (a dotted path into latest.json; `list[key]` selects a row by its set/archetype/card id) against the fresh report, and embeds the result in latest.json and dashboard.html. Gates without a metric are judged by hand via `met`. Thresholds are proposals; change them here.",
+  "updated": "2026-10-03",
+  "goal": "Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMeta measure it) by training agents on a simulator that plays that meta faithfully.",
+  "active": "M1",
+  "milestones": [
+    {
+      "id": "M0",
+      "name": "Measure the gap",
+      "status": "done",
+      "why": "Coverage of the whole card pool says nothing about readiness; coverage of the decks people register does.",
+      "gates": [
+        {
+          "label": "Meta coverage report + dashboard regenerate from repo data",
+          "met": true
+        },
+        {
+          "label": "BT26 field shares transcribed from DigiLab (data/meta_shares.json)",
+          "met": true
+        }
+      ],
+      "actions": [
+        "PYTHONPATH=code python -m tools.meta_coverage --trend --html after each card batch"
+      ]
+    },
+    {
+      "id": "M1",
+      "name": "Make the BT26 field playable",
+      "status": "active",
+      "why": "BT26 carries about a fifth of every card the field registers and has no implementations, so most top decks cannot be simulated at all.",
+      "gates": [
+        {
+          "label": "Field share of fully playable decks",
+          "metric": "headline.decks.playable_pct",
+          "op": ">=",
+          "target": 75,
+          "unit": "%"
+        },
+        {
+          "label": "BT26 cards seen in meta lists that are implemented",
+          "metric": "by_set[BT26].meta_cards_implemented",
+          "op": ">=",
+          "target": 60,
+          "unit": "cards"
+        },
+        {
+          "label": "Deck library holds at least 300 BT26-window lists",
+          "metric": "headline.decklists",
+          "op": ">=",
+          "target": 300,
+          "unit": "lists"
+        }
+      ],
+      "actions": [
+        "BT26 authoring is in flight on its own branch; work the waves in qa/qa-reports/meta-coverage/bt26_priority.json",
+        "Refresh the deck library first: python code/tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-since 2026-09-12",
+        "Author in implement_next order (12 cards reach 25% of the field, 33 reach 50%, 74 reach 75%), via /author-set BT26 or /batch-implement-cards-rust-dsl per archetype",
+        "Start with the shared TS package (Mervamon, Aegiochusmon Dark/Holy, Kanan Yuki, Shota Kuroi, Jupitermon DUAL): it feeds Jupitermon, Chronomon, TS Mervamon and TS Toolbox at once"
+      ]
+    },
+    {
+      "id": "M2",
+      "name": "Let training see the meta",
+      "status": "next",
+      "why": "The training deck pool admits an archetype only when a free-form ledger label matches its library name, so most fully playable meta decks are invisible to it.",
+      "gates": [
+        {
+          "label": "Playable decks the training pool rejects (field share)",
+          "metric": "headline.decks.trainable_gap_pct",
+          "op": "<=",
+          "target": 1,
+          "unit": "%"
+        },
+        {
+          "label": "Implemented cards missing from the deck-builder allowlist",
+          "metric": "pool.allowlist_lag",
+          "op": "<=",
+          "target": 0,
+          "unit": "cards"
+        }
+      ],
+      "actions": [
+        "Replace gauntlet._load_fully_implemented_archetypes with a per-deck check: every card registered and none PARTIAL/BLOCKED",
+        "Regenerate data/tested_cards.json (python code/tools/build_tested_cards.py) so the deck builder offers every implemented card"
+      ]
+    },
+    {
+      "id": "M3",
+      "name": "Verify what the field plays",
+      "status": "next",
+      "why": "An agent learns whatever the engine does, including its mistakes. The DCGO exam is the independent check, and today it covers mostly Three Musketeers and Toho Braves.",
+      "gates": [
+        {
+          "label": "Meta card copies that are DCGO-verified",
+          "metric": "headline.verified.copies_pct",
+          "op": ">=",
+          "target": 40,
+          "unit": "%"
+        },
+        {
+          "label": "Clauses confirmed, weighted by how often the field plays each card",
+          "metric": "headline.clauses.field_weighted_confirmed_pct",
+          "op": ">=",
+          "target": 50,
+          "unit": "%"
+        }
+      ],
+      "actions": [
+        "Run /archetype-campaign on TS Jupitermon, Glowing Dawn, Data Squad and Chronomon (largest unmeasured field share)",
+        "Work the exam_next queue top-down: it is ordered by field play rate times unmeasured clauses"
+      ]
+    },
+    {
+      "id": "M4",
+      "name": "Meta training pilot",
+      "status": "later",
+      "why": "Spend training compute once the pool is playable, admitted and checked.",
+      "gates": [
+        {
+          "label": "Field share the training pool can use",
+          "metric": "headline.decks.trainable_pct",
+          "op": ">=",
+          "target": 60,
+          "unit": "%"
+        },
+        {
+          "label": "2026-07-02 anchored baselines re-measured on the current engine",
+          "met": false
+        },
+        {
+          "label": "A BT26 generalist clears 55% anchored vs greedy and the frozen champions",
+          "met": false
+        }
+      ],
+      "actions": [
+        "Cut a fresh training image (the published one predates exploiter_cli.py)",
+        "Re-run the anchored panel and exploiter for the three baseline agents",
+        "Train a generalist on the trainable BT26 pool; promote only on anchored evaluation"
+      ]
+    },
+    {
+      "id": "M5",
+      "name": "Deck optimization loop",
+      "status": "later",
+      "why": "The goal: rank decklist variants against the live meta and keep pace with each release.",
+      "gates": [
+        {
+          "label": "Architect agent ranks list variants against a BT26 gauntlet",
+          "met": false
+        },
+        {
+          "label": "Training runs (training_run.json, anchored_evals.jsonl) charted on this dashboard",
+          "met": false
+        }
+      ],
+      "actions": [
+        "Per release (EX13 is already appearing in DCG Nexus events): /author-set with the DCGO keyword gate in week one, then exam, then retrain"
+      ]
+    }
+  ],
+  "training": {
+    "summary": "The harness works on the six starter decks. No agent has been trained on meta decks, and the baselines predate most of the current engine.",
+    "facts": [
+      {
+        "label": "Harness proven on starters",
+        "state": "good",
+        "detail": "Three generalists trained on ST-1..6 beat the greedy bot 59-61% (n=300 each, seat-balanced, recorded 2026-07-02)."
+      },
+      {
+        "label": "Agents are exploitable",
+        "state": "warn",
+        "detail": "A 1M-step PPO exploiter beats each of them 70-75% of the time (a lower bound). Robustness, not just skill, needs a target."
+      },
+      {
+        "label": "Baselines are stale",
+        "state": "warn",
+        "detail": "Training code last changed 2026-07-04; 126 engine and DSL commits have landed since. Re-measure before comparing a new run to these numbers."
+      },
+      {
+        "label": "Run charts",
+        "state": "warn",
+        "detail": "TensorBoard (docker-compose.watch.yml) and the training MCP read runs/. Each run writes training_run.json and anchored_evals.jsonl, but nothing charts them yet, and the admin Arena page runs on placeholder worker jobs."
+      },
+      {
+        "label": "Training image",
+        "state": "warn",
+        "detail": "The published image predates exploiter_cli.py (it was hand-patched into training-v0.46). Cut a fresh one before the next run."
+      }
+    ],
+    "baselines": [
+      {
+        "model": "starter_pool_single_v1",
+        "arch": "MLP",
+        "vs_greedy_pct": 61.0,
+        "exploitability": 0.7
+      },
+      {
+        "model": "v022-generalist-v1",
+        "arch": "LSTM",
+        "vs_greedy_pct": 61.3,
+        "exploitability": 0.75
+      },
+      {
+        "model": "v020-generalist-v1",
+        "arch": "LSTM",
+        "vs_greedy_pct": 59.0,
+        "exploitability": 0.75
+      }
+    ],
+    "baselines_source": "openspec/changes/add-determinized-search/baselines.md (n=300 per cell, decks pinned to the starter pool)"
+  },
+  "findings": [
+    {
+      "title": "DigiLab database password is committed",
+      "state": "bad",
+      "detail": "code/server/digilab_client.py and code/tools/meta_loader.py hard-code an owner-level connection string for DigiLab's Postgres.",
+      "action": "Ask DigiLab to rotate it, read DIGILAB_CONN_STR from the environment only, and prefer their public API (api.digilab.cards; free key from their Discord #api channel)."
+    },
+    {
+      "title": "Card authoring stalled for two months",
+      "state": "warn",
+      "detail": "One new card spec landed between 2026-07-09 and 2026-09-11 (813 to 814) while the DCGO exam was built. BT26 released 2026-09-04, inside that gap.",
+      "action": "Split capacity: one lane authors cards in implement_next order, the other runs exam campaigns."
+    },
+    {
+      "title": "Clause extractor loses text for 7 meta cards",
+      "state": "warn",
+      "detail": "LM-057..061 and P-240/P-244 have official-DB bundles with empty text_sections, which win over cards.json, so their clause denominator is 0.",
+      "action": "Fall back to cards.json text when a bundle's text_sections is empty (tools/clause_coverage/card_sources.py)."
+    },
+    {
+      "title": "EX13 is implemented ahead of its meta",
+      "state": "info",
+      "detail": "All 77 EX13 cards landed on main (PR #701) before any EX13 lists reached the deck library, so the meta report cannot rank them yet.",
+      "action": "Once EX13 events accumulate, refresh the library, add EX13 shares to data/meta_shares.json, and re-run the report to see which EX13 cards the field adopts."
+    }
+  ]
+}
