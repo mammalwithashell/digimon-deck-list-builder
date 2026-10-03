@@ -1,0 +1,79 @@
+# EX13-017 Veemon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Mini Dragon, CS. Form: Rookie. Attribute: Free.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Blue Lv.2 / 0.  [Digivolve] Lv.2 w/[CS] trait: Cost 0
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card
+#   with [Veedramon] in its text or the [Royal Knight] trait among them to the
+#   hand. Return the rest to the bottom of the deck.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon with [Veedramon] in
+#   its name would leave the battle area by your opponent's effects, by
+#   suspending it, it doesn't leave.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_017.cs
+#   - Alt digivolve HasCSTraits, level 2, cost 0 (requirements kept).
+#   - Shared [When Moving]/[On Play], not optional:
+#     SimplifiedRevealDeckTopCardsAndSelect(3, HasText("Veedramon") ||
+#     HasRoyalKnightTraits, AddHand, maxCount 1), rest → deck bottom.
+#     [When Moving] is self-scoped → on_move gated on event_permanent_is_source
+#     (ST24-04 idiom).
+#   - Inherited WhenRemoveField (OPT, optional): carrier top card
+#     ContainsCardName("Veedramon"), IsByEffect(opponent), CanActivateSuspend
+#     CostEffect → suspend; success → it doesn't leave. Modelled as an
+#     inherited `kind: replacement` with no `replacement_subject_is_mine`
+#     (so the engine restricts the subject to the carrier itself — EX7-049
+#     note), `source_is_unsuspended` for the payable cost, and
+#     `suspend {source}` + `cancel_replacement`.
+
+card: EX13-017
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mini Dragon, CS]
+form: Rookie
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Veedramon]-text or [Royal Knight] card to hand; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: add_pick
+          filter:
+            any_of:
+              - in_text_contains: Veedramon
+              - trait_has: Royal Knight
+          prompt: "Add 1 card with [Veedramon] in its text or the [Royal Knight] trait to the hand"
+      - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_cause: opponent_effect
+        - source_name_contains: Veedramon
+        - source_is_unsuspended: true
+    summary: "Inherited [All Turns][OPT] When this [Veedramon]-name Digimon would leave by an opponent's effect, by suspending it, it doesn't leave"
+    process:
+      - suspend: { target: source }
+      - cancel_replacement: {}

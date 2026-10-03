@@ -1,0 +1,120 @@
+# EX13-026 Kudamon — Digimon, Lv.3, Yellow, DP 1000, Cost 3.
+# Traits: Holy Beast / DATA SQUAD. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Yellow Lv.2 / cost 0; [Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add
+#   1 [Holy Beast], [Royal Knight] or [DATA SQUAD] trait card to the hand and
+#   place 1 such card face down under any of your [DATA SQUAD] trait Tamers.
+#   Return the rest to the bottom of the deck.
+#   Inherited Effect: [When Attacking] [Once Per Turn] Give 1 of your
+#   opponent's Digimon <Security A. -1> until their turn ends.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO: no EX13_026.cs at b9a0638cd. The reveal clause is ST23-06 Gekkomon's
+# text with different traits; its YAML idiom (select_reveal_buckets +
+# place_selected_card_under_tamer, bottom + face down) is reused verbatim,
+# including the "no [DATA SQUAD] Tamer → add-to-hand only" branch (DCGO
+# ST23_06 HasMatchConditionOwnersPermanent gate).
+#
+# Inherited: SecurityAttackChange -1 (AD1-017 idiom), expiry
+# end_of_opponents_turn = "until their turn ends".
+
+card: EX13-026
+name: Kudamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Holy Beast, DATA SQUAD]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Holy Beast]/[Royal Knight]/[DATA SQUAD] card to hand + place 1 face down under a [DATA SQUAD] Tamer; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              trait_has: "DATA SQUAD"
+          then:
+            - select_reveal_buckets:
+                from: revealed
+                no_duplicate_cards: true
+                buckets:
+                  - bind_as: add_pick
+                    min: 1
+                    max: 1
+                    filter:
+                      any_of:
+                        - trait_has: "Holy Beast"
+                        - trait_has: "Royal Knight"
+                        - trait_has: "DATA SQUAD"
+                  - bind_as: place_pick
+                    min: 1
+                    max: 1
+                    filter:
+                      any_of:
+                        - trait_has: "Holy Beast"
+                        - trait_has: "Royal Knight"
+                        - trait_has: "DATA SQUAD"
+                prompt: "Add 1 [Holy Beast]/[Royal Knight]/[DATA SQUAD] card to hand and place 1 face down under a [DATA SQUAD] Tamer"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+            - if:
+                condition: { binding_present: place_pick }
+                then:
+                  - select_own_permanent:
+                      bind_as: ds_tamer
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - trait_has: "DATA SQUAD"
+                      prompt: "Choose a [DATA SQUAD] Tamer to place the card face down under"
+                  - place_selected_card_under_tamer:
+                      card: place_pick
+                      tamer: ds_tamer
+                      face_down: true
+          else:
+            - select_reveal:
+                of: you
+                bind_as: add_pick
+                filter:
+                  any_of:
+                    - trait_has: "Holy Beast"
+                    - trait_has: "Royal Knight"
+                    - trait_has: "DATA SQUAD"
+                prompt: "Add 1 [Holy Beast]/[Royal Knight]/[DATA SQUAD] card to the hand"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] Give 1 opponent Digimon <Security A. -1> until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: sa_target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon <Security A. -1> until their turn ends"
+      - add_modifier:
+          target: sa_target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn

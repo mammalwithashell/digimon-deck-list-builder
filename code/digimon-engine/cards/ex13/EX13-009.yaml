@@ -1,0 +1,77 @@
+# EX13-009 Huckmon — Digimon, Lv.3, Red/White, 2000 DP, play cost 3.
+# Traits: Mini Dragon. Rookie / Data. Digivolve: Red Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-009.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Huckmon] or [Sistermon] in its text and 1 such Tamer card or Option card
+#   among them to the hand. Return the rest to the bottom of the deck.
+#   Inherited: [Your Turn] [Once Per Turn] When any of your white Digimon are
+#   played, gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_009.cs
+#   On Play: SimplifiedRevealDeckTopCardsAndSelect(3) — bucket 1 Digimon with
+#   HasText Huckmon|Sistermon, bucket 2 Tamer-or-Option with the same text,
+#   both AddHand, rest DeckBottom. Inherited: OnEnterFieldAnyone, OPT, owner's
+#   turn, own Digimon with a white top card → AddMemory(1).
+#
+# DSL: `reveal_search` two-bucket idiom (EX13-027) + `on_ally_played`
+# event-target gates (EX13-001).
+
+card: EX13-009
+name: Huckmon
+kind: digimon
+level: 3
+color: [red, white]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Huckmon]/[Sistermon]-text Digimon and 1 such Tamer or Option to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - in_text_contains: Huckmon
+                      - in_text_contains: Sistermon
+              to: hand
+              max: 1
+              prompt: "Add 1 Digimon card with [Huckmon] or [Sistermon] in its text to the hand"
+            - filter:
+                all_of:
+                  - any_of:
+                      - kind: tamer
+                      - kind: option
+                  - any_of:
+                      - in_text_contains: Huckmon
+                      - in_text_contains: Sistermon
+              to: hand
+              max: 1
+              prompt: "Add 1 Tamer or Option card with [Huckmon] or [Sistermon] in its text to the hand"
+          remainder: bottom
+
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [white]
+    summary: "[Your Turn][OPT] When any of your white Digimon are played, gain 1 memory"
+    process:
+      - gain_memory: 1

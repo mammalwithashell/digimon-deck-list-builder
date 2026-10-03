@@ -1,0 +1,44 @@
+{
+  "index": 4384,
+  "norm_id": 0.2192,
+  "card_id": "EX13-060",
+  "card_index": 60,
+  "card_name_eng": "Alphamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_060",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory.\r\n[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects.\r\n[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

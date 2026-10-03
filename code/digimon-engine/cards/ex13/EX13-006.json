@@ -1,0 +1,29 @@
+{
+  "index": 4330,
+  "norm_id": 0.2165,
+  "card_id": "EX13-006",
+  "card_index": 6,
+  "card_name_eng": "Dorimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Lesser",
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] By paying 1 cost, 1 of your Digimon with the [X Antibody] or [Chronicle] trait may unsuspend.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

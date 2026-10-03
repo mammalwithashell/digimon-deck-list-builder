@@ -8,7 +8,7 @@ dp: 12000
 traits: [Dragonkin, LIBERATOR]
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, color_includes: red }
+    from: { level_eq: 5, color_is: red }
     cost: 3
 
 effects:

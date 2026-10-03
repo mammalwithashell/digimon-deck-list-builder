@@ -1,0 +1,27 @@
+{
+  "index": 4395,
+  "norm_id": 0.21975,
+  "card_id": "EX13-071",
+  "card_index": 71,
+  "card_name_eng": "Richard Sampson",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_071",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] You may place your deck's top card face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory.\r\n[Main] [Once Per Turn] By trashing 3 bottom face-down cards from under any of your Tamers and placing 1 each of level 4 and level 5 [Holy Beast] trait yellow Digimon cards from your trash as 1 of your [Kudamon]'s bottom digivolution cards, it may digivolve into [Kentaurosmon] in the hand or trash, ignoring level and with the cost reduced by 1.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

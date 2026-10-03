@@ -1,0 +1,145 @@
+# EX13-014 Jesmon — Digimon, Lv.6, Red/White, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-014.md):
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may use 1 use cost
+#   5 or lower [Huckmon] text Option card from your hand or this Digimon's
+#   digivolution cards without paying the cost.
+#   [All Turns] [Once Per Turn] When any of your Digimon are played, you may
+#   delete 1 of your opponent's lowest DP Digimon. Then, if you don't have
+#   [Atho, René & Por], you may play 1 [Atho, René & Por] Token.
+#   (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy(Red)/(Black)＞)
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text
+#   Digivolve: Red Lv.5 / cost 3; Lv.5 w/[Huckmon] in text: cost 3.
+#   Official Q&A: a card used from the digivolution cards is removed from the
+#   stack.
+#
+# DCGO C# reference: none at the submodule (no EX13_014.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - [WD][WA] use-from-hand-or-sources = the BT25-085 idiom: one
+#     `select_union_zone` over [hand, material] (material_of: source), then
+#     `use_option_bound`; the union pick's PASS is the "you may" decline and
+#     refunds the OPT (nothing was activated). "use cost 5 or lower" =
+#     `play_cost_lte: 5`; "[Huckmon] text" = `in_text_contains`.
+#   - [All Turns] played-trigger: "any of your Digimon" covers tokens and this
+#     Digimon itself. "you may delete … lowest DP" → optional lowest_dp pick
+#     that CONTINUES on decline (the token half is independent); the token half
+#     is gated on no own [Atho, René & Por] and offered as an explicit
+#     yes/no `select_effect_choice` (mid-clause "you may").
+
+card: EX13-014
+name: Jesmon
+kind: digimon
+level: 6
+color: [red, white]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: Huckmon
+    cost: 3
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text ─────────────
+  - kind: assembly
+    materials:
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 5 }, { in_text_contains: Huckmon } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 4 }, { in_text_contains: Huckmon } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 3 }, { in_text_contains: Huckmon } ] }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      any_of:
+        - count_gte:
+            filter:
+              zone: [hand]
+              owner: you
+              kind: option
+              play_cost_lte: 5
+              in_text_contains: Huckmon
+            n: 1
+        - self_source_count:
+            filter:
+              kind: option
+              play_cost_lte: 5
+              in_text_contains: Huckmon
+            op: gte
+            value: 1
+    summary: "[When Digivolving][When Attacking][OPT] You may use 1 use cost 5 or lower [Huckmon] text Option card from your hand or this Digimon's digivolution cards without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          material_of: source
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - play_cost_lte: 5
+              - in_text_contains: Huckmon
+          bind_as: huckmon_option
+          prompt: "Use 1 use cost 5 or lower [Huckmon] text Option card from your hand or this Digimon's digivolution cards without paying the cost"
+      - use_option_bound:
+          binding: huckmon_option
+      - if:
+          condition: { binding_absent: huckmon_option }
+          then:
+            - refund_opt: {}
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+    summary: "[All Turns][OPT] When any of your Digimon are played, you may delete 1 opponent lowest DP Digimon; then, if you don't have [Atho, René & Por], you may play 1 [Atho, René & Por] Token"
+    process:
+      - select_opponent_permanent:
+          bind_as: lowest_target
+          filter: { kind: digimon }
+          selector: lowest_dp
+          optional: true
+          continue_on_decline: true
+          prompt: "You may delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: lowest_target }
+      - if:
+          condition:
+            none_of:
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  name_is: "Atho, René & Por"
+          then:
+            # Mid-clause "you may": an explicit yes/no choice (an `optional:`
+            # step only prompts when it leads the clause).
+            - select_effect_choice:
+                bind_as: token_choice
+                labels: ["Play 1 [Atho, René & Por] Token", "Don't play"]
+                prompt: "You may play 1 [Atho, René & Por] Token"
+            - if:
+                condition: { equals: [token_choice, 0] }
+                then:
+                  - play_token:
+                      controller: you
+                      token_name: atho_rene_por

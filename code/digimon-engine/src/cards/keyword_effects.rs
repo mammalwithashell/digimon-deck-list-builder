@@ -675,6 +675,14 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         .modifiers
                         .has(handle, crate::enums::ModifierType::CannotSuspend)
             })
+            // Self-scope at CANDIDATE collection, not only in the process:
+            // without it any other permanent's would-be-deletion (e.g. the
+            // opponent's Digimon losing a battle to this one) surfaced a
+            // spurious "<Evade>" accept prompt whose process then no-op'd.
+            // G-ENGINE-EVADE-CANDIDATE-SELF-SCOPE (surfaced by EX13-045).
+            .replacement_condition(|ctx, subject| {
+                matches!(subject, ReplacementSubject::Permanent(h) if Some(*h) == ctx.source_permanent)
+            })
             .replacement_process(|rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
                 let me_perm = rctx.effect.source_permanent;
@@ -2086,12 +2094,34 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 if !guard_carrier_can_be_deleted_for_cost(rctx.effect.game, me) {
                     return;
                 }
+                // The carrier's top card identifies it across the deletion
+                // (handles shift; the card lands in its owner's trash).
+                let carrier_top = rctx
+                    .effect
+                    .game
+                    .player(me.player)
+                    .battle_area
+                    .get(me.index as usize)
+                    .and_then(|p| p.card_sources.last())
+                    .map(|c| c.handle());
                 let outcome = rctx
                     .effect
                     .game
                     .delete_permanents_batch(vec![me], ReplacementCause::OwnEffect);
                 if outcome.completed.contains(&me) {
                     rctx.cancel();
+                } else if rctx.effect.game.pending_selection.is_some() {
+                    // The cost deletion itself opened a replacement window on
+                    // the carrier (its own <Decode>/<Evade>/... prompt) and
+                    // is parked. Guard succeeds only if that deletion
+                    // completes (DCGO GuardProcess →
+                    // DeletePeremanentAndProcessAccordingToResult success
+                    // branch), so defer the cancel to the drain, which runs
+                    // after the carrier's event commits
+                    // (G-NESTED-PARKED-REPLACEMENT).
+                    if let Some(top) = carrier_top {
+                        rctx.cancel_if_card_deleted(me.player, top);
+                    }
                 }
             })
             .build()],

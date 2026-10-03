@@ -1,0 +1,111 @@
+# EX13-037 Dynasmon — Digimon, Lv.6, Yellow/Red, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-037.md):
+#   ＜Raid＞ ＜Piercing＞ ＜Blocker＞
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] Trash your
+#   top security card and this Digimon gets +10000 DP until your opponent's
+#   turn ends. Then, if you have 3 or fewer security cards, trash their top
+#   security card.
+#   [All Turns] [Once Per Turn] When security stacks are removed from, 1 of
+#   your opponent's Digimon gets -12000 DP until their turn ends. Then, if you
+#   have 3 or fewer security cards, ＜Recovery +1＞.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text
+#   Digivolve: Yellow Lv.5 / 4; Red Lv.5 / 4; Lv.5 w/[Witchelny] in text: 3.
+#
+# DCGO C# reference: none at the submodule (no EX13_037.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - Shared OP/WD/WA OPT (mandatory): `trash_top_security { of: you }` and a
+#     self +10000 (`end_of_opponents_turn`) — the two halves of "X and Y" are
+#     independent (the buff applies even with an empty security stack); then
+#     `security_count_lte: 3` (controller) gates `trash_top_security { of:
+#     opponent }`.
+#   - "When security stacks are removed from" = either player's security
+#     (EX12-019 idiom: on_own_security_removed + on_opponent_security_removed,
+#     shared OPT). The clause's own security trash feeds it.
+#   - "[Witchelny] in text" = `in_text_contains` (official Q&A: name, traits,
+#     effects, requirements …).
+
+card: EX13-037
+name: Dynasmon
+kind: digimon
+level: 6
+color: [yellow, red]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: Witchelny
+    cost: 3
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Witchelny] in text ───────────
+  - kind: assembly
+    materials:
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 5 }, { in_text_contains: Witchelny } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 4 }, { in_text_contains: Witchelny } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 3 }, { in_text_contains: Witchelny } ] }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][OPT] Trash your top security card and this Digimon gets +10000 DP; then, if you have 3 or fewer security cards, trash their top security card"
+    process:
+      - trash_top_security: { of: you }
+      - add_dp_modifier:
+          target: source
+          value: 10000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - trash_top_security: { of: opponent }
+
+  - when: [on_own_security_removed, on_opponent_security_removed]
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When security stacks are removed from, 1 opponent Digimon gets -12000 DP until their turn ends; then, if you have 3 or fewer security cards, <Recovery +1>"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -12000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -12000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - recover: { of: you, count: 1 }

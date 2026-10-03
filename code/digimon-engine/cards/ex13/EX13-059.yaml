@@ -1,0 +1,141 @@
+# EX13-059 BigMamemon — Digimon, Lv.5, Black, DP 8000, Cost 8.
+# Traits: Mutant. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-059.md):
+#   [When Digivolving] [On Deletion] Reveal the top 3 cards of your deck. You
+#   may play 1 play cost 7 or lower Digimon card with [Mamemon] in its name or
+#   the [Mutant] trait among them without paying the cost. Trash the rest.
+#   [End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with
+#   [Mamemon] in its name, delete 1 of your opponent's Digimon with the lowest
+#   play cost.
+#   Inherited: [End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon
+#   with [Mamemon] in its name, delete all of your opponent's Digimon with the
+#   lowest play cost.
+#   Digivolve: Black Lv.4 / 3.
+#   Official Q&A: the play-cost cap applies to both alternatives.
+#
+# DCGO C# reference: none (no EX13_059.cs). Printed text + general_rule.pdf
+# §15-7 govern.
+#
+# DSL notes:
+#   - Reveal clause: EX8-050 idiom (`reveal_top_deck` + optional single
+#     `select_reveal_buckets` (min 0 / max 1) + `play_from_revealed_free`, then
+#     trash every remaining revealed card). Mandatory clause — only the play
+#     is a "may".
+#   - "By deleting 1 of your Digimon with [Mamemon] in its name, ..." is an
+#     optional processing condition (§15-7-1/-4): `optional: true` +
+#     `outer_prompt: true` (BT23-064 idiom) so the player may decline; the
+#     inner own pick is then mandatory. The clause is gated only on the cost
+#     being payable (an own [Mamemon]-named Digimon exists) — §15-7-4 lets the
+#     player pay it even when the opponent has no Digimon. BigMamemon itself
+#     has [Mamemon] in its name and may be the one deleted. Declining at the
+#     outer prompt does not consume [Once Per Turn] (the activation is
+#     recorded only when the body runs).
+#   - Face-up: `select_opponent_permanent` + `selector: lowest_play_cost`
+#     (ties are a player choice). Inherited: BT23-058 delete-all sweep —
+#     `for_each` over opponent Digimon whose play cost is <= the opponent's
+#     lowest play cost.
+
+card: EX13-059
+name: BigMamemon
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 8000
+traits: [Mutant]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - when: [when_digivolving, on_deletion]
+    summary: "[When Digivolving][On Deletion] Reveal top 3; you may play 1 cost<=7 [Mamemon]-name or [Mutant] Digimon free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 7
+                  - any_of:
+                      - name_contains: Mamemon
+                      - trait_has: Mutant
+          prompt: "Play 1 play cost 7 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "[End of Your Turn][OPT] By deleting 1 of your [Mamemon]-named Digimon, delete 1 of your opponent's Digimon with the lowest play cost"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        name_contains: Mamemon
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Mamemon
+          prompt: "Delete 1 of your Digimon with [Mamemon] in its name"
+      - delete_permanent: { target: sacrifice }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          selector: lowest_play_cost
+          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+      - delete_permanent: { target: victim }
+
+  - scope: inherited
+    when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "Inherited [End of Your Turn][OPT] By deleting 1 of your [Mamemon]-named Digimon, delete all of your opponent's Digimon with the lowest play cost"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        name_contains: Mamemon
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Mamemon
+          prompt: "Delete 1 of your Digimon with [Mamemon] in its name"
+      - delete_permanent: { target: sacrifice }
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte:
+              aggregate:
+                selector: lowest_play_cost
+                scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

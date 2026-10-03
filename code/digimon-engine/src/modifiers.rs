@@ -74,6 +74,15 @@ pub enum ModifierPayload {
         value: i32,
         delta: bool,
     },
+    /// `ModifierType::DnaMaterialIdentity` — while evaluating a DNA (or
+    /// Blast-DNA) material requirement for a result card named
+    /// `result_name`, the carrier is additionally treated as `level` and/or
+    /// as named `name`. G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    DnaMaterialIdentity {
+        result_name: String,
+        level: Option<u8>,
+        name: Option<String>,
+    },
 }
 
 impl Default for ModifierPayload {
@@ -573,6 +582,10 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
             | (
                 ModifierType::ChangePermanentLevel,
                 ModifierPayload::LevelOverride { .. }
+            )
+            | (
+                ModifierType::DnaMaterialIdentity,
+                ModifierPayload::DnaMaterialIdentity { .. }
             )
     )
 }
@@ -1109,6 +1122,36 @@ impl ModifierRegistry {
         })
     }
 
+    /// Whether any `modifier` entry on `target` blocks an effect controlled
+    /// by `effect_controller`, honoring each entry's
+    /// `effect_immunity_filter.controller` scope:
+    ///   - `OpponentOnly` — blocks only effects controlled by `target`'s
+    ///     opponent ("your opponent's effects can't …", EX13-023);
+    ///   - `OwnOnly` — blocks only the owner's own effects;
+    ///   - `Any` / no filter — blocks every effect (back-compat for entries
+    ///     installed without a filter).
+    /// Used by the stacked-card protections (`ImmuneFromStackTrashing`,
+    /// `ImmuneFromStackReturn`). G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn blocks_effect_from(
+        &self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        effect_controller: PlayerId,
+    ) -> bool {
+        let from_opponent = effect_controller != target.player;
+        self.get(target, modifier).into_iter().any(|entry| {
+            match entry
+                .effect_immunity_filter
+                .map(|f| f.controller)
+                .unwrap_or(EffectControllerFilter::Any)
+            {
+                EffectControllerFilter::Any => true,
+                EffectControllerFilter::OpponentOnly => from_opponent,
+                EffectControllerFilter::OwnOnly => !from_opponent,
+            }
+        })
+    }
+
     /// Iterate over ALL `ModifierEntry` values attached to `target`
     /// (regardless of `ModifierType`). Used by the Phase 7 replacement
     /// dispatcher to scan for `CannotBe*` entries across all modifier types
@@ -1609,6 +1652,20 @@ impl ModifierRegistry {
             .into_iter()
             .map(|entry| match &entry.payload {
                 ModifierPayload::LinkMax { delta } => *delta,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            })
+            .sum()
+    }
+
+    /// Summed "add N to this Digimon's DP deletion effects' maximums" delta on
+    /// `host` (`ModifierType::ChangeDPDeleteEffectMaxDP`). Added to the DP cap
+    /// of every deletion effect whose source permanent is `host`.
+    /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    pub fn dp_delete_effect_max_delta(&self, host: PermanentHandle) -> i32 {
+        self.get(host, ModifierType::ChangeDPDeleteEffectMaxDP)
+            .into_iter()
+            .map(|entry| match &entry.payload {
                 ModifierPayload::None => entry.value,
                 _ => 0,
             })

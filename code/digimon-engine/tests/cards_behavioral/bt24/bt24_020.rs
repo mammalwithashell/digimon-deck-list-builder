@@ -124,6 +124,11 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
         inherited.condition,
         Some(CompiledPredicate {
             all_of: vec![
+                // "When THIS Digimon unsuspends" self-gate (DCGO BT24_020.cs).
+                CompiledPredicate {
+                    event_permanent_is_source: Some(true),
+                    ..CompiledPredicate::default()
+                },
                 CompiledPredicate {
                     your_turn: Some(true),
                     ..CompiledPredicate::default()
@@ -142,7 +147,7 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
             ],
             ..CompiledPredicate::default()
         }),
-        "inherited clause must require your turn and hand size <= 7"
+        "inherited clause must be self-gated and require your turn and hand size <= 7"
     );
     assert_eq!(
         inherited.process,
@@ -270,6 +275,27 @@ fn bt24_020_inherited_on_unsuspend_does_not_draw_when_hand_count_above_seven() {
         "hand size > 7 must suppress the inherited draw"
     );
     assert_eq!(runner.deck_size(0), 1);
+}
+
+#[test]
+fn bt24_020_inherited_on_unsuspend_ignores_another_digimon_unsuspending() {
+    // "When THIS Digimon unsuspends" (DCGO BT24_020.cs self filter): another
+    // of your Digimon unsuspending must not draw.
+    let mut runner = gomamon_runner()
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("OTHER", "Other"))
+        .add_card(make_test_card("DRAW", "Draw"))
+        .deck(0, &["DRAW"])
+        .memory(0)
+        .start();
+
+    let _carrier = place_gomamon_as_source(&mut runner);
+    let other = runner.place_on_field(0, "OTHER", Some(0));
+    runner.game_mut().players[0].battle_area[other.index as usize].is_suspended = true;
+    runner.game_mut().unsuspend(other);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.deck_size(0), 1, "another Digimon unsuspending does not draw");
 }
 
 #[test]

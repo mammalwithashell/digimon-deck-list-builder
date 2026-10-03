@@ -1,0 +1,28 @@
+{
+  "index": 4391,
+  "norm_id": 0.21955,
+  "card_id": "EX13-067",
+  "card_index": 67,
+  "card_name_eng": "Nokia Shiramine",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_067",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve, if you have 1 or fewer Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

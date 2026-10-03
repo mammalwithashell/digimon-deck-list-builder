@@ -459,7 +459,8 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::FloorDiv(args)
         | CompiledFormula::Max(args)
         | CompiledFormula::Min(args)
-        | CompiledFormula::Subtract(args) => {
+        | CompiledFormula::Subtract(args)
+        | CompiledFormula::Multiply(args) => {
             for arg in args {
                 collect_formula_raw_rust_fns(arg, names);
             }

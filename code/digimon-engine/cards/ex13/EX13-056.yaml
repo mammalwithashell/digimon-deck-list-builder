@@ -1,0 +1,105 @@
+# EX13-056 Giromon — Digimon, Lv.5, Black, 7000 DP, play cost 7.
+# Traits: Mine, Machine (Rule). Ultimate / Vaccine. Digivolve: Black Lv.4 / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-056.md):
+#   <Collision> <Blocker> [All Turns] [Once Per Turn] When this Digimon
+#   suspends, reveal the top 3 cards of your deck. You may play 1 level 4 or
+#   lower black Digimon card with <Blocker> among them without paying the
+#   cost. Trash the rest. (Rule) Trait: Has [Machine] Type.
+#   Inherited: [Opponent's Turn] [Once Per Turn] When any of your Digimon
+#   suspend, you may play 1 level 5 or lower black Digimon card with <Blocker>
+#   from your hand without paying the cost.
+#   Official Q&A: "a card with <Blocker>" = printed (always has) <Blocker>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_056.cs
+#   Collision + Blocker; OnTappedAnyone OPT self-suspend → reveal 3, optional
+#   Level<=4 && HasBlocker play free, rest trashed (DCGO drops the printed
+#   "black" test; printed text governs and the colour gate is kept).
+#   Inherited OnTappedAnyone OPT on the opponent's turn for any own Digimon →
+#   optional PlayByEffect of a Level<=5 HasBlocker hand Digimon; RemoveUse()
+#   when nothing is played.
+#
+# DSL: `on_suspend` + `event_target_is_source`; BT24-059 reveal →
+# `select_reveal_buckets` (0..1) → `play_from_revealed_free` → trash rest;
+# `printed_keyword: Blocker` (EX13-062); inherited optional `select_hand` →
+# `play_from_hand_free`, `refund_opt` on decline.
+
+card: EX13-056
+name: Giromon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Mine, Machine]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Collision
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition: { event_target_is_source: true }
+    summary: "[All Turns][OPT] When this Digimon suspends, reveal 3; you may play 1 Lv.4- black <Blocker> Digimon among them free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_lte: 4
+                  - color_is: black
+                  - printed_keyword: Blocker
+          prompt: "You may play 1 level 4 or lower black Digimon card with <Blocker> among them without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "Inherited [Opponent's Turn][OPT] When any of your Digimon suspend, you may play 1 Lv.5- black <Blocker> Digimon card from your hand for free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - color_is: black
+              - printed_keyword: Blocker
+          prompt: "You may play 1 level 5 or lower black Digimon card with <Blocker> from your hand without paying the cost"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: pick }
+          else:
+            - refund_opt: {}

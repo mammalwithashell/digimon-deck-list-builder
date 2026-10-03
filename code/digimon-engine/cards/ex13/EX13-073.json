@@ -1,0 +1,28 @@
+{
+  "index": 4397,
+  "norm_id": 0.21985,
+  "card_id": "EX13-073",
+  "card_index": 73,
+  "card_name_eng": "Tai Kamiya & Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_073",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have an [ADVENTURE] trait Digimon, gain 1 memory.\r\n[Your Turn] When your [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.\r\n[All Turns] All of your level 5 or higher [ADVENTURE] trait Digimon gain ＜Rush＞ (This Digimon can attack the turn it was played.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,47 @@
+# EX13-005 Bebydomon — Digi-Egg, Lv.2, Green. Traits: Baby Dragon.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-005.md):
+#   Inherited: [When Attacking] [Once Per Turn] You may play or use 1 card with
+#   [Dracomon] or [Examon] in its text from your hand with the cost reduced
+#   by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_005.cs
+#   OnAllyAttack, inherited, OPT. Optional hand pick of a HasText("Dracomon"|
+#   "Examon") card; Options are used, Digimon/Tamers played, paying cost − 1.
+#
+# DSL: EX13-043 idiom — optional `select_hand` → `play_or_use_from_hand`
+# (`cost_delta: { reduce: 1 }`; the verb plays Digimon/Tamers, uses Options and
+# surfaces the face choice for DUAL cards). Declining refunds the OPT.
+
+card: EX13-005
+name: Bebydomon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Baby Dragon]
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] You may play or use 1 [Dracomon]/[Examon]-text card from your hand with the cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: card
+          optional: true
+          filter:
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+          prompt: "You may play or use 1 card with [Dracomon] or [Examon] in its text with the cost reduced by 1"
+      - if:
+          condition: { binding_present: card }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: card
+                cost_delta: { reduce: 1 }
+          else:
+            - refund_opt: {}

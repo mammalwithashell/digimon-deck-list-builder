@@ -1,0 +1,58 @@
+{
+  "index": 4387,
+  "norm_id": 0.21935,
+  "card_id": "EX13-063",
+  "card_index": 63,
+  "card_name_eng": "PrinceMamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_063",
+  "play_cost": 11,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 10 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait among them without paying the cost. Trash the rest.\r\n[On Deletion] Delete 1 of your opponent's highest play cost Digimon.\r\n[All Turns] All of your Digimon with [Mamemon] in their names gain ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "Assembly Requirements [Assembly -4] 3 Lv.5 or lower [Mamemon] text cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Mamemon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 4,
+      "max_materials": 1,
+      "different_card_numbers": false,
+      "different_names": true,
+      "has_text": "",
+      "source_zones": [
+        "trash"
+      ]
+    }
+  ]
+}

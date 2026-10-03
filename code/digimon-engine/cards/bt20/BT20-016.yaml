@@ -11,13 +11,13 @@ traits: [Dragonkin]
 # DNA digivolve: Lv4 Red + Lv4 Purple / Cost 0
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, color: red }
+    from: { level_eq: 4, color_is: red }
     cost: 4
 
   - kind: dna_digivolve
     materials:
-      - { level_eq: 4, color: red }
-      - { level_eq: 4, color: purple }
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: purple }
     cost: 0
 
 effects:

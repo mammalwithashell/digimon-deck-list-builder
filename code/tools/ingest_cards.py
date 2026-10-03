@@ -86,6 +86,11 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     "BT26-057": ["Black"],           # Bearcatmon (card Black/Red)
     "BT26-075": ["Purple"],          # ScourgeChiropmon (card Purple/Yellow)
     "BT26-080": ["Purple"],          # Bacchusmon (card Purple/Green)
+    # EX13 (2026-09-30) — from the official Bandai DB "DUAL Color" field
+    # (`dual_colors` in data/card_official.json). Both print a single White
+    # Option face on a two-colour Digimon face.
+    "EX13-065": ["White"],           # Sistermon Blanc (Awakened) (card White/Yellow)
+    "EX13-066": ["White"],           # Sistermon Noir (Awakened) (card White/Black)
 }
 
 RARITY_MAP = {
@@ -221,6 +226,11 @@ def _digixros_element_to_json(el):
         "count": int(el.count),
         "is_digimon_only": bool(el.is_digimon_only),
         "color": _card_color_to_json(el.color),
+        # EX13 Assembly fields: emitted only when set (older entries unchanged).
+        **({"level_exact": el.level_exact} if el.level_exact is not None else {}),
+        **({"name_any": list(el.name_any)} if el.name_any else {}),
+        **({"text_any": list(el.text_any)} if el.text_any else {}),
+        **({"keyword": el.keyword} if el.keyword else {}),
     }
 
 
@@ -231,6 +241,7 @@ def _digixros_cost_to_json(dxc):
         "max_materials": int(dxc.max_materials),
         "different_card_numbers": bool(dxc.different_card_numbers),
         "different_names": bool(dxc.different_names),
+        **({"different_colors": True} if dxc.different_colors else {}),
         "has_text": dxc.has_text,
         "source_zones": list(dxc.source_zones),
     }
@@ -427,6 +438,16 @@ def apply_overrides(cards, overrides=None):
             print(f"  WARNING: override for unknown card_id {cid!r} skipped")
             continue
         cards[cid].update(patch)
+        # An overridden `xros_req` (e.g. an Assembly line the API dropped) must
+        # also drive the parsed cost fields, which were derived from the API
+        # text before overrides ran — unless the override sets them itself.
+        if "xros_req" in patch and not ({"dna_costs", "digixros_costs"} & patch.keys()):
+            dna_json, digixros_json = _parse_xros_costs(patch["xros_req"] or "")
+            for key, value in (("dna_costs", dna_json), ("digixros_costs", digixros_json)):
+                if value:
+                    cards[cid][key] = value
+                else:
+                    cards[cid].pop(key, None)
         applied += 1
     return applied
 

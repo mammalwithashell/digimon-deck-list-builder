@@ -302,7 +302,7 @@ fn st24_07_option_main_minus_6000_then_delete_le_7000() {
     // Pick the deletable Digimon.
     let pick = legal[0];
     r.execute_action(0, pick).unwrap();
-    let _ = r.auto_resolve();
+    decline_arts(&mut r);
 
     let _ = weak;
     assert_eq!(
@@ -334,11 +334,49 @@ fn st24_07_option_main_delete_is_optional() {
     let v2 = r.pending_selection_view().expect("delete pick installs");
     assert!(v2.is_optional, "the delete is optional (canNoSelect:true)");
     r.execute_action(0, PASS).expect("decline the delete");
-    let _ = r.auto_resolve();
+    decline_arts(&mut r);
 
     assert_eq!(
         r.game.players[1].battle_area.len(),
         opp_field_before,
         "declined delete ⇒ the opponent Digimon stays on the field"
     );
+}
+
+/// Decline the trailing optional prompts — notably <Arts Digivolve>, which is
+/// now (correctly) offered onto the Lv.5 [DATA SQUAD] base via the printed
+/// "Lv.5 w/[RizeGreymon] in name or [DATA SQUAD] trait: Cost 3" route
+/// (G-ENGINE-ARTS-ALT-PATH-BASE). These Option-face tests assert the [Main]
+/// body only.
+fn decline_arts(r: &mut DebugRunner) {
+    while let Some(v) = r.pending_selection_view() {
+        let a = if v.is_optional { PASS } else { v.valid_action_ids[0] };
+        r.execute_action(v.selecting_player, a).unwrap();
+    }
+}
+
+/// <Arts Digivolve> honours the alt-digivolve route: a Lv.5 [DATA SQUAD]
+/// Digimon (no matching standard circle) is a legal Arts base.
+#[test]
+fn st24_07_arts_offered_onto_lv5_data_squad_base() {
+    let mut r = builder().hand(0, &[CARD_ID]).memory(10).start();
+    let base = r.place_on_field(0, "DS-BASE", Some(0));
+    r.game.enter_main_phase();
+    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    let arts = digimon_engine::action::space::encode_attack(0, base.index as u16);
+    loop {
+        let v = r.pending_selection_view().expect("Arts prompt before resolution ends");
+        if v.kind == SelectionKind::OwnField && v.is_optional && v.valid_action_ids.contains(&arts) {
+            break;
+        }
+        let a = if v.is_optional { PASS } else { v.valid_action_ids[0] };
+        r.execute_action(v.selecting_player, a).unwrap();
+    }
+    r.execute_action(0, arts).unwrap();
+    let _ = r.auto_resolve();
+    let top = r.game.player(0).battle_area[base.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string();
+    assert_eq!(top, CARD_ID);
 }

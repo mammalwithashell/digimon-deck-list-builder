@@ -1,0 +1,35 @@
+{
+  "index": 4332,
+  "norm_id": 0.2166,
+  "card_id": "EX13-008",
+  "card_index": 8,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Bebydomon]: Cost 0"
+}

@@ -1,0 +1,35 @@
+{
+  "index": 4334,
+  "norm_id": 0.2167,
+  "card_id": "EX13-010",
+  "card_index": 10,
+  "card_name_eng": "Growlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_010",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Moving] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, this Digimon gains ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) and +3000 DP for the turn.",
+  "inherited_effect_description_eng": "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 4366,
+  "norm_id": 0.2183,
+  "card_id": "EX13-042",
+  "card_index": 42,
+  "card_name_eng": "Bastemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_042",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits from your hand without paying the cost.",
+  "inherited_effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

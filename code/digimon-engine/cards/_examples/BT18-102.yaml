@@ -35,26 +35,38 @@ effects:
           prompt: "Delete"
       - delete_permanent: { target: tgt }
 
+  # [When Attacking] "By placing up to 5 Tamer cards from this Digimon's
+  # digivolution cards as your bottom security cards, for each one, trash your
+  # opponent's top security card." DCGO BT18_102.cs: SelectCardEffect over the
+  # Tamer digivolution cards (maxCount min(5, #Tamers), canNoSelect false,
+  # canEndNotMax true) -> AddSecurityCard(toTop: false) each -> IDestroySecurity
+  # x cardSources.Count.
+  #
+  # W1 (2026-10-01): this used `select_count_capped_multi { zone: material }`,
+  # which the DSL count-capped step does not support (it silently installs
+  # nothing for the material zone), followed by `for_each.over: { binding }`
+  # (`binding` is not a predicate key — silently dropped, so it scanned EVERY
+  # permanent and trashed one opponent security per permanent on the field).
+  # `select_own_sources` is the supported source picker; `per_selected` over
+  # its source refs runs once per placed card.
   - when: when_attacking
     optional: true
     process:
-      - select_count_capped_multi:
-          of: you
-          zone: material
+      - select_own_sources:
+          target: source
+          filter: { kind: tamer }
+          min: 1
           max: 5
           bind_as: placed
-          filter:
-            all_of:
-              - of_permanent: self
-              - kind: tamer
-          prompt: "Place Tamer materials as bottom security"
-      - for_each:
-          over: { binding: placed }
-          bind_as: m
-          body:
-            - place_on_security:
-                of: you
-                source: { card: { binding: m } }
-                position: bottom
-                face_up: false
-            - trash_top_security: { of: opponent }
+          prompt: "Place up to 5 Tamer cards from this Digimon's digivolution cards as your bottom security cards"
+          then:
+            - per_selected:
+                selection: placed
+                bind_as: m
+                body:
+                  - place_on_security:
+                      of: you
+                      source: { card: { binding: m } }
+                      position: bottom
+                      face_up: false
+                  - trash_top_security: { of: opponent }

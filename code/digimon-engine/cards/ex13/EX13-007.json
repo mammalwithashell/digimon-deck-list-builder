@@ -1,0 +1,35 @@
+{
+  "index": 4331,
+  "norm_id": 0.21655,
+  "card_id": "EX13-007",
+  "card_index": 7,
+  "card_name_eng": "Guilmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] By trashing 1 card in your hand, you may return 1 Digimon card with [Gallantmon] in its name or 1 red Tamer card from your trash to the hand.",
+  "inherited_effect_description_eng": "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

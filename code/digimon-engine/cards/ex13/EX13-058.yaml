@@ -1,0 +1,100 @@
+# EX13-058 Knightmon — Digimon, Lv.5, Black, 7000 DP, play cost 7.
+# Traits: Warrior. Ultimate / Data.
+# Digivolve: Black Lv.4 / cost 3; [Digivolve] Lv.4 w/[Knightmon] in text: Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-058.md):
+#   [When Attacking] [On Deletion] You may play or use 1 card with [Knightmon]
+#   in its text and a play or use cost of 4 or less from your hand without
+#   paying the cost. [Opponent's Turn] All of your Digimon with [Knightmon] in
+#   their texts gain <Reboot> and <Blocker>.
+#   Inherited: [All Turns] [Once Per Turn] When any of your Digimon with
+#   [Knightmon] in their texts are played, <De-Digivolve 1> 1 of your
+#   opponent's Digimon.
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_058.cs). Printed text governs.
+#
+# DSL: ST24-06 free play-or-use (`play_or_use_cost_lte: 4` +
+# `play_or_use_from_hand { cost_delta: free }`); EX13-062-style keyword auras
+# over own `[Knightmon]`-text Digimon gated `opponents_turn`; inherited
+# `on_ally_played` (`event_target_in_text_contains`) → De-Digivolve 1.
+
+card: EX13-058
+name: Knightmon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Warrior]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+  # Printed special condition: "[Digivolve] Lv.4 w/[Knightmon] in text: Cost 3".
+  - kind: digivolve
+    from:
+      level_eq: 4
+      in_text_contains: Knightmon
+    cost: 3
+
+effects:
+  - when: [when_attacking, on_deletion]
+    summary: "[When Attacking][On Deletion] You may play or use 1 [Knightmon]-text card with a play or use cost of 4 or less from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - in_text_contains: Knightmon
+              - play_or_use_cost_lte: 4
+          prompt: "You may play or use 1 card with [Knightmon] in its text and a play or use cost of 4 or less without paying the cost"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: pick
+                cost_delta: free
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      in_text_contains: Knightmon
+    grant_keyword: { keyword: Reboot }
+    summary: "[Opponent's Turn] All of your [Knightmon]-text Digimon gain <Reboot>"
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      in_text_contains: Knightmon
+    grant_keyword: { keyword: Blocker }
+    summary: "[Opponent's Turn] All of your [Knightmon]-text Digimon gain <Blocker>"
+
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_in_text_contains: Knightmon
+    summary: "Inherited [All Turns][OPT] When any of your [Knightmon]-text Digimon are played, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+          stop_at_level: 3

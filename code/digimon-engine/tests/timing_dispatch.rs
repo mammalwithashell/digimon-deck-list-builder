@@ -969,7 +969,13 @@ struct TrashResidentAllyPlayedObserver {
 impl CardEffect for TrashResidentAllyPlayedObserver {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let seen = self.seen.clone();
+        // `.trash_zone()` = the printed `[Trash]` zone scope (BT20-084's
+        // "[Trash] When any of your Digimon are played, ..."). Only clauses
+        // carrying it operate from the trash: `enqueue_from_player_trash`
+        // skips un-scoped observers on dead cards (DCGO never fires a dead
+        // card's ordinary field observers — EX12-063 exam finding).
         vec![Effect::on_ally_played(card)
+            .trash_zone()
             .name("record allied play from trash")
             .process(move |ctx| {
                 let event_id = ctx

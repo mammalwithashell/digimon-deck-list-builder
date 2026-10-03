@@ -287,6 +287,70 @@ impl Game {
             let outcome = self.try_replace(timing, subject, cause, Some(destination));
             if self.pending_selection.is_some() {
                 // Parked — caller unwinds and resumes via parked_replacement.
+                // The replacement callback commits only the parked member;
+                // stash the batch's OTHER members so they are still deleted
+                // once the selection settles
+                // (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST).
+                let rest: Vec<PermanentHandle> = self
+                    .active_deletion_batch
+                    .as_ref()
+                    .map(|b| {
+                        b.kill_list
+                            .iter()
+                            .copied()
+                            .filter(|&h| h != handle)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if rest.is_empty() {
+                    return true;
+                }
+                // Which optional replacement parked? (The installer leaves an
+                // `OptionalReplacement` resume frame.)
+                let parked_id = self.pending_selection_resume.as_ref().and_then(|stack| {
+                    stack.frames.iter().find_map(|f| match f {
+                        crate::resume::ResumeFrame::OptionalReplacement(st) => Some(
+                            crate::replacement::candidate_identity(
+                                st.source_card,
+                                &st.candidate_kind,
+                            ),
+                        ),
+                        _ => None,
+                    })
+                });
+                self.pending_deletion_batch_parked = self
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .filter(|p| !p.card_sources.is_empty())
+                    .map(|p| (handle.player, p.top_card().handle()));
+                for h in rest {
+                    let Some(card) = self
+                        .player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .filter(|p| !p.card_sources.is_empty())
+                        .map(|p| p.top_card().handle())
+                    else {
+                        continue;
+                    };
+                    let covered_by_parked = parked_id.is_some_and(|id| {
+                        crate::replacement::active_candidate_identities(
+                            self,
+                            timing,
+                            ReplacementSubject::Permanent(h),
+                            cause,
+                        )
+                        .contains(&id)
+                    });
+                    self.pending_deletion_batch_rest
+                        .push(crate::game::PendingDeletionBatchRest {
+                            player: h.player,
+                            card,
+                            cause,
+                            covered_by_parked,
+                        });
+                }
                 return true;
             }
 
@@ -435,6 +499,14 @@ impl Game {
         let source_count = digisources.len();
         let dp_now = self.effective_dp(handle);
         let is_token = perm.top_card().is_token;
+        // Last-known names are the RULES names (synth identity): a Digimon whose
+        // base name was changed (`ChangeBaseCardName`, e.g. EX13-031 KingSukamon
+        // turning it into [Sukamon] until their turn ends) is deleted AS that
+        // name, so "when a Digimon with [Sukamon] in its name is deleted"
+        // observers see it. Without modifiers this is the top card's own names.
+        let names_just_before = perm
+            .synth_identity(&self.card_data, &self.modifiers, handle)
+            .card_names;
         Some(crate::trigger_context::DeletedObjectSnapshot {
             former_controller: handle.player,
             top_card: top_handle,
@@ -448,7 +520,7 @@ impl Game {
             dp_just_before: dp_now,
             level_just_before: data.level,
             cost_just_before: Some(data.play_cost),
-            names_just_before: vec![data.card_name.clone()],
+            names_just_before,
             traits_just_before: data.traits.clone(),
             source_count_just_before: source_count,
             digisources_just_before: digisources,
@@ -833,6 +905,44 @@ impl Game {
             self.drain_batch_on_any_deletion();
             // After OnAnyDeletion stage, clear the batch.
             self.active_deletion_batch = None;
+        }
+
+        // G-ENGINE-BATCH-DELETION-PARK-DROPS-REST: a multi-member batch that
+        // parked on one member's optional replacement now deletes its other
+        // members (re-found by top card; same cause).
+        if self.pending_selection.is_none() && !self.pending_deletion_batch_rest.is_empty() {
+            let rest = std::mem::take(&mut self.pending_deletion_batch_rest);
+            let parked = self.pending_deletion_batch_parked.take();
+            // Parked member still on the field ⇒ its replacement cancelled
+            // the leave; one activation covers every member it was active
+            // for (DCGO list-based WhenRemoveField — EX13-051).
+            let parked_survived = parked.is_some_and(|(player, card)| {
+                self.player(player)
+                    .battle_area
+                    .iter()
+                    .any(|p| !p.card_sources.is_empty() && p.top_card().handle() == card)
+            });
+            let cause = rest[0].cause;
+            let handles: Vec<PermanentHandle> = rest
+                .iter()
+                .filter(|r| !(parked_survived && r.covered_by_parked))
+                .filter_map(|r| {
+                    let (player, card) = (r.player, r.card);
+                    self.player(player)
+                        .battle_area
+                        .iter()
+                        .position(|p| {
+                            !p.card_sources.is_empty() && p.top_card().handle() == card
+                        })
+                        .map(|i| PermanentHandle {
+                            player,
+                            index: i as u8,
+                        })
+                })
+                .collect();
+            if !handles.is_empty() {
+                self.delete_permanents_batch(handles, cause);
+            }
         }
     }
 }

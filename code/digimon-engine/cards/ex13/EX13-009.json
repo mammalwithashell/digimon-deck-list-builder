@@ -1,0 +1,36 @@
+{
+  "index": 4333,
+  "norm_id": 0.21665,
+  "card_id": "EX13-009",
+  "card_index": 9,
+  "card_name_eng": "Huckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_009",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    4
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Huckmon] or [Sistermon] in its text and 1 such Tamer card or Option card among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your white Digimon are played, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

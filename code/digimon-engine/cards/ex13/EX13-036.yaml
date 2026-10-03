@@ -1,0 +1,210 @@
+# EX13-036 Kentaurosmon — Digimon, Lv.6, Yellow, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight / DATA SQUAD. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-036.md):
+#   [Security] [On Play] 1 of your opponent's Digimon gets -7000 DP for the
+#   turn. If there are 6 or fewer total cards in both players' security
+#   stacks, instead all of their Digimon get -7000 DP for the turn.
+#   [When Digivolving] By trashing the top security card of 1 player with the
+#   most security cards, you may activate 1 of this Digimon's [Security]
+#   effects.
+#   [When Digivolving] [End of Attack] [Counter] [Once Per Turn] You may place
+#   1 of each player's Digimon as the top security cards.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait
+#   Digivolve: Yellow Lv.5 / cost 3; Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: 3.
+#   Official Q&A: "instead" replaces the standard processing.
+#
+# DCGO C# reference: none at the submodule (no EX13_036.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - [Security][On Play]: one clause over `[on_security, on_play]`; the
+#     `total_security_count_lte: 6` branch REPLACES the single-target branch
+#     ("instead" — Q&A), so it is an if/else, the mass branch a `for_each`
+#     over the opponent's Digimon present at resolution.
+#   - [When Digivolving] cost: "1 player with the most security cards" — a
+#     player choice only when tied, so an explicit 3-way `select_effect_choice`
+#     (trash yours / trash theirs / don't) whose branches are each gated on
+#     that player having the most (BT25-043 idiom). "you may activate 1 of this
+#     Digimon's [Security] effects": Kentaurosmon prints exactly ONE [Security]
+#     effect (inherited effects never carry [Security]) and the engine's
+#     `refire_effect` only re-runs [On Play]/[When Digivolving] effects, so the
+#     activation re-runs that single [Security] body inline after the paid
+#     cost (the choice to trash IS the "you may").
+#   - [WD][EoA][Counter][OPT]: clause-level optional; both picks mandatory once
+#     accepted ("1 of each player's Digimon"), each placed face down on TOP of
+#     its owner's security stack.
+
+card: EX13-036
+name: Kentaurosmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight", "DATA SQUAD"]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Holy Beast"
+            - trait_has: "DATA SQUAD"
+    cost: 3
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all yellow w/[Holy Beast] trait ─────
+  - kind: assembly
+    materials:
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 5 }, { color_is: yellow }, { trait_has: "Holy Beast" } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 4 }, { color_is: yellow }, { trait_has: "Holy Beast" } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 3 }, { color_is: yellow }, { trait_has: "Holy Beast" } ] }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - when: [on_security, on_play]
+    summary: "[Security][On Play] 1 opponent Digimon gets -7000 DP for the turn; if both security stacks total 6 or fewer, instead all of their Digimon get -7000 DP for the turn"
+    process:
+      - if:
+          condition: { total_security_count_lte: 6 }
+          then:
+            - for_each:
+                over:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                bind_as: mass_target
+                body:
+                  - add_dp_modifier:
+                      target: mass_target
+                      value: -7000
+                      expiry: end_of_turn
+          else:
+            - select_opponent_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "1 of your opponent's Digimon gets -7000 DP for the turn"
+            - add_dp_modifier:
+                target: dp_target
+                value: -7000
+                expiry: end_of_turn
+
+  - when: when_digivolving
+    summary: "[When Digivolving] By trashing the top security card of 1 player with the most security cards, you may activate this Digimon's [Security] effect"
+    process:
+      - select_effect_choice:
+          bind_as: who
+          labels:
+            - "Trash your top security card"
+            - "Trash your opponent's top security card"
+            - "Don't trash"
+          prompt: "Trash the top security card of 1 player with the most security cards to activate this Digimon's [Security] effect?"
+      # Each paid branch re-runs the single printed [Security] body inline.
+      - if:
+          condition:
+            all_of:
+              - equals: [who, 0]
+              - security_count_gte: 1
+              - security_count_gte:
+                  formula:
+                    base: 0
+                    per: { card_count_in_zone: { of: opponent, zone: security } }
+                    delta: 1
+          then:
+            - trash_top_security: { of: you }
+            - if:
+                condition: { total_security_count_lte: 6 }
+                then:
+                  - for_each:
+                      over:
+                        of: opponent
+                        zone: [battle_area]
+                        kind: digimon
+                      bind_as: mass_target_own
+                      body:
+                        - add_dp_modifier:
+                            target: mass_target_own
+                            value: -7000
+                            expiry: end_of_turn
+                else:
+                  - select_opponent_permanent:
+                      bind_as: dp_target_own
+                      filter: { kind: digimon }
+                      prompt: "1 of your opponent's Digimon gets -7000 DP for the turn"
+                  - add_dp_modifier:
+                      target: dp_target_own
+                      value: -7000
+                      expiry: end_of_turn
+      - if:
+          condition:
+            all_of:
+              - equals: [who, 1]
+              - opponent_security_count_gte: 1
+              - opponent_security_count_gte:
+                  formula:
+                    base: 0
+                    per: { card_count_in_zone: { of: you, zone: security } }
+                    delta: 1
+          then:
+            - trash_top_security: { of: opponent }
+            - if:
+                condition: { total_security_count_lte: 6 }
+                then:
+                  - for_each:
+                      over:
+                        of: opponent
+                        zone: [battle_area]
+                        kind: digimon
+                      bind_as: mass_target_opp
+                      body:
+                        - add_dp_modifier:
+                            target: mass_target_opp
+                            value: -7000
+                            expiry: end_of_turn
+                else:
+                  - select_opponent_permanent:
+                      bind_as: dp_target_opp
+                      filter: { kind: digimon }
+                      prompt: "1 of your opponent's Digimon gets -7000 DP for the turn"
+                  - add_dp_modifier:
+                      target: dp_target_opp
+                      value: -7000
+                      expiry: end_of_turn
+
+  - when: [when_digivolving, end_of_attack, counter]
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - any_permanent: { of: you, zone: [battle_area], kind: digimon }
+        - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    summary: "[When Digivolving][End of Attack][Counter][OPT] You may place 1 of each player's Digimon as the top security cards"
+    process:
+      - select_own_permanent:
+          bind_as: own_digi
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to place as your top security card"
+      - select_opponent_permanent:
+          bind_as: opp_digi
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to place as their top security card"
+      - place_on_security:
+          source: { permanent: own_digi }
+          of: you
+          position: top
+          face_up: false
+      - place_on_security:
+          source: { permanent: opp_digi }
+          of: opponent
+          position: top
+          face_up: false

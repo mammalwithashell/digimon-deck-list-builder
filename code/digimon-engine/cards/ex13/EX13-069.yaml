@@ -1,0 +1,97 @@
+# EX13-069 Rina Shinomiya — Tamer, Blue, Cost 3. Traits: CS.
+#
+# Printed text (per-card JSON / official Bandai DB bundle; the corpus files the
+# [Security] line under inherited_effect_description_eng):
+#   [Start of Your Main Phase] If you have a Digimon with [Veemon] or
+#   [Veedramon] in its name, gain 1 memory.
+#   [Your Turn] When any of your Digimon unsuspend, by suspending this Tamer,
+#   <Draw 1>. After, 1 of your Digimon may digivolve into a Digimon card with
+#   [Veedramon] in its name in the hand with the cost reduced by 2.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: without suspending this card, the part after "After" can't be
+#   processed (the suspend is the activation cost of the whole effect).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_069.cs
+#   - StartOfYourMainPhaseClass (mandatory) gated on an own Digimon whose top
+#     card ContainsCardName("Veemon"|"Veedramon") → AddMemory(1).
+#   - OnUnTappedAnyone ActivateClass (no per-turn cap, optional): owner's turn,
+#     own Digimon unsuspended, CanActivateSuspendCostEffect(this) → suspend this
+#     Tamer; success → DrawClass(1); then, if an own Digimon AND a
+#     [Veedramon]-name Digimon card in hand exist, SelectPermanentEffect(own
+#     Digimon, canNoSelect) → DigivolveIntoHandOrTrashCard(payCost, reduce 2,
+#     isHand). BT24-084 idiom: optional clause + source_is_unsuspended +
+#     activation_cost suspend_self; the own-Digimon pick is filtered with
+#     has_digivolve_candidate and the hand pick with can_digivolve_onto (only
+#     legal digivolutions are surfaced — BT25-092 convention).
+#   - PlaySelfTamerSecurityEffect.
+
+card: EX13-069
+name: Rina Shinomiya
+kind: tamer
+color: [blue]
+cost: 3
+traits: [CS]
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - name_contains: Veemon
+          - name_contains: Veedramon
+    summary: "[Start of Your Main Phase] If you have a [Veemon]/[Veedramon]-name Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_unsuspend
+    active_when: { your_turn: true }
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - source_is_unsuspended: true
+    summary: "[Your Turn] When any of your Digimon unsuspend, by suspending this Tamer, Draw 1; then 1 of your Digimon may digivolve into a [Veedramon]-name hand card for 2 less"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - select_own_permanent:
+          bind_as: evo_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - name_contains: Veedramon
+          prompt: "1 of your Digimon may digivolve into a Digimon card with [Veedramon] in its name in the hand"
+      - if:
+          condition: { binding_present: evo_target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Veedramon
+                    - can_digivolve_onto: evo_target
+                prompt: "Digivolve into a Digimon card with [Veedramon] in its name with the cost reduced by 2"
+            - effect_initiated_digivolve:
+                target: evo_target
+                from_hand: evo
+                cost: { reduce: 2 }
+                ignore_requirements: false
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

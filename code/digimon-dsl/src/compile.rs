@@ -38,7 +38,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         return Err(errors);
     }
 
-    Ok(CompiledCard {
+    let mut card = CompiledCard {
         card: spec.card.clone(),
         name: spec.name.clone(),
         kind: compile_card_kind(spec.kind),
@@ -57,7 +57,12 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         use_requirement,
         alt_paths,
         effects,
-    })
+    };
+    // G-ENGINE-DP-DELETION-MAX-MODIFIER: flag the DP caps that belong to
+    // deletion effects so "add N to this Digimon's DP deletion effects'
+    // maximums" can raise exactly those.
+    crate::deletion_cap::mark_card(&mut card);
+    Ok(card)
 }
 
 // ── Enum mappings ───────────────────────────────────────────────────
@@ -182,6 +187,28 @@ fn compile_synth_identity(
         traits: s.traits.clone(),
         dp: s.dp,
     }
+}
+
+/// Lower a typed `add_modifier` payload. The validator guarantees exactly one
+/// key is set; this picks it (name > colors > dp > traits) so a spec that
+/// slipped past validation still compiles deterministically.
+fn compile_modifier_payload(
+    p: &crate::step::ModifierPayloadSpec,
+) -> Option<crate::compiled::CompiledModifierPayload> {
+    use crate::compiled::CompiledModifierPayload as P;
+    if let Some(name) = &p.name {
+        return Some(P::Name(name.clone()));
+    }
+    if let Some(colors) = &p.colors {
+        return Some(P::Colors(colors.iter().copied().map(compile_color).collect()));
+    }
+    if let Some(dp) = p.dp {
+        return Some(P::Dp(dp));
+    }
+    p.traits.as_ref().map(|traits| P::Traits {
+        add: traits.clone(),
+        replace: p.replace_traits,
+    })
 }
 
 fn compile_player_ref(p: crate::common::PlayerRef) -> CompiledPlayerRef {
@@ -363,6 +390,7 @@ fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
         S::CardNumber => CompiledDistinctBy::CardNumber,
         S::Level => CompiledDistinctBy::Level,
         S::Name => CompiledDistinctBy::Name,
+        S::Color => CompiledDistinctBy::Color,
     }
 }
 
@@ -665,6 +693,14 @@ fn compile_formula(
                 })
                 .collect(),
         ),
+        FormulaSpec::Compound(CompoundFormula::Multiply(v)) => CompiledFormula::Multiply(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    compile_formula(f, &format!("{prefix}.multiply[{i}]"), card_id, errors)
+                })
+                .collect(),
+        ),
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
             selector: compile_aggregate_selector(*a),
             scope: CompiledPlayerRef::You,
@@ -901,9 +937,8 @@ fn compile_predicate(
         card_id,
         errors,
     );
-    // Unknown fields in `extra` are silently dropped here — they are absorbed
-    // by serde's flatten+unknown-fields mechanism and flagged by the semantic
-    // validator (Task 12), not by the compiler.
+    // `p.extra` is always empty here: unknown predicate keys are rejected at
+    // deserialize time by `predicate::deny_unknown_predicate_keys`.
 
     CompiledPredicate {
         kind: p.kind.map(compile_card_kind),
@@ -947,6 +982,7 @@ fn compile_predicate(
         name_is: p.name_is.clone(),
         name_contains: p.name_contains.clone(),
         effect_text_contains: p.effect_text_contains.clone(),
+        printed_keyword: p.printed_keyword.clone(),
         in_text_contains: p.in_text_contains.clone(),
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
@@ -971,6 +1007,7 @@ fn compile_predicate(
         can_digivolve_onto: p.can_digivolve_onto.clone(),
         dp_eq,
         dp_lte,
+        dp_lte_deletion_cap: false,
         dp_gte,
         stack_size_lte,
         stack_size_gte,
@@ -1024,6 +1061,12 @@ fn compile_predicate(
         }),
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
+        can_change_orientation: p.can_change_orientation,
+        can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
+            targets: compile_attack_target_spec(c.targets),
+            without_suspending: c.without_suspending,
+            ignore_summoning_sickness: c.ignore_summoning_sickness,
+        }),
         has_keyword: p.has_keyword.clone(),
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
@@ -1225,6 +1268,7 @@ fn compile_predicate(
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
         digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
+        during_attack: p.during_attack,
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -1250,6 +1294,15 @@ fn compile_predicate(
         event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
         event_winner_owner: p.event_winner_owner.map(compile_player_ref),
         event_winner_trait_has: p.event_winner_trait_has.clone(),
+        event_winner_is_source: p.event_winner_is_source,
+        event_battle_deleter: p.event_battle_deleter.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_battle_deleter"),
+                card_id,
+                errors,
+            ))
+        }),
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
         event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
@@ -2087,6 +2140,7 @@ fn compile_replacement_process(
             from_hand: compile_binding_ref(&args.card),
             cost: CompiledCostDelta::Free,
             ignore_requirements: true,
+            ignore_level: false,
         });
         if r.choose.is_none() {
             errors.push(ValidationError {
@@ -2224,6 +2278,14 @@ fn compile_declarative(
                 effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
                     source_kind: imm.source_kind.map(compile_effect_source_kind),
                     source_controller: compile_effect_controller(imm.source_controller),
+                }),
+                modifier_from: a.modifier_from.map(compile_effect_controller),
+                dna_material_identity: a.dna_material_identity.as_ref().map(|d| {
+                    CompiledDnaMaterialIdentity {
+                        for_result: d.for_result.clone(),
+                        level: d.level,
+                        name: d.name.clone(),
+                    }
                 }),
                 summary,
                 summary_key,
@@ -2975,6 +3037,10 @@ fn compile_step(
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
+        S::TrashSelectedMaterials(a) => CompiledStep::TrashSelectedMaterials {
+            target: compile_binding_ref(&a.target),
+            cards: compile_binding_ref(&a.cards),
+        },
         S::PlaceSelectedCardUnderTamer(a) => CompiledStep::PlaceSelectedCardUnderTamer {
             card: compile_binding_ref(&a.card),
             tamer: compile_binding_ref(&a.tamer),
@@ -3003,12 +3069,17 @@ fn compile_step(
         S::TrashTopStackedSources(a) => CompiledStep::TrashTopStackedSources {
             target: compile_binding_ref(&a.target),
             count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
+            include_top_card: a.include_top_card,
         },
         S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),
         },
         S::ReturnSelectedSourcesToDeck(a) => CompiledStep::ReturnSelectedSourcesToDeck {
             source_refs: a.source_refs.clone(),
+            position: compile_stack_position(a.position),
+        },
+        S::ReturnAllSourcesToDeck(a) => CompiledStep::ReturnAllSourcesToDeck {
+            target: compile_binding_ref(&a.target),
             position: compile_stack_position(a.position),
         },
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
@@ -3219,6 +3290,17 @@ fn compile_step(
             },
             cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
             ignore_requirements: a.ignore_requirements,
+            ignore_level: {
+                if a.ignore_level && a.ignore_requirements {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.effect_initiated_digivolve"),
+                        message: "effect_initiated_digivolve: ignore_level and ignore_requirements are mutually exclusive (ignore_requirements already waives level)"
+                            .to_string(),
+                    });
+                }
+                a.ignore_level
+            },
         },
         S::AppFuse(a) => CompiledStep::AppFuse {
             from_zone: match a.from {
@@ -3413,6 +3495,7 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
             synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            payload: a.payload.as_ref().and_then(compile_modifier_payload),
             continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
@@ -3545,6 +3628,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             then: compile_then_tail(&a.then, prefix, card_id, errors),
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
             left_filter: compile_predicate(
@@ -3602,6 +3686,10 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional_zero: a.optional_zero,
+            min: a.min,
+            same_by: a.same_by.map(|s| match s {
+                crate::step::SameBy::Level => crate::compiled::CompiledSameBy::Level,
+            }),
         },
         S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
             target: a
@@ -3710,6 +3798,7 @@ fn compile_step(
                 .enumerate()
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
+            deletion_cap: false,
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: compile_formula(
@@ -3843,21 +3932,65 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
         },
-        S::SelectCountCappedMulti(a) => CompiledStep::SelectCountCappedMulti {
-            of: compile_player_ref(a.of),
-            zone: compile_zone(a.zone),
-            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
-            min: a.min,
-            clamp_to_available: a.clamp_to_available,
-            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
-            bind_as: a.bind_as.clone(),
-            prompt: a.prompt.clone(),
-            prompt_key: a.prompt_key.clone(),
-            optional_zero: a.optional_zero,
-            distinct_by: a.distinct_by.map(compile_distinct_by),
-        },
+        S::SelectCountCappedMulti(a) => {
+            // The runtime (`count_capped_candidate_count`) only scans hand,
+            // trash and the battle area; any other zone used to install
+            // NOTHING and silently skip the rest of the slice (BT18-102 had
+            // `zone: material`). Use `select_own_sources` / `select_materials`
+            // for digivolution cards.
+            if !matches!(
+                a.zone,
+                crate::predicate::Zone::Hand
+                    | crate::predicate::Zone::Trash
+                    | crate::predicate::Zone::BattleArea
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zone"),
+                    message: format!(
+                        "select_count_capped_multi supports zone hand, trash or battle_area \
+                         (got {:?}); use select_own_sources / select_materials for \
+                         digivolution cards",
+                        a.zone
+                    ),
+                });
+            }
+            CompiledStep::SelectCountCappedMulti {
+                of: compile_player_ref(a.of),
+                zone: compile_zone(a.zone),
+                max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
+                min: a.min,
+                clamp_to_available: a.clamp_to_available,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                bind_as: a.bind_as.clone(),
+                prompt: a.prompt.clone(),
+                prompt_key: a.prompt_key.clone(),
+                optional_zero: a.optional_zero,
+                distinct_by: a.distinct_by.map(compile_distinct_by),
+            }
+        }
         S::SelectEffectChoice(a) => CompiledStep::SelectEffectChoice {
             labels: a.labels.clone(),
+            legal_when: a.legal_when.as_ref().map(|conds| {
+                if conds.len() != a.labels.len() {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.legal_when"),
+                        message: format!(
+                            "legal_when has {} entries but labels has {}; they must be parallel",
+                            conds.len(),
+                            a.labels.len()
+                        ),
+                    });
+                }
+                conds
+                    .iter()
+                    .enumerate()
+                    .map(|(k, p)| {
+                        compile_predicate(p, &format!("{prefix}.legal_when[{k}]"), card_id, errors)
+                    })
+                    .collect()
+            }),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
@@ -4055,6 +4188,12 @@ fn compile_step(
         S::Battle(b) => CompiledStep::Battle {
             attacker: compile_binding_ref(&b.attacker),
             defender: compile_binding_ref(&b.defender),
+            compare: match b.compare {
+                crate::step::BattleCompareSpec::Dp => crate::compiled::CompiledBattleCompare::Dp,
+                crate::step::BattleCompareSpec::DigivolutionCards => {
+                    crate::compiled::CompiledBattleCompare::DigivolutionCards
+                }
+            },
         },
         S::MayAttackNow(a) => CompiledStep::MayAttackNow {
             attacker: compile_binding_ref(&a.attacker),
@@ -4351,6 +4490,7 @@ effects:
                         from_hand: CompiledBindingRef::Named(card),
                         cost: CompiledCostDelta::Free,
                         ignore_requirements: true,
+                        ignore_level: false,
                     },
                     CompiledStep::CancelReplacement
                 ] if chosen == "chosen" && target == "replacement_subject" && card == "chosen"

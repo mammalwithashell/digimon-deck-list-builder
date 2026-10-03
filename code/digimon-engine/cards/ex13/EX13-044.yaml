@@ -1,0 +1,229 @@
+# EX13-044 Breakdramon — Digimon, Lv.6, Green/Red, DP 12000, Cost 12.
+# Traits: Machine Dragon. Form: Mega. Attribute: Virus.
+#
+# Printed text (per-card JSON + card_overrides.json / official Bandai DB bundle):
+#   Digivolve: Green Lv.5 / 4; Red Lv.5 / 4.  [Digivolve] [Groundramon]/[Wingdramon]: Cost 3
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text
+#   <Piercing> <Blocker>
+#   [On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers.
+#   Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their
+#   turn ends.
+#   [All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your
+#   Digimon with [Dracomon] or [Examon] in its text may battle 1 of your
+#   opponent's Digimon.
+#   Inherited: (same [All Turns] [Once Per Turn] battle clause)
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_044.cs
+#   - Alt digivolve EqualsCardName("Groundramon") || ("Wingdramon"), cost 3.
+#   - Assembly: Lv.5 ×1, Lv.4 ×1, Lv.3 ×1, each own card with HasText(Dracomon)
+#     || HasText(Examon); reduceCost 5 (AD1-025 / BT24-081 idiom, trash + stack_under).
+#   - Shared [OP]/[WD] (optional: false):
+#       1. SelectPermanentEffect(Tap) over unsuspended Digimon/Tamers on EITHER
+#          side, max 2, canNoSelect + canEndNotMax ("up to 2"). Authored as two
+#          sequential optional `select_any_permanent` picks (the second offered
+#          only after the first; the first is already suspended so it drops out
+#          of the `is_unsuspended` filter). Same choice set as the multi-pick.
+#       2. SelectPermanentEffect over opponent Digimon/Tamers, max min(2, n),
+#          canNoSelect: false → GainCanNotUnsuspend(UntilOpponentTurnEnd).
+#          `select_count_capped_multi { clamp_to_available: true }` + per_selected
+#          CannotUnsuspend (EX12-063 / BT24-051 idioms).
+#   - OnTappedAnyone ×2 (face + inherited; separate hash → separate OPT):
+#     CanTriggerWhenPermanentSuspends(own Digimon); activate only when an own
+#     [Dracomon]/[Examon]-text Digimon and an opponent Digimon exist; pick battler
+#     then defender → IBattle; RemoveUse() when no battle happened. Modeled as an
+#     optional clause (declining at the gate never burns the OPT) whose accepted
+#     body always battles: mandatory battler + defender picks, both guaranteed to
+#     exist by the clause condition. `battle:` is a battle, not an attack
+#     (EX11-074 idiom).
+
+card: EX13-044
+name: Breakdramon
+kind: digimon
+level: 6
+color: [green, red]
+cost: 12
+dp: 12000
+traits: [Machine Dragon]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Groundramon
+        - name_is: Wingdramon
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_eq: 5
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - level_eq: 4
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - level_eq: 3
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend up to 2 Digimon/Tamers; then 2 opponent Digimon/Tamers can't unsuspend until their turn ends"
+    process:
+      - select_any_permanent:
+          bind_as: first_suspend
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - is_unsuspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may suspend up to 2 Digimon or Tamers (1st)"
+      - if:
+          condition: { binding_present: first_suspend }
+          then:
+            - suspend: { target: first_suspend }
+            - select_any_permanent:
+                bind_as: second_suspend
+                optional: true
+                continue_on_decline: true
+                filter:
+                  all_of:
+                    - is_unsuspended: true
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                prompt: "You may suspend up to 2 Digimon or Tamers (2nd)"
+            - if:
+                condition: { binding_present: second_suspend }
+                then:
+                  - suspend: { target: second_suspend }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: locked_targets
+          prompt: "Choose 2 of your opponent's Digimon or Tamers that can't unsuspend until their turn ends"
+          optional_zero: false
+      - per_selected:
+          selection: locked_targets
+          bind_as: locked_target
+          body:
+            - add_modifier:
+                target: locked_target
+                modifier: CannotUnsuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When your Digimon suspends, 1 of your [Dracomon]/[Examon]-text Digimon may battle 1 opponent Digimon"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - select_own_permanent:
+          bind_as: battler
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+          prompt: "Choose 1 of your Digimon with [Dracomon] or [Examon] in its text to battle"
+      - select_opponent_permanent:
+          bind_as: defender
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to battle"
+      - battle:
+          attacker: battler
+          defender: defender
+
+  - when: on_suspend
+    scope: inherited
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][All Turns][OPT] When your Digimon suspends, 1 of your [Dracomon]/[Examon]-text Digimon may battle 1 opponent Digimon"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - select_own_permanent:
+          bind_as: battler
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+          prompt: "Choose 1 of your Digimon with [Dracomon] or [Examon] in its text to battle"
+      - select_opponent_permanent:
+          bind_as: defender
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to battle"
+      - battle:
+          attacker: battler
+          defender: defender

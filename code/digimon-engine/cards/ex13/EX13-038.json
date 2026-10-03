@@ -1,0 +1,36 @@
+{
+  "index": 4362,
+  "norm_id": 0.2181,
+  "card_id": "EX13-038",
+  "card_index": 38,
+  "card_name_eng": "Salamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_038",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Mammal",
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Leopardmon] in its text and 1 Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[All Turns] All of your suspended Digimon get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

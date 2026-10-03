@@ -1,0 +1,35 @@
+{
+  "index": 4382,
+  "norm_id": 0.2191,
+  "card_id": "EX13-058",
+  "card_index": 58,
+  "card_name_eng": "Knightmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_058",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Warrior"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Attacking] [On Deletion] You may play or use 1 card with [Knightmon] in its text and a play or use cost of 4 or less from your hand without paying the cost.\r\n[Opponent's Turn] All of your Digimon with [Knightmon] in their texts gain ＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your Digimon with [Knightmon] in their texts are played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Knightmon] in text: Cost 3"
+}

@@ -19,6 +19,7 @@ pub mod clause;
 pub mod common;
 pub mod compile;
 pub mod compiled;
+pub mod deletion_cap;
 pub mod errors;
 pub mod formula;
 pub mod identity;

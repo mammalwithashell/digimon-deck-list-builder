@@ -199,6 +199,15 @@ pub enum StepSpec {
     TrashBottomSources(TrashBottomSourcesArgs),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    /// Trash each `select_materials`-bound card (a card-list binding) from
+    /// `target`'s digivolution cards. Card-list sibling of
+    /// `TrashSelectedSources` (which takes `select_own_sources` source refs);
+    /// pairs with `select_materials` so per-pick constraints (`uniqueness`,
+    /// `same_by`) apply. Each trash fires `OnDigivolutionCardTrashed` and
+    /// honors `ImmuneFromStackTrashing`. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-
+    /// SELECTION (EX13-016 Omnimon "by trashing 2 same-level cards from its
+    /// digivolution cards").
+    TrashSelectedMaterials(TrashSelectedMaterialsArgs),
     PlaceSelectedCardUnderTamer(PlaceSelectedCardUnderTamerArgs),
     PlaceSelectedSourcesUnderTamer(PlaceSelectedSourcesUnderTamerArgs),
     MoveMatchingSourcesUnderTamer(MoveMatchingSourcesUnderTamerArgs),
@@ -218,6 +227,9 @@ pub enum StepSpec {
     /// Alphamon's would-leave self-protection cost (return 1 [X Antibody]/[Royal
     /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
     ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
+    /// Return ALL of a permanent's digivolution cards to the deck
+    /// (EX13-076). See [`ReturnAllSourcesToDeckArgs`].
+    ReturnAllSourcesToDeck(ReturnAllSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
@@ -581,6 +593,7 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::TrashSelectedMaterials(v) => kv!(s, "trash_selected_materials", v),
             StepSpec::PlaceSelectedCardUnderTamer(v) => {
                 kv!(s, "place_selected_card_under_tamer", v)
             }
@@ -597,6 +610,7 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSourcesToDeck(v) => {
                 kv!(s, "return_selected_sources_to_deck", v)
             }
+            StepSpec::ReturnAllSourcesToDeck(v) => kv!(s, "return_all_sources_to_deck", v),
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
@@ -862,6 +876,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "trash_selected_materials" => StepSpec::TrashSelectedMaterials(map.next_value()?),
             "place_selected_card_under_tamer" => {
                 StepSpec::PlaceSelectedCardUnderTamer(map.next_value()?)
             }
@@ -878,6 +893,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_sources_to_deck" => {
                 StepSpec::ReturnSelectedSourcesToDeck(map.next_value()?)
             }
+            "return_all_sources_to_deck" => StepSpec::ReturnAllSourcesToDeck(map.next_value()?),
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
@@ -1102,6 +1118,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_bottom_sources",
                         "trash_all_sources",
                         "trash_selected_sources",
+                        "trash_selected_materials",
                         "return_selected_sources_to_hand",
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
@@ -1205,6 +1222,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 ));
             }
         };
+        // A step is a ONE-key map. A second key (e.g. a step arg mis-indented
+        // to sit beside the verb: `- select_hand: {..}\n  optional: true`) used
+        // to be silently ignored; make it a hard error.
+        if let Some(extra) = map.next_key::<String>()? {
+            return Err(de::Error::custom(format!(
+                "step `{key}` has an unexpected sibling key `{extra}` — a step must be a \
+                 one-key map `{{verb: args}}` (is an arg mis-indented?)"
+            )));
+        }
         Ok(step)
     }
 }
@@ -1641,6 +1667,43 @@ pub struct BindPermanentProperty {
 pub struct BattleArgs {
     pub attacker: BindingRef,
     pub defender: BindingRef,
+    /// What this battle compares. Default `dp` (the standard rule);
+    /// `digivolution_cards` = "Compare the number of digivolution cards
+    /// instead of DP in this battle" (EX13-076 Imperialdramon: Paladin Mode;
+    /// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) — the battle-scoped twin of
+    /// `<Iceclad>`.
+    #[serde(default, skip_serializing_if = "BattleCompareSpec::is_dp")]
+    pub compare: BattleCompareSpec,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleCompareSpec {
+    #[default]
+    Dp,
+    DigivolutionCards,
+}
+
+impl BattleCompareSpec {
+    pub fn is_dp(&self) -> bool {
+        matches!(self, BattleCompareSpec::Dp)
+    }
+}
+
+/// `return_all_sources_to_deck` — return EVERY digivolution card of
+/// `target` (all of its stack below the top card) to the owners' deck at
+/// `position` ("return all digivolution cards of 1 of their Digimon to the
+/// bottom of the deck" — EX13-076). A return, not a trash: fires no
+/// `OnDigivolutionCardTrashed`; bottom returns fire
+/// `OnDigivolutionCardReturnedToDeckBottom` per card.
+/// G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT (2026-10-01).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnAllSourcesToDeckArgs {
+    pub target: BindingRef,
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
@@ -2100,7 +2163,7 @@ pub struct PlaceOnSecurityArgs {
 /// struct variants are plain maps `{ card: … }` / `{ permanent: … }` that work
 /// on both the streaming and from_value paths; the self markers are strings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum SecuritySource {
     /// A bound card from hand or trash (`{ card: <binding> }`); the binding's
     /// own `zone` selects hand vs trash, exactly as the former hand-only
@@ -2266,6 +2329,25 @@ pub struct TrashSelectedSourcesArgs {
     pub source_refs: String,
 }
 
+/// Args for `trash_selected_materials` — trash the `cards` card-list binding
+/// (from `select_materials`) out of `target`'s digivolution cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashSelectedMaterialsArgs {
+    pub target: BindingRef,
+    pub cards: BindingRef,
+}
+
+/// Pick-set "all the same" constraint for `select_materials` (`same_by:`).
+/// `level`: every pick shares one level, and a first pick is only offered
+/// from a level that holds at least `min` candidates (so the selection can
+/// always be completed). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SameBy {
+    Level,
+}
+
 /// Args for `return_selected_sources_to_deck` — return each
 /// `select_own_sources`-bound digivolution source card to its owner's deck at
 /// `position` (top or bottom). Sibling of `TrashSelectedSourcesArgs` with a
@@ -2313,6 +2395,12 @@ pub struct MoveMatchingSourcesUnderTamerArgs {
 pub struct TrashTopStackedSourcesArgs {
     pub target: BindingRef,
     pub count: crate::formula::FormulaSpec,
+    /// `true` for printed "trash the top N **stacked cards**": each pass
+    /// trashes the visible top card itself (DCGO `ITrashStack`), down to one
+    /// remaining card. `false` (default) for "the top N **digivolution
+    /// cards**": the top card stays. G-TOP-STACKED-CARD-TRASH.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_top_card: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2524,7 +2612,7 @@ pub struct UseOptionBoundArgs {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum CostDelta {
     /// Cost REDUCTION subtracted from the printed play cost (clamped at 0).
     /// `reduce` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare
@@ -2639,6 +2727,15 @@ pub struct EffectDigivolveArgs {
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
+    /// "digivolve … ignoring level" (DCGO `IgnoreRequirement.Level`): only
+    /// the base's LEVEL requirement is waived — colour-matching printed
+    /// circles of any level and level-stripped alt-paths still gate the
+    /// digivolve, and the cheapest such route's printed cost is the base
+    /// that `cost` adjusts (`{ reduce: 1 }` = "with the cost reduced by 1").
+    /// Mutually exclusive with `ignore_requirements`.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_level: bool,
 }
 
 /// Source zone for the result (fusing-in) card in an `app_fuse` step.
@@ -2760,6 +2857,19 @@ pub struct AddModifierArgs {
     /// is live; lowers to `ModifierPayload::SynthIdentity`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synth_identity: Option<SynthIdentitySpec>,
+    /// Typed payload for the identity/metadata modifiers whose effect is not a
+    /// scalar (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD, the "Track C modifier
+    /// payload YAML shape" item). Exactly one key is set, and it must match the
+    /// modifier (validated):
+    ///   * `name:`   → `ChangeBaseCardName` / `CanOnlyDigivolveInto`
+    ///   * `colors:` → `ChangeBaseCardColor` (replace) / `AddColor` (gain)
+    ///   * `dp:`     → `ChangeOriginDP` / `ChangeCardDP` (base-DP set)
+    ///   * `traits:` (+ `replace_traits`) → `ChangeTraits`
+    /// e.g. EX13-031 KingSukamon "change the base name, color and DP of 1 of
+    /// your opponent's Digimon to [Sukamon], white and 3000 until their turn
+    /// ends" is three `add_modifier` steps on one bound target.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub payload: Option<ModifierPayloadSpec>,
     /// CONTINUOUS mass modifier: instead of a one-time scan over the CURRENT
     /// matches, install a source-independent floating effect re-applied to the
     /// live candidate set every tick — so Digimon that ENTER during the window
@@ -2789,6 +2899,33 @@ pub struct SynthIdentitySpec {
     pub colors: Vec<crate::spec::ColorSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traits: Vec<String>,
+}
+
+/// Typed `add_modifier` payload (see `AddModifierArgs::payload`). A struct of
+/// optional keys rather than a tagged enum so the YAML stays flat
+/// (`payload: { name: Sukamon }`); the validator enforces "exactly one key,
+/// compatible with the modifier".
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ModifierPayloadSpec {
+    /// Card name the target is treated as having (replaces its base name).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Colors: the new base colors (`ChangeBaseCardColor`) or the colors
+    /// gained (`AddColor`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub colors: Option<Vec<crate::spec::ColorSpec>>,
+    /// New base DP. Other DP modifiers still apply on top (DCGO
+    /// `ChangeBaseDPClass`: `Permanent.BaseDP` is replaced, then `DP` adds the
+    /// +/- effects to it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp: Option<i32>,
+    /// Traits added (`ChangeTraits`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub traits: Option<Vec<String>>,
+    /// With `traits:` — replace the printed traits instead of adding to them.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub replace_traits: bool,
 }
 
 fn synth_identity_default_kind() -> crate::spec::CardKind {
@@ -3154,6 +3291,17 @@ pub struct SelectMaterialsArgs {
     /// distinct card name" — the printed-text "1 of each different name".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uniqueness: Option<crate::alt_path::DistinctBy>,
+    /// Minimum picks before PASS commits (default 0 ⇒ the historical
+    /// "at least 1 unless `optional_zero`"). With `min > 0` the step is a
+    /// required cost: fewer than `min` eligible cards ⇒ nothing is picked
+    /// and the rest of the body does not run. G-ENGINE-SAME-LEVEL-SOURCE-
+    /// PAIR-SELECTION.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub min: u8,
+    /// "All picks share X" constraint (`level`). Mutually exclusive with
+    /// `uniqueness`. G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub same_by: Option<SameBy>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
@@ -3440,7 +3588,7 @@ pub struct SelectCountCappedArgs {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum CountBound {
     Literal(u8),
     Formula {
@@ -3452,6 +3600,16 @@ pub enum CountBound {
 #[serde(deny_unknown_fields)]
 pub struct SelectEffectChoiceArgs {
     pub labels: Vec<String>,
+    /// Per-branch legality, parallel to `labels` (same length). Branch `i` is
+    /// offered only when `legal_when[i]` holds at install time (`{}` = always
+    /// legal); illegal branches are masked out of the prompt. When exactly ONE
+    /// branch is legal the choice is not a choice: it is bound and its tail
+    /// runs without a prompt (DCGO `SetBool(onlyLegalBranch)` — e.g. BT13-112
+    /// Omnimon). When NO branch is legal the step binds nothing and the tail
+    /// continues (branch `if`s on the unbound index all fail). Absent = every
+    /// label legal. G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legal_when: Option<Vec<PredicateSpec>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default)]
@@ -3629,7 +3787,7 @@ pub enum LinkCardsTo {
 /// N }`, which work for both the streaming YAML deserializer and the
 /// `serde_yml::from_value(Value::Mapping)` path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum LinkCardsCount {
     Exactly { exactly: u8 },
     UpTo { up_to: u8 },

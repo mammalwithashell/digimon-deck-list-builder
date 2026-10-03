@@ -8,7 +8,7 @@ dp: 14000
 traits: [Bird Dragon, Vortex Warriors, LIBERATOR]
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6, color_includes: green }
+    from: { level_eq: 6, color_is: green }
     cost: 4
 
 # Readiness slice only.

@@ -1,0 +1,36 @@
+{
+  "index": 4336,
+  "norm_id": 0.2168,
+  "card_id": "EX13-012",
+  "card_index": 12,
+  "card_name_eng": "SaviorHuckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_012",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    4
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1 white card with [Huckmon] in its text from your hand with the cost reduced by 3.",
+  "inherited_effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Huckmon] in text: Cost 3"
+}

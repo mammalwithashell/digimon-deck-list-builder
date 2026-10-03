@@ -133,6 +133,7 @@ effects:
             from_hand: CompiledBindingRef::Named(source),
             cost: CompiledCostDelta::Free,
             ignore_requirements: true,
+            ignore_level: false,
         } if target == "target" && source == "picked"
     ));
 }
@@ -160,6 +161,7 @@ fn group4_zone_movement_effect_digivolve_step_uses_card_binding_live_source() {
         from_hand: CompiledBindingRef::Named("picked".to_string()),
         cost: CompiledCostDelta::Free,
         ignore_requirements: false,
+        ignore_level: false,
     };
 
     {

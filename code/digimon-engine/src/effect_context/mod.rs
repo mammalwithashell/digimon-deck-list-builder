@@ -152,9 +152,24 @@ pub struct EffectReadContext<'a> {
     /// predicate to gate effects scoped to "when THIS Digimon would
     /// digivolve" (printed semantics — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
     pub cost_target_permanents: Vec<PermanentHandle>,
+    /// The DNA (or Blast-DNA) RESULT card whose material requirements are
+    /// currently being evaluated. When set, permanent-subject `level_eq` /
+    /// `name_is` / `name_contains` / `name_in` leaves also accept the
+    /// material's result-scoped DNA identity extras
+    /// (`Game::dna_material_extras`) — "This Digimon is also treated as Lv.6
+    /// [Slayerdramon] for [Examon]'s DNA digivolution".
+    /// `None` everywhere else. G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    pub dna_result_card: Option<CardHandle>,
 }
 
 impl<'a> EffectReadContext<'a> {
+    /// Scope this read context to evaluating DNA material requirements for
+    /// `result` (see `dna_result_card`). G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    pub fn with_dna_result(mut self, result: CardHandle) -> Self {
+        self.dna_result_card = Some(result);
+        self
+    }
+
     pub fn new(
         game: &'a Game,
         source_card: CardHandle,
@@ -185,6 +200,7 @@ impl<'a> EffectReadContext<'a> {
             cost_target_from_hand: false,
             cost_is_digivolve: false,
             cost_target_permanents: Vec::new(),
+            dna_result_card: None,
         }
     }
 
@@ -210,6 +226,7 @@ impl<'a> EffectReadContext<'a> {
             cost_target_from_hand,
             cost_is_digivolve: false,
             cost_target_permanents: Vec::new(),
+            dna_result_card: None,
         }
     }
 
@@ -1600,6 +1617,7 @@ impl<'a> EffectContext<'a> {
             cost_target_from_hand: self.cost_target_from_hand,
             cost_is_digivolve: self.cost_is_digivolve,
             cost_target_permanents: Vec::new(),
+            dna_result_card: None,
         }
     }
 
@@ -1698,7 +1716,9 @@ pub(crate) fn dna_pair_cost_for_hand_card(
         .player(partner.player)
         .battle_area
         .get(partner.index as usize)?;
-    crate::dna_digivolve::matching_dna_cost(meta, anchor_perm, partner_perm, &game.card_data)
+    let _ = (anchor_perm, partner_perm);
+    // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: honor result-scoped extras.
+    game.matching_dna_cost_for_handles(hand_card, meta, anchor, partner)
         .map(|c| c.memory_cost as i32)
 }
 

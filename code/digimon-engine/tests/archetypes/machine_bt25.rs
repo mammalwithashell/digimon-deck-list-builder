@@ -126,6 +126,7 @@ fn kokuwamon_free_digivolve_into_gatomon_fires_when_digivolving_debuff() {
 
     let memory_before = runner.memory();
     let hand_before = runner.hand_size(0);
+    let deck_before = runner.deck_size(0);
     let opp_dp_before = runner.effective_dp(opp);
     assert_eq!(opp_dp_before, Some(9000), "opponent starts at 9000 DP");
 
@@ -198,11 +199,27 @@ fn kokuwamon_free_digivolve_into_gatomon_fires_when_digivolving_debuff() {
         memory_before,
         "the free-digivolve must not pay memory (printed 'without paying the cost')"
     );
-    // 3. Gatomon left hand to become the new top card.
+    // 3. Gatomon left hand to become the new top card, and the digivolution
+    //    procedure drew 1 (§8-1-3-3 — the draw belongs to the PROCEDURE, so an
+    //    effect-initiated digivolve draws like the main-phase action; DCGO
+    //    `PlayCardClass.PlayCard` draws on every `isEvolution`). Net hand
+    //    −1 + 1, deck −1, and the hand card is now the drawn DECK-PAD.
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != GATOMON),
+        "Gatomon left hand to become Kokuwamon's evolution"
+    );
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 1,
-        "Gatomon left hand to become Kokuwamon's evolution"
+        hand_before,
+        "hand: −1 (Gatomon digivolved) +1 (§8-1-3-3 digivolve draw)"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "the effect-initiated digivolve draws exactly 1 card (§8-1-3-3)"
     );
     // 4. The payoff: the opponent Digimon is −3000 DP for the turn (9000 → 6000).
     assert_eq!(

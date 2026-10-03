@@ -1,0 +1,36 @@
+{
+  "index": 4349,
+  "norm_id": 0.21745,
+  "card_id": "EX13-025",
+  "card_index": 25,
+  "card_name_eng": "Candlemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_025",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Flame",
+    "Witchelny"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have 3 or more security cards, trash your top or bottom security card, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory. Then, if you have 2 or fewer security cards, you may place 1 card with [Witchelny] in its text from your hand as the bottom security card.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with [Dynasmon] or [Witchelny] in its text would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -73,6 +73,7 @@ fn selected_union_zone_card_can_feed_effect_digivolve_from_card_handle() {
             from_hand: CompiledBindingRef::Binding("evo".to_string()),
             cost: CompiledCostDelta::Free,
             ignore_requirements: false,
+            ignore_level: false,
         },
     ];
 

@@ -111,6 +111,17 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     crate::card_data::parse_printed_keywords("", &card_data.inherited_text, "")
 }
 
+/// One stashed member of a parked multi-permanent deletion batch
+/// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingDeletionBatchRest {
+    pub(crate) player: PlayerId,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) cause: crate::replacement::ReplacementCause,
+    /// The parked optional replacement was also active for this member.
+    pub(crate) covered_by_parked: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
@@ -126,6 +137,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     /// cost. No turn-keyed scan resumes — this kind only carries the deferred
     /// trash of the activated Option.
     MainPhaseActivation,
+    /// The turn-start unsuspend-phase `OnUnsuspend` batch
+    /// (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND) parked on an observer's
+    /// selection. No Delay scan resumes — once the batch's queue settles the
+    /// turn machine continues into the draw phase
+    /// (`continue_begin_turn_after_unsuspend_phase`).
+    UnsuspendPhase,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -877,13 +894,29 @@ pub struct Game {
     /// `effect_queue::resolve_generic_selection` after the user's callback
     /// runs. `None` outside a parked-replacement scope.
     ///
-    /// **Single-outstanding invariant:** at most one slot occupied at a time;
-    /// the dispatcher `debug_assert!`s on duplicate install.
+    /// **Stack (G-NESTED-PARKED-REPLACEMENT, 2026-10-01):** a replacement
+    /// process can itself cause an event whose replacement window parks
+    /// (e.g. `<Guard>` deletes its carrier, whose own `<Decode>` window then
+    /// prompts). Parked replacements are pushed and drained LIFO — the inner
+    /// event commits before the outer replacement's outcome is committed.
+    /// Plain data (clone-safe for `Game: Clone`).
+    ///
+    /// Outcome writers (`EffectContext::cancel_leave` etc.) address only the
+    /// TOP entry and only when it belongs to the currently-running scope —
+    /// see `parked_replacement_floor`.
     ///
     /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
     /// independent concerns. Phase C §4.1.
     #[doc(hidden)]
-    pub(crate) parked_replacement: Option<crate::replacement::ParkedReplacement>,
+    pub(crate) parked_replacement: Vec<crate::replacement::ParkedReplacement>,
+
+    /// Stack depth of `parked_replacement` at the entry of the replacement
+    /// process currently running synchronously (0 outside any process). A
+    /// process running while an OUTER replacement is parked must not write
+    /// its outcome into that outer entry: entries at index `< floor` belong
+    /// to enclosing events. Saved/restored by `replacement::run_effect_inner`.
+    #[doc(hidden)]
+    pub(crate) parked_replacement_floor: usize,
 
     /// Temporary bridge used by DSL replacement-process outcome steps before
     /// the dispatcher has installed a `ParkedReplacement`. The replacement
@@ -926,6 +959,28 @@ pub struct Game {
     /// requirement contract this state implements.
     #[doc(hidden)]
     pub(crate) active_deletion_batch: Option<crate::deletion_batch::DeletionBatch>,
+
+    /// The REST of a multi-permanent deletion batch whose replacement stage
+    /// parked on one member's optional replacement prompt (e.g. the attacker's
+    /// `<Evade>` in a tie — kill list `[defender, attacker]`). The parked
+    /// member is committed by the replacement accept/decline callback; the
+    /// other members (identified by their top card, since indices can shift)
+    /// are deleted with the same cause once the selection settles
+    /// (`resume_pending_deletion`). Before this, the batch was dropped on the
+    /// park and the other members silently survived
+    /// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST, found 2026-10-01 by EX13-076).
+    #[doc(hidden)]
+    pub(crate) pending_deletion_batch_rest: Vec<PendingDeletionBatchRest>,
+    /// The parked member of that batch (owner, top card) — still on the
+    /// battle area at resume time ⇒ its replacement cancelled the leave, so
+    /// rest members covered by the SAME replacement activation don't leave
+    /// either (one activation covers the whole simultaneous batch, as in
+    /// DCGO's list-based `WhenRemoveField`).
+    #[doc(hidden)]
+    pub(crate) pending_deletion_batch_parked: Option<(
+        crate::enums::PlayerId,
+        crate::card_source::CardHandle,
+    )>,
 
     /// Phase 2d Task 7: when a control-flow or iteration step's body parks
     /// a selection, the steps that follow the control-flow step in the
@@ -1058,6 +1113,15 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// 6-1-4-1: memory crossed to the opponent's side while an effect was
+    /// still resolving (inside a drain or a deferred-drain scope), so
+    /// `check_turn_end` held the turn end back. The outermost
+    /// `drain_effect_queue` exit re-runs `check_turn_end` once that
+    /// processing has finished. G-ENGINE-TURN-END-MID-EFFECT.
+    pub(crate) turn_end_check_deferred: bool,
+    /// Depth of `resolve_generic_selection` calls in progress; while > 0,
+    /// `check_turn_end` defers (G-ENGINE-TURN-END-MID-EFFECT).
+    pub(crate) selection_resolution_depth: u16,
     /// G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): the next play commit enters
     /// the battle area suspended. Set by the `play_from_trash_free`
     /// `suspended: true` DSL arm; consumed (and cleared) at the
@@ -1826,7 +1890,7 @@ impl Game {
         &mut self,
         parked: crate::replacement::ParkedReplacement,
     ) {
-        self.parked_replacement = Some(parked);
+        self.parked_replacement.push(parked);
     }
 
     /// Test-only getter for the parked-replacement outcome. The
@@ -1837,7 +1901,14 @@ impl Game {
     pub fn parked_replacement_outcome_for_test(
         &self,
     ) -> Option<crate::replacement::ReplacementOutcome> {
-        self.parked_replacement.as_ref().map(|p| p.outcome)
+        self.parked_replacement.last().map(|p| p.outcome)
+    }
+
+    /// Test-only: number of parked replacements currently stacked
+    /// (G-NESTED-PARKED-REPLACEMENT).
+    #[doc(hidden)]
+    pub fn parked_replacement_depth_for_test(&self) -> usize {
+        self.parked_replacement.len()
     }
 
     /// Get the next player clockwise from the given player.
@@ -2945,6 +3016,68 @@ impl Game {
     /// the Progress carrier specifically while it is the attacker.
     pub fn current_attacker(&self) -> Option<PermanentHandle> {
         self.pending_attack.as_ref().map(|p| p.attacker)
+    }
+
+    /// "Add N to this Digimon's DP deletion effects' maximums" total for the
+    /// battle-area permanent `host`: the sum of every self-scoped
+    /// `Effect::dp_delete_effect_max_delta` in `host`'s card stack whose
+    /// scope matches the card's position (inherited ⇔ under the top card) and
+    /// whose condition (`active_when`) holds — read live, so a card that just
+    /// became a digivolution source counts immediately — plus any
+    /// materialized `ModifierType::ChangeDPDeleteEffectMaxDP` entries on
+    /// `host` installed by other routes (filtered-target auras, steps).
+    ///
+    /// Added to the DP cap of every deletion effect whose source permanent is
+    /// `host` (DCGO `Player.MaxDP_DeleteEffect` →
+    /// `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`). Non-battle-area handles
+    /// (breeding sentinel, stale indices) yield 0.
+    /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    pub fn dp_delete_effect_max_bonus(&self, host: PermanentHandle) -> i32 {
+        use crate::effect_context::EffectReadContext;
+
+        let materialized = self.modifiers.dp_delete_effect_max_delta(host);
+        let Some(perm) = self
+            .players
+            .get(host.player as usize)
+            .and_then(|p| p.battle_area.get(host.index as usize))
+        else {
+            return materialized;
+        };
+        let stack_size = perm.card_sources.len();
+        let sources: Vec<(String, crate::card_source::CardHandle, bool)> = perm
+            .card_sources
+            .iter()
+            .enumerate()
+            .map(|(i, src)| {
+                (
+                    src.card_id(&self.card_data).to_string(),
+                    src.handle(),
+                    i + 1 < stack_size,
+                )
+            })
+            .collect();
+        let mut total = materialized;
+        for (card_id, handle, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, handle) else {
+                continue;
+            };
+            for effect in effects.iter() {
+                let Some(delta) = effect.dp_delete_effect_max_delta else {
+                    continue;
+                };
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                let ctx = EffectReadContext::new(self, handle, Some(host), host.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                total += delta;
+            }
+        }
+        total
     }
 
     fn live_declarative_formula_sum(

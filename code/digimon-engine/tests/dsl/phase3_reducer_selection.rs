@@ -68,6 +68,7 @@ fn select_any_permanent_can_bind_either_players_field() {
             prompt: "Pick anything".to_string(),
             prompt_key: None,
             optional: false,
+            continue_on_decline: false,
         },
         CompiledStep::Suspend {
             target: CompiledBindingRef::Named("target".to_string()),

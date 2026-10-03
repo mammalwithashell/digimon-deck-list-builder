@@ -1,0 +1,65 @@
+# EX13-054 Nanimon — Digimon, Lv.4, Black, DP 3000, Cost 3.
+# Traits: Invader + (Rule) Trait: Has [Mutant] Type. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-054.md):
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [On Deletion] 1 of your opponent's Digimon can't attack players
+#   until their turn ends. (Rule) Trait: Has [Mutant] Type.
+#   Inherited: [All Turns] This Digimon gets +1000 DP.
+#   Digivolve: Black Lv.3 / 2; Yellow Lv.3 / 2.
+#
+# DCGO C# reference: none (no EX13_054.cs). Printed text governs.
+#
+# DSL notes:
+#   - [Security]: BT21-043 / BT21-015 `play_from_security` idiom (DCGO
+#     PlaySelfDigimonAfterBattleSecurityEffect — played after the battle).
+#   - [On Play][On Deletion]: one shared clause, mandatory pick (no "may");
+#     `CannotAttackPlayer` (BT13-075 / BT9-103 idiom) — the target may still
+#     attack Digimon. "until their turn ends" → `end_of_opponents_turn`
+#     (removed when a turn of the non-installing player ends, so an
+#     [On Deletion] during the opponent's turn ends with THAT turn).
+#   - The Rule-granted [Mutant] trait is authored in `traits`.
+
+card: EX13-054
+name: Nanimon
+kind: digimon
+level: 4
+color: [black]
+cost: 3
+dp: 3000
+traits: [Invader, Mutant]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+
+effects:
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  - when: [on_play, on_deletion]
+    summary: "[On Play][On Deletion] 1 of your opponent's Digimon can't attack players until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon can't attack players until their turn ends"
+      - add_modifier:
+          target: target
+          modifier: CannotAttackPlayer
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "Inherited [All Turns] This Digimon gets +1000 DP"

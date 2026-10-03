@@ -1,0 +1,91 @@
+# EX13-028 Sukamon — Digimon, Lv.4, Yellow, DP 2000, Cost 3.
+# Traits: Abnormal. Form: Champion. Attribute: Virus.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Yellow Lv.3 / cost 2; Black Lv.3 / cost 2
+#   <Blocker>
+#   [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost
+#   3 or lower Digimon card with [Chuumon] or [Sukamon] in its name among them
+#   without paying the cost. Trash the rest.
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon would leave
+#   the battle area other than by your effects, by deleting 1 other Digimon
+#   with [Sukamon] in its name, it doesn't leave.
+#
+# DCGO: no EX13_028.cs at b9a0638cd.
+#
+# [On Deletion]: EX13-059 BigMamemon idiom — the reveal and "trash the rest"
+# are mandatory; only the play is a may (bucket min 0 / max 1).
+# Inherited: identical to EX13-027 Chuumon (self-scoped leave-prevention,
+# cost-gated on another [Sukamon]-named Digimon existing).
+
+card: EX13-028
+name: Sukamon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Abnormal]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: on_deletion
+    summary: "[On Deletion] Reveal top 3; you may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 3
+                  - any_of:
+                      - name_contains: Chuumon
+                      - name_contains: Sukamon
+          prompt: "You may play 1 play cost 3 or lower Digimon card with [Chuumon] or [Sukamon] in its name without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "Inherited [All Turns][OPT] By deleting 1 other [Sukamon]-named Digimon, this Digimon doesn't leave (not by your effects)"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 of your other Digimon with [Sukamon] in its name"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

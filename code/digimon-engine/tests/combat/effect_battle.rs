@@ -141,3 +141,144 @@ fn direct_battle_rejects_same_controller_targets() {
     assert_eq!(r.battle_area_size(0), 2, "same-controller battle rejected");
     assert_eq!(r.trash_size(0), 0, "no same-controller permanent deleted");
 }
+
+// ─── G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT (2026-10-01) ──────────────────────
+// `battle_digimon_with(.., BattleComparison::DigivolutionCards)` compares the
+// two Digimon's digivolution-card counts instead of DP for THIS battle
+// (EX13-076 Imperialdramon: Paladin Mode). DCGO `IBattle.CompareStats`:
+// `HasIceclad || CompareDigivolutionCards` → source-count difference.
+
+use digimon_engine::combat::BattleComparison;
+
+#[test]
+fn source_count_battle_more_sources_wins_despite_lower_dp() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 3000))
+        .add_card(fighter("DEF", 15000))
+        .add_card(fighter("SRC", 1000))
+        .start();
+    let atk = r.place_stack(0, &["SRC", "SRC", "ATK"]);
+    let def = r.place_stack(1, &["SRC", "DEF"]);
+
+    let result = r.battle_digimon_with(atk, def, BattleComparison::DigivolutionCards);
+
+    assert_eq!(result, AttackResult::AttackerWins);
+    assert_eq!(r.battle_area_size(1), 0, "fewer digivolution cards loses");
+    assert_eq!(r.battle_area_size(0), 1, "more digivolution cards survives");
+}
+
+#[test]
+fn source_count_battle_fewer_sources_loses_despite_higher_dp() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 15000))
+        .add_card(fighter("DEF", 3000))
+        .add_card(fighter("SRC", 1000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_stack(1, &["SRC", "DEF"]);
+
+    let result = r.battle_digimon_with(atk, def, BattleComparison::DigivolutionCards);
+
+    assert_eq!(result, AttackResult::DefenderWins);
+    assert_eq!(r.battle_area_size(0), 0, "0 digivolution cards loses to 1");
+    assert_eq!(r.battle_area_size(1), 1);
+}
+
+#[test]
+fn source_count_battle_equal_counts_delete_both() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 15000))
+        .add_card(fighter("DEF", 3000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+
+    let result = r.battle_digimon_with(atk, def, BattleComparison::DigivolutionCards);
+
+    assert_eq!(result, AttackResult::MutualDestruction);
+    assert_eq!(r.battle_area_size(0), 0, "tie (0 vs 0) deletes both");
+    assert_eq!(r.battle_area_size(1), 0, "tie (0 vs 0) deletes both");
+}
+
+#[test]
+fn dp_comparison_is_unchanged_by_default() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 3000))
+        .add_card(fighter("DEF", 15000))
+        .add_card(fighter("SRC", 1000))
+        .start();
+    let atk = r.place_stack(0, &["SRC", "SRC", "ATK"]);
+    let def = r.place_on_field(1, "DEF", Some(0));
+
+    let result = r.battle_digimon_with(atk, def, BattleComparison::Dp);
+
+    assert_eq!(result, AttackResult::DefenderWins, "DP battle: 3000 < 15000");
+    assert_eq!(r.battle_area_size(0), 0);
+}
+
+#[test]
+fn source_count_battle_still_fires_end_of_battle() {
+    let counts = Arc::new(Mutex::new(TimingCounts::default()));
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 3000))
+        .add_card(fighter("DEF", 15000))
+        .add_card(fighter("SRC", 1000))
+        .add_card(fighter("WITNESS", 5000))
+        .start();
+    r.register_effect("WITNESS", Arc::new(TimingWitness(counts.clone())));
+    let atk = r.place_stack(0, &["SRC", "ATK"]);
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+
+    let result = r.battle_digimon_with(atk, def, BattleComparison::DigivolutionCards);
+
+    assert_eq!(result, AttackResult::AttackerWins);
+    assert_eq!(counts.lock().unwrap().end_of_battle, 1);
+}
+
+#[test]
+fn tie_battle_with_evade_declined_deletes_both() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 5000))
+        .add_card(fighter("DEF", 5000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Evade, Expiry::Permanent, 0);
+
+    let _ = r.battle_digimon_with(atk, def, BattleComparison::DigivolutionCards);
+    let v = r.pending_selection_view().expect("<Evade> prompt");
+    r.execute_action(v.selecting_player, digimon_engine::action::space::PASS)
+        .expect("decline");
+    let _ = r.auto_resolve();
+    assert_eq!(r.battle_area_size(0), 0, "attacker deleted");
+    assert_eq!(r.battle_area_size(1), 0, "defender deleted");
+}
+
+#[test]
+fn tie_battle_with_evade_accepted_still_deletes_the_other() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 5000))
+        .add_card(fighter("DEF", 5000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Evade, Expiry::Permanent, 0);
+
+    let _ = r.battle_digimon(atk, def);
+    let v = r.pending_selection_view().expect("<Evade> prompt");
+    let accept = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .unwrap();
+    r.execute_action(v.selecting_player, accept).expect("accept");
+    let _ = r.auto_resolve();
+    assert_eq!(r.battle_area_size(0), 1, "attacker evaded");
+    assert_eq!(r.battle_area_size(1), 0, "defender still deleted by the tie");
+}

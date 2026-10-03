@@ -1,0 +1,86 @@
+# EX13-073 Tai Kamiya & Matt Ishida — Tamer, Black/Purple, play cost 4.
+# Traits: ADVENTURE.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-073.md):
+#   [Start of Your Main Phase] If you have an [ADVENTURE] trait Digimon, gain
+#   1 memory. [Your Turn] When your [ADVENTURE] trait Digimon or Tamers are
+#   played, by suspending this Tamer, <Draw 1> and trash 1 card in your hand.
+#   [All Turns] All of your level 5 or higher [ADVENTURE] trait Digimon gain
+#   <Rush> and <Blocker>.
+#   Security: [Security] Play this card without paying the cost.
+#   Official Q&A: "Yes, it triggers." (its own play triggers the clause).
+#
+# DCGO C# reference: none at b9a0638cd (no EX13_073.cs). Printed text governs.
+#
+# DSL: BT21-084 idioms — `start_of_your_main_phase` gated `any_permanent`;
+# optional ally-played trigger with `source_is_unsuspended` +
+# `activation_cost: { suspend_self: true }` → draw → mandatory hand trash;
+# `on_security` → `play_from_security`. Auras = BT24-041 shape.
+
+card: EX13-073
+name: Tai Kamiya & Matt Ishida
+kind: tamer
+color: [black, purple]
+cost: 4
+traits: [ADVENTURE]
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: ADVENTURE
+    summary: "[Start of Your Main Phase] If you have an [ADVENTURE] trait Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_ally_played
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: tamer
+        - event_target_trait_has: ADVENTURE
+        - source_is_unsuspended: true
+    summary: "[Your Turn] When your [ADVENTURE] Digimon or Tamers are played, by suspending this Tamer, <Draw 1> and trash 1 card in your hand"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: ADVENTURE
+      level_gte: 5
+    grant_keyword: { keyword: Rush }
+    summary: "[All Turns] All of your Lv.5+ [ADVENTURE] Digimon gain <Rush>"
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: ADVENTURE
+      level_gte: 5
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] All of your Lv.5+ [ADVENTURE] Digimon gain <Blocker>"
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

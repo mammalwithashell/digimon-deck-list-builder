@@ -105,7 +105,7 @@ effects:
       - optional:
           - select_own_permanent:
               bind_as: attacker
-              filter: { kind: digimon }
+              filter: { kind: digimon, can_attack: { targets: any } }
               prompt: "Choose 1 of your Digimon that may attack"
           - may_attack_now:
               attacker: attacker
