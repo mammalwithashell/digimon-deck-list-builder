@@ -758,6 +758,11 @@ impl Game {
                 | TriggerSource::AttackTargetChanged { .. }
                 | TriggerSource::BlockDeclared { .. }
                 | TriggerSource::EnteredField { .. }
+                // P-244's `<Delay>` is keyed to
+                // `OnEvent(OnAddDigivolutionCards)` ("When effects place
+                // [Vemmon] as any of your Digimon's digivolution cards").
+                // G-ENGINE-EVENT-DELAY-ON-ADD-DIGIVOLUTION-CARDS.
+                | TriggerSource::SourcesAddedToStack { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
