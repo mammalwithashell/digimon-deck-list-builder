@@ -1,0 +1,125 @@
+# BT24-042 Goblimon — Digimon, Lv.3, Green/Purple, DP 1000, Cost 3.
+# Traits: Demon, Titan, TS. Form: Rookie. Attribute: Virus.
+# Printed digivolve box (official Bandai DB — data/card_bundles/BT24-042.md):
+#   Green Lv.2 / cost 1; Purple Lv.2 / cost 1 (cards.json evo_costs keeps
+#   only the first circle — the second is authored explicitly below);
+#   [Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0.
+#
+# Printed card text (official Bandai DB):
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#     [Demon] or [Titan] trait, reduce the digivolution cost by 1.
+#   Inherited: [Your Turn] [Once Per Turn] When your hand is trashed from, this
+#     [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a
+#     [Titan] trait Digimon card in the trash with the digivolution cost
+#     reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Green/BT24_042.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Tsunomon") || (IsLevel2 &&
+#   HasTSTraits), cost 0.
+# [Your Turn] cost reduction: ChangeDigivolutionCostStaticEffect(changeValue
+#   -1, permanentCondition: target == this permanent, cardCondition: Demon |
+#   Titan, rootCondition: any root, condition IsOwnerTurn && on battle area,
+#   not inherited).
+#   → `kind: cost_reduction` before_pay_cost, your_turn +
+#   source_is_cost_target_permanent + cost_target (Digimon with Demon or
+#   Titan) — the ST23-02 / BT25-010 idiom. "Any root" means it also applies to
+#   effect digivolutions (e.g. an inherited trash digivolve onto this).
+# Inherited (OnDiscardHand, maxPerTurn 1, isOptional true, inherited;
+#   CanUse = on battle area && CanTriggerOnTrashHand(owner == you) &&
+#   IsOwnerTurn; CanActivate = a trash Digimon named [Titamon] or with [Titan]
+#   that can digivolve onto this permanent AND the host TopCard has [Demon]
+#   or [Titan]): DigivolveIntoHandOrTrashCard(isHand false, payCost, reduce 1).
+#   → on_discard_hand + active_when your_turn + event_discard_player you;
+#   once_per_turn; condition any_of source_permanent_trait_has Demon/Titan;
+#   optional trash pick → effect_initiated_digivolve cost -1; refund_opt
+#   when nothing was picked. Same body as BT26-066 Salamon.
+
+card: BT24-042
+name: Goblimon
+kind: digimon
+level: 3
+color: [green, purple]
+cost: 3
+dp: 1000
+traits: [Demon, Titan, TS]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  # Standard Green Lv.2 / cost 1 circle (also in cards.json evo_costs; authored
+  # explicitly so the compiled card carries it — the DSL-compiled CardData
+  # does not read cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  # Standard Purple Lv.2 / cost 1 circle (dropped by cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1
+  # [Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0.
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: "Tsunomon"
+        - all_of:
+            - level_eq: 2
+            - trait_has: TS
+    cost: 0
+
+effects:
+  # ─── [Your Turn] digivolving THIS into a [Demon]/[Titan] Digimon → -1 ─────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Titan
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Demon] or [Titan] trait, reduce the digivolution cost by 1"
+
+  # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
+  #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
+  #     cost -1 (BT26-066 idiom; trait gate widened to Demon OR Titan) ───────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition:
+      any_of:
+        - source_permanent_trait_has: Demon
+        - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] Digimon may digivolve into [Titamon] or a [Titan] Digimon card in the trash with the cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Titamon"
+                  - trait_has: Titan
+          prompt: "This Digimon may digivolve into [Titamon] or a [Titan] Digimon card in your trash with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+          else:
+            - refund_opt: {}

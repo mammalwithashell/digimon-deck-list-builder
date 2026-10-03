@@ -145,11 +145,13 @@ fn bt25_084_op_wd_deletes_all_highest_dp_after_hand_trash() {
         .expect("trash 1 hand card");
     runner.auto_resolve().expect("resolve delete-all-highest");
 
-    // Both 13000 Digimon deleted, the 5000 survives -> opp went from 3 to 1.
+    // Both 13000 Digimon are deleted by the clause; the 1-card hand trash is
+    // also a "your hand is trashed from" event, so Titamon's [All Turns]
+    // observer then deletes the opp's lowest-DP Digimon (the 5000).
     assert_eq!(
         runner.battle_area_size(1),
-        opp_before - 2,
-        "all opp highest-DP (13000) Digimon are deleted; the 5000 survives"
+        opp_before - 3,
+        "highest-DP pair deleted, then the on-hand-trashed delete takes the 5000"
     );
 }
 
@@ -270,7 +272,7 @@ fn digivolve_from(runner: &mut DebugRunner, base_id: &str) -> Option<i32> {
             .card_id(&runner.game.card_data),
         CARD_ID
     );
-    Some(before - runner.memory())
+    Some(i32::from(before - runner.memory()))
 }
 
 #[test]
@@ -424,7 +426,8 @@ fn bt25_084_opponents_hand_trash_does_not_trigger() {
     runner.place_on_field(1, "OPP-SMALL", Some(0));
     trash_one_from_hand(&mut runner, 1);
     let _ = runner.auto_resolve();
-    assert_eq!(opp_field(&runner).len(), 2);
+    let field = opp_field(&runner);
+    assert!(field.contains(&"OPP-BIG".to_string()) && field.contains(&"OPP-SMALL".to_string()), "{field:?}");
 }
 
 #[test]
@@ -435,9 +438,7 @@ fn bt25_084_leave_prevention_trashes_two_and_stays_then_deletes_lowest() {
     runner.place_on_field(1, "OPP-BIG", Some(0));
     runner.place_on_field(1, "OPP-SMALL", Some(0));
     runner.game.set_effect_source_player_for_test(Some(1));
-    runner
-        .game
-        .delete_permanents_batch(vec![titamon], ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_effects(titamon);
     runner.game.set_effect_source_player_for_test(None);
     let outer = runner.pending_selection_view().expect("would-leave prompt");
     assert_eq!(outer.kind, SelectionKind::Replacement);

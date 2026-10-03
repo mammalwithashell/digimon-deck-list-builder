@@ -1,0 +1,166 @@
+# BT24-045 Ogremon — Digimon, Lv.4, Green/Purple, DP 4000, Cost 4.
+# Traits: Demon, Titan, TS. Form: Champion. Attribute: Virus.
+# Printed digivolve box: Green Lv.3 / cost 3; Purple Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[Demon]/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-045.md):
+#   When this card is trashed from the hand, if you have 5 or fewer cards in
+#     your hand, <Draw 1>.
+#   [On Play] [When Attacking] [Once Per Turn] By trashing 1 card in your hand,
+#     suspend 1 of your opponent's Digimon. It can't unsuspend in their next
+#     unsuspend phase.
+#   Inherited: [Your Turn] [Once Per Turn] When your hand is trashed from, this
+#     [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan]
+#     trait Digimon card in the trash with the digivolution cost reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Green/BT24_045.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve (EffectTiming.None): TopCard.IsLevel3 && (EqualsTraits Demon ||
+#   HasTSTraits), cost 2. → alt_path level_eq 3 + any_of(trait Demon, trait
+#   TS), cost 2. The two printed colour circles (Lv.3 / cost 3 each) are
+#   encoded as colour alt-paths too, because cards.json drops the second
+#   colour circle (official DB + card_overrides.json carry both) and DSL
+#   fixtures backfill evo_costs only from alt-paths.
+# Trashed from hand (OnDiscardHand, CanTriggerOnTrashSelfHand(card), not
+#   optional, no per-turn cap; CanActivate = IsExistOnTrash && hand <= 5):
+#   DrawClass 1. → `scope: trash` + `when: on_discard_hand` (engine reaches a
+#   trash-scoped on_discard_hand clause ONLY on the card that was itself just
+#   trashed from the hand — BT26-069 idiom); condition hand count_lte 5.
+# Shared [On Play]/[When Attacking] (TWO ActivateClass instances sharing ONE
+#   SetHashString, maxCountPerTurn 1, isOptional false; CanActivate =
+#   IsExistOnBattleArea && hand >= 1): SelectHand Discard 1 canNoSelect:true;
+#   if discarded → the payload below.
+#   → ONE clause `when: [on_play, when_attacking]` + once_per_turn (one
+#   shared counter across both timings — BT26-042 idiom); condition hand >= 1
+#   (an empty hand never activates, so the OPT is not spent); select_hand
+#   optional cost:true + trash_from_hand_by_index (declining the cost ends
+#   the clause). DCGO counts the activation BEFORE the cost pick and never
+#   calls RemoveUse, so DECLINING THE COST STILL SPENDS THE ONCE-PER-TURN
+#   (no refund_opt) — the activation happened, only its cost was not paid.
+# Inherited (OnDiscardHand, maxPerTurn 1, isOptional true; CanUse =
+#   IsOwnerTurn && CanTriggerOnTrashHand(owner == you); CanActivate = a
+#   matching trash card exists && carrier top card has Demon or Titan):
+#   DigivolveIntoHandOrTrashCard(this, isHand false, payCost, reduce 1) over
+#   IsDigimon && (EqualsCardName Titamon || EqualsTraits Titan).
+#   → BT26-066 inherited body, condition widened to the printed "this [Demon]
+#   or [Titan] trait Digimon" (any_of source_permanent_trait_has); refund_opt
+#   when nothing was picked (DCGO's CanActivate gate never spends the OPT
+#   without a candidate).
+# Payload (canNoSelect:false, Mode Tap over opponent Digimon) → suspend,
+#   then GainCantUnsuspendNextActivePhase(selected) — locks ONLY that
+#   permanent's controller's next unsuspend (Active) phase; effect unsuspends
+#   stay legal. → mandatory select_opponent_permanent + suspend +
+#   `CannotUnsuspendInUnsuspendPhase` with `end_of_opponents_next_turn`
+#   (EX13-041 idiom): the phase-only lock (NOT `CannotUnsuspend`, which would
+#   also block effect unsuspends for their whole turn), and the *NextTurn
+#   expiry so it survives to THEIR NEXT unsuspend phase whether it is
+#   installed on our turn (On Play / When Attacking) or on theirs (e.g. an
+#   On Play from SkullGreymon BT24-072's [On Deletion] during their attack).
+
+card: BT24-045
+name: Ogremon
+kind: digimon
+level: 4
+color: [green, purple]
+cost: 4
+dp: 4000
+traits: [Demon, Titan, TS]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - trait_has: Demon
+            - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── When this card is trashed from the hand, hand <= 5 → <Draw 1> ───────
+  - scope: trash
+    when: on_discard_hand
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 5
+    summary: "When this card is trashed from the hand, if you have 5 or fewer cards in your hand, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── [On Play][When Attacking][Once Per Turn] by trashing 1 hand card,
+  #     suspend 1 of your opponent's Digimon; it can't unsuspend in their next unsuspend phase ─────
+  - when: [on_play, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Attacking][Once Per Turn] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon; it can't unsuspend in their next unsuspend phase"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to suspend 1 of your opponent's Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: susp
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon. It can't unsuspend in their next unsuspend phase"
+      - suspend: { target: susp }
+      - add_modifier:
+          target: susp
+          modifier: CannotUnsuspendInUnsuspendPhase
+          value: 1
+          expiry: end_of_opponents_next_turn
+
+  # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
+  #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
+  #     cost -1 ────────────────────────────────────────────────────────────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition:
+      any_of:
+        - source_permanent_trait_has: Demon
+        - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Titamon"
+                  - trait_has: Titan
+          prompt: "This Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in your trash with the digivolution cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+          else:
+            - refund_opt: {}

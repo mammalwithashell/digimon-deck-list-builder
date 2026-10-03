@@ -1,0 +1,169 @@
+# BT24-026 Hyogamon — Digimon, Lv.4, Blue/Purple, DP 4000, Cost 4.
+# Traits: Ice-Snow, Titan, TS, Demon. Form: Champion. Attribute: Virus.
+# Printed digivolve box: Blue Lv.3 / cost 3; Purple Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[Demon]/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-026.md):
+#   When this card is trashed from the hand, if you have 5 or fewer cards in
+#     your hand, <Draw 1>.
+#   [On Play] [When Attacking] [Once Per Turn] By trashing 1 card in your hand,
+#     1 of your Digimon with the [Demon], [Shaman] or [Titan] trait gains
+#     <Jamming> and <Blocker> until your opponent's turn ends.
+#   (Rule) Trait: Has [Demon] Type.  → [Demon] added to traits.
+#   Inherited: [Your Turn] [Once Per Turn] When your hand is trashed from, this
+#     [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan]
+#     trait Digimon card in the trash with the digivolution cost reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Blue/BT24_026.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve (EffectTiming.None): TopCard.IsLevel3 && (EqualsTraits Demon ||
+#   HasTSTraits), cost 2. → alt_path level_eq 3 + any_of(trait Demon, trait
+#   TS), cost 2. The two printed colour circles (Lv.3 / cost 3 each) are
+#   encoded as colour alt-paths too, because cards.json drops the second
+#   colour circle (official DB + card_overrides.json carry both) and DSL
+#   fixtures backfill evo_costs only from alt-paths.
+# Trashed from hand (OnDiscardHand, CanTriggerOnTrashSelfHand(card), not
+#   optional, no per-turn cap; CanActivate = IsExistOnTrash && hand <= 5):
+#   DrawClass 1. → `scope: trash` + `when: on_discard_hand` (engine reaches a
+#   trash-scoped on_discard_hand clause ONLY on the card that was itself just
+#   trashed from the hand — BT26-069 idiom); condition hand count_lte 5.
+# Shared [On Play]/[When Attacking] (TWO ActivateClass instances sharing ONE
+#   SetHashString, maxCountPerTurn 1, isOptional false; CanActivate =
+#   IsExistOnBattleArea && hand >= 1): SelectHand Discard 1 canNoSelect:true;
+#   if discarded → the payload below.
+#   → ONE clause `when: [on_play, when_attacking]` + once_per_turn (one
+#   shared counter across both timings — BT26-042 idiom); condition hand >= 1
+#   (an empty hand never activates, so the OPT is not spent); select_hand
+#   optional cost:true + trash_from_hand_by_index (declining the cost ends
+#   the clause). DCGO counts the activation BEFORE the cost pick and never
+#   calls RemoveUse, so DECLINING THE COST STILL SPENDS THE ONCE-PER-TURN
+#   (no refund_opt) — the activation happened, only its cost was not paid.
+# Inherited (OnDiscardHand, maxPerTurn 1, isOptional true; CanUse =
+#   IsOwnerTurn && CanTriggerOnTrashHand(owner == you); CanActivate = a
+#   matching trash card exists && carrier top card has Demon or Titan):
+#   DigivolveIntoHandOrTrashCard(this, isHand false, payCost, reduce 1) over
+#   IsDigimon && (EqualsCardName Titamon || EqualsTraits Titan).
+#   → BT26-066 inherited body, condition widened to the printed "this [Demon]
+#   or [Titan] trait Digimon" (any_of source_permanent_trait_has); refund_opt
+#   when nothing was picked (DCGO's CanActivate gate never spends the OPT
+#   without a candidate).
+# Payload (HasMatchConditionPermanent gate; canNoSelect:false, Mode Custom):
+#   1 own Digimon with TopCard Demon/Shaman/Titan → GainJamming + GainBlocker,
+#   both UntilOpponentTurnEnd. → mandatory select_own_permanent + two
+#   grant_keyword steps, expiry end_of_opponents_turn.
+
+card: BT24-026
+name: Hyogamon
+kind: digimon
+level: 4
+color: [blue, purple]
+cost: 4
+dp: 4000
+traits: [Ice-Snow, Titan, TS, Demon]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - trait_has: Demon
+            - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── When this card is trashed from the hand, hand <= 5 → <Draw 1> ───────
+  - scope: trash
+    when: on_discard_hand
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 5
+    summary: "When this card is trashed from the hand, if you have 5 or fewer cards in your hand, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── [On Play][When Attacking][Once Per Turn] by trashing 1 hand card,
+  #     1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Jamming> and <Blocker> until your opponent's turn ends ─────
+  - when: [on_play, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Attacking][Once Per Turn] By trashing 1 card in your hand, 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Jamming> and <Blocker> until your opponent's turn ends"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand: 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Jamming> and <Blocker>"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_own_permanent:
+          bind_as: buff
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Shaman
+                  - trait_has: Titan
+          prompt: "1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Jamming> and <Blocker> until your opponent's turn ends"
+      - grant_keyword:
+          target: buff
+          keyword: Jamming
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: buff
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
+  #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
+  #     cost -1 ────────────────────────────────────────────────────────────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition:
+      any_of:
+        - source_permanent_trait_has: Demon
+        - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Titamon"
+                  - trait_has: Titan
+          prompt: "This Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in your trash with the digivolution cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+          else:
+            - refund_opt: {}
