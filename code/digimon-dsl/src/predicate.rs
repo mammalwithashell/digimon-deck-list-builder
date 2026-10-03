@@ -297,6 +297,14 @@ pub struct PredicateSpec {
     pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
+    /// Ceiling twin of `self_color_count_gte`: the card / permanent has AT
+    /// MOST this many distinct colors. Pairs with the floor inside an
+    /// `any_of` to express "not exactly N colors" — BT25-084 Titamon's
+    /// "[Digivolve] [Titamon] w/o 3 colors" (DCGO `CardColors.Count != 3`):
+    /// `any_of: [{ self_color_count_lte: 2 }, { self_color_count_gte: 4 }]`.
+    /// G-DSL-SELF-COLOR-COUNT-LTE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_color_count_lte: Option<u8>,
     /// Permanent-subject predicate. Matches whether the permanent's
     /// digivolution stack contains at least one face-down source.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -736,6 +744,24 @@ pub struct PredicateSpec {
     /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_added_card_any: Option<Box<PredicateSpec>>,
+    /// For `on_discard_hand` observers: the batch of cards the causing effect
+    /// just trashed from the event player's hand must contain AT LEAST ONE
+    /// card matching the inner card predicate. Mirrors DCGO
+    /// `CanTriggerOnTrashHand(hashtable, null, cardCondition)` over
+    /// `DiscardedCards`. BT24-007 Tsunomon "When level 4 or higher Digimon
+    /// cards with the [Demon] or [Titan] trait are trashed from your hand":
+    /// `event_discarded_card_any: { kind: digimon, level_gte: 4, … }`.
+    /// Fails outside that timing. G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_discarded_card_any: Option<Box<PredicateSpec>>,
+    /// Card-subject predicate for `on_discard_hand` clauses: true when the
+    /// candidate card is one of the cards the triggering effect just trashed
+    /// from the hand ("you may play 1 of THEM" — BT24-007 Tsunomon; DCGO
+    /// `GetDiscardedCardsFromHashtable`). Combine with a `zone: [trash]`
+    /// selection. Always false outside an `on_discard_hand` firing.
+    /// G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_event_discarded_cards: Option<bool>,
     /// True when the permanent carrying this effect was played by an effect
     /// (`PlaySource::ByEffect`) — read at the OnPlay firing. Models BT25-080's
     /// "if played by an effect, …" main-clause tail. G-ENGINE-ON-DISCARD-HAND.

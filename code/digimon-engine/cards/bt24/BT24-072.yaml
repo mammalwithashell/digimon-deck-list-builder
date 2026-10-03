@@ -1,0 +1,144 @@
+# BT24-072 SkullGreymon — Digimon, Lv.5, Purple, DP 7000, Cost 7.
+# Traits: Undead, Titan, TS. Form: Ultimate. Attribute: Virus.
+# Printed digivolve box: Purple Lv.4 / cost 3; [Digivolve] Lv.4 w/[Demon]/[TS]
+#   trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-072.md):
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, until your
+#     opponent's turn ends, 1 of your Digimon with the [Demon], [Shaman] or
+#     [Titan] trait gains <Blocker> and <Retaliation>.
+#   [On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait
+#     Digimon card from your trash without paying the cost.
+#   Inherited: [Your Turn] While this Digimon is [Titamon] or has the [Titan]
+#     trait, it gains <Security A. +1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_072.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve (EffectTiming.None): TopCard.IsLevel4 && (EqualsTraits Demon
+#   || HasTSTraits), cost 3 → alt_path. The printed Purple Lv.4 / cost 3
+#   circle is also encoded (DSL fixtures backfill evo_costs from alt-paths).
+# Shared OP/WD (two ActivateClass, isOptional true, NO per-turn cap;
+#   CanActivate = IsExistOnBattleAreaDigimon && hand >= 1): SelectHand
+#   Discard 1 canNoSelect:true → if discarded, the payload below.
+#   → `when: [on_play, when_digivolving]` + condition hand >= 1; select_hand
+#   optional cost:true + trash_from_hand_by_index — the declinable cost pick
+#   is the single decline surface (DCGO's outer yes/no + cancelable pick
+#   collapse to one PASS with identical outcomes: nothing happens).
+# Payload: if an own Digimon with TopCard Demon/Shaman/Titan exists,
+#   canNoSelect:false pick of 1 → GainBlocker + GainRetaliation, both
+#   UntilOpponentTurnEnd. → mandatory select_own_permanent + two grant_keyword
+#   steps, expiry end_of_opponents_turn.
+# [On Deletion] (OnDestroyedAnyone, isOptional true): SelectCardEffect from
+#   Trash, canNoSelect true, over IsDigimon && Level <= 4 && (Demon || Titan)
+#   && CanPlayAsNewPermanent → PlayPermanentCards(payCost false). → on_deletion
+#   + optional select_trash + play_from_trash_free (EX12-063 idiom). Rule 25:
+#   OnDeletion runs POST-trash, so the trash already holds SkullGreymon's own
+#   stack — a Lv.4 [Demon]/[Titan] digivolution card that was under it is a
+#   legal pick (same as DCGO, whose OnDestroyed also resolves after the move).
+#   SkullGreymon itself is Lv.5 and never matches.
+# Inherited (EffectTiming.None static, isInheritedEffect true; Condition =
+#   IsExistOnBattleArea && IsOwnerTurn && carrier TopCard EqualsCardName
+#   "Titamon" || EqualsTraits "Titan"): ChangeSelfSAttackStaticEffect(+1).
+#   → `scope: inherited, kind: grant_keyword SecurityAttackPlus 1` gated by
+#   active_when your_turn + any_of(source_name_contains "Titamon",
+#   source_permanent_trait_has Titan) — the BT19 Xros Heart inherited-keyword
+#   idiom. The DSL has no carrier-name EQUALITY predicate;
+#   `source_name_contains: Titamon` is exact in practice ("Titamon" is the
+#   only card name containing it in the pool), and Titamon itself carries
+#   [Titan] anyway.
+
+card: BT24-072
+name: SkullGreymon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Undead, Titan, TS]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Demon
+            - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] by trashing 1 hand card, until your
+  #     opponent's turn ends, 1 own [Demon]/[Shaman]/[Titan] Digimon gains
+  #     <Blocker> and <Retaliation> ──────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 card in your hand, until your opponent's turn ends, 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Blocker> and <Retaliation>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand: 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Blocker> and <Retaliation>"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_own_permanent:
+          bind_as: buff
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Shaman
+                  - trait_has: Titan
+          prompt: "1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Blocker> and <Retaliation> until your opponent's turn ends"
+      - grant_keyword:
+          target: buff
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: buff
+          keyword: Retaliation
+          expiry: end_of_opponents_turn
+
+  # ─── [On Deletion] you may play 1 Lv.4- [Demon]/[Titan] Digimon from the
+  #     trash without paying the cost ─────────────────────────────────────
+  - when: on_deletion
+    summary: "[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Titan
+          prompt: "You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick }
+
+  # ─── Inherited [Your Turn] while this Digimon is [Titamon] or has the
+  #     [Titan] trait → <Security A. +1> ───────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - source_name_contains: "Titamon"
+            - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains <Security A. +1>"

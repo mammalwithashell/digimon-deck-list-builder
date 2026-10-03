@@ -1047,6 +1047,11 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      6,
+      0,
+      3
     ]
   },
   "BT5-112": {

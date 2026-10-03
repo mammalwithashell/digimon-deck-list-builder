@@ -1,0 +1,108 @@
+# BT24-075 SkullBaluchimon — Digimon, Lv.5, Purple, DP 7000, Cost 6.
+# Traits: Undead, X Antibody, Titan, TS. Form: Ultimate. Attribute: Data.
+# Printed digivolve box: Purple Lv.4 / cost 3; [Digivolve] Lv.4 w/[Demon]/[TS]
+#   trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-075.md):
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 each
+#     of your opponent's level 3 and level 4 Digimon.
+#   Inherited: [Your Turn] While this Digimon is [Titamon] or has the [Titan]
+#     trait, it gains <Security A. +1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_075.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve (EffectTiming.None): TopCard.IsLevel4 && (EqualsTraits Demon
+#   || HasTSTraits), cost 3 → alt_path. The printed Purple Lv.4 / cost 3
+#   circle is also encoded (DSL fixtures backfill evo_costs from alt-paths).
+# Shared OP/WD (two ActivateClass, isOptional true, NO per-turn cap;
+#   CanActivate = IsExistOnBattleAreaDigimon && hand >= 1): SelectHand
+#   Discard 1 canNoSelect:true → if discarded, the payload below.
+#   → `when: [on_play, when_digivolving]` + condition hand >= 1; select_hand
+#   optional cost:true + trash_from_hand_by_index — the declinable cost pick
+#   is the single decline surface (DCGO's outer yes/no + cancelable pick
+#   collapse to one PASS with identical outcomes: nothing happens).
+# Payload: if an opp level-3 Digimon exists, canNoSelect:false pick of 1
+#   (collected, not yet deleted); then if an opp level-4 Digimon exists,
+#   canNoSelect:false pick of 1 (collected); then ONE DestroyPermanentsClass
+#   over both picks (simultaneous deletion). → two independent mandatory
+#   select_opponent_permanent picks (level_eq 3, level_eq 4; each self-skips
+#   when no candidate exists) + ONE `delete_permanents` batch over both
+#   bindings (EX7-071 idiom; an unset arm is skipped).
+# Inherited (EffectTiming.None static, isInheritedEffect true; Condition =
+#   IsExistOnBattleArea && IsOwnerTurn && carrier TopCard EqualsCardName
+#   "Titamon" || EqualsTraits "Titan"): ChangeSelfSAttackStaticEffect(+1).
+#   → `scope: inherited, kind: grant_keyword SecurityAttackPlus 1` gated by
+#   active_when your_turn + any_of(source_name_contains "Titamon",
+#   source_permanent_trait_has Titan) — the BT19 Xros Heart inherited-keyword
+#   idiom. The DSL has no carrier-name EQUALITY predicate;
+#   `source_name_contains: Titamon` is exact in practice ("Titamon" is the
+#   only card name containing it in the pool), and Titamon itself carries
+#   [Titan] anyway.
+
+card: BT24-075
+name: SkullBaluchimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 7000
+traits: [Undead, X Antibody, Titan, TS]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Demon
+            - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] by trashing 1 hand card, delete 1 each of
+  #     your opponent's level 3 and level 4 Digimon ─────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 card in your hand, delete 1 each of your opponent's level 3 and level 4 Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete 1 each of your opponent's level 3 and level 4 Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: lv3_target
+          filter: { kind: digimon, level_eq: 3 }
+          prompt: "Delete 1 of your opponent's level 3 Digimon"
+      - select_opponent_permanent:
+          bind_as: lv4_target
+          filter: { kind: digimon, level_eq: 4 }
+          prompt: "Delete 1 of your opponent's level 4 Digimon"
+      # ONE simultaneous deletion of both picks (an unset arm is skipped).
+      - delete_permanents: { targets: [lv3_target, lv4_target] }
+
+  # ─── Inherited [Your Turn] while this Digimon is [Titamon] or has the
+  #     [Titan] trait → <Security A. +1> ───────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - source_name_contains: "Titamon"
+            - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains <Security A. +1>"

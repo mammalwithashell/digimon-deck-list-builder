@@ -4425,6 +4425,21 @@ the hand". Tests: bt26_069_trashed_from_hand_draws_one /
 bt26_069_already_in_trash_does_not_fire_on_other_discards /
 bt26_069_opponent_effect_trashing_it_still_draws_for_owner.
 
+## G-ENGINE-DISCARDED-HAND-CARDS — RESOLVED (2026-10-03, BT24-007 Tsunomon)
+
+"When level 4 or higher Digimon cards with the [Demon] or [Titan] trait are trashed from your
+hand, you may play 1 of THEM" needs the trashed batch itself, not just whose hand it was. DCGO
+reads it with `GetDiscardedCardsFromHashtable` and gates the trigger with
+`CanTriggerOnTrashHand(hashtable, null, cardCondition)`. The `OnDiscardHand` fan-out carried
+only `discard_hand_player` / `discard_cause_controller`. Now `TriggerSource::HandDiscarded`
+carries `cards` (the window's `trashed_cards` for that hand owner), surfaced on the trigger
+context as a `moved_card_sets` entry Hand → Trash and read through
+`TriggerContext::discarded_hand_cards()`. DSL: `event_discarded_card_any: { <card predicate> }`
+(trigger gate: at least one trashed card matches) and the card-subject
+`in_event_discarded_cards: true` (restrict a trash pick to "1 of them" — a qualifying card
+that was already in the trash is not a candidate). Tests: `bt24::bt24_007::*`
+(incl. `bt24_007_only_the_just_trashed_cards_are_candidates`).
+
 ## G-ENGINE-LINKED-ESS-SELF-APPLIED — RESOLVED (2026-10-03, BT26-010 Roleplaymon)
 
 A `scope: linked` declarative (`Effect.linked`, Link-ESS such as "<Progress> <Piercing>" or a

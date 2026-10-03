@@ -1,8 +1,10 @@
-# BT25-084 Titamon — Digimon, Lv.6, Purple/(Black), DP 13000, Cost 13.
+# BT25-084 Titamon — Digimon, Lv.6, Purple/Red/Green, DP 13000, Cost 13.
 # Traits: Shaman, Titan, TS. Attribute: Virus.
-# Standard digivolution: Lv.5 Purple / cost 5 (printed evo_costs).
+# Standard digivolution (official Bandai DB — data/card_bundles/BT25-084.md):
+#   Purple Lv.5 / cost 5, Red Lv.5 / cost 5, Green Lv.5 / cost 5. (cards.json
+#   drops Green; corrected in data/card_overrides.json `card_colors`.)
 #
-# Printed card text (card image BT25-084 — authoritative for printed text):
+# Printed card text (official Bandai DB — authoritative for printed text):
 #   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1
 #   card in your hand, delete all of your opponent's highest DP Digimon. After,
 #   if played or digivolved by an effect, trash their top security card.
@@ -25,29 +27,29 @@
 #     if EnteredByEffect (OP/WD by effect) → trash opp top security.
 #   All Turns WhenRemoveField (OPT, skippable, requires Hand>=2): SelectHand
 #     Discard 2; if 2 discarded → willBeRemoveField=false (doesn't leave).
-#   All Turns OnDiscardHand: when your hand is trashed from, delete 1 opp lowest
-#     DP Digimon. → ENGINE GAP: no OnDiscardHand observer timing in the Rust
-#     EffectTiming enum (G-ENGINE-ON-DISCARD-HAND, logged in
-#     qa/archetype-qa/engine-gaps.md). Clause OMITTED → verdict PARTIAL.
+#   All Turns OnDiscardHand (not optional, no per-turn cap; CanUseCondition
+#     IsExistOnBattleArea && CanTriggerOnTrashHand(owner == you), either turn):
+#     mandatory (canNoSelect:false) Destroy pick of 1 opp IsMinDP Digimon.
+#     → `on_discard_hand` + `event_discard_player: you`; condition an opp
+#     Digimon exists; select_opponent_permanent `selector: lowest_dp` → delete.
 #
-# NOTE — "[Titamon] w/o 3 colors: Cost 2" alt-path OMITTED: the DSL `from:`
-# filter has no "distinct colors != 3" / self_color_count_lte predicate
-# (G-DSL-SELF-COLOR-COUNT-LTE). The standard Lv.5 Purple path and the Lv.5 [TS]
-# cost-4 path are encoded.
+# "[Titamon] w/o 3 colors: Cost 2": DCGO `TopCard.EqualsCardName("Titamon") &&
+#   TopCard.CardColors.Distinct().Count() != 3` → `name_is: Titamon` + `any_of:
+#   [self_color_count_lte: 2, self_color_count_gte: 4]` (G-DSL-SELF-COLOR-COUNT-LTE).
 #
 # Implementation status (faithfulness diff):
-# | Std digivolve Lv.5 Purple / Cost 5                         | IMPLEMENTED (evo_costs) |
+# | Std digivolve Lv.5 Purple/Red/Green / Cost 5               | IMPLEMENTED (alt_paths) |
 # | Alt-source Lv.5 [TS] / Cost 4                              | IMPLEMENTED (alt_paths) |
-# | Alt-source [Titamon] w/o 3 colors / Cost 2                 | OMITTED — G-DSL-SELF-COLOR-COUNT-LTE |
+# | Alt-source [Titamon] w/o 3 colors / Cost 2                 | IMPLEMENTED (alt_paths) |
 # | [OP][WD][WA][OPT] trash 1 hand -> delete all opp highest DP; if by effect trash opp sec | IMPLEMENTED |
 # | [All Turns][OPT] would-leave -> trash 2 hand -> doesn't leave | IMPLEMENTED (replacement + 2x hand trash + cancel) |
-# | [All Turns] on hand-trashed -> delete opp lowest DP        | OMITTED — G-ENGINE-ON-DISCARD-HAND -> PARTIAL |
+# | [All Turns] on hand-trashed -> delete opp lowest DP        | IMPLEMENTED (on_discard_hand) |
 
 card: BT25-084
 name: Titamon
 kind: digimon
 level: 6
-color: [purple, black]
+color: [purple, red, green]
 dp: 13000
 cost: 13
 traits: [Shaman, Titan, TS]
@@ -58,8 +60,23 @@ alt_paths:
     from: { level_eq: 5, color_is: purple }
     cost: 5
   - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+  - kind: digivolve
     from: { level_eq: 5, trait_has: TS }
     cost: 4
+  # "[Digivolve] [Titamon] w/o 3 colors: Cost 2" — any level.
+  - kind: digivolve
+    from:
+      all_of:
+        - name_is: "Titamon"
+        - any_of:
+            - self_color_count_lte: 2
+            - self_color_count_gte: 4
+    cost: 2
 
 effects:
   # ─── [OP][WD][WA][OPT] trash 1 hand -> delete all opp highest DP; if effect, trash opp sec ─
@@ -101,16 +118,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # A face-up replacement clause is anchored to its own carrier
+    # (`replacement_subject` = this Digimon), as in BT23-032.
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - card_number_is: "BT25-084"
-        - count_gte:
-            filter:
-              all_of:
-                - owner: you
-                - zone: [hand]
-            n: 2
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 2
     summary: "[All Turns][OPT] When this Digimon would leave, by trashing 2 cards in your hand, it doesn't leave"
     process:
       - select_hand:
@@ -127,6 +140,19 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: c2 }
       - cancel_replacement: {}
 
-  # [All Turns] "When your hand is trashed from, delete 1 opp lowest DP Digimon"
-  # OMITTED — no OnDiscardHand observer timing in the engine
-  # (G-ENGINE-ON-DISCARD-HAND). Verdict PARTIAL.
+  # ─── [All Turns] your hand is trashed from -> delete 1 opp lowest DP ───────
+  - when: on_discard_hand
+    active_when: { event_discard_player: you }
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          selector: lowest_dp
+          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: victim }

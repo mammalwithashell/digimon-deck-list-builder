@@ -750,6 +750,11 @@ pub enum TriggerSource {
     HandDiscarded {
         player: PlayerId,
         cause_controller: PlayerId,
+        /// The cards this batch moved from `player`'s hand to the trash, in
+        /// trash order (DCGO `DiscardedCards`). Read by
+        /// `event_discarded_card_any` / `in_event_discarded_cards`
+        /// (BT24-007 Tsunomon "play 1 of THEM"). G-ENGINE-DISCARDED-HAND-CARDS.
+        cards: Vec<crate::card_source::CardHandle>,
     },
     /// `OnAddDigivolutionCards` observer fan-out fired after an EFFECT placed
     /// one or more cards into `host`'s digivolution cards
