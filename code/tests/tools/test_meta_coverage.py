@@ -9,6 +9,7 @@ from collections import Counter
 import pytest
 
 from tools.meta_coverage import (
+    NOT_READY_STATUSES,
     Deck,
     append_history,
     build_report,
@@ -20,11 +21,11 @@ from tools.meta_coverage import (
     is_dcgo_verified,
     milestones,
     normalize_card_id,
+    not_ready_card_ids,
     parse_event_date,
     render_dashboard,
     render_markdown,
     resolve_metric,
-    training_gate_archetypes,
     unlock_order,
 )
 
@@ -150,19 +151,49 @@ def test_resolve_metric_and_gates():
     assert plan["milestones"][0]["gates_met"] == 1
 
 
-def test_training_gate_matches_ledger_labels_not_cards():
+def test_training_gate_flags_cards_by_status_not_label():
     tracker = {
         "A1": {"archetype": "three-musketeers", "status": "IMPLEMENTED"},
-        "B1": {"archetype": "Toho Braves", "status": "IMPLEMENTED"},
+        "B1": {"archetype": "Toho Braves", "status": "AUDITED-OK"},
         "B2": {"archetype": "Toho Braves", "status": "PARTIAL"},
-        "C1": {"archetype": "Glowing Dawn (BEATBREAK)", "status": "AUDITED-OK"},
+        "C1": {"archetype": "store-champs-june-2026", "status": "BLOCKED"},
+        "D1": {"archetype": "judge-quiz cluster E (Q15)", "status": "AUDITED-DRIFT"},
+        "E1": {"archetype": "Glowing Dawn (BEATBREAK)", "status": "audited-missing-tests"},
     }
-    alias_map = {"three-musketeers": "Three Musketeers", "three musketeers": "Three Musketeers"}
-    ready = training_gate_archetypes(tracker, alias_map)
-    assert "Three Musketeers" in ready
-    assert "Toho Braves" not in ready  # one PARTIAL card drops the label
-    # The library calls it "Glowing Dawn"; the ledger label does not match.
-    assert "Glowing Dawn" not in ready and "Glowing Dawn (BEATBREAK)" in ready
+    assert not_ready_card_ids(tracker) == {"B2", "C1", "D1", "E1"}
+
+
+def test_not_ready_statuses_mirror_the_training_deck_pool():
+    gauntlet = pytest.importorskip("digimon_gym.agents.gauntlet")  # needs the PyO3 engine
+    assert NOT_READY_STATUSES == gauntlet._NOT_READY_DSL_STATUSES
+
+
+def test_trainable_lists_are_playable_lists_without_not_ready_cards():
+    cards_index = {cid: {"card_name_eng": cid, "card_kind": 0, "effect_description_eng": "text"}
+                   for cid in ("AA-001", "AA-002", "AA-003")}
+    decks = [
+        _deck("Three Musketeers", {"AA-001": 4}),
+        _deck("Three Musketeers", {"AA-001": 2, "AA-002": 2}),
+        _deck("Unplayable", {"AA-003": 4}),
+    ]
+    weights, weighting = deck_weights(decks, None)
+    report = build_report(
+        decks=decks, weights=weights, weighting=weighting, cards_index=cards_index,
+        implemented={"AA-001": "a.yaml", "AA-002": "b.yaml"},
+        test_refs={"AA-001", "AA-002"},
+        # Batch labels never name the library archetype; only card status counts.
+        tracker={"AA-001": {"archetype": "store-champs-june-2026", "status": "IMPLEMENTED"},
+                 "AA-002": {"archetype": "judge-quiz cluster E (Q15)", "status": "PARTIAL"}},
+        exam={},
+        window={"label": "TEST", "format": None, "since": "2026-09-01", "until": "2026-09-30",
+                "newest_list": "2026-09-10", "sources": {"test": 3}},
+    )
+    decks_h = report["headline"]["decks"]
+    assert decks_h["playable_lists"] == 2
+    assert decks_h["trainable_lists"] == 1  # the list playing the PARTIAL card is held back
+    assert decks_h["trainable_pct"] == pytest.approx(round(100 / 3, 2))
+    row = next(r for r in report["archetypes"] if r["archetype"] == "Three Musketeers")
+    assert row["playable_lists"] == 2 and row["trainable_lists"] == 1
 
 
 @pytest.fixture
@@ -197,7 +228,7 @@ def test_build_report_headline(small_report):
     assert h["implemented"]["copies_pct"] == pytest.approx(round(100 * (0.5 * 8 + 0.5 * 2) / (0.5 * 8 + 0.5 * 4), 2))
     assert h["verified"]["unique"] == 1  # only AA-001 has every clause confirmed
     assert h["decks"]["playable_pct"] == pytest.approx(50.0)
-    assert h["decks"]["trainable_pct"] == pytest.approx(50.0)  # "Alpha" matches its ledger label
+    assert h["decks"]["trainable_pct"] == pytest.approx(50.0)  # Alpha plays no PARTIAL/BLOCKED card
     assert h["clauses"]["total"] == 6 and h["clauses"]["by_verdict"]["confirmed"] == 2
     assert small_report["implement_next"][0]["card_id"] == "AA-003"
     assert small_report["implement_next"][0]["cumulative_playable_pct"] == pytest.approx(100.0)
@@ -208,6 +239,7 @@ def test_build_report_headline(small_report):
 def test_renderers(small_report):
     md = render_markdown(small_report)
     assert "## Headline" in md and "Alpha" in md and "AA-003" in md
+    assert "| Trainable lists |" in md
     page = render_dashboard(small_report)
     assert page.startswith("<!doctype html>")
     assert "/*__META_COVERAGE_REPORT__*/" not in page and '"meta_cards":3' in page
