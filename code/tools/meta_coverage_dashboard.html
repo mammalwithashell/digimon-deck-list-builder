@@ -1,0 +1,861 @@
+<title>Digimon Sim Readiness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
+<!--
+  Template for code/tools/meta_coverage.py --html. The tool replaces the
+  report placeholder in the script block at the end with latest.json.
+  Generated pages are rebuilt on every run; edit this file, not dashboard.html.
+-->
+<style>
+/* Layout: the app's own design language. Light = "Adventure '99" windows on a
+   teal desktop; dark = the digivice terminal. Tiled windows on a 12-column
+   grid, one column under 900px. Chart colors were run through the dataviz
+   validator against each theme's window surface. */
+:root {
+  --desk: #1c8a8a;
+  --win: #e7e2d2;
+  --win-2: #d9d3bf;
+  --title-bg: #2b2f7a;
+  --title-ink: #ffffff;
+  --ink: #1b1a14;
+  --ink-2: #3a382c;
+  --ink-3: #54513f;
+  --line: #b3ad92;
+  --line-strong: #7a7560;
+  --accent: #2b2f7a;
+  --good: #2f6d2c;
+  --warn: #b5660f;
+  --bad: #c1272d;
+  --info: #2f6db5;
+  --grid: rgba(27, 26, 20, 0.12);
+  --axis: #7a7560;
+  --s-missing: #8f8a73;
+  --s-impl: #5598e7;
+  --s-tested: #256abf;
+  --s-verified: #0d366b;
+  --c1: #2f6db5;
+  --c2: #d9531e;
+  --c3: #7a4fb0;
+  --bevel: inset 1.5px 1.5px 0 #f6f2e4, inset -2px -2px 0 #7a7560;
+  --win-border: 2px solid #4a4636;
+  --tip-bg: #1b1a14;
+  --tip-ink: #f4f0e2;
+  --focus: #2b2f7a;
+  --font-display: "Silkscreen", "IBM Plex Mono", ui-monospace, monospace;
+  --font-ui: "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #050807; --win: #0c1410; --win-2: #11201a; --title-bg: #11201a; --title-ink: #39ff88;
+    --ink: #c8e6d4; --ink-2: #9fc4b0; --ink-3: #88ad9b;
+    --line: rgba(57, 255, 136, 0.16); --line-strong: rgba(57, 255, 136, 0.42);
+    --accent: #39ff88; --good: #39ff88; --warn: #ffb05a; --bad: #ff4d5e; --info: #3aa6ff;
+    --grid: rgba(57, 255, 136, 0.09); --axis: rgba(57, 255, 136, 0.35);
+    --s-missing: #4d5f56; --s-impl: #1c5cab; --s-tested: #3987e5; --s-verified: #9ec5f4;
+    --c1: #2a86e0; --c2: #e36c1a; --c3: #9670e6;
+    --bevel: none; --win-border: 1px solid rgba(57, 255, 136, 0.28);
+    --tip-bg: #11201a; --tip-ink: #c8e6d4; --focus: #39ff88;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #050807; --win: #0c1410; --win-2: #11201a; --title-bg: #11201a; --title-ink: #39ff88;
+  --ink: #c8e6d4; --ink-2: #9fc4b0; --ink-3: #88ad9b;
+  --line: rgba(57, 255, 136, 0.16); --line-strong: rgba(57, 255, 136, 0.42);
+  --accent: #39ff88; --good: #39ff88; --warn: #ffb05a; --bad: #ff4d5e; --info: #3aa6ff;
+  --grid: rgba(57, 255, 136, 0.09); --axis: rgba(57, 255, 136, 0.35);
+  --s-missing: #4d5f56; --s-impl: #1c5cab; --s-tested: #3987e5; --s-verified: #9ec5f4;
+  --c1: #2a86e0; --c2: #e36c1a; --c3: #9670e6;
+  --bevel: none; --win-border: 1px solid rgba(57, 255, 136, 0.28);
+  --tip-bg: #11201a; --tip-ink: #c8e6d4; --focus: #39ff88;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--desk);
+  color: var(--ink);
+  font: 14px/1.5 var(--font-ui);
+  margin: 0;
+}
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+.win {
+  grid-column: span 12;
+  min-width: 0;
+  background: var(--win);
+  border: var(--win-border);
+  box-shadow: var(--bevel);
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 900px) {
+  .span-7 { grid-column: span 7; }
+  .span-5 { grid-column: span 5; }
+  .span-6 { grid-column: span 6; }
+}
+.win-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--title-bg);
+  color: var(--title-ink);
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.win-title h2, .win-title h1 {
+  margin: 0;
+  font: 400 13px/1.3 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.win-title .meta { font: 12px/1.3 var(--font-mono); opacity: 0.85; }
+.win-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+h3 { margin: 0; font: 600 14px/1.3 var(--font-ui); text-wrap: balance; }
+p { margin: 0; max-width: 72ch; }
+.muted { color: var(--ink-3); }
+.small { font-size: 12px; }
+.mono { font-family: var(--font-mono); }
+a { color: inherit; text-decoration-color: var(--line-strong); text-underline-offset: 2px; }
+a:hover { text-decoration-color: currentColor; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: 0.92em; background: var(--win-2); padding: 1px 4px; overflow-wrap: anywhere; }
+
+/* Hero */
+.hero-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .hero-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; } }
+.hero-figure { display: flex; flex-direction: column; gap: 6px; }
+.hero-value { font: 600 64px/1 var(--font-ui); letter-spacing: -0.02em; }
+.hero-caption { font-size: 16px; color: var(--ink-2); max-width: 34ch; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.kpi { border: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi .label { font-size: 12px; color: var(--ink-3); }
+.kpi .value { font: 600 24px/1.2 var(--font-ui); }
+.kpi .sub { font-size: 12px; color: var(--ink-3); }
+
+.phases { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 640px) { .phases { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.phase { border-top: 4px solid var(--s-missing); padding: 6px 4px 0; min-width: 0; }
+.phase.done { border-top-color: var(--good); }
+.phase.active { border-top-color: var(--accent); }
+.phase .pid { font: 400 11px/1.2 var(--font-display); letter-spacing: 0.06em; color: var(--ink-3); }
+.phase .pname { font-size: 12px; line-height: 1.3; }
+.phase.active .pname { font-weight: 600; }
+
+.narrative { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+
+/* Chips: color is a small square beside ink text, never the text itself */
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; color: var(--ink); }
+.chip::before { content: ""; width: 9px; height: 9px; background: var(--ink-3); flex: none; }
+.chip.good::before { background: var(--good); }
+.chip.warn::before { background: var(--warn); }
+.chip.bad::before { background: var(--bad); }
+.chip.info::before { background: var(--info); }
+.chip.accent::before { background: var(--accent); }
+
+/* Stacked bars (2px surface gap between segments) */
+.stack-row { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 10px; align-items: center; }
+@media (max-width: 520px) { .stack-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+.stack { display: flex; gap: 2px; height: 22px; min-width: 0; }
+.stack.mini { height: 10px; min-width: 90px; }
+.seg { min-width: 2px; flex-basis: 0; flex-shrink: 1; }
+.seg:hover, .seg:focus-visible { filter: brightness(1.15); }
+.s-missing { background: var(--s-missing); }
+.s-impl { background: var(--s-impl); }
+.s-tested { background: var(--s-tested); }
+.s-verified { background: var(--s-verified); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); }
+.legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 12px; height: 12px; flex: none; }
+.legend .ln { width: 16px; height: 2px; flex: none; }
+.legend b { color: var(--ink); font-weight: 600; }
+
+/* Charts */
+.chart { width: 100%; min-width: 0; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.chart .grid { stroke: var(--grid); stroke-width: 1; }
+.chart .axis { stroke: var(--axis); stroke-width: 1; }
+.chart .tick { fill: var(--ink-3); font: 11px var(--font-mono); }
+.chart .marker { stroke: var(--line-strong); stroke-width: 1; }
+.chart .marker-label { fill: var(--ink-2); font: 11px var(--font-mono); }
+.chart .end-label { fill: var(--ink-2); font: 12px var(--font-ui); }
+.chart .end-label .v { fill: var(--ink); font-weight: 600; }
+.chart .ms-label { fill: var(--ink-2); font: 11px var(--font-mono); }
+.chart .leader { stroke: var(--line-strong); stroke-width: 1; }
+.chart .crosshair { stroke: var(--ink-3); stroke-width: 1; }
+.chart .ring { stroke: var(--win); stroke-width: 2; }
+.chart .band { fill: var(--win-2); }
+.chart .band-label { fill: var(--ink-3); font: 11px var(--font-ui); }
+#tip {
+  position: fixed; z-index: 10; pointer-events: none;
+  background: var(--tip-bg); color: var(--tip-ink);
+  padding: 8px 10px; font: 12px/1.45 var(--font-ui);
+  max-width: 260px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+#tip .t { font-weight: 600; margin-bottom: 2px; }
+#tip .r { display: flex; align-items: center; gap: 8px; }
+#tip .r .k { width: 14px; height: 2px; flex: none; }
+#tip .r b { font-weight: 600; }
+
+/* Bars by set */
+.setbars { display: flex; flex-direction: column; gap: 6px; }
+.setbar { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) 5.2rem; gap: 10px; align-items: center; font-size: 13px; }
+.setbar .name { font-family: var(--font-mono); }
+.setbar .track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.setbar .bar { display: flex; gap: 2px; height: 14px; min-width: 2px; }
+.setbar .val { font: 12px var(--font-mono); color: var(--ink-2); white-space: nowrap; }
+.setbar .cards { font: 12px var(--font-mono); color: var(--ink-3); text-align: right; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font: 600 12px/1.3 var(--font-ui); color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+td.id { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+tbody tr:hover td { background: var(--win-2); }
+.sub-line { display: block; font-size: 11px; color: var(--ink-3); }
+
+/* Plan */
+.plan { display: flex; flex-direction: column; gap: 0; }
+.ms { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.ms:first-child { border-top: 0; padding-top: 0; }
+.ms .mid { font: 400 14px/1.2 var(--font-display); letter-spacing: 0.06em; padding-top: 2px; }
+.ms .mhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.ms .mbody { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ms.active { background: linear-gradient(90deg, var(--win-2), transparent 70%); margin-inline: -16px; padding-inline: 16px; }
+.gates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gate { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) minmax(90px, 160px) 7.5rem; gap: 8px; align-items: center; font-size: 13px; }
+@media (max-width: 640px) { .gate { grid-template-columns: 2.2rem minmax(0, 1fr) 6.5rem; } .gate .meter { display: none; } }
+.gate .mark { font: 700 12px var(--font-mono); color: var(--ink-3); white-space: nowrap; }
+.gate.met .mark { color: var(--good); }
+.meter { height: 8px; background: var(--win-2); border: 1px solid var(--line); }
+.meter > div { height: 100%; background: var(--s-tested); }
+.gate .gv { font: 12px var(--font-mono); color: var(--ink-2); text-align: right; white-space: nowrap; }
+.actions { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: flex; flex-direction: column; gap: 3px; }
+
+/* Lists of facts / findings */
+.facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.facts li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 10px; align-items: baseline; }
+@media (max-width: 520px) { .facts li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.facts .chip { white-space: normal; font-weight: 600; }
+.facts .act { display: block; margin-top: 2px; color: var(--ink-3); font-size: 12px; }
+
+details { font-size: 13px; }
+details summary { cursor: pointer; color: var(--ink-2); }
+details[open] summary { margin-bottom: 8px; }
+.defs { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; }
+.defs dt { font-weight: 600; }
+.defs dd { margin: 0; color: var(--ink-2); }
+.warnbox { border-left: 4px solid var(--warn); padding: 6px 10px; background: var(--win-2); font-size: 13px; }
+.footer { grid-column: span 12; color: var(--ink); background: var(--win); border: var(--win-border); padding: 10px 14px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="page" id="app">
+  <section class="win" id="hero" aria-labelledby="hero-title">
+    <div class="win-title"><h1 id="hero-title">Digimon sim readiness</h1><span class="meta" id="hero-meta"></span></div>
+    <div class="win-body" id="hero-body"></div>
+  </section>
+
+  <section class="win span-7" id="readiness" aria-labelledby="readiness-title">
+    <div class="win-title"><h2 id="readiness-title">Readiness ladder</h2><span class="meta" id="readiness-meta"></span></div>
+    <div class="win-body" id="readiness-body"></div>
+  </section>
+
+  <section class="win span-5" id="sets" aria-labelledby="sets-title">
+    <div class="win-title"><h2 id="sets-title">Meta copies by set</h2><span class="meta">implemented share filled</span></div>
+    <div class="win-body" id="sets-body"></div>
+  </section>
+
+  <section class="win" id="trend" aria-labelledby="trend-title">
+    <div class="win-title"><h2 id="trend-title">Coverage over time</h2><span class="meta" id="trend-meta"></span></div>
+    <div class="win-body" id="trend-body"></div>
+  </section>
+
+  <section class="win" id="archetypes" aria-labelledby="arch-title">
+    <div class="win-title"><h2 id="arch-title">Archetypes in the field</h2><span class="meta" id="arch-meta"></span></div>
+    <div class="win-body" id="arch-body"></div>
+  </section>
+
+  <section class="win span-6" id="unlock" aria-labelledby="unlock-title">
+    <div class="win-title"><h2 id="unlock-title">Unlock path</h2><span class="meta" id="unlock-meta"></span></div>
+    <div class="win-body" id="unlock-body"></div>
+  </section>
+
+  <section class="win span-6" id="queue" aria-labelledby="queue-title">
+    <div class="win-title"><h2 id="queue-title">Implement next</h2><span class="meta">in unlock order</span></div>
+    <div class="win-body" id="queue-body"></div>
+  </section>
+
+  <section class="win span-7" id="plan" aria-labelledby="plan-title">
+    <div class="win-title"><h2 id="plan-title">Launch plan</h2><span class="meta" id="plan-meta"></span></div>
+    <div class="win-body" id="plan-body"></div>
+  </section>
+
+  <section class="win span-5" id="training" aria-labelledby="training-title">
+    <div class="win-title"><h2 id="training-title">Training readiness</h2><span class="meta">from the runbooks</span></div>
+    <div class="win-body" id="training-body"></div>
+  </section>
+
+  <section class="win span-7" id="exam" aria-labelledby="exam-title">
+    <div class="win-title"><h2 id="exam-title">Exam next</h2><span class="meta">implemented, clauses unmeasured</span></div>
+    <div class="win-body" id="exam-body"></div>
+  </section>
+
+  <section class="win span-5" id="findings" aria-labelledby="findings-title">
+    <div class="win-title"><h2 id="findings-title">Findings</h2><span class="meta">act on these</span></div>
+    <div class="win-body" id="findings-body"></div>
+  </section>
+
+  <footer class="footer" id="footer"></footer>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const R = /*__META_COVERAGE_REPORT__*/null;
+
+const SVGNS = "http://www.w3.org/2000/svg";
+function h(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k === "style") n.style.cssText = v;
+    else n.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    n.appendChild(typeof kid === "string" || typeof kid === "number" ? document.createTextNode(String(kid)) : kid);
+  }
+  return n;
+}
+function s(tag, attrs, parent) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "text") n.textContent = v;
+    else if (k === "style") n.setAttribute("style", v);
+    else n.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const pct = (v, d = 1) => (v == null || isNaN(v) ? "—" : `${Number(v).toFixed(d)}%`);
+const num = (v) => (v == null ? "—" : Number(v).toLocaleString("en-US"));
+const byId = (id) => document.getElementById(id);
+const toMs = (iso) => Date.parse(iso + "T00:00:00Z");
+const shortDate = (iso) => new Date(toMs(iso)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const STATUS_CHIP = { done: "good", active: "accent", next: "info", later: "", good: "good", warn: "warn", bad: "bad", info: "info" };
+
+/* ---------- tooltip ---------- */
+const tip = byId("tip");
+function showTip(evt, title, rows) {
+  tip.textContent = "";
+  tip.appendChild(h("div", { class: "t", text: title }));
+  for (const r of rows || []) {
+    const row = h("div", { class: "r" });
+    if (r.color) row.appendChild(h("span", { class: "k", style: `background:${r.color}` }));
+    row.appendChild(h("b", { text: r.value }));
+    row.appendChild(h("span", { text: r.label }));
+    tip.appendChild(row);
+  }
+  tip.hidden = false;
+  let x, y;
+  if (evt && evt.clientX != null && evt.type !== "focus") { x = evt.clientX; y = evt.clientY; }
+  else { const b = evt.target.getBoundingClientRect(); x = b.left + b.width / 2; y = b.top; }
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = x + 14, top = y - th - 10;
+  if (left + tw > window.innerWidth - 8) left = x - tw - 14;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 16;
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+function hideTip() { tip.hidden = true; }
+function attachTip(node, title, rows) {
+  node.addEventListener("pointermove", (e) => showTip(e, title, rows));
+  node.addEventListener("pointerleave", hideTip);
+  node.addEventListener("focus", (e) => showTip(e, title, rows));
+  node.addEventListener("blur", hideTip);
+}
+
+/* ---------- stacked readiness bar ---------- */
+const STAGE_META = [
+  { key: "missing", label: "Not implemented", cls: "s-missing", color: "var(--s-missing)" },
+  { key: "impl", label: "Implemented, not tested", cls: "s-impl", color: "var(--s-impl)" },
+  { key: "tested", label: "Tested", cls: "s-tested", color: "var(--s-tested)" },
+  { key: "verified", label: "DCGO-verified", cls: "s-verified", color: "var(--s-verified)" },
+];
+function stageSplit(implPct, testedPct, verifiedPct) {
+  return {
+    missing: Math.max(0, 100 - implPct),
+    impl: Math.max(0, implPct - testedPct),
+    tested: Math.max(0, testedPct - verifiedPct),
+    verified: Math.max(0, verifiedPct),
+  };
+}
+function stackBar(split, { mini = false, title = "", fmt = (v) => pct(v), focusable = true } = {}) {
+  const bar = h("div", { class: "stack" + (mini ? " mini" : ""), role: "img",
+    "aria-label": `${title}: ` + STAGE_META.map((m) => `${m.label} ${fmt(split[m.key])}`).join(", ") });
+  for (const m of STAGE_META) {
+    const v = split[m.key];
+    if (!(v > 0)) continue;
+    const seg = h("div", { class: "seg " + m.cls, tabindex: focusable ? "0" : null });
+    seg.style.flexGrow = String(v);
+    attachTip(seg, title, [{ color: m.color, value: fmt(v), label: m.label }]);
+    bar.appendChild(seg);
+  }
+  return bar;
+}
+function stageLegend(split, fmt = (v) => pct(v)) {
+  return h("div", { class: "legend" }, STAGE_META.map((m) =>
+    h("span", { class: "key" }, h("span", { class: "sw " + m.cls }), `${m.label} `, h("b", { text: fmt(split[m.key]) }))));
+}
+
+/* ---------- line chart (one axis, crosshair tooltip) ---------- */
+function lineChart(host, cfg) {
+  const draw = () => {
+    host.textContent = "";
+    const W = Math.max(300, host.clientWidth);
+    const H = cfg.height || 260;
+    const m = { l: 40, r: cfg.rightPad == null ? (W < 520 ? 96 : 128) : cfg.rightPad, t: 24, b: 28 };
+    const svg = s("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.aria, tabindex: "0" });
+    const xs = cfg.xs, n = xs.length;
+    const x0 = xs[0], x1 = xs[n - 1];
+    const X = (v) => m.l + ((v - x0) / (x1 - x0 || 1)) * (W - m.l - m.r);
+    const Y = (v) => m.t + (1 - v / cfg.yMax) * (H - m.t - m.b);
+    for (const band of cfg.bands || []) {
+      if (band.to < x0 || band.from > x1) continue;
+      const a = X(Math.max(band.from, x0)), b = X(Math.min(band.to, x1));
+      s("rect", { x: a, y: m.t, width: Math.max(0, b - a), height: H - m.t - m.b, class: "band" }, svg);
+      s("text", { x: (a + b) / 2, y: m.t + 14, class: "band-label", "text-anchor": "middle", text: band.label }, svg);
+    }
+    for (const t of cfg.yTicks) {
+      s("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: t === 0 ? "axis" : "grid" }, svg);
+      s("text", { x: m.l - 6, y: Y(t) + 4, class: "tick", "text-anchor": "end", text: cfg.yFmt(t) }, svg);
+    }
+    for (const t of cfg.xTicks) {
+      s("text", { x: X(t.x), y: H - 8, class: "tick", "text-anchor": "middle", text: t.label }, svg);
+    }
+    for (const mk of cfg.markers || []) {
+      if (mk.x < x0 || mk.x > x1) continue;
+      s("line", { x1: X(mk.x), x2: X(mk.x), y1: m.t - 6, y2: H - m.b, class: "marker" }, svg);
+      s("text", { x: X(mk.x) + 4, y: m.t - 10, class: "marker-label", text: mk.label }, svg);
+    }
+    for (const se of cfg.series) {
+      const d = se.values.map((v, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+      s("path", { d, fill: "none", style: `stroke:${se.color};stroke-width:2;stroke-linejoin:round;stroke-linecap:round` }, svg);
+    }
+    for (const pt of cfg.points || []) {
+      s("circle", { cx: X(pt.x), cy: Y(pt.y), r: 4, class: "ring", style: `fill:${pt.color}` }, svg);
+      const anchorEnd = X(pt.x) > W - m.r - 90;
+      s("text", { x: X(pt.x) + (anchorEnd ? -8 : 8), y: Y(pt.y) + (pt.dy || 4), class: "ms-label", "text-anchor": anchorEnd ? "end" : "start", text: pt.label }, svg);
+    }
+    // End labels: separated, with a leader when moved off their line end.
+    if (cfg.endLabels !== false) {
+      const ends = cfg.series.map((se) => ({ se, y: Y(se.values[n - 1]), y0: Y(se.values[n - 1]) })).sort((a, b) => a.y - b.y);
+      for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+      for (const e of ends) {
+        const ex = X(x1);
+        s("circle", { cx: ex, cy: e.y0, r: 4, class: "ring", style: `fill:${e.se.color}` }, svg);
+        if (Math.abs(e.y - e.y0) > 2) s("line", { x1: ex + 5, y1: e.y0, x2: ex + 12, y2: e.y, class: "leader" }, svg);
+        const t = s("text", { x: ex + 14, y: e.y + 4, class: "end-label" }, svg);
+        s("tspan", { class: "v", text: cfg.yFmt(e.se.values[n - 1], true) + " " }, t);
+        s("tspan", { text: e.se.short || e.se.label }, t);
+      }
+    }
+    // Crosshair: snaps to the nearest x; one tooltip lists every series.
+    const cross = s("line", { y1: m.t, y2: H - m.b, class: "crosshair", visibility: "hidden" }, svg);
+    const dots = cfg.series.map((se) => s("circle", { r: 4, class: "ring", style: `fill:${se.color}`, visibility: "hidden" }, svg));
+    const hit = s("rect", { x: m.l, y: 0, width: Math.max(0, W - m.l - m.r), height: H, fill: "transparent" }, svg);
+    let cur = n - 1;
+    const show = (i, evt) => {
+      cur = Math.max(0, Math.min(n - 1, i));
+      const cx = X(xs[cur]);
+      cross.setAttribute("x1", cx); cross.setAttribute("x2", cx); cross.setAttribute("visibility", "visible");
+      cfg.series.forEach((se, k) => { dots[k].setAttribute("cx", cx); dots[k].setAttribute("cy", Y(se.values[cur])); dots[k].setAttribute("visibility", "visible"); });
+      showTip(evt, cfg.tipTitle(cur), cfg.series.map((se) => ({ color: se.color, value: cfg.yFmt(se.values[cur], true), label: se.label })).concat(cfg.tipExtra ? cfg.tipExtra(cur) : []));
+    };
+    const hide = () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); hideTip(); };
+    hit.addEventListener("pointermove", (e) => {
+      const b = svg.getBoundingClientRect();
+      const px = e.clientX - b.left;
+      let best = 0, bd = Infinity;
+      for (let i = 0; i < n; i++) { const d = Math.abs(X(xs[i]) - px); if (d < bd) { bd = d; best = i; } }
+      show(best, e);
+    });
+    hit.addEventListener("pointerleave", hide);
+    svg.addEventListener("focus", (e) => show(cur, { target: svg, type: "focus" }));
+    svg.addEventListener("blur", hide);
+    svg.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { show(cur - 1, { target: svg, type: "focus" }); e.preventDefault(); }
+      if (e.key === "ArrowRight") { show(cur + 1, { target: svg, type: "focus" }); e.preventDefault(); }
+    });
+    host.appendChild(svg);
+  };
+  draw();
+  let last = host.clientWidth;
+  new ResizeObserver(() => { if (Math.abs(host.clientWidth - last) > 4) { last = host.clientWidth; draw(); } }).observe(host);
+}
+function lineLegend(series) {
+  return h("div", { class: "legend" }, series.map((se) => h("span", { class: "key" }, h("span", { class: "ln", style: `background:${se.color}` }), se.label)));
+}
+function dataTable(cols, rows) {
+  return h("div", { class: "table-wrap" }, h("table", {},
+    h("thead", {}, h("tr", {}, cols.map((c) => h("th", { class: c.num ? "num" : null, text: c.label })))),
+    h("tbody", {}, rows.map((r) => h("tr", {}, cols.map((c) => h("td", { class: c.num ? "num" : c.id ? "id" : null }, c.render ? c.render(r) : String(r[c.key] ?? "—"))))))));
+}
+
+/* ---------- sections ---------- */
+function renderHero() {
+  const hl = R.headline, w = R.window, wt = R.weighting;
+  const field = wt.field || {};
+  byId("hero-meta").textContent = `${w.label} · updated ${R.generated_at.slice(0, 10)}`;
+  const body = byId("hero-body");
+  const bt = (R.by_set || []).find((x) => x.set === (w.format || "")) || null;
+  const plan = R.plan;
+  const m50 = (R.unlock_milestones || []).find((x) => x.target_pct === 50);
+  const m75 = (R.unlock_milestones || []).find((x) => x.target_pct === 75);
+  const topVerified = [...R.archetypes].filter((a) => a.verified_copies_pct >= 50).sort((a, b) => b.verified_copies_pct - a.verified_copies_pct).slice(0, 3);
+
+  const fig = h("div", { class: "hero-figure" },
+    h("div", { class: "hero-value", text: pct(hl.decks.playable_pct, 0) }),
+    h("div", { class: "hero-caption" }, `of the ${w.label} field plays end to end in the engine today`),
+    h("div", { class: "small muted" },
+      `${num(hl.decklists)} tournament lists, ${w.since} to ${w.until}` +
+      (wt.mode === "digilab" ? `, weighted to DigiLab's ${num(field.entries)}-entry field` : "")));
+
+  const kpi = (label, value, sub) => h("div", { class: "kpi" }, h("span", { class: "label", text: label }), h("span", { class: "value", text: value }), h("span", { class: "sub", text: sub }));
+  const kpis = h("div", { class: "kpis" },
+    kpi("Card copies implemented", pct(hl.implemented.copies_pct), `${hl.implemented.unique} of ${hl.meta_cards} distinct cards`),
+    kpi("DCGO-verified", pct(hl.verified.copies_pct), `${hl.verified.unique} cards, every clause confirmed`),
+    kpi("Trainable today", pct(hl.decks.trainable_pct), `${hl.decks.trainable_lists} of ${hl.decks.playable_lists} playable lists`),
+    kpi(bt ? `${bt.set} cards implemented` : "Pool implemented", bt ? `${bt.meta_cards_implemented} / ${bt.meta_cards}` : `${num(R.pool.implemented)}`,
+        bt ? `${pct(bt.share_of_meta_copies_pct)} of all meta copies` : `of ${num(R.pool.cards_json_total)} cards`));
+
+  const right = h("div", { class: "hero-figure" }, kpis);
+  body.appendChild(h("div", { class: "hero-grid" }, fig, right));
+
+  if (plan && plan.milestones) {
+    body.appendChild(h("div", { class: "phases", role: "list", "aria-label": "Launch milestones" },
+      plan.milestones.map((ms) => h("div", { class: "phase " + (ms.status || ""), role: "listitem" },
+        h("div", { class: "pid", text: `${ms.id} · ${ms.status}` }), h("div", { class: "pname", text: ms.name })))));
+  }
+
+  const lines = [];
+  if (bt) lines.push(`${bt.set} is ${pct(bt.share_of_meta_copies_pct)} of every card the field registers, and ${bt.meta_cards_implemented} of the ${bt.meta_cards} ${bt.set} cards seen in lists are implemented. That one set is most of the gap.`);
+  if (m50 && m75) lines.push(`Implementing the next ${m50.cards} cards in unlock order makes half the field playable; ${m75.cards} cards reach three quarters (${R.unlock_total_cards} missing in all).`);
+  const heldBack = hl.decks.playable_lists - hl.decks.trainable_lists;
+  lines.push(heldBack > 0
+    ? `${heldBack} of the ${hl.decks.playable_lists} fully playable lists play a card the DSL ledger flags as not ready (PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS), so the training pool holds them back.`
+    : `The training pool admits all ${hl.decks.playable_lists} fully playable lists.`);
+  lines.push(`${pct(hl.clauses.field_weighted_confirmed_pct)} of printed clauses are DCGO-confirmed, weighted by play rate` +
+    (topVerified.length ? `; the confirmations sit mostly in ${topVerified.map((a) => `${a.archetype} (${pct(a.verified_copies_pct, 0)})`).join(", ")}.` : "."));
+  body.appendChild(h("ul", { class: "narrative" }, lines.map((t) => h("li", { text: t }))));
+  for (const wmsg of R.warnings || []) body.appendChild(h("div", { class: "warnbox", text: wmsg }));
+}
+
+function renderReadiness() {
+  const hl = R.headline;
+  byId("readiness-meta").textContent = `${num(hl.meta_cards)} cards · ${num(hl.clauses.total)} clauses`;
+  const body = byId("readiness-body");
+  const sc = hl.stage_copies_pct, su = hl.stage_unique, total = hl.meta_cards;
+  const copies = { missing: sc.missing, impl: sc.known_gap + sc.untested, tested: sc.tested, verified: sc.verified };
+  const uniq = { missing: su.missing, impl: su.known_gap + su.untested, tested: su.tested, verified: su.verified };
+  const uniqPct = Object.fromEntries(Object.entries(uniq).map(([k, v]) => [k, (100 * v) / total]));
+  const bv = hl.clauses.by_verdict;
+  const clauseSplit = { missing: 0, impl: 0, tested: 100 * (bv.unmeasured + bv.diverged + bv.unreachable + bv.unavailable) / hl.clauses.total, verified: 100 * bv.confirmed / hl.clauses.total };
+  body.appendChild(h("p", { class: "muted small", text: "Every card in the window, placed on one ladder. Copies weight a card by how many slots the field gives it; distinct cards count each once." }));
+  const row = (label, sub, bar) => h("div", { class: "stack-row" }, h("div", {}, h("div", { text: label }), h("span", { class: "sub-line", text: sub })), bar);
+  body.appendChild(row("Card copies", "weighted to field share", stackBar(copies, { title: "Card copies" })));
+  body.appendChild(row("Distinct cards", `${total} cards`, stackBar(uniqPct, { title: "Distinct cards", fmt: (v) => `${Math.round((v * total) / 100)} cards` })));
+  body.appendChild(stageLegend(copies));
+  body.appendChild(h("p", { class: "small muted" },
+    `Clauses on these cards: ${num(hl.clauses.total)}. Confirmed ${num(bv.confirmed)}, diverged ${num(bv.diverged)}, unreachable ${num(bv.unreachable)}, unavailable ${num(bv.unavailable)}, unmeasured ${num(bv.unmeasured)}.`));
+  const p = R.pool;
+  body.appendChild(h("p", { class: "small muted" },
+    `Whole card pool: ${num(p.implemented)} of ${num(p.cards_json_total)} cards implemented (${pct(p.implemented_pct)}), ${p.known_gap} flagged PARTIAL or BLOCKED, ${p.verified} DCGO-verified.`));
+}
+
+function renderSets() {
+  const body = byId("sets-body");
+  const rows = (R.by_set || []).slice(0, 12);
+  const max = Math.max(...rows.map((r) => r.share_of_meta_copies_pct), 1);
+  const list = h("div", { class: "setbars" });
+  for (const r of rows) {
+    const width = (100 * r.share_of_meta_copies_pct) / max;
+    const implW = r.implemented_copies_pct, missW = 100 - implW;
+    const bar = h("div", { class: "bar", style: `width:${width}%`, tabindex: "0", role: "img",
+      "aria-label": `${r.set}: ${pct(r.share_of_meta_copies_pct)} of meta copies, ${pct(implW)} implemented` });
+    if (implW > 0) { const a = h("div", { class: "s-tested" }); a.style.flex = `${implW} 1 0`; bar.appendChild(a); }
+    if (missW > 0) { const b = h("div", { class: "s-missing" }); b.style.flex = `${missW} 1 0`; bar.appendChild(b); }
+    attachTip(bar, r.set, [
+      { value: pct(r.share_of_meta_copies_pct), label: "of all meta card copies" },
+      { color: "var(--s-tested)", value: pct(implW), label: "of those implemented" },
+      { value: `${r.meta_cards_implemented}/${r.meta_cards}`, label: "meta cards implemented" },
+      { value: `${r.pool_implemented}/${r.pool_cards}`, label: "whole set implemented" },
+    ]);
+    list.appendChild(h("div", { class: "setbar" },
+      h("span", { class: "name", text: r.set }),
+      h("div", { class: "track" }, bar, h("span", { class: "val", text: pct(r.share_of_meta_copies_pct) })),
+      h("span", { class: "cards", text: `${r.meta_cards_implemented}/${r.meta_cards}` })));
+  }
+  body.appendChild(list);
+  body.appendChild(h("div", { class: "legend" },
+    h("span", { class: "key" }, h("span", { class: "sw s-tested" }), "Implemented"),
+    h("span", { class: "key" }, h("span", { class: "sw s-missing" }), "Not implemented"),
+    h("span", { class: "key muted" }, "Right column: meta cards implemented / seen")));
+}
+
+function renderTrend() {
+  const body = byId("trend-body");
+  const tr = R.trend || [];
+  if (tr.length < 2) {
+    byId("trend").hidden = true;
+    return;
+  }
+  byId("trend-meta").textContent = `rolling ${R.trend_window_days || 42}-day window · equal weight`;
+  body.appendChild(h("p", { class: "muted small", text: "Each point re-scores the lists played in the preceding window against the specs that had landed by that date, so new sets show up as drops." }));
+  const series = [
+    { label: "Card copies implemented", short: "copies", color: "var(--c1)", values: tr.map((p) => p.implemented_copies_pct) },
+    { label: "Decks fully playable", short: "decks", color: "var(--c2)", values: tr.map((p) => p.playable_decks_pct) },
+    { label: "Clauses DCGO-confirmed", short: "clauses", color: "var(--c3)", values: tr.map((p) => p.clause_confirmed_pct) },
+  ];
+  body.appendChild(lineLegend(series));
+  const host = h("div", { class: "chart" });
+  body.appendChild(host);
+  const xs = tr.map((p) => toMs(p.date));
+  const months = [];
+  const d0 = new Date(xs[0]);
+  for (let d = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1)); d.getTime() <= xs[xs.length - 1]; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
+    months.push({ x: d.getTime(), label: d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }) });
+  }
+  const markers = (R.calendar || []).map((c) => ({ x: toMs(c.start), label: c.format }));
+  // Mark the authoring plateau: consecutive points where the pool did not grow.
+  const bands = [];
+  let runStart = null;
+  for (let i = 1; i < tr.length; i++) {
+    const flat = tr[i].pool_implemented - tr[i - 1].pool_implemented <= 2;
+    if (flat && runStart == null) runStart = i - 1;
+    if ((!flat || i === tr.length - 1) && runStart != null) {
+      const end = flat ? i : i - 1;
+      if (end - runStart >= 5) bands.push({ from: xs[runStart], to: xs[end], label: "no new card specs" });
+      runStart = null;
+    }
+  }
+  lineChart(host, {
+    xs, series, yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: (v, exact) => (exact ? pct(v) : `${v}%`),
+    xTicks: months, markers, bands, height: 280,
+    aria: "Line chart of meta coverage over time",
+    tipTitle: (i) => `${shortDate(tr[i].date)} · ${tr[i].lists} lists`,
+    tipExtra: (i) => [{ value: num(tr[i].pool_implemented), label: "cards implemented in the pool" }],
+  });
+  const det = h("details", {}, h("summary", { text: "Show the data" }), dataTable([
+    { label: "Window end", key: "date", id: true },
+    { label: "Lists", key: "lists", num: true },
+    { label: "Copies implemented", num: true, render: (r) => pct(r.implemented_copies_pct) },
+    { label: "Decks playable", num: true, render: (r) => pct(r.playable_decks_pct) },
+    { label: "Clauses confirmed", num: true, render: (r) => pct(r.clause_confirmed_pct) },
+    { label: "Pool implemented", key: "pool_implemented", num: true },
+  ], tr.slice().reverse()));
+  body.appendChild(det);
+}
+
+function renderArchetypes() {
+  const body = byId("arch-body");
+  const rows = R.archetypes.slice(0, 18);
+  byId("arch-meta").textContent = `top ${rows.length} of ${R.archetypes.length} by field share`;
+  body.appendChild(h("p", { class: "muted small", text: "Readiness bars split each archetype's card copies by stage. A list is playable when every card in it is implemented, and trainable when it is also free of cards the DSL ledger flags as not ready; trainable lists are what the RL deck pool admits today." }));
+  const cols = [
+    { label: "Archetype", render: (a) => h("span", {}, a.archetype, a.digilab_deck && a.digilab_deck !== a.archetype ? h("span", { class: "sub-line", text: `DigiLab: ${a.digilab_deck}` }) : null) },
+    { label: "Field share", num: true, render: (a) => pct(a.field_share_pct) },
+    { label: "Readiness", render: (a) => stackBar(stageSplit(a.implemented_copies_pct, a.tested_copies_pct, a.verified_copies_pct), { mini: true, title: a.archetype }) },
+    { label: "Implemented", num: true, render: (a) => pct(a.implemented_copies_pct, 0) },
+    { label: "Verified", num: true, render: (a) => pct(a.verified_copies_pct, 0) },
+    { label: "Playable lists", num: true, render: (a) => `${a.playable_lists}/${a.lists}` },
+    { label: "Trainable lists", num: true, render: (a) => `${a.trainable_lists}/${a.lists}` },
+    { label: "Closest list needs", render: (a) => {
+        if (a.min_missing === 0) return h("span", { class: "chip good", text: "nothing" });
+        const ids = a.closest_list_missing.slice(0, 4).join(", ") + (a.closest_list_missing.length > 4 ? "…" : "");
+        return h("span", {}, h("span", { class: "mono small", text: `${a.min_missing} card${a.min_missing === 1 ? "" : "s"}` }), h("span", { class: "sub-line mono", text: ids }));
+      } },
+  ];
+  body.appendChild(dataTable(cols, rows));
+}
+
+function renderUnlock() {
+  const body = byId("unlock-body");
+  const curve = R.unlock_curve || [];
+  const start = R.headline.decks.playable_pct;
+  byId("unlock-meta").textContent = `${R.unlock_total_cards} cards to 100%`;
+  body.appendChild(h("p", { class: "muted small", text: "Share of the field that becomes fully playable as cards are implemented in the order of the queue beside this chart. Early cards are blockers shared by many decks." }));
+  if (!curve.length) return;
+  const xs = [0, ...curve.map((_, i) => i + 1)];
+  const values = [start, ...curve.map((c) => c[1])];
+  const names = Object.fromEntries((R.implement_next || []).map((r) => [r.card_id, r.name]));
+  const host = h("div", { class: "chart" });
+  body.appendChild(host);
+  const N = xs.length - 1;
+  const step = N > 150 ? 50 : N > 60 ? 25 : 10;
+  const xTicks = [];
+  for (let t = 0; t <= N; t += step) xTicks.push({ x: t, label: String(t) });
+  const points = (R.unlock_milestones || []).filter((m) => m.cards && m.target_pct < 100).map((m) => ({ x: m.cards, y: values[m.cards], color: "var(--c1)", label: `${m.target_pct}% at ${m.cards}`, dy: -6 }));
+  lineChart(host, {
+    xs, series: [{ label: "Field fully playable", color: "var(--c1)", values }],
+    yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: (v, exact) => (exact ? pct(v) : `${v}%`),
+    xTicks, points, height: 240, rightPad: 24, endLabels: false,
+    aria: "Unlock curve: share of the field playable versus cards implemented",
+    tipTitle: (i) => (i === 0 ? "Today" : `After ${i} card${i === 1 ? "" : "s"}`),
+    tipExtra: (i) => (i === 0 ? [] : [{ value: curve[i - 1][0], label: names[curve[i - 1][0]] || "" }]),
+  });
+  body.appendChild(h("div", { class: "legend" }, (R.unlock_milestones || []).map((m) =>
+    h("span", { class: "key" }, `${m.target_pct}% → `, h("b", { text: m.cards == null ? "n/a" : `${m.cards} cards` })))));
+}
+
+function renderQueue() {
+  const body = byId("queue-body");
+  const rows = (R.implement_next || []).slice(0, 15);
+  body.appendChild(dataTable([
+    { label: "#", key: "rank", num: true },
+    { label: "Card", render: (r) => h("span", {}, h("span", { class: "mono small", text: r.card_id }), h("span", { class: "sub-line", text: `${r.name} · ${r.kind}` })) },
+    { label: "Field play", num: true, render: (r) => pct(r.field_inclusion_pct) },
+    { label: "Then playable", num: true, render: (r) => pct(r.cumulative_playable_pct) },
+    { label: "Played in", render: (r) => h("span", { class: "small", text: r.top_archetypes.slice(0, 2).map((a) => a[0]).join(", ") }) },
+  ], rows));
+  body.appendChild(h("p", { class: "small muted" }, "Full queue (", h("code", { text: "implement_next" }), `, ${R.implement_next.length} rows) is in latest.json and latest.md.`));
+}
+
+function gateValue(g) {
+  if (!("metric" in g)) return g.met ? "done" : "open";
+  const v = g.value;
+  const shown = v == null ? "—" : Number.isInteger(v) ? String(v) : Number(v).toFixed(1);
+  const unit = g.unit === "%" ? "%" : "";
+  return `${shown}${unit} ${g.op === "<=" ? "≤" : "/"} ${g.target}${unit}`;
+}
+function renderPlan() {
+  const plan = R.plan;
+  const body = byId("plan-body");
+  if (!plan) { byId("plan").hidden = true; return; }
+  byId("plan-meta").textContent = `plan updated ${plan.updated}`;
+  body.appendChild(h("p", { class: "small", text: plan.goal }));
+  const list = h("div", { class: "plan" });
+  for (const ms of plan.milestones) {
+    const gates = h("ul", { class: "gates" }, ms.gates.map((g) => {
+      const meter = h("div", { class: "meter", "aria-hidden": "true" });
+      if (g.progress != null) meter.appendChild(h("div", { style: `width:${Math.round(g.progress * 100)}%` }));
+      return h("li", { class: "gate" + (g.met ? " met" : "") },
+        h("span", { class: "mark", text: g.met ? "[x]" : "[ ]", "aria-label": g.met ? "met" : "not met" }),
+        h("span", { text: g.label }),
+        g.progress != null ? meter : h("span", {}),
+        h("span", { class: "gv", text: gateValue(g) }));
+    }));
+    list.appendChild(h("div", { class: "ms " + (ms.status || "") },
+      h("div", { class: "mid", text: ms.id }),
+      h("div", { class: "mbody" },
+        h("div", { class: "mhead" }, h("h3", { text: ms.name }), h("span", { class: "chip " + (STATUS_CHIP[ms.status] || ""), text: ms.status }), h("span", { class: "small muted", text: `${ms.gates_met}/${ms.gates.length} gates` })),
+        ms.why ? h("p", { class: "small muted", text: ms.why }) : null,
+        gates,
+        ms.actions && ms.actions.length ? h("ul", { class: "actions" }, ms.actions.map((a) => h("li", { text: a }))) : null)));
+  }
+  body.appendChild(list);
+  body.appendChild(h("p", { class: "small muted" }, "Gate thresholds live in ", h("code", { text: "qa/qa-reports/meta-coverage/launch_plan.json" }), " and are re-scored on every run."));
+}
+
+function renderTraining() {
+  const body = byId("training-body");
+  const t = R.plan && R.plan.training;
+  if (!t) { byId("training").hidden = true; return; }
+  const hl = R.headline;
+  body.appendChild(h("p", { text: t.summary }));
+  const facts = [{ label: "Meta deck gate", state: hl.decks.trainable_gap_pct > 1 ? "bad" : "good",
+    detail: `${hl.decks.trainable_lists} of ${hl.decks.playable_lists} fully playable lists (${pct(hl.decks.trainable_pct)} of the field, against ${pct(hl.decks.playable_pct)} playable) pass the training pool's per-list gate: no card flagged as not ready in the DSL ledger.` }, ...t.facts];
+  body.appendChild(h("ul", { class: "facts" }, facts.map((f) => h("li", {}, h("span", { class: "chip " + (STATUS_CHIP[f.state] || ""), text: f.label }), h("span", { class: "small", text: f.detail })))));
+  if (t.baselines && t.baselines.length) {
+    body.appendChild(h("h3", { text: "Anchored baselines (2026-07-02)" }));
+    body.appendChild(dataTable([
+      { label: "Agent", render: (b) => h("span", {}, h("span", { class: "mono small", text: b.model }), h("span", { class: "sub-line", text: b.arch })) },
+      { label: "vs greedy", num: true, render: (b) => pct(b.vs_greedy_pct) },
+      { label: "Exploitability", num: true, render: (b) => b.exploitability.toFixed(2) },
+    ], t.baselines));
+    if (t.baselines_source) body.appendChild(h("p", { class: "small muted", text: t.baselines_source }));
+  }
+}
+
+function renderExam() {
+  const body = byId("exam-body");
+  const rows = (R.exam_next || []).slice(0, 12);
+  body.appendChild(h("p", { class: "muted small", text: "Implemented cards with unmeasured clauses, ordered by field play rate times unmeasured clauses: the most-played unchecked behavior first." }));
+  body.appendChild(dataTable([
+    { label: "Card", render: (r) => h("span", {}, h("span", { class: "mono small", text: r.card_id }), h("span", { class: "sub-line", text: r.name })) },
+    { label: "Field play", num: true, render: (r) => pct(r.field_inclusion_pct) },
+    { label: "Unmeasured", num: true, render: (r) => `${r.by_verdict.unmeasured}/${r.clauses}` },
+    { label: "Played in", render: (r) => h("span", { class: "small", text: r.top_archetypes.slice(0, 2).map((a) => a[0]).join(", ") }) },
+  ], rows));
+  const gaps = R.known_gaps || [];
+  if (gaps.length) {
+    body.appendChild(h("h3", { text: `Known gaps in meta cards (${gaps.length})` }));
+    body.appendChild(dataTable([
+      { label: "Card", render: (r) => h("span", {}, h("span", { class: "mono small", text: r.card_id }), h("span", { class: "sub-line", text: r.name })) },
+      { label: "Status", render: (r) => h("span", { class: "chip " + (r.tracker_status === "BLOCKED" ? "bad" : "warn"), text: r.tracker_status }) },
+      { label: "Gap", render: (r) => r.gap_kind || "—" },
+      { label: "Field play", num: true, render: (r) => pct(r.field_inclusion_pct) },
+    ], gaps));
+  }
+}
+
+function renderFindings() {
+  const body = byId("findings-body");
+  const items = [];
+  const gen = toMs(R.generated_at.slice(0, 10)), newest = toMs(R.window.newest_list);
+  const age = Math.round((gen - newest) / 86400000);
+  if (age > 10) items.push({ title: "Deck library is stale", state: "warn", detail: `Newest list is from ${R.window.newest_list} (${age} days before this report); ${R.headline.decklists} lists fall in the window.`, action: "python code/tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-since " + R.window.newest_list });
+  if (R.pool.allowlist_lag > 0) items.push({ title: "Deck builder hides implemented cards", state: "warn", detail: `${R.pool.allowlist_lag} implemented cards are missing from data/tested_cards.json, so the deck builder will not offer them.`, action: "python code/tools/build_tested_cards.py" });
+  for (const f of (R.plan && R.plan.findings) || []) items.push(f);
+  const order = { bad: 0, warn: 1, info: 2 };
+  items.sort((a, b) => (order[a.state] ?? 3) - (order[b.state] ?? 3));
+  body.appendChild(h("ul", { class: "facts" }, items.map((f) => h("li", {},
+    h("span", { class: "chip " + (STATUS_CHIP[f.state] || ""), text: f.state === "bad" ? "Fix now" : f.state === "warn" ? "Soon" : "Heads up" }),
+    h("span", { class: "small" }, h("b", { text: f.title + ". " }), f.detail, f.action ? h("span", { class: "act", text: "→ " + f.action }) : null)))));
+}
+
+function renderFooter() {
+  const f = byId("footer");
+  const wt = R.weighting;
+  f.appendChild(h("div", {}, `Generated ${R.generated_at.replace("T", " ").replace("+00:00", " UTC")} from git ${R.git_head || "?"}. Regenerate with `, h("code", { text: "PYTHONPATH=code python -m tools.meta_coverage --trend --html" }), "."));
+  const src = h("div", {}, "Sources: tournament lists from ", h("code", { text: "data/deck_library.json" }), ` (${Object.entries(R.window.sources).map(([k, v]) => `${k} ${v}`).join(", ")})`);
+  if (wt.mode === "digilab" && wt.source_url) {
+    src.appendChild(document.createTextNode("; field shares from "));
+    src.appendChild(h("a", { href: wt.source_url, target: "_blank", rel: "noopener", text: "DigiLab's retrospective" }));
+    src.appendChild(document.createTextNode(` (${wt.source_window}, ${wt.named_share_pct}% of the field named; the rest spread by list count)`));
+  }
+  src.appendChild(document.createTextNode("; implementation from YAML specs, tests and the DCGO exam ledger."));
+  f.appendChild(src);
+  f.appendChild(h("details", {}, h("summary", { text: "Definitions" }), h("dl", { class: "defs" },
+    h("dt", { text: "Implemented" }), h("dd", { text: "A YAML spec under code/digimon-engine/cards/ declares the card; build.rs compiles exactly these into the engine registry." }),
+    h("dt", { text: "Tested" }), h("dd", { text: "Implemented, referenced by a Rust test, and not flagged PARTIAL or BLOCKED in validated_cards_dsl.json." }),
+    h("dt", { text: "DCGO-verified" }), h("dd", { text: "Tested, and every printed clause has an exam verdict, none unmeasured or diverged." }),
+    h("dt", { text: "Playable" }), h("dd", { text: "Every card in the list is implemented, so the engine can run the deck." }),
+    h("dt", { text: "Trainable" }), h("dd", { text: "Playable, and no card in the list is flagged PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS in validated_cards_dsl.json: the training deck pool's per-list gate (digimon_gym.agents.gauntlet)." }),
+    h("dt", { text: "Field share" }), h("dd", { text: "Lists are weighted so each archetype carries its DigiLab share of entries; copies are expected copies per deck in the field." }))));
+}
+
+if (!R) {
+  byId("app").replaceChildren(h("section", { class: "win" }, h("div", { class: "win-body" }, h("p", { text: "No report embedded. Run: PYTHONPATH=code python -m tools.meta_coverage --html" }))));
+} else {
+  renderHero(); renderReadiness(); renderSets(); renderTrend(); renderArchetypes();
+  renderUnlock(); renderQueue(); renderPlan(); renderTraining(); renderExam(); renderFindings(); renderFooter();
+}
+</script>
