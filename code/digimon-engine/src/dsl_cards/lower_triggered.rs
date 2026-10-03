@@ -255,6 +255,17 @@ pub fn lower_for_kind_with_clause_index(
         if steps_provide_resource_flow(&clause.process) {
             builder = builder.resource_flow();
         }
+        // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
+        // that authors its own `place_self_as_delay_option` owns the
+        // placement — `dispose_option` trashes the card if the body ended
+        // without placing it (e.g. a declined "By trashing …" cost).
+        if matches!(
+            engine_timing,
+            EffectTiming::MainFromHand | EffectTiming::OptionMain
+        ) && steps_contain_place_self_as_delay_option(&clause.process)
+        {
+            builder = builder.explicit_self_placement();
+        }
         if matches!(
             engine_timing,
             EffectTiming::MainFromHand | EffectTiming::OptionMain
@@ -416,6 +427,26 @@ fn predicate_subject_for_source(
 
 fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {
     steps.iter().any(step_provides_resource_flow)
+}
+
+/// Recursive scan for a `place_self_as_delay_option` step anywhere in a
+/// clause body, at any nesting depth. Walks the serde form of the compiled
+/// steps (the unit variant serializes as the bare string
+/// `"PlaceSelfAsDelayOption"`) so every nesting construct (`if`, `optional`,
+/// `for_each`, `per_selected`, selection `then:` tails, …) is covered without
+/// a hand-maintained variant list. Runs once per card build (effects cached).
+fn steps_contain_place_self_as_delay_option(steps: &[CompiledStep]) -> bool {
+    fn walk(v: &serde_json::Value) -> bool {
+        match v {
+            serde_json::Value::String(s) => s == "PlaceSelfAsDelayOption",
+            serde_json::Value::Array(items) => items.iter().any(walk),
+            serde_json::Value::Object(map) => {
+                map.contains_key("PlaceSelfAsDelayOption") || map.values().any(walk)
+            }
+            _ => false,
+        }
+    }
+    serde_json::to_value(steps).map(|v| walk(&v)).unwrap_or(false)
 }
 
 /// Recursive scan for a `refund_opt` step anywhere in a clause body

@@ -284,6 +284,18 @@ impl Game {
         )
     }
 
+    /// G-ENGINE-CANNOT-USE-OPTION-CARDS: whether `player_id` is currently
+    /// barred from USING Option cards (EX1-072 "Your opponent can't use
+    /// Option cards …"; DCGO `CanNotPlayClass(cardSource.IsOption)`). Gates
+    /// every use path — the hand PLAY bit, effect-driven `use_option_*`, and
+    /// hand Counter-timing Options. Linking a Plug-In from hand (§6-5-1-4, a
+    /// separate main-phase action) and `[Security]` effects (official EX1-072
+    /// Q&A) are not uses and stay legal.
+    pub fn option_use_blocked(&self, player_id: PlayerId) -> bool {
+        self.modifiers
+            .player_has(player_id, crate::enums::ModifierType::CannotUseOptionCards)
+    }
+
     /// Shared Option-play pipeline. Forks on source zone (hand vs trash)
     /// and on the resolved play mode (Standard / Delay / Link / Training).
     ///
@@ -411,7 +423,16 @@ impl Game {
         // Standard `[Main]` Option and a Link Option) surfaces a
         // mode-select prompt; its callback re-enters here with the chosen
         // mode. Cost, `OptionMain` firing, and disposal all fork on it.
+        // G-ENGINE-CANNOT-USE-OPTION-CARDS: a counter-window use is always a
+        // use; elsewhere only the Link mode (a link, not a use) survives — the
+        // legal-mode set below already drops the use modes.
+        if self.in_counter_window && self.option_use_blocked(player_id) {
+            return OptionPlayResult::Invalid;
+        }
         let mode = match chosen_mode {
+            Some(mode) if !mode.is_link() && self.option_use_blocked(player_id) => {
+                return OptionPlayResult::Invalid;
+            }
             Some(mode) => mode,
             // Counter-window plays are always Standard counter Options;
             // dual-mode Plug-Ins are never counter Options.

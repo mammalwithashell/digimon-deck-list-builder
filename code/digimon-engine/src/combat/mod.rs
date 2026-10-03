@@ -1595,7 +1595,7 @@ impl Game {
                 let has_counter_option = effects.iter().any(|e| {
                     e.counter && !e.blast_digivolve && e.timing == EffectTiming::CounterEffect
                 });
-                if has_counter_option {
+                if has_counter_option && !self.option_use_blocked(defender_player) {
                     // Legality parity with Phase 8 Option play: the
                     // candidate surface must match `play_option_from_hand`.
                     let card = &self.player(defender_player).hand[h_idx];

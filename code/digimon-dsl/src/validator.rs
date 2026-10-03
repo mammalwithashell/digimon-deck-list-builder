@@ -2861,6 +2861,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "DrawBlock",
     "MemoryBlock",
     "CannotPlayFromHand",
+    "CannotUseOptionCards",
     // Phase 6 player-scoped flood gates
     "CannotPlayDigimonByEffect",
     "CannotPlayTamerByEffect",
