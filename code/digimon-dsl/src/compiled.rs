@@ -980,6 +980,8 @@ pub enum CompiledPerSelector {
     DigivolutionColorCount,
     SourceColorCount,
     ReturnedCardColorCount,
+    /// See `PerSelector::EffectSuspendedCount`.
+    EffectSuspendedCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         bucket: Option<u32>,
