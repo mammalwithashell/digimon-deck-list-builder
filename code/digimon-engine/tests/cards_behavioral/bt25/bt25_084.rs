@@ -1,4 +1,4 @@
-//! BT25-084 Titamon — Digimon, Lv.6, Purple/Black, DP 13000, Cost 13.
+//! BT25-084 Titamon — Digimon, Lv.6, Purple/Red/Green, DP 13000, Cost 13.
 //! Traits: Shaman, Titan, TS. Attribute: Virus.
 //!
 //! # Card text (card image BT25-084 — authoritative for printed text)
@@ -8,7 +8,9 @@
 //! [All Turns] [Once Per Turn] When this Digimon would leave the battle area, by
 //! trashing 2 cards in your hand, it doesn't leave.
 //! [All Turns] When your hand is trashed from, delete 1 of your opponent's
-//! lowest DP Digimon.   (OMITTED — G-ENGINE-ON-DISCARD-HAND -> PARTIAL)
+//! lowest DP Digimon.
+//! Digivolve: Purple/Red/Green Lv.5 cost 5; "[Titamon] w/o 3 colors: Cost 2";
+//! "Lv.5 w/[TS] trait: Cost 4".
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_084.cs
@@ -16,6 +18,7 @@
 //! # Patterns this test covers (RUST_DSL_TEST_API 4.3)
 //! - hand-trash cost (cost:true) + delete-all-highest-DP; effect-gated sec trash
 //! - F3 leave-prevention replacement (trash 2 hand -> cancel); E2 OPT
+//! - on_discard_hand observer (delete opp lowest DP); "w/o 3 colors" alt path
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -193,4 +196,266 @@ fn bt25_084_leave_prevention_installs_with_two_hand_cards() {
             // the structural test guards the clause's presence.
         }
     }
+}
+
+// ─── Printed colors / digivolve circles ───────────────────────────────────────
+
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{encode_digivolve, REPLACEMENT_ACCEPT};
+use digimon_engine::enums::{CardColor, EffectTiming};
+use digimon_engine::selection::TriggerSource;
+
+/// Test-only [On Play] "trash 1 card in your hand" Digimon — fires
+/// `on_discard_hand` for its controller's hand.
+const HAND_TRASHER_YAML: &str = r#"
+card: T-HANDTRASH
+name: HandTrasher
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_play
+    summary: "[On Play] Trash 1 card in your hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: gone
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: gone }
+"#;
+
+fn colored(id: &str, name: &str, level: u8, colors: &[CardColor], traits: &[&str]) -> CardData {
+    let mut card = make_digimon(id, level, 1000 * level as i32, traits);
+    card.card_name = name.to_string();
+    card.colors = colors.to_vec();
+    card
+}
+
+fn evo_base() -> DebugRunnerBuilder {
+    base()
+        .add_card(colored("RED5", "Red Five", 5, &[CardColor::Red], &[]))
+        .add_card(colored("GREEN5", "Green Five", 5, &[CardColor::Green], &[]))
+        .add_card(colored("BLUE5", "Blue Five", 5, &[CardColor::Blue], &[]))
+        .add_card(colored(
+            "TITAMON2C",
+            "Titamon",
+            6,
+            &[CardColor::Purple, CardColor::Green],
+            &["Shaman", "Titan", "TS"],
+        ))
+        .add_card(colored(
+            "TITAMON3C",
+            "Titamon",
+            6,
+            &[CardColor::Purple, CardColor::Red, CardColor::Green],
+            &["Shaman", "Titan", "TS"],
+        ))
+}
+
+fn digivolve_from(runner: &mut DebugRunner, base_id: &str) -> Option<i32> {
+    let perm = runner.place_on_field(0, base_id, Some(0));
+    let action = encode_digivolve(0, perm.index as u16);
+    if build_action_mask(&runner.game, 0)[action as usize] != 1.0 {
+        return None;
+    }
+    let before = runner.memory();
+    runner.game.decode_action(action, 0);
+    assert_eq!(
+        runner.game.players[0].battle_area[perm.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID
+    );
+    Some(before - runner.memory())
+}
+
+#[test]
+fn bt25_084_printed_colors_are_purple_red_green() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let colors = format!("{:?}", card.color);
+    for c in ["Purple", "Red", "Green"] {
+        assert!(colors.contains(c), "{c} in {colors}");
+    }
+    assert!(!colors.contains("Black"), "{colors}");
+}
+
+#[test]
+fn bt25_084_digivolves_from_red_level_five_for_five() {
+    let mut runner = evo_base().hand(0, &[CARD_ID]).memory(10).start();
+    assert_eq!(digivolve_from(&mut runner, "RED5"), Some(5));
+}
+
+#[test]
+fn bt25_084_digivolves_from_green_level_five_for_five() {
+    let mut runner = evo_base().hand(0, &[CARD_ID]).memory(10).start();
+    assert_eq!(digivolve_from(&mut runner, "GREEN5"), Some(5));
+}
+
+#[test]
+fn bt25_084_cannot_digivolve_from_blue_level_five() {
+    let mut runner = evo_base().hand(0, &[CARD_ID]).memory(10).start();
+    assert_eq!(digivolve_from(&mut runner, "BLUE5"), None);
+}
+
+#[test]
+fn bt25_084_digivolves_from_two_color_titamon_for_two() {
+    let mut runner = evo_base().hand(0, &[CARD_ID]).memory(10).start();
+    assert_eq!(digivolve_from(&mut runner, "TITAMON2C"), Some(2));
+}
+
+#[test]
+fn bt25_084_cannot_use_titamon_path_from_three_color_titamon() {
+    let mut runner = evo_base().hand(0, &[CARD_ID]).memory(10).start();
+    assert_eq!(digivolve_from(&mut runner, "TITAMON3C"), None);
+}
+
+// ─── [All Turns] When your hand is trashed from → delete opp lowest DP ───────
+
+fn discard_base() -> DebugRunnerBuilder {
+    base()
+        .from_dsl_yaml(HAND_TRASHER_YAML)
+        .expect("trasher")
+}
+
+fn trash_one_from_hand(runner: &mut DebugRunner, p: PlayerId) {
+    let t = runner.place_on_field(p, "T-HANDTRASH", Some(0));
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(t));
+    runner.game.drain_effect_queue();
+    let v = runner.pending_selection_view().expect("hand pick");
+    runner.execute_action(p, v.valid_action_ids[0]).unwrap();
+}
+
+fn opp_field(runner: &DebugRunner) -> Vec<String> {
+    runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+#[test]
+fn bt25_084_has_all_turns_on_discard_hand_clause() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDiscardHand) => {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("on_discard_hand clause");
+    assert_eq!(clause.scope, CompiledScope::FaceUp);
+    assert!(!clause.optional, "mandatory delete");
+    assert!(!clause.once_per_turn, "no [Once Per Turn]");
+}
+
+#[test]
+fn bt25_084_own_hand_trash_deletes_opp_lowest_dp() {
+    let mut runner = discard_base().hand(0, &["PAD"]).memory(5).start();
+    runner.set_first_player(0);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    trash_one_from_hand(&mut runner, 0);
+    let _ = runner.auto_resolve();
+    assert_eq!(opp_field(&runner), vec!["OPP-BIG".to_string()]);
+}
+
+#[test]
+fn bt25_084_lowest_dp_tie_is_the_players_choice() {
+    let mut runner = discard_base().hand(0, &["PAD"]).memory(5).start();
+    runner.set_first_player(0);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-BIG2", Some(0));
+    trash_one_from_hand(&mut runner, 0);
+    let v = runner
+        .pending_selection_view()
+        .expect("two tied lowest-DP Digimon -> a pick");
+    assert!(!v.is_optional, "the delete is mandatory");
+    assert_eq!(v.valid_action_ids.len(), 2);
+    runner.execute_action(0, v.valid_action_ids[1]).unwrap();
+    let _ = runner.auto_resolve();
+    assert_eq!(opp_field(&runner).len(), 1);
+}
+
+#[test]
+fn bt25_084_triggers_on_opponents_turn_too() {
+    let mut runner = discard_base().hand(0, &["PAD"]).memory(5).start();
+    runner.set_first_player(1);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    trash_one_from_hand(&mut runner, 0);
+    let _ = runner.auto_resolve();
+    assert_eq!(opp_field(&runner), vec!["OPP-BIG".to_string()]);
+}
+
+#[test]
+fn bt25_084_triggers_for_every_hand_trash_no_once_per_turn() {
+    let mut runner = discard_base().hand(0, &["PAD", "PAD"]).memory(5).start();
+    runner.set_first_player(0);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    trash_one_from_hand(&mut runner, 0);
+    let _ = runner.auto_resolve();
+    trash_one_from_hand(&mut runner, 0);
+    let _ = runner.auto_resolve();
+    assert!(opp_field(&runner).is_empty());
+}
+
+#[test]
+fn bt25_084_opponents_hand_trash_does_not_trigger() {
+    let mut runner = discard_base().hand(1, &["PAD"]).memory(5).start();
+    runner.set_first_player(0);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    trash_one_from_hand(&mut runner, 1);
+    let _ = runner.auto_resolve();
+    assert_eq!(opp_field(&runner).len(), 2);
+}
+
+#[test]
+fn bt25_084_leave_prevention_trashes_two_and_stays_then_deletes_lowest() {
+    let mut runner = base().hand(0, &["PAD", "PAD", "PAD"]).memory(13).start();
+    runner.set_first_player(0);
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    runner.game.set_effect_source_player_for_test(Some(1));
+    runner
+        .game
+        .delete_permanents_batch(vec![titamon], ReplacementCause::OpponentEffect);
+    runner.game.set_effect_source_player_for_test(None);
+    let outer = runner.pending_selection_view().expect("would-leave prompt");
+    assert_eq!(outer.kind, SelectionKind::Replacement);
+    assert!(outer.is_optional);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).unwrap();
+    for _ in 0..2 {
+        let v = runner.pending_selection_view().expect("hand trash pick");
+        runner.execute_action(0, v.valid_action_ids[0]).unwrap();
+    }
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.players[0].hand.len(), 1, "2 of 3 trashed");
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "Titamon did not leave"
+    );
+    // The 2-card trash is one hand-trash event → one lowest-DP delete.
+    assert_eq!(opp_field(&runner), vec!["OPP-BIG".to_string()]);
 }

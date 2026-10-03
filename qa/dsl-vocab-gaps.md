@@ -3353,13 +3353,14 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** a `board_level_sum_gte` / `stat_sum` predicate (e.g. `{ stat: level, scope: any, zone: battle_area, kind: digimon } >= N`).
 - **Verdict:** contributes to BT25-077 PARTIAL (gap_kind: dsl). The cost-reduction clause is omitted (rather than approximated); the two main clauses ship.
 
-## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter
+## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter — RESOLVED 2026-10-03
 - **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
 - **Clause (alt-digivolve box):** "[Digivolve] [Titamon] w/o 3 colors: Cost 2."
 - **DCGO (BT25_084.cs):** `AddSelfDigivolutionRequirementStaticEffect(permanentCondition: TopCard.EqualsCardName("Titamon") && TopCard.CardColors.Distinct().Count() != 3, cost 2)`.
 - **What the DSL has:** `self_color_count_gte` (>= only). There is no `self_color_count_lte` / `!= N` for the base-card `from:` filter.
 - **Suggested DSL syntax:** `self_color_count_lte: N` (and/or `self_color_count_eq`) usable inside an alt-path `from:` predicate.
 - **Verdict:** contributes to BT25-084 PARTIAL (gap_kind: dsl). The standard Lv.5 Purple and Lv.5 [TS] cost-4 alt-paths ship; the Titamon-3-color cost-2 path is omitted.
+- **RESOLVED 2026-10-03 (Titans / TS Plutomon support package):** `self_color_count_lte: N` added (card- and permanent-subject, the ceiling twin of `self_color_count_gte`; on a permanent it reads the synthesized colors like the floor). "w/o 3 colors" is `any_of: [{ self_color_count_lte: 2 }, { self_color_count_gte: 4 }]` (DCGO `!= 3`). BT25-084 now ships the cost-2 path; tests `bt25_084_digivolves_from_two_color_titamon_for_two` / `bt25_084_cannot_use_titamon_path_from_three_color_titamon`.
 
 ## DSL Vocabulary ADDED: DigiLink Shape-B (Appmon Link Digimon)  [G-DSL-DIGILINK] — LANDED 2026-06-06
 - **Status:** LANDED 2026-06-06 (OpenSpec `implement-digilink-mechanic` §7). New YAML vocabulary for authoring Shape-B Appmon Link *Digimon* (the `[Link]` keyword on `kind: digimon` cards, e.g. BT21-009 Gatchmon) — distinct from the existing Option-scoped `kind: link_requirement` (Plug-Ins).
@@ -7422,13 +7423,14 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** a `board_level_sum_gte` / `stat_sum` predicate (e.g. `{ stat: level, scope: any, zone: battle_area, kind: digimon } >= N`).
 - **Verdict:** contributes to BT25-077 PARTIAL (gap_kind: dsl). The cost-reduction clause is omitted (rather than approximated); the two main clauses ship.
 
-## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter
+## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter — RESOLVED 2026-10-03
 - **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
 - **Clause (alt-digivolve box):** "[Digivolve] [Titamon] w/o 3 colors: Cost 2."
 - **DCGO (BT25_084.cs):** `AddSelfDigivolutionRequirementStaticEffect(permanentCondition: TopCard.EqualsCardName("Titamon") && TopCard.CardColors.Distinct().Count() != 3, cost 2)`.
 - **What the DSL has:** `self_color_count_gte` (>= only). There is no `self_color_count_lte` / `!= N` for the base-card `from:` filter.
 - **Suggested DSL syntax:** `self_color_count_lte: N` (and/or `self_color_count_eq`) usable inside an alt-path `from:` predicate.
 - **Verdict:** contributes to BT25-084 PARTIAL (gap_kind: dsl). The standard Lv.5 Purple and Lv.5 [TS] cost-4 alt-paths ship; the Titamon-3-color cost-2 path is omitted.
+- **RESOLVED 2026-10-03 (Titans / TS Plutomon support package):** `self_color_count_lte: N` added (card- and permanent-subject, the ceiling twin of `self_color_count_gte`; on a permanent it reads the synthesized colors like the floor). "w/o 3 colors" is `any_of: [{ self_color_count_lte: 2 }, { self_color_count_gte: 4 }]` (DCGO `!= 3`). BT25-084 now ships the cost-2 path; tests `bt25_084_digivolves_from_two_color_titamon_for_two` / `bt25_084_cannot_use_titamon_path_from_three_color_titamon`.
 
 ## DSL Vocabulary ADDED: DigiLink Shape-B (Appmon Link Digimon)  [G-DSL-DIGILINK] — LANDED 2026-06-06
 - **Status:** LANDED 2026-06-06 (OpenSpec `implement-digilink-mechanic` §7). New YAML vocabulary for authoring Shape-B Appmon Link *Digimon* (the `[Link]` keyword on `kind: digimon` cards, e.g. BT21-009 Gatchmon) — distinct from the existing Option-scoped `kind: link_requirement` (Plug-Ins).

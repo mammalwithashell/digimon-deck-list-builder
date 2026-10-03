@@ -472,6 +472,9 @@ pub struct CompiledPredicate {
     /// gates target selection on this predicate.
     pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
+    /// Ceiling twin of `self_color_count_gte`. G-DSL-SELF-COLOR-COUNT-LTE.
+    #[serde(default)]
+    pub self_color_count_lte: Option<u8>,
     pub has_face_down_source: Option<bool>,
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
@@ -727,6 +730,14 @@ pub struct CompiledPredicate {
     /// `on_add_digivolution_cards`: ANY card of the just-placed batch matches
     /// this card predicate (DCGO `cardCondition`). G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub event_added_card_any: Option<Box<CompiledPredicate>>,
+    /// `on_discard_hand`: ANY card of the just-trashed hand batch matches this
+    /// card predicate. G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(default)]
+    pub event_discarded_card_any: Option<Box<CompiledPredicate>>,
+    /// Card subject is one of the cards the triggering effect just trashed
+    /// from the hand. G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(default)]
+    pub in_event_discarded_cards: Option<bool>,
     /// True when this permanent was played by an effect (OnPlay firing).
     /// G-ENGINE-ON-DISCARD-HAND.
     pub played_by_effect: Option<bool>,

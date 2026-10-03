@@ -1412,6 +1412,8 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.play_cost_eq_binding.is_none()
         && pred.play_or_use_cost_lte.is_none()
         && pred.self_color_count_gte.is_none()
+        && pred.self_color_count_lte.is_none()
+        && pred.in_event_discarded_cards.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
         && pred.dp_gte.is_none()
@@ -1898,6 +1900,24 @@ fn eval_event_fields(
             .map(|trigger| trigger.added_source_cards().to_vec())
             .unwrap_or_default();
         let any_match = added.iter().any(|card| {
+            eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(*card), None)
+        });
+        if !any_match {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.event_discarded_card_any {
+        // on_discard_hand: ANY card of the just-trashed hand batch matches the
+        // inner card predicate (DCGO `CanTriggerOnTrashHand(…, cardCondition)`
+        // over `DiscardedCards`). Outside that timing the batch is empty and
+        // the gate fails. G-ENGINE-DISCARDED-HAND-CARDS.
+        let discarded: Vec<CardHandle> = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.discarded_hand_cards().to_vec())
+            .unwrap_or_default();
+        let any_match = discarded.iter().any(|card| {
             eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(*card), None)
         });
         if !any_match {
@@ -2800,6 +2820,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(cap) = pred.self_color_count_lte {
+        if distinct_color_count(&data.colors) > usize::from(cap) {
+            return false;
+        }
+    }
     if pred.form_is.is_some() {
         // CardData has no `form` field yet; engine doesn't track form.
         // Phase 1c: treat as always-false when set (mirrors "no card matches").
@@ -3030,6 +3055,20 @@ fn eval_card_fields(
     }
     if let Some(want) = pred.can_digivolve_from_source {
         if can_card_digivolve_from_source(rctx, card) != want {
+            return false;
+        }
+    }
+    // `in_event_discarded_cards`: the candidate is one of the cards the
+    // triggering effect just trashed from the hand ("play 1 of THEM" —
+    // BT24-007 Tsunomon; DCGO `GetDiscardedCardsFromHashtable`).
+    // G-ENGINE-DISCARDED-HAND-CARDS.
+    if let Some(want) = pred.in_event_discarded_cards {
+        let is_discarded = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.discarded_hand_cards().contains(&card));
+        if is_discarded != want {
             return false;
         }
     }
@@ -3575,7 +3614,8 @@ fn eval_permanent_fields(
     // `TopCard.CardColors.Count` after ChangeCardColorClass). Strip it from the
     // delegated predicate; the synth check is the sole authority.
     // G-DSL-OWN-STACK-COLOR-COUNT-GTE.
-    let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
+    let has_self_color_count_constraint =
+        pred.self_color_count_gte.is_some() || pred.self_color_count_lte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
         || level_eq_dna_match
@@ -3625,6 +3665,7 @@ fn eval_permanent_fields(
         }
         if has_self_color_count_constraint {
             p.self_color_count_gte = None;
+            p.self_color_count_lte = None;
         }
         if has_dp_constraint {
             p.dp_eq = None;
@@ -3742,6 +3783,11 @@ fn eval_permanent_fields(
     }
     if let Some(floor) = pred.self_color_count_gte {
         if distinct_color_count(&synth_identity.colors) < usize::from(floor) {
+            return false;
+        }
+    }
+    if let Some(cap) = pred.self_color_count_lte {
+        if distinct_color_count(&synth_identity.colors) > usize::from(cap) {
             return false;
         }
     }

@@ -223,6 +223,22 @@ pub struct TriggerContext {
 }
 
 impl TriggerContext {
+    /// The cards an effect just trashed from the event player's hand
+    /// (`OnDiscardHand` board-wide observer fan-out only; the trashed card's
+    /// own `scope: trash` firing names itself via `event_card`). Empty on
+    /// every other timing.
+    /// G-ENGINE-DISCARDED-HAND-CARDS.
+    pub fn discarded_hand_cards(&self) -> &[CardHandle] {
+        if self.discard_hand_player.is_none() {
+            return &[];
+        }
+        self.moved_card_sets
+            .iter()
+            .find(|set| set.from == Some(Zone::Hand) && set.to == Some(Zone::Trash))
+            .map(|set| set.cards.as_slice())
+            .unwrap_or(&[])
+    }
+
     /// The cards an effect just placed into the event host's digivolution
     /// cards (`OnAddDigivolutionCards` only). Empty on every other timing.
     pub fn added_source_cards(&self) -> &[CardHandle] {
