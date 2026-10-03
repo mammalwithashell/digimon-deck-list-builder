@@ -1,0 +1,95 @@
+# EX13-055 Raptordramon — Digimon, Lv.4, Black/Yellow, DP 5000, Cost 5.
+# Traits: Cyborg / X Antibody / Chronicle. Form: Champion. Attribute: Vaccine.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Black Lv.3 / cost 3, Yellow Lv.3 / cost 3
+#   [Digivolve] [Dorumon]/Lv.3 w/[Chronicle] trait: Cost 2
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for
+#   the turn.
+#   [When Attacking] This Digimon may digivolve into a Digimon card with the
+#   [Chronicle] trait in the hand or trash.
+#   Inherited: <Barrier>
+#
+# DCGO: no EX13_055.cs at b9a0638cd — printed text governs.
+#   - Alt route "[Dorumon] OR Lv.3 w/[Chronicle]" (no colour gate) — BT20-053
+#     DCGO idiom (EqualsCardName || (IsLevelN && EqualsTraits)).
+#   - [When Attacking] digivolve: BT25-092 shape — ONE optional union pick over
+#     hand ∪ trash filtered by `can_digivolve_onto: source` (only cards with a
+#     legal route are offered), then `effect_initiated_digivolve` paying the
+#     printed digivolution cost (`cost: printed`, no reduction).
+#   - Inherited <Barrier> → scope: inherited grant_keyword (BT20-056 idiom).
+
+card: EX13-055
+name: Raptordramon
+kind: digimon
+level: 4
+color: [black, yellow]
+cost: 5
+dp: 5000
+traits: [Cyborg, X Antibody, Chronicle]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Dorumon }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: Chronicle
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to get -3000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_turn
+
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon may digivolve into a [Chronicle] trait Digimon card in the hand or trash"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - kind: digimon
+            - trait_has: Chronicle
+            - can_digivolve_onto: source
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Chronicle
+              - can_digivolve_onto: source
+          bind_as: evo
+          prompt: "This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: printed
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

@@ -36,12 +36,15 @@ effects:
     summary: "[Hand][Main] Place a ShoeShoemon from trash under a Shoemon, then digivolve into this card for cost 3 ignoring requirements"
     condition:
       all_of:
-        - any_field_permanent:
+        # Battle area only (DCGO IsPermanentExistsOnOwnerBattleArea), so
+        # `any_permanent`, not `any_field_permanent` (which also scans breeding).
+        - any_permanent:
             of: you
-            predicate: { name_is: "Arisa Kinosaki" }
-        - any_field_permanent:
+            name_is: "Arisa Kinosaki"
+        - any_permanent:
             of: you
-            predicate: { kind: digimon, name_is: "Shoemon" }
+            kind: digimon
+            name_is: "Shoemon"
         - count_gte:
             filter:
               owner: you

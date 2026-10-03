@@ -1,0 +1,84 @@
+# EX13-049 Dorumon — Digimon, Lv.3, Black/Yellow, DP 1000, Cost 3.
+# Traits: Beast / X Antibody / Chronicle. Form: Rookie. Attribute: Data.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   Digivolve: Black Lv.2 / cost 1, Yellow Lv.2 / cost 1
+#   [Digivolve] [Dorimon]/Black Lv.2 w/[X Antibody] trait: Cost 0
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card
+#   with the [X Antibody] or [Chronicle] trait among them to the hand. Return
+#   the rest to the top or bottom of the deck.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#   gets -2000 DP for the turn.
+#
+# DCGO: no EX13_049.cs at b9a0638cd — printed text governs.
+#   - The alt route reads "[Dorimon]" OR "Black Lv.2 w/[X Antibody] trait"
+#     (BT20-053's DCGO idiom: EqualsCardName(X) || (level && trait)).
+#   - Reveal / pick / remainder: EX13-008 idiom; "top or bottom" →
+#     order_remainder { destinations: [deck_top, deck_bottom] } (BT24-058),
+#     an EffectChoice then a player-ordered permutation.
+#   - "for the turn" → expiry end_of_turn.
+
+card: EX13-049
+name: Dorumon
+kind: digimon
+level: 3
+color: [black, yellow]
+cost: 3
+dp: 1000
+traits: [Beast, X Antibody, Chronicle]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  - kind: digivolve
+    from: { name_is: Dorimon }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: black
+        - trait_has: X Antibody
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [X Antibody]/[Chronicle] trait card to hand; rest to deck top or bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - choose_from_reveal:
+          of: you
+          filter:
+            any_of:
+              - trait_has: X Antibody
+              - trait_has: Chronicle
+          destination: hand
+          bind_as: picked
+          prompt: "Add 1 card with the [X Antibody] or [Chronicle] trait to your hand"
+      - order_remainder:
+          of: you
+          destinations: [deck_top, deck_bottom]
+          prompt: "Return the rest to the top or bottom of the deck?"
+
+  - when: when_attacking
+    scope: inherited
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

@@ -141,6 +141,10 @@ fn bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack() {
     runner.register_effect("TS-HIGH", Arc::new(OptionMainNoop));
     runner.register_effect("PLAIN-LOW", Arc::new(OptionMainNoop));
 
+    // Turn 1 with the attacker played on turn 0: it is not summoning-sick,
+    // so it can attack (the pick is `can_attack`-filtered,
+    // G-DSL-CAN-ATTACK-PREDICATE).
+    runner.game.turn_count = 1;
     let tamer = runner.place_on_field(0, "BT24-085", Some(0));
     let attacker = runner.place_on_field(0, "TS-ATTACKER", Some(0));
     let hand_before = runner.hand_size(0);
@@ -226,5 +230,75 @@ fn bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack() {
             .iter()
             .any(|action| decode_attack(*action).0 == attacker.index as u16),
         "attack target choices should be for the selected TS Digimon"
+    );
+}
+
+/// G-ENGINE-TURN-END-MID-EFFECT: the real End-phase flow. Memory is already on
+/// the opponent's side, so `end_turn` fires BT24-085's [End of Your Turn]. The
+/// Option it uses finishes its own lifecycle (which calls `check_turn_end`)
+/// BEFORE "Then, 1 of your [TS] Digimon may attack"; that must not re-enter
+/// `end_turn` and rotate the turn mid-effect. The turn ends only once the
+/// whole effect — including the may-attack follow-up — has resolved (6-1-4-1).
+#[test]
+fn bt24_085_turn_does_not_pass_mid_effect_after_used_option() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-085 YAML parses")
+        .add_card(ts_digimon("TS-ATTACKER"))
+        .add_card(ts_option("TS-LOW", 2))
+        .hand(0, &["TS-LOW"])
+        .deck(0, &["TS-ATTACKER", "TS-ATTACKER", "TS-ATTACKER"])
+        .deck(1, &["TS-ATTACKER", "TS-ATTACKER", "TS-ATTACKER"])
+        .memory(-2)
+        .start();
+    runner.register_effect("TS-LOW", Arc::new(OptionMainNoop));
+
+    runner.game.turn_count = 1;
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    let attacker = runner.place_on_field(0, "TS-ATTACKER", Some(0));
+    assert_eq!(runner.turn_player(), 0);
+    let turn_before = runner.game.turn_count;
+
+    runner.game.end_turn();
+    assert!(
+        runner.pending_is_optional(),
+        "the End phase fires BT24-085's optional [End of Your Turn]"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept BT24-085 end-of-turn effect");
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("use the eligible TS Option");
+    assert!(runner.game.players[0].battle_area[tamer.index as usize].is_suspended);
+
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "the turn must not pass while the effect's may-attack step is still pending"
+    );
+    assert_eq!(runner.game.turn_count, turn_before, "no turn rotation mid-effect");
+    let attacker_prompt = runner
+        .pending_selection_view()
+        .expect("the may-attack attacker pick runs after the used Option");
+    assert_eq!(attacker_prompt.kind, SelectionKind::OwnField);
+    assert_eq!(attacker_prompt.selecting_player, 0);
+    assert!(
+        attacker_prompt
+            .valid_action_ids
+            .contains(&encode_attack(0, attacker.index as u16)),
+        "the TS Digimon is still offered as the attacker (it is still P0's turn)"
+    );
+
+    // Declining the follow-up finishes the effect; only now does the End
+    // phase complete and the turn pass.
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the optional may-attack");
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.turn_player(),
+        1,
+        "once the effect has fully resolved, the End phase hands the turn to P1"
     );
 }

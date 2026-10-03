@@ -66,6 +66,12 @@ class DigiXrosElement:
     count: int = 1
     is_digimon_only: bool = True
     color: Optional[CardColor] = None
+    # Assembly shapes added for EX13 (2026-10-01). Serialized only when set,
+    # so older cards' digixros_costs JSON is unchanged.
+    level_exact: Optional[int] = None          # "Lv.5 × Lv.4 × Lv.3": one slot per level
+    name_any: List[str] = field(default_factory=list)   # "w/[A]/[B] in name"
+    text_any: List[str] = field(default_factory=list)   # "w/[A] in text", "[A] text"
+    keyword: str = ""                          # "w/＜Blocker＞"
 
 
 @dataclass
@@ -76,6 +82,7 @@ class DigiXrosCost:
     max_materials: int = -1
     different_card_numbers: bool = False
     different_names: bool = False
+    different_colors: bool = False  # "w/different colors" (EX13-077); serialized only when True
     has_text: str = ""
     source_zones: List[str] = field(default_factory=lambda: ['hand', 'field'])
 
@@ -234,6 +241,7 @@ def parse_digixros_req(xros_req: str) -> List['DigiXrosCost']:
         # Parse constraints: different card numbers / different names
         different_card_numbers = 'different card numbers' in body
         different_names = 'different names' in body
+        different_colors = 'different colors' in body
 
         # Parse has_text constraint (e.g., "with ＜Save＞ in text")
         has_text = ""
@@ -255,6 +263,7 @@ def parse_digixros_req(xros_req: str) -> List['DigiXrosCost']:
             max_materials=max_materials,
             different_card_numbers=different_card_numbers,
             different_names=different_names,
+            different_colors=different_colors,
             has_text=has_text,
             source_zones=source_zones,
         ))
@@ -277,6 +286,10 @@ def _parse_digixros_elements(body: str) -> List['DigiXrosElement']:
             trait_alternatives=traits[1:] if len(traits) > 1 else [],
             count=count,
         )]
+
+    ex13 = _parse_ex13_assembly_elements(body)
+    if ex13 is not None:
+        return ex13
 
     # Strip trailing constraint clauses for simpler parsing
     body = re.sub(r'\s*(?:w/different\s+(?:card numbers|names)|& different\s+(?:card numbers|names)).*$', '', body)
@@ -422,3 +435,85 @@ def _parse_digixros_elements(body: str) -> List['DigiXrosElement']:
         logger.warning("Unparsed DigiXros element: %r", part)
 
     return elements
+
+
+_BRACKETS = re.compile(r'\[([^\]]+)\]')
+
+
+def _qualifier(text: str) -> Optional[dict]:
+    """Parse an EX13 material qualifier into DigiXrosElement kwargs.
+
+    Shapes: "w/[A]/[B] in name", "w/[A] in text", "[A] text", "w/[A]/[B] trait",
+    "[A]/[B] trait", "w/＜Kw＞", each optionally led by a colour word.
+    Returns None when the text is not one of these shapes.
+    """
+    t = text.replace('\xa0', ' ').strip()
+    kw = {}
+    cm = re.match(r'(red|blue|yellow|green|white|black|purple)\b\s*', t, re.IGNORECASE)
+    if cm:
+        kw['color'] = _COLOR_NAME_MAP[cm.group(1).lower()]
+        t = t[cm.end():]
+    m = re.fullmatch(r'w/[＜<]([^＞>]+)[＞>]', t)
+    if m:
+        kw['keyword'] = m.group(1).strip()
+        return kw
+    m = re.fullmatch(r'(?:w/)?((?:\[[^\]]+\]\s*/?\s*)+)\s*(in name|in text|text|trait)', t)
+    if not m:
+        return None
+    names = _BRACKETS.findall(m.group(1))
+    where = m.group(2)
+    if where == 'in name':
+        kw['name_any'] = names
+    elif where in ('in text', 'text'):
+        kw['text_any'] = names
+    else:
+        # Traits use the legacy fields: first trait + alternatives.
+        kw['trait_match'] = names[0]
+        kw['trait_alternatives'] = names[1:]
+    return kw
+
+
+def _parse_ex13_assembly_elements(body: str) -> Optional[List['DigiXrosElement']]:
+    """EX13 Assembly requirement shapes, or None if `body` is none of them.
+
+    - "Lv.5 × Lv.4 × Lv.3, all <qualifier>" -> one element per level
+    - "[A]×[B]×..." (multiplication sign) -> one named element each
+    - "N [A]/[B] trait|text Digimon cards w/different names|colors"
+    - "N Lv.L or lower [Digimon cards w/]<qualifier> ... "
+    """
+    b = body.replace('\xa0', ' ').strip()
+    m = re.fullmatch(r'((?:Lv\.\d+\s*×\s*)+Lv\.\d+)\s*,\s*all\s+(.+)', b)
+    if m:
+        q = _qualifier(m.group(2))
+        if q is None:
+            return None
+        levels = [int(x) for x in re.findall(r'Lv\.(\d+)', m.group(1))]
+        return [DigiXrosElement(level_exact=lv, count=1, **q) for lv in levels]
+    if '×' in b and re.fullmatch(r'\[[^\]]+\](?:\s*×\s*\[[^\]]+\])+', b):
+        return [DigiXrosElement(name_contains=n, count=1, is_digimon_only=False)
+                for n in _BRACKETS.findall(b)]
+    core = re.sub(r'\s*w/different\s+(?:card numbers|names|colors)\s*$', '', b)
+    m = re.fullmatch(r'(\d+)\s+(?:Lv\.(\d+)\s+or\s+lower\s+)?(.+?)\s+(Digimon cards?|cards?)(?:\s+(.+))?', core)
+    if m:
+        count, lv_max, pre, noun, post = m.groups()
+        q = None
+        if post and pre in ('',):
+            q = _qualifier(post)
+        if q is None and post is None:
+            q = _qualifier(pre)
+        if q is None and post is not None and pre:
+            # "Lv.4 or lower Digimon cards w/[Sukamon] in name"
+            q = _qualifier(post)
+        if q is not None:
+            digimon_only = noun.lower().startswith('digimon') or pre.strip().lower() == 'digimon'
+            return [DigiXrosElement(count=int(count),
+                                    level_max=int(lv_max) if lv_max else None,
+                                    is_digimon_only=digimon_only,
+                                    **q)]
+    m = re.fullmatch(r'(\d+)\s+Lv\.(\d+)\s+or\s+lower\s+(Digimon cards?|cards?)\s+(.+)', core)
+    if m:
+        q = _qualifier(m.group(4))
+        if q is not None:
+            return [DigiXrosElement(count=int(m.group(1)), level_max=int(m.group(2)),
+                                    is_digimon_only=m.group(3).lower().startswith('digimon'), **q)]
+    return None

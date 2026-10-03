@@ -235,7 +235,15 @@ fn permanent_and_stacked_card_security_verbs_move_expected_cards() {
             .last()
             .unwrap()
             .card_id(&runner.game.card_data),
-        "BOTTOM"
+        "CARRIER",
+        "top stacked card = the visible top card (G-TOP-STACKED-CARD-TO-SECURITY)"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BOTTOM",
+        "the permanent stays, topped by the card that was under it"
     );
 }
 

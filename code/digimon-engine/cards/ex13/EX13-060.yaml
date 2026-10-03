@@ -1,0 +1,149 @@
+# EX13-060 Alphamon — Digimon, Lv.6, Black/Yellow, DP 13000, Cost 13.
+# Traits: Holy Warrior / X Antibody / Royal Knight / Chronicle. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-060.md):
+#   [When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their
+#   turn ends. Then, if they have 5 or more memory, gain 2 memory.
+#   [Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or
+#   Tamers are played, 1 of your Digimon may attack. Then, you may activate 1
+#   of this Digimon's [When Digivolving] effects.
+#   [End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card
+#   without [Alphamon] in its name from your hand with the cost reduced by 6.
+#   It gains ＜Rush＞ for the turn.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait
+#   Digivolve: Black Lv.5 / 5; Yellow Lv.5 / 5; [Grademon]/Lv.5 w/[Chronicle]: 4.
+#
+# DCGO C# reference: none (no EX13_060.cs at the submodule). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - "if they have 5 or more memory" — the opponent's memory ≥ 5 ⇔ the
+#     controller-perspective gauge ≤ -5 → `own_memory_lte: -5`.
+#   - "1 of your Digimon may attack" → optional own pick + `may_attack_now`
+#     (EX12-029 idiom); "you may activate 1 of this Digimon's [When
+#     Digivolving] effects" → `refire_effect { timing: when_digivolving,
+#     optional: true }` (BT22-042 idiom).
+#   - The played-trigger counts Alphamon itself when it is the [Chronicle]
+#     Digimon being played (it is on the field when the play trigger checks).
+#   - [End of Your Turn] play: optional hand pick → `play_from_hand` with
+#     `reduce: 6`, bound, then Rush `end_of_turn`. Declining refunds the OPT
+#     (nothing was activated; G-OPT-REFUND-ON-DECLINE).
+
+card: EX13-060
+name: Alphamon
+kind: digimon
+level: 6
+color: [black, yellow]
+cost: 13
+dp: 13000
+traits: ["Holy Warrior", "X Antibody", "Royal Knight", Chronicle]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+  - kind: digivolve
+    from: { name_is: "Grademon" }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: Chronicle
+    cost: 4
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait ─────────────
+  - kind: assembly
+    materials:
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 5 }, { trait_has: Chronicle } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 4 }, { trait_has: Chronicle } ] }
+        zones: [trash]
+        stack_under: true
+      - filter: { all_of: [ { kind: digimon }, { level_eq: 3 }, { trait_has: Chronicle } ] }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] 1 opponent Digimon gets -8000 DP until their turn ends; then, if they have 5 or more memory, gain 2 memory"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -8000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -8000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { own_memory_lte: -5 }
+          then:
+            - gain_memory: 2
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_trait_has: Chronicle
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: tamer
+    summary: "[Your Turn][OPT] When any of your [Chronicle] Digimon or Tamers are played, 1 of your Digimon may attack; then you may activate 1 of this Digimon's [When Digivolving] effects"
+    process:
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon to attack"
+      - if:
+          condition: { binding_present: attacker }
+          then:
+            - may_attack_now:
+                attacker: attacker
+                targets: any
+                optional: true
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true
+
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] You may play 1 [Chronicle] trait card without [Alphamon] in its name from hand with the cost reduced by 6; it gains <Rush> for the turn"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chronicle
+          optional: true
+          filter:
+            all_of:
+              - trait_has: Chronicle
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - none_of:
+                  - name_contains: Alphamon
+          prompt: "Play 1 [Chronicle] trait card without [Alphamon] in its name with the cost reduced by 6"
+      - if:
+          condition: { binding_present: chronicle }
+          then:
+            - play_from_hand:
+                of: you
+                hand_index: chronicle
+                cost_delta: { reduce: 6 }
+                bind_as: played
+            - grant_keyword:
+                target: played
+                keyword: Rush
+                expiry: end_of_turn
+          else:
+            - refund_opt: {}

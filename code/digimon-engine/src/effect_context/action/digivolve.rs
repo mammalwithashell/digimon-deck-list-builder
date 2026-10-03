@@ -94,6 +94,13 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return 0;
         }
+        // <De-Digivolve> trashes the top stacked cards: a stacked-card trash
+        // protection blocks it (DCGO `IDegeneration.Degeneration` checks
+        // `ImmuneFromStackTrashing`; EX13-023 official Q&A).
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+        if self.stack_trash_blocked(target) {
+            return 0;
+        }
         // Per-pop immunity recheck (judge-quiz Q15): De-Digivolve is applied
         // one card at a time and a newly-exposed top card's continuous
         // immunity halts the remaining pops. The core also re-ticks
@@ -235,6 +242,26 @@ impl<'a> EffectContext<'a> {
                 cost_delta,
                 PlaySource::ByEffect,
             )
+    }
+
+    /// "Digivolve … ignoring level": only the base's level requirement is
+    /// waived; colour still applies and the printed cost (then `cost_delta`)
+    /// is paid. See `Game::effect_initiated_digivolve_from_source_ignore_level`.
+    /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
+    pub fn effect_initiated_digivolve_from_source_ignore_level(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game.effect_initiated_digivolve_from_source_ignore_level(
+            player,
+            source,
+            target,
+            cost_delta,
+            PlaySource::ByEffect,
+        )
     }
 
     /// Merge two existing battle-area permanents into a single permanent
@@ -381,7 +408,10 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
-        crate::dna_digivolve::matching_dna_cost(meta, perm_a, perm_b, &self.game.card_data)
+        let _ = (perm_a, perm_b);
+        // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: honor result-scoped extras.
+        self.game
+            .matching_dna_cost_for_handles(result, meta, target_a, target_b)
             .is_some()
     }
 
@@ -417,13 +447,11 @@ impl<'a> EffectContext<'a> {
                     .player(target_b.player)
                     .battle_area
                     .get(target_b.index as usize)?;
-                return crate::dna_digivolve::matching_dna_cost(
-                    meta,
-                    perm_a,
-                    perm_b,
-                    &self.game.card_data,
-                )
-                .map(|c| c.memory_cost as i32);
+                let _ = (perm_a, perm_b);
+                return self
+                    .game
+                    .matching_dna_cost_for_handles(result, meta, target_a, target_b)
+                    .map(|c| c.memory_cost as i32);
             }
         }
         None
@@ -581,13 +609,10 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
-        crate::dna_digivolve::matching_dna_cost_perm_and_card(
-            result_meta,
-            field_perm,
-            partner_meta,
-            &self.game.card_data,
-        )
-        .is_some()
+        let _ = field_perm;
+        self.game
+            .matching_dna_cost_for_handle_and_card(result, result_meta, field, partner_meta)
+            .is_some()
     }
 
     /// The printed DNA cost the {field target, hand partner} pair would pay to
@@ -613,13 +638,11 @@ impl<'a> EffectContext<'a> {
                     .player(target.player)
                     .battle_area
                     .get(target.index as usize)?;
-                return crate::dna_digivolve::matching_dna_cost_perm_and_card(
-                    result_meta,
-                    field_perm,
-                    partner_meta,
-                    &self.game.card_data,
-                )
-                .map(|c| c.memory_cost as i32);
+                let _ = field_perm;
+                return self
+                    .game
+                    .matching_dna_cost_for_handle_and_card(result, result_meta, target, partner_meta)
+                    .map(|c| c.memory_cost as i32);
             }
         }
         None
@@ -777,13 +800,10 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
-        crate::dna_digivolve::matching_dna_cost_perm_and_card(
-            result_meta,
-            field_perm,
-            trash_meta,
-            &self.game.card_data,
-        )
-        .is_some()
+        let _ = field_perm;
+        self.game
+            .matching_dna_cost_for_handle_and_card(result, result_meta, field, trash_meta)
+            .is_some()
     }
 
     /// The printed DNA cost the {field target, trash partner} pair would pay to
@@ -808,13 +828,11 @@ impl<'a> EffectContext<'a> {
                     .player(field.player)
                     .battle_area
                     .get(field.index as usize)?;
-                return crate::dna_digivolve::matching_dna_cost_perm_and_card(
-                    result_meta,
-                    field_perm,
-                    trash_meta,
-                    &self.game.card_data,
-                )
-                .map(|c| c.memory_cost as i32);
+                let _ = field_perm;
+                return self
+                    .game
+                    .matching_dna_cost_for_handle_and_card(result, result_meta, field, trash_meta)
+                    .map(|c| c.memory_cost as i32);
             }
         }
         None

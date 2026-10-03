@@ -1,0 +1,92 @@
+# EX13-027 Chuumon — Digimon, Lv.3, Yellow, DP 1000, Cost 3.
+# Traits: Beast. Form: Rookie. Attribute: Virus.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Yellow Lv.2 / cost 0; Black Lv.2 / cost 0
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Among them,
+#   add 1 card with [Sukamon] or [Etemon] in its name to the hand and trash 1
+#   such card. Return the rest to the bottom of the deck.
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon would leave
+#   the battle area other than by your effects, by deleting 1 other Digimon
+#   with [Sukamon] in its name, it doesn't leave.
+#   Official Q&A: with only 1 qualifying card, that card is added to the hand.
+#
+# DCGO: no EX13_027.cs at b9a0638cd.
+#
+# Reveal: `reveal_search` with a HAND bucket first and a TRASH bucket second.
+# Buckets resolve in order with cross-bucket de-dup, so a lone match always
+# lands in the hand (Official Q&A). Both picks are mandatory when available
+# ("add 1 ... and trash 1"); the player chooses WHICH card goes where.
+#
+# Inherited: EX11-022 Karakurumon's inherited leave-prevention idiom. The
+# `active_when` deliberately reads ONLY the replacement cause (no subject
+# predicate), so the replacement stays self-scoped to the carrier ("this
+# Digimon"). The first step is the cost selection, so the offer is gated on
+# at least one OTHER [Sukamon]-named Digimon existing.
+
+card: EX13-027
+name: Chuumon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Beast]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Sukamon]/[Etemon]-named card to hand and trash 1 such card; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter:
+                any_of:
+                  - name_contains: Sukamon
+                  - name_contains: Etemon
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Sukamon] or [Etemon] in its name to the hand"
+            - filter:
+                any_of:
+                  - name_contains: Sukamon
+                  - name_contains: Etemon
+              to: trash
+              max: 1
+              prompt: "Trash 1 card with [Sukamon] or [Etemon] in its name"
+          remainder: bottom
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "Inherited [All Turns][OPT] By deleting 1 other [Sukamon]-named Digimon, this Digimon doesn't leave (not by your effects)"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 of your other Digimon with [Sukamon] in its name"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

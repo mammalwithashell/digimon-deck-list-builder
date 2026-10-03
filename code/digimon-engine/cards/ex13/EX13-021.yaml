@@ -1,0 +1,122 @@
+# EX13-021 Wingdramon — Digimon, Lv.5, Blue/Red, DP 7000, Cost 7.
+# Traits: Sky Dragon. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle, data/card_bundles/EX13-021.md):
+#   Digivolve: Blue Lv.4 / 4; Red Lv.4 / 4.  [Digivolve] [Coredramon]: Cost 3
+#   <Jamming>
+#   [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of
+#   your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend
+#   until their turn ends.
+#   [All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for
+#   [Examon]'s DNA digivolution.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon with [Dracomon] or
+#   [Examon] in its text suspends, it may unsuspend.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_021.cs
+#   - AddSelfDigivolutionRequirementStaticEffect: TopCard.EqualsCardName
+#     ("Coredramon"), cost 3 → alt `digivolve` from `name_is: Coredramon`.
+#   - JammingSelfStaticEffect → grant_keyword Jamming.
+#   - Shared [OP]/[WD] (optional: false), two INDEPENDENT steps, each gated on
+#     a candidate existing (canNoSelect: false):
+#       1. pick 1 opponent Digimon → TrashDigivolutionCardsFromTopOrBottom(2,
+#          bottom). `trash_bottom_sources` trashes up to 2 (fewer if the stack
+#          is shorter).
+#       2. pick 1 opponent Digimon or Tamer → CanNotSuspendClass on its
+#          UntilOwnerTurnEndEffects ("until their turn ends") → CannotSuspend,
+#          expiry end_of_opponents_turn (EX12-029 / EX13-022 lock idiom).
+#     Step 2 runs whether or not step 1 had a target (it is NOT nested).
+#   - AddJogressLevelsClass (+Lv.6 when the DNA result is [Examon]) +
+#     ChangeCardNamesClass (+[Slayerdramon]) while on the battle area →
+#     `dna_material_identity` self-aura (G-DNA-MATERIAL-TREATED-AS-FOR-TARGET).
+#     Scope note: DCGO's ChangeCardNamesClass adds [Slayerdramon] for EVERY
+#     name check; the printed text scopes the name to [Examon]'s DNA
+#     digivolution, and the official Bandai text outranks DCGO for what the
+#     card prints, so the name is result-scoped here (both readings agree on
+#     every [Examon] DNA / Blast-DNA recipe: BT20-045's Blast DNA
+#     [Breakdramon] + [Slayerdramon], EX13-045's Green Lv.6 + Blue Lv.6).
+#   - Inherited OnTappedAnyone, OPT (hash EX13_021_ESS_AT), optional: carrier
+#     is THIS permanent AND its top card HasText Dracomon/Examon; activate only
+#     while suspended + CanUnsuspend → IUnsuspendPermanents (EX13-022 idiom +
+#     `any_permanent { is_source }` text gate). `unsuspend` honours
+#     CannotUnsuspend.
+
+card: EX13-021
+name: Wingdramon
+kind: digimon
+level: 5
+color: [blue, red]
+cost: 7
+dp: 7000
+traits: [Sky Dragon]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Coredramon }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash the bottom 2 digivolution cards of 1 opponent Digimon; then 1 opponent Digimon or Tamer can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: source_target
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: source_target }
+          then:
+            - trash_bottom_sources: { target: source_target, count: 2 }
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers that can't suspend until their turn ends"
+      - if:
+          condition: { binding_present: lock_target }
+          then:
+            - add_modifier:
+                target: lock_target
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  - kind: aura
+    target: {}
+    dna_material_identity:
+      for_result: Examon
+      level: 6
+      name: Slayerdramon
+    summary: "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution"
+
+  - scope: inherited
+    when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            is_source: true
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+    summary: "Inherited [All Turns][OPT] When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend"
+    process:
+      - unsuspend: { target: source }

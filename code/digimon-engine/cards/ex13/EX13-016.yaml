@@ -1,0 +1,149 @@
+# EX13-016 Omnimon — Digimon, Lv.7, Red/White/Blue, DP 15000, Cost 15.
+# Traits: Holy Warrior / Royal Knight / CS. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX13-016.md):
+#   Digivolve: Red Lv.6 / cost 5; Blue Lv.6 / cost 5;
+#     [Digivolve] Lv.6 w/[CS] trait: Cost 5
+#     [DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name: Cost 0
+#   Assembly -7: [WarGreymon]×[MetalGarurumon]×[Agumon]×[Gabumon]
+#   <Raid> <Blocker>
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] 2 of your
+#   opponent's Digimon or Tamers can't suspend until their turn ends.
+#   [On Play] [When Digivolving] [Counter] [Once Per Turn] You may delete 1 of
+#   your opponent's Digimon with as many digivolution cards as this Digimon or
+#   fewer.
+#   [All Turns] When this Digimon would leave the battle area, by trashing 2
+#   same-level cards from its digivolution cards, it doesn't leave.
+#   Official Q&A: only 1 [Counter] effect can be activated per attack.
+#
+# DCGO: no EX13_016.cs at b9a0638cd. Idioms: Assembly names are exact names
+# (EX13_020.cs `EqualsCardName("Veemon")`); lock = BT23-047 / ST24-10
+# (`select_count_capped_multi` + per-pick `CannotSuspend`
+# end_of_opponents_turn); delete = EX12-035 (`materials_count_lte:
+# { formula: { source_material_count: {} } }`).
+#
+# ─── Status: IMPLEMENTED (all clauses) ─────────────────────────────────────
+# The would-leave save was BLOCKED on G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION
+# (RESOLVED 2026-10-01): `select_materials { min: 2, max: 2, same_by: level }`
+# offers a first pick only from a level held by ≥2 of its digivolution cards
+# and then only the same level; `trash_selected_materials` trashes the pair.
+# The replacement preflight offers the save only when such a pair exists
+# (an unpayable "by trashing…" processing cost is never offered).
+
+card: EX13-016
+name: Omnimon
+kind: digimon
+level: 7
+color: [red, white, blue]
+cost: 15
+dp: 15000
+traits: ["Holy Warrior", "Royal Knight", CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: CS }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: Greymon }
+      - { level_eq: 6, name_contains: Garurumon }
+    cost: 0
+  # ─── Assembly -7: [WarGreymon]×[MetalGarurumon]×[Agumon]×[Gabumon] ────────
+  - kind: assembly
+    materials:
+      - { name_is: "WarGreymon", zones: [trash], stack_under: true }
+      - { name_is: "MetalGarurumon", zones: [trash], stack_under: true }
+      - { name_is: "Agumon", zones: [trash], stack_under: true }
+      - { name_is: "Gabumon", zones: [trash], stack_under: true }
+    cost: 7
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [OP][WD][WA][OPT] 2 opponent Digimon/Tamers can't suspend ─────────────
+  # Mandatory: pick 2 (or every one, if fewer exist — clamp_to_available).
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      any_of:
+        - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+        - any_permanent: { of: opponent, zone: [battle_area], kind: tamer }
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] 2 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          optional_zero: false
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: suspend_locked
+          prompt: "2 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+      - per_selected:
+          selection: suspend_locked
+          bind_as: suspend_locked_one
+          body:
+            - add_modifier:
+                target: suspend_locked_one
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── [OP][WD][Counter][OPT] may delete 1 opp Digimon w/ ≤ sources ──────────
+  - when: [on_play, when_digivolving, counter]
+    once_per_turn: true
+    optional: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        materials_count_lte:
+          formula:
+            source_material_count: {}
+    summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may delete 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte:
+                  formula:
+                    source_material_count: {}
+          prompt: "Delete 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer"
+      - delete_permanent: { target: delete_target }
+
+  # ─── [All Turns] would-leave save: trash 2 same-level digivolution cards ───
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    summary: "[All Turns] When this Digimon would leave the battle area, by trashing 2 same-level cards from its digivolution cards, it doesn't leave"
+    process:
+      - select_materials:
+          of_permanent: replacement_subject
+          min: 2
+          max: 2
+          same_by: level
+          bind_as: same_level_pair
+          prompt: "Trash 2 same-level cards from this Digimon's digivolution cards"
+      - trash_selected_materials:
+          target: replacement_subject
+          cards: same_level_pair
+      - cancel_replacement: {}

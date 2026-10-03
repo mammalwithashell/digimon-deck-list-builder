@@ -372,6 +372,8 @@ Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
 
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
+> **RESOLVED for `add_modifier` steps 2026-10-01** — see G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD (`payload: { name | colors | dp | traits }`). Aura-clause `modifier:` payloads beyond `synth_identity` remain open.
+
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
 the deferred Track C identity/metadata modifiers:
 `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
@@ -4439,6 +4441,8 @@ Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
 
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
+> **RESOLVED for `add_modifier` steps 2026-10-01** — see G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD (`payload: { name | colors | dp | traits }`). Aura-clause `modifier:` payloads beyond `synth_identity` remain open.
+
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
 the deferred Track C identity/metadata modifiers:
 `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
@@ -8346,3 +8350,130 @@ pins that the turn scan does not trash such a marker.
   corrected). `EX12-076#effect#5` is the matching digivolve-cost line.
 - First reported: 2026-08-24
 
+
+## DNA-material "treated as Lv.N [X] for [Y]'s DNA digivolution" static  [G-DNA-MATERIAL-TREATED-AS-FOR-TARGET] — hybrid, RESOLVED 2026-10-01
+
+> **RESOLVED 2026-10-01.** Landed as an `aura` payload (self-aura only, validator-enforced):
+> ```yaml
+> - kind: aura
+>   target: {}
+>   dna_material_identity: { for_result: Examon, level: 6, name: Slayerdramon }
+> ```
+> Lowers to `ModifierType::DnaMaterialIdentity` (`ModifierPayload::DnaMaterialIdentity { result_name, level, name }`),
+> read by `Game::dna_material_extras(material, result)` — see `qa/archetype-qa/engine-gaps.md`
+> §G-DNA-MATERIAL-TREATED-AS-FOR-TARGET. EX13-021 / EX13-041 IMPLEMENTED (BT20-025 / BT20-042 can reuse it).
+> Same change also landed two vocab items the cards needed: `event_battle_deleter: { <permanent predicate> }`
+> (G-DSL-BATTLE-DELETER, below) and the `CannotUnsuspendInUnsuspendPhase` modifier ("can't unsuspend in their next
+> unsuspend phase"). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dna_material_identity battle_deleter unsuspend_phase_lock`;
+> `RUST_MIN_STACK=134217728 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex13::ex13_021 ex13::ex13_041`;
+> `cargo test --manifest-path code/digimon-engine/Cargo.toml --test archetypes -- dracomon_ex13`.
+
+- **Cards (formerly BLOCKED):** EX13-021 Wingdramon, EX13-041 Groundramon (also BT20-025 / BT20-042).
+- **Missing DSL vocabulary:** a declarative clause for a material-side, result-scoped identity override, e.g.
+  ```yaml
+  - kind: dna_material_identity
+    active_when: { all_turns: true }
+    for_result: { name_is: Examon }
+    treated_as: { level: 6, name: Slayerdramon }
+  ```
+- **Lowers to engine API:** none exists yet — needs the engine hook described in `qa/archetype-qa/engine-gaps.md` §G-DNA-MATERIAL-TREATED-AS-FOR-TARGET (DCGO `AddJogressLevelsClass` + scoped `ChangeCardNamesClass`).
+
+## Battle "deleter" on an EndOfBattle observer  [G-DSL-BATTLE-DELETER] — dsl+engine, RESOLVED 2026-10-01
+
+- **Card:** EX13-041 Groundramon inherited — "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card." (DCGO `CanTriggerWhenDeleteOpponentDigimonByBattle` with `winnerRealCondition`; `LoserPermanents` fixed to the actually destroyed ones.)
+- **Why the existing leaves did not fit:** `event_winner_*` reads `battle_winner`, which is set even when the loser's deletion was prevented and is `None` on a tie whose survivor was protected; `source_deleted_battle_opponent` is carrier-scoped.
+- **Landed:** `TriggerSource::BattleResolved { winner, deleter }` / `TriggerContext.battle_deleter` (the combatant that survived while its battle opponent was actually deleted, incl. a protected tie survivor; computed in `resolve_battle` from `DeletionBatchOutcome.completed`) + predicate leaf `event_battle_deleter: { <permanent predicate> }` for `on_ally_won_battle` observers. Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- battle_deleter`.
+- **Also landed (same change):** `ModifierType::CannotUnsuspendInUnsuspendPhase` — gates only the turn-start bulk unsuspend (DCGO `GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase: true)`); install with `end_of_opponents_next_turn`. Follow-up: BT23-047 / BT24-095 / BT16-025 model "can't unsuspend in their next unsuspend phase" as the broader `CannotUnsuspend` + `end_of_opponents_turn` (also blocks effect unsuspends); they can migrate to this modifier.
+
+## `select_any_permanent` ignores `continue_on_decline`  [G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE] — OPEN 2026-10-01 (worked around)
+
+- **Shape:** `SelectFieldArgs.continue_on_decline` parses on every field-select verb, but only `select_own_permanent` / `select_opponent_permanent` honor it (`dsl_cards/step/selections.rs`); `install_select_any_permanent` takes no decline flag, so declining an optional any-side pick silently drops the rest of the clause.
+- **Consumer:** EX13-044 Breakdramon "[On Play][When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend…" — the mandatory "Then" lock must run after a decline. Worked around faithfully with `select_effect_choice` [suspend / stop] gates before mandatory `select_any_permanent` picks (same choice set, one extra prompt per pick).
+- **Fix:** thread `continue_on_decline` through `install_select_any_permanent` (mirror the own/opponent installers' `on_decline` tail), or reject the field at validate time for `select_any_permanent`.
+
+## Timed base-name / base-color change on a target (Track C payload on `add_modifier`)  [G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD] — dsl, RESOLVED 2026-10-01
+
+> **RESOLVED 2026-10-01.** `add_modifier` gained a general typed `payload:` (`AddModifierArgs::payload` → `ModifierPayloadSpec` → `CompiledModifierPayload` → engine `ModifierPayload`): exactly one of `name:` (`ChangeBaseCardName` / `CanOnlyDigivolveInto` → `Name { base: true }`), `colors:` (`ChangeBaseCardColor` replace / `AddColor` gain → `Colors`), `dp:` (`ChangeOriginDP` / `ChangeCardDP` → `Dp { base: true }` — a base-DP SET; `ChangeDp` effects still add on top, DCGO `ChangeBaseDPClass` semantics) or `traits:` + `replace_traits` (`ChangeTraits` → `Traits`), with any expiry. Validator enforces one key, modifier compatibility, and requires a payload for `ChangeBaseCardName` / `ChangeBaseCardColor` / `ChangeTraits`. NOTE: the scalar `ChangeBaseDp` suggested below has NO engine consult site (it would silently no-op) — use `ChangeOriginDP` + `payload: { dp }`. Also widened: the deletion snapshot's `names_just_before` now holds the synth (rules) names, and `event_target_name_contains` on a deleted object also matches them, so a Digimon renamed by `ChangeBaseCardName` dies as that name (last-known info). EX13-031 KingSukamon IMPLEMENTED. Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- add_modifier_typed_payload`, `cargo test -p digimon-dsl -- typed_modifier change_base_card_name`, `cards_behavioral -- ex13::ex13_031`. The general "Track C modifier payload YAML shape" entry above is closed for the step path by the same change (the aura `modifier:` path still carries only `synth_identity`).
+
+
+- **Card (BLOCKED):** EX13-031 KingSukamon — "[On Play] [When Digivolving] [On Deletion] By trashing 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards, you may change the base name, color and DP of 1 of your opponent's Digimon to [Sukamon], white and 3000 until their turn ends." (slice "Mutant", EX13 author-set; no DCGO script).
+- **Missing DSL vocabulary:** `add_modifier` accepts a structured payload only for `TreatAsDigimon` (`synth_identity`), so `ChangeBaseCardName` (`ModifierPayload::Name { value, base }`) and `ChangeBaseCardColor` (`ModifierPayload::Colors`) can't be installed on a bound target with an expiry. This is the open "Track C modifier payload YAML shape" item above, now with a printed consumer. (`ChangeBaseDp` is scalar and already expressible as `value: 3000`.)
+- **Lowers to engine API:** existing — `ModifierType::ChangeBaseCardName` / `ChangeBaseCardColor` with typed payloads (`modifiers.rs` `payload_matches_modifier`), consulted by `Permanent::synth_identity` (`permanent.rs`) and the predicate overlay (Phase 4l), so `name_*` / `color_*` filters already see the change.
+- **Suggested DSL syntax:**
+  ```yaml
+  - add_modifier: { target: victim, modifier: ChangeBaseCardName, name: Sukamon, expiry: end_of_opponents_turn }
+  - add_modifier: { target: victim, modifier: ChangeBaseCardColor, colors: [white], expiry: end_of_opponents_turn }
+  - add_modifier: { target: victim, modifier: ChangeBaseDp, value: 3000, expiry: end_of_opponents_turn }
+  ```
+- The rest of the card (Assembly -4 with 3 Lv.4-or-lower [Sukamon]-name Digimon from trash; the hand-or-digivolution-cards trash cost via `select_union_zone`; the inherited [All Turns][OPT] "other [Sukamon] deleted → reveal 3, play cost<=3 [Chuumon]/[Sukamon] free, trash rest") looks expressible today; re-attempt once the payload lands.
+
+## `effect_initiated_digivolve { ignore_level: true }`  [G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01.** `EffectDigivolveArgs.ignore_level` / `CompiledStep::EffectInitiatedDigivolve.ignore_level` lower to `EffectContext::effect_initiated_digivolve_from_source_ignore_level` (see `qa/archetype-qa/engine-gaps.md` §G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST). Compile error if combined with `ignore_requirements`. Driver EX13-071 now IMPLEMENTED. Verify: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digivolve_ignore_level_and_tamer_base`.
+
+- **Card (BLOCKED):** EX13-071 Richard Sampson [Main] [Once Per Turn] — "…it may digivolve into [Kentaurosmon] in the hand or trash, ignoring level and with the cost reduced by 1." (slice "Richard Sampson / DATA SQUAD", EX13 author-set; no DCGO script). Also BT24-025 / BT12-089 ("ignoring level").
+- **Missing DSL vocabulary:** `EffectDigivolveArgs` has only `ignore_requirements`, which lowers to the zero-base-cost, colour-ignoring engine path. Needs an `ignore_level: bool` flag (colour circle kept, printed cost paid then `cost` delta applied).
+- **Lowers to engine API:** none yet — see `qa/archetype-qa/engine-gaps.md` §G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST (DCGO `IgnoreRequirement.Level`).
+- **Suggested DSL syntax:**
+  ```yaml
+  - effect_initiated_digivolve:
+      target: kudamon
+      from_hand: kentaurosmon   # select_union_zone [hand, trash] binding
+      cost: { reduce: 1 }
+      ignore_level: true
+  ```
+
+
+## Vocabulary added this run (slice "Examon / holy warrior", EX13 author-set, 2026-10-01) — RESOLVED
+
+- **`multiply` compound formula** [G-DSL-FORMULA-MULTIPLY] — `{ multiply: [a, b, …] }` (product, saturating). Driver EX13-020 Magnamon "-4000 DP for every 5000 DP this Digimon has" = `multiply: [ { floor_div: [ { source_dp: {} }, 5000 ] }, -4000 ]`.
+- **`printed_keyword:` card-scope predicate** [G-DSL-PREDICATE-PRINTED-KEYWORD] — the candidate card's face-up printed keyword line (effect text only; DCGO `CardSource.HasBlocker`). Driver EX13-062 Craniamon Assembly "all black w/＜Blocker＞".
+- **`binding_card_kind` reads `select_union_zone` bindings** [G-DSL-BINDING-CARD-KIND-UNION] — lets a play-OR-use body route an Option to `use_option_bound` and anything else to `play_union_bound_free`. Drivers EX13-045 Examon, EX13-064 LordKnightmon.
+- **`event_winner_is_source:` predicate** [G-DSL-BATTLE-WINNER-IS-SOURCE] — `on_ally_won_battle` scoped to the carrier ("When THIS Digimon wins a battle"), firing for effect battles too (the `on_any_deletion` + `source_deleted_battle_opponent` idiom reads the live attack and misses `battle:`). Driver EX13-045 Examon.
+- **`select_any_permanent` honors `continue_on_decline`** [G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE] — RESOLVED (compiled field appended; installer threads the decline tail + resume `RunTail`). Driver EX13-043 Leopardmon "You may suspend 1 Digimon. Then, you may return …".
+
+## Same-level pair selection from a stack  [G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01:** `select_materials` gains `min:` (pick floor) and `same_by: level` (lowers to `DistinctByMode::SameLevel` + install-time `prune_pool`), and the new step `trash_selected_materials { target, cards }` trashes a `select_materials` card-list binding. Also added this run (G-ENGINE-STACKED-CARD-RETURN-PROTECTION): aura `modifier_from:` (controller scope for the named `modifier`), `ImmuneFromStackReturn` modifier name, `can_change_orientation` predicate. Drivers EX13-016 / EX13-023 (IMPLEMENTED). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- stack_pair_and_protection`.
+- *(original entry follows)*
+
+- **Card (BLOCKED):** EX13-016 Omnimon — "by trashing 2 same-level cards from its digivolution cards, it doesn't leave".
+- **Missing DSL vocabulary:** `select_materials { …, same_by: level }` (all picks share one key; first pick limited to keys with ≥max candidates).
+- **Lowers to engine API:** none yet — needs a SAME-key mode on the count-capped multi-pick; see `qa/archetype-qa/engine-gaps.md` §G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+
+## Assembly `distinct_by: color`  [G-ASSEMBLY-DISTINCT-BY-COLOR] — hybrid, RESOLVED 2026-10-01
+
+- **RESOLVED 2026-10-01:** `distinct_by: color` added to the DSL (`alt_path::DistinctBy::Color`, `CompiledDistinctBy::Color`), usable on Assembly / DigiXros materials and `select_count_capped_multi`. Lowers to `DistinctByMode::Color` — a bipartite card → colour matching (`DistinctByMode::admits`), see `qa/archetype-qa/engine-gaps.md` §G-ASSEMBLY-DISTINCT-BY-COLOR. Driver EX13-077 (IMPLEMENTED). Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- distinct_by_color` (4), `…--test cards_behavioral -- "ex13::ex13_077"` (20).
+- *(original entry follows)*
+
+- **Card (BLOCKED):** EX13-077 Omnimon: Merciful Mode — "Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors".
+- **Missing DSL vocabulary:** `DistinctBy::Color` (`distinct_by: color`).
+- **Lowers to engine API:** none yet — colour distinctness over multicolour cards is a bipartite matching; see `qa/archetype-qa/engine-gaps.md` §G-ASSEMBLY-DISTINCT-BY-COLOR.
+
+## Vocabulary added this run (slice "Chronicle", EX13 author-set, 2026-10-01) — RESOLVED
+
+- **`during_attack:` game-level predicate** [G-DSL-DURING-ATTACK] — true while an attack is in flight (`Game::pending_attack`; DCGO `GManager.instance.attackProcess.IsAttacking`), `false` asserts none. Driver EX13-057 Grademon "If during an attack, it also isn't affected by their Digimon effects and gets +5000 DP" (BT20-053 DCGO precedent). Plumbed `PredicateSpec` → `CompiledPredicate` → `dsl_cards/predicate.rs`. Also unblocks the `during_attack` half of BT20-056's G-BREEDING-DIGIVOLVE-UNION-ZONES (the breeding-subject digivolve half stays open) and BT20-015 / BT20-018 / BT20-053.
+- **`can_digivolve_onto: source`** [G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE] — the magic name `source` resolves to the effect's own carrier permanent (no `bind_as` needed; validator exempts it, an explicit binding named `source` still wins). Lets a "THIS Digimon may digivolve into a [X] card in the hand or trash" union pick (and its offer gate) list only cards with a legal route. Drivers EX13-055 Raptordramon [When Attacking], EX13-057 Grademon [End of Attack].
+
+## Battle comparison override (digivolution-card count instead of DP)  [G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT] — hybrid, RESOLVED 2026-10-01 (slice "orphan staples")
+
+- **RESOLVED 2026-10-01:** `battle:` gained `compare: dp | digivolution_cards` (default `dp`), lowering to the new `Game::battle_digimon_with(attacker, defender, BattleComparison::DigivolutionCards)` / `EffectContext::battle_digimon_with` (the battle-scoped twin of `<Iceclad>` — same `resolve_battle` branch, as in DCGO `IBattle.CompareStats`). New step `return_all_sources_to_deck: { target, position }` returns every digivolution card of a permanent to the deck ("return all digivolution cards of 1 of their Digimon to the bottom of the deck"). EX13-076 IMPLEMENTED. Verify: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- effect_battle` and `RUST_MIN_STACK=134217728 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- "ex13::ex13_076" --test-threads=3`.
+- *(original entry follows)*
+
+- **Card (BLOCKED):** EX13-076 Imperialdramon: Paladin Mode — "...have this Digimon battle it. Compare the number of digivolution cards instead of DP in this battle."
+- **Missing DSL vocabulary:** `battle: { attacker: source, defender: <binding>, compare: source_count }` (default `compare: dp`).
+- **Lowers to engine API:** none yet — `battle` lowers to `Game::battle_digimon`, which only compares DP; see `qa/archetype-qa/engine-gaps.md` §G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT. The same card's Assembly `distinct_by: name` half (§G-ASSEMBLY-NO-DISTINCT-BY) is RESOLVED 2026-10-01; only the battle comparator still blocks it.
+
+
+## `can_attack` permanent predicate  [G-DSL-CAN-ATTACK-PREDICATE] — RESOLVED 2026-10-01
+
+- **Symptom:** "1 of your Digimon may attack" picks (`select_own_permanent` → `may_attack_now`) offered EVERY own Digimon, including ones that cannot legally attack (summoning-sick without <Rush>, suspended, `CannotAttack`, no legal target). Picking one was a dead RL action (the attack-target prompt then had no bits and nothing happened), and the prompt still appeared when no Digimon could attack. DCGO filters the pick with `permanent.CanAttack(activateClass[, withoutTap])` and skips the select when nothing matches (EX12_014.cs, BT24_037.cs, BT25_016.cs, BT25_018.cs, AD1_004/009/021.cs, BT17_081.cs, BT19_090.cs, BT20_017.cs, BT21_044.cs, BT24_085.cs, EX9_013.cs, EX12_018.cs).
+- **RESOLVED 2026-10-01:** new permanent leaf `can_attack: { targets: any|player|digimon, without_suspending?, ignore_summoning_sickness? }` (`PredicateSpec::can_attack` → `CompiledPredicate::can_attack`). True when `action::mask::effect_attack_target_action_ids_with_options` (the exact target set `may_attack_now` would offer, same options) is non-empty — so it honours suspension / can't-suspend, summoning sickness vs <Rush>, permanent- and player-scoped `CannotAttack`, `CannotAttackPlayer`, Raid / `CanAttackUnsuspended` / `CannotAttackTarget`. An all-ineligible board yields zero candidates, so the optional pick installs no prompt.
+- **Cards switched to it:** EX13-077 (`without_suspending: true`), EX12-014, BT24-037, EX12-018 (also its "Attack/Decline" gate), BT19-090 and BT17-081 (`targets: player`; BT17-081's clause condition too), BT25-016, BT25-018, AD1-004, AD1-009, AD1-021, BT20-017, BT21-044, BT24-085, EX9-013, EX13-033, EX13-060. Left unfiltered on purpose (the pick also grants something, and DCGO does not filter them): EX12-015/029/056 (Alliance), BT16-077 / EX13-064 (Rush — changes legality), BT24-051 (+5000), BT25-057 / BT25-086 (buffs), BT24-047 (unsuspend).
+- **Not modelled (noted):** DCGO `CanAttack` also returns false while another attack is in progress (`attackProcess.IsAttacking`); the leaf does not. **Turn-player clause added 2026-10-01:** the leaf is false unless the permanent's controller is the turn player (DCGO "can not attack during opponent's turn") — possible once the mid-effect turn pass it exposed in BT24-085 was fixed (docs/RUST_ENGINE_GAPS.md §G-ENGINE-TURN-END-MID-EFFECT).
+- **Tests:** `cards_behavioral` `ex13::ex13_077::ex13_077_attacker_pick_offers_only_digimon_that_can_attack_without_suspending`, `ex13_077_no_attacker_prompt_when_none_can_attack_and_then_still_runs`; `ex12::ex12_014::ex12_014_attacker_pick_excludes_digimon_that_cannot_attack`, `ex12_014_no_attacker_prompt_when_no_digimon_can_attack`; `bt24::bt24_037::bt24_037_attacker_pick_offers_only_digimon_that_can_attack`, `bt24_037_no_attacker_prompt_when_no_digimon_can_attack`.
+
+## `trash_top_stacked_sources { include_top_card }`  [G-TOP-STACKED-CARD-TRASH] — RESOLVED 2026-10-01
+
+- **Symptom:** BT21-030 Shoutmon X7: Superior Mode "Trash the top 10 stacked cards" removed `card_sources[len-2]` each pass, leaving the original TOP card. Official Q&A: "The top card is trashed until there are no more stacked cards" — the original BOTTOM card remains; DCGO `ITrashStack` trashes `TopCard` each pass.
+- **RESOLVED 2026-10-01:** `trash_top_stacked_sources` gains `include_top_card: bool` (default `false` keeps "top N digivolution cards" for BT13-030 / EX7-016 / EX7-020). `true` pops the visible top each pass (host = promoted top; an exposed Digi-Egg deletes the permanent). BT21-030 uses it. Test: `bt21::bt21_030::bt21_030_trashes_sources_then_when_attacking_targets_only_no_source_digimon` (re-pinned: remaining card is the bottom card).

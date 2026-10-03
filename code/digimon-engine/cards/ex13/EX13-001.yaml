@@ -1,0 +1,53 @@
+# EX13-001 Gigimon — Digi-Egg, Lv.2, Red. Traits: Lesser.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-001.md):
+#   Inherited: [Your Turn] [Once Per Turn] When any of your red Tamers are
+#   played, this Digimon may digivolve into a Digimon card with [Growlmon] or
+#   [Gallantmon] in its name in the hand with the cost reduced by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_001.cs
+#   OnEnterFieldAnyone, inherited, OPT; trigger = own Tamer played whose top
+#   card is red, on the owner's turn; body = DigivolveIntoHandOrTrashCard
+#   (payCost: true, reduceCost: 2, isHand: true), declinable.
+#
+# DSL: EX12-002 Mococomon idiom — `on_ally_played` + event_target gates, an
+# optional hand pick, then `effect_initiated_digivolve` with `reduce: 2`.
+
+card: EX13-001
+name: Gigimon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser]
+
+effects:
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red]
+    summary: "[Your Turn][OPT] When any of your red Tamers are played, this Digimon may digivolve into a [Growlmon]/[Gallantmon]-named hand card with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Growlmon
+                  - name_contains: Gallantmon
+          prompt: "Digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name with the cost reduced by 2"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: { reduce: 2 }

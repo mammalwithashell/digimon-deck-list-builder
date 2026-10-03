@@ -40,6 +40,7 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
         CompiledDistinctBy::CardNumber => DistinctByMode::CardNumber,
         CompiledDistinctBy::Level => DistinctByMode::Level,
         CompiledDistinctBy::Name => DistinctByMode::Name,
+        CompiledDistinctBy::Color => DistinctByMode::Color,
     })
 }
 
@@ -840,6 +841,7 @@ pub(crate) fn run_resume(
                         Some(bind_right_as),
                         right_prompt,
                         optional,
+                        false,
                         (*inner_tail).clone(),
                         b,
                         runtime,
@@ -1416,16 +1418,9 @@ fn count_capped_rejects_distinct(
     candidate_data_index: usize,
 ) -> bool {
     let candidate = &game.card_data[candidate_data_index];
-    picked_data_indices.iter().any(|&picked_idx| {
-        let picked = &game.card_data[picked_idx];
-        match mode {
-            DistinctByMode::CardNumber => picked.card_id == candidate.card_id,
-            DistinctByMode::Level => {
-                matches!((picked.level, candidate.level), (Some(p), Some(c)) if p == c)
-            }
-            DistinctByMode::Name => picked.card_name == candidate.card_name,
-        }
-    })
+    let picked: Vec<&crate::card_data::CardData> =
+        picked_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+    !mode.admits(&picked, candidate)
 }
 
 fn park_non_dsl_count_capped_state(
@@ -1487,21 +1482,22 @@ fn run_non_dsl_count_capped_step(
         return;
     }
 
+    // EVERY pick so far (not just the latest): a set-level mode (`Color`)
+    // needs the whole accumulated set. Earlier picks are no longer in
+    // `candidate_actions`, so resolve each handle's data index directly.
+    // G-ASSEMBLY-DISTINCT-BY-COLOR.
     let picked_data_indices: Vec<usize> = state
         .accum
         .iter()
         .filter_map(|&picked| {
-            state
-                .candidate_actions
-                .iter()
-                .copied()
-                .find(|&candidate| {
-                    count_capped_handle_for_action(game, state.of_player, state.zone, candidate)
-                        == Some(picked)
-                })
-                .and_then(|candidate| {
-                    count_capped_data_index_for_action(game, state.of_player, state.zone, candidate)
-                })
+            let slice: &[crate::card_source::CardSource] = match state.zone {
+                CountCappedZone::Hand => &game.player(state.of_player).hand,
+                CountCappedZone::Trash => &game.player(state.of_player).trash,
+                CountCappedZone::Material(ph) => {
+                    crate::effect_context::selections::material_zone_slice(game, ph)?
+                }
+            };
+            slice.iter().find(|c| c.handle() == picked).map(|c| c.data_index)
         })
         .collect();
 
@@ -3306,7 +3302,7 @@ fn run_multipick_step(
     action_id: u16,
     is_pass: bool,
 ) {
-    use crate::effect_context::selections::{material_zone_slice, CountCappedZone, DistinctByMode};
+    use crate::effect_context::selections::{material_zone_slice, CountCappedZone};
     if is_pass {
         run_multipick_terminal(game, state);
         return;
@@ -3368,16 +3364,9 @@ fn run_multipick_step(
                     },
                 };
                 let cand_data = &game.card_data[cand_data_idx];
-                !accum_data_indices.iter().any(|&pdi| {
-                    let pd = &game.card_data[pdi];
-                    match mode {
-                        DistinctByMode::CardNumber => pd.card_id == cand_data.card_id,
-                        DistinctByMode::Level => {
-                            matches!((pd.level, cand_data.level), (Some(p), Some(c)) if p == c)
-                        }
-                        DistinctByMode::Name => pd.card_name == cand_data.card_name,
-                    }
-                })
+                let picked: Vec<&crate::card_data::CardData> =
+                    accum_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+                mode.admits(&picked, cand_data)
             })
             .collect()
     } else {
@@ -3723,6 +3712,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             then,
             ..
         } => {
@@ -3734,6 +3724,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
@@ -3841,20 +3832,77 @@ pub fn try_install(
         }
         CompiledStep::SelectEffectChoice {
             labels,
+            legal_when,
             bind_as,
             prompt,
             ..
         } => {
-            install_select_effect_choice(
-                ctx,
-                labels.clone(),
-                bind_as.clone(),
-                prompt.clone(),
-                tail.to_vec(),
-                bindings,
-                runtime.clone(),
-            );
-            selection_result(ctx)
+            // G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY — evaluate per-branch
+            // legality at install time (absent = every label legal).
+            let legal: Vec<usize> = {
+                let rctx = ctx.as_read();
+                (0..labels.len())
+                    .filter(|&i| match legal_when.as_ref().and_then(|c| c.get(i)) {
+                        Some(cond) => eval_predicate_with_bindings(
+                            cond,
+                            &rctx,
+                            PredicateSubject::None,
+                            Some(&bindings),
+                        ),
+                        None => true,
+                    })
+                    .collect()
+            };
+            match legal.as_slice() {
+                // No legal branch: nothing to choose. Bind nothing (branch
+                // `if`s on the unbound index fail) and let the tail continue.
+                [] => InstallResult::Continue,
+                // Exactly one legal branch: a one-option choice is not a
+                // choice (DCGO `SetBool(onlyLegalBranch)`, same collapse as
+                // `select_union_zone` / single-destination remainder). Bind it
+                // and run the tail inline — no prompt.
+                [only] => {
+                    let mut b = bindings;
+                    if let Some(name) = bind_as {
+                        b.insert_literal(name, *only as i64);
+                    }
+                    run_steps_with_runtime(tail, ctx, &mut b, runtime);
+                    if ctx.game.pending_selection.is_some() {
+                        InstallResult::Parked
+                    } else {
+                        InstallResult::TailAlreadyRan
+                    }
+                }
+                _ => {
+                    install_select_effect_choice(
+                        ctx,
+                        labels.clone(),
+                        bind_as.clone(),
+                        prompt.clone(),
+                        tail.to_vec(),
+                        bindings,
+                        runtime.clone(),
+                    );
+                    // Mask illegal branches out of the prompt. Action ids stay
+                    // `HAND_EFFECT_START + label_index`, so the resolve path's
+                    // index mapping (closure + resume frame) is unchanged.
+                    if legal.len() < labels.len() {
+                        if let Some(sel) = ctx.game.pending_selection.as_mut() {
+                            if sel.kind == SelectionKind::EffectChoice {
+                                let allowed: Vec<u16> = legal
+                                    .iter()
+                                    .map(|&i| crate::action::space::HAND_EFFECT_START + i as u16)
+                                    .collect();
+                                sel.valid_action_ids.retain(|id| allowed.contains(id));
+                                if let Some(choices) = sel.effect_choices.as_mut() {
+                                    choices.retain(|c| allowed.contains(&c.action_id));
+                                }
+                            }
+                        }
+                    }
+                    selection_result(ctx)
+                }
+            }
         }
         CompiledStep::SelectReveal {
             of,
@@ -4208,6 +4256,8 @@ pub fn try_install(
             bind_as,
             prompt,
             optional_zero,
+            min,
+            same_by,
             ..
         } => {
             let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
@@ -4223,13 +4273,30 @@ pub fn try_install(
             // engine multi-pick encodes breeding sources in the
             // `BREEDING_SOURCE_SELECT` action range (Task S1.3).
             let has_candidates = has_material_candidates(ctx, perm, filter, Some(&bindings));
-            let completes_synchronously = !has_candidates || max_value == 0;
+            // `same_by: level` → the SameLevel pick-set mode (mutually
+            // exclusive with `uniqueness`, enforced by the validator).
+            // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+            let mode = match same_by {
+                Some(digimon_dsl::compiled::CompiledSameBy::Level) => {
+                    Some(DistinctByMode::SameLevel)
+                }
+                None => map_distinct_by(*uniqueness),
+            };
+            // A required floor (`min > 0`) the pool can't reach is an
+            // unpayable cost: nothing is picked and the rest of the body is
+            // skipped (the closure install never fires its tail callback).
+            let min_value = (*min).min(max_value);
+            let unpayable_min = min_value > 0
+                && material_candidate_count(ctx, perm, filter, &bindings, mode, min_value)
+                    < min_value as usize;
+            let completes_synchronously = !has_candidates || max_value == 0 || unpayable_min;
             install_select_materials(
                 ctx,
                 perm,
+                min_value,
                 max_value,
                 filter.clone(),
-                map_distinct_by(*uniqueness),
+                mode,
                 bind_as.clone(),
                 prompt.clone(),
                 *optional_zero,
@@ -4367,8 +4434,16 @@ pub fn try_install(
             bind_as,
             prompt,
             then,
+            deletion_cap,
         } => {
-            let dp_budget = formula_value(dp_budget, ctx, &bindings);
+            let mut dp_budget = formula_value(dp_budget, ctx, &bindings);
+            if *deletion_cap {
+                // G-ENGINE-DP-DELETION-MAX-MODIFIER — the total-DP budget of a
+                // deletion is a "DP deletion effect's maximum".
+                dp_budget += crate::dsl_cards::predicate::deletion_max_bonus_for_source(
+                    &ctx.as_read(),
+                );
+            }
             if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }
@@ -4647,6 +4722,33 @@ fn count_opponent_source_candidates(
             .count();
     }
     count.min(usize::from(u8::MAX)) as u8
+}
+
+/// Number of offerable first-pick material candidates of `perm` under
+/// `filter` + `mode` (incl. the `SameLevel` pool restriction for a `need`
+/// floor). G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+fn material_candidate_count(
+    ctx: &EffectContext<'_>,
+    perm: PermanentHandle,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+    mode: Option<DistinctByMode>,
+    need: u8,
+) -> usize {
+    count_capped_card_candidate_indices(
+        ctx.game,
+        perm.player,
+        CountCappedZone::Material(perm),
+        filter,
+        bindings,
+        ctx.source_card,
+        ctx.source_permanent,
+        ctx.source_kind,
+        ctx.player,
+        mode,
+        need as usize,
+    )
+    .len()
 }
 
 fn has_material_candidates(
@@ -6640,6 +6742,7 @@ fn install_select_any_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -6681,6 +6784,15 @@ fn install_select_any_permanent(
     let bindings_for_resume = bindings.clone();
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
+    // `continue_on_decline` (G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE):
+    // PASS leaves the binding unresolved and the clause CONTINUES, mirroring
+    // `install_select_own_permanent` (EX13-043 Leopardmon "You may suspend 1
+    // Digimon. Then, you may return …").
+    let continue_tail = optional && continue_on_decline;
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
 
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -6730,7 +6842,28 @@ fn install_select_any_permanent(
                 &runtime,
             );
         }),
-        on_decline: None,
+        on_decline: if continue_tail {
+            Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }))
+        } else {
+            None
+        },
     });
     // Park the data frame alongside the closure (coexistence): driven by
     // `run_resume`'s AnyPermanent arm (linear search over the candidates).
@@ -6748,12 +6881,19 @@ fn install_select_any_permanent(
                     candidates: candidates_for_resume,
                 },
                 bind_as: bind_as_for_resume,
-                inner_tail: tail_for_resume,
+                inner_tail: Arc::clone(&tail_for_resume),
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
                 trigger_context: trigger_for_resume,
-                decline: crate::resume::ResumeDecline::None,
+                decline: if continue_tail {
+                    crate::resume::ResumeDecline::RunTail {
+                        tail: tail_for_resume,
+                        aborts_clause: false,
+                    }
+                } else {
+                    crate::resume::ResumeDecline::None
+                },
             }],
         });
     }
@@ -6861,6 +7001,7 @@ fn install_select_dna_pair(
                 Some(bind_right_as),
                 prompt,
                 optional,
+                false,
                 tail,
                 b,
                 runtime,
@@ -7025,6 +7166,9 @@ fn install_select_count_capped_multi(
         source_permanent,
         source_kind,
         player,
+
+        distinct_by,
+        min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
@@ -7076,10 +7220,12 @@ fn install_select_count_capped_multi(
 /// Re-derive the filter-passing zone indices for a card-based count_capped
 /// (Hand/Trash/Material), mirroring `select_count_capped_multi_min`'s install-time
 /// candidate scan with the `CompiledPredicate` on `PredicateSubject::Card`.
-/// Data-pure. `distinct_by` is NOT applied here (the executor applies it on
-/// re-park, matching the closure).
+/// Data-pure. Of `distinct_by` only the empty-set admissibility is applied
+/// here (a colorless card can never start a `Color` set — mirrors the closure's
+/// install-time scan); the pairwise exclusions are applied by the executor on
+/// re-park, matching the closure.
 #[allow(clippy::too_many_arguments)]
-fn count_capped_card_candidate_indices(
+pub(crate) fn count_capped_card_candidate_indices(
     game: &crate::game::Game,
     of_player: PlayerId,
     zone: CountCappedZone,
@@ -7089,6 +7235,8 @@ fn count_capped_card_candidate_indices(
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
     player: PlayerId,
+    distinct_by: Option<DistinctByMode>,
+    need: usize,
 ) -> Vec<usize> {
     use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
     let zone_len = match zone {
@@ -7124,16 +7272,36 @@ fn count_capped_card_candidate_indices(
     );
     let mut out = Vec::new();
     for (i, h) in handles.into_iter().enumerate() {
-        if eval_predicate_with_bindings(
-            filter,
-            &read,
-            PredicateSubject::Card(h),
-            Some(filter_bindings),
-        ) {
-            out.push(i);
+        let admissible = distinct_by.is_none_or(|mode| {
+            game.card_data_for_handle(h)
+                .is_some_and(|data| mode.admits(&[], data))
+        });
+        if admissible
+            && eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Card(h),
+                Some(filter_bindings),
+            )
+        {
+            out.push((i, h));
         }
     }
-    out
+    // Pool-level restriction, mirroring `select_count_capped_multi_min` so the
+    // resume frame's candidates equal the closure install's.
+    // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION.
+    if let Some(mode) = distinct_by {
+        let pool: Vec<&crate::card_data::CardData> = out
+            .iter()
+            .filter_map(|(_, h)| game.card_data_for_handle(*h))
+            .collect();
+        if pool.len() == out.len() {
+            let keep = mode.prune_pool(&pool, need);
+            let mut k = keep.into_iter();
+            out.retain(|_| k.next().unwrap_or(true));
+        }
+    }
+    out.into_iter().map(|(i, _)| i).collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -7853,6 +8021,7 @@ fn install_select_material(
 fn install_select_materials(
     ctx: &mut EffectContext<'_>,
     perm: PermanentHandle,
+    min: u8,
     max: u8,
     filter: CompiledPredicate,
     uniqueness: Option<DistinctByMode>,
@@ -7897,11 +8066,12 @@ fn install_select_materials(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_count_capped_multi(
+    ctx.select_count_capped_multi_min(
         // The carrier's owner — `Material` candidates come from
         // `perm.player`'s battle area regardless of `of_player`.
         perm.player,
         CountCappedZone::Material(perm),
+        min,
         max,
         &prompt,
         optional_zero,
@@ -7941,6 +8111,9 @@ fn install_select_materials(
         source_permanent,
         source_kind,
         player,
+
+        uniqueness,
+        min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
     if !candidate_indices.is_empty() {
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
@@ -7965,7 +8138,7 @@ fn install_select_materials(
                         previous_phase,
                         zone: CountCappedZone::Material(perm),
                         range_start,
-                        min: 0,
+                        min,
                         max,
                         is_optional_zero: optional_zero,
                         distinct_by: uniqueness,

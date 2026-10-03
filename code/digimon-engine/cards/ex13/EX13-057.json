@@ -1,0 +1,43 @@
+{
+  "index": 4381,
+  "norm_id": 0.21905,
+  "card_id": "EX13-057",
+  "card_index": 57,
+  "card_name_eng": "Grademon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_057",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Warrior",
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody] or [Chronicle] trait Digimon gains ＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.) and ＜Blocker＞ (This Digimon can block in the blocker timing.). If during an attack, it also isn't affected by their Digimon effects and gets +5000 DP.\r\n[End of Attack] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your [Chronicle] trait Digimon would leave the battle area, by trashing your top security card, they don't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Raptordramon]/Lv.4 w/[Chronicle] trait: Cost 3"
+}

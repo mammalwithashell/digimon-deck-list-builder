@@ -1,0 +1,96 @@
+# EX13-072 Kota Domoto — Tamer, Black, Cost 4. Trait: Chronicle.
+#
+# Printed text (per-card JSON / official Bandai DB bundle):
+#   [Start of Your Main Phase] By trashing 1 [Chronicle] trait card from your
+#   hand, <Draw 1> and gain 1 memory.
+#   [Your Turn] When one of your [Chronicle] trait Digimon attacks, by
+#   suspending this Tamer, you may use 1 [X Antibody] or 1 Option card with the
+#   [Chronicle] trait from your hand with the cost reduced by 1.
+#   [Security] Play this card without paying the cost.
+#   (The corpus JSON files the [Security] line under inherited text; the
+#   official bundle prints it as the Security Effect.)
+#
+# DCGO: no EX13_072.cs at b9a0638cd — printed text governs.
+#   1. BT18-092 idiom: optional clause whose first step is a declinable
+#      `select_hand { cost: true }` — declining aborts the whole clause.
+#      Then Draw 1 and gain 1 memory, in printed order.
+#   2. EX12-066 idiom: `on_ally_attack` observer gated on your turn, an own
+#      [Chronicle] attacker and an unsuspended Tamer; `activation_cost:
+#      suspend_self`; then a hand pick + `play_or_use_from_hand` with
+#      `cost_delta: { reduce: 1 }`. "1 [X Antibody]" is the card NAMED
+#      [X Antibody] (BT9-109, an Option) → `name_is: X Antibody`; the trait arm
+#      is "Option card with the [Chronicle] trait". The offer is gated on an
+#      eligible Option being in hand (nothing to use → nothing to pay for).
+#   3. [Security] play self free.
+
+card: EX13-072
+name: Kota Domoto
+kind: tamer
+color: [black]
+cost: 4
+traits: [Chronicle]
+
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    # Unpayable without a [Chronicle] trait card in hand (DCGO CanActivate
+    # convention): no offer, so the draw + memory never run unpaid.
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], trait_has: Chronicle }
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 [Chronicle] trait card from your hand, Draw 1 and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            trait_has: Chronicle
+          prompt: "Trash 1 [Chronicle] trait card from your hand to Draw 1 and gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  - when: on_ally_attack
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_target_trait_has: Chronicle
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: option
+            - any_of:
+                - name_is: X Antibody
+                - trait_has: Chronicle
+        n: 1
+    summary: "[Your Turn] When one of your [Chronicle] Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or 1 [Chronicle] trait Option card from your hand with the cost reduced by 1"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: option_pick
+          filter:
+            all_of:
+              - kind: option
+              - any_of:
+                  - name_is: X Antibody
+                  - trait_has: Chronicle
+          prompt: "Use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: option_pick
+          cost_delta: { reduce: 1 }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

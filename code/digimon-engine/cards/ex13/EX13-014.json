@@ -1,0 +1,37 @@
+{
+  "index": 4338,
+  "norm_id": 0.2169,
+  "card_id": "EX13-014",
+  "card_index": 14,
+  "card_name_eng": "Jesmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_014",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 use cost 5 or lower [Huckmon] text Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[All Turns] [Once Per Turn] When any of your Digimon are played, you may delete 1 of your opponent's lowest DP Digimon. Then, if you don't have [Atho, René & Por], you may play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy(Red)/(Black)＞)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Huckmon] in text: Cost 3 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Huckmon] in text\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

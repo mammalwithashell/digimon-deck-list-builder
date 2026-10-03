@@ -1,0 +1,73 @@
+# EX13-051 Guardromon — Digimon, Lv.4, Black, 5000 DP, play cost 4.
+# Traits: Machine. Champion / Virus. Digivolve: Black Lv.3 / cost 2.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-051.md):
+#   <Blocker> [All Turns] When any of your other Digimon with <Blocker> would
+#   leave the battle area other than by your effects, by suspending this
+#   Digimon, they don't leave.
+#   Inherited: [Opponent's Turn] [Once Per Turn] When any of your Digimon
+#   suspend, this Digimon may unsuspend.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_051.cs
+#   Blocker; WhenRemoveField (optional, no OPT) for own OTHER Digimon whose top
+#   card HasBlocker, not by an owner effect, CanActivateSuspendCostEffect →
+#   suspend this → protected Digimon don't leave. Inherited OnTappedAnyone
+#   (OPT, optional) on the opponent's turn for any own Digimon, carrier
+#   suspended → unsuspend the carrier.
+#
+# DSL: EX13-043 / EX13-017 replacement idiom — `replacement_subject_is_mine`,
+# `other`, `has_keyword: Blocker` (live keyword of the leaving Digimon),
+# `none_of: [replacement_cause: own_effect]`, `source_is_unsuspended` for the
+# payable suspend cost → `suspend {source}` + `cancel_replacement`. Inherited
+# on_suspend unsuspend = BT20-045 / AD1-014 idiom.
+
+card: EX13-051
+name: Guardromon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 5000
+traits: [Machine]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - other: true
+        - has_keyword: Blocker
+        - none_of:
+            - replacement_cause: own_effect
+        - source_is_unsuspended: true
+    summary: "[All Turns] When any of your other <Blocker> Digimon would leave other than by your effects, by suspending this Digimon, they don't leave"
+    process:
+      - suspend: { target: source }
+      - cancel_replacement: {}
+
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - not: { source_is_unsuspended: true }
+    summary: "Inherited [Opponent's Turn][OPT] When any of your Digimon suspend, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

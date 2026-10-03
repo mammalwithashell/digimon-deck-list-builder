@@ -151,6 +151,7 @@ pub enum CostSpec {
 
 /// Wraps `FormulaSpec` under the `formula:` YAML key.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct FormulaCost {
     pub formula: FormulaSpec,
 }
@@ -161,11 +162,10 @@ pub struct FormulaCost {
 /// - **Inline**: predicate fields directly on the map, e.g. `{ level_eq: 6, name_contains: Greymon }`
 /// - **Wrapped**: a `filter:` key holding a `PredicateSpec`, e.g. `{ filter: { any_of: [...] }, repeat: unbounded }`
 // NOTE: MaterialSpec deliberately omits `#[serde(deny_unknown_fields)]` because
-// serde does not permit combining it with `#[serde(flatten)]`. As a consequence,
-// typos in inline-predicate fields (e.g. `levle_eq: 6`) are silently dropped
-// rather than raising a parse error. The semantic validator (Task 12) will need
-// a pass over inline-material predicate fields to catch this — tracked as part
-// of Task 7 when `PredicateSpec` is fleshed out.
+// serde does not permit combining it with `#[serde(flatten)]`. Unknown keys still
+// fail the parse: every key MaterialSpec does not own is forwarded to the
+// flattened `PredicateSpec`, whose `extra` sink rejects anything unrecognized
+// (`deny_unknown_predicate_keys`), e.g. `levle_eq: 6` or `color: red`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MaterialSpec {
     /// Explicit filter wrapper — used when the predicate is complex (e.g. `any_of`).
@@ -197,7 +197,7 @@ pub struct MaterialSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
+#[serde(deny_unknown_fields, untagged)]
 pub enum RepeatSpec {
     Keyword(RepeatKeyword),
     Range { min: u8, max: u8 },
@@ -215,4 +215,10 @@ pub enum DistinctBy {
     CardNumber,
     Level,
     Name,
+    /// "w/different colors" — a SET-level constraint: the chosen cards must
+    /// admit an injective assignment card → one of its printed colors (a
+    /// multicolor card represents exactly one of its colors; a colorless card
+    /// can represent none). Bipartite matching, not pairwise inequality.
+    /// G-ASSEMBLY-DISTINCT-BY-COLOR (EX13-077 Omnimon: Merciful Mode).
+    Color,
 }

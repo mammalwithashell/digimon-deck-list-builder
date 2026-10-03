@@ -1,0 +1,182 @@
+# EX13-077 Omnimon: Merciful Mode — Digimon, Lv.7, White, DP 16000, Cost 16.
+# Traits: Holy Warrior / ADVENTURE. Form: Mega. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-077.md):
+#   [On Play] [When Digivolving] 1 of your Digimon may attack without
+#   suspending. Then, for every 2 of your Digimon and Tamers' colors, activate
+#   1 effect below:
+#   ・This Digimon may battle 1 of your opponent's Digimon.
+#   ・By returning 5 cards from your opponent's trash to the bottom of the
+#     deck, <Recovery +1>.
+#   [All Turns] This Digimon gains all colors in its digivolution cards, and
+#   +1000 DP for each of your Digimon and Tamers' colors.
+#   Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors
+#   Digivolve: [Omnimon]: Cost 2.
+#   Official Q&A: the battle starts immediately and follows the standard
+#   battle rules.
+#
+# DCGO C# reference: none at the submodule (no EX13_077.cs). Printed text +
+# general_rule.pdf govern; DCGO precedents named per clause below.
+#
+# DSL notes:
+#   - Assembly "w/different colors": `distinct_by: color`
+#     (G-ASSEMBLY-DISTINCT-BY-COLOR) — a SET-level constraint: the six cards
+#     must admit an injective card → printed-color assignment (a multicolor
+#     card stands for exactly one of its colors). Eligibility (and thus the
+#     mask's hidden −8 availability) is a bipartite matching; each pick masks
+#     candidates that would break the matching.
+#   - [OP][WD] attack: optional own-Digimon pick (`continue_on_decline` — a
+#     declined attack must not skip the "Then") + `may_attack_now
+#     { without_suspending: true }` (EX12-014 / BT21-072 idioms). The attack
+#     resolves inline, so the "Then" count reads the board after it.
+#   - "for every 2 of your Digimon and Tamers' colors, activate 1 effect":
+#     `repeat_effect_choice` (EX12-037 / DCGO EX12_037.cs idiom: count read
+#     once, the same effect may be chosen again), count =
+#     floor(distinct rules-colors across own Digimon + Tamers / 2) — the
+#     AD1-014 `distinct_colors_count` formula; it reads synthesized colors, so
+#     this Digimon's gained source colors count.
+#   - Battle mode: optional opp-Digimon pick + `battle: { attacker: this }`
+#     (BT25-058 idiom — an effect battle, not an attack; Q&A: standard rules).
+#   - Return mode: "By returning 5 cards …, <Recovery +1>" — the return is the
+#     optional cost (DCGO BT17_070.cs `canNoSelect: true`, `maxCount` exact):
+#     yes/no, then exactly 5 cards of the opponent's trash to the bottom of
+#     their deck (`return_trash_list_to_deck_bottom`, BT17-070 idiom), then
+#     Recovery +1. Unpayable (< 5 cards) ⇒ nothing.
+#   - [All Turns]: self-aura `modifier: AddColor` with no payload = "gains the
+#     colors of its digivolution cards" (BT8-084 idiom, read live), plus a
+#     `dp_modifier_fn` of +1000 per distinct color across own Digimon + Tamers
+#     (AD1-004 idiom).
+
+card: EX13-077
+name: "Omnimon: Merciful Mode"
+kind: digimon
+level: 7
+color: [white]
+cost: 16
+dp: 16000
+traits: ["Holy Warrior", ADVENTURE]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Omnimon }
+    cost: 2
+  # ─── Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors ─────
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - trait_has: ADVENTURE
+        repeat: { min: 6, max: 6 }
+        distinct_by: color
+        zones: [trash]
+        stack_under: true
+    cost: 8
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your Digimon may attack without suspending; then per 2 of your Digimon/Tamer colors activate 1: this Digimon may battle 1 opp Digimon, or return 5 opp trash cards to deck bottom for <Recovery +1>"
+    process:
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          continue_on_decline: true
+          # DCGO `CanAttack(withoutTap: true)`: only a Digimon that could
+          # actually attack without suspending is offered; none ⇒ no prompt.
+          filter: { kind: digimon, can_attack: { without_suspending: true } }
+          prompt: "1 of your Digimon may attack without suspending"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          without_suspending: true
+          optional: true
+      - repeat_effect_choice:
+          count:
+            floor_div:
+              - base: 0
+                per:
+                  distinct_colors_count:
+                    of: you
+                    zone: battle_area
+                    filter:
+                      any_of:
+                        - kind: digimon
+                        - kind: tamer
+                delta: 1
+              - 2
+          labels:
+            - "This Digimon may battle 1 of your opponent's Digimon"
+            - "Return 5 cards from your opponent's trash to the bottom of the deck: <Recovery +1>"
+          bind_as: mode
+          prompt: "Activate 1 effect (1 per 2 of your Digimon and Tamers' colors)"
+          body:
+            - if:
+                condition: { equals: [mode, 0] }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: battle_target
+                      optional: true
+                      continue_on_decline: true
+                      filter: { kind: digimon }
+                      prompt: "This Digimon may battle 1 of your opponent's Digimon"
+                  - battle:
+                      attacker: this
+                      defender: battle_target
+            - if:
+                condition: { equals: [mode, 1] }
+                then:
+                  - if:
+                      condition:
+                        count_gte:
+                          filter:
+                            of: opponent
+                            zone: [trash]
+                          n: 5
+                      then:
+                        - select_effect_choice:
+                            labels:
+                              - "Return 5 cards from your opponent's trash to the bottom of the deck for <Recovery +1>"
+                              - "Don't return"
+                            bind_as: pay_return
+                            prompt: "Return 5 cards from your opponent's trash to the bottom of the deck?"
+                        - if:
+                            condition: { equals: [pay_return, 0] }
+                            then:
+                              - select_count_capped_multi:
+                                  of: opponent
+                                  zone: trash
+                                  min: 5
+                                  max: 5
+                                  filter: {}
+                                  bind_as: returned
+                                  optional_zero: false
+                                  prompt: "Return 5 cards from your opponent's trash to the bottom of their deck"
+                              - return_trash_list_to_deck_bottom:
+                                  of: opponent
+                                  cards: returned
+                              - recover: { of: you, count: 1 }
+
+  # ─── [All Turns] gains the digivolution cards' colors ─────────────────────
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    modifier: AddColor
+    summary: "[All Turns] This Digimon gains all colors in its digivolution cards"
+
+  # ─── [All Turns] +1000 DP per color across your Digimon and Tamers ─────────
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per:
+        distinct_colors_count:
+          of: you
+          zone: battle_area
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+      delta: 1000
+    summary: "[All Turns] +1000 DP for each of your Digimon and Tamers' colors"

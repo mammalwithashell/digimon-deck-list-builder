@@ -56,6 +56,7 @@ fn install_parked(game: &mut digimon_engine::game::Game, target: PermanentHandle
         source_permanent: None,
         controller: 0,
         outcome: ReplacementOutcome::None,
+        cancel_if_deleted: None,
     });
 }
 
@@ -377,10 +378,12 @@ fn last_write_wins_on_multiple_outcome_setters() {
 }
 
 #[test]
-#[should_panic(expected = "nested replacement park")]
-fn single_outstanding_park_panics_on_double_install() {
-    // Manually install parked_replacement, then trigger a second install via
-    // the dispatcher post-process hook — should panic in dev builds.
+fn second_park_stacks_above_an_outstanding_park_and_drains_lifo() {
+    // G-NESTED-PARKED-REPLACEMENT (2026-10-01): the old single-slot invariant
+    // (a debug_assert "nested replacement park") is replaced by a LIFO stack.
+    // Pre-install a parked replacement, then trigger a second park via the
+    // dispatcher post-process hook — it stacks on top, and resolving the inner
+    // selection drains both (inner first).
 
     struct DoubleParkCard;
     impl CardEffect for DoubleParkCard {
@@ -409,9 +412,22 @@ fn single_outstanding_park_panics_on_double_install() {
 
     r.game.delete_permanent_with_effects(parker);
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
-    // The accept-callback runs run_candidate_inner which hits the post-process
-    // hook with parked_replacement already Some(_) → debug_assert! fires.
-    let _ = r.game.resolve_selection(0, REPLACEMENT_ACCEPT);
+    assert_eq!(r.game.parked_replacement_depth_for_test(), 1);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept DOUBLE-PARK");
+    assert_eq!(
+        r.game.parked_replacement_depth_for_test(),
+        2,
+        "the process's nested select parks a second entry on the stack"
+    );
+    // Resolve the inner select: both parked entries drain.
+    let v = r.pending_selection_view().expect("inner select pending");
+    let a = v.valid_action_ids[0];
+    r.execute_action(v.selecting_player, a).expect("pick");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.game.parked_replacement_depth_for_test(), 0, "stack fully drained");
+    let _ = (parker, other);
 }
 
 #[test]

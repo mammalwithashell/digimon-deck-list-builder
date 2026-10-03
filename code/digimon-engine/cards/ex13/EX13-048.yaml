@@ -1,0 +1,77 @@
+# EX13-048 Kotemon — Digimon, Lv.3, Black, DP 2000, Cost 3.
+# Traits: Reptile. Form: Rookie. Attribute: Data.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Black Lv.2 / cost 0
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Knightmon]
+#   in its text and 1 card with [Knightmon] in its name among them to the
+#   hand. Return the rest to the bottom of the deck.
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon would
+#   leave the battle area other than by your effects, by deleting 1 of your
+#   other Digimon with [Knightmon] in its text, it doesn't leave.
+#   Official Q&A: "[X] in its text" = name, traits, effects, inherited,
+#   (Rule), requirement text (e.g. [DarkKnightmon]) → `in_text_contains`.
+#
+# DCGO: no EX13_048.cs at b9a0638cd. Authored with the established idioms:
+#   - Two `reveal_search` buckets, both to hand, resolved in printed order
+#     with cross-bucket de-dup (EX13-038 Salamon). Each is mandatory when a
+#     candidate exists.
+#   - Inherited leave-prevention replacement (EX13-027 Chuumon / EX11-022):
+#     optional "by deleting" cost, once per turn, not for own-effect removal.
+#     `select_own_permanent` scopes the cost to YOUR Digimon; `other: true`
+#     excludes the carrier.
+
+card: EX13-048
+name: Kotemon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Reptile]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Knightmon]-text card and 1 [Knightmon]-named card to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter: { in_text_contains: Knightmon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Knightmon] in its text to the hand"
+            - filter: { name_contains: Knightmon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Knightmon] in its name to the hand"
+          remainder: bottom
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "Inherited [All Turns][OPT] By deleting 1 of your other [Knightmon]-text Digimon, this Digimon doesn't leave (not by your effects)"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - in_text_contains: Knightmon
+          prompt: "Delete 1 of your other Digimon with [Knightmon] in its text"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

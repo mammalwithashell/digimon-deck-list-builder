@@ -24,6 +24,29 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Whether `target`'s stacked cards are protected from being trashed by
+    /// THIS effect (its controller `self.player`), per
+    /// `ModifierType::ImmuneFromStackTrashing` and each entry's controller
+    /// scope. G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn stack_trash_blocked(&self, target: PermanentHandle) -> bool {
+        self.game.modifiers.blocks_effect_from(
+            target,
+            ModifierType::ImmuneFromStackTrashing,
+            self.player,
+        )
+    }
+
+    /// Whether `target`'s stacked cards are protected from being returned to
+    /// the hand or deck by THIS effect (`ModifierType::ImmuneFromStackReturn`).
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    pub fn stack_return_blocked(&self, target: PermanentHandle) -> bool {
+        self.game.modifiers.blocks_effect_from(
+            target,
+            ModifierType::ImmuneFromStackReturn,
+            self.player,
+        )
+    }
+
     pub fn select_deleted_self_digisources_from_trash<F, C>(
         &mut self,
         max: u8,
@@ -84,7 +107,7 @@ impl<'a> EffectContext<'a> {
 
     pub fn trash_top_security_and_cancel_current_replacement(&mut self, player: PlayerId) -> bool {
         if self.trash_top_security(player) {
-            if self.game.parked_replacement.is_some() {
+            if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
             true
@@ -457,6 +480,12 @@ impl<'a> EffectContext<'a> {
     /// Token cards (`is_token == true`) are still pushed to trash; the
     /// caller's gate is responsible for any token-aware filtering.
     pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
+        // G-ENGINE-STACKED-CARD-RETURN-PROTECTION: stacked-card trash
+        // protection (DCGO `TrashDigivolutionCards` checks
+        // `ImmuneFromStackTrashing` before any removal).
+        if self.stack_trash_blocked(perm) {
+            return false;
+        }
         let (removed, host_card) = {
             // Soft-fail: carrier missing (DCGO: `if (_permanent == null) yield break;`).
             let permanent = match self
@@ -565,11 +594,7 @@ impl<'a> EffectContext<'a> {
         // Distinct from `CannotBeDestroyed` (which protects the live top
         // card from deletion) — this protects the digivolution sources
         // sitting beneath the top from being peeled off and trashed.
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return false;
         }
         // Validate target slot.
@@ -616,11 +641,7 @@ impl<'a> EffectContext<'a> {
         if count == 0 {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return 0;
         }
 
@@ -661,15 +682,30 @@ impl<'a> EffectContext<'a> {
         removed_count
     }
 
-    pub fn trash_top_n_stacked_sources(&mut self, target: PermanentHandle, count: u8) -> usize {
+    /// Trash up to `count` cards from the top of `target`'s stack, one at a
+    /// time, stopping once a single card remains.
+    ///
+    /// `include_top_card: false` — "trash the top N **digivolution cards**":
+    /// each pass removes the topmost digivolution card (`card_sources
+    /// [len - 2]`); the top card stays (BT13-030, EX7-016, EX7-020).
+    ///
+    /// `include_top_card: true` — "trash the top N **stacked cards**": each
+    /// pass removes the visible TOP card (`card_sources[len - 1]`, DCGO
+    /// `ITrashStack` → `_permanent.TopCard`), promoting the card under it;
+    /// the last remaining card is the original bottom card (BT21-030 official
+    /// Q&A: "The top card is trashed until there are no more stacked cards").
+    /// An exposed Digi-Egg top deletes the permanent and stops.
+    /// G-TOP-STACKED-CARD-TRASH (2026-10-01).
+    pub fn trash_top_n_stacked_sources(
+        &mut self,
+        target: PermanentHandle,
+        count: u8,
+        include_top_card: bool,
+    ) -> usize {
         if count == 0 || !self.can_affect_permanent(target) {
             return 0;
         }
-        if self
-            .game
-            .modifiers
-            .has(target, ModifierType::ImmuneFromStackTrashing)
-        {
+        if self.stack_trash_blocked(target) {
             return 0;
         }
 
@@ -687,6 +723,14 @@ impl<'a> EffectContext<'a> {
                 };
                 if permanent.card_sources.len() <= 1 {
                     None
+                } else if include_top_card {
+                    // Pop the visible top; the host is the promoted new top.
+                    let removed = permanent
+                        .card_sources
+                        .pop()
+                        .expect("len > 1 checked above");
+                    let host_card = permanent.top_card().handle();
+                    Some((removed, host_card))
                 } else {
                     let source_index = permanent.card_sources.len() - 2;
                     let host_card = permanent.top_card().handle();
@@ -699,6 +743,9 @@ impl<'a> EffectContext<'a> {
             self.game
                 .trash_source_and_fire(removed.owner, target, removed, host_card);
             trashed += 1;
+            if include_top_card && self.cleanup_exposed_battle_area_digi_egg(target) {
+                return trashed;
+            }
         }
         trashed
     }

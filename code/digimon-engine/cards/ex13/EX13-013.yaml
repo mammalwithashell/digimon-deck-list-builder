@@ -1,0 +1,98 @@
+# EX13-013 WarGrowlmon — Digimon, Lv.5, Red, 8000 DP, play cost 8.
+# Traits: Cyborg. Ultimate / Virus. Digivolve: Red Lv.4 / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-013.md):
+#   <Engage> (At the end of your turn, this Digimon may attack.) [When
+#   Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 5000
+#   DP or less. If this effect didn't delete, this Digimon gains <Piercing> and
+#   +3000 DP for the turn. [End of Attack] [On Deletion] You may play 1 Tamer
+#   card with [Guilmon] in its text from your hand or trash without paying the
+#   cost.
+#   Inherited: [All Turns] [Once Per Turn] When any of your opponent's Digimon
+#   are deleted, if this Digimon has [Gallantmon] in its name, trash their top
+#   security card.
+#   Official Q&A: the delete is mandatory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_013.cs
+#   EngageSelfStaticEffect. Shared WD/WA mandatory delete (DP <=
+#   MaxDP_DeleteEffect(5000)); nothing deleted → GainPierce + ChangeDigimonDP
+#   +3000 UntilEachTurnEnd. Shared EoA/OD: Tamer HasText("Guilmon") from hand
+#   or trash, PlayByEffect(payCost: false), declinable. Inherited
+#   OnDestroyedAnyone OPT: opponent Digimon deleted, carrier
+#   ContainsCardName("Gallantmon") → destroy enemy top security.
+#
+# DSL: EX13-015 / BT25-014 top-level select+delete + `effect_deleted_any_
+# opponent_digimon: false` fallback; EX13-030 optional `select_union_zone
+# [hand, trash]` → `play_union_bound_free`; inherited `on_any_deletion`
+# (opponent Digimon) gated `source_name_contains: Gallantmon`.
+
+card: EX13-013
+name: WarGrowlmon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+traits: [Cyborg]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Engage
+
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] Delete 1 opp Digimon with 5000 DP or less; if this effect didn't delete, this Digimon gains <Piercing> and +3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Delete 1 of your opponent's Digimon with 5000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - grant_keyword:
+                target: source
+                keyword: Piercing
+                expiry: end_of_turn
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_turn
+
+  - when: [end_of_attack, on_deletion]
+    summary: "[End of Attack][On Deletion] You may play 1 [Guilmon]-text Tamer card from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - in_text_contains: Guilmon
+          prompt: "You may play 1 Tamer card with [Guilmon] in its text from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: tamer }
+
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - source_name_contains: Gallantmon
+    summary: "Inherited [All Turns][OPT] When any of your opponent's Digimon are deleted, if this Digimon has [Gallantmon] in its name, trash their top security card"
+    process:
+      - trash_top_security: { of: opponent }

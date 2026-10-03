@@ -1,0 +1,41 @@
+{
+  "index": 4358,
+  "norm_id": 0.2179,
+  "card_id": "EX13-034",
+  "card_index": 34,
+  "card_name_eng": "Wisemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_034",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Barrier＞\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of your Digimon gains ＜Reboot＞ and ＜Blocker＞, and their ＜De-Digivolve＞ effects don't affect it.\r\n[All Turns] [Once Per Turn] When your security stack is removed from, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of their Digimon can't digivolve until their turn ends.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Witchelny] in text: Cost 3"
+}

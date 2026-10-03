@@ -1,0 +1,70 @@
+# EX13-011 BaoHuckmon — Digimon, Lv.4, Red/White, 5000 DP, play cost 5.
+# Traits: Dinosaur. Champion / Data.
+# Digivolve: Red Lv.3 / cost 2; [Digivolve] Lv.3 w/[Huckmon] in text: Cost 2.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-011.md):
+#   <Raid> [On Play] [When Digivolving] If you have 1 or fewer Tamers, you may
+#   play 1 [Mon] from your hand without paying the cost.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_011.cs
+#   Raid; On Play / When Digivolving gated OwnerHas1OrLessTamers + a playable
+#   EqualsCardName("Mon") hand card → optional pick → PlayPermanentCards
+#   (payCost: false). Inherited ChangeSelfDPStaticEffect(+2000) on owner's turn.
+#
+# DSL: BT21-009 tamer-count gate (`count_lte` over own battle-area Tamers) +
+# optional `select_hand { name_is: Mon }` → `play_from_hand_free`.
+
+card: EX13-011
+name: BaoHuckmon
+kind: digimon
+level: 4
+color: [red, white]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  # Printed special condition: "[Digivolve] Lv.3 w/[Huckmon] in text: Cost 2".
+  - kind: digivolve
+    from:
+      level_eq: 3
+      in_text_contains: Huckmon
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+
+  - when: [on_play, when_digivolving]
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    summary: "[On Play][When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mon] from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: mon
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_is: Mon
+          prompt: "You may play 1 [Mon] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: mon }
+          then:
+            - play_from_hand_free: { of: you, hand_index: mon }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

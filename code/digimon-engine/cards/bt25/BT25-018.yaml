@@ -161,10 +161,12 @@ effects:
       - select_own_permanent:
           bind_as: eot_attacker
           optional: true
+          # DCGO BT25_018.cs YourDigimonThatCanAttack.
           filter:
             all_of:
               - kind: digimon
               - zone: [battle_area]
+              - can_attack: { targets: any }
           prompt: "1 of your Digimon may attack"
       - may_attack_now:
           attacker: eot_attacker

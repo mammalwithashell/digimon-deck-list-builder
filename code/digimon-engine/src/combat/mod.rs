@@ -170,6 +170,18 @@ pub enum AttackError {
     InvalidPhase,
 }
 
+/// What a Digimon-vs-Digimon battle compares to decide its winner.
+/// `Dp` is the standard rule; `DigivolutionCards` is the battle-scoped
+/// "compare the number of digivolution cards instead of DP" override
+/// (EX13-076; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT). `<Iceclad>` on either
+/// combatant forces the digivolution-card comparison regardless.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BattleComparison {
+    #[default]
+    Dp,
+    DigivolutionCards,
+}
+
 /// Result of an attack resolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackResult {
@@ -392,6 +404,27 @@ impl Game {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        self.battle_digimon_with(attacker, defender, BattleComparison::Dp)
+    }
+
+    /// [`Self::battle_digimon`] with an explicit battle comparison.
+    ///
+    /// `BattleComparison::DigivolutionCards` makes THIS battle compare the
+    /// two Digimon's digivolution-card counts instead of DP ("Compare the
+    /// number of digivolution cards instead of DP in this battle." — EX13-076
+    /// Imperialdramon: Paladin Mode; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
+    /// It is the battle-scoped twin of `<Iceclad>` (16-34): DCGO routes both
+    /// through the same `IBattle.CompareStats` branch
+    /// (`HasIceclad || CompareDigivolutionCards`). Everything else is a
+    /// standard battle — ties delete both, battle deletions run the normal
+    /// replacement windows (<Evade>, would-leave), and `EndOfBattle` /
+    /// win-battle observers fire.
+    pub fn battle_digimon_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: BattleComparison,
+    ) -> AttackResult {
         if attacker.player == defender.player {
             return AttackResult::Invalid;
         }
@@ -399,7 +432,7 @@ impl Game {
             return AttackResult::Invalid;
         }
 
-        self.resolve_battle(attacker, defender)
+        self.resolve_battle_with(attacker, defender, comparison)
     }
 
     /// Declare an attack. Validates, installs `PendingAttack`, fires
@@ -4096,6 +4129,15 @@ impl Game {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        self.resolve_battle_with(attacker, defender, BattleComparison::Dp)
+    }
+
+    fn resolve_battle_with(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+        comparison: BattleComparison,
+    ) -> AttackResult {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.battle_occurred = true;
         }
@@ -4115,7 +4157,12 @@ impl Game {
         // the combat resolver — we collapse that registration into a
         // direct `has_keyword` query at the resolver site since the swap
         // is binary and the registry indirection adds nothing.
-        let iceclad_active = self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
+        //
+        // A battle-scoped `BattleComparison::DigivolutionCards` (EX13-076,
+        // G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT) takes the same branch — DCGO
+        // `IBattle.CompareStats`: `HasIceclad || CompareDigivolutionCards`.
+        let iceclad_active = comparison == BattleComparison::DigivolutionCards
+            || self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
             || self.has_keyword(defender, crate::enums::Keyword::Iceclad);
 
         let (a_value, d_value) = if iceclad_active {
@@ -4145,6 +4192,12 @@ impl Game {
         // battle-area handle is still valid after the loser's deletion — the
         // combatants are on opposite sides, so the loser leaving does not
         // shift the winner's index.
+        // G-DSL-BATTLE-DELETER: the combatant that SURVIVED while its battle
+        // opponent was actually deleted ("when your Digimon delete your
+        // opponent's Digimon in battle"). DCGO fixes `LoserPermanents` to the
+        // actually-destroyed ones before `OnEndBattle`, and reads the winner's
+        // REAL (still-on-field) top card.
+        let mut deleter: Option<PermanentHandle> = None;
         let (outcome, winner) = if a_value > d_value {
             // Attacker wins — defender is deleted. Record on the in-flight
             // attack (when this battle IS the attack's battle) whether the
@@ -4170,22 +4223,38 @@ impl Game {
                     pa.battle_defender_deleted = defender_deleted;
                 }
             }
+            if defender_deleted {
+                deleter = Some(attacker);
+            }
             (AttackResult::AttackerWins, Some(attacker))
         } else if a_value < d_value {
             // Defender wins — attacker is deleted.
-            self.delete_permanent_with_cause(
-                attacker,
+            let batch_outcome = self.delete_permanents_batch(
+                vec![attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
+            if batch_outcome.completed.contains(&attacker) {
+                deleter = Some(defender);
+            }
             (AttackResult::DefenderWins, Some(defender))
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
             // DCGO convention, with both bodies leaving as one batch before
             // global OnAnyDeletion observers check survivor state.
-            self.delete_permanents_batch(
+            let batch_outcome = self.delete_permanents_batch(
                 vec![defender, attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
+            // A tie still "deletes in battle": a combatant whose own deletion
+            // was prevented deleted its opponent. Opposite sides, so neither
+            // removal shifts the survivor's index.
+            let defender_gone = batch_outcome.completed.contains(&defender);
+            let attacker_gone = batch_outcome.completed.contains(&attacker);
+            if defender_gone && !attacker_gone {
+                deleter = Some(attacker);
+            } else if attacker_gone && !defender_gone {
+                deleter = Some(defender);
+            }
             (AttackResult::MutualDestruction, None)
         };
 
@@ -4198,7 +4267,7 @@ impl Game {
         // unaffected (it fires on the separate OnAnyDeletion path).
         self.enqueue_triggered(
             crate::enums::EffectTiming::EndOfBattle,
-            crate::selection::TriggerSource::BattleResolved { winner },
+            crate::selection::TriggerSource::BattleResolved { winner, deleter },
         );
         self.drain_effect_queue();
 

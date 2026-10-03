@@ -676,6 +676,14 @@ pub enum ModifierType {
     // Suspend
     CannotSuspend,
     CannotUnsuspend,
+    /// Printed "… can't unsuspend in their next unsuspend phase" (EX13-041
+    /// Groundramon). Blocks ONLY the controller's turn-start bulk unsuspend
+    /// (`game_phases.rs`) — effect unsuspends and <Reboot> are unaffected,
+    /// unlike `CannotUnsuspend`. Install with `end_of_opponents_next_turn`
+    /// so it survives to the target's NEXT unsuspend phase whichever turn it
+    /// lands on. DCGO `GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase:
+    /// true, EffectDuration.UntilOwnerActivePhase)`.
+    CannotUnsuspendInUnsuspendPhase,
 
     // Selection/targeting
     CannotBeSelectedByEffect,
@@ -835,7 +843,27 @@ pub enum ModifierType {
     /// be trashed (peeled) by effects. Distinct from `CannotBeDestroyed`,
     /// which protects the top card. Consult site: source-trash mutation
     /// (the inherited stack-peel path).
+    ///
+    /// Honors `effect_immunity_filter.controller` for the effect controller
+    /// scope (no filter ⇒ every effect) via
+    /// `ModifierRegistry::blocks_effect_from`. Every stacked-card trash
+    /// mover consults it — top-card peel, bottom trash, selected-source
+    /// trash, face-down bottom trash and <De-Digivolve> (DCGO
+    /// `Permanent.ImmuneFromStackTrashing`, checked by `TrashStack`,
+    /// `TrashDigivolutionCards` and `Degeneration`).
     ImmuneFromStackTrashing,
+    /// Permanent-scoped: this permanent's stacked cards (its digivolution
+    /// cards and its top card as a "stacked card") can't be returned to the
+    /// hand or deck by effects. Distinct from `CannotBeReturnedToHand` /
+    /// `CannotBeReturnedToDeck`, which protect the permanent itself — the
+    /// EX13-023 official Q&A: "XX is still permitted to be performed on the
+    /// Digimon itself". Honors `effect_immunity_filter.controller` via
+    /// `ModifierRegistry::blocks_effect_from`. Consult sites: the source →
+    /// hand / deck movers (`EffectContext::return_card_source_to_hand` /
+    /// `return_card_source_to_deck`). DCGO `ImmuneStackReturnToLibraryClass`
+    /// / `Permanent.ImmuneFromStackReturnToLibrary`.
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION (EX13-023 UlforceVeedramon).
+    ImmuneFromStackReturn,
 
     // Effect-suppression
     /// Permanent-scoped: suppresses dispatch of one specific timing's
@@ -873,6 +901,16 @@ pub enum ModifierType {
     ChangeLinkCost,
     /// Modifies the maximum number of linked cards on this host.
     ChangeLinkMax,
+    /// "Add N to this Digimon's DP deletion effects' maximums" (EX13-007
+    /// Guilmon / EX13-010 Growlmon inherited; BT17-008 et al. memory-gated).
+    /// Permanent-scoped scalar (`ModifierPayload::None`, `value` = delta):
+    /// every DP-capped deletion effect whose source permanent is the host adds
+    /// the summed delta to its DP maximum (DCGO `ChangeDPDeleteEffectMaxDPClass`
+    /// consulted by `Player.MaxDP_DeleteEffect`, which the card scripts wrap
+    /// around each deletion cap). Consult sites: the `dp_lte_deletion_cap`
+    /// predicate path (`dsl_cards/predicate.rs`) and the deletion-flagged
+    /// `select_opponent_dp_budget` budget. G-ENGINE-DP-DELETION-MAX-MODIFIER.
+    ChangeDPDeleteEffectMaxDP,
     /// Overrides the live permanent's level for predicates and digivolution
     /// requirements. Distinct from `ChangeLevel` which adjusts level by
     /// a delta on the printed value.
@@ -895,6 +933,17 @@ pub enum ModifierType {
     /// Adds names this card is treated as for DigiXros material matching
     /// (printed-text "treat this card as named X for DigiXros").
     ChangeCardNamesForDigiXros,
+    /// DNA-material identity override scoped to ONE DNA result — printed
+    /// "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for
+    /// [Examon]'s DNA digivolution" (EX13-021 / EX13-041 / BT20-025 /
+    /// BT20-042). Carries `ModifierPayload::DnaMaterialIdentity`; consulted
+    /// only by the DNA / Blast-DNA material matchers, and only when the DNA
+    /// result card's name matches `result_name` (DCGO `AddJogressLevelsClass`
+    /// + the name half of `Names_ForDNA`). Installed by the dedicated aura
+    /// payload `dna_material_identity:`; the validator rejects the bare
+    /// payload-less `modifier: DnaMaterialIdentity` aura string (it would be a
+    /// silent no-op). G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    DnaMaterialIdentity,
 }
 
 /// When a modifier expires.

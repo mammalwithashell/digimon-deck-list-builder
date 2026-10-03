@@ -398,8 +398,10 @@ fn bt20_084_trash_observer_no_prompt_when_played_card_is_not_a_digimon() {
 fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
     let mut runner = bt20_084_runner().start();
     let carrier = runner.place_stack(0, &["SISTERMON-CIEL-BASE", "BT20-084"]);
+    // "Top stacked card" = the visible top card itself (BT20-084), DCGO
+    // `AddSecurityCard(card, toTop: true)` — G-TOP-STACKED-CARD-TO-SECURITY.
     let moved_card =
-        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[1].handle();
 
     runner.game.enqueue_triggered(
         EffectTiming::EndOfYourTurn,
@@ -414,7 +416,7 @@ fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
             .expect("security top")
             .handle(),
         moved_card,
-        "top stacked card below BT20-084 should become top security"
+        "BT20-084 (its own top stacked card) should become top security"
     );
     assert!(
         !runner.game.players[0]
@@ -427,11 +429,11 @@ fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
     assert_eq!(
         remaining_stack.len(),
         1,
-        "carrier must remain legal with its visible BT20-084 top card"
+        "the Digimon stays, now topped by the card that was under BT20-084"
     );
     assert_eq!(
         remaining_stack[0].card_id(&runner.game.card_data),
-        "BT20-084"
+        "SISTERMON-CIEL-BASE"
     );
 }
 
@@ -442,7 +444,7 @@ fn bt20_084_end_of_all_turns_fires_on_the_opponents_turn_too() {
     let mut runner = bt20_084_runner().start();
     let carrier = runner.place_stack(0, &["SISTERMON-CIEL-BASE", "BT20-084"]);
     let moved_card =
-        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[1].handle();
 
     runner.game.enqueue_triggered(
         EffectTiming::EndOfOpponentsTurn,

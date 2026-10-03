@@ -735,7 +735,7 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
     // being non-Puppet, it is NOT a legal Karakurumon cost body, keeping the Puppet
     // fodder the unique cost target. ST5-04 ToyAgumon — the Puppet fodder.
     // ST19-07 Tobucatmon — the [Puppet] free-digivolve hand body. ST1-04 Dracomon —
-    // the deck card that can only enter hand via the death-trigger draw.
+    // the deck card that enters hand only via a draw (death draw + digivolve draw).
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
         .expect("EX9-032 (Karakurumon) in embedded DSL pack")
@@ -750,7 +750,7 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
         .dsl_card("ST1-04")
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
         .hand(0, &["EX9-032", "ST19-07"])
-        .deck(0, &["ST1-04", "ST1-04"])
+        .deck(0, &["ST1-04", "ST1-04", "ST1-04"])
         .deck(1, &["ST1-04"])
         .memory(10)
         .start();
@@ -799,8 +799,10 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
         "Karakurumon must free-digivolve into the Puppet hand body; field={:?}",
         field_ids(&runner, 0),
     );
-    // The fodder death fired Kyaromon's inherited Draw 1: a deck-seeded ST1-04
-    // (which enters hand ONLY via the death-trigger draw) must now be in hand.
+    // A deck-seeded ST1-04 (which enters hand only via a draw) must now be in
+    // hand. NOTE: the free digivolve's own §8-1-3-3 draw also pulls an ST1-04,
+    // so this alone does not isolate the death draw — the deck −2 check below
+    // does.
     assert!(
         hand_has(&runner, 0, "ST1-04"),
         "Kyaromon's inherited Draw 1 must fire off the Puppet-fodder death; hand={:?}",
@@ -810,13 +812,26 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
             .map(|c| c.card_id(&runner.game.card_data))
             .collect::<Vec<_>>(),
     );
-    // Net hand: −1 (Karakurumon played) −1 (PS3-EVO consumed) +1 (death draw) = −1.
+    // Net hand: −1 (Karakurumon played) −1 (Puppet hand body consumed)
+    // +1 (Kyaromon death draw) +1 (§8-1-3-3 draw of the effect-initiated
+    // digivolve — the draw belongs to the digivolution PROCEDURE; DCGO
+    // `PlayCardClass.PlayCard` draws on every `isEvolution`) = 0.
     assert_eq!(
         after.hand[0],
-        before.hand[0] - 1,
-        "net hand: −2 consumed, +1 drawn off the death trigger (before={}, after={})",
+        before.hand[0],
+        "net hand: −2 consumed, +1 death-trigger draw, +1 digivolve draw (before={}, after={})",
         before.hand[0],
         after.hand[0],
+    );
+    // The deck delta is what isolates the death draw: the free digivolve alone
+    // draws exactly 1, so a deck −2 proves Kyaromon's Draw 1 also fired.
+    assert_eq!(
+        after.deck[0],
+        before.deck[0] - 2,
+        "deck −2: 1 for the §8-1-3-3 digivolve draw + 1 for Kyaromon's death draw \
+         (before={}, after={})",
+        before.deck[0],
+        after.deck[0],
     );
 }
 

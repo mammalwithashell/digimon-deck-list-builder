@@ -39,6 +39,21 @@ GRAMMAR = {
     "hybrid", "x antibody", "ace", "de-digivolve", "dna digivolve",
 }
 
+# Printed keyword spellings whose Rust `Keyword` variant is named differently.
+# `_strip_param` has already dropped the numeric param ("Draw 2" -> "draw",
+# "Security A. +1" -> "security a."), so both Security A. signs land on the
+# same token; the enum carries both variants, either proves coverage.
+PRINTED_KEYWORD_ALIASES = {
+    "draw": "drawx",
+    "securitya": "securityattackplus",
+}
+
+# §16 keywords that are one-shot effect verbs rather than standing abilities:
+# the engine has no `Keyword` variant because the DSL lowers them as steps.
+DSL_STEP_KEYWORDS = {
+    "recovery",  # <Recovery +x (Deck)> -> DSL step `recover`
+}
+
 VERDICTS = ("covered", "auto_ingest", "flag_for_human", "trait", "name_ref", "ignored")
 
 
@@ -75,10 +90,10 @@ class KeywordGateReport:
 
 
 def _strip_param(token: str) -> str:
-    """``App Fusion -4`` -> ``app fusion`` ; ``Draw 1`` -> ``draw``."""
+    """``App Fusion -4`` -> ``app fusion`` ; ``Recovery +1 (Deck)`` -> ``recovery``."""
     s = token.strip().lower()
-    s = re.sub(r"\s*[+\-]?\d+\s*$", "", s)        # trailing numeric param
     s = re.sub(r"\s*\(.*?\)\s*$", "", s)          # trailing parenthetical
+    s = re.sub(r"\s*[+\-]?\d+\s*$", "", s)        # trailing numeric param
     return s.strip()
 
 
@@ -94,34 +109,61 @@ _INNER = r"[^\]>＞]+"
 # ASCII brackets like ＜Decode ([Aegiomon])＞ are kept whole, not truncated at
 # the inner `]`); ASCII [..]/<..> tokens use the strict no-close-char inner.
 _TOKEN_RE = re.compile(rf"＜([^＞]+)＞|[\[<]({_INNER})[\]>]")
-_TRAIT_SUFFIX_RE = re.compile(r"^\W*trait", re.IGNORECASE)
-# A run of bracketed tokens joined by EXPLICIT list separators (/ , "or" "and"),
-# ending in "trait" — e.g. "[Social]/[Tool]/[Game] trait". Every token in the
-# run is a trait reference. Consecutive brackets joined only by bare whitespace
-# are NOT a list (e.g. "[Link] [Appmon] trait" = the Link keyword + an [Appmon]
-# trait clause), so a separator is required between items.
-_TRAIT_LIST_RE = re.compile(
-    rf"(?:{_OPEN}{_INNER}{_CLOSE}\s*(?:[/,]|\bor\b|\band\b)\s*)+{_OPEN}{_INNER}{_CLOSE}\s*trait\b",
-    re.IGNORECASE,
+# A bracketed token is a *reference* (not a keyword) when the words right after
+# it say what it refers to: "[X] trait", "[X] in (any of) its traits" -> a trait;
+# "[X] in its name" / "[X] in its text" / "[X] Token" -> a card or token name.
+# The same holds for every item of a list run joined by EXPLICIT separators
+# (/ , "or" "and" ", other than") that ends in such a suffix — e.g.
+# "[Social]/[Tool]/[Game] trait" or "[Huckmon] or [Sistermon] in its text".
+# Consecutive brackets joined only by bare whitespace are NOT a list (e.g.
+# "[Link] [Appmon] trait" = the Link keyword + an [Appmon] trait clause).
+_IN_ITS = r"in\s+(?:any\s+of\s+)?(?:its|their)\s+"
+_TRAIT_SUFFIX = rf"(?:traits?|{_IN_ITS}traits?)\b"
+_NAME_SUFFIX = rf"(?:{_IN_ITS}(?:names?|texts?)|tokens?)\b"
+_LIST_SEP = r"(?:,\s*other\s+than|[/,]|\bor\b|\band\b)"
+
+
+def _suffix_re(suffix: str) -> re.Pattern:
+    return re.compile(rf"^[\W_]*{suffix}", re.IGNORECASE)
+
+
+def _list_re(suffix: str) -> re.Pattern:
+    return re.compile(
+        rf"(?:{_OPEN}{_INNER}{_CLOSE}\s*{_LIST_SEP}\s*)+{_OPEN}{_INNER}{_CLOSE}[,\s]*{suffix}",
+        re.IGNORECASE,
+    )
+
+
+_REF_KINDS = (
+    ("trait", _suffix_re(_TRAIT_SUFFIX), _list_re(_TRAIT_SUFFIX)),
+    ("name", _suffix_re(_NAME_SUFFIX), _list_re(_NAME_SUFFIX)),
 )
 
 
-def scan_bracket_tokens(text: str) -> list[tuple[str, bool]]:
-    """Return ``(raw_token, followed_by_trait)`` for each bracketed token.
+def scan_bracket_refs(text: str) -> list[tuple[str, str | None]]:
+    """Return ``(raw_token, ref_kind)`` for each bracketed token.
 
-    ``followed_by_trait`` is True when the token is immediately followed by the
-    word "trait" OR when it sits inside a bracket-list that terminates in
-    "trait" (so slash/comma/or-delimited trait enumerations are fully covered).
+    ``ref_kind`` is ``"trait"`` or ``"name"`` when the token's position marks it
+    as a reference (see the suffix rules above), else ``None``.
     """
     text = text or ""
-    trait_spans = [m.span() for m in _TRAIT_LIST_RE.finditer(text)]
+    spans = [(kind, [m.span() for m in lst.finditer(text)]) for kind, _, lst in _REF_KINDS]
     out = []
     for m in _TOKEN_RE.finditer(text):
         token = m.group(1) if m.group(1) is not None else m.group(2)
-        tail = text[m.end(): m.end() + 12]
-        in_list = any(s <= m.start() and m.end() <= e for s, e in trait_spans)
-        out.append((token.strip(), in_list or bool(_TRAIT_SUFFIX_RE.match(tail))))
+        tail = text[m.end(): m.end() + 24]
+        kind = None
+        for (k, suf, _), (_, sp) in zip(_REF_KINDS, spans):
+            if suf.match(tail) or any(s <= m.start() and m.end() <= e for s, e in sp):
+                kind = k
+                break
+        out.append((token.strip(), kind))
     return out
+
+
+def scan_bracket_tokens(text: str) -> list[tuple[str, bool]]:
+    """Return ``(raw_token, followed_by_trait)`` for each bracketed token."""
+    return [(tok, kind == "trait") for tok, kind in scan_bracket_refs(text)]
 
 
 def triage_set(
@@ -146,23 +188,35 @@ def triage_set(
     """
     subsystem_keywords = subsystem_keywords or set()
     rep = KeywordGateReport(set_prefix=set_prefix)
+    effect_texts = list(effect_texts)
+    # A token is named in the set's own text ("play 1 [X] Token"); its other
+    # mentions ("if you don't have [X]") carry no positional suffix.
+    token_names = {
+        _strip_param(m.group(1))
+        for text in effect_texts
+        for m in re.finditer(rf"{_OPEN}({_INNER}){_CLOSE}\s*tokens?\b", text or "", re.IGNORECASE)
+    }
     for text in effect_texts:
-        for raw, followed_by_trait in scan_bracket_tokens(text):
+        for raw, ref_kind in scan_bracket_refs(text):
             base = _strip_param(raw)
             if not base:
                 continue
-            # 1. positional trait rule — beats everything (catches display-names).
-            if followed_by_trait:
+            # 1. positional reference rules — beat everything (catch display-
+            #    names and token names that no lexicon carries).
+            if ref_kind == "trait":
                 rep.trait_hits[base] += 1
                 if base not in traits:
                     rep.lexicon_misses[base] += 1
+                continue
+            if ref_kind == "name":
+                rep.name_hits[base] += 1
                 continue
             # 2. known non-keyword bracket tokens.
             if base in KNOWN_TIMINGS or base in GRAMMAR:
                 rep.ignored[base] += 1
                 continue
-            # 3. known card name / trait by lexicon.
-            if base in card_names:
+            # 3. known card / token name, or trait, by lexicon.
+            if base in card_names or base in token_names:
                 rep.name_hits[base] += 1
                 continue
             if base in traits:
@@ -170,7 +224,8 @@ def triage_set(
                 continue
             # 4. keyword triage against Rust enum, then DCGO manifest.
             norm = normalize_keyword(base)
-            if norm in rust_keywords:
+            norm = PRINTED_KEYWORD_ALIASES.get(norm, norm)
+            if norm in rust_keywords or norm in DSL_STEP_KEYWORDS:
                 rep.covered[base] += 1
             elif norm in dcgo_available:
                 if norm in subsystem_keywords:

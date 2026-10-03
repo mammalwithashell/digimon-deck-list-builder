@@ -73,6 +73,29 @@ impl CardEffect for LoseSecuritySelectThenAddPendingToHand {
     }
 }
 
+/// Like [`LoseSecuritySelectThenAddPendingToHand`] but tolerates the add
+/// being a no-op (the pending card is no longer this card).
+struct LoseSecuritySelectThenTryAddPendingToHand;
+
+impl CardEffect for LoseSecuritySelectThenTryAddPendingToHand {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_lose_security(card)
+            .name("select then try to add removed security to hand")
+            .process(|ctx| {
+                ctx.select_hand(
+                    0,
+                    "Choose a card",
+                    false,
+                    |_game, _idx| true,
+                    |cb_ctx, _idx| {
+                        let _ = cb_ctx.add_pending_security_to_hand();
+                    },
+                );
+            })
+            .build()]
+    }
+}
+
 struct LoseSecuritySelectThenTrashNextSecurity;
 
 impl CardEffect for LoseSecuritySelectThenTrashNextSecurity {
@@ -580,6 +603,16 @@ fn trash_top_security_resumes_after_lose_security_selection_without_duplication(
     assert!(runner.game.pending_effect_security_removal.is_empty());
 }
 
+/// OUTER's removal parks behind OUTER's own `OnLoseSecurity` selection; that
+/// effect then trashes INNER. Per 15-8-3-2 ("trigger-type effects can't
+/// activate during the processing for a rule or effect") INNER's trigger,
+/// which fires while OUTER's effect is resolving, waits as pending
+/// activation, so INNER's removal completes inside OUTER's effect (INNER goes
+/// to trash) and does NOT stack a second deferred removal
+/// (G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT). INNER's trigger then
+/// resolves; its "add this card to hand" no longer has INNER pending and must
+/// NOT move the still-parked OUTER card instead. Finally OUTER's parked
+/// removal resumes and trashes OUTER.
 #[test]
 fn nested_deferred_security_removals_resume_outer_after_inner_selection() {
     let mut runner = DebugRunner::builder()
@@ -591,7 +624,7 @@ fn nested_deferred_security_removals_resume_outer_after_inner_selection() {
         .hand(0, &["CHOICE-A", "CHOICE-B"])
         .start();
     runner.register_effect("OUTER", Arc::new(LoseSecuritySelectThenTrashNextSecurity));
-    runner.register_effect("INNER", Arc::new(LoseSecuritySelectThenAddPendingToHand));
+    runner.register_effect("INNER", Arc::new(LoseSecuritySelectThenTryAddPendingToHand));
 
     let source_card = runner.game.players[0].security[1].handle();
 
@@ -614,11 +647,19 @@ fn nested_deferred_security_removals_resume_outer_after_inner_selection() {
         .resolve_selection(0, outer_action)
         .expect("outer hand selection resolves");
 
-    assert!(runner.game.pending_selection.is_some());
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "INNER's deferred trigger opens its selection once OUTER's effect has finished"
+    );
     assert_eq!(
         runner.game.pending_effect_security_removal.len(),
-        2,
-        "inner direct removal should stack on top of the outer continuation"
+        1,
+        "INNER's removal completed inside OUTER's effect (15-8-3-2); only OUTER's stays parked"
+    );
+    assert_eq!(
+        ids_in_zone(&runner.game.players[0].trash, &runner.game.card_data),
+        vec!["INNER".to_string()],
+        "INNER reached the trash as part of OUTER's effect processing"
     );
 
     let inner_action = runner
@@ -643,17 +684,13 @@ fn nested_deferred_security_removals_resume_outer_after_inner_selection() {
     assert_eq!(security_ids, Vec::<String>::new());
     assert_eq!(
         hand_ids,
-        vec![
-            "CHOICE-A".to_string(),
-            "CHOICE-B".to_string(),
-            "INNER".to_string(),
-        ],
-        "INNER should appear only in hand alongside the untouched choice cards"
+        vec!["CHOICE-A".to_string(), "CHOICE-B".to_string()],
+        "INNER's add-this-card step must not move the unrelated parked OUTER card"
     );
     assert_eq!(
         trash_ids,
-        vec!["OUTER".to_string()],
-        "OUTER should appear only in trash after the outer continuation resumes"
+        vec!["INNER".to_string(), "OUTER".to_string()],
+        "OUTER reaches the trash once its parked removal resumes"
     );
 
     let battle_ids: Vec<String> = runner.game.players[0]

@@ -265,13 +265,60 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     && b.grant_traits.is_empty()
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
+                                    && b.dna_material_identity.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, effect_immunity, or dna_material_identity"
                                             .to_string(),
                                     });
+                                }
+                                // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: a
+                                // self-aura payload ("This Digimon is also
+                                // treated as …") naming a result and at least
+                                // one of level / name.
+                                if b.modifier.as_deref() == Some("DnaMaterialIdentity") {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.modifier"),
+                                        message: "DnaMaterialIdentity needs its payload: author it as dna_material_identity: { for_result, level, name }"
+                                            .to_string(),
+                                    });
+                                }
+                                if let Some(d) = &b.dna_material_identity {
+                                    let path = format!("{prefix}.dna_material_identity");
+                                    let is_self_target =
+                                        b.target.as_ref().map(|t| t.is_empty()).unwrap_or(true);
+                                    if !is_self_target
+                                        || b.target_player.is_some()
+                                        || b.while_condition.is_some()
+                                    {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: path.clone(),
+                                            message: "dna_material_identity is a self-aura payload: use target: {}, no target_player, no while_condition"
+                                                .to_string(),
+                                        });
+                                    }
+                                    if d.for_result.trim().is_empty() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{path}.for_result"),
+                                            message: "dna_material_identity.for_result must name the DNA result card"
+                                                .to_string(),
+                                        });
+                                    }
+                                    let name_empty =
+                                        d.name.as_ref().map(|n| n.trim().is_empty()).unwrap_or(true);
+                                    if d.level.is_none() && name_empty {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path,
+                                            message: "dna_material_identity needs a level and/or a name"
+                                                .to_string(),
+                                        });
+                                    }
                                 }
                                 for (i, t) in b.grant_traits.iter().enumerate() {
                                     if t.trim().is_empty() {
@@ -307,6 +354,21 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                                     .to_string(),
                                         });
                                     }
+                                }
+                                // `modifier_from` scopes the named `modifier`
+                                // grant; it lowers on the declarative-tick
+                                // path only (G-ENGINE-STACKED-CARD-RETURN-
+                                // PROTECTION).
+                                if b.modifier_from.is_some()
+                                    && (b.modifier.is_none() || b.while_condition.is_some())
+                                {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.modifier_from"),
+                                        message:
+                                            "modifier_from requires `modifier` and does not support while_condition (gate with active_when)"
+                                                .to_string(),
+                                    });
                                 }
                                 // unify-dsl-scalar-and-comparators: `dp_modifier`
                                 // is now a `FormulaSpec`. A bare `Literal` is a
@@ -900,6 +962,7 @@ fn validate_step(
                 }),
                 _ => {}
             }
+            validate_modifier_payload(args, card_id, prefix, errors);
         }
         StepSpec::AddPlayerModifier(args) => {
             if !is_known_modifier(&args.modifier) {
@@ -1146,6 +1209,25 @@ fn validate_step(
                 ctx,
                 errors,
             );
+            // G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION: `same_by` and
+            // `uniqueness` are opposite pick-set constraints.
+            if args.same_by.is_some() && args.uniqueness.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.same_by"),
+                    message: "select_materials: `same_by` and `uniqueness` are mutually exclusive"
+                        .to_string(),
+                });
+            }
+            if let crate::step::CountBound::Literal(max) = &args.max {
+                if args.min > *max {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.min"),
+                        message: format!("select_materials: min {} exceeds max {}", args.min, max),
+                    });
+                }
+            }
         }
         StepSpec::SelectUnionZone(args) => {
             validate_predicate(
@@ -1183,6 +1265,25 @@ fn validate_step(
             }
         }
         StepSpec::SelectCountCappedMulti(args) => {
+            // Mirrors the compile-time check: the runtime only scans hand /
+            // trash / battle_area; any other zone silently installed nothing.
+            if !matches!(
+                args.zone,
+                crate::predicate::Zone::Hand
+                    | crate::predicate::Zone::Trash
+                    | crate::predicate::Zone::BattleArea
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zone"),
+                    message: format!(
+                        "select_count_capped_multi supports zone hand, trash or battle_area \
+                         (got {:?}); use select_own_sources / select_materials for \
+                         digivolution cards",
+                        args.zone
+                    ),
+                });
+            }
             if let crate::step::CountBound::Formula { formula } = &args.max {
                 validate_formula(
                     formula,
@@ -1282,6 +1383,11 @@ fn validate_step(
         StepSpec::Optional(optional) => {
             for (k, s) in optional.0.iter().enumerate() {
                 validate_step(s, &format!("{prefix}.optional[{k}]"), card_id, ctx, errors);
+            }
+        }
+        StepSpec::SelectEffectChoice(args) => {
+            for (k, cond) in args.legal_when.iter().flatten().enumerate() {
+                validate_predicate(cond, &format!("{prefix}.legal_when[{k}]"), card_id, ctx, errors);
             }
         }
         _ => {}
@@ -1651,6 +1757,15 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectEffectChoice(args) => {
+            for (k, cond) in args.legal_when.iter().flatten().enumerate() {
+                validate_predicate_binding_scope(
+                    cond,
+                    &format!("{prefix}.legal_when[{k}]"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::RepeatEffectChoice(args) => {
@@ -1996,6 +2111,12 @@ fn validate_predicate_binding_scope(
         ("can_digivolve_onto", &pred.can_digivolve_onto),
     ] {
         if let Some(binding) = binding {
+            // `can_digivolve_onto: source` names the effect's own carrier
+            // permanent ("THIS Digimon may digivolve into ..."), a magic name
+            // that is never a `bind_as`. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
+            if field == "can_digivolve_onto" && binding == "source" {
+                continue;
+            }
             report_if_undeclared_binding(
                 binding,
                 &format!("{prefix}.{field}"),
@@ -2224,7 +2345,8 @@ fn validate_formula_binding_scope(
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
         | FormulaSpec::Compound(CompoundFormula::Min(args))
-        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args))
+        | FormulaSpec::Compound(CompoundFormula::Multiply(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula_binding_scope(
                     arg,
@@ -2392,7 +2514,8 @@ fn validate_formula(
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
         | FormulaSpec::Compound(CompoundFormula::Min(args))
-        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args))
+        | FormulaSpec::Compound(CompoundFormula::Multiply(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula(arg, &format!("{prefix}[{i}]"), card_id, ctx, errors);
             }
@@ -2476,7 +2599,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             CompoundFormula::FloorDiv(args)
             | CompoundFormula::Max(args)
             | CompoundFormula::Min(args)
-            | CompoundFormula::Subtract(args),
+            | CompoundFormula::Subtract(args)
+            | CompoundFormula::Multiply(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::SourceStackCount { .. } | FormulaSpec::SourceStackDpSum { .. } => false,
@@ -2581,6 +2705,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     // Suspend / select / affect
     "CannotSuspend",
     "CannotUnsuspend",
+    "CannotUnsuspendInUnsuspendPhase",
     "CannotBeSelectedByEffect",
     "CannotBeAffected",
     // Granted keywords
@@ -2649,6 +2774,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeEndTurnMinMemory",
     "ImmuneFromDPMinus",
     "ImmuneFromStackTrashing",
+    "ImmuneFromStackReturn",
     "DisableEffect",
     "TreatAsDigimon",
     "ChangeCardDP",
@@ -2656,6 +2782,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeSAttack",
     "ChangeLinkCost",
     "ChangeLinkMax",
+    "ChangeDPDeleteEffectMaxDP",
     "ChangePermanentLevel",
     "ChangeTraits",
     "ChangeBaseCardName",
@@ -2663,6 +2790,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangeBaseCardColor",
     "ChangeCardLevelForAssembly",
     "ChangeCardNamesForDigiXros",
+    "DnaMaterialIdentity",
 ];
 
 fn is_permanent_activation_modifier(name: &str) -> bool {
@@ -2752,6 +2880,82 @@ pub const KNOWN_EXPIRY_KEYS: &[&str] = &[
 
 fn is_known_expiry(name: &str) -> bool {
     KNOWN_EXPIRY_KEYS.contains(&name)
+}
+
+/// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the typed `add_modifier` payload
+/// must carry exactly one key, compatible with the modifier; and the
+/// replace-style identity modifiers that are meaningless without a payload
+/// (`ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeTraits`) require one,
+/// so a spec can't install an entry that silently no-ops.
+fn validate_modifier_payload(
+    args: &crate::step::AddModifierArgs,
+    card_id: &str,
+    prefix: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    let push = |errors: &mut Vec<ValidationError>, message: String| {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.payload"),
+            message,
+        })
+    };
+    let m = args.modifier.as_str();
+    let Some(p) = &args.payload else {
+        if matches!(m, "ChangeBaseCardName" | "ChangeBaseCardColor" | "ChangeTraits") {
+            push(
+                errors,
+                format!(
+                    "{m} requires a payload (e.g. `payload: {{ name: Sukamon }}`, \
+                     `payload: {{ colors: [white] }}`, `payload: {{ traits: [Holy] }}`)"
+                ),
+            );
+        }
+        return;
+    };
+    let keys: Vec<&str> = [
+        p.name.as_ref().map(|_| "name"),
+        p.colors.as_ref().map(|_| "colors"),
+        p.dp.map(|_| "dp"),
+        p.traits.as_ref().map(|_| "traits"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if keys.len() != 1 {
+        push(
+            errors,
+            format!(
+                "add_modifier payload must set exactly one of name/colors/dp/traits, got {keys:?}"
+            ),
+        );
+        return;
+    }
+    if p.replace_traits && p.traits.is_none() {
+        push(errors, "payload.replace_traits is only valid with payload.traits".into());
+    }
+    let allowed: &[&str] = match keys[0] {
+        "name" => &["ChangeBaseCardName", "CanOnlyDigivolveInto"],
+        "colors" => &["ChangeBaseCardColor", "AddColor"],
+        "dp" => &["ChangeOriginDP", "ChangeCardDP"],
+        _ => &["ChangeTraits"],
+    };
+    if !allowed.contains(&m) {
+        push(
+            errors,
+            format!(
+                "payload.{} is only valid for modifier {}, not {m}",
+                keys[0],
+                allowed.join(" / ")
+            ),
+        );
+    }
+    if p.colors.as_ref().is_some_and(|c| c.is_empty()) {
+        push(errors, "payload.colors must list at least one color".into());
+    }
+    if p.name.as_ref().is_some_and(|n| n.trim().is_empty()) {
+        push(errors, "payload.name must be non-empty".into());
+    }
 }
 
 #[cfg(test)]
@@ -3011,6 +3215,72 @@ effects:
         assert!(errs.iter().any(|e| e
             .message
             .contains("synth_identity is only valid for modifier TreatAsDigimon")));
+    }
+
+    fn payload_card(steps: &str) -> CardSpec {
+        let yaml = format!(
+            r#"
+card: X-1
+name: Test
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    process:
+{steps}
+"#
+        );
+        serde_yml::from_str(&yaml).unwrap()
+    }
+
+    /// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the EX13-031 shape validates.
+    #[test]
+    fn typed_modifier_payloads_validate() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, payload: { name: Sukamon }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeBaseCardColor, value: 0, payload: { colors: [white] }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeOriginDP, value: 0, payload: { dp: 3000 }, expiry: end_of_opponents_turn }
+      - add_modifier: { target: self, modifier: ChangeTraits, value: 0, payload: { traits: [Holy], replace_traits: true }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn typed_modifier_payload_must_match_modifier() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardColor, value: 0, payload: { name: Sukamon }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("payload.name is only valid for modifier")));
+    }
+
+    #[test]
+    fn typed_modifier_payload_needs_exactly_one_key() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, payload: { name: Sukamon, dp: 3000 }, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("exactly one of")));
+    }
+
+    #[test]
+    fn change_base_card_name_without_payload_is_rejected() {
+        let spec = payload_card(
+            r#"      - add_modifier: { target: self, modifier: ChangeBaseCardName, value: 0, expiry: end_of_turn }"#,
+        );
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("ChangeBaseCardName requires a payload")));
     }
 
     /// PUPPETS-G008 security-DP auras (ST19-03 / EX7-024 / ST3-12 idiom):

@@ -1,0 +1,74 @@
+# EX13-038 Salamon — Digimon, Lv.3, Green, DP 2000, Cost 3.
+# Traits: Mammal + (Rule) Beast. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (per-card JSON; official Bandai DB bundle agrees):
+#   Digivolve: Green Lv.2 / cost 0
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Leopardmon]
+#   in its text and 1 Digimon card with [Beast], [Animal] or [Sovereign], other
+#   than [Sea Animal], in any of its traits among them to the hand. Return the
+#   rest to the bottom of the deck. (Rule) Trait: Has [Beast] Type.
+#   Inherited Effect: [All Turns] All of your suspended Digimon get +1000 DP.
+#   Official Q&A: "[X] in its text" = name, traits, effects, inherited, (Rule),
+#   requirement text → `in_text_contains`.
+#
+# DCGO: no EX13_038.cs at b9a0638cd. Trait bucket follows DCGO
+# `CardSource.HasAvianBeastAnimalTraits` (minus Avian/Bird): ContainsTraits
+# (substring) "Beast" || "Sovereign" || ("Animal" && !"Sea Animal").
+#
+# Two `reveal_search` buckets, both to hand, resolved in printed order with
+# cross-bucket de-dup (one card can't fill both slots). Each is mandatory
+# when a candidate exists.
+
+card: EX13-038
+name: Salamon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Mammal, Beast]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Leopardmon]-text card and 1 [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) Digimon to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter: { in_text_contains: Leopardmon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Leopardmon] in its text to the hand"
+            - filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_contains: Beast
+                      - trait_contains: Sovereign
+                      - all_of:
+                          - trait_contains: Animal
+                          - none_of:
+                              - trait_contains: Sea Animal
+              to: hand
+              max: 1
+              prompt: "Add 1 Digimon card with [Beast], [Animal] or [Sovereign] (other than [Sea Animal]) in any of its traits to the hand"
+          remainder: bottom
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    summary: "Inherited [All Turns] All of your suspended Digimon get +1000 DP"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      is_suspended: true
+    dp_modifier: 1000

@@ -52,7 +52,9 @@ effects:
             - unsuspend: { target: shooting }
             - select_own_permanent:
                 bind_as: attacker
-                filter: { kind: digimon }
+                # DCGO BT19_090.cs IsYourDigimon: CanAttack; the attack is
+                # player-only, so the leaf counts the player target only.
+                filter: { kind: digimon, can_attack: { targets: player } }
                 prompt: "Choose 1 of your Digimon to attack a player"
             - may_attack_now:
                 attacker: attacker

@@ -1,0 +1,27 @@
+{
+  "index": 4393,
+  "norm_id": 0.21965,
+  "card_id": "EX13-069",
+  "card_index": 69,
+  "card_name_eng": "Rina Shinomiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_069",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with [Veemon] or [Veedramon] in its name, gain 1 memory.\r\n[Your Turn] When any of your Digimon unsuspend, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.). After, 1 of your Digimon may digivolve into a Digimon card with [Veedramon] in its name in the hand with the cost reduced by 2.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

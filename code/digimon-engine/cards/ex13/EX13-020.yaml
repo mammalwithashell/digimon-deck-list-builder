@@ -1,0 +1,149 @@
+# EX13-020 Magnamon — Digimon, Lv.4, Blue/Yellow, DP 7000, Cost 7.
+# Traits: Holy Warrior / Royal Knight. Form: Armor Form. Attribute: Free.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-020.md):
+#   ＜Blocker＞ ＜Armor Purge＞
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon
+#   gets +1000 DP until your opponent's turn ends for each color in trashes.
+#   Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends
+#   for every 5000 DP this Digimon has.
+#   [End of Your Turn] [Once Per Turn] 1 of your [Free] or [Royal Knight] trait
+#   Digimon may unsuspend.
+#   Inherited: [End of Your Turn] [Once Per Turn] 1 of your Digimon with the
+#   [Free] or [Royal Knight] trait may unsuspend.
+#   Assembly -2: [Veemon]
+#   Digivolve: Blue Lv.3 / 4; Yellow Lv.3 / 4; [Digivolve] [Veemon]: Cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_020.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(EqualsCardName "Veemon", 3).
+#   - BlockerSelfStaticEffect, ArmorPurgeEffect.
+#   - AddAssemblyConditionClass: 1 element EqualsCardName("Veemon"), reduceCost 2.
+#   - Shared OP/WD/WA (hash EX13_020_OP_WD_WA, maxCountPerTurn 1, not optional):
+#     +1000 × distinct colours over BOTH trashes (UntilOpponentTurnEnd), then a
+#     mandatory SelectPermanentEffect (canNoSelect: false) over opponent Digimon:
+#     -4000 × (this Digimon's DP / 5000), read AFTER the +DP (UntilOpponentTurnEnd).
+#   - [End of Your Turn] OPT (isInherited: true), canNoSelect: true over own
+#     Digimon with Free/Royal Knight that can unsuspend.
+#
+# DSL notes:
+#   - "for each color in trashes" → `distinct_colors_count { zone: trash, of: any }`
+#     (colour set is unioned across both players — DCGO `.Distinct()`).
+#   - "for every 5000 DP this Digimon has" → `multiply(floor_div(source_dp, 5000), -4000)`
+#     (G-DSL-FORMULA-MULTIPLY, added for this card). Formula evaluated at step
+#     time, i.e. after the +DP step (DCGO reads `thisPermanent.DP` in the callback).
+#   - Printed face-up AND inherited [End of Your Turn] clauses are both authored;
+#     DCGO only registers one class (flagged inherited) but printed text governs.
+
+card: EX13-020
+name: Magnamon
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 7
+dp: 7000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "Veemon" }
+    cost: 3
+  # ─── Assembly -2: [Veemon] (from trash, stacked under) ────────────────────
+  - kind: assembly
+    materials:
+      - { name_is: "Veemon", zones: [trash], stack_under: true }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][OPT] +1000 DP per color in trashes; then 1 opponent Digimon gets -4000 DP for every 5000 DP this Digimon has"
+    process:
+      - add_dp_modifier:
+          target: source
+          value:
+            formula:
+              base: 0
+              per:
+                distinct_colors_count:
+                  of: any
+                  zone: trash
+              delta: 1000
+          expiry: end_of_opponents_turn
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon -4000 DP for every 5000 DP this Digimon has"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              multiply:
+                - floor_div:
+                    - source_dp: {}
+                    - 5000
+                - -4000
+          expiry: end_of_opponents_turn
+
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] 1 of your [Free] or [Royal Knight] trait Digimon may unsuspend"
+    process:
+      - select_own_permanent:
+          bind_as: wake
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+              - any_of:
+                  - trait_has: Free
+                  - trait_has: "Royal Knight"
+          prompt: "Unsuspend 1 of your [Free] or [Royal Knight] trait Digimon"
+      - unsuspend: { target: wake }
+      # DCGO `if (!isUsed) activateClass.RemoveUse()` — declining does not
+      # spend the [Once Per Turn] (G-OPT-REFUND-ON-DECLINE).
+      - if:
+          condition: { binding_absent: wake }
+          then:
+            - refund_opt: {}
+
+  - scope: inherited
+    when: end_of_your_turn
+    once_per_turn: true
+    summary: "[Inherited][End of Your Turn][OPT] 1 of your Digimon with the [Free] or [Royal Knight] trait may unsuspend"
+    process:
+      - select_own_permanent:
+          bind_as: wake_inherited
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+              - any_of:
+                  - trait_has: Free
+                  - trait_has: "Royal Knight"
+          prompt: "Unsuspend 1 of your Digimon with the [Free] or [Royal Knight] trait"
+      - unsuspend: { target: wake_inherited }
+      # DCGO `if (!isUsed) activateClass.RemoveUse()` — declining does not
+      # spend the [Once Per Turn] (G-OPT-REFUND-ON-DECLINE).
+      - if:
+          condition: { binding_absent: wake_inherited }
+          then:
+            - refund_opt: {}

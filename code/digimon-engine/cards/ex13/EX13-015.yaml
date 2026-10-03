@@ -1,0 +1,128 @@
+# EX13-015 Gallantmon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-015.md):
+#   ＜Raid＞ ＜Progress＞ ＜Blocker＞
+#   [On Play] [When Digivolving] [When Attacking] [Counter] [Once Per Turn]
+#   Delete 1 of your opponent's 12000 DP or higher Digimon. If this effect
+#   didn't delete, trash their top security card.
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area
+#   other than by your effects, by deleting 1 of your opponent's 9000 DP or
+#   lower Digimon, it doesn't leave.
+#   Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Guilmon]/[Growlmon] in name
+#   Digivolve: Red Lv.5 / cost 3.
+#   Official Q&A: if the deletion isn't possible, it leaves the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_015.cs
+#   - RaidSelfEffect, ProgressSelfStaticEffect, BlockerSelfStaticEffect.
+#   - Shared OP/WD/WA/Counter (hash EX13_015_Shared, maxCountPerTurn 1,
+#     mandatory): SelectPermanentEffect canNoSelect false, then
+#     DeletePeremanentAndProcessAccordingToResult; `failedToDelete` → trash
+#     opponent's top security. NOTE: DCGO's target filter is
+#     `permanent.DP <= MaxDP_DeleteEffect(12000)` — the inverse of the printed
+#     "12000 DP or higher". Printed text governs: `dp_gte: 12000`.
+#   - WhenRemoveField OPT, skippable: not by owner's effect; canNoSelect: true
+#     pick over opponent Digimon with DP ≤ 9000; on successful delete,
+#     `willBeRemoveField = false`; `if (!isUsed) RemoveUse()`.
+#   - Assembly: 3 elements (Lv.5/Lv.4/Lv.3) each ContainsCardName Guilmon or
+#     Growlmon; reduceCost 5.
+#
+# DSL notes:
+#   - "If this effect didn't delete" → `effect_deleted_any_opponent_digimon:
+#     false` (result-log predicate, BT13-111 idiom): covers both "no legal
+#     target" and "target not deleted" (e.g. a deletion replacement).
+#   - Leave-replacement: self-scoped `kind: replacement` (default subject =
+#     this Digimon) excluding `own_effect` causes; the 9000-DP deletion is the
+#     cost and `cancel_replacement` only runs when it actually deleted (Q&A).
+
+card: EX13-015
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Guilmon]/[Growlmon] in name ──
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - any_of: [ { name_contains: Guilmon }, { name_contains: Growlmon } ]
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - any_of: [ { name_contains: Guilmon }, { name_contains: Growlmon } ]
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - any_of: [ { name_contains: Guilmon }, { name_contains: Growlmon } ]
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Progress
+    summary: "<Progress>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving, when_attacking, counter]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Counter][OPT] Delete 1 opponent 12000+ DP Digimon; if this effect didn't delete, trash their top security card"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte: 12000
+          prompt: "Delete 1 of your opponent's 12000 DP or higher Digimon"
+      - delete_permanent: { target: delete_target }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_top_security: { of: opponent }
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "[All Turns][OPT] When this Digimon would leave other than by your effects, by deleting 1 opponent 9000 DP or lower Digimon, it doesn't leave"
+    process:
+      - select_opponent_permanent:
+          bind_as: cost_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 9000
+          prompt: "Delete 1 of your opponent's 9000 DP or lower Digimon so this Digimon doesn't leave"
+      - delete_permanent: { target: cost_target }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: true }
+          then:
+            - cancel_replacement: {}

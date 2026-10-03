@@ -1,0 +1,143 @@
+# EX13-061 Gankoomon — Digimon, Lv.6, Black/White, DP 13000, Cost 13.
+# Traits: Holy Warrior / Royal Knight. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-061.md):
+#   ＜Reboot＞ ＜Blocker＞
+#   [On Play] [When Digivolving] You may play 1 [Hinukamuy] Token.
+#   (Digimon/White/6000 DP/＜Alliance＞ ＜Reboot＞ ＜Blocker＞) Then, until your
+#   opponent's turn ends, their Digimon effects don't affect 1 of your white
+#   Digimon.
+#   [All Turns] [Once Per Turn] When any of your white Digimon suspend, you may
+#   use 1 use cost 5 or lower Option card with [Huckmon] in its text from your
+#   hand or this Digimon's digivolution cards without paying the cost.
+#   Assembly -5: 3 [Huckmon] text Digimon cards w/different names
+#   Digivolve: Black Lv.5 / cost 5; Lv.5 w/[Huckmon] in text: cost 4.
+#
+# DCGO C# reference: none at the submodule (no EX13_061.cs). Printed text and
+# general_rule.pdf govern.
+#
+# DSL notes:
+#   - [OP][WD]: the token play is a mid-clause "you may" → explicit yes/no
+#     `select_effect_choice` (an `optional:` step only prompts when it leads
+#     the clause, and a clause-level `optional` would wrongly let the player
+#     skip the mandatory "Then" immunity too). The immunity is a mandatory
+#     own white Digimon pick + `grant_effect_immunity { source_kind: digimon,
+#     source_controller: opponent, expiry: end_of_opponents_turn }`.
+#   - [All Turns] suspend observer: `on_suspend` gated on an own white Digimon
+#     being the suspended permanent; body = BT25-085 union-zone free Option use
+#     with OPT refund on decline.
+#   - Assembly: one filter entry `repeat {3,3}` + `distinct_by: name`
+#     (EX12-076 precedent).
+
+card: EX13-061
+name: Gankoomon
+kind: digimon
+level: 6
+color: [black, white]
+cost: 13
+dp: 13000
+traits: ["Holy Warrior", "Royal Knight"]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: Huckmon
+    cost: 4
+  # ─── Assembly -5: 3 [Huckmon] text Digimon cards w/different names ────────
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - in_text_contains: Huckmon
+        repeat: { min: 3, max: 3 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play 1 [Hinukamuy] Token; then, until your opponent's turn ends, their Digimon effects don't affect 1 of your white Digimon"
+    process:
+      - select_effect_choice:
+          bind_as: token_choice
+          labels: ["Play 1 [Hinukamuy] Token", "Don't play"]
+          prompt: "You may play 1 [Hinukamuy] Token"
+      - if:
+          condition: { equals: [token_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: hinukamuy
+      - select_own_permanent:
+          bind_as: shielded
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: white
+          prompt: "Your opponent's Digimon effects don't affect 1 of your white Digimon until their turn ends"
+      - grant_effect_immunity:
+          target: shielded
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [white]
+        - any_of:
+            - count_gte:
+                filter:
+                  zone: [hand]
+                  owner: you
+                  kind: option
+                  play_cost_lte: 5
+                  in_text_contains: Huckmon
+                n: 1
+            - self_source_count:
+                filter:
+                  kind: option
+                  play_cost_lte: 5
+                  in_text_contains: Huckmon
+                op: gte
+                value: 1
+    summary: "[All Turns][OPT] When any of your white Digimon suspend, you may use 1 use cost 5 or lower [Huckmon]-text Option card from your hand or this Digimon's digivolution cards without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          material_of: source
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - play_cost_lte: 5
+              - in_text_contains: Huckmon
+          bind_as: huckmon_option
+          prompt: "Use 1 use cost 5 or lower Option card with [Huckmon] in its text from your hand or this Digimon's digivolution cards without paying the cost"
+      - use_option_bound:
+          binding: huckmon_option
+      - if:
+          condition: { binding_absent: huckmon_option }
+          then:
+            - refund_opt: {}

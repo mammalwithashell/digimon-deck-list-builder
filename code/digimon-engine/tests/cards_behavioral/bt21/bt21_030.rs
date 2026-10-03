@@ -44,13 +44,17 @@ fn bt21_030_trashes_sources_then_when_attacking_targets_only_no_source_digimon()
         .expect("choose stacked target");
     runner.auto_resolve().expect("trash stacked sources");
 
+    let remaining = &runner.game.players[1].battle_area[stacked.index as usize].card_sources;
+    assert_eq!(remaining.len(), 1, "trash stops once one card remains");
+    // "stacked cards" include the top card: the top card is trashed until
+    // there are no more stacked cards, so the original BOTTOM card remains
+    // (official Q&A; DCGO `ITrashStack` trashes `TopCard` each pass).
     assert_eq!(
-        runner.game.players[1].battle_area[stacked.index as usize]
-            .card_sources
-            .len(),
-        1,
-        "top 10 stacked-card trash should leave only the visible top card"
+        remaining[0].card_id(&runner.game.card_data),
+        "SRC-A",
+        "the original bottom card remains"
     );
+    assert_eq!(runner.game.players[1].trash.len(), 2, "STACKED + SRC-B trashed");
 
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,

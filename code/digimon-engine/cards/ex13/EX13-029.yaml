@@ -1,0 +1,105 @@
+# EX13-029 FlameWizardmon — Digimon, Lv.4, Yellow/Red, DP 5000, Cost 5.
+# Traits: Wizard / Witchelny. Form: Armor Form. Attribute: Virus.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-029.md):
+#   Digivolve: Yellow Lv.3 / 3; Red Lv.3 / 3; [Digivolve] Lv.3 w/[Witchelny]
+#   in text: Cost 2
+#   <Armor Purge>
+#   [When Digivolving] [When Attacking] [Once Per Turn] By trashing your top
+#   security card, 1 of your opponent's Digimon gets -4000 DP for the turn.
+#   After, if you have 3 or fewer security cards, delete 1 of your opponent's
+#   Digimon with 4000 DP or less. (Rule) Name: Also treated as [Wizardmon].
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon with
+#   [Dynasmon] or [Witchelny] in its text would leave the battle area by your
+#   opponent's effects, by trashing your top security card, it doesn't leave.
+#
+# DCGO: no EX13_029.cs. Inherited = BT18-030 Candlemon inherited
+# (DCGO/Assets/Scripts/CardEffect/BT18/Yellow/BT18_030.cs) with an
+# [X]-in-text carrier gate — same shape as EX13-025.
+#
+# DSL notes:
+#   - WD/WA OPT: optional "By trashing" processing condition (15-7-4) →
+#     `optional` + `outer_prompt` (EX13-030 / BT23-035 idiom) so the
+#     accept/decline surfaces BEFORE the security card moves;
+#     `security_count_gte: 1` gate (15-7-2: an unpayable cost isn't offered).
+#     The body is the cost then the effect, so the "After, ..." delete only
+#     runs when the cost was paid.
+#   - "-4000 DP for the turn" → expiry end_of_turn; the delete reads effective
+#     DP after the debuff (the debuffed Digimon can become eligible).
+#   - (Rule) Name → `also_treated_as: [Wizardmon]`.
+
+card: EX13-029
+name: FlameWizardmon
+kind: digimon
+level: 4
+color: [yellow, red]
+cost: 5
+dp: 5000
+traits: [Wizard, Witchelny]
+form: Armor Form
+attribute: Virus
+also_treated_as: [Wizardmon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - in_text_contains: Witchelny
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition: { security_count_gte: 1 }
+    summary: "[When Digivolving][When Attacking][OPT] By trashing your top security card, 1 opponent Digimon gets -4000 DP for the turn; after, if 3 or fewer security, delete 1 opponent Digimon with 4000 DP or less"
+    process:
+      - trash_top_security: { of: you }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -4000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -4000
+          expiry: end_of_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 4000
+                prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+            - delete_permanent: { target: delete_target }
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_cause: opponent_effect
+        - security_count_gte: 1
+        - any_of:
+            - in_text_contains: Dynasmon
+            - in_text_contains: Witchelny
+    summary: "Inherited [All Turns][OPT] When this [Dynasmon]/[Witchelny]-text Digimon would leave by opponent's effects, trash your top security card so it doesn't leave"
+    process:
+      - trash_top_security: { of: you }
+      - cancel_replacement: {}

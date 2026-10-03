@@ -559,6 +559,7 @@ fn add_modifier_filter_threads_bindings_for_not_in_binding() {
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
         synth_identity: None,
+        payload: None,
         continuous: false,
     }];
 
@@ -942,6 +943,7 @@ fn result_bound_suspend_predicate_reads_current_effect_result_log() {
                 value: CompiledModifierValue::Literal(1000),
                 expiry: "end_of_turn".to_string(),
                 synth_identity: None,
+                payload: None,
                 continuous: false,
             }],
             else_branch: vec![],

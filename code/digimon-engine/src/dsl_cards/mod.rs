@@ -228,6 +228,8 @@ impl CardEffect for DslCardEffect {
                         applies_to_opponent_security_dp,
                         applies_to_own_security_dp,
                         effect_immunity,
+                        modifier_from,
+                        dna_material_identity,
                         ..
                     } => {
                         for e in lower_aura::lower_all(
@@ -250,6 +252,8 @@ impl CardEffect for DslCardEffect {
                             *applies_to_opponent_security_dp,
                             *applies_to_own_security_dp,
                             *effect_immunity,
+                            *modifier_from,
+                            dna_material_identity.clone(),
                             self.raw.clone(),
                         ) {
                             out.push(e);

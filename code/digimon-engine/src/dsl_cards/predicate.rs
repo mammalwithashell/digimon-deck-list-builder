@@ -334,6 +334,13 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-DSL-DURING-ATTACK: "if during an attack" (DCGO
+    // `attackProcess.IsAttacking`) — an attack is in flight.
+    if let Some(want) = pred.during_attack {
+        if rctx.game.pending_attack.is_some() != want {
+            return false;
+        }
+    }
     if let Some(player_ref) = pred.digimon_attacked_this_turn {
         let attacked = resolve_predicate_players(player_ref, rctx)
             .into_iter()
@@ -757,8 +764,15 @@ pub fn eval_predicate_with_bindings(
         // Resolve the named card binding and compare its printed category.
         // Used by LM-020 to test the revealed opponent deck-top against the
         // declared category. Fails closed when the binding is unset or the
-        // card data can't be resolved.
-        let Some(handle) = bindings.and_then(|b| b.get_card(&binding_kind.binding)) else {
+        // card data can't be resolved. Also resolves an origin-tagged
+        // `select_union_zone` binding, so a "play OR use 1 card from your hand
+        // or its digivolution cards" body can branch Option → `use_option_bound`
+        // vs Digimon/Tamer → `play_union_bound_free` (EX13-045 Examon).
+        // G-DSL-BINDING-CARD-KIND-UNION.
+        let Some(handle) = bindings.and_then(|b| {
+            b.get_card(&binding_kind.binding)
+                .or_else(|| b.get_union_card(&binding_kind.binding).map(|(c, _, _)| c))
+        }) else {
             return false;
         };
         let Some(data) = rctx.game.card_data_for_handle(handle) else {
@@ -1379,6 +1393,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_is.is_none()
         && pred.name_contains.is_none()
         && pred.effect_text_contains.is_none()
+        && pred.printed_keyword.is_none()
         && pred.in_text_contains.is_none()
         && pred.name_in.is_none()
         && pred.name_not_shared_by_field_digimon.is_none()
@@ -1697,12 +1712,19 @@ fn eval_event_fields(
             .as_ref()
             .and_then(|trigger| trigger.deleted_object.as_ref())
         {
-            // Deleted object is gone from the field — match its snapshot name.
+            // Deleted object is gone from the field — match its snapshot name:
+            // the printed name, or any last-known rules name captured in
+            // `names_just_before` (synth identity — includes a
+            // `ChangeBaseCardName` overlay live at deletion time).
             let name_match = rctx
                 .game
                 .card_data_for_handle(snapshot.top_card)
                 .map(|data| data.card_name.to_lowercase().contains(&want))
-                .unwrap_or(false);
+                .unwrap_or(false)
+                || snapshot
+                    .names_just_before
+                    .iter()
+                    .any(|name| name.to_lowercase().contains(&want));
             if !name_match {
                 return false;
             }
@@ -1785,6 +1807,37 @@ fn eval_event_fields(
             .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
             .unwrap_or(false);
         if !matches {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_winner_is_source {
+        // on_ally_won_battle: is the winner THIS effect's carrier? A tie has no
+        // winner → fail. G-DSL-BATTLE-WINNER-IS-SOURCE.
+        let Some(winner) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+        else {
+            return false;
+        };
+        if (Some(winner) == rctx.source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.event_battle_deleter {
+        // on_ally_won_battle (EndOfBattle): the surviving combatant whose battle
+        // opponent was actually deleted. `None` when the loser's deletion was
+        // prevented or no combatant survived. G-DSL-BATTLE-DELETER.
+        let Some(deleter) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_deleter)
+        else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Permanent(deleter), None) {
             return false;
         }
     }
@@ -2754,6 +2807,17 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(ref keyword) = pred.printed_keyword {
+        // G-DSL-PREDICATE-PRINTED-KEYWORD: the candidate's face-up printed
+        // keyword line (effect text only) — DCGO `CardSource.HasBlocker`
+        // excludes inherited and security effects.
+        let Some(kw) = lookup_keyword(keyword, None) else {
+            return false;
+        };
+        if !crate::card_data::parse_printed_keywords(&data.effect_text, "", "").contains(&kw) {
+            return false;
+        }
+    }
     if let Some(ref n) = pred.effect_text_contains {
         // G-DSL-PREDICATE-TEXT-CONTAINS: case-insensitive substring scan
         // against the candidate card's printed text — `effect_text`,
@@ -2896,7 +2960,10 @@ fn eval_card_fields(
             }
         }
         if let Some(cap) = &pred.dp_lte {
-            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+            if dp
+                > eval_dp_constraint(cap, rctx, perm_target, bindings)
+                    + deletion_cap_bonus(pred, rctx)
+            {
                 return false;
             }
         }
@@ -2918,7 +2985,17 @@ fn eval_card_fields(
     // Absent / non-permanent binding → false (no target, no route).
     // G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     if let Some(binding) = &pred.can_digivolve_onto {
-        let Some(target) = bindings.and_then(|b| b.get_permanent(binding)) else {
+        // `source` (when not shadowed by a real binding) is the effect's own
+        // carrier permanent — "THIS Digimon may digivolve into ..." (EX13-055 /
+        // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
+        let target = bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
+            if binding == "source" {
+                rctx.source_permanent
+            } else {
+                None
+            }
+        });
+        let Some(target) = target else {
             return false;
         };
         if !can_card_digivolve_onto(rctx, card, target) {
@@ -3376,20 +3453,38 @@ fn eval_permanent_fields(
             .chain(synth_identity.card_names.iter())
             .any(|x| x.to_lowercase().contains(&needle))
     });
-    let name_is_overlay_match = pred
-        .name_is
-        .as_ref()
-        .is_some_and(|n| synth_identity.card_names.iter().any(|name| name == n));
+    // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: while a DNA / Blast-DNA material
+    // requirement is evaluated for a specific result card, the material's
+    // result-scoped identity extras ("also treated as Lv.6 [Slayerdramon] for
+    // [Examon]'s DNA digivolution") also satisfy `level_eq` / `name_*`.
+    let dna_extras = if in_breeding {
+        crate::dna_digivolve::DnaMaterialExtras::default()
+    } else {
+        rctx.dna_result_card
+            .and_then(|h| rctx.game.card_source_for_handle(h))
+            .map(|result| rctx.game.dna_material_extras(handle, result))
+            .unwrap_or_default()
+    };
+    let level_eq_dna_match = pred
+        .level_eq
+        .is_some_and(|want| dna_extras.levels.contains(&want));
+    let name_is_overlay_match = pred.name_is.as_ref().is_some_and(|n| {
+        synth_identity.card_names.iter().any(|name| name == n)
+            || dna_extras.names.iter().any(|name| name == n)
+    });
     let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
+        let needle = n.to_lowercase();
         synth_identity
             .card_names
             .iter()
-            .any(|name| name.to_lowercase().contains(&n.to_lowercase()))
+            .chain(dna_extras.names.iter())
+            .any(|name| name.to_lowercase().contains(&needle))
     });
     let name_in_overlay_match = pred.name_in.as_ref().is_some_and(|names| {
-        names
-            .iter()
-            .any(|n| synth_identity.card_names.iter().any(|name| name == n))
+        names.iter().any(|n| {
+            synth_identity.card_names.iter().any(|name| name == n)
+                || dna_extras.names.iter().any(|name| name == n)
+        })
     });
     let color_is_overlay_match = pred.color_is.is_some_and(|want| {
         synth_identity
@@ -3428,6 +3523,7 @@ fn eval_permanent_fields(
     let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
+        || level_eq_dna_match
         || trait_overlay_match
         || trait_contains_overlay_match
         || in_text_contains_overlay_match
@@ -3444,6 +3540,9 @@ fn eval_permanent_fields(
             // Authoritative permanent-kind check is `kind_matches_field`
             // (token-aware) below — don't let the card-search matcher re-reject.
             p.kind = None;
+        }
+        if level_eq_dna_match {
+            p.level_eq = None;
         }
         if trait_overlay_match {
             p.trait_has = None;
@@ -3513,6 +3612,51 @@ fn eval_permanent_fields(
     }
     if let Some(want) = pred.is_unsuspended {
         if perm.is_suspended == want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.can_change_orientation {
+        // DCGO `CanChangeOrientation`: IsSuspended ? CanUnsuspend : CanSuspend.
+        let can = if perm.is_suspended {
+            !rctx.game.cannot_unsuspend(handle)
+        } else {
+            !rctx
+                .game
+                .modifiers
+                .has(handle, crate::enums::ModifierType::CannotSuspend)
+        };
+        if can != want {
+            return false;
+        }
+    }
+    if let Some(spec) = pred.can_attack {
+        // G-DSL-CAN-ATTACK-PREDICATE — DCGO `Permanent.CanAttack`: false off
+        // its owner's turn ("can not attack during opponent's turn"), then at
+        // least one legal attack target exists under the same options the
+        // consuming `may_attack_now` uses (identical target set, so a
+        // candidate is never a dead pick). DCGO's `IsAttacking` gate is not
+        // applied here.
+        if rctx.game.turn_player() != handle.player {
+            return false;
+        }
+        let restriction = match spec.targets {
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Any => crate::effect_context::AttackTargetRestriction::Any,
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Player => {
+                crate::effect_context::AttackTargetRestriction::PlayerOnly
+            }
+            digimon_dsl::compiled::CompiledAttackTargetSpec::Digimon => {
+                crate::effect_context::AttackTargetRestriction::DigimonOnly
+            }
+        };
+        let can = !crate::action::mask::effect_attack_target_action_ids_with_options(
+                rctx.game,
+                handle,
+                restriction,
+                spec.without_suspending,
+                spec.ignore_summoning_sickness,
+            )
+            .is_empty();
+        if !can {
             return false;
         }
     }
@@ -3593,7 +3737,17 @@ fn eval_permanent_fields(
         } else {
             perm.card_sources[..n - 1]
                 .iter()
-                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
                 .count()
         };
         if matching < usize::from(*at_least) {
@@ -3610,7 +3764,17 @@ fn eval_permanent_fields(
         let matching = perm
             .linked_cards
             .iter()
-            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
             .count();
         if matching < usize::from(*at_least) {
             return false;
@@ -3665,7 +3829,7 @@ fn eval_dp_constraints(
         }
     }
     if let Some(cap) = &pred.dp_lte {
-        if dp > eval_dp_constraint(cap, rctx, handle, bindings) {
+        if dp > eval_dp_constraint(cap, rctx, handle, bindings) + deletion_cap_bonus(pred, rctx) {
             return false;
         }
     }
@@ -3759,6 +3923,30 @@ fn aggregate_material_count(
         | CompiledAggregateSelector::HighestLevel
         | CompiledAggregateSelector::LowestPlayCost => None,
     }
+}
+
+/// "Add N to this Digimon's DP deletion effects' maximums": when `pred.dp_lte`
+/// is a deletion effect's DP cap (flagged at compile time by
+/// `digimon_dsl::deletion_cap`), the effect source permanent's summed
+/// `ChangeDPDeleteEffectMaxDP` delta raises the cap. DCGO
+/// `Player.MaxDP_DeleteEffect` → `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`
+/// (adds only when `cardEffect.EffectSourceCard.PermanentOfThisCard()` is the
+/// modifier's own permanent). 0 for non-deletion caps and for effects with no
+/// source permanent (Options, rules processes).
+/// G-ENGINE-DP-DELETION-MAX-MODIFIER.
+fn deletion_cap_bonus(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> i32 {
+    if !pred.dp_lte_deletion_cap {
+        return 0;
+    }
+    deletion_max_bonus_for_source(rctx)
+}
+
+/// The effect source permanent's summed `ChangeDPDeleteEffectMaxDP` delta.
+/// Shared by the predicate cap path and the deletion-flagged DP-budget select.
+pub(crate) fn deletion_max_bonus_for_source(rctx: &EffectReadContext<'_>) -> i32 {
+    rctx.source_permanent
+        .map(|h| rctx.game.dp_delete_effect_max_bonus(h))
+        .unwrap_or(0)
 }
 
 fn eval_dp_constraint(
@@ -3901,7 +4089,17 @@ fn eval_breeding_permanent_fields(
         } else {
             perm.card_sources[..n - 1]
                 .iter()
-                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
                 .count()
         };
         if matching < usize::from(*at_least) {
@@ -3916,7 +4114,17 @@ fn eval_breeding_permanent_fields(
         let matching = perm
             .linked_cards
             .iter()
-            .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+            .filter(|s| {
+                    // Full predicate eval (Card subject) so `all_of` / `any_of` /
+                    // `none_of` / `not` in the nested filter are honoured — the
+                    // bare `eval_card_fields` leaf path ignores combinators.
+                    eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(s.handle()),
+                        bindings,
+                    )
+                })
             .count();
         if matching < usize::from(*at_least) {
             return false;
@@ -3960,7 +4168,10 @@ fn eval_breeding_permanent_fields(
         }
     }
 
-    pred.is_suspended.is_none() && pred.is_unsuspended.is_none()
+    pred.is_suspended.is_none()
+        && pred.is_unsuspended.is_none()
+        && pred.can_change_orientation.is_none()
+        && pred.can_attack.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

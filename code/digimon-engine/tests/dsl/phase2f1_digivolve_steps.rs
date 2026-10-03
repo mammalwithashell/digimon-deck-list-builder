@@ -100,6 +100,7 @@ fn effect_initiated_digivolve_step_grows_target_stack_with_hand_card() {
         from_hand: CompiledBindingRef::Named("from".into()),
         cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
+        ignore_level: false,
     };
 
     {

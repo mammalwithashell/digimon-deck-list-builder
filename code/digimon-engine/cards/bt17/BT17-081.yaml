@@ -163,13 +163,16 @@ effects:
         zone: [battle_area]
         kind: digimon
         name_contains: "Omnimon"
+        can_attack: { targets: player }
     process:
       - select_own_permanent:
           bind_as: attacker
+          # DCGO BT17_081.cs IsOmnimonPermanentCondition: CanAttack.
           filter:
             all_of:
               - kind: digimon
               - name_contains: "Omnimon"
+              - can_attack: { targets: player }
           prompt: "Select 1 of your [Omnimon]-named Digimon to attack a player"
       - may_attack_now:
           attacker: attacker

@@ -1,0 +1,202 @@
+# EX13-024 Slayerdramon — Digimon, Lv.6, Blue/Red, 12000 DP, play cost 12.
+# Traits: Dragonkin. Mega / Vaccine.
+# Digivolve: Blue Lv.5 / cost 4; Red Lv.5 / cost 4;
+#            [Digivolve] [Wingdramon]/[Groundramon]: Cost 3.
+# Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-024.md):
+#   <Raid> <Blocker> [On Play] [When Digivolving] For each of this Digimon's
+#   digivolution cards, trash any 1 digivolution card from your opponent's
+#   Digimon. Then, you may return all of their Digimon with the fewest
+#   digivolution cards to the bottom of the deck. [All Turns] [Once Per Turn]
+#   When any of your [Dracomon] or [Examon] text Digimon would leave the
+#   battle area, by suspending 1 of your such Digimon, they don't leave.
+#   Inherited: (same [All Turns] [Once Per Turn] clause)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Blue/EX13_024.cs
+#   EqualsCardName Wingdramon|Groundramon cost 3; Raid; Blocker; Assembly
+#   Lv.5/Lv.4/Lv.3 HasText Dracomon|Examon, reduce 5. Shared OP/WD:
+#   SelectTrashDigivolutionCards(max = own source count, mandatory, any
+#   opponent Digimon), then Yes/No deck-bottom of the fewest-source opponent
+#   Digimon (DCGO limits that set to Digimon with ≥1 source; printed "all of
+#   their Digimon with the fewest digivolution cards" governs → 0-source
+#   Digimon count). WhenRemoveField × {face-up, inherited}, separate OPT
+#   hashes, any cause: optional suspend of an unsuspended own Dracomon/Examon
+#   text Digimon (RemoveUse on no pick) → all leaving matching Digimon stay.
+#
+# DSL: EX13-044 Assembly shape; `select_opponent_sources` with `min = max =
+# source_material_count` + `clamp_to_available` → `trash_selected_sources`;
+# yes/no `select_effect_choice` → BT24-030 fewest-materials `for_each`
+# deck-bottom; EX13-043 replacement idiom with a `select_own_permanent`
+# suspend cost, gated on a payable candidate existing.
+
+card: EX13-024
+name: Slayerdramon
+kind: digimon
+level: 6
+color: [blue, red]
+cost: 12
+dp: 12000
+traits: [Dragonkin]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  # Printed special condition: "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3".
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Wingdramon
+        - name_is: Groundramon
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_eq: 5
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - level_eq: 4
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - level_eq: 3
+            - any_of:
+                - in_text_contains: Dracomon
+                - in_text_contains: Examon
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash 1 opponent digivolution card per this Digimon's digivolution card; then you may return all of their fewest-source Digimon to the deck bottom"
+    process:
+      - select_opponent_sources:
+          min: { formula: { source_material_count: {} } }
+          max: { formula: { source_material_count: {} } }
+          clamp_to_available: true
+          bind_as: trashed
+          prompt: "For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed }
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_effect_choice:
+                bind_as: bottom_choice
+                labels:
+                  - "Return all of their Digimon with the fewest digivolution cards to the bottom of the deck"
+                  - "Don't return"
+                prompt: "You may return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck"
+            - if:
+                condition: { equals: [bottom_choice, 0] }
+                then:
+                  - for_each:
+                      over:
+                        of: opponent
+                        zone: [battle_area]
+                        kind: digimon
+                        materials_count_matches_aggregate:
+                          selector: fewest_materials
+                          of: opponent
+                      bind_as: bottom_target
+                      body:
+                        - return_to_deck:
+                            target: bottom_target
+                            position: bottom
+                            include_sources: true
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of:
+            - in_text_contains: Dracomon
+            - in_text_contains: Examon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            is_unsuspended: true
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+    summary: "[All Turns][OPT] When any of your [Dracomon]/[Examon]-text Digimon would leave, by suspending 1 of your such Digimon, they don't leave"
+    process:
+      - select_own_permanent:
+          bind_as: suspend_cost
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+          prompt: "Suspend 1 of your [Dracomon]/[Examon]-text Digimon so they don't leave"
+      - suspend: { target: suspend_cost }
+      - cancel_replacement: {}
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of:
+            - in_text_contains: Dracomon
+            - in_text_contains: Examon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            is_unsuspended: true
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+    summary: "Inherited [All Turns][OPT] When any of your [Dracomon]/[Examon]-text Digimon would leave, by suspending 1 of your such Digimon, they don't leave"
+    process:
+      - select_own_permanent:
+          bind_as: suspend_cost
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+          prompt: "Suspend 1 of your [Dracomon]/[Examon]-text Digimon so they don't leave"
+      - suspend: { target: suspend_cost }
+      - cancel_replacement: {}

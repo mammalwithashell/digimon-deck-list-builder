@@ -913,3 +913,123 @@ fn bt20_016_inherited_security_attack_plus_grants_modifier_at_runtime() {
          keyword bonus to its carrier; got {bonus}"
     );
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Red Lv.4" circle
+// used to say `from: { level_eq: 4, color: red }`. `color` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-4 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn bt20_016_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(4);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve BT20-016 (from hand) onto a level-4 base of `color`.
+fn bt20_016_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT20-016")
+        .expect("BT20-016 in embedded DSL pack")
+        .add_card(bt20_016_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["BT20-016"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT20-016")
+        .expect("BT20-016 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn bt20_016_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !bt20_016_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-4 base must NOT digivolve into BT20-016 via the Red Lv.4 alt path"
+    );
+}
+
+#[test]
+fn bt20_016_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        bt20_016_color_gate_try(digimon_engine::enums::CardColor::Red),
+        "a red level-4 base digivolves into BT20-016 via the Red Lv.4 alt path"
+    );
+}
+
+// ─── Colour-gated DNA materials (W1 regression guard) ───────────────────────
+//
+// The printed "[DNA Digivolve] Red Lv.4 + purple Lv.4" alt path's materials used
+// `color:` — not a DSL predicate key — so it was silently dropped and ANY two
+// level-4 Digimon formed a legal DNA pair. Now `color_is`.
+
+fn bt20_016_dna_mat(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 5;
+    c.traits = Vec::new();
+    c
+}
+
+fn bt20_016_dna_route(a: digimon_engine::enums::CardColor, b: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("BT20-016")
+        .expect("BT20-016 in embedded DSL pack")
+        .add_card(bt20_016_dna_mat("DNA-A", a))
+        .add_card(bt20_016_dna_mat("DNA-B", b))
+        .add_card(digimon_engine::debug_runner::make_test_card("DNA-FILL", "DNA-FILL"))
+        .hand(0, &["BT20-016"])
+        .deck(0, &["DNA-FILL"; 5])
+        .deck(1, &["DNA-FILL"])
+        .memory(10)
+        .start();
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    r.place_on_field(0, "DNA-A", Some(0));
+    r.place_on_field(0, "DNA-B", Some(0));
+    r.game.tick_declarative_effects();
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "BT20-016")
+        .expect("BT20-016 in hand");
+    r.game.has_valid_dna_route_for_hand_card(0, hand_idx)
+}
+
+#[test]
+fn bt20_016_dna_rejects_two_blue_level4_materials() {
+    use digimon_engine::enums::CardColor;
+    assert!(
+        !bt20_016_dna_route(CardColor::Blue, CardColor::Blue),
+        "two blue Lv.4 Digimon are not a legal Red Lv.4 + purple Lv.4 DNA pair"
+    );
+}
+
+#[test]
+fn bt20_016_dna_accepts_printed_color_pair() {
+    use digimon_engine::enums::CardColor;
+    assert!(
+        bt20_016_dna_route(CardColor::Red, CardColor::Purple),
+        "a Red Lv.4 + Purple Lv.4 pair is a legal Red Lv.4 + purple Lv.4 DNA pair"
+    );
+}

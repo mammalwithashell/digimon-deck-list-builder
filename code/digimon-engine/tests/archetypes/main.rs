@@ -46,6 +46,8 @@ mod beatbreak_bt25;
 mod bg_imperial;
 mod callismon_dark_animal_bt25;
 mod dna_omnimon;
+mod dracomon_ex13;
+mod veedramon_cs_ex13;
 mod flaremon_beastkin;
 mod gaogamon_beast_bt25;
 mod ice_snow;
@@ -53,11 +55,14 @@ mod machine_bt25;
 mod magneticdra;
 mod mammal_bt25;
 mod medusamon;
+mod mutant_ex13;
 mod nokia_alters;
 mod omni_nokia;
 mod omnimon_ace;
 mod puppet_sister;
 mod puppets;
+mod richard_sampson_data_squad_ex13;
+mod royal_knights_ex13;
 mod rocks;
 mod thomas_data_squad_bt25;
 mod titan_bt25;
@@ -70,3 +75,18 @@ mod st3;
 mod st4;
 mod st5;
 mod st6;
+
+// EX13 "Sukamon / beast" slice (author-set workflow).
+mod sukamon_beast_ex13;
+
+// EX13 "Guilmon / reptile" slice (author-set workflow).
+mod guilmon_reptile_ex13;
+
+// EX13 "Chronicle" slice (author-set workflow).
+mod chronicle_ex13;
+
+// EX13 "Puppet (Sistermon Awakened DUALs)" slice (author-set workflow).
+mod puppet_sistermon_ex13;
+
+// EX13 "Witchelny" slice (author-set workflow).
+mod witchelny_ex13;

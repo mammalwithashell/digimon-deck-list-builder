@@ -1,0 +1,106 @@
+# EX13-025 Candlemon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Flame (+ (Rule) Trait: Has [Witchelny]). Form: Rookie. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX13-025.md):
+#   Digivolve: Yellow Lv.2 / cost 0
+#   [Start of Your Main Phase] If you have 3 or more security cards, trash your
+#   top or bottom security card, <Draw 1> and gain 1 memory. Then, if you have
+#   2 or fewer security cards, you may place 1 card with [Witchelny] in its
+#   text from your hand as the bottom security card. (Rule) Trait: Has [Witchelny].
+#   Inherited Effect: [All Turns] [Once Per Turn] When this Digimon with
+#   [Dynasmon] or [Witchelny] in its text would leave the battle area by your
+#   opponent's effects, by trashing your top security card, it doesn't leave.
+#
+# DCGO: no EX13_025.cs. The inherited clause is BT18-030 Candlemon's inherited
+# (DCGO/Assets/Scripts/CardEffect/BT18/Yellow/BT18_030.cs): WhenRemoveField,
+# maxCountPerTurn 1, isOptional true, IsOpponentEffect, gate on the carrier's
+# TOP card + `SecurityCards.Count >= 1`, cost = IDestroySecurity(fromTop).
+#
+# DSL notes:
+#   - (Rule) Trait grant folded into `traits` (cards.json type_eng agrees).
+#   - Start of Main: the "if 3 or more" gate covers trash + draw + memory; the
+#     "Then, if 2 or fewer" gate is a separate processing condition re-read
+#     AFTER the trash (so exactly-3 → trash → 2 → placement offered; and with
+#     2 or fewer to begin with only the placement half runs — 15-6-2).
+#   - "top or bottom" is the player's choice → `select_effect_choice` (both
+#     options always payable here since the stack has >= 3 cards).
+#   - Placement: optional `select_hand` filtered by `in_text_contains:
+#     Witchelny` (official Q&A: name, traits, effects, …) → `place_on_security`
+#     bottom, face down.
+#   - Inherited save: EX13-027 idiom. `active_when` reads only
+#     `replacement_cause` + `in_text_contains` + `security_count_gte` — none of
+#     which flips the replacement to cross-permanent subject matching — so it
+#     stays self-scoped ("this Digimon"); `in_text_contains` is evaluated on
+#     the leaving subject (= the carrier, its top card). Security >= 1 gate:
+#     an unpayable "by" cost is not offered (15-7-2; DCGO CanActivateCondition).
+
+card: EX13-025
+name: Candlemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Flame, Witchelny]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If 3+ security: trash top or bottom security, <Draw 1>, gain 1 memory. Then, if 2 or fewer security, you may place 1 [Witchelny]-text card from hand as bottom security"
+    process:
+      - if:
+          condition: { security_count_gte: 3 }
+          then:
+            - select_effect_choice:
+                bind_as: which_end
+                labels:
+                  - "Trash your top security card"
+                  - "Trash your bottom security card"
+                prompt: "Trash your top or bottom security card"
+            - if:
+                condition: { equals: [which_end, 0] }
+                then:
+                  - trash_top_security: { of: you }
+            - if:
+                condition: { equals: [which_end, 1] }
+                then:
+                  - trash_bottom_security: { of: you }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+      - if:
+          condition: { security_count_lte: 2 }
+          then:
+            - select_hand:
+                of: you
+                bind_as: witch_card
+                optional: true
+                filter: { in_text_contains: Witchelny }
+                prompt: "You may place 1 card with [Witchelny] in its text from your hand as the bottom security card"
+            - place_on_security:
+                of: you
+                source: { card: { binding: witch_card, zone: hand } }
+                position: bottom
+                face_up: false
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_cause: opponent_effect
+        - security_count_gte: 1
+        - any_of:
+            - in_text_contains: Dynasmon
+            - in_text_contains: Witchelny
+    summary: "Inherited [All Turns][OPT] When this [Dynasmon]/[Witchelny]-text Digimon would leave by opponent's effects, trash your top security card so it doesn't leave"
+    process:
+      - trash_top_security: { of: you }
+      - cancel_replacement: {}

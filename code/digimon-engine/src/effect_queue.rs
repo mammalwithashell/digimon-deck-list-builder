@@ -1119,6 +1119,17 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+        // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
+        // back while an effect was resolving runs now that the outermost
+        // drain has settled with nothing parked (6-1-4-1).
+        if self.turn_end_check_deferred
+            && self.effect_drain_depth == 0
+            && self.draining_deferred == 0
+            && self.selection_resolution_depth == 0
+            && self.pending_selection.is_none()
+        {
+            self.check_turn_end();
+        }
     }
 
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
@@ -1874,12 +1885,14 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
-            TriggerSource::BattleResolved { winner } => TriggerContext {
+            TriggerSource::BattleResolved { winner, deleter } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 // The battle winner (owner + trait read by the observer's
                 // `event_winner_*` predicates). `None` on a tie — no winner.
                 battle_winner: winner,
+                // G-DSL-BATTLE-DELETER — read by `event_battle_deleter`.
+                battle_deleter: deleter,
                 event_permanent: winner,
                 cause: Some(crate::trigger_context::EventCause::BattleDeletion),
                 ..TriggerContext::default()
@@ -2916,81 +2929,156 @@ impl Game {
     fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId) -> Vec<usize> {
         let mut to_skip: Vec<usize> = Vec::new();
         for i in 0..self.effect_queue.len() {
-            let qe = &self.effect_queue[i];
-            if qe.controller != chooser {
+            if self.effect_queue[i].controller != chooser {
                 continue;
             }
-            if qe.granted_effect_id.is_some() {
-                // Granted effects have no clause condition — keep them.
-                continue;
-            }
-            // Snapshot the fields we need; release the borrow before
-            // entering the trigger-context guard (which needs &mut self).
-            let card_id = qe.card_id.clone();
-            let keyword_effect = qe.keyword_effect;
-            let source_card = qe.source_card;
-            let source_permanent = qe.source_permanent;
-            let source_kind = qe.source_kind;
-            let controller = qe.controller;
-            let effect_slot = qe.effect_slot as usize;
-            let trigger_context = qe.trigger_context.clone();
-            let dna_origin_context = qe.dna_origin_context;
-
-            // Look up the effect's condition closure. If the effect
-            // doesn't exist anymore (carrier removed, registry mutated),
-            // the run-time path returns silently — treat the same here:
-            // keep the queued entry, let run-time handle it.
-            //
-            // `effects_for_card` returns an OWNED `Vec<Effect>` so the
-            // condition closure can be evaluated against `&mut self`
-            // without lifetime conflict — same idiom as the pre-cost
-            // prompt branch's evaluation in `drain_effect_queue`.
-            //
-            // Also temporarily install the queued effect's
-            // `dna_origin_context` onto `Game::current_dna_origin` so
-            // conditions that branch on DNA-origin (e.g. shared
-            // `[When Digivolving]` clauses with DNA-only rider arms)
-            // see the same value the run-time path would. Mirrors the
-            // `prev_dna_origin` save/restore in `run_queued_effect`.
-            let prev_dna_origin = self.current_dna_origin;
-            if dna_origin_context.is_some() {
-                self.current_dna_origin = dna_origin_context;
-            }
-            // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
-            // indexes the keyword's synthesized auto-effects, not the card's.
-            let looked_up = match keyword_effect {
-                Some(keyword) => Some(std::sync::Arc::new(
-                    crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
-                )),
-                None => self.effects_for_card(&card_id, source_card),
-            };
-            let condition_passes = if let Some(effects) = looked_up {
-                if let Some(eff) = effects.get(effect_slot) {
-                    if let Some(cond) = &eff.condition {
-                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
-                        let ctx = EffectContext::new_with_source_kind(
-                            &mut *trigger_guard.game,
-                            source_card,
-                            source_permanent,
-                            source_kind,
-                            controller,
-                        );
-                        cond(&ctx.as_read())
-                    } else {
-                        true // no condition → keep
-                    }
-                } else {
-                    true // slot missing → keep, let run-time handle it
-                }
-            } else {
-                true // effects missing → keep
-            };
-            self.current_dna_origin = prev_dna_origin;
-            if !condition_passes {
+            if !self.queued_effect_condition_passes(i) {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// Evaluate the clause-level condition of `effect_queue[i]` against the
+    /// current board (with the entry's trigger context + DNA-origin context
+    /// installed). Granted bodies and entries whose effect can no longer be
+    /// looked up report `true` (the run-time path decides those).
+    pub(crate) fn queued_effect_condition_passes(&mut self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            // Granted effects have no clause condition — keep them.
+            return true;
+        }
+        // Snapshot the fields we need; release the borrow before
+        // entering the trigger-context guard (which needs &mut self).
+        let card_id = qe.card_id.clone();
+        let keyword_effect = qe.keyword_effect;
+        let source_card = qe.source_card;
+        let source_permanent = qe.source_permanent;
+        let source_kind = qe.source_kind;
+        let controller = qe.controller;
+        let effect_slot = qe.effect_slot as usize;
+        let trigger_context = qe.trigger_context.clone();
+        let dna_origin_context = qe.dna_origin_context;
+
+        // Look up the effect's condition closure. If the effect
+        // doesn't exist anymore (carrier removed, registry mutated),
+        // the run-time path returns silently — treat the same here:
+        // keep the queued entry, let run-time handle it.
+        //
+        // `effects_for_card` returns an OWNED `Vec<Effect>` so the
+        // condition closure can be evaluated against `&mut self`
+        // without lifetime conflict — same idiom as the pre-cost
+        // prompt branch's evaluation in `drain_effect_queue`.
+        //
+        // Also temporarily install the queued effect's
+        // `dna_origin_context` onto `Game::current_dna_origin` so
+        // conditions that branch on DNA-origin (e.g. shared
+        // `[When Digivolving]` clauses with DNA-only rider arms)
+        // see the same value the run-time path would. Mirrors the
+        // `prev_dna_origin` save/restore in `run_queued_effect`.
+        let prev_dna_origin = self.current_dna_origin;
+        if dna_origin_context.is_some() {
+            self.current_dna_origin = dna_origin_context;
+        }
+        // `G-ENGINE-AURA-GRANT-NO-TRIGGER`: an aura-granted keyword entry
+        // indexes the keyword's synthesized auto-effects, not the card's.
+        let looked_up = match keyword_effect {
+            Some(keyword) => Some(std::sync::Arc::new(
+                crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card),
+            )),
+            None => self.effects_for_card(&card_id, source_card),
+        };
+        let condition_passes = if let Some(effects) = looked_up {
+            if let Some(eff) = effects.get(effect_slot) {
+                if let Some(cond) = &eff.condition {
+                    let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                    let ctx = EffectContext::new_with_source_kind(
+                        &mut *trigger_guard.game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                    );
+                    cond(&ctx.as_read())
+                } else {
+                    true // no condition → keep
+                }
+            } else {
+                true // slot missing → keep, let run-time handle it
+            }
+        } else {
+            true // effects missing → keep
+        };
+        self.current_dna_origin = prev_dna_origin;
+        condition_passes
+    }
+
+    /// Collapse a just-enqueued SIMULTANEOUS event batch so each effect
+    /// triggers at most once for the whole batch
+    /// (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND).
+    ///
+    /// A batch event ("your Digimon unsuspend" in the unsuspend phase) is
+    /// enqueued as one `EventObserved` scan per affected permanent, so an
+    /// observer like "When any of your Digimon unsuspend" collects one entry
+    /// per permanent. DCGO evaluates `CanUseCondition` ONCE against the whole
+    /// batch (`AutoProcessing.GetSkillInfos(hashtable{Permanents: list})`),
+    /// so such an effect triggers once. Here: among the entries at
+    /// `first_index..` that share an effect identity (source card + slot +
+    /// granted body / keyword synthesis + timing), keep the FIRST whose
+    /// condition passes now (all entries see the same post-batch board) and
+    /// drop the rest (a group where none passes keeps only its first entry,
+    /// which the drainer then discards as non-firing). Self-scoped observers
+    /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
+    /// event permanent is the source passes.
+    pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
+        type Key = (
+            CardHandle,
+            u8,
+            Option<u64>,
+            Option<crate::enums::Keyword>,
+            EffectTiming,
+        );
+        let len = self.effect_queue.len();
+        let key_of = |qe: &QueuedEffect| -> Key {
+            (
+                qe.source_card,
+                qe.effect_slot,
+                qe.granted_effect_id,
+                qe.keyword_effect,
+                qe.timing,
+            )
+        };
+        // Group batch entries by identity, preserving queue order.
+        let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
+        for i in first_index..len {
+            let key = key_of(&self.effect_queue[i]);
+            match groups.iter_mut().find(|(k, _)| *k == key) {
+                Some((_, members)) => members.push(i),
+                None => groups.push((key, vec![i])),
+            }
+        }
+        let mut drop: Vec<usize> = Vec::new();
+        for (_, members) in groups {
+            if members.len() < 2 {
+                continue;
+            }
+            // Keep the first member whose condition passes against the
+            // post-batch board; when none passes keep the first (the drainer
+            // discards it as non-firing, exactly as for a single entry).
+            let keep = members
+                .iter()
+                .copied()
+                .find(|&i| self.queued_effect_condition_passes(i))
+                .unwrap_or(members[0]);
+            drop.extend(members.into_iter().filter(|&i| i != keep));
+        }
+        drop.sort_unstable();
+        for idx in drop.into_iter().rev() {
+            self.effect_queue.remove(idx);
+        }
     }
 
     /// Execute a single queued effect: re-look-up, condition check,
@@ -3703,7 +3791,8 @@ impl Game {
                             cause: pending.cause,
                         },
                     );
-                    self.drain_effect_queue();
+                    // See `fire_effect_security_removal` (15-8-3-2).
+                    self.maybe_drain_effect_queue();
                     if self.pending_selection.is_some() {
                         self.pending_effect_security_removal.push(pending);
                         return;
@@ -3909,7 +3998,16 @@ impl Game {
                 cause: pending.cause,
             },
         );
-        self.drain_effect_queue();
+        // 15-8-3-2: "trigger-type effects can't activate during the processing
+        // for a rule or effect". When the removal happens INSIDE a resolving
+        // effect body (the queued-effect deferred scope), the security-removed
+        // observers stay queued until that body has finished — e.g. EX13-037
+        // Dynasmon's [When Digivolving] trashes its own top security, then
+        // buffs and checks "if you have 3 or fewer security cards" BEFORE its
+        // own "When security stacks are removed from" observer resolves.
+        // Outside any effect scope this drains immediately, as before.
+        // G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT.
+        self.maybe_drain_effect_queue();
 
         if pending.defender != pending.observer_player {
             self.enqueue_triggered(
@@ -3922,7 +4020,7 @@ impl Game {
                     cause: pending.cause,
                 },
             );
-            self.drain_effect_queue();
+            self.maybe_drain_effect_queue();
         }
     }
 
@@ -3958,7 +4056,11 @@ impl Game {
                 card: card_handle,
             },
         );
-        self.drain_effect_queue();
+        // 15-8-3-2: inside a resolving effect body (deferred scope) the
+        // observers — and any SIBLING trigger already queued, e.g. EX13-036
+        // Kentaurosmon's second [When Digivolving] — must wait until the body
+        // finishes. G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT.
+        self.maybe_drain_effect_queue();
 
         let pending = PendingEffectSecurityRemoval {
             defender,
@@ -4415,6 +4517,11 @@ impl Game {
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
         self.current_phase = sel.previous_phase;
+        // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
+        // continuation below (pay-cost tails, parked security removals,
+        // scheduled drains, pending-attack resume, ...) are the rest of the
+        // effect's processing; hold `check_turn_end` until they have run.
+        self.selection_resolution_depth = self.selection_resolution_depth.saturating_add(1);
         // Wrap the callback in a deferred-drain scope (post-2026-05-23
         // G-DSL-OUTER-TAIL-NESTED-PARK fix). While the callback runs,
         // `fire_on_*` observer helpers go through `maybe_drain_effect_queue`
@@ -4553,9 +4660,10 @@ impl Game {
         if self.pending_selection.is_none() && self.pending_attack.is_some() {
             self.advance_pending_attack();
         }
+        self.selection_resolution_depth = self.selection_resolution_depth.saturating_sub(1);
         if self.pending_selection.is_none()
-            && self.current_phase == crate::enums::GamePhase::Main
-            && !was_attack_pending
+            && ((self.current_phase == crate::enums::GamePhase::Main && !was_attack_pending)
+                || self.turn_end_check_deferred)
         {
             self.check_turn_end();
         }

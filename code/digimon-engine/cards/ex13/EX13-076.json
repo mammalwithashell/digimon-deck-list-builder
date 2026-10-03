@@ -1,0 +1,43 @@
+{
+  "index": 4400,
+  "norm_id": 0.22,
+  "card_id": "EX13-076",
+  "card_index": 76,
+  "card_name_eng": "Imperialdramon: Paladin Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX13_076",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    4,
+    1,
+    3
+  ],
+  "type_eng": [
+    "Ancient Holy Warrior"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine",
+    "Free"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon. Then, you may return all digivolution cards of 1 of their Digimon to the bottom of the deck and have this Digimon battle it. Compare the number of digivolution cards instead of DP in this battle.\r\n[All Turns] [Once Per Turn] When this Digimon wins a battle, you may return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may unsuspend.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Free]/[Royal Knight] trait: Cost 5 \r\nAssembly Requirements [Assembly -8] 6 [Free]/[Royal Knight] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+}

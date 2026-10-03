@@ -530,6 +530,48 @@ pub struct AuraBody {
     /// G-DSL-AURA-EFFECT-IMMUNITY.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect_immunity: Option<AuraEffectImmunity>,
+
+    /// Effect-controller scope for the named `modifier` grant — installs it
+    /// with an `effect_immunity_filter { controller }` so protection-style
+    /// modifiers apply only against effects of that controller. Printed
+    /// "Your opponent's effects can't reduce this unsuspended Digimon's DP,
+    /// return its stacked cards to the hand or deck, or trash them"
+    /// (EX13-023) ⇒ three self-auras `modifier: ImmuneFromDPMinus` /
+    /// `ImmuneFromStackReturn` / `ImmuneFromStackTrashing`, each
+    /// `modifier_from: opponent`, gated by `active_when:
+    /// { source_is_unsuspended: true }`. Consulted by the modifiers that
+    /// read the filter (`ImmuneFromDPMinus` in `effective_dp`, the stacked-
+    /// card protections via `ModifierRegistry::blocks_effect_from`).
+    /// Omitted ⇒ unscoped (every effect). Requires `modifier`.
+    /// G-ENGINE-STACKED-CARD-RETURN-PROTECTION.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_from: Option<crate::step::EffectControllerSpec>,
+    /// Result-scoped DNA-material identity — printed "[All Turns] This
+    /// Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA
+    /// digivolution" (EX13-021 / EX13-041). While the aura is active the
+    /// carrier is ALSO treated as `level` and/or named `name`, but only when
+    /// a DNA / Blast-DNA material requirement is evaluated for a result card
+    /// named `for_result`. Self-aura only (`target: {}`); lowers to
+    /// `ModifierType::DnaMaterialIdentity`. DCGO `AddJogressLevelsClass` +
+    /// `Names_ForDNA`. G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dna_material_identity: Option<DnaMaterialIdentitySpec>,
+}
+
+/// Inline result-scoped DNA-material identity used inside [`AuraBody`].
+/// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DnaMaterialIdentitySpec {
+    /// Exact name of the DNA result card the treatment applies to
+    /// ("for [Examon]'s DNA digivolution" ⇒ `Examon`).
+    pub for_result: String,
+    /// Extra level the carrier is treated as ("Lv.6" ⇒ `6`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<u8>,
+    /// Extra name the carrier is treated as ("[Slayerdramon]").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 /// Inline continuous effect-immunity grant used inside [`AuraBody`].

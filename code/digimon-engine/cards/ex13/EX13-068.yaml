@@ -1,0 +1,72 @@
+# EX13-068 Takato Matsuki — Tamer, Red, Cost 4. Traits: (none).
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX13-068.md; the
+# corpus files the [Security] line under inherited_effect_description_eng):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Start of Your Main Phase] By returning this Tamer to the bottom of the
+#   deck, you may play 1 [Takato Matsuki] from your hand without paying the
+#   cost. After, if you don't have a Digimon, you may play 1 [Guilmon] from
+#   your trash without paying the cost.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: if you don't return this card to the bottom of the deck,
+#   you can't process the part after "after".
+#
+# DCGO: none — DCGO b9a0638cd ships no EX13_068.cs. Authored from the printed
+# text + Q&A with the established idioms:
+#   - [Start of Your Turn] memory set-to-3 (EX12-066 / BT23-086).
+#   - optional clause + `activation_cost: return_self_to_deck_bottom`
+#     (BT24-088 / EX11-071): declining the clause = not paying the cost, which
+#     also skips the "after" part (Q&A). The cost is payable without a
+#     [Takato Matsuki] in hand (the "after" part still runs).
+#   - optional `select_hand` + `play_from_hand_free` (BT17-093) for the Tamer.
+#   - `if` (you have no Digimon, evaluated AFTER the Takato play) → optional
+#     `select_trash` + `play_from_trash_free` for [Guilmon].
+#   - "1 [Takato Matsuki]" / "1 [Guilmon]" are exact card names → name_is.
+
+card: EX13-068
+name: Takato Matsuki
+kind: tamer
+color: [red]
+cost: 4
+traits: []
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory <= 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] Return this Tamer to deck bottom: may play [Takato Matsuki] from hand free; then if you have no Digimon, may play [Guilmon] from trash free"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: takato
+          optional: true
+          filter: { name_is: "Takato Matsuki" }
+          prompt: "Play 1 [Takato Matsuki] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: takato }
+      - if:
+          condition:
+            count_lte:
+              filter:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+              n: 0
+          then:
+            - select_trash:
+                of: you
+                bind_as: guilmon
+                optional: true
+                filter: { name_is: Guilmon }
+                prompt: "Play 1 [Guilmon] from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: guilmon }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

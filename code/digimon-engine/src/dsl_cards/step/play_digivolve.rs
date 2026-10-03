@@ -960,6 +960,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             from_hand,
             cost,
             ignore_requirements,
+            ignore_level,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -975,6 +976,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let player = target_handle.player;
             let success = if *ignore_requirements {
                 ctx.effect_initiated_digivolve_from_source_ignore_requirements(
+                    player,
+                    source_ref,
+                    target_handle,
+                    delta,
+                )
+            } else if *ignore_level {
+                // G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST: level waived,
+                // colour + printed cost kept, then `cost` applied.
+                ctx.effect_initiated_digivolve_from_source_ignore_level(
                     player,
                     source_ref,
                     target_handle,

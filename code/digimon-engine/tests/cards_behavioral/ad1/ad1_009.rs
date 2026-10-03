@@ -612,3 +612,64 @@ fn ad1_009_inherited_security_attack_plus_one_has_correct_value_and_scope() {
     );
     assert_eq!(value, Some(1), "value must equal +1");
 }
+
+// ─── Colour-gated standard-circle alt path (W1 regression guard) ────────────
+//
+// The `kind: digivolve` alt path mirroring the printed "Red Lv.5" circle
+// used to say `from: { level_eq: 5, color: red }`. `color` is not a
+// DSL predicate key, so it was silently dropped and the path accepted a
+// level-5 base of ANY colour. Now `color_is` — a wrong-colour base must be
+// rejected; a right-colour base still digivolves.
+
+fn ad1_009_color_gate_base(id: &str, color: digimon_engine::enums::CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card(id, "Wrongcolormon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.colors = vec![color];
+    c.level = Some(5);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = Vec::new();
+    c
+}
+
+/// Try to digivolve AD1-009 (from hand) onto a level-5 base of `color`.
+fn ad1_009_color_gate_try(color: digimon_engine::enums::CardColor) -> bool {
+    let mut r = digimon_engine::debug_runner::DebugRunner::builder()
+        .dsl_card("AD1-009")
+        .expect("AD1-009 in embedded DSL pack")
+        .add_card(ad1_009_color_gate_base("CG-BASE", color))
+        .add_card(digimon_engine::debug_runner::make_test_card("CG-FILL", "CG-FILL"))
+        .hand(0, &["AD1-009"])
+        .deck(0, &["CG-FILL"; 5])
+        .deck(1, &["CG-FILL"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "CG-BASE", Some(0));
+    let hand_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "AD1-009")
+        .expect("AD1-009 in hand");
+    r.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    )
+}
+
+#[test]
+fn ad1_009_standard_alt_path_rejects_wrong_color_base() {
+    assert!(
+        !ad1_009_color_gate_try(digimon_engine::enums::CardColor::Blue),
+        "a blue level-5 base must NOT digivolve into AD1-009 via the Red Lv.5 alt path"
+    );
+}
+
+#[test]
+fn ad1_009_standard_alt_path_accepts_right_color_base() {
+    assert!(
+        ad1_009_color_gate_try(digimon_engine::enums::CardColor::Red),
+        "a red level-5 base digivolves into AD1-009 via the Red Lv.5 alt path"
+    );
+}
