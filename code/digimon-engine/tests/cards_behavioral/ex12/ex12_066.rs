@@ -104,7 +104,11 @@ fn ex12_066_attack_trigger_can_use_a_vb_option_from_hand_with_cost_reduced() {
         .security
         .iter()
         .any(|card| card.card_id(&runner.game.card_data) == "EX12-069"));
-    assert_eq!(memory_before, runner.memory(), "cost 2 reduced by 2 is free");
+    assert_eq!(
+        memory_before,
+        runner.memory(),
+        "cost 2 reduced by 2 is free"
+    );
 }
 
 #[test]

@@ -234,12 +234,30 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
+        self.play_from_hand_with_cost_suppress_on_play(
+            player,
+            hand_index,
+            crate::enums::CostDelta::Free,
+            suppress_on_play,
+        )
+    }
+
+    /// Cost-bearing sibling of `play_from_hand_free_suppress_on_play` (the
+    /// union-zone `play_union_bound_free { cost_delta }` hand origin —
+    /// G-DSL-PLAY-UNION-BOUND-COST-DELTA).
+    pub fn play_from_hand_with_cost_suppress_on_play(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
         match self
             .game
             .play_from_hand_with_cost_result_from_origin_suppress(
                 player,
                 hand_index,
-                crate::enums::CostDelta::Free,
+                cost_delta,
                 PlaySource::ByEffect,
                 false,
                 PendingWouldPlayOrigin::Hand,

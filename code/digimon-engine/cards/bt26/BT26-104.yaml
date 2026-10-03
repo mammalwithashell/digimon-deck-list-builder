@@ -1,0 +1,92 @@
+# BT26-104 Kunlun — Tamer, White, Cost 5. Traits: Shambala, SW, TB, TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-104.md):
+#   [Start of Your Main Phase] Gain 1 memory.
+#   [On Play] By trashing 1 [Shambala] trait card from your hand, <Draw 2>.
+#   [End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait,
+#     by suspending this Tamer, you may use 1 Option card with the [Shambala]
+#     trait from your hand without paying the cost.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/White/BT26_104.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional): IsOwnerTurn → AddMemory 1.
+#   → start_of_your_main_phase + gain_memory.
+# On Play (not optional, skippable): CanActivate requires a [Shambala]
+#   (EqualsTraits) card in hand; canNoSelect:true hand pick → trash it →
+#   on success Draw 2. → condition + optional cost select_hand + trash + draw.
+# EOT (OnEndTurn, optional TRUE): IsOwnerTurn; CanActivate = suspend cost
+#   payable (CanActivateSuspendCostEffect) AND an own Digimon whose top card
+#   EqualsTraits "Tentei Hachibushu". Body: suspend self → canNoSelect:true pick
+#   of 1 hand Option EqualsTraits "Shambala" (and usable) → PlayOptionCards
+#   payCost:false. → optional + source_is_unsuspended + any_field_permanent
+#   condition, activation_cost suspend_self, use_option_from_hand (free,
+#   optional) — BT24-085 idiom.
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT26-104
+name: "Kunlun"
+kind: tamer
+color: [white]
+cost: 5
+traits: [Shambala, SW, TB, TS]
+
+effects:
+  # ─── [Start of Your Main Phase] Gain 1 memory ──────────────────────────────
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── [On Play] By trashing 1 [Shambala] hand card, <Draw 2> ────────────────
+  - when: on_play
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "Shambala"
+        n: 1
+    summary: "[On Play] By trashing 1 [Shambala] trait card from your hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: "Shambala" }
+          prompt: "Trash 1 [Shambala] trait card from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  # ─── [End of Your Turn] with a [Tentei Hachibushu] Digimon, suspend this
+  #     Tamer → may use 1 [Shambala] Option from hand for free ────────────────
+  - when: end_of_your_turn
+    optional: true
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_field_permanent:
+            of: you
+            kind: digimon
+            trait_has: "Tentei Hachibushu"
+    summary: "[End of Your Turn] If you have a [Tentei Hachibushu] Digimon, by suspending this Tamer, you may use 1 [Shambala] Option card from your hand without paying the cost"
+    process:
+      - activation_cost: { suspend_self: true }
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Shambala"
+          prompt: "You may use 1 [Shambala] trait Option card from your hand without paying the cost"
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

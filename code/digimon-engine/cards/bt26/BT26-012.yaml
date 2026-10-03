@@ -1,0 +1,98 @@
+# BT26-012 Manekimon — Digimon, Lv.4, Red/Yellow, DP 6000, Cost 5. Traits:
+#   Puppet, Shambala, TB. Form Champion. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.3 / cost 3; Yellow Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[Shambala] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-012.md):
+#   [Main] [Once Per Turn] You may play or use 1 [TB] trait card from your hand
+#     with the cost reduced by 2.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#     gets -2000 DP for the turn.
+#   Official Q&A: you can't simultaneously activate multiple effects that play
+#     or use a card (engine resolves one play/use per effect; nothing to model).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_012.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + EqualsTraits("Shambala"), cost 2.
+# [Main] OPT (OnDeclaration, maxCountPerTurn 1, CanUseCondition: a [TB] hand
+#   card exists): canNoSelect:true SelectHandEffect over [TB] cards →
+#   ChangeCostClass -2 → PlayOptionCards (Option) / PlayPermanentCards
+#   (Digimon/Tamer), payCost:true. Nothing picked → activateClass.RemoveUse()
+#   (OPT not spent).
+#   → `when: main_on_field` + once_per_turn + condition (a [TB] card in hand);
+#   optional `select_hand` (non-cost: decline still runs the tail) → `play_or_use_from_hand
+#   { cost_delta: { reduce: 2 } }` (kind-routing verb, G-PLAY-OR-USE-FROM-HAND;
+#   DUAL cards surface the play/use face choice); `refund_opt` on decline.
+#   DCGO additionally pre-filters candidates by CanPlayOrUse(fixedCost); the
+#   play/use verb itself enforces playability at resolution (same as the
+#   shipped BT26-032 / BT25-041 play-or-use clauses).
+# Inherited WA OPT (OnAllyAttack, not optional): if an opp Digimon exists,
+#   mandatory pick → ChangeDigimonDP(-2000, UntilEachTurnEnd).
+#   → scope: inherited, when_attacking, once_per_turn; mandatory
+#   select_opponent_permanent + add_dp_modifier -2000 end_of_turn.
+
+card: BT26-012
+name: "Manekimon"
+kind: digimon
+level: 4
+color: [red, yellow]
+cost: 5
+dp: 6000
+traits: [Puppet, Shambala, TB]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Shambala"
+    cost: 2
+
+effects:
+  # ─── [Main][OPT] You may play or use 1 [TB] card from hand, cost -2 ────────
+  - when: main_on_field
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "TB"
+        n: 1
+    summary: "[Main][OPT] You may play or use 1 [TB] trait card from your hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          # A declined (non-cost) select_hand still runs the tail, so the
+          # else-branch refund (DCGO RemoveUse) is reached.
+          filter: { trait_has: "TB" }
+          prompt: "You may play or use 1 [TB] trait card from your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: pick
+                cost_delta: { reduce: 2 }
+          else:
+            - refund_opt: {}
+
+  # ─── Inherited [When Attacking][OPT] opp Digimon -2000 for the turn ───────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: debuffed
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"
+      - add_dp_modifier:
+          target: debuffed
+          value: -2000
+          expiry: end_of_turn

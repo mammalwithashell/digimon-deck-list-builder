@@ -138,7 +138,12 @@ fn pick_revealed(runner: &mut DebugRunner, card_id: &str) {
                 .and_then(|idx| runner.game.revealed_cards.get(idx as usize))
                 .is_some_and(|card| card.card_id(&runner.game.card_data) == card_id)
         })
-        .unwrap_or_else(|| panic!("{card_id} must be a legal pick: {:?}", view.valid_action_ids));
+        .unwrap_or_else(|| {
+            panic!(
+                "{card_id} must be a legal pick: {:?}",
+                view.valid_action_ids
+            )
+        });
     runner
         .execute_action(view.selecting_player, want)
         .unwrap_or_else(|err| panic!("select {card_id}: {err:?}"));

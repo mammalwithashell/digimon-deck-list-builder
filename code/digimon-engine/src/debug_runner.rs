@@ -1220,7 +1220,9 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             ..
         }) = clause
         {
-            if matches!(scope, CompiledScope::Inherited) {
+            // Linked grants are Link-ESS for the HOST (BT26-010), never the
+            // card's own native keywords.
+            if matches!(scope, CompiledScope::Inherited | CompiledScope::Linked) {
                 continue;
             }
             if let Some(kw) = lookup_keyword(keyword, *value) {

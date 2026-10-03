@@ -483,7 +483,12 @@ fn bt25_036_standard_circle_digivolves_from_yellow_lv3() {
 #[test]
 fn bt25_036_stnd_grade_circle_has_no_level_or_color_gate() {
     let mut r = base()
-        .add_card(make_colored("RED-STND", 4, CardColor::Red, &["Stnd.", "Appmon"]))
+        .add_card(make_colored(
+            "RED-STND",
+            4,
+            CardColor::Red,
+            &["Stnd.", "Appmon"],
+        ))
         .hand(0, &[CARD_ID])
         .deck(0, &["DECK-PAD"; 12])
         .deck(1, &["DECK-PAD"; 12])

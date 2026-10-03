@@ -1,0 +1,75 @@
+# BT26-096 Kosuke Misono — Tamer, Purple, Cost 4. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-096.md):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Main] By returning this Tamer to the bottom of the deck, you may play 1
+#     Digimon card with [Chronomon] in its text or 1 Tamer card with the [TS]
+#     trait from your hand or trash with the cost reduced by 2.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: "[Chronomon] in its text" scans the whole card (name,
+#     traits, effects, inherited effects, (Rule), requirements…).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_096.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# [Start of Your Turn]: CardEffectFactory.SetMemoryTo3TamerEffect →
+#   start_of_your_turn + condition memory_lte 2 + set_memory 3 (BT25-087).
+# [Main] (OnDeclaration, no per-turn cap, not optional at activation — the
+#   activation IS the decision): DeckBouncePeremanentAndProcessAccordingToResult
+#   (this Tamer → deck bottom; the rest runs only on success); then if the
+#   hand and/or trash hold a candidate — (Digimon && HasText("Chronomon")) ||
+#   (Tamer && HasTSTraits), playable at cost-2 — a zone choice (From hand /
+#   From trash / Don't play; auto-picked when only one zone qualifies) and
+#   PlayByEffect(payCost: true, reduceCost 2, canNoSelect default true).
+#   → main_on_field: return_to_deck { source, bottom } (the cost), then ONE
+#   optional `select_union_zone` over [hand, trash] (the zone choice + pick +
+#   "Don't play" collapsed into a single declinable pick over both zones)
+#   → `play_union_bound_free { cost_delta: { reduce: 2 } }`, which plays the
+#   card from its TRUE origin zone paying cost-2
+#   (G-DSL-PLAY-UNION-BOUND-COST-DELTA).
+# [Security]: PlaySelfTamerSecurityEffect → on_security play_from_security.
+
+card: BT26-096
+name: "Kosuke Misono"
+kind: tamer
+color: [purple]
+cost: 4
+traits: [TS]
+
+effects:
+  # ─── [Start of Your Turn] memory ≤2 → set to 3 ──────────────────────────
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  # ─── [Main] return self to deck bottom → may play a [Chronomon]-text Digimon
+  #     or [TS] Tamer from hand/trash, cost -2 ──────────────────────────────
+  - when: main_on_field
+    summary: "[Main] By returning this Tamer to the bottom of the deck, you may play 1 Digimon card with [Chronomon] in its text or 1 [TS] trait Tamer card from your hand or trash with the cost reduced by 2"
+    process:
+      - return_to_deck: { target: source, position: bottom }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - all_of:
+                  - kind: digimon
+                  - in_text_contains: "Chronomon"
+              - all_of:
+                  - kind: tamer
+                  - trait_has: TS
+          prompt: "You may play 1 Digimon card with [Chronomon] in its text or 1 [TS] trait Tamer card from your hand or trash with the cost reduced by 2"
+      - play_union_bound_free:
+          binding: pick
+          cost_delta: { reduce: 2 }
+
+  # ─── [Security] Play this card without paying the cost ──────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,238 @@
+# BT26-031 Murasamemon // Gonozan: Murashigure — DUAL (Digimon Lv.5
+#   Yellow/Blue DP 8000 // Option Yellow use cost 4). Traits: Beastkin,
+#   Glowing Dawn, BEATBREAK. Form: Ultimate. Attribute: Virus.
+# Printed digivolve box: Yellow Lv.4 / cost 4; Blue Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-031.md):
+#   Digimon face:
+#   [When Digivolving] By trashing the top security card of 1 player with the
+#     most security cards, 1 of your opponent's Digimon or Tamers can't suspend
+#     until their turn ends.
+#   [When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom
+#     face-down card from under any of your Tamers, <Recovery +1>.
+#   Option face (DUAL): <Use Req. ([Glowing Dawn] trait)> [Main] 1 of your
+#     opponent's Digimon gets -8000 DP until their turn ends. By trashing your
+#     top security card, it further gets -5000 DP.
+#   DUAL Rule: <Arts Digivolve>.
+#   Official Q&A: the player that activated the effect chooses 1 player.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_031.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 + TopCard EqualsTraits "Glowing Dawn", cost 3.
+# [When Digivolving] #1 (not optional, skippable): CanActivate = either player
+#   has security. SetIntSelection over the VALID players (own iff own > 0 &&
+#   own >= opp; opponent iff opp > 0 && opp >= own) + "Don't trash security".
+#   On a pick: TrashSecurityAndProcessAccordingToResult → mandatory pick of 1
+#   opponent Digimon/Tamer → GainCantSuspendUntilOpponentTurnEnd.
+#   → condition any security; three gated select_effect_choice menus (tie /
+#   own-only / opponent-only — BT25-043 most-security formula idiom) so an
+#   invalid player is never offered; trash_top_security → mandatory
+#   select_opponent_permanent → add_modifier CannotSuspend until end of
+#   opponent's turn.
+# [WD][WA][OPT] #2 (shared, not optional, maxCount 1): CanActivate = a Tamer
+#   with a face-down source. canNoSelect:true Tamer pick → trash its bottom
+#   face-down card → Recovery +1; RemoveUse on cancel.
+#   → optional clause (decline = cancel; a declined optional clause does not
+#   spend the [Once Per Turn]) + face_down_sources_under_tamers_gte 1;
+#   trash_bottom_face_down_source_under_tamer → recover 1.
+# Option [Main] (OptionSkill): mandatory pick of 1 opponent Digimon →
+#   ChangeDigimonDP(-8000, UntilOpponentTurnEnd); then if security >= 1 a
+#   Yes/No → IDestroySecurity(1, top) → the same Digimon -5000
+#   (UntilOpponentTurnEnd).
+#   → main_from_hand: select_opponent_permanent → add_dp_modifier -8000
+#   end_of_opponents_turn; gated 2-way select_effect_choice →
+#   trash_top_security + add_dp_modifier -5000 on the same binding.
+# Use Req ([Glowing Dawn]) + <Arts Digivolve>: BT26-050 idiom.
+
+card: BT26-031
+name: Murasamemon
+kind: dual
+
+level: 5
+color: [yellow, blue]
+dp: 8000
+traits: [Beastkin, Glowing Dawn, BEATBREAK]
+form: Ultimate
+attribute: Virus
+
+dual:
+  digimon:
+    level: 5
+    dp: 8000
+    colors: [yellow, blue]
+    traits: [Beastkin, Glowing Dawn, BEATBREAK]
+    effect_text: "[When Digivolving] By trashing the top security card of 1 player with the most security cards, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends. [When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, <Recovery +1>."
+    inherited_text: ""
+  option:
+    use_cost: 4
+    colors: [yellow]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "Glowing Dawn"
+    effect_text: "<Use Req. ([Glowing Dawn] trait)> [Main] 1 of your opponent's Digimon gets -8000 DP until their turn ends. By trashing your top security card, it further gets -5000 DP. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] by trashing the top security card of 1 player with
+  #     the most security cards, 1 opp Digimon/Tamer can't suspend until their
+  #     turn ends ───────────────────────────────────────────────────────────
+  - when: when_digivolving
+    condition:
+      any_of:
+        - security_count_gte: 1
+        - opponent_security_count_gte: 1
+    summary: "[When Digivolving] By trashing the top security card of 1 player with the most security cards, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+    process:
+      # Tie (both > 0): either player may be chosen.
+      - if:
+          condition:
+            all_of:
+              - security_count_gte: 1
+              - security_count_gte:
+                  formula:
+                    base: 0
+                    per: { card_count_in_zone: { of: opponent, zone: security } }
+                    delta: 1
+              - opponent_security_count_gte:
+                  formula:
+                    base: 0
+                    per: { card_count_in_zone: { of: you, zone: security } }
+                    delta: 1
+          then:
+            - select_effect_choice:
+                bind_as: who_tie
+                labels:
+                  - "Trash your own top security card"
+                  - "Trash your opponent's top security card"
+                  - "Don't trash security"
+                prompt: "Trash the top security card of 1 player with the most security cards?"
+      # You have strictly more.
+      - if:
+          condition:
+            all_of:
+              - security_count_gte: 1
+              - not:
+                  opponent_security_count_gte:
+                    formula:
+                      base: 0
+                      per: { card_count_in_zone: { of: you, zone: security } }
+                      delta: 1
+          then:
+            - select_effect_choice:
+                bind_as: who_own
+                labels:
+                  - "Trash your own top security card"
+                  - "Don't trash security"
+                prompt: "Trash the top security card of 1 player with the most security cards?"
+      # Your opponent has strictly more.
+      - if:
+          condition:
+            all_of:
+              - opponent_security_count_gte: 1
+              - not:
+                  security_count_gte:
+                    formula:
+                      base: 0
+                      per: { card_count_in_zone: { of: opponent, zone: security } }
+                      delta: 1
+          then:
+            - select_effect_choice:
+                bind_as: who_opp
+                labels:
+                  - "Trash your opponent's top security card"
+                  - "Don't trash security"
+                prompt: "Trash the top security card of 1 player with the most security cards?"
+      - if:
+          condition:
+            any_of:
+              - equals: [who_tie, 0]
+              - equals: [who_own, 0]
+          then:
+            - trash_top_security: { of: you }
+            - select_opponent_permanent:
+                bind_as: lock_own
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+            - add_modifier:
+                target: lock_own
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+      - if:
+          condition:
+            any_of:
+              - equals: [who_tie, 1]
+              - equals: [who_opp, 0]
+          then:
+            - trash_top_security: { of: opponent }
+            - select_opponent_permanent:
+                bind_as: lock_opp
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+            - add_modifier:
+                target: lock_opp
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── [WD][WA][OPT] by trashing a Tamer's bottom face-down card, <Recovery +1>
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    summary: "[When Digivolving][When Attacking][Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, <Recovery +1>"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - recover: { of: you, count: 1 }
+
+  # ─── Option face [Main] 1 opp Digimon -8000 DP until their turn ends; by
+  #     trashing your top security card, it further gets -5000 DP ──────────
+  - when: main_from_hand
+    summary: "[Main] 1 of your opponent's Digimon gets -8000 DP until their turn ends. By trashing your top security card, it further gets -5000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -8000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -8000
+          expiry: end_of_opponents_turn
+      - if:
+          condition:
+            all_of:
+              - binding_present: dp_target
+              - security_count_gte: 1
+          then:
+            - select_effect_choice:
+                bind_as: further
+                labels:
+                  - "Trash your top security card (it further gets -5000 DP)"
+                  - "Don't trash security"
+                prompt: "Trash your top security card so it further gets -5000 DP?"
+            - if:
+                condition: { equals: [further, 0] }
+                then:
+                  - trash_top_security: { of: you }
+                  - add_dp_modifier:
+                      target: dp_target
+                      value: -5000
+                      expiry: end_of_opponents_turn

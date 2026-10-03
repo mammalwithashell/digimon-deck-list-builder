@@ -1,0 +1,124 @@
+# BT26-017 Zanbamon — Digimon, Lv.6, Red/Purple, DP 12000, Cost 12. Traits:
+#   Wizard, Shambala, TB, TS. Form Mega. Attribute: Virus.
+# Printed digivolve box: Red Lv.5 / cost 4; Purple Lv.5 / cost 4;
+#   [Digivolve] Lv.5 w/[Shambala]/[TS] trait: Cost 3.
+# Special play: Assembly -4: 2 Lv.5 or lower [Shambala] trait cards w/different
+#   levels.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-017.md):
+#   <Blocker> <Retaliation> [On Play] [When Digivolving] 1 of your Digimon with
+#     the [Shambala] trait gains <Security A. +1> and <Progress> for the turn.
+#     [On Deletion] You may play 1 [Shambala] or [TS] trait card with a play
+#     cost of 5 or less from your trash without paying the cost.
+#   Inherited: (none)
+#   Official Q&A: <Retaliation> and [On Deletion] trigger simultaneously — the
+#     player chooses the order (engine TriggerOrder bundle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_017.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5 + (EqualsTraits Shambala || HasTSTraits), cost 3.
+# Blocker (BlockerSelfStaticEffect) / Retaliation (RetaliationSelfEffect) →
+#   grant_keyword ×2.
+# Assembly: 2 elements HasLevel && Level <= 5 && EqualsTraits("Shambala"),
+#   CanTargetCondition_ByPreSelecetedList = no already-picked card shares its
+#   level; reduceCost 4. → `kind: assembly`, repeat 2, distinct_by: level
+#   (BT26-085 idiom), trash materials stacked under.
+# Shared OP/WD (optional:false): mandatory (canNoSelect:false) pick of an own
+#   Digimon whose top card has [Shambala] → ChangeDigimonSAttack(+1) +
+#   GainProgress, both UntilEachTurnEnd.
+#   → select_own_permanent + grant_keyword SecurityAttackPlus 1 + grant_keyword
+#   Progress, expiry end_of_turn.
+# On Deletion (OnDestroyedAnyone, isSkippable; CanActivate: a matching trash
+#   card): PlayByEffect from trash, payCost:false, filter (Shambala || TS) &&
+#   HasPlayCost && cost <= 5 (any playable kind).
+#   → when: on_deletion; optional select_trash { Shambala|TS, play_cost_lte 5,
+#   digimon|tamer } + play_from_trash_free. Zanbamon itself (cost 12) is never
+#   eligible.
+
+card: BT26-017
+name: "Zanbamon"
+kind: digimon
+level: 6
+color: [red, purple]
+cost: 12
+dp: 12000
+traits: [Wizard, Shambala, TB, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Shambala"
+            - trait_has: "TS"
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_gte: 1
+            - level_lte: 5
+            - trait_has: "Shambala"
+        repeat: { min: 2, max: 2 }
+        distinct_by: level
+        zones: [trash]
+        stack_under: true
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation>"
+
+  # ─── [On Play][When Digivolving] 1 [Shambala] Digimon gains <Security A. +1>
+  #     and <Progress> for the turn ─────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your Digimon with the [Shambala] trait gains <Security A. +1> and <Progress> for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Shambala"
+          prompt: "1 of your Digimon with the [Shambala] trait gains <Security A. +1> and <Progress> for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_turn
+      - grant_keyword:
+          target: boosted
+          keyword: Progress
+          expiry: end_of_turn
+
+  # ─── [On Deletion] may play 1 [Shambala]/[TS] card (play cost ≤ 5) from
+  #     trash without paying the cost ──────────────────────────────────────
+  - when: on_deletion
+    summary: "[On Deletion] You may play 1 [Shambala] or [TS] trait card with a play cost of 5 or less from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - trait_has: "Shambala"
+                  - trait_has: "TS"
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - play_cost_lte: 5
+          prompt: "You may play 1 [Shambala] or [TS] trait card with a play cost of 5 or less from your trash without paying the cost"
+      - if:
+          condition: { binding_present: revive_pick }
+          then:
+            - play_from_trash_free: { of: you, hand_index: revive_pick }

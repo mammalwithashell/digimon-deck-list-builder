@@ -1,0 +1,133 @@
+# BT26-038 Kuwagamon — Digimon, Lv.4, Green, DP 5000, Cost 5.
+# Traits: Insectoid, Titan, TS. Form: Champion. Attribute: Virus.
+# Printed digivolve box: Green Lv.3 / cost 2; [Digivolve] Lv.3 w/[TS] trait:
+#   Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-038.md):
+#   [When Moving] [On Play] [When Digivolving] You may suspend 1 Digimon. Then,
+#     1 of your Digimon with the [Insectoid] or [Titan] trait gets +3000 DP
+#     until your opponent's turn ends.
+#   Inherited: [Your Turn] [Once Per Turn] When this Digimon wins a battle, 1 of
+#     your [Insectoid] or [Titan] trait Digimon may digivolve into an
+#     [Insectoid] or [Titan] trait Digimon card in the hand with the cost
+#     reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_038.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3, TopCard.HasTSTraits, cost 2.
+# Shared [When Moving]/[On Play]/[When Digivolving] (optional false, no
+#   CanActivate gate): (a) if an unsuspended Digimon exists on EITHER battle
+#   area, canNoSelect:true Tap pick; (b) canNoSelect:false pick of 1 own
+#   Insectoid/Titan Digimon → ChangeDigimonDP(+3000, UntilOpponentTurnEnd).
+#   → optional select_any_permanent (continue_on_decline) + suspend, then
+#   mandatory select_own_permanent + add_dp_modifier end_of_opponents_turn.
+#   [When Moving] is self-scoped → on_move gated on event_permanent_is_source.
+# Inherited (OnEndBattle, CanTriggerWhenWinBattle(winner contains this card),
+#   IsOwnerTurn, maxPerTurn 1, skippable): identical to BT26-035's inherited
+#   with [Titan] in place of [NSp] → same on_any_deletion +
+#   source_deleted_battle_opponent idiom; refund_opt when no Digimon picked.
+
+card: BT26-038
+name: "Kuwagamon"
+kind: digimon
+level: 4
+color: [green]
+cost: 5
+dp: 5000
+traits: [Insectoid, Titan, TS]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "TS" }
+    cost: 2
+
+effects:
+  # ─── [When Moving][On Play][When Digivolving] may suspend 1 Digimon; then 1
+  #     own [Insectoid]/[Titan] Digimon +3000 DP until opp turn ends ─────────
+  - when: [on_play, on_move, when_digivolving]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play][When Digivolving] You may suspend 1 Digimon. Then, 1 of your [Insectoid]/[Titan] Digimon gets +3000 DP until your opponent's turn ends"
+    process:
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "You may suspend 1 Digimon"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+      - select_own_permanent:
+          bind_as: buff
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Insectoid"
+                  - trait_has: "Titan"
+          prompt: "1 of your [Insectoid]/[Titan] Digimon gets +3000 DP until your opponent's turn ends"
+      - add_dp_modifier:
+          target: buff
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [Your Turn][OPT] win a battle → 1 [Insectoid]/[Titan] Digimon
+  #     may digivolve (hand, cost -1) ────────────────────────────────────────
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "Inherited [Your Turn][OPT] When this Digimon wins a battle, 1 of your [Insectoid]/[Titan] Digimon may digivolve into an [Insectoid]/[Titan] Digimon card in the hand with the cost reduced by 1"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Insectoid"
+                  - trait_has: "Titan"
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - trait_has: "Insectoid"
+                          - trait_has: "Titan"
+          prompt: "Select 1 of your [Insectoid]/[Titan] Digimon that may digivolve"
+      - if:
+          condition: { binding_present: base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - can_digivolve_onto: base
+                    - any_of:
+                        - trait_has: "Insectoid"
+                        - trait_has: "Titan"
+                prompt: "Digivolve into an [Insectoid]/[Titan] Digimon card in your hand with the cost reduced by 1"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: { reduce: 1 }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}

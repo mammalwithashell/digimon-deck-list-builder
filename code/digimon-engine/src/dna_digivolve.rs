@@ -295,10 +295,7 @@ impl Game {
     /// `AddSelfDigivolutionRequirementStaticEffect` costs (the printed
     /// "[Digivolve] [Name]: Cost N" alt evo boxes) to ANY target permanent,
     /// with no battle-area-only gate.
-    pub(crate) fn digivolve_base_permanent(
-        &self,
-        handle: PermanentHandle,
-    ) -> Option<&Permanent> {
+    pub(crate) fn digivolve_base_permanent(&self, handle: PermanentHandle) -> Option<&Permanent> {
         let player = self.players.get(handle.player as usize)?;
         if handle.index == crate::action::space::BREEDING_TARGET as u8 {
             player.breeding_area.as_ref()

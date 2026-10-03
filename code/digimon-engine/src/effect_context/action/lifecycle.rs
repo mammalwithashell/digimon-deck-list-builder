@@ -538,6 +538,11 @@ impl<'a> EffectContext<'a> {
         } else {
             deck.push(card);
         }
+        // G-ENGINE-ON-ADD-TO-DECK: Digi-Eggs routed to the Digi-Egg deck do
+        // not fire "when effects add to decks" (DCGO ruling).
+        if !is_egg {
+            self.game.note_effect_deck_add(self.player);
+        }
     }
 
     pub fn return_all_trash_to_deck_bottom(&mut self, player: PlayerId) -> Vec<CardHandle> {

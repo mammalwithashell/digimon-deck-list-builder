@@ -1,0 +1,69 @@
+# BT26-090 Kanan Yuki — Tamer, Green, Cost 3. Traits: ADAMAS, TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-090.md):
+#   [Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.
+#   [End of Your Turn] By suspending this Tamer, you may use 1 Option card with
+#     the [TS] trait from your hand. For each memory your opponent has, reduce
+#     this effect's paid cost by 1.
+#   Security: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_090.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Start of Main (OnStartMainPhase, owner turn): CanActivate requires
+#   CanAddMemory && MemoryForPlayer <= 4 → AddMemory(1).
+#   → start_of_your_main_phase + `memory_lte: 4` + gain_memory 1 (BT24-085).
+# End of Your Turn (OnEndTurn, owner turn, optional): CanActivate requires the
+#   Tamer to be suspendable; SuspendPermanent → on success a canNoSelect:true
+#   hand pick over IsOption && HasTSTraits (affordable at cost - opponent
+#   memory) → PlayOptionCards(payCost: true) with a one-shot
+#   ChangeCost(-Enemy.MemoryForPlayer) on the selected card.
+#   → clause optional + `source_is_unsuspended` + activation_cost suspend_self;
+#   optional select_hand (Option, [TS]); play_or_use_from_hand with
+#   cost_delta reduce = opponent memory (`player_memory { of: opponent }`).
+# Security: PlaySelfTamerSecurityEffect → on_security play_from_security.
+
+card: BT26-090
+name: "Kanan Yuki"
+kind: tamer
+color: [green]
+cost: 3
+traits: [ADAMAS, TS]
+
+effects:
+  - when: start_of_your_main_phase
+    condition: { memory_lte: 4 }
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── [End of Your Turn] by suspending this Tamer, may use 1 [TS] Option
+  #     from hand; paid cost reduced by 1 per opponent memory ───────────────
+  - when: end_of_your_turn
+    optional: true
+    condition: { source_is_unsuspended: true }
+    summary: "[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand. For each memory your opponent has, reduce this effect's paid cost by 1"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: ts_option
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: TS
+          prompt: "You may use 1 Option card with the [TS] trait from your hand (cost reduced by 1 for each memory your opponent has)"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: ts_option
+          cost_delta:
+            reduce:
+              base: 0
+              per: { player_memory: { of: opponent } }
+              delta: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

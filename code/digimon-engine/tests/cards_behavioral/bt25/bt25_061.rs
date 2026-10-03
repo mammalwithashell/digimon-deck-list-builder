@@ -191,8 +191,7 @@ fn bt25_061_has_start_main_and_when_linked_clauses() {
     });
     let when_linked = card.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
+            t.when.contains(&CompiledTiming::WhenLinked) && matches!(t.scope, CompiledScope::Linked)
         }
         _ => false,
     });
@@ -265,7 +264,8 @@ fn bt25_061_start_main_decline_is_free_noop() {
         r.game.pending_selection.is_some(),
         "optional trash cost must surface a pending selection"
     );
-    r.execute_action(0, PASS).expect("decline the optional trash");
+    r.execute_action(0, PASS)
+        .expect("decline the optional trash");
     r.auto_resolve().ok();
 
     assert_eq!(r.trash_size(0), trash_before, "declined ⇒ nothing trashed");

@@ -176,7 +176,14 @@ impl Game {
                 let Some(top) = perm.card_sources.last() else {
                     continue;
                 };
-                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
+                sources.push((
+                    top.data_index,
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                    false,
+                ));
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
@@ -188,6 +195,20 @@ impl Game {
                         source.handle(),
                         Some(handle),
                         player_id,
+                        true,
+                        false,
+                    ));
+                }
+                // `<Succession>`: an adopted source's top-scope declaratives
+                // also materialize onto the carrier.
+                for source_index in self.succession_source_indices(handle) {
+                    let source = &perm.card_sources[source_index];
+                    sources.push((
+                        source.data_index,
+                        source.handle(),
+                        Some(handle),
+                        player_id,
+                        false,
                         true,
                     ));
                 }
@@ -203,7 +224,14 @@ impl Game {
                     index: crate::action::space::BREEDING_TARGET as u8,
                 };
                 let top = perm.top_card();
-                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
+                sources.push((
+                    top.data_index,
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                    false,
+                ));
             }
 
             // Track H §5 — security-zone-sourced auras. Face-up security
@@ -222,11 +250,26 @@ impl Game {
                 if !player.face_up_security.contains(&card.card_index) {
                     continue;
                 }
-                sources.push((card.data_index, card.handle(), None, player_id, false));
+                sources.push((
+                    card.data_index,
+                    card.handle(),
+                    None,
+                    player_id,
+                    false,
+                    false,
+                ));
             }
         }
 
-        for (data_index, source_card, source_permanent, controller, inherited_source) in sources {
+        for (
+            data_index,
+            source_card,
+            source_permanent,
+            controller,
+            inherited_source,
+            adopted_copy,
+        ) in sources
+        {
             let Some(effects) =
                 self.effects_for_card(&self.card_data[data_index].card_id, source_card)
             else {
@@ -234,6 +277,18 @@ impl Game {
             };
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if adopted_copy && !Game::is_adoptable_effect(effect) {
+                    continue;
+                }
+                // A `.linked()` declarative is Link-ESS: it applies to the HOST
+                // only while this card is a link card (the linked-card pass
+                // below). A standing / digivolution-source copy of the card
+                // must not grant it to itself (BT26-010 Roleplaymon's linked
+                // <Progress>/<Piercing>; DCGO `SetIsLinkedEffect(true)` gates
+                // on `IsLinked`).
+                if effect.linked {
                     continue;
                 }
                 if !effect.materializes_declarative_state || effect.process.is_none() {
@@ -386,7 +441,11 @@ impl Game {
                     // is the sole lifetime authority. Using `fm.expiry` here would
                     // expire the entry one turn-end early relative to the descriptor
                     // (`*NextTurn` skips live on the descriptor, not the entry).
-                    if let Some(payload) = &fm.payload {
+                    if let Some(kw) = fm.keyword {
+                        // Continuous mass keyword grant (BT26-101 Cross Arts).
+                        // G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT.
+                        ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
+                    } else if let Some(payload) = &fm.payload {
                         // Continuous mass structured-payload aura (BT25-104:
                         // "all of your [Marcus Damon]s are also treated as 12000
                         // DP Digimon"): the materialized entry carries the

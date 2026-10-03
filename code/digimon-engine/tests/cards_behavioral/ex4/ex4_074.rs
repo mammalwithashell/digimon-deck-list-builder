@@ -270,7 +270,12 @@ fn ex4_074_end_of_attack_self_deletion_on_deletion_waits_until_the_body_resolves
         .battle_area
         .iter()
         .enumerate()
-        .map(|(i, _)| runner.dp_of(PermanentHandle { player: 1, index: i as _ }))
+        .map(|(i, _)| {
+            runner.dp_of(PermanentHandle {
+                player: 1,
+                index: i as _,
+            })
+        })
         .collect();
     assert_eq!(
         dps,
@@ -278,13 +283,20 @@ fn ex4_074_end_of_attack_self_deletion_on_deletion_waits_until_the_body_resolves
         "the self-deletion [On Deletion] -5000 must still be pending at the pick (15-8-3-2)"
     );
 
-    runner.auto_resolve().expect("finish [End of Attack] and the pending [On Deletion]");
+    runner
+        .auto_resolve()
+        .expect("finish [End of Attack] and the pending [On Deletion]");
     let _ = opp_2;
     let survivors: Vec<i32> = runner.game.players[1]
         .battle_area
         .iter()
         .enumerate()
-        .filter_map(|(i, _)| runner.dp_of(PermanentHandle { player: 1, index: i as _ }))
+        .filter_map(|(i, _)| {
+            runner.dp_of(PermanentHandle {
+                player: 1,
+                index: i as _,
+            })
+        })
         .collect();
     assert_eq!(survivors.len(), 1, "one opposing Digimon was deleted");
     assert!(

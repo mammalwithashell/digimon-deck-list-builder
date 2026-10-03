@@ -2,6 +2,12 @@
 //!
 //! Usage:
 //!   dsl-lint <path> [--format human|json] [--strict] [--cross-check <cards.json>]
+//!            [--printed <card_official.json>]
+//!
+//! `--printed` enables the security-icon check: `scope: security` clauses must
+//! match a pink `{Security}` (face-up) effect on the printed card and
+//! `when: on_security` clauses a blue `[Security]` effect
+//! (`digimon_dsl::security_icon_lint`).
 //!
 //! Exit codes:
 //!   0 — no diagnostics
@@ -11,6 +17,7 @@
 
 use digimon_engine::dsl::loader;
 use digimon_engine::dsl::raw_rust_registry::StubRegistry;
+use digimon_engine::dsl::security_icon_lint::{check_security_icons, PrintedSection};
 use digimon_engine::dsl::validator::{validate, ValidationContext};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -27,6 +34,7 @@ struct Args {
     format: Format,
     strict: bool,
     cross_check_path: Option<PathBuf>,
+    printed_path: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -34,6 +42,7 @@ fn parse_args() -> Result<Args, String> {
     let mut format = Format::Human;
     let mut strict = false;
     let mut cross_check_path: Option<PathBuf> = None;
+    let mut printed_path: Option<PathBuf> = None;
     let mut iter = std::env::args().skip(1);
     while let Some(arg) = iter.next() {
         match arg.as_str() {
@@ -50,8 +59,12 @@ fn parse_args() -> Result<Args, String> {
                 let v = iter.next().ok_or("--cross-check requires a path")?;
                 cross_check_path = Some(PathBuf::from(v));
             }
+            "--printed" => {
+                let v = iter.next().ok_or("--printed requires a path")?;
+                printed_path = Some(PathBuf::from(v));
+            }
             "-h" | "--help" => {
-                println!("Usage: dsl-lint <path> [--format human|json] [--strict] [--cross-check <cards.json>]");
+                println!("Usage: dsl-lint <path> [--format human|json] [--strict] [--cross-check <cards.json>] [--printed <card_official.json>]");
                 std::process::exit(0);
             }
             s if s.starts_with("--") => return Err(format!("unknown flag: {s}")),
@@ -69,6 +82,7 @@ fn parse_args() -> Result<Args, String> {
         format,
         strict,
         cross_check_path,
+        printed_path,
     })
 }
 
@@ -87,9 +101,36 @@ enum Severity {
     Warning,
 }
 
+type PrintedDb = std::collections::HashMap<String, Vec<PrintedSection>>;
+
+/// Load `card_official.json` (`{cards: {<id>: {text_sections: [{label, text}]}}}`).
+fn load_printed(path: &Path) -> Result<PrintedDb, String> {
+    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    let cards = v["cards"].as_object().ok_or("no `cards` object")?;
+    Ok(cards
+        .iter()
+        .map(|(id, c)| {
+            let secs = c["text_sections"]
+                .as_array()
+                .map(|a| {
+                    a.iter()
+                        .map(|s| PrintedSection {
+                            label: s["label"].as_str().unwrap_or_default().to_string(),
+                            text: s["text"].as_str().unwrap_or_default().to_string(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            (id.clone(), secs)
+        })
+        .collect())
+}
+
 fn lint_file(
     path: &Path,
     adapter: Option<&dyn digimon_engine::dsl::loader::CardDataDb>,
+    printed: Option<&PrintedDb>,
     diags: &mut Vec<Diagnostic>,
 ) {
     let file = path.display().to_string();
@@ -121,6 +162,17 @@ fn lint_file(
                 severity: Severity::Error,
                 path: e.path,
                 message: e.message,
+            });
+        }
+    }
+
+    if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
+        for f in check_security_icons(&spec, sections) {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Error,
+                path: f.path,
+                message: format!("security-icon/{:?}: {}", f.rule, f.message),
             });
         }
     }
@@ -202,9 +254,16 @@ fn real_main() -> ExitCode {
         .as_ref()
         .map(|a| a as &dyn digimon_engine::dsl::loader::CardDataDb);
 
+    let printed = args.printed_path.as_ref().map(|p| {
+        load_printed(p).unwrap_or_else(|e| {
+            eprintln!("dsl-lint: failed to load {}: {e}", p.display());
+            std::process::exit(3);
+        })
+    });
+
     let mut diags = Vec::new();
     for file in walk_yaml(&args.path) {
-        lint_file(&file, adapter_dyn, &mut diags);
+        lint_file(&file, adapter_dyn, printed.as_ref(), &mut diags);
     }
 
     match args.format {

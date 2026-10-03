@@ -30,6 +30,15 @@ effects:
         .deck(1, &filler)
         .memory(3)
         .start();
+    // Rule 15-14-5: a {Security} effect is active only while FACE UP
+    // (G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP).
+    let idx = runner.game.players[0]
+        .security
+        .iter()
+        .find(|c| c.card_id(&runner.game.card_data) == "SEC-EOT")
+        .map(|c| c.card_index)
+        .expect("SEC-EOT in security");
+    runner.game.players[0].face_up_security.insert(idx);
 
     runner.end_turn();
     assert_eq!(runner.game.turn_player(), 1);

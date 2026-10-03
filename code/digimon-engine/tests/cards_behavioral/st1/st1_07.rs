@@ -495,9 +495,8 @@ fn st1_07_sec_plus_expires_when_source_trashed_by_cost() {
 #[test]
 fn st1_07_sec_plus_expires_when_source_trashed_by_handle() {
     let (mut runner, carrier) = stack_with_greymon_source();
-    let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize].card_sources
-        [0]
-    .handle();
+    let greymon_handle =
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
     {
         let src = runner.top_card(carrier);
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
@@ -526,9 +525,8 @@ fn st1_07_sec_plus_expires_when_de_digivolve_exposes_source_as_top() {
 #[test]
 fn st1_07_sec_plus_expires_when_source_returned_to_hand() {
     let (mut runner, carrier) = stack_with_greymon_source();
-    let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize].card_sources
-        [0]
-    .handle();
+    let greymon_handle =
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
     {
         let src = runner.top_card(carrier);
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
@@ -543,9 +541,8 @@ fn st1_07_sec_plus_expires_when_source_returned_to_hand() {
 fn st1_07_sec_plus_expires_when_source_returned_to_deck() {
     for to_bottom in [true, false] {
         let (mut runner, carrier) = stack_with_greymon_source();
-        let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize]
-            .card_sources[0]
-            .handle();
+        let greymon_handle =
+            runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
         {
             let src = runner.top_card(carrier);
             let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);

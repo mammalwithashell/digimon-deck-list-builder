@@ -180,7 +180,10 @@ fn advance_to_kari_optional_prompt(runner: &mut DebugRunner) -> bool {
             None if view.is_optional => digimon_engine::action::space::PASS,
             None => return false,
         };
-        if runner.execute_action(view.selecting_player, action).is_err() {
+        if runner
+            .execute_action(view.selecting_player, action)
+            .is_err()
+        {
             return false;
         }
     }

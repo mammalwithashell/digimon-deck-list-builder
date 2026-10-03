@@ -274,7 +274,11 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return false;
         }
-        self.game.return_to_deck(target, position)
+        let moved = self.game.return_to_deck(target, position);
+        if moved {
+            self.game.note_effect_deck_add(self.player);
+        }
+        moved
     }
 
     /// Return a permanent's full stack to its owner's deck. See
@@ -287,7 +291,11 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return false;
         }
-        self.game.return_stack_to_deck(target, position)
+        let moved = self.game.return_stack_to_deck(target, position);
+        if moved {
+            self.game.note_effect_deck_add(self.player);
+        }
+        moved
     }
 
     /// Move a SELECTED LIST of cards out of `player`'s trash to the bottom of

@@ -1,0 +1,99 @@
+# BT26-074 Cerberusmon — Digimon, Lv.5, Purple/Black, DP 7000, Cost 7.
+# Traits: Dark Animal, Titan, TS. Form: Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.4 / cost 4; Black Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-074.md):
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] If it's your
+#     turn, by trashing 1 card in your hand, you may use 1 Option card with the
+#     [Titan] trait from your trash with the cost reduced by 2.
+#   Inherited: [On Deletion] Delete 1 of your opponent's Digimon with the
+#     lowest level.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_074.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 && TopCard.EqualsTraits("TS"), cost 3.
+# Shared OP / WD / WA (maxCountPerTurn 1, optional false; additional
+#   condition IsOwnerTurn && hand >= 1): canNoSelect:true hand pick (the
+#   cost); on a successful trash, if a usable [Titan] Option exists in the
+#   trash, a canNoSelect:true pick → PlayOptionCards(payCost, Root.Trash)
+#   with a -2 ChangeCostClass. RemoveUse only when the hand cost was not paid.
+#   → condition your_turn + hand >= 1; optional select_hand; on pick: trash +
+#   use_option_from_trash { [Titan] Option, reduce 2, optional } (the step
+#   installs no prompt when no candidate exists); declined cost → refund_opt.
+# Inherited (OnDestroyedAnyone, not optional): if an opponent Digimon at the
+#   opponent's minimum level exists, mandatory Destroy pick of 1.
+#   → select_opponent_permanent (level <= the opponent's lowest Digimon
+#   level, Digimon only) → delete.
+
+card: BT26-074
+name: Cerberusmon
+kind: digimon
+level: 5
+color: [purple, black]
+cost: 7
+dp: 7000
+traits: [Dark Animal, Titan, TS]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving][When Attacking][OPT] your turn: by trashing
+  #     1 hand card, may use 1 [Titan] Option from trash at -2 ──────────────
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] If it's your turn, by trashing 1 card in your hand, you may use 1 [Titan] Option card from your trash with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to use 1 [Titan] Option card from your trash with the cost reduced by 2"
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+            - use_option_from_trash:
+                of: you
+                optional: true
+                filter:
+                  all_of:
+                    - kind: option
+                    - trait_has: Titan
+                cost: { reduce: 2 }
+                prompt: "You may use 1 [Titan] Option card from your trash with the cost reduced by 2"
+          else:
+            - refund_opt: {}
+
+  # ─── Inherited [On Deletion] delete 1 opponent's lowest-level Digimon ─────
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Delete 1 of your opponent's Digimon with the lowest level"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte:
+                  aggregate:
+                    selector: lowest_level
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the lowest level"
+      - delete_permanent: { target: victim }

@@ -534,8 +534,10 @@ fn collect_candidates(
             return;
         };
         let stack_size = perm.card_sources.len();
+        // `<Succession>`: an adopted source's top-scope replacements apply too.
+        let adopted = game.succession_source_indices(h);
         for (source_index, source) in perm.card_sources.iter().enumerate() {
-            let inherited_source = source_index + 1 < stack_size;
+            let is_adopted = adopted.contains(&source_index);
             let card_id = source.card_id(&game.card_data).to_string();
             let source_card = source.handle();
 
@@ -544,7 +546,12 @@ fn collect_candidates(
             };
 
             for (slot, effect) in effects.iter().enumerate() {
-                if effect.inherited != inherited_source {
+                if !crate::game::Game::source_effect_is_active(
+                    source_index,
+                    stack_size,
+                    is_adopted,
+                    effect,
+                ) {
                     continue;
                 }
                 if effect.timing != timing {
@@ -557,8 +564,15 @@ fn collect_candidates(
                     continue;
                 }
                 if effect.max_per_turn > 0 {
+                    let opt_key = game.opt_key_for_source(
+                        h,
+                        source_card,
+                        effect.inherited,
+                        effect.linked,
+                        slot as u8,
+                    );
                     let Some(activation_count) =
-                        source_permanent_activation_count(game, h, source_card, slot as u8)
+                        source_permanent_activation_count(game, h, source_card, opt_key)
                     else {
                         continue;
                     };
@@ -1100,15 +1114,22 @@ fn run_effect_inner(
         let Some(source_permanent) = source_permanent else {
             return ReplacementOutcome::None;
         };
+        let opt_key = game.opt_key_for_source(
+            source_permanent,
+            source_card,
+            effect.inherited,
+            effect.linked,
+            effect_slot,
+        );
         let Some(activation_count) =
-            source_permanent_activation_count(game, source_permanent, source_card, effect_slot)
+            source_permanent_activation_count(game, source_permanent, source_card, opt_key)
         else {
             return ReplacementOutcome::None;
         };
         if activation_count >= effect.max_per_turn {
             return ReplacementOutcome::None;
         }
-        record_source_permanent_activation(game, source_permanent, source_card, effect_slot);
+        record_source_permanent_activation(game, source_permanent, source_card, opt_key);
     }
 
     // Build the EffectContext then the ReplacementContext in an inner scope
@@ -1606,18 +1627,22 @@ pub(crate) fn run_optional_replacement_step(
     game.replacement_pending_outcome = Some(outcome);
     // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —
     // see `make_accept_callback`.
-    run_commit_with_flag(game, outcome != ReplacementOutcome::None,
+    run_commit_with_flag(
+        game,
+        outcome != ReplacementOutcome::None,
         // Accepted but non-replacing: this commit must not re-offer its own window.
-        Some((state.timing, state.subject)), |game| {
-        commit_deferred_outcome(
-            game,
-            state.subject,
-            state.cause,
-            state.event_cause_override,
-            state.original_destination,
-            outcome,
-        );
-    });
+        Some((state.timing, state.subject)),
+        |game| {
+            commit_deferred_outcome(
+                game,
+                state.subject,
+                state.cause,
+                state.event_cause_override,
+                state.original_destination,
+                outcome,
+            );
+        },
+    );
     if has_unrelated_parked_replacement {
         game.replacement_pending_outcome = None;
     }

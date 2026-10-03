@@ -1,0 +1,113 @@
+# BT26-078 Cherubimon — Digimon, Lv.6, Purple/Green, DP 13000, Cost 13.
+# Traits: Cherub, Titan, TS (official Bandai DB — cards.json drops Titan).
+# Attribute: Vaccine. Form: Mega.
+# Printed digivolve box: Purple Lv.5 / cost 5; Green Lv.5 / cost 5;
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 5.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-078.md):
+#   [Trash] [Your Turn] When any of your [Chronomon] text or [Titan] trait
+#     Digimon are played, if your opponent has 5 or more memory, by returning
+#     this card to the bottom of the deck, 1 of them gains <Rush> and
+#     <Execute> for the turn.
+#   [On Play] [When Digivolving] By deleting this Digimon, you may play 1 play
+#     cost 12 or lower [Chronomon] text or [Titan] trait card from your trash
+#     without paying the cost.
+#   Official Q&A: "[Chronomon] text" scans the whole card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_078.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5 && TopCard.EqualsTraits("TS"), cost 5.
+# [Trash][Your Turn] (OnEnterFieldAnyone, IsExistOnTrashTrigger, IsOwnerTurn,
+#   CanTriggerOnPermanentPlay over own battle-area Digimon whose top card
+#   HasText("Chronomon") || EqualsTraits("Titan")); optional (isOptional
+#   true); activate condition Owner.Enemy.MemoryForPlayer >= 5; body:
+#   AddLibraryBottomCards(this) then a pick (auto when 1) among the matching
+#   played permanents → GainRush + GainExecute (UntilEachTurnEnd).
+#   → scope: trash + on_ally_played + active_when your_turn; condition gates
+#   the played permanent (event_target_*) and "opponent has 5+ memory" as the
+#   controller's signed gauge `own_memory_lte: -5`; optional; the cost
+#   `return_trash_list_to_deck_bottom { cards: self }` then grant_keyword
+#   Rush + Execute (end_of_turn) to `event_target` — the engine raises one
+#   on_ally_played per played permanent, and once this card has left the
+#   trash no further copy can activate, so the player's accept/decline over
+#   the per-permanent triggers is the "1 of them" choice.
+# [On Play][When Digivolving] (shared, optional: true): DeletePermanent(this)
+#   and on success PlayByEffect(Root.Trash, payCost: false, canNoSelect
+#   default true) over HasPlayCost && cost ≤ 12 && (HasText("Chronomon") ||
+#   EqualsTraits("Titan")).
+#   → optional clause; delete_permanent source; if
+#   effect_deleted_any_own_digimon → optional select_trash (Digimon/Tamer —
+#   the cards with a play cost) → play_from_trash_free.
+
+card: BT26-078
+name: Cherubimon
+kind: digimon
+level: 6
+color: [purple, green]
+cost: 13
+dp: 13000
+traits: [Cherub, Titan, TS]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 5
+
+effects:
+  # ─── [Trash][Your Turn] own [Chronomon]-text / [Titan] Digimon played, opp
+  #     ≥5 memory → bottom-deck this card → it gains <Rush> + <Execute> ──────
+  - when: on_ally_played
+    scope: trash
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_in_text_contains: "Chronomon"
+            - event_target_trait_has: Titan
+        - own_memory_lte: -5
+    summary: "[Trash][Your Turn] When any of your [Chronomon] text or [Titan] trait Digimon are played, if your opponent has 5 or more memory, by returning this card to the bottom of the deck, 1 of them gains <Rush> and <Execute> for the turn"
+    process:
+      - return_trash_list_to_deck_bottom: { of: you, cards: self }
+      - grant_keyword:
+          target: event_target
+          keyword: Rush
+          expiry: end_of_turn
+      - grant_keyword:
+          target: event_target
+          keyword: Execute
+          expiry: end_of_turn
+
+  # ─── [On Play][When Digivolving] by deleting this Digimon, may play 1 cost
+  #     ≤12 [Chronomon]-text / [Titan] card from trash free ─────────────────
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] By deleting this Digimon, you may play 1 play cost 12 or lower [Chronomon] text or [Titan] trait card from your trash without paying the cost"
+    process:
+      - delete_permanent: { target: source }
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - select_trash:
+                of: you
+                bind_as: revive
+                optional: true
+                filter:
+                  all_of:
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                    - play_cost_lte: 12
+                    - any_of:
+                        - in_text_contains: "Chronomon"
+                        - trait_has: Titan
+                prompt: "You may play 1 play cost 12 or lower [Chronomon] text or [Titan] trait card from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: revive }

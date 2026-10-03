@@ -108,7 +108,11 @@ fn pass_until_breeding_phase(r: &mut DebugRunner, player: u8) {
         }
         r.game.pass_turn();
     }
-    assert_eq!(r.game.turn_player(), player, "expected player {player}'s turn");
+    assert_eq!(
+        r.game.turn_player(),
+        player,
+        "expected player {player}'s turn"
+    );
     assert_eq!(
         r.game.current_phase,
         GamePhase::Breeding,
@@ -318,7 +322,11 @@ fn elizamon_to_dimetromon_breeding_digivolve_works() {
             "BT21-008",
             "Elizamon must be the breeding-area top card"
         );
-        assert_eq!(breeding.card_sources.len(), 2, "stack must be egg + Elizamon");
+        assert_eq!(
+            breeding.card_sources.len(),
+            2,
+            "stack must be egg + Elizamon"
+        );
     }
     assert_eq!(r.memory(), memory_before, "Elizamon circle costs 0 memory");
     assert_eq!(

@@ -1087,7 +1087,10 @@ fn dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones() {
         .rev()
         .map(|c| c.card_id(&s.game.card_data))
         .collect();
-    assert_eq!(my_lib_draw_order, my_lib, "my library in recorded draw order");
+    assert_eq!(
+        my_lib_draw_order, my_lib,
+        "my library in recorded draw order"
+    );
 
     let my_sec_draw_order: Vec<&str> = s.game.players[0]
         .security

@@ -423,7 +423,9 @@ fn p_170_opponent_option_is_trashed_before_on_deletion_resolves() {
 
     runner.game.play_option_from_hand(0, 0);
     // Gaia Force's [Main] target pick: AvengeKidmon.
-    let view = runner.pending_selection_view().expect("Gaia Force target pick");
+    let view = runner
+        .pending_selection_view()
+        .expect("Gaia Force target pick");
     assert_eq!(view.selecting_player, 0);
     let pick = view
         .valid_action_ids
@@ -450,11 +452,17 @@ fn p_170_opponent_option_is_trashed_before_on_deletion_resolves() {
 
     runner.accept_optional_trigger().expect("accept");
     let pick = runner.pending_selection().unwrap().valid_action_ids[0];
-    runner.execute_action(1, pick).expect("play TM-COST12 from hand");
+    runner
+        .execute_action(1, pick)
+        .expect("play TM-COST12 from hand");
     runner.auto_resolve().ok();
     assert!(runner.game.players[1]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "TM-COST12"));
-    assert_eq!(runner.game.players[0].trash.len(), 1, "trashed exactly once");
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        1,
+        "trashed exactly once"
+    );
 }

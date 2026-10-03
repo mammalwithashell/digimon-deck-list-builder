@@ -1262,9 +1262,8 @@ impl Game {
             };
             if let Some(trigger) = trigger {
                 let next_turn = self.compute_delay_trash_turn(owner, trigger);
-                if let crate::permanent::OptionState::Delayed {
-                    trash_on_turn, ..
-                } = &mut self.player_mut(owner).battle_area[slot].option_state
+                if let crate::permanent::OptionState::Delayed { trash_on_turn, .. } =
+                    &mut self.player_mut(owner).battle_area[slot].option_state
                 {
                     *trash_on_turn = next_turn;
                 }

@@ -177,7 +177,9 @@ fn official_db_inherited_text_matches_cards_json() {
             .unwrap_or_default()
             .to_string();
         if want.is_empty() {
-            failures.push(format!("{id}: official mirror has no Inherited Effect section"));
+            failures.push(format!(
+                "{id}: official mirror has no Inherited Effect section"
+            ));
             continue;
         }
         if norm(&want) != norm(&got) {

@@ -1,0 +1,124 @@
+# BT26-035 Morphomon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Insectoid, NSp. Form: Rookie. Attribute: Vaccine.
+# Printed digivolve box: Green Lv.2 / cost 0; [Digivolve] Lv.2 w/[NSp] trait:
+#   Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-035.md):
+#   [When Moving] [On Play] You may suspend 1 Digimon.
+#   Inherited: [Your Turn] [Once Per Turn] When this Digimon wins a battle, 1 of
+#     your [Insectoid] or [NSp] trait Digimon may digivolve into an [Insectoid]
+#     or [NSp] trait Digimon card in the hand with the cost reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_035.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 2, TopCard EqualsTraits "NSp", cost 0.
+# Shared [When Moving]/[On Play] (optional false, skippable; CanActivate = an
+#   unsuspended Digimon on EITHER battle area): canNoSelect:true Tap pick of 1
+#   Digimon (any player). → condition any_permanent + optional
+#   select_any_permanent + suspend. [When Moving] is self-scoped → on_move
+#   gated on event_permanent_is_source (BT26-036 idiom).
+# Inherited (OnEndBattle, CanTriggerWhenWinBattle(winner contains this card),
+#   IsOwnerTurn, maxPerTurn 1, skippable): canNoSelect:true pick of 1 own
+#   Insectoid/NSp Digimon → DigivolveIntoHandOrTrashCard(isHand, payCost,
+#   reduce 1, isOptional) over IsDigimon && Insectoid|NSp; RemoveUse only when
+#   no Digimon was picked. → on_any_deletion + source_deleted_battle_opponent
+#   (the "wins a battle" idiom, BT25-048/051) + your_turn; optional
+#   select_own_permanent (has_digivolve_candidate) continue_on_decline →
+#   optional select_hand (can_digivolve_onto) + effect_initiated_digivolve
+#   reduce 1; refund_opt when no Digimon was picked (BT26-091 idiom).
+
+card: BT26-035
+name: "Morphomon"
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Insectoid, NSp]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "NSp" }
+    cost: 0
+
+effects:
+  # ─── [When Moving][On Play] you may suspend 1 Digimon ─────────────────────
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      any_permanent:
+        of: any
+        zone: [battle_area]
+        kind: digimon
+        is_suspended: false
+    summary: "[When Moving][On Play] You may suspend 1 Digimon"
+    process:
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "You may suspend 1 Digimon"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+
+  # ─── Inherited [Your Turn][OPT] win a battle → 1 [Insectoid]/[NSp] Digimon
+  #     may digivolve (hand, cost -1) ────────────────────────────────────────
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "Inherited [Your Turn][OPT] When this Digimon wins a battle, 1 of your [Insectoid]/[NSp] Digimon may digivolve into an [Insectoid]/[NSp] Digimon card in the hand with the cost reduced by 1"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Insectoid"
+                  - trait_has: "NSp"
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - trait_has: "Insectoid"
+                          - trait_has: "NSp"
+          prompt: "Select 1 of your [Insectoid]/[NSp] Digimon that may digivolve"
+      - if:
+          condition: { binding_present: base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - can_digivolve_onto: base
+                    - any_of:
+                        - trait_has: "Insectoid"
+                        - trait_has: "NSp"
+                prompt: "Digivolve into an [Insectoid]/[NSp] Digimon card in your hand with the cost reduced by 1"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: { reduce: 1 }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}

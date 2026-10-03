@@ -51,7 +51,12 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("BT6-105 must load from the embedded DSL pack")
         .add_card(digimon("FILL", CardColor::Black, 3, &[]))
-        .add_card(digimon("TM-PURPLE", CardColor::Purple, 6, &["Three Musketeers"]))
+        .add_card(digimon(
+            "TM-PURPLE",
+            CardColor::Purple,
+            6,
+            &["Three Musketeers"],
+        ))
         .add_card(digimon("PURPLE-BIG", CardColor::Purple, 12, &[]))
         .add_card(digimon("BLACK-5", CardColor::Black, 5, &[]))
         .add_card(digimon("BLACK-8", CardColor::Black, 8, &[]))
@@ -96,7 +101,9 @@ fn bt6_105_metadata_and_clauses() {
         .find(|t| t.when == vec![CompiledTiming::MainFromHand])
         .expect("[Main] clause");
     assert!(!main.optional);
-    assert!(triggered.iter().any(|t| t.when == vec![CompiledTiming::OnSecurity]));
+    assert!(triggered
+        .iter()
+        .any(|t| t.when == vec![CompiledTiming::OnSecurity]));
 }
 
 // ─── Section 2: colour bypass ────────────────────────────────────────────────
@@ -125,7 +132,11 @@ fn bt6_105_a_musketeer_digimon_lets_a_non_black_board_use_it() {
     );
     let _ = runner.auto_resolve();
     assert_eq!(runner.memory(), 3, "cost 7 paid");
-    assert_eq!(field_ids(&runner, 0), vec!["PURPLE-BIG".to_string()], "the cost-6 Musketeer itself is deleted");
+    assert_eq!(
+        field_ids(&runner, 0),
+        vec!["PURPLE-BIG".to_string()],
+        "the cost-6 Musketeer itself is deleted"
+    );
 }
 
 // ─── Section 3: [Main] delete all play cost ≤ 7 ──────────────────────────────
@@ -144,8 +155,16 @@ fn bt6_105_main_deletes_every_digimon_with_play_cost_7_or_less_on_both_sides() {
     assert_ne!(result, OptionPlayResult::Invalid);
     let _ = runner.auto_resolve();
 
-    assert_eq!(field_ids(&runner, 0), vec!["BLACK-8".to_string()], "own cost-5 deleted, cost-8 survives");
-    assert_eq!(field_ids(&runner, 1), vec!["OPP-12".to_string()], "opp cost-7 deleted (≤ 7 inclusive), cost-12 survives");
+    assert_eq!(
+        field_ids(&runner, 0),
+        vec!["BLACK-8".to_string()],
+        "own cost-5 deleted, cost-8 survives"
+    );
+    assert_eq!(
+        field_ids(&runner, 1),
+        vec!["OPP-12".to_string()],
+        "opp cost-7 deleted (≤ 7 inclusive), cost-12 survives"
+    );
     assert_eq!(runner.trash_size(1), opp_trash_before + 1);
     // Own trash: BLACK-5 + the used Option itself.
     assert_eq!(runner.trash_size(0), own_trash_before + 2);
@@ -172,7 +191,10 @@ fn bt6_105_main_deletes_the_whole_set_as_one_batch() {
         })
         .collect();
     for id in ["BLACK-5", "OPP-7", "FILL"] {
-        assert!(trashed.iter().any(|t| t == id), "{id} must be trashed by the [Main]; trashed = {trashed:?}");
+        assert!(
+            trashed.iter().any(|t| t == id),
+            "{id} must be trashed by the [Main]; trashed = {trashed:?}"
+        );
     }
     assert!(runner.game.players[0].battle_area.is_empty());
     assert!(runner.game.players[1].battle_area.is_empty());

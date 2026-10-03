@@ -116,7 +116,10 @@ fn bt3_096_metadata_and_clauses() {
         .find(|t| t.when == vec![CompiledTiming::OnUseOption])
         .expect("on_use_option clause");
     assert!(use_opt.optional, "'you may suspend this Tamer' is optional");
-    assert!(!use_opt.once_per_turn, "no [Once Per Turn] printed — the suspend cost self-limits");
+    assert!(
+        !use_opt.once_per_turn,
+        "no [Once Per Turn] printed — the suspend cost self-limits"
+    );
     assert_eq!(use_opt.scope, CompiledScope::FaceUp);
 
     let sec = triggered
@@ -137,8 +140,15 @@ fn bt3_096_own_option_use_offers_suspend_then_gains_one_memory() {
 
     // Cost 1 is paid first (5 → 4); Death Claw's [Main] self-skips (P0 has no
     // Digimon to offer for the self-delete); Mimi's trigger then parks.
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
-    assert_eq!(runner.memory(), 4, "the Option's use cost was paid before the trigger");
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    assert_eq!(
+        runner.memory(),
+        4,
+        "the Option's use cost was paid before the trigger"
+    );
 
     // 15-4-3-5-1: P0 orders their two pending items. Take DCGO's order (the
     // trash first) -- the alternative is pinned in Section 2b.
@@ -158,7 +168,10 @@ fn bt3_096_declining_leaves_mimi_unsuspended_and_memory_unchanged() {
     runner.place_on_field(0, CARD_ID, Some(0));
     let mimi = mimi_handle(&runner);
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     pick_order_entry(&mut runner, "Trash");
     let view = runner.pending_selection_view().expect("prompt parked");
     assert!(view.is_optional);
@@ -245,7 +258,10 @@ fn bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed() 
     runner.place_on_field(0, CARD_ID, Some(0));
     let mimi = mimi_handle(&runner);
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     assert_eq!(runner.memory(), 4, "the Option's use cost was paid");
     assert!(
         p0_trash_ids(&runner).is_empty(),
@@ -280,7 +296,10 @@ fn bt3_096_option_user_may_trash_the_option_before_their_trigger() {
     runner.place_on_field(0, CARD_ID, Some(0));
     let mimi = mimi_handle(&runner);
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     pick_order_entry(&mut runner, "Trash");
     assert_eq!(
         p0_trash_ids(&runner),
@@ -303,7 +322,10 @@ fn bt3_096_no_order_prompt_when_the_user_has_no_pending_trigger() {
     // No Mimi on P0's field — nothing of P0's is pending beside the trash.
     // FILL is purple, so P0 still meets the Option's colour requirement (4-19).
     runner.place_on_field(0, "FILL", Some(0));
-    assert_ne!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_ne!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
     if let Some(view) = runner.pending_selection_view() {
         // Death Claw's own optional [Main] pick may park -- but never the
         // ordering prompt: a lone pending processing is not a choice.
@@ -334,7 +356,10 @@ fn bt3_096_opponent_option_use_also_triggers_on_their_turn() {
     assert_eq!(runner.game.turn_player(), 1);
     runner.game.set_memory(5); // P1's perspective
 
-    assert_eq!(runner.game.play_option_from_hand(1, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(1, 0),
+        OptionPlayResult::Pending
+    );
     let after_cost = runner.memory();
     assert_eq!(after_cost, 4, "P1 paid the Option's cost");
 
@@ -346,21 +371,39 @@ fn bt3_096_opponent_option_use_also_triggers_on_their_turn() {
     let body = runner
         .pending_selection_view()
         .expect("Death Claw's optional [Main] pick parks first");
-    assert_eq!(body.selecting_player, 1, "the Option's own body belongs to its user (P1)");
-    assert!(body.is_optional, "'you may delete 1 of your Digimon' exposes PASS");
-    runner.execute_action(1, PASS).expect("P1 declines the self-delete");
+    assert_eq!(
+        body.selecting_player, 1,
+        "the Option's own body belongs to its user (P1)"
+    );
+    assert!(
+        body.is_optional,
+        "'you may delete 1 of your Digimon' exposes PASS"
+    );
+    runner
+        .execute_action(1, PASS)
+        .expect("P1 declines the self-delete");
     assert!(!is_suspended(&runner, mimi), "Mimi has not been asked yet");
 
     let view = runner
         .pending_selection_view()
         .expect("Mimi's prompt parks on P1's turn, after the Option's [Main]");
-    assert_eq!(view.selecting_player, 0, "Mimi's controller (P0) makes the choice");
+    assert_eq!(
+        view.selecting_player, 0,
+        "Mimi's controller (P0) makes the choice"
+    );
     accept_prompt(&mut runner);
 
-    assert!(is_suspended(&runner, mimi), "Mimi suspends on the opponent's turn");
+    assert!(
+        is_suspended(&runner, mimi),
+        "Mimi suspends on the opponent's turn"
+    );
     // Memory is stored from the turn player's (P1's) perspective: P0 gaining 1
     // moves the gauge by -1.
-    assert_eq!(runner.memory(), after_cost - 1, "P0 (not the turn player) gained 1 memory");
+    assert_eq!(
+        runner.memory(),
+        after_cost - 1,
+        "P0 (not the turn player) gained 1 memory"
+    );
     let _ = runner.auto_resolve();
 }
 
@@ -389,7 +432,11 @@ fn bt3_096_security_plays_itself_free() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
         "Mimi was played into P1's battle area by her [Security] effect"
     );
-    assert_eq!(runner.memory(), memory_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
 }
 
 // ─── Section 5: ORDER — Mimi resolves after the used Option is disposed ──────
@@ -416,10 +463,16 @@ fn bt3_096_prompt_sees_delay_option_already_placed() {
     runner.place_on_field(0, CARD_ID, Some(0));
 
     // LM-032's [Main] has no purple Digimon to pick → silent; Mimi parks.
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     // P0 orders the pending disposal ahead of their own trigger (15-4-3-5-1).
     pick_order_entry(&mut runner, "Trash");
-    assert!(runner.pending_selection_view().is_some(), "Mimi's prompt is parked");
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "Mimi's prompt is parked"
+    );
     let placed = runner.game.players[0]
         .battle_area
         .iter()
@@ -438,13 +491,22 @@ fn bt3_096_prompt_sees_standard_option_already_trashed() {
     let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
     runner.place_on_field(0, CARD_ID, Some(0));
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     // P0 orders the pending disposal ahead of their own trigger (15-4-3-5-1).
     pick_order_entry(&mut runner, "Trash");
-    assert!(runner.pending_selection_view().is_some(), "Mimi's prompt is parked");
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "Mimi's prompt is parked"
+    );
     let trashed = runner.game.players[0]
         .trash
         .iter()
         .any(|c| c.card_id(&runner.game.card_data) == OPTION_ID);
-    assert!(trashed, "the used Option must already be in the trash when Mimi asks");
+    assert!(
+        trashed,
+        "the used Option must already be in the trash when Mimi asks"
+    );
 }

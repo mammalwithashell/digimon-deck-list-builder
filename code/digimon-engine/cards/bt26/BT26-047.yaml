@@ -1,0 +1,148 @@
+# BT26-047 TyrantKabuterimon — Digimon, Lv.6, Green, DP 13000, Cost 13.
+# Traits: Insectoid, Titan, TS. Form: Mega. Attribute: Virus.
+# Printed digivolve box: Green Lv.5 / cost 4; [Digivolve] Lv.5 w/[Insectoid]/
+#   [TS] trait: Cost 3.
+# Special Play Condition: Assembly -6: 4 [Larva]/[Insectoid]/[Titan] trait
+#   Digimon cards w/different levels.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-047.md):
+#   [On Play] [When Digivolving] This Digimon may battle 1 of your opponent's
+#     Digimon.
+#   [Start of Your Main Phase] [On Play] [When Digivolving] By suspending 1
+#     Digimon, until your opponent's turn ends, none of your suspended
+#     [Insectoid] or [Titan] trait Digimon are affected by your opponent's
+#     Option effects, and they get +3000 DP.
+#   Official Q&A: the battle starts immediately and follows the standard rules.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_047.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5, TopCard EqualsTraits Insectoid || HasTSTraits, cost 3.
+# Assembly: 4 elements, own IsDigimon && HasLevel && EqualsTraits
+#   Larva|Insectoid|Titan, CanTargetCondition_ByPreSelecetedList = no already
+#   picked card shares its level; reduceCost 6. → `kind: assembly`, one
+#   material `repeat: 4`, `distinct_by: level`, `level_gte: 1` (HasLevel),
+#   trash materials stacked under (BT26-085 idiom).
+# Shared A OP/WD (optional false, skippable; CanActivate = an opponent Digimon
+#   with DP): canNoSelect:true pick → IBattle(this, picked). → optional
+#   select_opponent_permanent + `battle { attacker: this }` (BT25-058 idiom).
+# Shared B SOYMP/OP/WD (optional false, skippable; CanActivate = an
+#   unsuspended Digimon on EITHER battle area): canNoSelect:true Tap pick of 1
+#   Digimon (any player); then ChangeDigimonDPPlayerEffect(+3000) +
+#   CanNotAffectedClass (opponent Option effects, incl. a Dual's Option face)
+#   over "own battle-area Digimon that IsSuspended && top Insectoid|Titan",
+#   both UntilOpponentTurnEnd and re-evaluated continuously.
+#   → optional select_any_permanent; ON SUCCESS: suspend + `add_modifier
+#   { continuous: true }` ChangeDp +3000 + `grant_effect_immunity
+#   { continuous: true, source_kind: option }` over the same live filter.
+#   DIVERGENCE (deliberate): DCGO applies the buff/immunity even when the
+#   suspend pick is declined; the printed "By suspending 1 Digimon, …" is a
+#   cost, and general_rule.pdf (which outranks DCGO) makes the effect
+#   contingent on paying it — so a decline applies nothing.
+
+card: BT26-047
+name: "TyrantKabuterimon"
+kind: digimon
+level: 6
+color: [green]
+cost: 13
+dp: 13000
+traits: [Insectoid, Titan, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Insectoid"
+            - trait_has: "TS"
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_gte: 1
+            - any_of:
+                - trait_has: "Larva"
+                - trait_has: "Insectoid"
+                - trait_has: "Titan"
+        repeat: { min: 4, max: 4 }
+        distinct_by: level
+        zones: [trash]
+        stack_under: true
+    cost: 6
+
+effects:
+  # ─── [On Play][When Digivolving] this Digimon may battle 1 opp Digimon ───
+  - when: [on_play, when_digivolving]
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[On Play][When Digivolving] This Digimon may battle 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: battle_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "This Digimon may battle 1 of your opponent's Digimon"
+      - battle:
+          attacker: this
+          defender: battle_target
+
+  # ─── [Start of Your Main Phase][On Play][When Digivolving] by suspending 1
+  #     Digimon: own suspended [Insectoid]/[Titan] Digimon are unaffected by
+  #     opp Option effects and get +3000 DP until opp turn ends ──────────────
+  - when: [start_of_your_main_phase, on_play, when_digivolving]
+    condition:
+      any_permanent:
+        of: any
+        zone: [battle_area]
+        kind: digimon
+        is_suspended: false
+    summary: "[Start of Your Main Phase][On Play][When Digivolving] By suspending 1 Digimon, until your opponent's turn ends, none of your suspended [Insectoid]/[Titan] Digimon are affected by your opponent's Option effects, and they get +3000 DP"
+    process:
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "By suspending 1 Digimon, your suspended [Insectoid]/[Titan] Digimon are unaffected by your opponent's Option effects and get +3000 DP until your opponent's turn ends"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+            - add_modifier:
+                continuous: true
+                target:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                    - is_suspended: true
+                    - any_of:
+                        - trait_has: "Insectoid"
+                        - trait_has: "Titan"
+                modifier: ChangeDp
+                value: 3000
+                expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                continuous: true
+                targets:
+                  all_of:
+                    - of: you
+                    - zone: [battle_area]
+                    - kind: digimon
+                    - is_suspended: true
+                    - any_of:
+                        - trait_has: "Insectoid"
+                        - trait_has: "Titan"
+                source_kind: option
+                source_controller: opponent
+                expiry: end_of_opponents_turn

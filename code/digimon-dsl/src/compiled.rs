@@ -406,6 +406,9 @@ pub struct CompiledPredicate {
     /// G-PLAY-OR-USE-COST-LTE: max(play_cost, option_use_cost) <= N.
     #[serde(default)]
     pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
+    /// See `PredicateSpec::affordable_with_cost_reduce` (BT26-084).
+    #[serde(default)]
+    pub affordable_with_cost_reduce: Option<u8>,
     pub can_digivolve_from_source: Option<bool>,
     /// Card-subject leaf: the candidate has ≥1 non-App-Fusion digivolve
     /// route onto the permanent bound under this name. Compiled form of
@@ -512,6 +515,9 @@ pub struct CompiledPredicate {
     pub is_source: Option<bool>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
+    /// See `PredicateSpec::name_not_in_binding` (BT26-086).
+    #[serde(default)]
+    pub name_not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
     pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     /// The card bound to `.0` shares ≥1 printed color with `.1`.
@@ -1264,6 +1270,21 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    /// `kind: use_cost_increase`.
+    UseCostIncrease {
+        scope: CompiledScope,
+        amount: CompiledFormula,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
+    /// `<Succession ([X])>` (`kind: succession`).
+    Succession {
+        scope: CompiledScope,
+        active_when: Option<CompiledPredicate>,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
@@ -1330,6 +1351,7 @@ pub enum CompiledTiming {
     /// (`event_discard_player`, `event_caused_by_own_effect`).
     /// G-ENGINE-ON-DISCARD-HAND.
     OnDiscardHand,
+    OnAddToDeck,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -1561,6 +1583,12 @@ pub enum CompiledStep {
         card: CompiledBindingRef,
         position: CompiledStackPosition,
     },
+    /// Move the top security card of `of` to its owner's deck at `position`.
+    /// G-DSL-RETURN-TOP-SECURITY-TO-DECK.
+    ReturnTopSecurityToDeck {
+        of: CompiledPlayerRef,
+        position: CompiledStackPosition,
+    },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
     },
@@ -1663,6 +1691,9 @@ pub enum CompiledStep {
     /// G-DSL-DELETE-ALL-PERMANENTS.
     DeleteAllPermanents {
         over: CompiledPredicate,
+        /// Keep only the matches holding the selector's extreme value among
+        /// the matches (`None` = all). G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER.
+        selector: Option<CompiledFieldSelector>,
     },
     /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR (EX9-074 Kimeramon Branch B):
     /// per game-color, a mandatory pick of 1 not-yet-chosen opponent Digimon of
@@ -1982,6 +2013,9 @@ pub enum CompiledStep {
         /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
         suppress_on_play: bool,
+        /// `None` = free (the verb's default); `Some(delta)` pays the cost
+        /// adjusted by `delta`. G-DSL-PLAY-UNION-BOUND-COST-DELTA.
+        cost_delta: Option<CompiledCostDelta>,
     },
     TrashUnionBound {
         binding: String,
@@ -2069,6 +2103,10 @@ pub enum CompiledStep {
         /// G-DSL-TRASH-TOP-SECURITY-LEAVE (driver BT21-098).
         #[serde(default)]
         leave: Option<CompiledFormula>,
+        /// Literal binding receiving the number of cards actually trashed.
+        /// G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING (BT26-083).
+        #[serde(default)]
+        bind_count_as: Option<String>,
     },
     TrashBottomSecurity {
         of: CompiledPlayerRef,
@@ -2120,6 +2158,13 @@ pub enum CompiledStep {
         face_up: bool,
     },
     SecurityPlaceTopStackedCard {
+        carrier: CompiledBindingRef,
+        of: CompiledPlayerRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    /// G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD — the carrier's visible top card.
+    SecurityPlaceTopCard {
         carrier: CompiledBindingRef,
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
@@ -2214,6 +2259,14 @@ pub enum CompiledStep {
         expiry: String,
         value: Option<i32>,
     },
+    /// Continuous mass keyword grant over the live `targets` set.
+    /// G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT.
+    GrantKeywordContinuous {
+        targets: CompiledPredicate,
+        keyword: String,
+        expiry: String,
+        value: Option<i32>,
+    },
     AllowDigixrosMaterialZone {
         zone: CompiledZone,
         max_count: Option<u8>,
@@ -2251,6 +2304,19 @@ pub enum CompiledStep {
     /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped
     /// CannotBeDeDigivolved) on `target`.
     GrantNarrowOpponentEffectProtection {
+        target: CompiledBindingRef,
+        expiry: String,
+    },
+    /// G-DSL-STACK-PROTECTION-FROM-OPPONENT-EFFECTS (BT26-029) — opponent-
+    /// scoped stack-trash / de-digivolve / return-to-hand / return-to-deck
+    /// protection on `target`.
+    GrantStackProtectionFromOpponentEffects {
+        target: CompiledBindingRef,
+        expiry: String,
+    },
+    /// G-DSL-STACK-TRASH-IMMUNITY-FROM-OPPONENT-EFFECTS (BT26-085) —
+    /// opponent-scoped stack-trash + de-digivolve protection on `target`.
+    GrantStackTrashImmunityFromOpponentEffects {
         target: CompiledBindingRef,
         expiry: String,
     },
@@ -2307,7 +2373,8 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
         /// Decline continues the clause tail (binding unresolved) instead of
         /// dropping it — parity with the own/opponent field selects.
-        /// G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE. Appended at the tail.
+        /// G-SELECT-ANY-PERMANENT-CONTINUE-ON-DECLINE (also BT26-038 Kuwagamon
+        /// "You may suspend 1 Digimon. Then, …"). Appended at the tail.
         #[serde(default)]
         continue_on_decline: bool,
     },
@@ -2435,6 +2502,35 @@ pub enum CompiledStep {
     /// budget can scale at run time — e.g. P-094 Destromon's "3 + 1 per [Vemmon]
     /// in this Digimon's digivolution cards". A bare integer YAML literal
     /// compiles to `CompiledFormula::Literal`, preserving scalar users (EX4-073).
+    /// `select_zone_cards` (see `crate::step::SelectZoneCardsArgs`).
+    SelectZoneCards {
+        of: CompiledPlayerRef,
+        zones: Vec<crate::step::ZoneCardZone>,
+        filter: CompiledPredicate,
+        min: u8,
+        max: u8,
+        optional_zero: bool,
+        play_cost_budget: Option<CompiledFormula>,
+        exclude: Option<CompiledBindingRef>,
+        bind_as: Option<String>,
+        prompt: String,
+    },
+    /// `play_cards_free` (see `crate::step::PlayCardsFreeArgs`).
+    PlayCardsFree {
+        cards: CompiledBindingRef,
+    },
+    /// `place_cards_as_bottom_sources`.
+    PlaceCardsAsBottomSources {
+        cards: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
+    /// `return_top_stacked_to_deck`.
+    ReturnTopStackedToDeck {
+        targets: CompiledBindingRef,
+        count: CompiledFormula,
+        position: CompiledStackPosition,
+        prompt: String,
+    },
     SelectOpponentPlayCostBudget {
         play_cost_budget: CompiledFormula,
         min_picks: u8,
@@ -2678,6 +2774,10 @@ pub enum CompiledStep {
         /// your OTHER Digimon", EX11-027). `#[serde(default)]` for pack layout.
         #[serde(default)]
         exclude_source: bool,
+        /// `cost: { reduce: N }` — pay each card's own printed link cost minus
+        /// N (BT26-007). `None` ⇒ pay the flat `cost` above.
+        #[serde(default)]
+        cost_reduce: Option<u8>,
     },
     /// G-DSL-LINK-RELINK-STANDING-PERMANENT — move the effect's own standing
     /// permanent to become a link card on a chosen OTHER own Digimon (EX11-027).
@@ -2751,6 +2851,14 @@ pub enum CompiledStep {
     /// prevent`; it owns both the cost-payment (player-chosen which link card)
     /// and the cancel, so no separate `CancelReplacement` follows it.
     TrashOwnLinkCardAndCancelLeave,
+    /// BT26 `<Detach ([X] trait)>` — like `TrashOwnLinkCardAndCancelLeave`
+    /// but only link cards matching `filter` may be trashed (DCGO
+    /// `DetachSelfEffect`'s `cardCondition`). Synthesized from `cost: {
+    /// trash_own_link_card: true, link_card_filter: {...} }`. The preflight
+    /// gates the accept prompt on ≥1 matching link card.
+    TrashOwnLinkCardMatchingAndCancelLeave {
+        filter: CompiledPredicate,
+    },
     /// EX11-027 Maquinamon leave-prevention. Synthesized from
     /// `cost: { place_link_card_as_bottom_digivolution: true }` + `outcome:
     /// prevent`. Like `TrashOwnLinkCardAndCancelLeave` but the player-chosen
@@ -2864,6 +2972,12 @@ pub enum CompiledActivationCostKind {
     /// permanent (a `<Delay>` Option). Fails if the source has already left
     /// the field. G-ACTIVATION-COST-TRASH-SELF.
     TrashSelf,
+    /// "by placing this Digimon as the bottom security card ..." — pays the
+    /// cost by placing the source permanent face down at the bottom of its
+    /// owner's security. Fails under `CannotAddSecurityByEffect` or when a
+    /// leave/place replacement intercepts it.
+    /// G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY.
+    PlaceSelfAtSecurityBottom,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2930,6 +3044,10 @@ pub enum CompiledBindingRef {
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
     /// Card-source binding only (never a permanent/card handle).
     DeckTop(CompiledPlayerRef),
+    /// Top card of a player's security stack — resolves to
+    /// `CardSourceRef::Security(p, top)`. Card-source binding only.
+    /// G-DSL-SECURITY-TOP-AS-SOURCE.
+    SecurityTop(CompiledPlayerRef),
     /// The controller's own breeding-area permanent (the single breeding
     /// carrier), resolved directly with no selection prompt.
     /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.

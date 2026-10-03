@@ -189,10 +189,9 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
     // Negative control, so the mask assertion below cannot pass vacuously: in
     // the Main phase the very same (attacker, target) pair is ILLEGAL, because
     // an unsuspended Digimon is not an ordinary attack target.
-    let bit = digimon_engine::action::space::encode_attack(
-        carrier.index as u16,
-        defender.index as u16,
-    ) as usize;
+    let bit =
+        digimon_engine::action::space::encode_attack(carrier.index as u16, defender.index as u16)
+            as usize;
     assert_eq!(runner.game.current_phase, GamePhase::Main);
     assert_eq!(
         digimon_engine::build_action_mask(&runner.game, 0)[bit],

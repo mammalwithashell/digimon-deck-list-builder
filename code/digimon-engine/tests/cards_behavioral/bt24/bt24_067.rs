@@ -146,9 +146,9 @@ fn bt24_067_has_alt_digivolve_from_lv2_appmon_cost0() {
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && p.cost == Some(CompiledCost::Literal(0))
-            && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon")
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon"))
     });
     assert!(
         has,
@@ -547,11 +547,7 @@ fn bt24_067_when_linked_opt_resets_after_end_turn() {
 // [Appmon] had NO digivolve route into BT24-067.
 
 /// A Lv.2 base Digimon with explicit colors/traits for digivolve-route tests.
-fn make_lv2_base(
-    id: &str,
-    color: digimon_engine::enums::CardColor,
-    traits: &[&str],
-) -> CardData {
+fn make_lv2_base(id: &str, color: digimon_engine::enums::CardColor, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.level = Some(2);
@@ -588,11 +584,8 @@ fn try_digivolve_over(base_card: CardData) -> (bool, i16) {
 #[test]
 fn bt24_067_digivolves_from_plain_purple_lv2_for_0() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "PURPLE-LV2-PLAIN",
-        CardColor::Purple,
-        &[],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("PURPLE-LV2-PLAIN", CardColor::Purple, &[]));
     assert!(
         proceeded,
         "printed standard circle Purple Lv.2 / cost 0: a plain purple Lv.2 must be a legal base"
@@ -605,11 +598,8 @@ fn bt24_067_digivolves_from_plain_purple_lv2_for_0() {
 #[test]
 fn bt24_067_digivolves_from_offcolor_appmon_lv2_for_0() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "RED-LV2-APPMON",
-        CardColor::Red,
-        &["Appmon"],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("RED-LV2-APPMON", CardColor::Red, &["Appmon"]));
     assert!(
         proceeded,
         "special condition Lv.2 w/[Appmon]: an off-colour Appmon Lv.2 must be a legal base"
@@ -622,11 +612,8 @@ fn bt24_067_digivolves_from_offcolor_appmon_lv2_for_0() {
 #[test]
 fn bt24_067_no_route_from_offcolor_traitless_lv2() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "RED-LV2-PLAIN",
-        CardColor::Red,
-        &[],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("RED-LV2-PLAIN", CardColor::Red, &[]));
     assert!(
         !proceeded,
         "a red traitless Lv.2 matches neither the purple circle nor the [Appmon] gate — \

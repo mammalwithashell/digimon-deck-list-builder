@@ -1005,17 +1005,14 @@ impl Game {
         let effects = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
             .unwrap_or_default();
-        let use_cost = card
-            .option_use_cost(&self.card_data)
-            .unwrap_or_else(|| card.play_cost(&self.card_data));
+        let use_cost = self.option_use_cost(card, player_id);
         let memory_min = self.rules.memory_range.0;
         let mut modes = classify_option_modes(&effects);
         modes.retain(|mode| {
             let cost = match mode {
-                OptionPlayMode::Link { cost } => {
-                    (*cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0)
-                        as i16
-                }
+                OptionPlayMode::Link { cost } => (*cost as i32
+                    + self.modifiers.link_cost_delta_for_player(player_id))
+                .max(0) as i16,
                 _ => use_cost as i16,
             };
             (self.memory - cost) >= memory_min
@@ -2135,6 +2132,11 @@ impl Game {
                 .get(h.index as usize)
                 .and_then(|perm| perm.card_sources.get(i)),
             CardSourceRef::Reveal(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
+            CardSourceRef::Link(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.linked_cards.get(i)),
         }
     }
 
@@ -2186,6 +2188,12 @@ impl Game {
                 .iter()
                 .find(|c| c.handle() == h)
                 .map(|c| (c.handle(), c.data_index, Zone::Reveal)),
+            CardSourceRef::Link(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.linked_cards.get(i))
+                .map(|c| (c.handle(), c.data_index, Zone::BattleArea)),
         }
     }
 
@@ -2318,6 +2326,7 @@ impl Game {
             // The placing effect's carrier, read back by
             // `complete_effect_security_removal` when it seats the card.
             self.pending_security_source_cause_card = effect_source_card;
+            self.pending_security_source_face_down = face_down;
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
@@ -2536,7 +2545,14 @@ impl Game {
                     .get(key.effect_slot as usize)
                     .and_then(|effect| effect.shared_opt_group)
             });
-        group.unwrap_or(key.effect_slot)
+        let slot = group.unwrap_or(key.effect_slot);
+        // A `<Succession>` copy keeps its own counter (G-ENGINE-SUCCESSION-KEYWORD).
+        match key.source_permanent {
+            Some(perm) if perm.index != crate::action::space::BREEDING_TARGET as u8 => {
+                self.opt_key_for_source(perm, key.source_card, key.is_under, false, slot)
+            }
+            _ => slot,
+        }
     }
 
     fn cost_reducer_activation_count(&self, key: &CostReductionKey) -> u8 {
@@ -2585,6 +2601,19 @@ impl Game {
                         Some(perm_handle),
                         source,
                         source_idx + 1 < stack_size,
+                        player_id,
+                        false,
+                    );
+                }
+                // `<Succession>`: an adopted source's top-scope reducers too.
+                for source_idx in self.succession_source_indices(perm_handle) {
+                    let source =
+                        &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
+                    self.push_cost_source_info(
+                        &mut infos,
+                        Some(perm_handle),
+                        source,
+                        false,
                         player_id,
                         false,
                     );
@@ -2728,6 +2757,19 @@ impl Game {
                         false,
                     );
                 }
+                // `<Succession>`: an adopted source's top-scope reducers too.
+                for source_idx in self.succession_source_indices(perm_handle) {
+                    let source =
+                        &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
+                    self.push_observer_source_info(
+                        &mut infos,
+                        Some(perm_handle),
+                        source,
+                        false,
+                        player_id,
+                        false,
+                    );
+                }
             }
             if player_id != acting_player {
                 self.push_breeding_observer_sources(player_id, &mut infos);
@@ -2819,10 +2861,27 @@ impl Game {
         }
     }
 
+    /// OPT key for a `BeforePayCostObserve` source (a `<Succession>` copy
+    /// keeps its own counter).
+    pub(crate) fn observer_opt_slot(&self, info: &BeforePayCostSourceInfo) -> u8 {
+        match info.source_permanent {
+            Some(perm) if perm.index != crate::action::space::BREEDING_TARGET as u8 => self
+                .opt_key_for_source(
+                    perm,
+                    info.source_card,
+                    info.is_under,
+                    false,
+                    info.effect_slot,
+                ),
+            _ => info.effect_slot,
+        }
+    }
+
     fn observer_activation_count(&self, info: &BeforePayCostSourceInfo) -> u8 {
         let Some(source) = info.source_permanent else {
             return 0;
         };
+        let opt_slot = self.observer_opt_slot(info);
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             return self
                 .player(source.player)
@@ -2834,7 +2893,7 @@ impl Game {
         self.player(source.player)
             .battle_area
             .get(source.index as usize)
-            .map(|perm| perm.activation_count(info.source_card, info.effect_slot))
+            .map(|perm| perm.activation_count(info.source_card, opt_slot))
             .unwrap_or(0)
     }
 

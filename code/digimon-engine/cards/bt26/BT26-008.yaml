@@ -1,0 +1,83 @@
+# BT26-008 Kotemon — Digimon, Lv.3, Red, DP 1000, Cost 3. Traits: Reptile,
+#   Shambala, TB, TS. Form Rookie. Attribute: Data.
+# Printed digivolve box: Red Lv.2 / cost 0; [Digivolve] Lv.2 w/[Shambala]/[TS]
+#   trait: Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-008.md):
+#   [When Moving] [On Play] 1 of your [Shambala] or [TS] trait Digimon gains
+#     <Piercing> and +3000 DP for the turn.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_008.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 2 + (EqualsTraits Shambala || EqualsTraits TS), cost 0.
+#   → alt_paths digivolve from { level_eq: 2, any_of: [Shambala, TS] } cost 0.
+# Shared WM/OP (ActivateClassesForSharedEffects, whenMoving + onPlay,
+#   optional:false): mandatory (canNoSelect:false) pick of an own battle-area
+#   Digimon whose top card has [Shambala] or [TS] → GainPierce +
+#   ChangeDigimonDP(+3000), both UntilEachTurnEnd.
+#   → `when: [on_play, on_move]` (on_move gated to this Digimon, EX11-038
+#   idiom) + mandatory `select_own_permanent` + grant_keyword Piercing +
+#   add_dp_modifier 3000, expiry end_of_turn.
+# Inherit: ChangeSelfDPStaticEffect(2000, inherited, IsOwnerTurn).
+#   → inherited aura, your_turn, +2000.
+
+card: BT26-008
+name: "Kotemon"
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile, Shambala, TB, TS]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - trait_has: "Shambala"
+            - trait_has: "TS"
+    cost: 0
+
+effects:
+  # ─── [When Moving][On Play] 1 [Shambala]/[TS] Digimon gains <Piercing> and
+  #     +3000 DP for the turn ─────────────────────────────────────────────────
+  - when: [on_play, on_move]
+    # [When Moving] is self-scoped; the engine's on_move dispatch is a
+    # board-wide observer scan, so gate it on the moved permanent being this
+    # Digimon (EX11-038 idiom).
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] 1 of your [Shambala] or [TS] trait Digimon gains <Piercing> and +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Shambala"
+                  - trait_has: "TS"
+          prompt: "1 of your [Shambala] or [TS] trait Digimon gains <Piercing> and +3000 DP for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: Piercing
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: boosted
+          value: 3000
+          expiry: end_of_turn
+
+  # ─── Inherited [Your Turn] +2000 DP ───────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

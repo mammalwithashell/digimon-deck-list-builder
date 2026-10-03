@@ -55,6 +55,7 @@ fn fixture_steps() -> Vec<CompiledStep> {
             binding: "union_pick".to_string(),
             bind_as: Some("played".to_string()),
             suppress_on_play: false,
+            cost_delta: None,
         },
         // Mandatory tail step — must run even when the optional union pick
         // is declined.
@@ -162,6 +163,7 @@ fn material_fixture_steps() -> Vec<CompiledStep> {
             binding: "union_pick".to_string(),
             bind_as: Some("played".to_string()),
             suppress_on_play: false,
+            cost_delta: None,
         },
     ]
 }

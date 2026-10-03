@@ -1082,7 +1082,6 @@ fn lm_029_delay_skips_optional_play_when_you_already_have_a_digimon() {
     );
 }
 
-
 /// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
 ///
 /// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card

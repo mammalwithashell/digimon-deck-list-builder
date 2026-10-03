@@ -61,7 +61,9 @@ fn base() -> DebugRunnerBuilder {
 }
 
 fn hand_action_for(runner: &DebugRunner, card_id: &str) -> u16 {
-    let view = runner.pending_selection_view().expect("hand selection parked");
+    let view = runner
+        .pending_selection_view()
+        .expect("hand selection parked");
     assert_eq!(view.kind, SelectionKind::Hand);
     let idx = runner.game.players[0]
         .hand
@@ -116,7 +118,10 @@ fn p_212_metadata_and_three_triggered_clauses() {
         .iter()
         .find(|t| t.when == vec![CompiledTiming::OnPlay])
         .expect("on_play clause");
-    assert!(!on_play.optional, "[On Play] draw + trash is mandatory (DCGO isOptional = false)");
+    assert!(
+        !on_play.optional,
+        "[On Play] draw + trash is mandatory (DCGO isOptional = false)"
+    );
     assert!(!on_play.once_per_turn);
 
     let sec = triggered
@@ -135,12 +140,17 @@ fn p_212_start_of_main_gains_memory_when_opponent_has_a_digimon() {
     runner.place_on_field(1, "OPP-L4", Some(0));
     let asuna = asuna_handle(&runner);
     let before = runner.memory();
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(asuna));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(asuna),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), before + 1, "gain 1 memory while the opponent has a Digimon");
+    assert_eq!(
+        runner.memory(),
+        before + 1,
+        "gain 1 memory while the opponent has a Digimon"
+    );
 }
 
 #[test]
@@ -149,12 +159,17 @@ fn p_212_start_of_main_does_nothing_without_opponent_digimon() {
     runner.place_on_field(0, CARD_ID, Some(0));
     let asuna = asuna_handle(&runner);
     let before = runner.memory();
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(asuna));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(asuna),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), before, "no opponent Digimon → condition gates the gain");
+    assert_eq!(
+        runner.memory(),
+        before,
+        "no opponent Digimon → condition gates the gain"
+    );
 }
 
 // ─── Section 3: [On Play] draw → trash → conditional delete ──────────────────
@@ -168,10 +183,17 @@ fn p_212_on_play_draws_then_demands_a_mandatory_hand_trash() {
         runner.fire_on_play(0, field_index);
     }
 
-    assert_eq!(runner.deck_size(0), deck_before - 1, "<Draw 1> resolved first");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "<Draw 1> resolved first"
+    );
     let view = runner.pending_selection_view().expect("hand trash prompt");
     assert_eq!(view.kind, SelectionKind::Hand);
-    assert!(!view.is_optional, "'trash 1 card in your hand' is mandatory — no PASS");
+    assert!(
+        !view.is_optional,
+        "'trash 1 card in your hand' is mandatory — no PASS"
+    );
     assert_eq!(
         view.valid_action_ids.len(),
         runner.hand_size(0),
@@ -190,7 +212,9 @@ fn p_212_trashing_a_musketeer_offers_only_opponent_level_3_digimon() {
     }
 
     let pick = hand_action_for(&runner, "TM");
-    runner.execute_action(0, pick).expect("trash the [Three Musketeers] card");
+    runner
+        .execute_action(0, pick)
+        .expect("trash the [Three Musketeers] card");
     assert!(
         runner.game.players[0]
             .trash
@@ -203,8 +227,15 @@ fn p_212_trashing_a_musketeer_offers_only_opponent_level_3_digimon() {
         .pending_selection_view()
         .expect("trashing a [Three Musketeers] card unlocks the delete");
     assert_eq!(view.kind, SelectionKind::OppField);
-    assert!(!view.is_optional, "the delete is mandatory once unlocked (DCGO canNoSelect false)");
-    assert_eq!(view.valid_action_ids.len(), 1, "only the level-3 opponent Digimon is offered");
+    assert!(
+        !view.is_optional,
+        "the delete is mandatory once unlocked (DCGO canNoSelect false)"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only the level-3 opponent Digimon is offered"
+    );
 
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
@@ -217,7 +248,11 @@ fn p_212_trashing_a_musketeer_offers_only_opponent_level_3_digimon() {
             .any(|c| c.card_id(&runner.game.card_data) == "OPP-L3"),
         "the level-3 opponent Digimon was deleted"
     );
-    assert_eq!(runner.battle_area_size(1), 1, "the level-4 Digimon survives");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "the level-4 Digimon survives"
+    );
     let _ = opp_l3;
 }
 
@@ -244,14 +279,20 @@ fn p_212_trashing_a_plain_card_does_not_delete() {
         runner.fire_on_play(0, field_index);
     }
     let pick = hand_action_for(&runner, "PLAIN");
-    runner.execute_action(0, pick).expect("trash the plain card");
+    runner
+        .execute_action(0, pick)
+        .expect("trash the plain card");
     let _ = runner.auto_resolve();
 
     assert!(
         runner.pending_selection().is_none(),
         "a non-[TS]/[Three Musketeers] trash unlocks nothing"
     );
-    assert_eq!(runner.battle_area_size(1), 1, "the opponent's level-3 Digimon survives");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "the opponent's level-3 Digimon survives"
+    );
 }
 
 #[test]
@@ -263,10 +304,19 @@ fn p_212_musketeer_trash_with_no_level_3_target_deletes_nothing() {
         runner.fire_on_play(0, field_index);
     }
     let pick = hand_action_for(&runner, "TM");
-    runner.execute_action(0, pick).expect("trash the [Three Musketeers] card");
+    runner
+        .execute_action(0, pick)
+        .expect("trash the [Three Musketeers] card");
     let _ = runner.auto_resolve();
-    assert!(runner.pending_selection().is_none(), "no level-3 target → no prompt");
-    assert_eq!(runner.battle_area_size(1), 1, "the level-4 Digimon is untouched");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no level-3 target → no prompt"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "the level-4 Digimon is untouched"
+    );
 }
 
 // ─── Section 4: [Security] play without paying the cost ──────────────────────
@@ -295,5 +345,9 @@ fn p_212_security_plays_itself_free() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
         "Asuna was played into P1's battle area by her [Security] effect"
     );
-    assert_eq!(runner.memory(), memory_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
 }

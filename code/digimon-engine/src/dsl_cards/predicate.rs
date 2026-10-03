@@ -768,10 +768,17 @@ pub fn eval_predicate_with_bindings(
         // `select_union_zone` binding, so a "play OR use 1 card from your hand
         // or its digivolution cards" body can branch Option → `use_option_bound`
         // vs Digimon/Tamer → `play_union_bound_free` (EX13-045 Examon).
-        // G-DSL-BINDING-CARD-KIND-UNION.
+        // G-DSL-BINDING-CARD-KIND-UNION. A single-card `CardList` (e.g. a
+        // min:0/max:1 `select_reveal_buckets` bucket, BT26-084) resolves like
+        // a `Card` binding.
         let Some(handle) = bindings.and_then(|b| {
             b.get_card(&binding_kind.binding)
                 .or_else(|| b.get_union_card(&binding_kind.binding).map(|(c, _, _)| c))
+                .or_else(|| {
+                    b.get_card_list(&binding_kind.binding)
+                        .filter(|l| l.len() == 1)
+                        .map(|l| l[0])
+                })
         }) else {
             return false;
         };
@@ -2683,6 +2690,27 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(ref binding) = pred.name_not_in_binding {
+        // BT26-086 — "with different names": reject a card that shares any
+        // card name with a card already captured in the CardList binding.
+        // Absent binding ⇒ nothing chosen yet ⇒ pass.
+        if let Some(list) = bindings.and_then(|b| b.get_card_list(binding)) {
+            let names = |d: &crate::card_data::CardData| {
+                let mut v = vec![d.card_name.clone()];
+                v.extend(d.also_treated_as.iter().cloned());
+                v
+            };
+            let mine = names(data);
+            let clash = list.iter().filter(|h| **h != card).any(|h| {
+                rctx.game
+                    .card_data_for_handle(*h)
+                    .is_some_and(|other| names(other).iter().any(|n| mine.contains(n)))
+            });
+            if clash {
+                return false;
+            }
+        }
+    }
     if let Some(ref binding) = pred.level_lte_binding {
         // Subject level <= the literal bound to `binding`. Sibling of
         // `level_eq_binding`. Driver: BT8-107 ("level <= the deleted
@@ -2933,9 +2961,36 @@ fn eval_card_fields(
         // `option_use_cost()` is `None` so the bound is `play_cost`; for a pure
         // Option both coincide; for a Dual it is the max of the two faces.
         let play = i32::from(data.play_cost);
-        let use_cost = data.option_use_cost().map(i32::from).unwrap_or(play);
+        // The effective use cost includes the card's own use-cost increase
+        // (G-ENGINE-OPTION-SELF-USE-COST-INCREASE).
+        let use_cost = if data.option_use_cost().is_some() {
+            effective_use_cost(rctx, card).unwrap_or(play)
+        } else {
+            play
+        };
         let cost = play.max(use_cost);
         if cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    if let Some(reduce) = pred.affordable_with_cost_reduce {
+        // BT26-084 — "play or use ... with the cost reduced by N": the
+        // controller's own memory must stay at or above the floor after paying
+        // max(0, cost - N). Option → use cost; otherwise play cost.
+        let cost = if data.card_kind == crate::enums::CardKind::Option {
+            effective_use_cost(rctx, card)
+                .map(|c| c as u16)
+                .unwrap_or(data.option_use_cost().unwrap_or(data.play_cost))
+        } else {
+            data.play_cost
+        };
+        let pay = i32::from(cost.saturating_sub(u16::from(reduce)));
+        let own = if rctx.game.turn_player() == rctx.player {
+            i32::from(rctx.game.memory)
+        } else {
+            -i32::from(rctx.game.memory)
+        };
+        if own - pay < i32::from(rctx.game.rules.memory_range.0) {
             return false;
         }
     }
@@ -4182,6 +4237,11 @@ fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {
             | (CompiledCardKind::Option, CardKind::Option)
             | (CompiledCardKind::DigiEgg, CardKind::DigiEgg)
             | (CompiledCardKind::Token, CardKind::Token)
+            // `kind: dual` names a DUAL card in a card zone, so `not: { kind:
+            // dual }` can exclude it — a DUAL has no play cost ("Play cost: D"),
+            // so "a card with a play cost of N or less" never matches it
+            // (BT26-075; DCGO `HasPlayCost`). G-DSL-KIND-DUAL-CARD-SEARCH.
+            | (CompiledCardKind::Dual, CardKind::Dual)
     )
 }
 
@@ -4222,4 +4282,21 @@ fn color_matches(want: CompiledColor, got: CardColor) -> bool {
             | (CompiledColor::Purple, CardColor::Purple)
             | (CompiledColor::White, CardColor::White)
     )
+}
+
+/// Effective Option use cost of the concrete card `card` (printed + its own
+/// use-cost increase), for the card's owner. `None` if the card can't be found.
+fn effective_use_cost(rctx: &EffectReadContext<'_>, card: CardHandle) -> Option<i32> {
+    let game = rctx.game;
+    for player in game.players.iter() {
+        for zone in [&player.hand, &player.trash, &player.security, &player.deck] {
+            if let Some(c) = zone.iter().find(|c| c.handle() == card) {
+                return Some(i32::from(game.option_use_cost(c, c.owner)));
+            }
+        }
+    }
+    game.revealed_cards
+        .iter()
+        .find(|c| c.handle() == card)
+        .map(|c| i32::from(game.option_use_cost(c, c.owner)))
 }

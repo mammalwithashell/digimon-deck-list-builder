@@ -190,3 +190,60 @@ describe('SelectionPanel effect choice (trigger-order chooser)', () => {
     expect(evt).toBe(false); // native menu suppressed
   });
 });
+
+describe('SelectionPanel card-zone selection (hand + trash, any phase)', () => {
+  it('renders a budgeted hand + trash pick and dispatches the picked ids', () => {
+    // BT26-081 Mervamon: "up to 8 play cost's worth of [Iliad] cards from your
+    // hand or trash" — one SelectBudgeted prompt mixing hand (0+) and trash
+    // (1150+) ids, which had no surface before.
+    const onAction = vi.fn();
+    const mask = new Array(2192).fill(0);
+    mask[62] = 1; // PASS ("may")
+    renderPanel({
+      currentPhase: GamePhase.SelectBudgeted,
+      pendingSelection: {
+        phase: GamePhase.SelectBudgeted,
+        selectingPlayer: 1,
+        validIndices: [0, 1151, 62],
+        isOptional: true,
+        prompt: "You may play up to 8 play cost's total worth of [Iliad] trait cards",
+        kind: 'PlayCostBudget { remaining_play_cost: 8, picked: 0 }',
+      } as PendingSelection,
+      actionMask: mask,
+      handIds: ['BT26-090', 'BT26-092'],
+      trashIds: ['BT26-087', 'BT26-088'],
+      onAction,
+    });
+    expect(screen.getByTestId('selection-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('BT26-088'));
+    fireEvent.click(screen.getByTitle('BT26-090'));
+    expect(onAction).toHaveBeenNthCalledWith(1, 1151);
+    expect(onAction).toHaveBeenNthCalledWith(2, 0);
+    fireEvent.click(screen.getByTestId('selection-decline'));
+    expect(onAction).toHaveBeenNthCalledWith(3, 62);
+  });
+
+  it("orders the opponent's stacked cards (BT26-060) from their battle area", () => {
+    const onAction = vi.fn();
+    const stack = (ids: string[]) => ({
+      sources: ids.map((cardId, i) => ({ cardId, cardName: cardId, isTop: i === ids.length - 1 })),
+    });
+    renderPanel({
+      currentPhase: GamePhase.SelectPermutation,
+      pendingSelection: {
+        phase: GamePhase.SelectPermutation,
+        selectingPlayer: 1,
+        zoneOwner: 2,
+        validIndices: [2001, 2000],
+        isOptional: false,
+        prompt: 'Choose the order to return these cards to the top of the deck',
+        kind: 'OrderedPermutation { remaining: 2 }',
+      } as PendingSelection,
+      actionMask: new Array(2192).fill(0),
+      opponentBattleArea: [stack(['BT26-066', 'BT26-074'])] as never,
+      onAction,
+    });
+    fireEvent.click(screen.getByTitle('BT26-074'));
+    expect(onAction).toHaveBeenCalledWith(2001);
+  });
+});

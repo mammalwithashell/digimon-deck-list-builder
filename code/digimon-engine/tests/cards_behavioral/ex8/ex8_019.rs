@@ -252,10 +252,7 @@ fn ex8_019_compiles_with_printed_stats_and_digivolve_paths() {
                         (from.level_eq == Some(2)
                             || from.all_of.iter().any(|pred| pred.level_eq == Some(2)))
                             && (from.color_is == Some(color)
-                                || from
-                                    .all_of
-                                    .iter()
-                                    .any(|pred| pred.color_is == Some(color)))
+                                || from.all_of.iter().any(|pred| pred.color_is == Some(color)))
                     })
             }),
             "Penguinmon must digivolve from a {color:?} Lv.2 for cost 1 \

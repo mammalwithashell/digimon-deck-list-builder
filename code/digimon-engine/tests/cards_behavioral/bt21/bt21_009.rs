@@ -550,11 +550,7 @@ fn bt21_009_when_linked_opt_resets_after_end_turn() {
 // [Appmon]/[Hero] had NO digivolve route into BT21-009.
 
 /// A Lv.2 base Digimon with explicit colors/traits for digivolve-route tests.
-fn make_lv2_base(
-    id: &str,
-    color: digimon_engine::enums::CardColor,
-    traits: &[&str],
-) -> CardData {
+fn make_lv2_base(id: &str, color: digimon_engine::enums::CardColor, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.level = Some(2);
@@ -591,11 +587,8 @@ fn try_digivolve_over(base_card: CardData) -> (bool, i16) {
 #[test]
 fn bt21_009_digivolves_from_plain_red_lv2_for_0() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "RED-LV2-PLAIN",
-        CardColor::Red,
-        &[],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("RED-LV2-PLAIN", CardColor::Red, &[]));
     assert!(
         proceeded,
         "printed standard circle Red Lv.2 / cost 0: a plain red Lv.2 must be a legal base"
@@ -608,11 +601,8 @@ fn bt21_009_digivolves_from_plain_red_lv2_for_0() {
 #[test]
 fn bt21_009_digivolves_from_offcolor_hero_lv2_for_0() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "BLUE-LV2-HERO",
-        CardColor::Blue,
-        &["Hero"],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("BLUE-LV2-HERO", CardColor::Blue, &["Hero"]));
     assert!(
         proceeded,
         "special condition Lv.2 w/[Appmon]/[Hero]: an off-colour Hero Lv.2 must be a legal base"
@@ -625,11 +615,8 @@ fn bt21_009_digivolves_from_offcolor_hero_lv2_for_0() {
 #[test]
 fn bt21_009_no_route_from_offcolor_traitless_lv2() {
     use digimon_engine::enums::CardColor;
-    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
-        "BLUE-LV2-PLAIN",
-        CardColor::Blue,
-        &[],
-    ));
+    let (proceeded, delta) =
+        try_digivolve_over(make_lv2_base("BLUE-LV2-PLAIN", CardColor::Blue, &[]));
     assert!(
         !proceeded,
         "a blue traitless Lv.2 matches neither the red circle nor the trait gate — \

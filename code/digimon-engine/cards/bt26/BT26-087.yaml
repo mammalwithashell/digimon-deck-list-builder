@@ -1,0 +1,99 @@
+# BT26-087 Toya Kuga — Tamer, Red, Cost 3. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-087.md):
+#   [Start of Your Main Phase] By returning 1 [TS] trait Digimon card from your
+#     trash to the bottom of the deck, gain 1 memory. After, you may return 1
+#     [Giant Slayer] from your trash to the hand.
+#   [On Play] By trashing 1 [TS] trait card from your hand, <Draw 2>.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: without the trash → deck-bottom return, the "after" part
+#     can't be processed.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_087.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional, skippable): IsOwnerTurn; CanActivate
+#   requires a trash Digimon card with HasTSTraits (EqualsTraits "TS").
+#   canNoSelect:true trash pick → AddLibraryBottomCards → AddMemory 1 → if a
+#   card named "Giant Slayer" (EqualsCardName) is in trash, canNoSelect:true
+#   pick → AddHand. All gated on the first pick.
+#   → condition + optional select_trash + return_trash_list_to_deck_bottom +
+#   gain_memory + optional select_trash + add_to_hand_from_trash, gated on the
+#   first binding.
+# On Play (not optional): CanActivate requires a TS hand card; canNoSelect:true
+#   pick → trash → Draw 2. → optional cost select_hand + trash + draw.
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT26-087
+name: "Toya Kuga"
+kind: tamer
+color: [red]
+cost: 3
+traits: [TS]
+
+effects:
+  # ─── [Start of Your Main Phase] bottom-deck 1 [TS] Digimon from trash →
+  #     gain 1 memory; after, may return 1 [Giant Slayer] trash → hand ──────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          trait_has: "TS"
+        n: 1
+    summary: "[Start of Your Main Phase] By returning 1 [TS] Digimon card from your trash to the bottom of the deck, gain 1 memory. After, you may return 1 [Giant Slayer] from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: returned
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "TS"
+          prompt: "Return 1 [TS] trait Digimon card from your trash to the bottom of the deck to gain 1 memory"
+      - if:
+          condition: { binding_present: returned }
+          then:
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned
+            - gain_memory: 1
+            - select_trash:
+                of: you
+                bind_as: slayer
+                optional: true
+                filter: { name_is: "Giant Slayer" }
+                prompt: "You may return 1 [Giant Slayer] from your trash to the hand"
+            - add_to_hand_from_trash: { of: you, card: slayer }
+
+  # ─── [On Play] By trashing 1 [TS] hand card, <Draw 2> ──────────────────────
+  - when: on_play
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "TS"
+        n: 1
+    summary: "[On Play] By trashing 1 [TS] trait card from your hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: "TS" }
+          prompt: "Trash 1 [TS] trait card from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

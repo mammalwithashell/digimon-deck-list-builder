@@ -1,0 +1,99 @@
+# BT26-009 Hyokomon — Digimon, Lv.3, Red, DP 2000, Cost 3. Traits: Bird,
+#   Iliad, TS. Form Rookie. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.2 / cost 0; [Digivolve] Lv.2 w/[TS] trait:
+#   Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-009.md):
+#   [Start of Your Main Phase] By trashing 1 card with [Chronomon] in its text
+#     or the [Shaman] trait from your hand, <Draw 1> and gain 1 memory.
+#   Inherited: [When Attacking] [Once Per Turn] <Draw 1>. Then, if your hand
+#     has 6 or more cards, return 1 card in your hand to the bottom of the deck.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_009.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 2 + HasTSTraits, cost 0.
+# SOMP (OnStartMainPhase, optional:true at activation, IsOwnerTurn; CanActivate
+#   needs a matching hand card): canNoSelect:true discard pick of
+#   `HasText("Chronomon") || EqualsTraits("Shaman")` → on a pick, Draw 1 THEN
+#   AddMemory 1.
+#   → condition (a candidate) + optional `select_hand` + `trash_from_hand_by_index`
+#   + draw 1 + gain_memory 1 (DCGO order). The optional pick carries the "by".
+# Inherited WA OPT (OnAllyAttack/CanTriggerOnAttack = this Digimon attacks,
+#   not optional): Draw 1; then if HandCards.Count >= 6, mandatory
+#   (canNoSelect:false) pick of any hand card → AddLibraryBottomCards.
+#   → draw + `if count_gte hand 6` + `select_union_zone { zones: [hand] }` +
+#   `return_union_bound_to_deck { position: bottom }` (an own-effect deck add,
+#   so it also fires `on_add_to_deck` observers — G-ENGINE-ON-ADD-TO-DECK).
+
+card: BT26-009
+name: "Hyokomon"
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Bird, Iliad, TS]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "TS"
+    cost: 0
+
+effects:
+  # ─── [Start of Your Main Phase] trash 1 [Chronomon]-text / [Shaman] card →
+  #     <Draw 1> + gain 1 memory ────────────────────────────────────────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - in_text_contains: "Chronomon"
+            - trait_has: "Shaman"
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 card with [Chronomon] in its text or the [Shaman] trait from your hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chrono_cost
+          optional: true
+          filter:
+            any_of:
+              - in_text_contains: "Chronomon"
+              - trait_has: "Shaman"
+          prompt: "Trash 1 card with [Chronomon] in its text or the [Shaman] trait from your hand to <Draw 1> and gain 1 memory"
+      - if:
+          condition: { binding_present: chrono_cost }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: chrono_cost }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── Inherited [When Attacking][OPT] <Draw 1>; then if hand ≥ 6, return 1
+  #     hand card to the bottom of the deck ─────────────────────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] <Draw 1>. Then, if your hand has 6 or more cards, return 1 card in your hand to the bottom of the deck"
+    process:
+      - draw: { of: you, count: 1 }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [hand] }
+              n: 6
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand]
+                bind_as: bottomed
+                filter: {}
+                prompt: "Return 1 card in your hand to the bottom of the deck"
+            - return_union_bound_to_deck: { binding: bottomed, position: bottom }

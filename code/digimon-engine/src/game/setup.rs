@@ -140,7 +140,10 @@ impl Game {
         if let Some(fp) = forced_first_player {
             // Replay construction: explicit first player, no RNG involvement.
             let start = turn_order.iter().position(|&p| p == fp).ok_or_else(|| {
-                format!("first_player {} out of range for {} players", fp, rules.player_count)
+                format!(
+                    "first_player {} out of range for {} players",
+                    fp, rules.player_count
+                )
             })?;
             turn_order.rotate_left(start);
         } else if let Some(s) = seed {
@@ -287,8 +290,11 @@ impl Game {
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
             pending_hand_discard: None,
+            pending_deck_add: None,
             pending_added_sources: Vec::new(),
             pending_security_source_cause_card: None,
+            pending_security_loss_effect_initiated: false,
+            pending_security_source_face_down: false,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,

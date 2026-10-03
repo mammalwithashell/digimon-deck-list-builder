@@ -72,6 +72,60 @@ impl Game {
         target
     }
 
+    /// Locate `h` in any zone an effect can lift a card from: hand, trash,
+    /// security, a battle-area stack (top card included), a link card, the
+    /// reveal pool or the pending security card.
+    pub(crate) fn locate_card_source_ref(
+        &self,
+        h: CardHandle,
+    ) -> Option<crate::enums::CardSourceRef> {
+        use crate::enums::CardSourceRef;
+        for pid in 0..self.players.len() {
+            let player_id = pid as PlayerId;
+            let player = self.player(player_id);
+            if let Some(idx) = player.hand.iter().position(|c| c.handle() == h) {
+                return Some(CardSourceRef::Hand(player_id, idx));
+            }
+            if let Some(idx) = player.trash.iter().position(|c| c.handle() == h) {
+                return Some(CardSourceRef::Trash(player_id, idx));
+            }
+            if let Some(idx) = player.security.iter().position(|c| c.handle() == h) {
+                return Some(CardSourceRef::Security(player_id, idx));
+            }
+            for (perm_idx, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: perm_idx as u8,
+                };
+                if let Some(src_idx) = perm.card_sources.iter().position(|c| c.handle() == h) {
+                    return Some(CardSourceRef::Material(host, src_idx));
+                }
+                if let Some(link_idx) = perm.linked_cards.iter().position(|c| c.handle() == h) {
+                    return Some(CardSourceRef::Link(host, link_idx));
+                }
+            }
+        }
+        if self.revealed_cards.iter().any(|c| c.handle() == h) {
+            return Some(CardSourceRef::Reveal(h));
+        }
+        if self
+            .pending_security
+            .as_ref()
+            .filter(|pending| !pending.played)
+            .is_some_and(|pending| pending.card.handle() == h)
+        {
+            return Some(CardSourceRef::PendingSecurity);
+        }
+        None
+    }
+
+    /// Lift the card `h` out of whatever zone it is in (see
+    /// [`Game::locate_card_source_ref`]); `None` if it can't be located.
+    pub(crate) fn take_card_by_handle(&mut self, h: CardHandle) -> Option<CardSource> {
+        let src = self.locate_card_source_ref(h)?;
+        self.take_card_source_ref(src).map(|t| t.card)
+    }
+
     pub(crate) fn take_card_source_ref(
         &mut self,
         source: crate::enums::CardSourceRef,
@@ -154,6 +208,16 @@ impl Game {
                 taken.clear_reveal_overlay();
                 taken
             }
+            CardSourceRef::Link(h, i) => {
+                let perm = self
+                    .player_mut(h.player)
+                    .battle_area
+                    .get_mut(h.index as usize)?;
+                if i >= perm.linked_cards.len() {
+                    return None;
+                }
+                perm.linked_cards.remove(i)
+            }
         };
         Some(TakenCardSource {
             card,
@@ -217,6 +281,18 @@ impl Game {
             }
             CardSourceRef::Reveal(_) => {
                 self.revealed_cards.push(taken.card);
+                true
+            }
+            CardSourceRef::Link(h, i) => {
+                let Some(perm) = self
+                    .player_mut(h.player)
+                    .battle_area
+                    .get_mut(h.index as usize)
+                else {
+                    return false;
+                };
+                let idx = i.min(perm.linked_cards.len());
+                perm.linked_cards.insert(idx, taken.card);
                 true
             }
         };
@@ -418,6 +494,9 @@ impl Game {
             } else {
                 deck.push(removed);
             }
+        }
+        if !is_egg {
+            self.note_effect_deck_add_if_resolving();
         }
 
         // The source has left the stack — refresh materialized declaratives so

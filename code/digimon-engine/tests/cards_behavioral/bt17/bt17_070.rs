@@ -39,8 +39,7 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -168,7 +167,11 @@ fn bt17_070_metadata_matches_printed_card() {
 fn bt17_070_has_printed_circle_and_dark_masters_text_alt_path() {
     let runner = builder().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
-    assert_eq!(card.alt_paths.len(), 2, "Purple Lv.5/3 circle + Lv.5 w/[Dark Masters] in text/3");
+    assert_eq!(
+        card.alt_paths.len(),
+        2,
+        "Purple Lv.5/3 circle + Lv.5 w/[Dark Masters] in text/3"
+    );
     for p in &card.alt_paths {
         assert_eq!(p.kind, CompiledAltPathKind::Digivolve);
         assert_eq!(p.cost, Some(CompiledCost::Literal(3)));
@@ -206,15 +209,24 @@ fn bt17_070_has_shared_optional_op_wd_clause_and_optional_wa_clause() {
         op_wd.when,
         vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving]
     );
-    assert!(op_wd.optional, "'By placing …' is an optional processing condition");
-    assert!(op_wd.condition.is_some(), "gated on a qualifying card in hand or trash");
+    assert!(
+        op_wd.optional,
+        "'By placing …' is an optional processing condition"
+    );
+    assert!(
+        op_wd.condition.is_some(),
+        "gated on a qualifying card in hand or trash"
+    );
 
     let wa = triggered
         .iter()
         .find(|t| t.when == vec![CompiledTiming::WhenAttacking])
         .expect("[When Attacking] clause");
     assert!(wa.optional, "'By returning 7 cards …' is optional");
-    assert!(wa.condition.is_some(), "gated on ≥7 cards in the opponent's trash");
+    assert!(
+        wa.condition.is_some(),
+        "gated on ≥7 cards in the opponent's trash"
+    );
     for t in &triggered {
         assert_eq!(t.scope, CompiledScope::FaceUp);
         assert!(!t.once_per_turn);
@@ -232,7 +244,10 @@ fn bt17_070_on_play_places_dark_master_from_hand_then_deletes_lv5_or_lower() {
 
     let gulf = play_gulfmon(&mut runner);
 
-    assert!(runner.pending_is_optional(), "DCGO outer yes/no must be exposed");
+    assert!(
+        runner.pending_is_optional(),
+        "DCGO outer yes/no must be exposed"
+    );
     runner
         .accept_optional_trigger()
         .expect("accept the 'By placing …' condition");
@@ -254,16 +269,31 @@ fn bt17_070_on_play_places_dark_master_from_hand_then_deletes_lv5_or_lower() {
         "after placing, a MANDATORY delete pick over level ≤5 opponent Digimon"
     );
     let view = runner.pending_selection_view().expect("delete prompt");
-    assert!(!view.valid_action_ids.contains(&PASS), "the delete is not declinable");
-    assert_eq!(non_pass_ids(&runner).len(), 2, "OPP-L3 + OPP-L5 (OPP-L6 excluded)");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "the delete is not declinable"
+    );
+    assert_eq!(
+        non_pass_ids(&runner).len(),
+        2,
+        "OPP-L3 + OPP-L5 (OPP-L6 excluded)"
+    );
     pick_first(&mut runner, "delete");
     let _ = runner.auto_resolve();
 
     let stack = stack_ids(&runner, gulf);
-    assert_eq!(stack.first().map(String::as_str), Some("DM-HAND"), "bottom digivolution card");
+    assert_eq!(
+        stack.first().map(String::as_str),
+        Some("DM-HAND"),
+        "bottom digivolution card"
+    );
     assert_eq!(stack.last().map(String::as_str), Some(CARD_ID));
     assert_eq!(runner.hand_size(0), 0, "DM-HAND left the hand");
-    assert_eq!(runner.battle_area_size(1), 2, "one opponent Digimon deleted");
+    assert_eq!(
+        runner.battle_area_size(1),
+        2,
+        "one opponent Digimon deleted"
+    );
     assert!(field_ids(&runner, 1).contains(&"OPP-L6".to_string()));
 }
 
@@ -275,12 +305,19 @@ fn bt17_070_on_play_can_place_the_dark_master_from_trash() {
 
     let gulf = play_gulfmon(&mut runner);
     runner.accept_optional_trigger().expect("accept");
-    assert_eq!(non_pass_ids(&runner).len(), 1, "DM-TRASH qualifies from trash");
+    assert_eq!(
+        non_pass_ids(&runner).len(),
+        1,
+        "DM-TRASH qualifies from trash"
+    );
     pick_first(&mut runner, "place DM-TRASH");
     pick_first(&mut runner, "delete OPP-L5");
     let _ = runner.auto_resolve();
 
-    assert_eq!(stack_ids(&runner, gulf).first().map(String::as_str), Some("DM-TRASH"));
+    assert_eq!(
+        stack_ids(&runner, gulf).first().map(String::as_str),
+        Some("DM-TRASH")
+    );
     assert_eq!(runner.trash_size(0), 0, "the card left the trash");
     assert_eq!(runner.battle_area_size(1), 0);
 }
@@ -293,19 +330,29 @@ fn bt17_070_on_play_offers_both_hand_and_trash_candidates() {
 
     play_gulfmon(&mut runner);
     runner.accept_optional_trigger().expect("accept");
-    assert_eq!(non_pass_ids(&runner).len(), 2, "hand DM + trash DM both selectable");
+    assert_eq!(
+        non_pass_ids(&runner).len(),
+        2,
+        "hand DM + trash DM both selectable"
+    );
 }
 
 #[test]
 fn bt17_070_on_play_excludes_level_4_and_non_dark_masters_cards() {
     // NEGATIVE: neither a Lv.4 [Dark Masters]-text card nor a Lv.5 without the
     // text qualifies → the gate fails and nothing is offered.
-    let mut runner = builder().hand(0, &[CARD_ID, "DM-L4", "NODM-L5"]).memory(15).start();
+    let mut runner = builder()
+        .hand(0, &[CARD_ID, "DM-L4", "NODM-L5"])
+        .memory(15)
+        .start();
     runner.place_on_field(1, "OPP-L5", Some(0));
 
     play_gulfmon(&mut runner);
 
-    assert!(runner.pending_selection().is_none(), "no qualifying card → no prompt");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no qualifying card → no prompt"
+    );
     assert_eq!(runner.hand_size(0), 2);
     assert_eq!(runner.battle_area_size(1), 1);
 }
@@ -335,7 +382,11 @@ fn bt17_070_on_play_declining_places_nothing_and_deletes_nothing() {
     runner.execute_action(player, PASS).expect("decline");
     let _ = runner.auto_resolve();
 
-    assert_eq!(stack_ids(&runner, gulf), vec![CARD_ID.to_string()], "no source placed");
+    assert_eq!(
+        stack_ids(&runner, gulf),
+        vec![CARD_ID.to_string()],
+        "no source placed"
+    );
     assert_eq!(runner.hand_size(0), 1, "DM-HAND stays in hand");
     assert_eq!(runner.battle_area_size(1), 1, "nothing deleted");
 }
@@ -352,8 +403,14 @@ fn bt17_070_on_play_level_6_opponent_digimon_cannot_be_deleted() {
     pick_first(&mut runner, "place DM-HAND");
     let _ = runner.auto_resolve();
 
-    assert!(runner.pending_selection().is_none(), "no legal delete target → no prompt");
-    assert_eq!(stack_ids(&runner, gulf).first().map(String::as_str), Some("DM-HAND"));
+    assert!(
+        runner.pending_selection().is_none(),
+        "no legal delete target → no prompt"
+    );
+    assert_eq!(
+        stack_ids(&runner, gulf).first().map(String::as_str),
+        Some("DM-HAND")
+    );
     assert_eq!(runner.battle_area_size(1), 1, "OPP-L6 survives");
 }
 
@@ -365,13 +422,19 @@ fn bt17_070_when_digivolving_fires_the_same_clause() {
 
     fire(&mut runner, EffectTiming::WhenDigivolving, gulf);
 
-    assert!(runner.pending_is_optional(), "[When Digivolving] surfaces the same outer yes/no");
+    assert!(
+        runner.pending_is_optional(),
+        "[When Digivolving] surfaces the same outer yes/no"
+    );
     runner.accept_optional_trigger().expect("accept");
     pick_first(&mut runner, "place DM-HAND");
     pick_first(&mut runner, "delete OPP-L3");
     let _ = runner.auto_resolve();
 
-    assert_eq!(stack_ids(&runner, gulf).first().map(String::as_str), Some("DM-HAND"));
+    assert_eq!(
+        stack_ids(&runner, gulf).first().map(String::as_str),
+        Some("DM-HAND")
+    );
     assert_eq!(runner.battle_area_size(1), 0);
 }
 
@@ -398,7 +461,10 @@ fn bt17_070_when_attacking_returns_7_opponent_trash_cards_to_their_deck_bottom_a
 
     runner.attack_player(gulf, 1, false);
 
-    assert!(runner.pending_is_optional(), "outer yes/no for 'By returning 7 cards …'");
+    assert!(
+        runner.pending_is_optional(),
+        "outer yes/no for 'By returning 7 cards …'"
+    );
     runner.accept_optional_trigger().expect("accept");
     assert!(
         matches!(
@@ -441,8 +507,15 @@ fn bt17_070_when_attacking_with_fewer_than_7_opponent_trash_cards_offers_nothing
     runner.attack_player(gulf, 1, false);
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.deck_size(1), opp_deck_before, "nothing returned to the deck");
-    assert!(runner.trash_size(1) >= 6, "the opponent's trash was not reduced");
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before,
+        "nothing returned to the deck"
+    );
+    assert!(
+        runner.trash_size(1) >= 6,
+        "the opponent's trash was not reduced"
+    );
     assert!(runner.game.players[0].battle_area[gulf.index as usize].is_suspended);
 }
 
@@ -460,7 +533,14 @@ fn bt17_070_when_attacking_declining_leaves_gulfmon_suspended() {
     runner.execute_action(player, PASS).expect("decline");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.deck_size(1), opp_deck_before, "declined — nothing returned to the deck");
-    assert!(runner.trash_size(1) >= 7, "declined — the opponent's trash was not reduced");
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before,
+        "declined — nothing returned to the deck"
+    );
+    assert!(
+        runner.trash_size(1) >= 7,
+        "declined — the opponent's trash was not reduced"
+    );
     assert!(runner.game.players[0].battle_area[gulf.index as usize].is_suspended);
 }

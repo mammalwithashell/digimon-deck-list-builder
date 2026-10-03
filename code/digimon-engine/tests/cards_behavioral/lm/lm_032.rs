@@ -37,9 +37,9 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
-use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 use digimon_engine::permanent::OptionState;

@@ -1,0 +1,153 @@
+# BT26-076 Crowmon — Digimon, Lv.5, Purple, DP 7000, Cost 7.
+# Traits: Mysterious Bird, DATA SQUAD. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.4 / cost 3; [Digivolve] Lv.4 w/[DATA SQUAD]
+#   trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-076.md):
+#   [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.
+#     Then, by trashing the bottom face-down card from under any of your Tamers,
+#     they trash 1 card in their hand.
+#   [Your Turn] [Once Per Turn] When your opponent's hand is trashed from or
+#     effects trash cards from under your Tamers, this Digimon may digivolve
+#     into [Ravemon] or a [DATA SQUAD] trait Digimon card in the trash with the
+#     cost reduced by 1.
+#   Inherited: [On Deletion] You may play 1 play cost 5 or lower card with
+#     [Avian] or [Bird] in any of its traits or the [DATA SQUAD] trait from your
+#     trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_076.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4, TopCard EqualsTraits "DATA SQUAD", cost 3.
+# WD (not optional): mandatory delete of an opp Lv.<=4 Digimon (when one
+#   exists); then, independently, if an own Tamer has a face-down source, a
+#   canNoSelect:true Tamer pick → trash its bottom face-down card → the
+#   OPPONENT picks 1 hand card (canNoSelect:false) to discard. → select + delete,
+#   then trash_bottom_face_down_source_under_tamer { optional: true } (its tail
+#   runs only when paid) + opponent-selected discard.
+# Reactive (OnDiscardHand | OnDigivolutionCardDiscarded, maxPerTurn 1, optional
+#   TRUE): IsOwnerTurn && (opponent's hand trashed || a card trashed from under
+#   an OWN Tamer); CanActivate requires a [Ravemon] (EqualsCardName) or
+#   EqualsTraits DATA SQUAD card in trash. Body: DigivolveIntoHandOrTrashCard(
+#   THIS, isHand false, payCost, reduce 1). → optional clause + select from
+#   trash (can_digivolve_from_source) + effect_initiated_digivolve cost -1.
+# Inherited (OnDestroyedAnyone, skippable, not optional): CanActivate requires a
+#   candidate; PlayByEffect(Root.Trash, payCost false) over cost <= 5 &&
+#   (ContainsTraits Avian | ContainsTraits Bird | EqualsTraits DATA SQUAD); the
+#   select is the "you may". → condition + optional select_trash + free play.
+
+card: BT26-076
+name: "Crowmon"
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Mysterious Bird, DATA SQUAD]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] delete 1 opp Lv.<=4; then by trashing a Tamer's bottom
+  #     face-down card, the opponent trashes 1 hand card ─────────────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing a bottom face-down card under a Tamer, they trash 1 card in their hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+      - delete_permanent: { target: victim }
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+
+  # ─── [Your Turn][OPT] opp hand trashed OR effects trash from under your
+  #     Tamers → this Digimon may digivolve into [Ravemon]/[DATA SQUAD] from
+  #     the trash, cost -1 ────────────────────────────────────────────────────
+  - when: [on_discard_hand, on_digivolution_card_trashed]
+    optional: true
+    # DCGO SetUpActivateClass(optional: true) always shows the yes/no first.
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    timing_conditions:
+      - when: on_discard_hand
+        condition:
+          event_discard_player: opponent
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          any_of:
+            - name_is: "Ravemon"
+            - trait_has: "DATA SQUAD"
+        n: 1
+    summary: "[Your Turn][OPT] When your opponent's hand is trashed from or effects trash cards from under your Tamers, this Digimon may digivolve into [Ravemon] or a [DATA SQUAD] Digimon card in the trash with the cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Ravemon"
+                  - trait_has: "DATA SQUAD"
+          prompt: "Digivolve into [Ravemon] or a [DATA SQUAD] Digimon card in your trash with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: { reduce: 1 }
+
+  # ─── Inherited [On Deletion] may play 1 cost<=5 Avian/Bird/DATA SQUAD card
+  #     from trash free ────────────────────────────────────────────────────────
+  - scope: inherited
+    when: on_deletion
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          play_cost_lte: 5
+          any_of:
+            - trait_contains: "Avian"
+            - trait_contains: "Bird"
+            - trait_has: "DATA SQUAD"
+        n: 1
+    summary: "Inherited [On Deletion] You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive
+          optional: true
+          filter:
+            all_of:
+              - play_cost_lte: 5
+              - any_of:
+                  - trait_contains: "Avian"
+                  - trait_contains: "Bird"
+                  - trait_has: "DATA SQUAD"
+          prompt: "You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive }

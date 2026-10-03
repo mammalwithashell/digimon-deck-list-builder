@@ -251,11 +251,10 @@ fn bt25_056_registers_app_fusion_logimon_craftmon() {
         matches!(p.kind, CompiledAltPathKind::AppFusion)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
             && p.materials.first().is_some_and(|m| {
-                m.filter
-                    .name_in
-                    .as_ref()
-                    .is_some_and(|names| names.contains(&"Logimon".to_string())
-                        && names.contains(&"Craftmon".to_string()))
+                m.filter.name_in.as_ref().is_some_and(|names| {
+                    names.contains(&"Logimon".to_string())
+                        && names.contains(&"Craftmon".to_string())
+                })
             })
     });
     assert!(
@@ -326,8 +325,7 @@ fn bt25_056_clause_shapes() {
     // Link box [When Linking] — linked scope.
     let when_linking = card.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
+            t.when.contains(&CompiledTiming::WhenLinked) && matches!(t.scope, CompiledScope::Linked)
         }
         _ => false,
     });
@@ -341,7 +339,10 @@ fn bt25_056_clause_shapes() {
 
 #[test]
 fn bt25_056_on_play_links_tool_from_hand_then_suspends_opponent() {
-    let mut r = base().hand(0, &[CARD_ID, "TOOL-IN-HAND"]).memory(10).start();
+    let mut r = base()
+        .hand(0, &[CARD_ID, "TOOL-IN-HAND"])
+        .memory(10)
+        .start();
     let opp = r.place_on_field(1, "OPP-A", Some(0));
     advance_to_main(&mut r);
 
@@ -379,7 +380,10 @@ fn bt25_056_on_play_links_tool_from_hand_then_suspends_opponent() {
 fn bt25_056_on_play_link_is_declinable() {
     // Printed "you may link 1" (DCGO isSkippable: true) — PASS declines the
     // link; nothing links and the [All Turns] suspend never fires.
-    let mut r = base().hand(0, &[CARD_ID, "TOOL-IN-HAND"]).memory(10).start();
+    let mut r = base()
+        .hand(0, &[CARD_ID, "TOOL-IN-HAND"])
+        .memory(10)
+        .start();
     let opp = r.place_on_field(1, "OPP-A", Some(0));
     advance_to_main(&mut r);
 
@@ -388,7 +392,8 @@ fn bt25_056_on_play_link_is_declinable() {
         r.game.pending_selection.is_some(),
         "On Play self-link installs a selection"
     );
-    r.execute_action(0, PASS).expect("decline the optional link");
+    r.execute_action(0, PASS)
+        .expect("decline the optional link");
     r.auto_resolve().ok();
 
     assert_eq!(
@@ -432,9 +437,7 @@ fn bt25_056_when_digivolving_offers_link() {
     advance_to_main(&mut r);
     let slot = r.place_on_field(0, "GREEN-BASE", Some(0)).index as usize;
 
-    let ok = r
-        .game
-        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
     assert!(ok, "Bootmon digivolves over the green Lv.4 base");
 
     assert!(
@@ -470,9 +473,7 @@ fn assert_digivolve_ok(base_id: &str, cost: i16) {
     );
 
     let mem_before = r.game.memory;
-    let ok = r
-        .game
-        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
     assert!(ok, "Bootmon digivolves over {base_id}");
     assert_eq!(
         mem_before - r.game.memory,
@@ -516,10 +517,11 @@ fn bt25_056_rejected_over_unmatched_red_lv4_base() {
     );
 
     let mem_before = r.game.memory;
-    let ok = r
-        .game
-        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
-    assert!(!ok, "digivolve over the unmatched red Lv.4 must be rejected");
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(
+        !ok,
+        "digivolve over the unmatched red Lv.4 must be rejected"
+    );
     assert_eq!(r.game.memory, mem_before, "no memory paid");
 }
 

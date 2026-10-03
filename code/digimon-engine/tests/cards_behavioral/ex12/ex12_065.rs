@@ -325,7 +325,12 @@ fn advance_to_trigger_order(runner: &mut DebugRunner) {
     use digimon_engine::selection::SelectionKind;
 
     for _ in 0..16 {
-        match runner.game.pending_selection.as_ref().map(|p| p.kind.clone()) {
+        match runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|p| p.kind.clone())
+        {
             Some(SelectionKind::TriggerOrder) => return,
             None => panic!("no TriggerOrder prompt was ever parked"),
             Some(_) => {
@@ -387,10 +392,7 @@ fn ex12_065_retaliation_is_not_offered_as_a_branch_on_an_effect_deletion() {
 
     if let Some(pending) = runner.game.pending_selection.as_ref() {
         if let Some(choices) = pending.effect_choices.as_ref() {
-            let offered: Vec<String> = choices
-                .iter()
-                .map(|c| format!("{:?}", c.keyword))
-                .collect();
+            let offered: Vec<String> = choices.iter().map(|c| format!("{:?}", c.keyword)).collect();
             assert!(
                 !choices
                     .iter()

@@ -251,7 +251,10 @@ fn bt21_023_has_when_card_linked_once_per_turn() {
     let clause = clause.expect(
         "BT21-023 must have a when_card_linked_to_this triggered clause ([Your Turn][Once Per Turn])",
     );
-    assert!(clause.once_per_turn, "clause must be once_per_turn (printed [Once Per Turn])");
+    assert!(
+        clause.once_per_turn,
+        "clause must be once_per_turn (printed [Once Per Turn])"
+    );
     assert!(
         clause.active_when.is_some(),
         "clause must carry the [Your Turn] active_when gate (DCGO IsOwnerTurn)"

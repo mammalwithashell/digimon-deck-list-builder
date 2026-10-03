@@ -126,7 +126,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // memory budget. An empty set means no mode is
                     // affordable right now.
                     if game
-                        .option_legal_play_modes(card, player_id, crate::game_actions::OptionSource::Hand(i))
+                        .option_legal_play_modes(
+                            card,
+                            player_id,
+                            crate::game_actions::OptionSource::Hand(i),
+                        )
                         .is_empty()
                     {
                         continue;
