@@ -287,7 +287,11 @@ fn inherited_piercing_source(id: &str) -> CardData {
 
 /// Drive: P0 attacks P1's player, P1 declares `blk` as blocker, battle
 /// resolves. Returns nothing; callers assert on state.
-fn attack_player_and_block(r: &mut DebugRunner, atk: digimon_engine::PermanentHandle, blk: digimon_engine::PermanentHandle) {
+fn attack_player_and_block(
+    r: &mut DebugRunner,
+    atk: digimon_engine::PermanentHandle,
+    blk: digimon_engine::PermanentHandle,
+) {
     let result = r.attack_player(atk, 1, false);
     assert_eq!(
         result,
@@ -596,5 +600,8 @@ fn piercing_with_zero_security_does_not_win_game() {
         "Piercing with 0 opposing security must not end the game \
          (§16-6-6: the check can't be performed at all)"
     );
-    assert!(r.game.pending_attack.is_none(), "attack cleaned up normally");
+    assert!(
+        r.game.pending_attack.is_none(),
+        "attack cleaned up normally"
+    );
 }

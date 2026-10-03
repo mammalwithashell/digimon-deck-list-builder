@@ -1,0 +1,148 @@
+# BT26-044 Lilamon — Digimon, Lv.5, Green, DP 7000, Cost 6.
+# Traits: Fairy, DATA SQUAD. Attribute: Data.
+# Printed digivolve box: Green Lv.4 / cost 3; [Digivolve] Lv.4 w/[DATA SQUAD]
+#   trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-044.md):
+#   [On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or
+#     Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn
+#     ends.
+#   [Your Turn] [Once Per Turn] When any of your opponent's Digimon or Tamers
+#     suspend, or effects trash cards from under your Tamers, this Digimon may
+#     digivolve into a [Vegetation], [Fairy] or [DATA SQUAD] trait Digimon card
+#     in the hand with the cost reduced by 1.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon with [Rosemon] in
+#     its name or the [DATA SQUAD] trait would leave the battle area, by trashing
+#     the bottom face-down card from under any of your Tamers, it doesn't leave.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_044.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4, TopCard EqualsTraits "DATA SQUAD", cost 3.
+# Shared OP/WD (optional false): (a) if an opp unsuspended Digimon/Tamer exists,
+#   canNoSelect:true Tap pick; (b) independently, if any opp Digimon/Tamer
+#   exists, canNoSelect:false pick → GainCanNotUnsuspend(UntilOpponentTurnEnd).
+#   → optional select (continue_on_decline) + suspend, then mandatory select +
+#   CannotUnsuspend (ST24-10 idiom).
+# [Your Turn][OPT] (two ActivateClasses sharing hash "BT26_044_YourTurn" → one
+#   shared OPT): OnTappedAnyone over an OPPONENT Digimon/Tamer, or
+#   OnDigivolutionCardDiscarded under an OWN Tamer (any cause). Not optional.
+#   Body: DigivolveIntoHandOrTrashCard(THIS, isHand, payCost, reduce 1,
+#   isOptional) over IsDigimon && EqualsTraits Vegetation|Fairy|DATA SQUAD; if
+#   nothing digivolved → RemoveUse. → optional select_hand (its decline runs the tail)
+#   + effect_initiated_digivolve, refund_opt when declined.
+# Inherited (WhenRemoveField, skippable, OPT): identical to ST24-10's inherited
+#   (HasText "Rosemon" || EqualsTraits DATA SQUAD; canNoSelect Tamer pick →
+#   trash bottom face-down; RemoveUse when declined). → ST24-10 replacement
+#   clause verbatim.
+
+card: BT26-044
+name: "Lilamon"
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 7000
+traits: [Fairy, DATA SQUAD]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] may suspend 1 opp Digimon/Tamer; then 1 opp
+  #     Digimon/Tamer can't unsuspend until their turn ends ──────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend 1 opp Digimon/Tamer; then 1 of their Digimon/Tamers can't unsuspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - is_suspended: false
+          prompt: "You may suspend 1 of your opponent's Digimon or Tamers"
+      - if:
+          condition: { binding_present: suspend_target }
+          then:
+            - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── [Your Turn][OPT] opp Digimon/Tamer suspends OR effects trash from under
+  #     your Tamers → this Digimon may digivolve (hand, cost -1) ────────────────
+  - when: [on_suspend, on_digivolution_card_trashed]
+    once_per_turn: true
+    active_when: { your_turn: true }
+    timing_conditions:
+      - when: on_suspend
+        condition:
+          all_of:
+            - event_target_owner: opponent
+            - any_of:
+                - event_target_kind: digimon
+                - event_target_kind: tamer
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    summary: "[Your Turn][OPT] When an opp Digimon/Tamer suspends or effects trash cards from under your Tamers, this Digimon may digivolve into a [Vegetation]/[Fairy]/[DATA SQUAD] hand card with the cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          # A declined (non-cost) select_hand still runs the tail, so the
+          # refund leg below executes.
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - trait_has: "Vegetation"
+                  - trait_has: "Fairy"
+                  - trait_has: "DATA SQUAD"
+          prompt: "This Digimon may digivolve into a [Vegetation]/[Fairy]/[DATA SQUAD] Digimon card in your hand with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: { reduce: 1 }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
+
+  # ─── Inherited [All Turns][OPT] Rosemon-name / DATA SQUAD carrier would leave
+  #     → trash 1 bottom face-down card under a Tamer → it doesn't leave ───────
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - any_of:
+            - source_name_contains: "Rosemon"
+            - source_permanent_trait_has: "DATA SQUAD"
+    summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - cancel_replacement: {}

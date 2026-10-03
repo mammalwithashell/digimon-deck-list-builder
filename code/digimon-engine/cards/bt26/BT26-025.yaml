@@ -1,0 +1,112 @@
+# BT26-025 Liollmon — Digimon, Lv.3, Yellow, DP 1000, Cost 3.
+# Traits: Holy Beast, Glowing Dawn, BEATBREAK. Form: Rookie. Attribute: Vaccine.
+# Digivolve: Yellow Lv.2 / cost 0; [Digivolve] Lv.2 w/[Glowing Dawn]: cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-025.md):
+#   [When Moving] [On Play] By placing your top security card face down under
+#     any of your [Glowing Dawn] trait Tamers, <Recovery +1>.
+#   Inherited: [When Attacking] [Once Per Turn] You may add your top security
+#     card to the hand. Then, if you have 0 security cards, <Recovery +1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_025.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(level 2, TopCard
+#   EqualsTraits "Glowing Dawn", cost 0) → alt_paths digivolve.
+# [When Moving][On Play] (ActivateClassesForSharedEffects, optional:false,
+#   skippable, whenMoving + onPlay): additional condition = >=1 security card
+#   AND an own [Glowing Dawn] Tamer. canNoSelect:true Tamer pick → if picked,
+#   AddDigivolutionCardsBottom(top security, face down) + ReduceSecurity →
+#   Recovery +1. → [on_play, on_move] (on_move gated on the moved permanent
+#   being this Digimon — ST24-04 idiom) + condition; optional
+#   select_own_permanent; place_as_bottom_source { security_top: you }
+#   face_down (NEW binding, G-DSL-SECURITY-TOP-AS-SOURCE — fires the
+#   OnLoseSecurity observers as an effect removal) → recover 1.
+# Inherited [When Attacking][OPT] (OnAllyAttack + CanTriggerOnAttack(self)):
+#   not optional; if security >= 1 a Yes/No → add top security to hand; then
+#   if security == 0 → Recovery +1; RemoveUse when neither happened.
+#   → scope inherited when_attacking once_per_turn; gated 2-way
+#   select_effect_choice (decline refunds the [Once Per Turn] via refund_opt);
+#   add_top_security_to_hand; `security_count_lte: 0` → recover 1.
+
+card: BT26-025
+name: "Liollmon"
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Holy Beast, Glowing Dawn, BEATBREAK]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Glowing Dawn"
+    cost: 0
+
+effects:
+  # ─── [When Moving][On Play] by placing top security face down under a
+  #     [Glowing Dawn] Tamer, <Recovery +1> ──────────────────────────────────
+  - when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      all_of:
+        - security_count_gte: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            trait_has: "Glowing Dawn"
+    summary: "[When Moving][On Play] By placing your top security card face down under any of your [Glowing Dawn] trait Tamers, <Recovery +1>"
+    process:
+      - select_own_permanent:
+          bind_as: gd_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "Glowing Dawn"
+          prompt: "Place your top security card face down under 1 of your [Glowing Dawn] trait Tamers to <Recovery +1>"
+      - if:
+          condition: { binding_present: gd_tamer }
+          then:
+            - place_as_bottom_source:
+                source: { security_top: you }
+                target: gd_tamer
+                face_down: true
+            - recover: { of: you, count: 1 }
+
+  # ─── Inherited [When Attacking][OPT] may add top security to hand; then if
+  #     0 security, <Recovery +1> ──────────────────────────────────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, <Recovery +1>"
+    process:
+      - if:
+          condition: { security_count_gte: 1 }
+          then:
+            - select_effect_choice:
+                bind_as: add_choice
+                labels:
+                  - "Add your top security card to the hand"
+                  - "Don't add"
+                prompt: "Add your top security card to the hand?"
+            - if:
+                condition: { equals: [add_choice, 0] }
+                then:
+                  - add_top_security_to_hand: { of: you }
+                else:
+                  # Declined with security left ⇒ nothing happened (no
+                  # recovery either): DCGO RemoveUse.
+                  - refund_opt: {}
+      - if:
+          condition: { security_count_lte: 0 }
+          then:
+            - recover: { of: you, count: 1 }

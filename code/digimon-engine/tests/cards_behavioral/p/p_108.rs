@@ -179,15 +179,24 @@ fn p_108_metadata_and_clause_shapes() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, process, .. }) => {
-                Some((trigger, process))
-            }
+            CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
+                trigger,
+                process,
+                ..
+            }) => Some((trigger, process)),
             _ => None,
         })
         .expect("<Delay> clause");
-    assert_eq!(*delay.0, CompiledTiming::Delayed, "standard player-activated [Main] <Delay>");
+    assert_eq!(
+        *delay.0,
+        CompiledTiming::Delayed,
+        "standard player-activated [Main] <Delay>"
+    );
     assert!(
-        process_contains(delay.1, &|s| matches!(s, CompiledStep::EffectInitiatedDigivolve { .. })),
+        process_contains(delay.1, &|s| matches!(
+            s,
+            CompiledStep::EffectInitiatedDigivolve { .. }
+        )),
         "the Delay body digivolves from hand (nested under the 'may' pick's `if binding_exists`)"
     );
 
@@ -219,19 +228,43 @@ fn p_108_main_adds_the_purple_card_bottoms_the_other_and_seats_itself() {
     runner.place_on_field(0, "PURPLE-B", Some(0)); // colour requirement
     let deck_before = runner.deck_size(0);
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
-    let view = runner.pending_selection_view().expect("reveal bucket prompt");
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("reveal bucket prompt");
     assert!(matches!(view.kind, SelectionKind::RevealBucket { .. }));
-    assert_eq!(view.valid_action_ids.iter().filter(|&&a| a != PASS).count(), 1, "only PURPLE-A is a legal pick");
+    assert_eq!(
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
+        1,
+        "only PURPLE-A is a legal pick"
+    );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("add PURPLE-A");
     let _ = runner.auto_resolve();
 
-    assert_eq!(hand_ids(&runner, 0), vec!["PURPLE-A".to_string()], "the purple card is in hand");
-    assert_eq!(runner.deck_size(0), deck_before - 2 + 1, "2 revealed, 1 returned to the bottom");
-    assert_eq!(deck_bottom_ids(&runner, 0, 1), vec!["RED-A".to_string()], "RED-A went to the bottom");
-    assert!(find_delayed(&runner, 0).is_some(), "P-108 is placed in the battle area as a Delay option");
+    assert_eq!(
+        hand_ids(&runner, 0),
+        vec!["PURPLE-A".to_string()],
+        "the purple card is in hand"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2 + 1,
+        "2 revealed, 1 returned to the bottom"
+    );
+    assert_eq!(
+        deck_bottom_ids(&runner, 0, 1),
+        vec!["RED-A".to_string()],
+        "RED-A went to the bottom"
+    );
+    assert!(
+        find_delayed(&runner, 0).is_some(),
+        "P-108 is placed in the battle area as a Delay option"
+    );
     assert_eq!(runner.memory(), 3, "cost 2 paid");
 }
 
@@ -246,18 +279,33 @@ fn p_108_main_with_two_purple_cards_lets_the_player_choose_one() {
     runner.place_on_field(0, "RED-A", Some(0));
     runner.place_on_field(0, "PURPLE-B", Some(0));
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
-    let view = runner.pending_selection_view().expect("reveal bucket prompt");
-    let picks: Vec<u16> = view.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("reveal bucket prompt");
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
     assert_eq!(picks.len(), 2, "both purple cards are offered");
-    runner.execute_action(view.selecting_player, picks[1]).expect("pick the second purple");
+    runner
+        .execute_action(view.selecting_player, picks[1])
+        .expect("pick the second purple");
     let _ = runner.auto_resolve();
 
     let hand = hand_ids(&runner, 0);
     assert_eq!(hand.len(), 1, "exactly one card added");
     assert!(hand[0].starts_with("PURPLE-"));
     assert_eq!(deck_bottom_ids(&runner, 0, 1).len(), 1);
-    assert!(deck_bottom_ids(&runner, 0, 1)[0].starts_with("PURPLE-"), "the other purple went to the bottom");
+    assert!(
+        deck_bottom_ids(&runner, 0, 1)[0].starts_with("PURPLE-"),
+        "the other purple went to the bottom"
+    );
 }
 
 #[test]
@@ -276,10 +324,17 @@ fn p_108_main_with_no_purple_card_bottoms_both_and_still_seats_itself() {
     let _ = runner.auto_resolve();
 
     assert!(hand_ids(&runner, 0).is_empty(), "nothing added to hand");
-    assert_eq!(runner.deck_size(0), deck_before, "both revealed cards returned to the deck");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "both revealed cards returned to the deck"
+    );
     let bottom = deck_bottom_ids(&runner, 0, 2);
     assert!(bottom.contains(&"RED-A".to_string()) && bottom.contains(&"RED-B".to_string()));
-    assert!(find_delayed(&runner, 0).is_some(), "still placed in the battle area");
+    assert!(
+        find_delayed(&runner, 0).is_some(),
+        "still placed in the battle area"
+    );
 }
 
 // ─── Section 3: <Delay> — digivolve a Digimon into a purple hand card, −2 ────
@@ -296,22 +351,42 @@ fn p_108_delay_digivolves_into_a_purple_hand_card_for_cost_minus_2() {
     advance_past_placing_turn(&mut runner, delay_idx);
     runner.game.set_memory(10);
 
-    let delay_handle = PermanentHandle { player: 0, index: delay_idx as u8 };
+    let delay_handle = PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
     assert!(
         runner.game.activate_delayed_option_main(delay_handle),
         "the <Delay> is activatable after the placing turn"
     );
 
-    let view = runner.pending_selection_view().expect("choose the Digimon that digivolves");
+    let view = runner
+        .pending_selection_view()
+        .expect("choose the Digimon that digivolves");
     assert_eq!(view.kind, SelectionKind::OwnField);
-    assert!(view.is_optional, "'1 of your Digimon MAY digivolve' — PASS is legal");
-    let pick = *view.valid_action_ids.iter().find(|&&a| a != PASS).expect("PURPLE-A is offered");
-    runner.execute_action(view.selecting_player, pick).expect("choose PURPLE-A");
+    assert!(
+        view.is_optional,
+        "'1 of your Digimon MAY digivolve' — PASS is legal"
+    );
+    let pick = *view
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("PURPLE-A is offered");
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("choose PURPLE-A");
 
-    let hand_view = runner.pending_selection_view().expect("choose the purple hand card");
+    let hand_view = runner
+        .pending_selection_view()
+        .expect("choose the purple hand card");
     assert_eq!(hand_view.kind, SelectionKind::Hand);
     assert_eq!(
-        hand_view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
+        hand_view
+            .valid_action_ids
+            .iter()
+            .filter(|&&a| a != PASS)
+            .count(),
         1,
         "only the purple Digimon card is offered (RED-EVO excluded)"
     );
@@ -320,10 +395,20 @@ fn p_108_delay_digivolves_into_a_purple_hand_card_for_cost_minus_2() {
         .expect("digivolve into PURPLE-EVO");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.memory(), 8, "digivolution cost 4 reduced by 2 → 2 memory paid");
+    assert_eq!(
+        runner.memory(),
+        8,
+        "digivolution cost 4 reduced by 2 → 2 memory paid"
+    );
     let evolved = &runner.game.players[0].battle_area[base_digimon.index as usize];
-    assert_eq!(evolved.top_card().card_id(&runner.game.card_data), "PURPLE-EVO");
-    assert!(find_delayed(&runner, 0).is_none(), "P-108 was trashed as the <Delay> cost");
+    assert_eq!(
+        evolved.top_card().card_id(&runner.game.card_data),
+        "PURPLE-EVO"
+    );
+    assert!(
+        find_delayed(&runner, 0).is_none(),
+        "P-108 was trashed as the <Delay> cost"
+    );
     assert!(
         runner.game.players[0]
             .trash
@@ -345,11 +430,18 @@ fn p_108_delay_declining_the_digivolve_changes_no_digimon() {
     advance_past_placing_turn(&mut runner, delay_idx);
     runner.game.set_memory(10);
 
-    let delay_handle = PermanentHandle { player: 0, index: delay_idx as u8 };
+    let delay_handle = PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
     assert!(runner.game.activate_delayed_option_main(delay_handle));
-    let view = runner.pending_selection_view().expect("optional Digimon pick");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional Digimon pick");
     assert!(view.is_optional);
-    runner.execute_action(view.selecting_player, PASS).expect("decline");
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline");
     let _ = runner.auto_resolve();
 
     assert_eq!(runner.memory(), 10, "no digivolution cost paid");
@@ -367,7 +459,10 @@ fn p_108_delay_cannot_be_activated_on_the_placing_turn() {
         .start();
     runner.place_on_field(0, "PURPLE-A", Some(0));
     let delay_idx = play_main_and_seat(&mut runner);
-    let delay_handle = PermanentHandle { player: 0, index: delay_idx as u8 };
+    let delay_handle = PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
     assert!(
         !runner.game.activate_delayed_option_main(delay_handle),
         "<Delay> may only be activated the next turn or later"
@@ -386,7 +481,10 @@ fn p_108_seated_delay_carries_the_main_phase_activated_trigger() {
     let delay_idx = play_main_and_seat(&mut runner);
     assert!(matches!(
         runner.game.players[0].battle_area[delay_idx].option_state,
-        OptionState::Delayed { trigger: DelayTrigger::MainPhaseActivated, .. }
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
     ));
 }
 
@@ -416,6 +514,10 @@ fn p_108_security_places_itself_in_the_owners_battle_area() {
         .expect("P-108 placed in P1's battle area");
     assert!(matches!(
         placed.option_state,
-        OptionState::Delayed { owner: 1, trigger: DelayTrigger::MainPhaseActivated, .. }
+        OptionState::Delayed {
+            owner: 1,
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
     ));
 }

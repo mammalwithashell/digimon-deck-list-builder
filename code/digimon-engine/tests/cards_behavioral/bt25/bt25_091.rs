@@ -189,8 +189,16 @@ fn bt25_091_on_play_return_does_not_draw() {
         .expect("return the TS Option");
     runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before + 1, "only the returned Option joins the hand");
-    assert_eq!(runner.deck_size(0), deck_before, "a successful return must not <Draw 1>");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "only the returned Option joins the hand"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "a successful return must not <Draw 1>"
+    );
 }
 
 /// Declining the optional return (a legal target exists) takes the draw

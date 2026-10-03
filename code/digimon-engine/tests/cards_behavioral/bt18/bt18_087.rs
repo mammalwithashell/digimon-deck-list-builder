@@ -565,7 +565,10 @@ fn answer_owen_confirm(runner: &mut DebugRunner, decline: bool) -> bool {
             None if view.is_optional => digimon_engine::action::space::PASS,
             None => return false,
         };
-        if runner.execute_action(view.selecting_player, action).is_err() {
+        if runner
+            .execute_action(view.selecting_player, action)
+            .is_err()
+        {
             return false;
         }
     }

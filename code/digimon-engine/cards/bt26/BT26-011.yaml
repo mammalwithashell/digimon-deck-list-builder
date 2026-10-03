@@ -1,0 +1,76 @@
+# BT26-011 Buraimon — Digimon, Lv.4, Red, DP 5000, Cost 5. Traits: Birdkin,
+#   Iliad, TS. Form Champion. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.3 / cost 2; [Digivolve] Lv.3 w/[TS] trait:
+#   Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-011.md):
+#   <Raid> [On Play] [When Digivolving] By trashing 1 card with [Chronomon] in
+#     its text or the [Shaman] trait from your hand, <Draw 2>.
+#   Inherited: <Raid>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_011.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + EqualsTraits("TS"), cost 2.
+# Raid: RaidSelfEffect (own + inherited) → grant_keyword Raid ×2 (own +
+#   `scope: inherited`, BT23-027 convention).
+# Shared OP/WD (optional:false, isSkippable, CanActivate needs a matching hand
+#   card): canNoSelect:true Discard pick of `HasText("Chronomon") ||
+#   EqualsTraits("Shaman")` → on a pick, Draw 2.
+#   → condition + optional `select_hand` + `trash_from_hand_by_index` + draw 2.
+
+card: BT26-011
+name: "Buraimon"
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Birdkin, Iliad, TS]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "TS"
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - in_text_contains: "Chronomon"
+            - trait_has: "Shaman"
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 card with [Chronomon] in its text or the [Shaman] trait from your hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chrono_cost
+          optional: true
+          filter:
+            any_of:
+              - in_text_contains: "Chronomon"
+              - trait_has: "Shaman"
+          prompt: "Trash 1 card with [Chronomon] in its text or the [Shaman] trait from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: chrono_cost }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: chrono_cost }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid
+    summary: "Inherited <Raid>"

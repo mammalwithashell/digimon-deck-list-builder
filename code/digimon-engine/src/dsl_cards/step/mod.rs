@@ -21,6 +21,7 @@ pub mod play_digivolve;
 pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
+pub mod zone_cards;
 pub mod zone_moves;
 
 use digimon_dsl::compiled::{
@@ -90,6 +91,9 @@ pub struct StepRuntime {
     /// un-record the activation — DCGO `RemoveUse` (G-OPT-REFUND-ON-DECLINE).
     /// Cloned into parked tails, so it survives mid-process selections.
     opt_key: Option<u8>,
+    /// The running clause is inherited/linked-scope: its OPT key is never
+    /// moved onto a `<Succession>` adopted-copy counter.
+    opt_key_inherited: bool,
 }
 
 impl Default for StepRuntime {
@@ -104,6 +108,7 @@ impl StepRuntime {
             raw,
             dna_origin: None,
             opt_key: None,
+            opt_key_inherited: false,
         }
     }
 
@@ -123,6 +128,11 @@ impl StepRuntime {
 
     pub fn opt_key(&self) -> Option<u8> {
         self.opt_key
+    }
+
+    pub fn with_opt_key_inherited(mut self, inherited: bool) -> Self {
+        self.opt_key_inherited = inherited;
+        self
     }
 }
 
@@ -276,6 +286,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromTrashStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::ZoneCardPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DigivolveReducerPrompt(_))
             | Some(ResumeFrame::DigivolveReducerSuspend(_))
@@ -535,6 +546,28 @@ fn run_steps_with_runtime_inner(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
+    // A selection is ALREADY pending before the first step runs. This happens
+    // when a tail resumes inside a selection callback whose synchronous work
+    // fired an observer that drained inline and parked — a source trashed from
+    // under a Tamer (`fire_digivolution_card_trashed` drains synchronously by
+    // design, see EX10-036). Installing this slice's next selection now would
+    // overwrite — silently drop — the observer's prompt, so park the whole
+    // slice behind it, exactly as the post-step check below does after a
+    // synchronous step. G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION.
+    if !steps.is_empty() && ctx.game.pending_selection.is_some() {
+        let tail_trigger_context = ctx.game.current_trigger_context.clone();
+        wrap_pending_selection_with_tail(
+            ctx.game,
+            ctx.source_card,
+            ctx.source_permanent,
+            ctx.player,
+            steps.to_vec(),
+            bindings.clone(),
+            runtime.clone(),
+            tail_trigger_context,
+        );
+        return RunOutcome::Parked;
+    }
     let mut i = 0;
     while i < steps.len() {
         // Cost-pay abort short-circuit (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
@@ -582,6 +615,16 @@ fn run_steps_with_runtime_inner(
         // pick loop of chained selections. It always either parks on a pending
         // selection or runs the captured tail synchronously — in both cases the
         // outer loop must stop (the tail was consumed inside the step).
+        // `select_zone_cards` / `return_top_stacked_to_deck` capture the tail
+        // like `link_cards` (parked selection or tail already run).
+        if zone_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+            return if ctx.game.pending_selection.is_some() {
+                RunOutcome::Parked
+            } else {
+                RunOutcome::Synchronous
+            };
+        }
+
         if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
             return if ctx.game.pending_selection.is_some() {
                 RunOutcome::Parked
@@ -638,8 +681,42 @@ pub fn run_step_with_runtime(
     if memory::try_run(step, ctx, bindings) {
         return;
     }
-    if draw::try_run(step, ctx) {
+    if draw::try_run(step, ctx, bindings) {
         return;
+    }
+    match step {
+        CompiledStep::PlayCardsFree { cards } => {
+            if let Some(list) = resolve_card_list(cards, ctx, bindings) {
+                zone_cards::play_cards_free(ctx, &list);
+            }
+            return;
+        }
+        CompiledStep::PlaceCardsAsBottomSources {
+            cards,
+            target: target_ref,
+        } => {
+            let target =
+                match crate::dsl_cards::binding_ref::resolve_binding_ref(target_ref, ctx, bindings)
+                {
+                    Some(crate::dsl_cards::binding_ref::ResolvedBinding::Permanent(h)) => Some(h),
+                    _ => None,
+                };
+            if let (Some(list), Some(target_handle)) =
+                (resolve_card_list(cards, ctx, bindings), target)
+            {
+                // Keep a named target binding pointing at the host after
+                // indices shift (a moved battle-area Digimon leaves the field).
+                if let Some(host) =
+                    zone_cards::place_cards_as_bottom_sources(ctx, &list, target_handle)
+                {
+                    if let digimon_dsl::compiled::CompiledBindingRef::Named(name) = target_ref {
+                        bindings.insert_permanent(name, host);
+                    }
+                }
+            }
+            return;
+        }
+        _ => {}
     }
     if zone_moves::try_run(step, ctx, bindings, runtime) {
         return;
@@ -675,6 +752,15 @@ pub fn run_step_with_runtime(
     if matches!(step, CompiledStep::RefundOpt) {
         if let (Some(opt_key), Some(perm)) = (runtime.opt_key(), ctx.source_permanent) {
             let source_card = ctx.source_card;
+            // A `<Succession>` copy refunds its OWN counter, not the source
+            // card's (DCGO `PushUseTrackingRedirectTarget`).
+            let opt_key = ctx.game.opt_key_for_source(
+                perm,
+                source_card,
+                runtime.opt_key_inherited,
+                false,
+                opt_key,
+            );
             ctx.game
                 .unrecord_source_permanent_activation(perm, source_card, opt_key);
         }
@@ -840,4 +926,18 @@ fn try_run_link_step_from_security(
     ctx.game
         .install_link_host_selection(owner, source_card, candidates, optional);
     true
+}
+
+/// Resolve a binding to a list of card handles (a single card, or a card list).
+fn resolve_card_list(
+    r: &digimon_dsl::compiled::CompiledBindingRef,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<Vec<crate::card_source::CardHandle>> {
+    use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+    match resolve_binding_ref(r, ctx, bindings)? {
+        ResolvedBinding::Card(h) => Some(vec![h]),
+        ResolvedBinding::CardList(v) => Some(v),
+        _ => None,
+    }
 }

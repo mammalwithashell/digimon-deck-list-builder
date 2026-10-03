@@ -271,10 +271,7 @@ fn ad1_005_has_ult_trait_digivolve_alt_path_cost_4() {
          (DCGO AddSelfDigivolutionRequirementStaticEffect EqualsTraits(\"Ult.\"))",
     );
     assert!(
-        ult_path
-            .from
-            .as_ref()
-            .is_some_and(|f| f.color_is.is_none()),
+        ult_path.from.as_ref().is_some_and(|f| f.color_is.is_none()),
         "the Ult. circle is rainbow-rimmed (any color) — no color gate allowed \
          (DCGO condition checks the trait only)"
     );
@@ -495,7 +492,10 @@ fn ad1_005_standard_digivolve_rejects_off_color_lv5_base() {
 
     let mem_before = r.game.memory;
     let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
-    assert!(!ok, "digivolving over a blue non-Ult. Lv.5 base must be rejected");
+    assert!(
+        !ok,
+        "digivolving over a blue non-Ult. Lv.5 base must be rejected"
+    );
     assert_eq!(r.game.memory, mem_before, "no memory is paid on rejection");
 }
 

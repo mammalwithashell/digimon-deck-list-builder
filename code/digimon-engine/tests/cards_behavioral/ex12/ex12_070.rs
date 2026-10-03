@@ -163,7 +163,9 @@ fn ex12_070_delay_option_is_not_auto_trashed_after_the_owners_next_turn() {
     // `EndOfYourNextTurn` fallback scheduled (`placing_turn + 2`).
     for _ in 0..5 {
         runner.end_turn();
-        runner.auto_resolve().expect("no selection is owed by a turn flip");
+        runner
+            .auto_resolve()
+            .expect("no selection is owed by a turn flip");
         assert!(
             field_contains(&runner, 0, CARD_ID),
             "EX12-070 must stay in the battle area (16-16-1): turn {} (placed on {placing_turn})",

@@ -1,0 +1,119 @@
+# BT26-102 Seven Code PAD — Option, White, Use cost 7. Traits: Appmon, Seven Code.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-102.md):
+#   <Use Req. ([Seven Code] trait)> (Specified cards let you ignore color
+#     requirements.)
+#   [Main] By placing 6 [Seven Code] trait Digimon cards from your battle area,
+#     link cards or trash as 1 of your [Seven Code] trait Digimon's bottom
+#     digivolution cards, that Digimon may digivolve into [Dantemon] in the
+#     hand, ignoring digivolution requirements and without paying the cost.
+#   [Security] You may play 1 play cost 5 or lower [Appmon] trait card from your
+#     hand or trash without paying the cost. Then, add this card to the hand.
+#   Official Q&A: the 6 may come from any mix of the three areas (e.g. 1 from a
+#     Digimon in the battle area, 2 from link cards and 3 from the trash).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/*/BT26_102.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Use Req.: EqualsTraits("Seven Code") → use_requirement.
+# [Main]: optional (canNoSelect) pick of 1 own [Seven Code] Digimon (the
+#   host); then a loop over {Battle area | Link cards | Trash | Cancel} with
+#   per-zone up-to-remaining multi-picks: battle-area picks are OTHER own
+#   [Seven Code] Digimon (their TOP card becomes material), link picks any own
+#   Digimon's [Seven Code] Digimon link cards (the host's included), trash picks
+#   [Seven Code] Digimon cards; exactly 6 or nothing (Cancel / running out
+#   places nothing). Then AddDigivolutionCardsBottom(all 6) and an optional
+#   DigivolveIntoHandOrTrashCard([Dantemon], hand, payCost false, ignore all
+#   requirements).
+#   → select_own_permanent (optional) + `select_zone_cards { zones:
+#   [battle_area, link_cards, trash], min/max 6, optional_zero, exclude: host }`
+#   (one prompt over all three zones — the zone loop's reachable sets;
+#   G-DSL-PLACE-MATERIALS-MULTI-ZONE) + `place_cards_as_bottom_sources` +
+#   optional select_hand [Dantemon] → effect_initiated_digivolve { free,
+#   ignore_requirements }.
+# [Security] (blue): 3-way hand / trash / don't (HasPlayCost && GetCostItself
+#   <= 5 && EqualsTraits("Appmon") && CanPlayAsNewPermanent) → PlayByEffect
+#   free; then AddThisCardToHand (always).
+#   → BT25-096 idiom: select_union_zone {hand, trash} + play_union_bound_free +
+#   add_this_option_to_hand.
+
+card: BT26-102
+name: "Seven Code PAD"
+kind: option
+color: [white]
+cost: 7
+traits: [Appmon, Seven Code]
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: "Seven Code"
+
+effects:
+  # ─── [Main] by placing 6 [Seven Code] Digimon cards under 1 of your
+  #     [Seven Code] Digimon, it may digivolve into [Dantemon] for free ───────
+  - when: main_from_hand
+    summary: "[Main] By placing 6 [Seven Code] trait Digimon cards from your battle area, link cards or trash as 1 of your [Seven Code] trait Digimon's bottom digivolution cards, that Digimon may digivolve into [Dantemon] in the hand, ignoring digivolution requirements and without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Seven Code"
+          prompt: "Choose 1 of your [Seven Code] trait Digimon to place 6 [Seven Code] Digimon cards under"
+      - if:
+          condition: { binding_present: host }
+          then:
+            - select_zone_cards:
+                zones: [battle_area, link_cards, trash]
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Seven Code"
+                min: 6
+                max: 6
+                optional_zero: true
+                exclude: host
+                bind_as: materials
+                prompt: "Place 6 [Seven Code] trait Digimon cards from your battle area, link cards or trash as its bottom digivolution cards"
+            - if:
+                condition: { binding_present: materials }
+                then:
+                  - place_cards_as_bottom_sources: { cards: materials, target: host }
+                  - select_hand:
+                      of: you
+                      bind_as: dantemon
+                      optional: true
+                      filter: { name_is: "Dantemon" }
+                      prompt: "That Digimon may digivolve into [Dantemon] in your hand, ignoring digivolution requirements and without paying the cost"
+                  - if:
+                      condition: { binding_present: dantemon }
+                      then:
+                        - effect_initiated_digivolve:
+                            target: host
+                            from_hand: dantemon
+                            cost: free
+                            ignore_requirements: true
+
+  # ─── [Security] may play 1 play cost ≤ 5 [Appmon] card from hand or trash,
+  #     free; then add this card to the hand ──────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost. Then, add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: app_play
+          optional: true
+          filter:
+            all_of:
+              - trait_has: Appmon
+              - play_cost_lte: 5
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: app_play }
+      - add_this_option_to_hand: {}

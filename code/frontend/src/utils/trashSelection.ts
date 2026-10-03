@@ -62,8 +62,9 @@ export function trashSelectionMode(
   if (pending.kind === 'Trash') return 'single';
   if (
     pending.kind?.startsWith('CountCappedMultiSelect') &&
-    pending.validIndices.length > 0 &&
-    pending.validIndices.every(isTrashAction)
+    // Optional picks may list PASS (the Decline button) among their ids.
+    pending.validIndices.some(isTrashAction) &&
+    pending.validIndices.every((id) => isTrashAction(id) || id === SELECTION.DECLINE)
   ) {
     return 'multi';
   }

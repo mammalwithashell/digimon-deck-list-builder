@@ -1,0 +1,73 @@
+# Exam scenario: Peckmon (BT26-072), clause BT26-072#effect#2 --
+# "[On Play] [When Digivolving] By trashing 1 card in your hand or placing it
+#  face down under any of your [Keenan Crier]s, delete 1 of your opponent's
+#  level 4 or lower Digimon."
+#
+# DECK NOTE. `bt26-dats` is the real 1st-place BT26 Data Squad list (see
+# BT26-065-effect1.yaml); `tm-quiet-red` is the shared quiet ST1 shell.
+#
+# THE LINE (no [Keenan Crier] on the field, so DCGO skips the 3-way cost modal
+# and goes straight to the declinable hand-trash pick; ours takes the same
+# `else` branch):
+#   T1 (P0): pass.                      -> P1 at 3 memory
+#   T2 (P1): play Agumon ST1-03 (3 -> 0), pass.   -> P0 at 3
+#   T3 (P0): draw; hard-play Peckmon (3 -> -1): THE CLAUSE -- trash ST24-15
+#            from hand (cost), delete Agumon (the only Lv.<=4 target).
+#   T4 (P1): the trailing step.
+card: BT26-072
+clause: BT26-072#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-072, ST24-12, BT26-076, ST24-15, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-094, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): Agumon, then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-072, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the cost -- trash ST24-15 from hand.
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  # ... then the mandatory delete of the opponent's Lv.<=4 Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # T4 (P1): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p0.trash: [ST24-15]
+      p0.field:
+        - { card_id: BT26-072, dp: 5000, suspended: false, sources: [] }
+      p1.field: []

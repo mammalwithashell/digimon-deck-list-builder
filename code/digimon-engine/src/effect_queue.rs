@@ -684,7 +684,9 @@ impl Game {
                     Some(trigger_context),
                 );
             }
-            TriggerSource::BattleResolved { .. } | TriggerSource::HandDiscarded { .. } => {
+            TriggerSource::BattleResolved { .. }
+            | TriggerSource::HandDiscarded { .. }
+            | TriggerSource::DeckGained { .. } => {
                 // Board-wide observer fan-out: scan EVERY player's battle area
                 // so both own-side and opponent-reactive observers see the
                 // event. The winner/owner/trait (BattleResolved) or trashing
@@ -884,6 +886,76 @@ impl Game {
         }
     }
 
+    /// Enqueue the `scope: trash` `OnDiscardHand` clauses of ONE card that an
+    /// effect just moved from `owner`'s hand to the trash — the self-scoped
+    /// "When this card is trashed from the hand, …" trigger (BT26-069
+    /// Dobermon; DCGO `CanTriggerOnTrashSelfHand`). Called once per trashed
+    /// card from `flush_pending_hand_discard`; a card that already left the
+    /// trash is skipped. A `scope: trash` + `when: on_discard_hand` clause is
+    /// therefore reached ONLY on the discarded card itself (a card already
+    /// lying in the trash never sees it). G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) fn enqueue_self_trashed_from_hand(
+        &mut self,
+        owner: PlayerId,
+        card: CardHandle,
+        cause_controller: PlayerId,
+    ) {
+        let timing = EffectTiming::OnDiscardHand;
+        let Some((card_id, source_kind)) = self
+            .players
+            .get(owner as usize)
+            .and_then(|p| p.trash.iter().find(|c| c.handle() == card))
+            .map(|c| {
+                (
+                    c.card_id(&self.card_data).to_string(),
+                    source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                )
+            })
+        else {
+            return;
+        };
+        let Some(effects) = self.effects_for_card(&card_id, card) else {
+            return;
+        };
+        let trigger_context = TriggerContext {
+            event_card: Some(card),
+            discard_hand_player: Some(owner),
+            discard_cause_controller: Some(cause_controller),
+            affected_player: Some(owner),
+            source_player: Some(cause_controller),
+            effect_initiated: true,
+            ..TriggerContext::default()
+        };
+        let is_turn_player = owner == self.turn_player();
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.inherited || effect.linked || !effect.trash_zone {
+                continue;
+            }
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card,
+                source_permanent: None,
+                source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                controller: owner,
+                timing,
+                trigger_context: Some(trigger_context.clone()),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
+                keyword_effect: None,
+            });
+        }
+    }
+
     /// Open a deferred-drain scope. While `draining_deferred > 0`, every
     /// `fire_on_*` observer helper that previously inline-drained should
     /// route through `maybe_drain_effect_queue()` instead — enqueue but
@@ -1075,6 +1147,23 @@ impl Game {
                     }
                     discard_guard += 1;
                     if discard_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
+            // Flush the OnAddToDeck batch window the same way
+            // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
+            // deck has finished, so fire the observer ONCE (DCGO
+            // `FireOnAddLibraryAnyone` once per added list), then drain.
+            if self.pending_selection.is_none() {
+                let mut deck_guard: u16 = 0;
+                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                    self.flush_pending_deck_add();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    deck_guard += 1;
+                    if deck_guard > MAX_CHAIN_DEPTH {
                         break;
                     }
                 }
@@ -1293,6 +1382,41 @@ impl Game {
                     self.effect_queue.remove(idx);
                 }
                 continue;
+            }
+
+            // G-ENGINE-ON-SUSPEND-BATCH: one suspend action that suspends
+            // several permanents is ONE `OnSuspend` event (rule 15-5-2: a
+            // condition met several times at once triggers once; DCGO fires a
+            // single `OnTappedAnyone` carrying the whole `Permanents` list).
+            // The engine enqueues one entry per suspended permanent, so the
+            // same observer can sit in this bundle several times. Keep the
+            // FIRST FIRING entry per observer and drop the rest — the
+            // non-firing ones were already excluded above, so "any of the
+            // batched permanents satisfies the condition" is preserved.
+            {
+                let mut seen = std::collections::HashSet::new();
+                let dup: Vec<usize> = bundle
+                    .iter()
+                    .copied()
+                    .filter(|&i| {
+                        let qe = &self.effect_queue[i];
+                        qe.timing == EffectTiming::OnSuspend
+                            && !seen.insert(format!(
+                                "{:?}|{:?}|{}|{:?}|{:?}",
+                                qe.source_card,
+                                qe.source_permanent,
+                                qe.effect_slot,
+                                qe.granted_effect_id,
+                                qe.keyword_effect
+                            ))
+                    })
+                    .collect();
+                if !dup.is_empty() {
+                    for idx in dup.into_iter().rev() {
+                        self.effect_queue.remove(idx);
+                    }
+                    continue;
+                }
             }
 
             if bundle.len() == 1 {
@@ -1554,6 +1678,10 @@ impl Game {
                 event_card: Some(card),
                 source_player: Some(defender),
                 was_security_skill: true,
+                // "if removed from by effects" (BT26-089) — see
+                // `pending_security_loss_effect_initiated`.
+                effect_initiated: timing == EffectTiming::OnLoseSecurity
+                    && self.pending_security_loss_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityStackCard { player, card } => TriggerContext {
@@ -1914,6 +2042,20 @@ impl Game {
                 effect_initiated: true,
                 ..TriggerContext::default()
             },
+            TriggerSource::DeckGained { cause_controller } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The causing effect's controller ("when YOUR effects add to
+                // decks" -> `event_caused_by_own_effect`). G-ENGINE-ON-ADD-TO-DECK.
+                source_player: Some(cause_controller),
+                event_cause_effect: Some(crate::trigger_context::EffectAttribution {
+                    controller: cause_controller,
+                    source_card: None,
+                    source_permanent: None,
+                }),
+                effect_initiated: true,
+                ..TriggerContext::default()
+            },
             TriggerSource::SourcesAddedToStack {
                 host,
                 host_card,
@@ -2211,6 +2353,18 @@ impl Game {
         else {
             return;
         };
+        // Rule 15-14-5: a `{Security}` effect is active only while its card is
+        // FACE UP in the security stack (BT26-082's official Q&A: "It can't be
+        // triggered or activated in areas other than the face-up security
+        // cards"). A face-down security card has no active effects.
+        // G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP.
+        if !self
+            .player(player)
+            .face_up_security
+            .contains(&card_source.card_index)
+        {
+            return;
+        }
         let card_id = card_source.card_id(&self.card_data).to_string();
         let source_kind = source_kind_for_card_kind(card_source.card_kind(&self.card_data));
 
@@ -2666,7 +2820,13 @@ impl Game {
         // keying (Track C) and predicates that read source identity remain
         // per-source-slot stable. `allow_below_top_liveness: true` lets the
         // liveness gate accept the stacked source as a valid origin.
-        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
+        //
+        // `<Succession>` (G-ENGINE-SUCCESSION-KEYWORD): an ADOPTED source also
+        // dispatches its top-scope effects through the carrier. Same entry
+        // shape; `run_queued_effect_inner`'s liveness gate re-checks the card
+        // is still the adopted one at activation time.
+        let adopted = self.succession_source_indices(handle);
+        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind, bool)> = {
             let Some(perm) = self
                 .players
                 .get(handle.player as usize)
@@ -2677,22 +2837,26 @@ impl Game {
             let stack_len = perm.card_sources.len();
             perm.card_sources
                 .iter()
+                .enumerate()
                 .take(stack_len.saturating_sub(1))
-                .map(|c| {
+                .map(|(i, c)| {
                     (
                         c.card_id(&self.card_data).to_string(),
                         c.handle(),
                         source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        adopted.contains(&i),
                     )
                 })
                 .collect()
         };
-        for (source_card_id, inherited_source, inherited_source_kind) in inherited_sources {
+        for (source_card_id, inherited_source, inherited_source_kind, is_adopted) in
+            inherited_sources
+        {
             let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
-                if !effect.inherited {
+                if !(effect.inherited || (is_adopted && Game::is_adoptable_effect(effect))) {
                     continue;
                 }
                 if !timing_flag_matches(effect, timing) {
@@ -3185,7 +3349,7 @@ impl Game {
 
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 let Some(activation_count) =
                     self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
                 else {
@@ -3272,7 +3436,7 @@ impl Game {
         let mut activation_cost_paid = false;
         if effect.activation_cost_fn.is_some() {
             let max_per_turn = effect.max_per_turn;
-            let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+            let opt_key = self.queued_opt_key(effect, &qe);
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
@@ -3330,7 +3494,7 @@ impl Game {
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3381,7 +3545,7 @@ impl Game {
             return;
         }
 
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3625,6 +3789,13 @@ impl Game {
             .any(|c| c.card_index == qe.source_card.0);
         let inherited_source_matches =
             below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
+        // `<Succession>`: a copied effect is live only while its card is STILL
+        // the adopted source (DCGO `ValidCardSourceAtActivate`).
+        let adopted_source_matches = below_top_source_matches
+            && qe.allow_below_top_liveness
+            && !effect.inherited
+            && Game::is_adoptable_effect(effect)
+            && self.is_adopted_source_card(perm_handle, qe.source_card);
         let training_matches = self
             .players
             .get(perm_handle.player as usize)
@@ -3647,7 +3818,11 @@ impl Game {
                 })
             })
             .unwrap_or(false);
-        top_matches || linked_matches || inherited_source_matches || training_matches
+        top_matches
+            || linked_matches
+            || inherited_source_matches
+            || adopted_source_matches
+            || training_matches
     }
 
     /// Resolve the once-per-turn counter key for an effect. A multi-timing
@@ -3656,6 +3831,18 @@ impl Game {
     /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
         effect.shared_opt_group.unwrap_or(effect_slot)
+    }
+
+    /// [`Game::opt_slot_key`] for a queued entry, with a `<Succession>`-adopted
+    /// copy moved onto its own counter (`Game::opt_key_for_source`).
+    fn queued_opt_key(&self, effect: &crate::effect::Effect, qe: &QueuedEffect) -> u8 {
+        let key = Self::opt_slot_key(effect, qe.effect_slot);
+        match qe.source_permanent {
+            Some(perm) if qe.allow_below_top_liveness => {
+                self.opt_key_for_source(perm, qe.source_card, effect.inherited, effect.linked, key)
+            }
+            _ => key,
+        }
     }
 
     fn source_permanent_activation_count(
@@ -3800,8 +3987,20 @@ impl Game {
                 }
             }
         }
-        if let Some(security) = self.pending_security.take() {
+        if let Some(mut security) = self.pending_security.take() {
             if !security.played {
+                // G-DSL-SECURITY-TOP-AS-SOURCE: an effect placing a security
+                // card "face down" under a permanent (BT26-025) — consumed for
+                // every destination so a stale flag never leaks.
+                if std::mem::take(&mut self.pending_security_source_face_down)
+                    && matches!(
+                        pending.destination,
+                        SecurityRemovalDestination::BottomSource(_)
+                            | SecurityRemovalDestination::TopSource(_)
+                    )
+                {
+                    security.card.face_down = true;
+                }
                 match pending.destination {
                     SecurityRemovalDestination::Trash => {
                         let owner = security.card.owner;
@@ -3826,6 +4025,9 @@ impl Game {
                             deck.insert(0, security.card);
                         } else {
                             deck.push(security.card);
+                        }
+                        if !is_egg {
+                            self.note_effect_deck_add_if_resolving();
                         }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
@@ -4049,6 +4251,10 @@ impl Game {
             played: false,
         });
 
+        // Every caller of this function is an EFFECT removal: tag the
+        // OnLoseSecurity trigger contexts (built at enqueue time) so
+        // `event_is_effect_initiated` reads true. G-ENGINE-LOSE-SECURITY-BY-EFFECT.
+        self.pending_security_loss_effect_initiated = true;
         self.enqueue_triggered(
             EffectTiming::OnLoseSecurity,
             TriggerSource::SecurityRevealed {
@@ -4056,6 +4262,7 @@ impl Game {
                 card: card_handle,
             },
         );
+        self.pending_security_loss_effect_initiated = false;
         // 15-8-3-2: inside a resolving effect body (deferred scope) the
         // observers — and any SIBLING trigger already queued, e.g. EX13-036
         // Kentaurosmon's second [When Digivolving] — must wait until the body
@@ -4114,7 +4321,7 @@ impl Game {
         }
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 match self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key) {
                     Some(count) if count >= effect.max_per_turn => return false,
                     None => return false,
@@ -4350,9 +4557,9 @@ impl Game {
             // never both apply to one effect.
             let keyword = qe.keyword_effect.or_else(|| {
                 self.effects_for_queued(qe).and_then(|effects| {
-                    effects.get(qe.effect_slot as usize).and_then(|effect| {
-                        effect.granted_keyword.or(effect.keyword_source)
-                    })
+                    effects
+                        .get(qe.effect_slot as usize)
+                        .and_then(|effect| effect.granted_keyword.or(effect.keyword_source))
                 })
             });
             debug_assert!(action_id < HAND_EFFECT_END);

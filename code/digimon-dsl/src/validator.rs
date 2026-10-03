@@ -325,8 +325,9 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
                                             path: format!("{prefix}.grant_traits[{i}]"),
-                                            message: "grant_traits entries must be non-empty trait names"
-                                                .to_string(),
+                                            message:
+                                                "grant_traits entries must be non-empty trait names"
+                                                    .to_string(),
                                         });
                                     }
                                 }
@@ -1047,7 +1048,7 @@ fn validate_step(
                 validate_binding_ref(source, &format!("{prefix}.source"), card_id, errors);
             }
         }
-        StepSpec::SecurityPlaceTopStackedCard(args) => {
+        StepSpec::SecurityPlaceTopStackedCard(args) | StepSpec::SecurityPlaceTopCard(args) => {
             validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
         }
         StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
@@ -1264,6 +1265,47 @@ fn validate_step(
                 );
             }
         }
+        StepSpec::SelectZoneCards(args) => {
+            if args.zones.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.zones"),
+                    message: "select_zone_cards needs at least one zone".to_string(),
+                });
+            }
+            if args.max == 0 || args.min > args.max {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.max"),
+                    message: "select_zone_cards needs 0 < max and min <= max".to_string(),
+                });
+            }
+            if let Some(budget) = &args.play_cost_budget {
+                validate_formula(
+                    budget,
+                    &format!("{prefix}.play_cost_budget"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        StepSpec::ReturnTopStackedToDeck(args) => {
+            validate_formula(
+                &args.count,
+                &format!("{prefix}.count"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectCountCappedMulti(args) => {
             // Mirrors the compile-time check: the runtime only scans hand /
             // trash / battle_area; any other zone silently installed nothing.
@@ -1455,6 +1497,22 @@ fn validate_step_binding_scope(
             // `bind_count_as` DECLARES a literal binding (the count trashed) for
             // consumption by LATER steps' `binding_value` formulas.
             // G-DSL-TRASH-COUNT-RESULT-BINDING.
+            declare_optional_binding(scope, &args.bind_count_as);
+        }
+        StepSpec::TrashTopSecurity(args) => {
+            for (f, key) in [(&args.count, "count"), (&args.leave, "leave")] {
+                if let Some(f) = f {
+                    validate_formula_binding_scope(
+                        f,
+                        &format!("{prefix}.{key}"),
+                        card_id,
+                        scope,
+                        errors,
+                    );
+                }
+            }
+            // `bind_count_as` DECLARES the number of security cards actually
+            // trashed. G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING (BT26-083).
             declare_optional_binding(scope, &args.bind_count_as);
         }
         StepSpec::DeDigivolve(args) => {
@@ -1742,6 +1800,25 @@ fn validate_step_binding_scope(
                 validate_formula_binding_scope(
                     formula,
                     &format!("{prefix}.max.formula"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectZoneCards(args) => {
+            if let Some(budget) = &args.play_cost_budget {
+                validate_formula_binding_scope(
+                    budget,
+                    &format!("{prefix}.play_cost_budget"),
                     card_id,
                     scope,
                     errors,
@@ -2440,6 +2517,7 @@ fn validate_binding_ref(
         source_permanent,
         of_permanent,
         deck_top,
+        security_top,
         own_breeding,
         ..
     }) = binding_ref
@@ -2460,6 +2538,7 @@ fn validate_binding_ref(
         permanent.is_some(),
         of_permanent.is_some(),
         deck_top.is_some(),
+        security_top.is_some(),
         matches!(own_breeding, Some(true)),
     ]
     .iter()

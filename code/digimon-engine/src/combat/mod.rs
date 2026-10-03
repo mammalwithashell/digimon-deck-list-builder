@@ -848,8 +848,7 @@ impl Game {
                                 // `advance_pending_attack`, and the
                                 // `PostBattle` arm below fires the check
                                 // once the chain has cleared.
-                                if self.pending_selection.is_some()
-                                    || !self.effect_queue.is_empty()
+                                if self.pending_selection.is_some() || !self.effect_queue.is_empty()
                                 {
                                     return AttackResult::InProgress;
                                 }

@@ -1,0 +1,156 @@
+# BT26-082 Ravemon — Digimon, Lv.6, Purple, DP 12000, Cost 12.
+# Traits: Cyborg, DATA SQUAD + (Rule) Birdkin. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.5 / cost 4; [Digivolve] [Crowmon] / Lv.5
+#   w/[DATA SQUAD] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-082.md):
+#   {Security} [End of Opponent's Turn] Play this card without paying the cost.
+#   [When Digivolving] [End of Attack] By deleting this Digimon or trashing 2
+#     bottom face-down cards from under any of your Tamers, delete 1 of your
+#     opponent's highest DP Digimon.
+#   [On Deletion] Your opponent trashes 1 card in their hand. Then, if their hand
+#     has 7 or fewer cards, you may place this card face up as the bottom
+#     security card.
+#   (Rule) Trait: Has [Birdkin] Type.
+#   Official Q&A: a {Security} effect can trigger only while its card is face up
+#   in the security stack.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_082.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve ×2: EqualsCardName "Crowmon" (no level gate) cost 3; level 5 +
+#   EqualsTraits DATA SQUAD cost 3.
+# {Security} (OnEndTurn, IsOpponentTurn, IsExistInSecurity — i.e. face up):
+#   PlayPermanentCards(root Security, payCost false, activateETB). Not optional.
+#   → scope: security + end_of_opponents_turn + play_security_card { self }.
+# Shared WD / End of Attack (optional false, skippable): SetIntSelection
+#   {Delete this Digimon | Trash 2 bottom face-down cards (ONLY offered when
+#   payable: one Tamer with >=2 face-down or >=2 Tamers with >=1) | Don't pay}.
+#   Delete branch: paid only if the deletion succeeded. Trash branch: picks
+#   Tamers, trashes 2 bottom face-down cards in total. If paid and a target
+#   exists: mandatory delete of 1 of the opponent's highest-DP Digimon.
+#   → modal (two shapes by payability) + delete source / trash 2 + gated delete
+#   (selector: highest_dp).
+# On Deletion (not optional): if the opponent has a hand card, THEY pick 1
+#   (canNoSelect:false) to discard; then if their hand <= 7 and this card is in
+#   the trash, a Yes/No → AddSecurityCard(bottom, face up).
+
+card: BT26-082
+name: "Ravemon"
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Cyborg, DATA SQUAD, Birdkin]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Crowmon" }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  # ─── {Security} [End of Opponent's Turn] play this card free ───────────────
+  - when: end_of_opponents_turn
+    scope: security
+    summary: "{Security} [End of Opponent's Turn] Play this card without paying the cost"
+    process:
+      - play_security_card: { of: you, card: self }
+
+  # ─── [When Digivolving][End of Attack] delete this OR trash 2 FD under Tamers
+  #     → delete 1 of the opponent's highest-DP Digimon ─────────────────────────
+  - when: [when_digivolving, end_of_attack]
+    summary: "[When Digivolving][End of Attack] By deleting this Digimon or trashing 2 bottom face-down cards from under your Tamers, delete 1 of your opponent's highest DP Digimon"
+    process:
+      - if:
+          condition: { face_down_sources_under_tamers_gte: 2 }
+          then:
+            - select_effect_choice:
+                bind_as: cost_mode
+                labels:
+                  - "Delete this Digimon"
+                  - "Trash 2 bottom face-down cards from under any of your Tamers"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost?"
+            - if:
+                condition: { equals: [cost_mode, 0] }
+                then:
+                  - delete_permanent: { target: source }
+                  - if:
+                      condition: { effect_deleted_any_own_digimon: true }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim
+                            selector: highest_dp
+                            filter: { kind: digimon }
+                            prompt: "Delete 1 of your opponent's highest DP Digimon"
+                        - delete_permanent: { target: victim }
+            - if:
+                condition: { equals: [cost_mode, 1] }
+                then:
+                  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+                  - select_opponent_permanent:
+                      bind_as: victim2
+                      selector: highest_dp
+                      filter: { kind: digimon }
+                      prompt: "Delete 1 of your opponent's highest DP Digimon"
+                  - delete_permanent: { target: victim2 }
+          else:
+            - select_effect_choice:
+                bind_as: cost_mode_b
+                labels:
+                  - "Delete this Digimon"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost?"
+            - if:
+                condition: { equals: [cost_mode_b, 0] }
+                then:
+                  - delete_permanent: { target: source }
+                  - if:
+                      condition: { effect_deleted_any_own_digimon: true }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim3
+                            selector: highest_dp
+                            filter: { kind: digimon }
+                            prompt: "Delete 1 of your opponent's highest DP Digimon"
+                        - delete_permanent: { target: victim3 }
+
+  # ─── [On Deletion] opponent trashes 1 hand card; then if their hand <= 7, may
+  #     place this card face up as the bottom security card ──────────────────
+  - when: on_deletion
+    summary: "[On Deletion] Your opponent trashes 1 card in their hand. Then, if their hand has 7 or fewer cards, you may place this card face up as the bottom security card"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [hand] }
+              n: 7
+          then:
+            - select_effect_choice:
+                bind_as: to_security
+                labels:
+                  - "Place this card face up as the bottom security card"
+                  - "Don't place it"
+                prompt: "Place this card face up as the bottom security card?"
+            - if:
+                condition: { equals: [to_security, 0] }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { card: event_card }
+                      position: bottom
+                      face_up: true

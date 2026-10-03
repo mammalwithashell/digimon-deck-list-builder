@@ -294,6 +294,8 @@ fn bt25_039_end_of_turn_fires_while_in_security() {
         .hand(0, &["CERESMON"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
 
     runner.end_turn();
 
@@ -331,6 +333,8 @@ fn bt25_039_end_of_turn_no_ceresmon_in_hand_is_a_clean_no_op() {
         .hand(0, &["OTHER-DIGI"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
 
     runner.end_turn();
     // Either no prompt installs, or an optional prompt with no legal
@@ -365,6 +369,8 @@ fn bt25_039_accepting_pick_plays_ceresmon_at_reduced_cost() {
         .hand(0, &["CERESMON"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
     runner.end_turn();
 
     let view = runner
@@ -411,6 +417,8 @@ fn bt25_039_declining_pick_plays_nothing() {
         .hand(0, &["CERESMON"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
     runner.end_turn();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
@@ -441,6 +449,8 @@ fn bt25_039_accepting_placement_moves_self_under_played_ceresmon() {
         .hand(0, &["CERESMON"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
     runner.end_turn();
 
     let view = runner
@@ -486,6 +496,8 @@ fn bt25_039_declining_placement_leaves_self_in_security() {
         .hand(0, &["CERESMON"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
     runner.end_turn();
 
     let view = runner
@@ -516,6 +528,8 @@ fn bt25_039_non_ceresmon_hand_card_is_not_offered() {
         .hand(0, &["OTHER-DIGI"])
         .security(0, &["FILL", CARD_ID])
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    mark_security_face_up(&mut runner, CARD_ID);
     runner.end_turn();
 
     if let Some(view) = runner.pending_selection_view() {
@@ -1050,4 +1064,16 @@ fn field_contains(r: &DebugRunner, player: u8, card_id: &str) -> bool {
             .iter()
             .any(|card| card.card_id(&r.game.card_data) == card_id)
     })
+}
+
+/// Rule 15-14-5 / G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP: a `{Security}`
+/// effect only works while its card is face up in the security stack.
+fn mark_security_face_up(runner: &mut DebugRunner, card_id: &str) {
+    let idx = runner.game.players[0]
+        .security
+        .iter()
+        .find(|c| c.card_id(&runner.game.card_data) == card_id)
+        .map(|c| c.card_index)
+        .expect("card in security");
+    runner.game.players[0].face_up_security.insert(idx);
 }

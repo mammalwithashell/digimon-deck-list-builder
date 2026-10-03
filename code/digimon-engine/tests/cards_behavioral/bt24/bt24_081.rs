@@ -69,7 +69,13 @@ fn builder() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("BT24-081 YAML parses, compiles and is in the embedded pack")
         .add_card(digimon("TITAMON", "Titamon", 6, 12000, &["Titan"]))
-        .add_card(digimon("SKULLBALU", "SkullBaluchimon", 6, 11000, &["Undead"]))
+        .add_card(digimon(
+            "SKULLBALU",
+            "SkullBaluchimon",
+            6,
+            11000,
+            &["Undead"],
+        ))
         .add_card(digimon("TITAN-L5", "Titan Five", 5, 7000, &["Titan"]))
         .add_card(digimon("TITAN-L6", "Titan Six", 6, 11000, &["Titan"]))
         .add_card(digimon("PLAIN-L4", "Plain Four", 4, 4000, &["Beast"]))
@@ -141,10 +147,7 @@ fn pick_first(runner: &mut DebugRunner, label: &str) {
 
 fn decline(runner: &mut DebugRunner) {
     assert!(runner.pending_is_optional(), "PASS must be legal");
-    let player = runner
-        .pending_selection()
-        .expect("prompt")
-        .selecting_player;
+    let player = runner.pending_selection().expect("prompt").selecting_player;
     runner.execute_action(player, PASS).expect("decline");
     let _ = runner.auto_resolve();
 }
@@ -152,7 +155,9 @@ fn decline(runner: &mut DebugRunner) {
 fn play_titamon(runner: &mut DebugRunner) -> PermanentHandle {
     runner.skip_mulligan();
     let idx = hand_index(runner, 0, CARD_ID);
-    let field = runner.play(0, idx).expect("Titamon + SkullBaluchimon plays");
+    let field = runner
+        .play(0, idx)
+        .expect("Titamon + SkullBaluchimon plays");
     PermanentHandle {
         player: 0,
         index: field as u8,
@@ -182,9 +187,15 @@ fn bt24_081_metadata_matches_printed_card_including_rule_trait() {
     assert_eq!(card.level, Some(7));
     assert_eq!(card.cost, Some(14));
     assert_eq!(card.dp, Some(14000));
-    assert_eq!(card.color, vec![CompiledColor::Purple, CompiledColor::Green]);
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Purple, CompiledColor::Green]
+    );
     for t in ["Shaman", "Titan", "TS", "Demon"] {
-        assert!(card.traits.iter().any(|x| x == t), "trait {t} (Demon via (Rule))");
+        assert!(
+            card.traits.iter().any(|x| x == t),
+            "trait {t} (Demon via (Rule))"
+        );
     }
 }
 
@@ -201,7 +212,11 @@ fn bt24_081_has_face_up_rush_piercing_and_execute_grants() {
                 scope,
                 ..
             }) => {
-                assert_eq!(*scope, CompiledScope::FaceUp, "{keyword} is a printed face-up keyword");
+                assert_eq!(
+                    *scope,
+                    CompiledScope::FaceUp,
+                    "{keyword} is a printed face-up keyword"
+                );
                 Some(keyword.as_str())
             }
             _ => None,
@@ -232,7 +247,11 @@ fn bt24_081_has_two_printed_circles_and_the_named_assembly() {
         .iter()
         .find(|p| p.kind == CompiledAltPathKind::Assembly)
         .expect("Assembly -6 alt-path");
-    assert_eq!(assembly.cost, Some(CompiledCost::Literal(6)), "Assembly -6 (cost reduction)");
+    assert_eq!(
+        assembly.cost,
+        Some(CompiledCost::Literal(6)),
+        "Assembly -6 (cost reduction)"
+    );
     assert_eq!(assembly.materials.len(), 2, "[Titamon] × [SkullBaluchimon]");
     let names: Vec<Option<&str>> = assembly
         .materials
@@ -243,7 +262,10 @@ fn bt24_081_has_two_printed_circles_and_the_named_assembly() {
     assert!(names.contains(&Some("SkullBaluchimon")));
     for m in &assembly.materials {
         assert!(m.stack_under, "Assembly materials go under the played card");
-        assert!(m.zones.contains(&CompiledZone::Trash), "Assembly materials come from the trash (7-3-1)");
+        assert!(
+            m.zones.contains(&CompiledZone::Trash),
+            "Assembly materials come from the trash (7-3-1)"
+        );
     }
 }
 
@@ -273,8 +295,14 @@ fn bt24_081_has_shared_op_wd_wa_cost_clause_and_optional_on_deletion() {
             CompiledTiming::WhenAttacking
         ]
     );
-    assert!(shared.optional, "'By trashing 1 card' is an optional processing condition");
-    assert!(shared.condition.is_some(), "gated on having a hand card to trash");
+    assert!(
+        shared.optional,
+        "'By trashing 1 card' is an optional processing condition"
+    );
+    assert!(
+        shared.condition.is_some(),
+        "gated on having a hand card to trash"
+    );
     assert!(!shared.once_per_turn);
 
     let od = triggered
@@ -311,9 +339,17 @@ fn bt24_081_on_play_trashing_a_hand_card_deletes_every_lowest_level_opponent_dig
 
     play_titamon(&mut runner);
 
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand), "pick the hand card to trash");
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Hand),
+        "pick the hand card to trash"
+    );
     assert!(runner.pending_is_optional(), "the cost may be declined");
-    assert_eq!(non_pass_ids(&runner).len(), 2, "HAND-X and HAND-Y are both trashable");
+    assert_eq!(
+        non_pass_ids(&runner).len(),
+        2,
+        "HAND-X and HAND-Y are both trashable"
+    );
     pick_first(&mut runner, "trash a hand card");
     let _ = runner.auto_resolve();
 
@@ -324,7 +360,11 @@ fn bt24_081_on_play_trashing_a_hand_card_deletes_every_lowest_level_opponent_dig
         vec!["OPP-L5".to_string()],
         "BOTH level-3 Digimon (the lowest level) are deleted; the Lv.5 survives"
     );
-    assert_eq!(runner.trash_size(1), 2, "the deleted Digimon are in the opponent's trash");
+    assert_eq!(
+        runner.trash_size(1),
+        2,
+        "the deleted Digimon are in the opponent's trash"
+    );
 }
 
 #[test]
@@ -339,7 +379,11 @@ fn bt24_081_on_play_declining_the_trash_cost_deletes_nothing() {
     decline(&mut runner);
 
     assert_eq!(runner.hand_size(0), 2, "no card trashed");
-    assert_eq!(runner.battle_area_size(1), 3, "no deletion without paying the cost");
+    assert_eq!(
+        runner.battle_area_size(1),
+        3,
+        "no deletion without paying the cost"
+    );
 }
 
 #[test]
@@ -404,7 +448,9 @@ fn bt24_081_when_attacking_fires_the_same_clause() {
     pick_first(&mut runner, "trash");
     let _ = runner.auto_resolve();
     assert!(
-        !field_ids(&runner, 1).iter().any(|c| c.starts_with("OPP-L3")),
+        !field_ids(&runner, 1)
+            .iter()
+            .any(|c| c.starts_with("OPP-L3")),
         "both lowest-level opponent Digimon are gone: {:?}",
         field_ids(&runner, 1)
     );
@@ -429,13 +475,20 @@ fn bt24_081_on_deletion_offers_titamon_and_low_level_titans_only() {
         .game
         .delete_permanent_with_cause(perm, ReplacementCause::OpponentEffect);
 
-    assert!(runner.pending_is_optional(), "'You may play' — outer accept/decline");
+    assert!(
+        runner.pending_is_optional(),
+        "'You may play' — outer accept/decline"
+    );
     runner.accept_optional_trigger().expect("accept");
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
     let ids = non_pass_ids(&runner);
     let titamon = TRASH_EFFECT_START + trash_index(&runner, 0, "TITAMON") as u16;
     let titan5 = TRASH_EFFECT_START + trash_index(&runner, 0, "TITAN-L5") as u16;
-    assert_eq!(ids.len(), 2, "exactly [Titamon] and the Lv.5 [Titan]: {ids:?}");
+    assert_eq!(
+        ids.len(),
+        2,
+        "exactly [Titamon] and the Lv.5 [Titan]: {ids:?}"
+    );
     assert!(ids.contains(&titamon));
     assert!(ids.contains(&titan5));
 }
@@ -454,7 +507,11 @@ fn bt24_081_on_deletion_accepting_plays_the_chosen_card_free() {
     let _ = runner.auto_resolve();
 
     assert_eq!(field_ids(&runner, 0), vec!["TITAMON".to_string()]);
-    assert_eq!(runner.memory(), memory_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
     assert!(
         !runner.game.players[0]
             .trash
@@ -510,16 +567,25 @@ fn bt24_081_assembly_plays_for_8_and_stacks_both_named_materials_from_trash() {
         "with both materials in trash the Assembly flow must surface"
     );
     runner.game.decode_action(TRASH_EFFECT_START, 0); // Titamon
-    assert!(runner.game.pending_selection.is_some(), "second element (SkullBaluchimon)");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "second element (SkullBaluchimon)"
+    );
     runner.game.decode_action(TRASH_EFFECT_START + 1, 0); // SkullBaluchimon
     let _ = runner.auto_resolve();
 
-    let perm = PermanentHandle { player: 0, index: 0 };
+    let perm = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let stack = stack_ids(&runner, perm);
     assert_eq!(stack.last().map(String::as_str), Some(CARD_ID));
     assert_eq!(stack.len(), 3, "Titamon + SkullBaluchimon underneath");
     assert!(stack.contains(&"TITAMON".to_string()));
     assert!(stack.contains(&"SKULLBALU".to_string()));
-    assert!(runner.game.players[0].trash.is_empty(), "both materials left the trash");
+    assert!(
+        runner.game.players[0].trash.is_empty(),
+        "both materials left the trash"
+    );
     assert_eq!(memory_before - runner.game.memory, 8, "14 − 6 = 8");
 }

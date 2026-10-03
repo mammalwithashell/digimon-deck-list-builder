@@ -300,6 +300,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnAnyDeletion => CompiledTiming::OnAnyDeletion,
         S::OnAllyWonBattle => CompiledTiming::OnAllyWonBattle,
         S::OnDiscardHand => CompiledTiming::OnDiscardHand,
+        S::OnAddToDeck => CompiledTiming::OnAddToDeck,
         S::OnEnterFieldAnyone => CompiledTiming::OnEnterFieldAnyone,
         S::OnAnyDigimonPlayed => CompiledTiming::OnAnyDigimonPlayed,
         S::OnAllyPlayed => CompiledTiming::OnAllyPlayed,
@@ -1003,6 +1004,7 @@ fn compile_predicate(
                 errors,
             )
         }),
+        affordable_with_cost_reduce: p.affordable_with_cost_reduce,
         can_digivolve_from_source: p.can_digivolve_from_source,
         can_digivolve_onto: p.can_digivolve_onto.clone(),
         dp_eq,
@@ -1120,6 +1122,7 @@ fn compile_predicate(
         is_source: p.is_source,
         of_permanent: p.of_permanent.clone(),
         not_in_binding: p.not_in_binding.clone(),
+        name_not_in_binding: p.name_not_in_binding.clone(),
         binding_owner: p
             .binding_owner
             .as_ref()
@@ -1945,6 +1948,17 @@ fn compile_replacement_process(
     // leave. It owns the `outcome: prevent`, so we emit only this step (and
     // suppress the trailing `CancelReplacement` below).
     let trash_own_link_card = r.cost.as_ref().is_some_and(|cost| cost.trash_own_link_card);
+    if !trash_own_link_card
+        && r.cost
+            .as_ref()
+            .is_some_and(|cost| !cost.link_card_filter.is_empty())
+    {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.cost.link_card_filter"),
+            message: "cost: { link_card_filter } requires trash_own_link_card: true".into(),
+        });
+    }
     if trash_own_link_card {
         if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
             errors.push(ValidationError {
@@ -1953,7 +1967,22 @@ fn compile_replacement_process(
                 message: "cost: { trash_own_link_card } requires outcome: prevent".into(),
             });
         }
-        process.push(CompiledStep::TrashOwnLinkCardAndCancelLeave);
+        let link_card_filter = r
+            .cost
+            .as_ref()
+            .map(|cost| &cost.link_card_filter)
+            .filter(|f| !f.is_empty());
+        match link_card_filter {
+            Some(f) => process.push(CompiledStep::TrashOwnLinkCardMatchingAndCancelLeave {
+                filter: compile_predicate(
+                    f,
+                    &format!("{prefix}.cost.link_card_filter"),
+                    card_id,
+                    errors,
+                ),
+            }),
+            None => process.push(CompiledStep::TrashOwnLinkCardAndCancelLeave),
+        }
         return process;
     }
 
@@ -2436,6 +2465,19 @@ fn compile_declarative(
             summary,
             summary_key,
         },
+        B::UseCostIncrease(u) => CompiledDeclarativeClause::UseCostIncrease {
+            scope,
+            amount: compile_formula(&u.amount, &format!("{prefix}.amount"), card_id, errors),
+            summary,
+            summary_key,
+        },
+        B::Succession(sc) => CompiledDeclarativeClause::Succession {
+            scope,
+            active_when,
+            filter: compile_predicate(&sc.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
         B::FloodGate(fg) => CompiledDeclarativeClause::FloodGate {
             scope,
             active_when,
@@ -2520,6 +2562,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             binding,
             of_permanent,
             deck_top,
+            security_top,
             own_breeding,
             ..
         }) => {
@@ -2531,6 +2574,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::OfPermanent(o.clone())
             } else if let Some(p) = deck_top {
                 CompiledBindingRef::DeckTop(compile_player_ref(*p))
+            } else if let Some(p) = security_top {
+                CompiledBindingRef::SecurityTop(compile_player_ref(*p))
             } else if matches!(own_breeding, Some(true)) {
                 CompiledBindingRef::OwnBreeding
             } else {
@@ -2725,6 +2770,10 @@ fn compile_step(
             card: compile_binding_ref(&a.card),
             position: compile_stack_position(a.position),
         },
+        S::ReturnTopSecurityToDeck(a) => CompiledStep::ReturnTopSecurityToDeck {
+            of: compile_player_ref(a.of),
+            position: compile_stack_position(a.position),
+        },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
@@ -2866,6 +2915,7 @@ fn compile_step(
         },
         S::DeleteAllPermanents(a) => CompiledStep::DeleteAllPermanents {
             over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors),
+            selector: a.selector.map(compile_field_selector),
         },
         S::DeleteOnePerOpponentColor(a) => CompiledStep::DeleteOnePerOpponentColor {
             filter: a.filter.as_ref().map(|f| {
@@ -3244,6 +3294,10 @@ fn compile_step(
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),
             suppress_on_play: a.suppress_on_play,
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         S::TrashUnionBound(a) => CompiledStep::TrashUnionBound {
             binding: a.binding.clone(),
@@ -3363,6 +3417,7 @@ fn compile_step(
                     .leave
                     .as_ref()
                     .map(|f| compile_formula(f, &format!("{prefix}.leave"), card_id, errors)),
+                bind_count_as: a.bind_count_as.clone(),
             }
         }
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
@@ -3396,6 +3451,12 @@ fn compile_step(
             }
         }
         S::SecurityPlaceTopStackedCard(a) => CompiledStep::SecurityPlaceTopStackedCard {
+            carrier: compile_binding_ref(&a.carrier),
+            of: compile_player_ref(a.of),
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+        },
+        S::SecurityPlaceTopCard(a) => CompiledStep::SecurityPlaceTopCard {
             carrier: compile_binding_ref(&a.carrier),
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
@@ -3514,6 +3575,17 @@ fn compile_step(
             expiry: a.expiry.clone(),
             value: a.value,
         },
+        S::GrantKeywordContinuous(a) => CompiledStep::GrantKeywordContinuous {
+            targets: compile_predicate(
+                &a.targets,
+                &format!("{prefix}.grant_keyword_continuous.targets"),
+                card_id,
+                errors,
+            ),
+            keyword: a.keyword.clone(),
+            expiry: a.expiry.clone(),
+            value: a.value,
+        },
         S::AllowDigixrosMaterialZone(a) => CompiledStep::AllowDigixrosMaterialZone {
             zone: compile_zone(a.zone),
             max_count: a.max_count,
@@ -3595,6 +3667,18 @@ fn compile_step(
         }
         S::GrantNarrowOpponentEffectProtection(a) => {
             CompiledStep::GrantNarrowOpponentEffectProtection {
+                target: compile_binding_ref(&a.target),
+                expiry: a.expiry.clone(),
+            }
+        }
+        S::GrantStackProtectionFromOpponentEffects(a) => {
+            CompiledStep::GrantStackProtectionFromOpponentEffects {
+                target: compile_binding_ref(&a.target),
+                expiry: a.expiry.clone(),
+            }
+        }
+        S::GrantStackTrashImmunityFromOpponentEffects(a) => {
+            CompiledStep::GrantStackTrashImmunityFromOpponentEffects {
                 target: compile_binding_ref(&a.target),
                 expiry: a.expiry.clone(),
             }
@@ -3799,6 +3883,33 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
             deletion_cap: false,
+        },
+        S::SelectZoneCards(a) => CompiledStep::SelectZoneCards {
+            of: compile_player_ref(a.of),
+            zones: a.zones.clone(),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            min: a.min,
+            max: a.max,
+            optional_zero: a.optional_zero,
+            play_cost_budget: a.play_cost_budget.as_ref().map(|f| {
+                compile_formula(f, &format!("{prefix}.play_cost_budget"), card_id, errors)
+            }),
+            exclude: a.exclude.as_ref().map(compile_binding_ref),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+        },
+        S::PlayCardsFree(a) => CompiledStep::PlayCardsFree {
+            cards: compile_binding_ref(&a.cards),
+        },
+        S::PlaceCardsAsBottomSources(a) => CompiledStep::PlaceCardsAsBottomSources {
+            cards: compile_binding_ref(&a.cards),
+            target: compile_binding_ref(&a.target),
+        },
+        S::ReturnTopStackedToDeck(a) => CompiledStep::ReturnTopStackedToDeck {
+            targets: compile_binding_ref(&a.targets),
+            count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
+            position: compile_stack_position(a.position),
+            prompt: a.prompt.clone(),
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: compile_formula(
@@ -4130,13 +4241,13 @@ fn compile_step(
                 LinkCardsCount::UpTo { up_to } => CompiledLinkCount::UpTo(up_to),
             };
 
-            // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this
-            // step serves have a base link cost of 0 in this context, so both
-            // resolve to 0. Threaded faithfully so a non-zero base cost extends
-            // here later without a schema change.
-            let cost = match a.cost {
-                LinkCardsCost::Free => 0u8,
-                LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
+            // `free` pays 0; `reduce: N` pays each linked card's OWN printed
+            // link cost (after ChangeLinkCost deltas) minus N, floored at 0 —
+            // resolved per card at link time by the engine (BT26-007). A card
+            // with no link condition has a base of 0.
+            let (cost, cost_reduce) = match a.cost {
+                LinkCardsCost::Free => (0u8, None),
+                LinkCardsCost::Reduce(n) => (0u8, Some(n)),
             };
 
             let host_filter = if a.host_filter.is_empty() {
@@ -4160,6 +4271,7 @@ fn compile_step(
                 bind_as: a.bind_as.clone(),
                 host_filter,
                 exclude_source: a.exclude_source,
+                cost_reduce,
             }
         }
         S::RelinkSelfToOwnDigimon(a) => {
@@ -4310,22 +4422,27 @@ fn compile_step(
             binds: r.binds.clone(),
         },
         S::ActivationCost(a) => {
-            let kind = match (a.suspend_self, a.return_self_to_deck_bottom, a.trash_self) {
-                (true, false, false) => {
-                    Some(crate::compiled::CompiledActivationCostKind::SuspendSelf)
-                }
-                (false, true, false) => {
-                    Some(crate::compiled::CompiledActivationCostKind::ReturnSelfToDeckBottom)
-                }
-                (false, false, true) => {
-                    Some(crate::compiled::CompiledActivationCostKind::TrashSelf)
-                }
-                (false, false, false) => {
+            use crate::compiled::CompiledActivationCostKind as K;
+            let set: Vec<K> = [
+                (a.suspend_self, K::SuspendSelf),
+                (a.return_self_to_deck_bottom, K::ReturnSelfToDeckBottom),
+                (a.trash_self, K::TrashSelf),
+                (
+                    a.place_self_at_security_bottom,
+                    K::PlaceSelfAtSecurityBottom,
+                ),
+            ]
+            .into_iter()
+            .filter_map(|(on, k)| on.then_some(k))
+            .collect();
+            let kind = match set.as_slice() {
+                [k] => Some(*k),
+                [] => {
                     errors.push(ValidationError {
                         card_id: card_id.to_string(),
                         path: format!("{}.activation_cost", prefix),
                         message:
-                            "activation_cost requires exactly one cost kind: suspend_self, return_self_to_deck_bottom, or trash_self"
+                            "activation_cost requires exactly one cost kind: suspend_self, return_self_to_deck_bottom, trash_self, or place_self_at_security_bottom"
                                 .to_string(),
                     });
                     None
@@ -4335,7 +4452,7 @@ fn compile_step(
                         card_id: card_id.to_string(),
                         path: format!("{}.activation_cost", prefix),
                         message:
-                            "activation_cost: suspend_self, return_self_to_deck_bottom, and trash_self are mutually exclusive"
+                            "activation_cost: suspend_self, return_self_to_deck_bottom, trash_self, and place_self_at_security_bottom are mutually exclusive"
                                 .to_string(),
                     });
                     None

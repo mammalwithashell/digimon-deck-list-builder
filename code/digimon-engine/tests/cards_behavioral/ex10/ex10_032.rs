@@ -152,7 +152,6 @@ fn accept_optional_cost(runner: &mut DebugRunner) {
         .expect("accepting the optional processing condition must be legal");
 }
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,114 @@
+# BT26-051 Gomimon — Digimon, Lv.3, Black, DP 4000, Cost 4.
+# Form: Stnd./Appmon. Type: Trashbin/Seven Code. Attribute: Tool.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-051.md):
+#   Digivolve: Black Lv.2 / cost 0; [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#     area other than by your effects, by trashing 1 of its specified link
+#     cards, it doesn't leave.)
+#   [Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your
+#     Digimon with the [Social], [Tool], [Open] or [Seven Code] trait gains
+#     <Collision> and +3000 DP for the turn.
+#   Link DP: DP+3000. Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: [When Linking] <De-Digivolve 2> 1 of your opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_051.cs
+#   (filed under Yellow in DCGO; the card is Black per the official DB).
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: HasAppmonTraits, level 2, cost 0.
+# Detach: DetachSelfEffect(EqualsTraits("Seven Code")) — BT26-019 idiom
+#   (replacement, optional, none_of own_effect, trash_own_link_card +
+#   link_card_filter).
+# Your Turn When Linked: WhenLinked, maxCount 1, IsOwnerTurn &&
+#   CanTriggerWhenLinked(permanent == this). Not optional; if a candidate
+#   exists, mandatory (canNoSelect false) pick of an own Digimon whose top card
+#   has Social/Tool/Open/Seven Code → GainCollision + ChangeDigimonDP(+3000),
+#   both UntilEachTurnEnd.
+#   → when_card_linked_to_this + once_per_turn + your_turn; select_own_permanent
+#   + grant_keyword Collision + add_dp_modifier 3000, expiry end_of_turn.
+# Link condition [Appmon] cost 3; Link DP +3000 (linked aura).
+# When Linking (linked effect): mandatory pick (maxCount min(1, n), canNoSelect
+#   false) of an opponent Digimon, Mode.Degenerate count 2.
+#   → scope: linked, when_linked, select_opponent_permanent + de_digivolve 2.
+
+card: BT26-051
+name: Gomimon
+kind: digimon
+level: 3
+color: [black]
+cost: 4
+dp: 4000
+traits: ["Stnd.", Appmon, Tool, Trashbin, Seven Code]
+attribute: Tool
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked → Collision + 3000 ──────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, 1 of your [Social]/[Tool]/[Open]/[Seven Code] Digimon gains <Collision> and +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Social
+                  - trait_has: Tool
+                  - trait_has: Open
+                  - trait_has: Seven Code
+          prompt: "1 of your [Social]/[Tool]/[Open]/[Seven Code] Digimon gains <Collision> and +3000 DP for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: Collision
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: boosted
+          value: 3000
+          expiry: end_of_turn
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── [When Linking] <De-Digivolve 2> 1 opp Digimon ──────────────────────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] <De-Digivolve 2> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 2> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dd_target, amount: 2 }

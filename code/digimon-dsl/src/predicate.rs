@@ -174,6 +174,15 @@ pub struct PredicateSpec {
     /// max of both faces; for a Digimon / Tamer it is exactly `play_cost`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_or_use_cost_lte: Option<DpConstraint>,
+    /// Card-subject leaf: the controller can afford to play (Digimon/Tamer) or
+    /// use (Option) this card right now with its cost reduced by N — i.e.
+    /// `own memory - max(0, cost - N) >= the memory floor`. Mirrors DCGO
+    /// `CanPlayAsNewPermanent(payCost: true, fixedCost: cost - N)` /
+    /// Option-use affordability in a "play or use 1 ... with the cost reduced
+    /// by N" pick filter (BT26-084 Copipemon), so an unpayable card is never
+    /// offered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub affordable_with_cost_reduce: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
     /// Card-subject leaf — the BINDING-TARGETED sibling of
@@ -377,6 +386,14 @@ pub struct PredicateSpec {
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_in_binding: Option<String>,
+    /// Card subject: true when the card shares NO card name with any card in
+    /// the named `CardList` binding (an absent binding ⇒ true — nothing chosen
+    /// yet). Models "N cards with different names" across a multi-pick loop
+    /// (BT26-086 Dantemon "link up to 7 [Appmon] trait cards with different
+    /// names", DCGO `CanTargetCondition_ByPreSelecetedList` +
+    /// `EqualsCardName`). Pair with the loop step's `bind_as`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_in_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_owner: Option<BindingOwnerPredicate>,
     /// True when the card bound to `binding` has the given card category.

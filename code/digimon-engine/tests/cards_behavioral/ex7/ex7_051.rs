@@ -36,8 +36,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
@@ -95,7 +94,12 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(DER_BLITZ)
         .expect("EX7-070 YAML loads from the embedded pack")
         .add_card(option("PLAIN-OPT", &[]))
-        .add_card(digimon("TM-DIGI", 4, CardColor::Purple, &["Three Musketeers"]))
+        .add_card(digimon(
+            "TM-DIGI",
+            4,
+            CardColor::Purple,
+            &["Three Musketeers"],
+        ))
         .add_card(digimon("OTHER", 4, CardColor::Purple, &[]))
         .add_card(token("TOKEN"))
         .add_card(filler("FILL"))
@@ -133,8 +137,14 @@ fn ex7_051_has_optional_start_of_main_clause_and_inherited_retaliation() {
         })
         .collect();
     assert_eq!(triggered.len(), 1);
-    assert_eq!(triggered[0].when, vec![CompiledTiming::StartOfYourMainPhase]);
-    assert!(triggered[0].optional, "'By placing ...' is a declinable cost");
+    assert_eq!(
+        triggered[0].when,
+        vec![CompiledTiming::StartOfYourMainPhase]
+    );
+    assert!(
+        triggered[0].optional,
+        "'By placing ...' is a declinable cost"
+    );
     assert!(!triggered[0].once_per_turn);
 
     let retaliation = compiled.effects.iter().any(|c| {
@@ -144,7 +154,10 @@ fn ex7_051_has_optional_start_of_main_clause_and_inherited_retaliation() {
                 if *scope == CompiledScope::Inherited && keyword == "Retaliation"
         )
     });
-    assert!(retaliation, "inherited <Retaliation> grant_keyword clause must be present");
+    assert!(
+        retaliation,
+        "inherited <Retaliation> grant_keyword clause must be present"
+    );
 
     let digivolve_paths = compiled
         .alt_paths
@@ -163,7 +176,9 @@ fn ex7_051_start_of_main_prompts_union_pick_when_tm_option_in_hand() {
     let mut runner = base().hand(0, &[DER_BLITZ]).start();
     runner.place_on_field(0, CARD_ID, Some(0));
     enter_main(&mut runner);
-    let view = runner.pending_selection_view().expect("union prompt installs");
+    let view = runner
+        .pending_selection_view()
+        .expect("union prompt installs");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(runner.pending_is_optional(), "the cost is declinable");
 }
@@ -200,7 +215,11 @@ fn ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash() {
         .copied()
         .filter(|&a| a >= TRASH_EFFECT_START)
         .collect();
-    assert_eq!(hand_picks, vec![PLAY_HAND_START + 1], "only Der Blitz (hand idx 1)");
+    assert_eq!(
+        hand_picks,
+        vec![PLAY_HAND_START + 1],
+        "only Der Blitz (hand idx 1)"
+    );
     assert_eq!(trash_picks.len(), 1, "only the trashed Der Blitz");
 }
 
@@ -216,17 +235,30 @@ fn ex7_051_places_hand_option_under_chosen_digimon_and_draws_one() {
     enter_main(&mut runner);
     let deck_before = runner.deck_size(0);
 
-    runner.execute_action(0, PLAY_HAND_START).expect("pick Der Blitz from hand");
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("pick Der Blitz from hand");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
     assert_eq!(view.kind, SelectionKind::OwnField);
-    assert!(!view.valid_action_ids.contains(&PASS), "once the card is picked, the host pick is mandatory");
-    assert_eq!(view.valid_action_ids.len(), 2, "Sparrowmon and OTHER are both legal hosts");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "once the card is picked, the host pick is mandatory"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "Sparrowmon and OTHER are both legal hosts"
+    );
     // Pick the LAST legal host (OTHER — placed after Sparrowmon).
     let host_pick = *view.valid_action_ids.last().unwrap();
     runner.execute_action(0, host_pick).expect("choose OTHER");
     runner.auto_resolve().expect("finish");
 
-    assert_eq!(sources_of(&runner, other), 2, "Der Blitz is now OTHER's bottom digivolution card");
+    assert_eq!(
+        sources_of(&runner, other),
+        2,
+        "Der Blitz is now OTHER's bottom digivolution card"
+    );
     assert_eq!(sources_of(&runner, sparrow), 1, "Sparrowmon untouched");
     let bottom = runner.game.players[0].battle_area[other.index as usize].card_sources[0]
         .card_id(&runner.game.card_data);
@@ -244,13 +276,25 @@ fn ex7_051_places_trash_option_under_self_and_draws_one() {
     let deck_before = runner.deck_size(0);
     let trash_before = runner.trash_size(0);
 
-    runner.execute_action(0, TRASH_EFFECT_START).expect("pick Der Blitz from trash");
+    runner
+        .execute_action(0, TRASH_EFFECT_START)
+        .expect("pick Der Blitz from trash");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
-    assert_eq!(view.valid_action_ids.len(), 1, "Sparrowmon is the only host");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("choose Sparrowmon");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "Sparrowmon is the only host"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose Sparrowmon");
     runner.auto_resolve().expect("finish");
 
-    assert_eq!(sources_of(&runner, sparrow), 2, "Der Blitz placed under Sparrowmon");
+    assert_eq!(
+        sources_of(&runner, sparrow),
+        2,
+        "Der Blitz placed under Sparrowmon"
+    );
     assert_eq!(runner.trash_size(0), trash_before - 1, "left the trash");
     assert_eq!(runner.deck_size(0), deck_before - 1, "Draw 1");
     assert_eq!(runner.hand_size(0), 1);
@@ -275,7 +319,9 @@ fn ex7_051_token_is_not_a_legal_host() {
     runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(0, "TOKEN", Some(0));
     enter_main(&mut runner);
-    runner.execute_action(0, PLAY_HAND_START).expect("pick Der Blitz");
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("pick Der Blitz");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
     assert_eq!(
         view.valid_action_ids.len(),
@@ -307,7 +353,10 @@ fn ex7_051_inherited_retaliation_grants_keyword_to_carrier() {
     let stack = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     assert!(runner.game.has_keyword(stack, Keyword::Retaliation));
     let alone = runner.place_on_field(0, CARD_ID, Some(0));
-    assert!(!runner.game.has_keyword(alone, Keyword::Retaliation), "inherited only");
+    assert!(
+        !runner.game.has_keyword(alone, Keyword::Retaliation),
+        "inherited only"
+    );
 }
 
 #[test]
@@ -317,7 +366,9 @@ fn ex7_051_digivolves_for_zero_from_lv2_with_tm_in_text_regardless_of_color() {
     let mut runner = base().add_card(red_tm_lv2).hand(0, &[CARD_ID]).start();
     let base_perm = runner.place_on_field(0, "RED-TM-LV2", Some(0));
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before, "cost 0");
 }
 
@@ -328,5 +379,7 @@ fn ex7_051_cannot_digivolve_from_plain_red_lv2() {
         .hand(0, &[CARD_ID])
         .start();
     let base_perm = runner.place_on_field(0, "RED-LV2", Some(0));
-    assert!(!runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(!runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }

@@ -142,6 +142,16 @@ pub enum Timing {
     /// own-effect-only ("one of YOUR effects", ST16-14 Matt Ishida),
     /// `event_caused_by_own_effect: true`.
     OnDiscardHand,
+    /// Deck-add observer: "[Your Turn] When your effects add to decks, …"
+    /// (`when: on_add_to_deck`, BT26-001 Yokomon / BT26-015 Butenmon /
+    /// BT26-060 Chronomon: Destroy Mode). Fires ONCE after an EFFECT adds ≥1
+    /// card to either player's deck (top or bottom) from outside it — a
+    /// permanent / stack, trash, hand, security or digivolution card. Cards
+    /// revealed from the deck and put back, and Digi-Eggs routed to the
+    /// Digi-Egg deck, never fire it. Gate "your effects" with
+    /// `event_caused_by_own_effect: true` in `active_when:`. Mirrors DCGO
+    /// `OnAddLibraryAnyone` + `CanTriggerOnAddLibrary`. G-ENGINE-ON-ADD-TO-DECK.
+    OnAddToDeck,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -342,6 +352,11 @@ pub enum DeclarativeKind {
     FloodGate,
     AltPathRegistration,
     RawRust,
+    // `<Succession ([X])>` — G-ENGINE-SUCCESSION-KEYWORD. (A plain comment: a
+    // doc comment here turns the schema's string enum into a oneOf.)
+    Succession,
+    // G-ENGINE-OPTION-SELF-USE-COST-INCREASE.
+    UseCostIncrease,
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +379,8 @@ pub enum TypedDeclarativeBody {
     FloodGate(FloodGateBody),
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
+    Succession(SuccessionBody),
+    UseCostIncrease(UseCostIncreaseBody),
 }
 
 impl DeclarativeClause {
@@ -411,6 +428,12 @@ impl DeclarativeClause {
             }
             DeclarativeKind::RawRust => {
                 TypedDeclarativeBody::RawRust(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::Succession => {
+                TypedDeclarativeBody::Succession(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::UseCostIncrease => {
+                TypedDeclarativeBody::UseCostIncrease(serde_yml::from_value(value)?)
             }
         })
     }
@@ -685,6 +708,13 @@ pub struct ReplacementCostBody {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub trash_own_link_card: bool,
 
+    /// BT26 `<Detach ([X] trait)>` — restrict `trash_own_link_card` to link
+    /// cards matching this card predicate ("by trashing 1 of its specified
+    /// link cards"). Empty ⇒ any link card (the BT25 shape). Only valid with
+    /// `trash_own_link_card: true`. DCGO `DetachSelfEffect.cardCondition`.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub link_card_filter: PredicateSpec,
+
     /// EX11-027 Maquinamon — pay the leave by placing 1 of the LEAVING
     /// permanent's own link cards as its BOTTOM digivolution card ("by placing
     /// 1 of its link cards as its bottom digivolution card, it doesn't leave").
@@ -867,6 +897,27 @@ pub struct FloodGateBody {
     pub target_player: Option<crate::common::PlayerRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expiry: Option<String>,
+}
+
+/// Body for `kind: succession` — `<Succession ([X])>`: "This Digimon gains all
+/// effects other than <Succession> on its topmost specified digivolution
+/// card." `filter` is the `[X]` card predicate, evaluated against each
+/// digivolution card (a source subject, so source-stack leaves work too);
+/// the TOPMOST match is adopted while this card is the top card.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SuccessionBody {
+    pub filter: PredicateSpec,
+}
+
+/// Body for `kind: use_cost_increase` — "add N to this card's use cost"
+/// (BT26-033 Jupitermon's Option face: "For each of your security cards, add 1
+/// to this card's use cost"). `amount` is evaluated for the card's owner
+/// whenever the use cost is read (affordability, payment, cost filters).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseCostIncreaseBody {
+    pub amount: crate::formula::FormulaSpec,
 }
 
 /// Body for `kind: alt_path_registration`.

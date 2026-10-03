@@ -1,0 +1,58 @@
+# BT26-007 Swipemon — Digi-Egg, Lv.2, White, Cost 0.
+# Form: Appmon. Type: Swipe. Attribute: Navi.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-007.md):
+#   Inherited Effect: [When Attacking] [Once Per Turn] You may link 1 [Seven
+#     Code] trait Digimon card from your hand or this Digimon's digivolution
+#     cards to this Digimon with the cost reduced by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_007.cs
+#   (filed under Green in DCGO; the card is White per the official DB).
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Inherited OnAllyAttack, maxCountPerTurn 1, SetIsSkippable(true):
+#   CanActivate = a hand card or a digivolution card that IsDigimon &&
+#   EqualsTraits("Seven Code") && CanLink(payCost: false).
+#   Activate: if both zones qualify → SetIntSelection {From hand | From this
+#   Digimon's digivolution cards | Do not link}; then a canNoSelect:true pick
+#   (SelectHandEffect / SelectCardEffect Root.DigivolutionCards) under a
+#   temporary GrantedReduceLinkCostClass(-2) → ILinkCard(payCost: true, card,
+#   this permanent). If nothing was linked → activateClass.RemoveUse().
+#   → `link_cards { from: [hand, self_sources], to: self, count: { up_to: 1 },
+#   cost: { reduce: 2 }, bind_as }` — the zone choice is surfaced when both
+#   zones hold a candidate, each pick is PASS-able, the card's OWN printed link
+#   cost (3 for the [Seven Code] Lv.3s) minus 2 is paid, unaffordable cards and
+#   cards whose own <Link> condition rejects this host are not offered — then
+#   `refund_opt` when nothing was linked (G-OPT-REFUND-ON-DECLINE, BT25-060
+#   idiom).
+
+card: BT26-007
+name: Swipemon
+kind: digi_egg
+level: 2
+color: [white]
+cost: 0
+traits: [Appmon, Navi, Swipe]
+attribute: Navi
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] You may link 1 [Seven Code] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2"
+    process:
+      - link_cards:
+          from: [hand, self_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Seven Code
+          to: self
+          count: { up_to: 1 }
+          cost: { reduce: 2 }
+          bind_as: swipe_linked
+          prompt: "You may link 1 [Seven Code] trait Digimon card to this Digimon (link cost -2)"
+      - if:
+          condition: { binding_absent: swipe_linked }
+          then:
+            - refund_opt: {}

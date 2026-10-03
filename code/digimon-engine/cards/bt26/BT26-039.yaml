@@ -1,0 +1,89 @@
+# BT26-039 Sunflowmon — Digimon, Lv.4, Green, DP 6000, Cost 5.
+# Traits: Vegetation, DATA SQUAD. Attribute: Data.
+# Printed digivolve box: Green Lv.3 / cost 2; [Digivolve] Lv.3 w/[DATA SQUAD]
+#   trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-039.md):
+#   [On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+#     [Yoshino Fujieda] from your hand without paying the cost.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#     can't unsuspend until their turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_039.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3, TopCard EqualsTraits "DATA SQUAD", cost 2.
+# Shared OP/WD (optional false, skippable): additionalActivateCondition =
+#   OwnerHas1OrLessTamers && a Tamer named exactly [Yoshino Fujieda] in hand;
+#   PlayByEffect(Root.Hand, payCost false) — the select is canNoSelect ("may").
+#   → ST24-05 idiom: count_lte Tamers 1 + optional select_hand + free play.
+# Inherited (OnAllyAttack, maxPerTurn 1, no IsOwnerTurn gate): mandatory
+#   (canNoSelect:false) pick of 1 opponent Digimon (suspended or not) →
+#   GainCanNotUnsuspend(UntilOpponentTurnEnd). → select + CannotUnsuspend
+#   modifier expiring end_of_opponents_turn (ST24-10 idiom).
+
+card: BT26-039
+name: "Sunflowmon"
+kind: digimon
+level: 4
+color: [green]
+cost: 5
+dp: 6000
+traits: [Vegetation, DATA SQUAD]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] if <=1 Tamer, may play [Yoshino Fujieda]
+  #     from hand free ──────────────────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      all_of:
+        - count_lte:
+            filter:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: tamer
+              name_is: "Yoshino Fujieda"
+            n: 1
+    summary: "[On Play][When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Yoshino Fujieda] from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: yoshino
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_is: "Yoshino Fujieda"
+          prompt: "You may play 1 [Yoshino Fujieda] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: yoshino
+
+  # ─── Inherited [When Attacking][OPT] 1 opp Digimon can't unsuspend until
+  #     their turn ends ────────────────────────────────────────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] 1 of your opponent's Digimon can't unsuspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon can't unsuspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn

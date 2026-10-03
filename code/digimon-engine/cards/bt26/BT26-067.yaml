@@ -1,0 +1,91 @@
+# BT26-067 Wizardmon — Digimon Lv.4, Purple/Red, DP 4000, Cost 4.
+# Traits: Wizard, Witchelny, Iliad, TS. Form: Champion. Attribute: Data.
+# Printed digivolve box: Purple Lv.3 / cost 3; Red Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-067.md):
+#   [On Play] [When Digivolving] <Draw 1> and trash 1 card in your hand.
+#   [End of Your Turn] If you have a blue or yellow Digimon, by returning this
+#     Digimon to the bottom of the deck, you may play 1 red or blue Digimon
+#     card with the [Iliad] trait from your trash with the cost reduced by 4.
+#   Inherited: <Retaliation>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_067.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + HasTSTraits (EqualsTraits "TS"), cost 2.
+# OP/WD (shared, not optional): Draw 1; if hand >= 1, canNoSelect:false
+#   Discard pick of 1 hand card. → draw + mandatory select_hand + trash.
+# EOT (OnEndTurn, optional TRUE): IsOwnerTurn; CanActivate = an own Digimon
+#   whose top card is blue or yellow. Body: DeckBounce self (bottom) → on
+#   success, canNoSelect:true trash pick of 1 Digimon card EqualsTraits
+#   "Iliad", red or blue → PlayPermanentCards(payCost, cost -4).
+#   → optional + condition + activation_cost { return_self_to_deck_bottom }
+#   (BT22-088 idiom) + optional select_trash + play_from_trash
+#   { cost_delta: reduce 4 } (BT19-099 idiom).
+# Inherited: RetaliationSelfEffect → grant_keyword Retaliation (inherited).
+
+card: BT26-067
+name: "Wizardmon"
+kind: digimon
+level: 4
+color: [purple, red]
+cost: 4
+dp: 4000
+traits: [Wizard, Witchelny, Iliad, TS]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "TS" }
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] <Draw 1> and trash 1 card in hand ────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <Draw 1> and trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  # ─── [End of Your Turn] with a blue/yellow Digimon, bottom-deck this Digimon
+  #     → may play 1 red/blue [Iliad] Digimon from trash at -4 ────────────────
+  - when: end_of_your_turn
+    optional: true
+    condition:
+      any_field_permanent:
+        of: you
+        kind: digimon
+        any_of:
+          - color_is: blue
+          - color_is: yellow
+    summary: "[End of Your Turn] If you have a blue or yellow Digimon, by returning this Digimon to the bottom of the deck, you may play 1 red or blue [Iliad] Digimon card from your trash with the cost reduced by 4"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_trash:
+          of: you
+          bind_as: iliad_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Iliad"
+              - any_of:
+                  - color_is: red
+                  - color_is: blue
+          prompt: "You may play 1 red or blue [Iliad] trait Digimon card from your trash with the cost reduced by 4"
+      - play_from_trash:
+          of: you
+          hand_index: iliad_pick
+          cost_delta: { reduce: 4 }
+
+  # ─── Inherited <Retaliation> ───────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation

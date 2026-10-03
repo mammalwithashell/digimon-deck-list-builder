@@ -232,7 +232,7 @@ fn mark_step(step: &mut CompiledStep, deleted: &BTreeSet<String>) {
                 mark_predicate(filter);
             }
         }
-        CompiledStep::DeleteAllPermanents { over } => mark_predicate(over),
+        CompiledStep::DeleteAllPermanents { over, .. } => mark_predicate(over),
         CompiledStep::DeleteOnePerOpponentColor {
             filter: Some(filter),
             ..

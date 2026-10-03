@@ -1,0 +1,148 @@
+# BT26-045 GranKuwagamon — Digimon, Lv.6, Green, DP 11000, Cost 11.
+# Traits: Insectoid, Titan, TS. Form: Mega. Attribute: Free.
+# Printed digivolve box: Green Lv.5 / cost 3; [Digivolve] Lv.5 w/[Insectoid]/
+#   [TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-045.md):
+#   When this card would be played, if your hand has fewer cards than your
+#     opponent's, reduce the cost by 4.
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1
+#     level 4 or lower [Insectoid] or [Titan] trait Digimon card from your hand
+#     without paying the cost.
+#   [Your Turn] All of your [Insectoid] or [Titan] trait Digimon gain
+#     <Alliance>, <Piercing> and <Vortex>.
+#   Official Q&A: the card is still in the hand when its play is announced, so
+#     both hand sizes are compared with it counted.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_045.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5, TopCard EqualsTraits Insectoid || HasTSTraits, cost 3.
+# Play-cost reduction: MandatorySelfPlayCostReduction(4) while own hand count
+#   < opponent hand count. → kind: cost_reduction (before_pay_cost,
+#   when_playing_this) amount 4 — BT26-059 Plutomon's identical formula.
+# Shared OP/WD/WA (optional false, skippable, maxCountPerTurn 1 under ONE
+#   hash; CanActivate = a playable level<=4 Insectoid/Titan Digimon in hand):
+#   PlayByEffect(Root.Hand, payCost false) — "may"; RemoveUse when nothing was
+#   played. → one clause over the three timings + once_per_turn + condition +
+#   optional select_hand + play_from_hand_free; refund_opt on decline.
+# [Your Turn] AddSkillClass over own battle-area Digimon whose TOP card is
+#   Insectoid|Titan (incl. this card): Alliance + Pierce + Vortex self effects,
+#   gated IsExistOnBattleArea && IsOwnerTurn. → three `kind: aura` clauses,
+#   active_when your_turn, grant_keyword (BT24-051 idiom).
+
+card: BT26-045
+name: "GranKuwagamon"
+kind: digimon
+level: 6
+color: [green]
+cost: 11
+dp: 11000
+traits: [Insectoid, Titan, TS]
+form: Mega
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Insectoid"
+            - trait_has: "TS"
+    cost: 3
+
+effects:
+  # ─── When played with fewer hand cards than the opponent: cost -4 ─────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 4
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n:
+          base: -1
+          per:
+            card_count_in_zone:
+              of: opponent
+              zone: hand
+          delta: 1
+    summary: "When this card would be played, if your hand has fewer cards than your opponent's, reduce the cost by 4"
+
+  # ─── [On Play][When Digivolving][When Attacking][OPT] may play 1 level 4 or
+  #     lower [Insectoid]/[Titan] Digimon from hand free ─────────────────────
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          level_lte: 4
+          any_of:
+            - trait_has: "Insectoid"
+            - trait_has: "Titan"
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] You may play 1 level 4 or lower [Insectoid]/[Titan] Digimon card from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: bug
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: "Insectoid"
+                  - trait_has: "Titan"
+          prompt: "You may play 1 level 4 or lower [Insectoid]/[Titan] Digimon card from your hand without paying the cost"
+      - if:
+          condition: { binding_present: bug }
+          then:
+            - play_from_hand_free:
+                of: you
+                hand_index: bug
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
+
+  # ─── [Your Turn] own [Insectoid]/[Titan] Digimon gain <Alliance>,
+  #     <Piercing> and <Vortex> ────────────────────────────────────────────
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - trait_has: "Insectoid"
+        - trait_has: "Titan"
+    grant_keyword: { keyword: Alliance }
+    summary: "[Your Turn] All of your [Insectoid]/[Titan] Digimon gain <Alliance>"
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - trait_has: "Insectoid"
+        - trait_has: "Titan"
+    grant_keyword: { keyword: Piercing }
+    summary: "[Your Turn] All of your [Insectoid]/[Titan] Digimon gain <Piercing>"
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - trait_has: "Insectoid"
+        - trait_has: "Titan"
+    grant_keyword: { keyword: Vortex }
+    summary: "[Your Turn] All of your [Insectoid]/[Titan] Digimon gain <Vortex>"

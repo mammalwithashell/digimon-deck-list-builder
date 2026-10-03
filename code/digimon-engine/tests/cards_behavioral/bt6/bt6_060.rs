@@ -178,7 +178,10 @@ fn bt6_060_has_one_mandatory_on_play_clause() {
     let on_play = triggered[0];
     assert_eq!(on_play.when, vec![CompiledTiming::OnPlay]);
     assert_eq!(on_play.scope, CompiledScope::FaceUp);
-    assert!(!on_play.optional, "printed text has no 'you may' — mandatory");
+    assert!(
+        !on_play.optional,
+        "printed text has no 'you may' — mandatory"
+    );
     assert!(!on_play.once_per_turn);
 }
 
@@ -186,7 +189,11 @@ fn bt6_060_has_one_mandatory_on_play_clause() {
 fn bt6_060_has_standard_circle_and_your_turn_warp_alt_path() {
     let runner = builder().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
-    assert_eq!(card.alt_paths.len(), 2, "printed circle + [Your Turn] warp route");
+    assert_eq!(
+        card.alt_paths.len(),
+        2,
+        "printed circle + [Your Turn] warp route"
+    );
 
     let circle = &card.alt_paths[0];
     assert_eq!(circle.kind, CompiledAltPathKind::Digivolve);
@@ -204,7 +211,10 @@ fn bt6_060_has_standard_circle_and_your_turn_warp_alt_path() {
         "'this Digimon can digivolve INTO ... from your hand' lives on the source"
     );
     assert_eq!(warp.cost, Some(CompiledCost::Literal(6)));
-    assert!(warp.ignore_requirements, "ignoring its digivolution requirements");
+    assert!(
+        warp.ignore_requirements,
+        "ignoring its digivolution requirements"
+    );
     assert!(
         warp.condition.is_some(),
         "[Your Turn] gate must be authored as the alt-path condition"
@@ -232,8 +242,14 @@ fn bt6_060_on_play_adds_musketeer_digimon_and_7_cost_option_then_trashes_rest() 
     let _ = runner.auto_resolve();
 
     let hand = hand_ids(&runner, 0);
-    assert!(hand.iter().any(|c| c == "TM-L5"), "TM Digimon added to hand: {hand:?}");
-    assert!(hand.iter().any(|c| c == "OPTION-7"), "7-cost Option added to hand: {hand:?}");
+    assert!(
+        hand.iter().any(|c| c == "TM-L5"),
+        "TM Digimon added to hand: {hand:?}"
+    );
+    assert!(
+        hand.iter().any(|c| c == "OPTION-7"),
+        "7-cost Option added to hand: {hand:?}"
+    );
     assert_eq!(hand.len(), 2);
 
     let mut trash = trash_ids(&runner, 0);
@@ -274,7 +290,10 @@ fn bt6_060_on_play_6_cost_option_is_not_eligible() {
         .start();
     play_deputymon(&mut runner);
 
-    assert!(runner.pending_selection().is_none(), "a 6-cost Option must not be offered");
+    assert!(
+        runner.pending_selection().is_none(),
+        "a 6-cost Option must not be offered"
+    );
     assert_eq!(runner.hand_size(0), 0);
     assert!(trash_ids(&runner, 0).iter().any(|c| c == "OPTION-6"));
 }
@@ -304,7 +323,9 @@ fn bt6_060_on_play_only_option_matches_offers_only_that_bucket() {
         .start();
     play_deputymon(&mut runner);
 
-    let view = runner.pending_selection_view().expect("Option bucket prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("Option bucket prompt");
     let non_pass = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(non_pass, 1, "exactly the 7-cost Option is selectable");
     assert!(
@@ -327,7 +348,9 @@ fn bt6_060_on_play_only_musketeer_matches_offers_only_that_bucket() {
         .start();
     play_deputymon(&mut runner);
 
-    let view = runner.pending_selection_view().expect("TM Digimon bucket prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("TM Digimon bucket prompt");
     let non_pass = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(non_pass, 1);
     pick_first(&mut runner, "TM bucket");
@@ -383,7 +406,11 @@ fn bt6_060_warps_into_musketeer_digimon_from_hand_for_6_ignoring_requirements() 
     );
     let top = runner.game.players[0].battle_area[deputy.index as usize].top_card();
     assert_eq!(top.card_id(&runner.game.card_data), "TM-L5");
-    assert_eq!(memory_before - runner.game.memory, 6, "warp costs exactly 6");
+    assert_eq!(
+        memory_before - runner.game.memory,
+        6,
+        "warp costs exactly 6"
+    );
 }
 
 #[test]

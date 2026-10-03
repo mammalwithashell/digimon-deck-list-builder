@@ -428,6 +428,18 @@ pub enum EffectTiming {
     /// non-null causing `CardEffect`). A multi-card discard batch fires this
     /// exactly ONCE (DCGO `DiscardHands()`). G-ENGINE-ON-DISCARD-HAND.
     OnDiscardHand,
+    /// Fires ONCE after an EFFECT adds one or more cards to a player's deck
+    /// (top or bottom) from outside it — a permanent / stack returned to the
+    /// deck, trash / hand / security / digivolution cards returned to the
+    /// deck ("When your effects add to decks", BT26-001 / BT26-015 /
+    /// BT26-060). Cards revealed FROM the deck and put back (the reveal
+    /// zone) do NOT fire it, nor do Digi-Eggs routed to the Digi-Egg deck
+    /// (DCGO `FireOnAddLibraryAnyone` ruling). Global observer — the
+    /// causing effect's controller rides in the `TriggerContext`
+    /// (`event_cause_effect`) so scripts gate "your effects" with
+    /// `event_caused_by_own_effect`. Mirrors DCGO
+    /// `EffectTiming.OnAddLibraryAnyone`. G-ENGINE-ON-ADD-TO-DECK.
+    OnAddToDeck,
 
     // Special
     None,
@@ -1101,6 +1113,9 @@ pub enum CardSourceRef {
     PendingSecurity,
     Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
+    /// A LINK card of a battle-area permanent: `(host, index into
+    /// linked_cards)` (BT26-102 Seven Code PAD materials from link cards).
+    Link(crate::permanent::PermanentHandle, usize),
 }
 
 /// Facet #9 — the source zone a chosen card is lifted from when an effect

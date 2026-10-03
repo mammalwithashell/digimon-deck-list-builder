@@ -1,0 +1,146 @@
+# BT26-015 Butenmon — Digimon, Lv.5, Red/Yellow, DP 7000, Cost 7. Traits:
+#   Shaman, Iliad, TS. Form Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.4 / cost 4; Yellow Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-015.md):
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP
+#     until their turn ends. Then, by returning 1 card in your trash to the
+#     bottom of the deck, delete 1 of your opponent's 5000 DP or lower Digimon.
+#   [Your Turn] [Once Per Turn] When your effects add to decks, 1 of your
+#     Digimon may get +3000 DP until your opponent's turn ends and attack.
+#   Inherited: [All Turns] [Once Per Turn] When your effects add to decks, this
+#     Digimon with [Chronomon] in its text may unsuspend.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_015.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 + HasTSTraits, cost 3.
+# Shared OP/WD (optional:false): (a) if an opp Digimon exists, mandatory pick →
+#   ChangeDigimonDP(-4000, UntilOpponentTurnEnd); (b) if the trash is non-empty,
+#   canNoSelect:true pick of ANY own trash card → AddLibraryBottomCards; on a
+#   pick, if an opp Digimon with DP <= MaxDP_DeleteEffect(5000) exists,
+#   mandatory pick → Destroy.
+#   → mandatory `select_opponent_permanent` + add_dp_modifier; optional
+#   `select_trash` (the "by" cost) + `return_trash_list_to_deck_bottom` (fires
+#   `on_add_to_deck`) + mandatory dp_lte 5000 pick + delete.
+# [Your Turn] OPT (OnAddLibraryAnyone, optional:false, isSkippable): IsOwnerTurn
+#   + CanTriggerOnAddLibrary(IsOwnerEffect); CanActivate needs an own Digimon.
+#   canNoSelect:true own-Digimon pick → +3000 (UntilOpponentTurnEnd) → if it
+#   CanAttack, SelectAttackEffect with SetCanNotSelectNotAttack (it MUST
+#   attack). No pick → activateClass.RemoveUse() (OPT not spent).
+#   → `when: on_add_to_deck` (G-ENGINE-ON-ADD-TO-DECK) + `active_when:
+#   { your_turn, event_caused_by_own_effect }`; optional select_own_permanent;
+#   add_dp_modifier + `may_attack_now { optional: false }`; `refund_opt` when
+#   declined.
+# Inherited All Turns OPT (OnAddLibraryAnyone, optional:true):
+#   CanTriggerOnAddLibrary(IsOwnerEffect); CanActivate: TopCard.HasText
+#   ("Chronomon") && CanUnsuspend → IUnsuspendPermanents(this).
+#   → `when: on_add_to_deck` + `active_when: { event_caused_by_own_effect }`;
+#   optional clause; condition = this permanent is suspended and its top card
+#   has [Chronomon] in its text.
+
+card: BT26-015
+name: "Butenmon"
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Shaman, Iliad, TS]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "TS"
+    cost: 3
+
+effects:
+  # ─── [OP][WD] -4000; then by bottom-decking 1 trash card, delete ≤5000 ────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, by returning 1 card in your trash to the bottom of the deck, delete 1 of your opponent's 5000 DP or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: debuffed
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -4000 DP until their turn ends"
+      - add_dp_modifier:
+          target: debuffed
+          value: -4000
+          expiry: end_of_opponents_turn
+      - select_trash:
+          of: you
+          bind_as: bottomed
+          optional: true
+          filter: {}
+          prompt: "Return 1 card in your trash to the bottom of the deck to delete 1 of your opponent's 5000 DP or lower Digimon"
+      - if:
+          condition: { binding_present: bottomed }
+          then:
+            - return_trash_list_to_deck_bottom: { of: you, cards: bottomed }
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 5000
+                prompt: "Delete 1 of your opponent's 5000 DP or lower Digimon"
+            - delete_permanent: { target: victim }
+
+  # ─── [Your Turn][OPT] When your effects add to decks, 1 of your Digimon may
+  #     get +3000 DP until your opponent's turn ends and attack ──────────────
+  - when: on_add_to_deck
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_caused_by_own_effect: true
+    condition:
+      any_field_permanent:
+        of: you
+        kind: digimon
+    summary: "[Your Turn][OPT] When your effects add to decks, 1 of your Digimon may get +3000 DP until your opponent's turn ends and attack"
+    process:
+      - select_own_permanent:
+          bind_as: striker
+          optional: true
+          # Decline must still reach the `refund_opt` else-branch (DCGO
+          # RemoveUse when nothing was picked). G-OPT-REFUND-ON-DECLINE.
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may get +3000 DP until your opponent's turn ends and attack"
+      - if:
+          condition: { binding_present: striker }
+          then:
+            - add_dp_modifier:
+                target: striker
+                value: 3000
+                expiry: end_of_opponents_turn
+            - may_attack_now:
+                attacker: striker
+                targets: any
+                optional: false
+                prompt: "This Digimon attacks"
+          else:
+            - refund_opt: {}
+
+  # ─── Inherited [All Turns][OPT] When your effects add to decks, this
+  #     Digimon with [Chronomon] in its text may unsuspend ──────────────────
+  - scope: inherited
+    when: on_add_to_deck
+    once_per_turn: true
+    optional: true
+    active_when:
+      event_caused_by_own_effect: true
+    condition:
+      any_field_permanent:
+        is_source: true
+        is_suspended: true
+        in_text_contains: "Chronomon"
+    summary: "Inherited [All Turns][OPT] When your effects add to decks, this Digimon with [Chronomon] in its text may unsuspend"
+    process:
+      - unsuspend: { target: source }

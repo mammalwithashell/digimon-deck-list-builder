@@ -175,6 +175,8 @@ pub fn lower_for_kind_with_clause_index(
             .find(|tc| tc.when == *t)
             .map(|tc| Arc::new(tc.condition.clone()));
         let scope = clause.scope;
+        let opt_key_inherited =
+            matches!(scope, CompiledScope::Inherited | CompiledScope::Linked) || is_when_linked;
         let optional = clause.optional;
         let once_per_turn = clause.once_per_turn;
         let max_per_turn = clause.max_per_turn;
@@ -341,7 +343,8 @@ pub fn lower_for_kind_with_clause_index(
                 // player picks a target.
                 let runtime = StepRuntime::new(raw_for_process.clone())
                     .with_dna_origin(ctx.game.current_dna_origin)
-                    .with_opt_key(shared_opt_group);
+                    .with_opt_key(shared_opt_group)
+                    .with_opt_key_inherited(opt_key_inherited);
                 run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
             });
         }
@@ -362,6 +365,9 @@ pub fn lower_for_kind_with_clause_index(
                     ActivationCostKind::ReturnSelfToDeckBottom
                 }
                 CompiledActivationCostKind::TrashSelf => ActivationCostKind::TrashSelf,
+                CompiledActivationCostKind::PlaceSelfAtSecurityBottom => {
+                    ActivationCostKind::PlaceSelfAtSecurityBottom
+                }
             });
         }
 

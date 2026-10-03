@@ -1,0 +1,148 @@
+# BT26-075 ScourgeChiropmon // Despair Blast — DUAL (Digimon Lv.5
+#   Purple/Yellow DP 8000 // Option Purple use cost 4). Traits: Machine,
+#   Glowing Dawn, BEATBREAK. Form: Ultimate. Attribute: Virus.
+# Printed digivolve box: Purple Lv.4 / cost 4; Yellow Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-075.md):
+#   Digimon face:
+#   <Execute> <Ascension> (When this Digimon is deleted, you may place this
+#     card as the top security card.)
+#   [Security] [On Deletion] By trashing the bottom face-down card from under
+#     any of your Tamers, you may play 1 [Glowing Dawn] trait card with a play
+#     cost of 5 or less from your trash without paying the cost.
+#   Option face (DUAL): <Use Req. ([Glowing Dawn] trait)> [Main] Delete 1 of
+#     your opponent's Digimon with the lowest level.
+#   DUAL Rule: <Arts Digivolve>.
+#   Official Q&A: <Ascension> and [On Deletion] trigger simultaneously and the
+#     player orders them; activating <Ascension> first removes the card from
+#     the trash, so the pending [On Deletion] can no longer activate.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_075.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 + TopCard EqualsTraits "Glowing Dawn", cost 3.
+# <Execute>: ExecuteSelfEffect (OnEndTurn) → grant_keyword Execute.
+# <Ascension>: AscensionSelfEffect (OnDestroyedAnyone) → grant_keyword.
+# [Security] + [On Deletion] (shared coroutine, not optional): CanUse requires
+#   an own Tamer with a face-down source. canNoSelect:true Tamer pick → trash
+#   its bottom face-down card → if a [Glowing Dawn] card with a play cost
+#   (HasPlayCost — excludes Options) <= 5 that can be played is in trash:
+#   PlayByEffect from trash, payCost:false (the pick is canNoSelect).
+#   → on_security / on_deletion clauses + face_down_sources_under_tamers_gte 1
+#   condition; trash_bottom_face_down_source_under_tamer { optional: true }
+#   (declinable cost, aborts the rest on decline) → optional select_trash
+#   (Digimon/Tamer, not a DUAL — no play cost, G-DSL-KIND-DUAL-CARD-SEARCH —
+#   [Glowing Dawn], play_cost_lte 5) → play_from_trash_free.
+#   The [Security] is a BLUE security-check trigger on the Digimon face.
+# Option [Main]: mandatory pick of 1 opponent Digimon with IsMinLevel →
+#   destroy. → main_from_hand: select_opponent_permanent with
+#   level_matches_aggregate { lowest_level, of: opponent } → delete_permanent.
+# Use Req ([Glowing Dawn]) + <Arts Digivolve>: BT26-050 idiom.
+
+card: BT26-075
+name: ScourgeChiropmon
+kind: dual
+
+level: 5
+color: [purple, yellow]
+dp: 8000
+traits: [Machine, Glowing Dawn, BEATBREAK]
+form: Ultimate
+attribute: Virus
+
+dual:
+  digimon:
+    level: 5
+    dp: 8000
+    colors: [purple, yellow]
+    traits: [Machine, Glowing Dawn, BEATBREAK]
+    effect_text: "<Execute> <Ascension> (When this Digimon is deleted, you may place this card as the top security card.) [Security] [On Deletion] By trashing the bottom face-down card from under any of your Tamers, you may play 1 [Glowing Dawn] trait card with a play cost of 5 or less from your trash without paying the cost."
+    inherited_text: ""
+  option:
+    use_cost: 4
+    colors: [purple]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "Glowing Dawn"
+    effect_text: "<Use Req. ([Glowing Dawn] trait)> [Main] Delete 1 of your opponent's Digimon with the lowest level. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+effects:
+  # ─── <Execute> ─────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Execute
+    summary: "<Execute>"
+
+  # ─── <Ascension> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension> (When this Digimon is deleted, you may place this card as the top security card)"
+
+  # ─── [Security] by trashing a Tamer's bottom face-down card, may play 1
+  #     [Glowing Dawn] card (play cost <= 5) from trash for free ─────────────
+  - when: on_security
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    summary: "[Security] By trashing the bottom face-down card from under any of your Tamers, you may play 1 [Glowing Dawn] trait card with a play cost of 5 or less from your trash without paying the cost"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - select_trash:
+          of: you
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              # A DUAL has no play cost ("Play cost: D") — DCGO HasPlayCost.
+              - not: { kind: dual }
+              - trait_has: "Glowing Dawn"
+              - play_cost_lte: 5
+          prompt: "You may play 1 [Glowing Dawn] trait card with a play cost of 5 or less from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: sec_pick }
+
+  # ─── [On Deletion] same body ───────────────────────────────────────────────
+  - when: on_deletion
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    summary: "[On Deletion] By trashing the bottom face-down card from under any of your Tamers, you may play 1 [Glowing Dawn] trait card with a play cost of 5 or less from your trash without paying the cost"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - select_trash:
+          of: you
+          bind_as: del_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              # A DUAL has no play cost ("Play cost: D") — DCGO HasPlayCost.
+              - not: { kind: dual }
+              - trait_has: "Glowing Dawn"
+              - play_cost_lte: 5
+          prompt: "You may play 1 [Glowing Dawn] trait card with a play cost of 5 or less from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: del_pick }
+
+  # ─── Option face [Main] delete 1 opp Digimon with the lowest level ────────
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon with the lowest level"
+    process:
+      - select_opponent_permanent:
+          bind_as: lowest
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Delete 1 of your opponent's Digimon with the lowest level"
+      - delete_permanent: { target: lowest }

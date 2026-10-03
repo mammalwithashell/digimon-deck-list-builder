@@ -43,9 +43,9 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledDpConstraint, CompiledPredicate, CompiledScope,
-    CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledDpConstraint, CompiledPredicate, CompiledScope, CompiledTiming,
+    CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;

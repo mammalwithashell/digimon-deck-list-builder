@@ -185,11 +185,16 @@ fn bt24_091_main_link_gives_host_printed_link_dp_plus_2000() {
     runner.place_on_field(0, "TS-TAMER", Some(0));
     let host = runner.place_on_field(0, "TS-DIGIMON", Some(0));
     runner.game.enter_main_phase();
-    let host_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: host.index };
+    let host_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: host.index,
+    };
     let dp_before = runner.effective_dp(host_handle).expect("host dp");
 
     assert_eq!(play_tidal_standard(&mut runner), OptionPlayResult::Pending);
-    let view = runner.pending_selection_view().expect("optional link prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional link prompt");
     let link_action = view
         .valid_action_ids
         .iter()
@@ -201,7 +206,9 @@ fn bt24_091_main_link_gives_host_printed_link_dp_plus_2000() {
         .expect("link Tidal Stream to the TS Digimon");
 
     assert_eq!(
-        runner.game.player(0).battle_area[host.index as usize].linked_cards.len(),
+        runner.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
         1
     );
     assert_eq!(
@@ -228,28 +235,41 @@ fn bt24_091_linked_host_when_attacking_bounces_lowest_level_mandatory_once_per_t
 
     // No opponent Digimon -> nothing returned -> straight to the link prompt.
     assert_eq!(play_tidal_standard(&mut runner), OptionPlayResult::Pending);
-    let view = runner.pending_selection_view().expect("optional link prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional link prompt");
     runner
         .execute_action(view.selecting_player, encode_attack(0, host.index as u16))
         .expect("link Tidal Stream to the TS Digimon");
     assert_eq!(
-        runner.game.player(0).battle_area[host.index as usize].linked_cards.len(),
+        runner.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
         1
     );
 
     let low = runner.place_on_field(1, "OPP-LV3-A", Some(0));
     let high = runner.place_on_field(1, "OPP-LV5", Some(0));
-    let host_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: host.index };
+    let host_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: host.index,
+    };
     let _ = runner.attack_player(host_handle, 1, false);
     let wa = runner
         .pending_selection_view()
         .expect("linked [When Attacking] bounce pick must park");
     assert_eq!(wa.selecting_player, 0);
     assert_eq!(wa.kind, SelectionKind::OppField);
-    assert!(!wa.is_optional, "printed text has no 'you may'; DCGO canNoSelect:false");
-    assert!(wa.valid_action_ids.contains(&encode_attack(0, low.index as u16)));
     assert!(
-        !wa.valid_action_ids.contains(&encode_attack(0, high.index as u16)),
+        !wa.is_optional,
+        "printed text has no 'you may'; DCGO canNoSelect:false"
+    );
+    assert!(wa
+        .valid_action_ids
+        .contains(&encode_attack(0, low.index as u16)));
+    assert!(
+        !wa.valid_action_ids
+            .contains(&encode_attack(0, high.index as u16)),
         "Lv.5 is not the lowest level -- not offered"
     );
     runner
@@ -260,11 +280,18 @@ fn bt24_091_linked_host_when_attacking_bounces_lowest_level_mandatory_once_per_t
     assert!(battle_area_contains(&runner, 1, "OPP-LV5"));
 
     // [Once Per Turn]: a second attack this turn does not re-trigger.
-    let host_idx = runner.game.player(0).battle_area.iter()
+    let host_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "TS-DIGIMON")
         .expect("host still on field");
     runner.game.players[0].battle_area[host_idx].is_suspended = false;
-    let host_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: host_idx as _ };
+    let host_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: host_idx as _,
+    };
     let _ = runner.attack_player(host_handle, 1, false);
     let _ = runner.auto_resolve();
     assert!(

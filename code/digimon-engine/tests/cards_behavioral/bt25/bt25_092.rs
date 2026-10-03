@@ -28,7 +28,9 @@
 //! union prompts fold each DCGO zone bool + per-zone pick into one prompt.
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
-use digimon_engine::action::space::{encode_attack, encode_source_select, PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::{
+    encode_attack, encode_source_select, PASS, PLAY_HAND_START, TRASH_EFFECT_START,
+};
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -118,7 +120,10 @@ fn main_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
 fn enter_main(runner: &mut DebugRunner) {
     runner.game.enter_main_phase();
     if runner.pending_selection().is_some() {
-        assert!(runner.pending_is_optional(), "only the start-of-main optional prompt is expected");
+        assert!(
+            runner.pending_is_optional(),
+            "only the start-of-main optional prompt is expected"
+        );
         runner
             .decline_optional_trigger()
             .expect("decline the [Start of Your Main Phase] prompt");
@@ -226,17 +231,31 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
         "cost prompt spans hand ∪ material, got {:?}",
         view.kind
     );
-    assert!(!view.is_optional, "the Option trash is a mandatory cost (DCGO canNoSelect false)");
+    assert!(
+        !view.is_optional,
+        "the Option trash is a mandatory cost (DCGO canNoSelect false)"
+    );
     let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
-    assert_eq!(view.valid_action_ids, vec![opt_action], "only the Option card is trashable");
-    runner.execute_action(0, opt_action).expect("trash the Option from hand");
+    assert_eq!(
+        view.valid_action_ids,
+        vec![opt_action],
+        "only the Option card is trashable"
+    );
+    runner
+        .execute_action(0, opt_action)
+        .expect("trash the Option from hand");
     assert!(trash_has(&runner, "OPT-HAND"), "Option trashed as cost");
 
     // Target prompt: optional own-Digimon pick (DCGO canNoSelect TRUE),
     // restricted to Digimon with a legal result card.
-    let view = runner.pending_selection_view().expect("own-Digimon target prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("own-Digimon target prompt");
     assert_eq!(view.kind, SelectionKind::OwnField);
-    assert!(view.is_optional, "\"may digivolve\" → declinable target pick");
+    assert!(
+        view.is_optional,
+        "\"may digivolve\" → declinable target pick"
+    );
     let base_action = encode_attack(0, base.index as u16);
     assert_eq!(
         view.valid_action_ids,
@@ -248,23 +267,33 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
     // Result prompt: ONE union prompt over hand ∪ trash. EVO-HAND (hand, TS)
     // and EVO-TRASH (trash, TM text) qualify; PLAIN-EVO (no TS / TM text)
     // and EVO-LV6 (no route onto a Lv.4) are filtered out.
-    let view = runner.pending_selection_view().expect("result union prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("result union prompt");
     assert!(
         matches!(view.kind, SelectionKind::UnionZone { zones } if zones == (UnionZoneSet::HAND | UnionZoneSet::TRASH)),
         "result prompt spans hand ∪ trash, got {:?}",
         view.kind
     );
-    assert!(view.is_optional, "result pick is declinable (DCGO isOptional)");
+    assert!(
+        view.is_optional,
+        "result pick is declinable (DCGO isOptional)"
+    );
     let evo_hand_action = PLAY_HAND_START + hand_index_of(&runner, "EVO-HAND") as u16;
     let evo_trash_action = TRASH_EFFECT_START + trash_index_of(&runner, "EVO-TRASH") as u16;
     let mut offered = view.valid_action_ids.clone();
     offered.sort_unstable();
     let mut expected = vec![evo_hand_action, evo_trash_action];
     expected.sort_unstable();
-    assert_eq!(offered, expected, "exactly the routable [TS]/[Three Musketeers] cards are offered");
+    assert_eq!(
+        offered, expected,
+        "exactly the routable [TS]/[Three Musketeers] cards are offered"
+    );
 
     let memory_before = runner.memory();
-    runner.execute_action(0, evo_hand_action).expect("digivolve into EVO-HAND");
+    runner
+        .execute_action(0, evo_hand_action)
+        .expect("digivolve into EVO-HAND");
     let _ = runner.auto_resolve();
 
     assert_eq!(field_top_id(&runner, base.index as usize), "EVO-HAND");
@@ -273,7 +302,11 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
         memory_before - 2,
         "printed circle cost 3 reduced by 1 → paid 2"
     );
-    assert_eq!(runner.deck_size(0), deck_before - 1, "digivolution draw (§8-1-3-3)");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "digivolution draw (§8-1-3-3)"
+    );
     assert!(runner.pending_selection().is_none());
 }
 
@@ -299,7 +332,9 @@ fn bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon() {
         vec![source_action],
         "only the buried Option (BASE source 0) is offered; the hand holds no Option"
     );
-    runner.execute_action(0, source_action).expect("trash the buried Option");
+    runner
+        .execute_action(0, source_action)
+        .expect("trash the buried Option");
     assert!(trash_has(&runner, "OPT-UNDER"));
     assert_eq!(
         runner.game.player(0).battle_area[base.index as usize]
@@ -325,7 +360,10 @@ fn bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon() {
 
 #[test]
 fn bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt() {
-    let mut runner = main_runner().hand(0, &["OPT-HAND", "EVO-HAND"]).memory(5).start();
+    let mut runner = main_runner()
+        .hand(0, &["OPT-HAND", "EVO-HAND"])
+        .memory(5)
+        .start();
     let tamer = runner.place_on_field(0, "BT25-092", Some(0));
     let base = runner.place_on_field(0, "BASE", Some(0));
     runner.push_source(base, "OPT-UNDER");
@@ -369,7 +407,9 @@ fn bt25_092_main_digivolve_into_card_resident_in_trash() {
         "only the trash-resident [Three Musketeers]-text card is offered"
     );
     let memory_before = runner.memory();
-    runner.execute_action(0, evo_trash_action).expect("digivolve from trash");
+    runner
+        .execute_action(0, evo_trash_action)
+        .expect("digivolve from trash");
     let _ = runner.auto_resolve();
 
     assert_eq!(field_top_id(&runner, base.index as usize), "EVO-TRASH");
@@ -382,7 +422,10 @@ fn bt25_092_main_target_pick_excludes_digimon_without_a_legal_result() {
     // BASE is Lv.4; the only result card is EVO-LV6 (needs a Lv.5 base) →
     // BASE has no digivolve candidate → after the cost the clause ends with
     // no target prompt (DCGO's `if HasMatchConditionOwnersPermanent(...)`).
-    let mut runner = main_runner().hand(0, &["OPT-HAND", "EVO-LV6"]).memory(5).start();
+    let mut runner = main_runner()
+        .hand(0, &["OPT-HAND", "EVO-LV6"])
+        .memory(5)
+        .start();
     let tamer = runner.place_on_field(0, "BT25-092", Some(0));
     let base = runner.place_on_field(0, "BASE", Some(0));
     enter_main(&mut runner);
@@ -402,7 +445,10 @@ fn bt25_092_main_target_pick_excludes_digimon_without_a_legal_result() {
 
 #[test]
 fn bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve() {
-    let mut runner = main_runner().hand(0, &["OPT-HAND", "EVO-HAND"]).memory(5).start();
+    let mut runner = main_runner()
+        .hand(0, &["OPT-HAND", "EVO-HAND"])
+        .memory(5)
+        .start();
     let tamer = runner.place_on_field(0, "BT25-092", Some(0));
     let base = runner.place_on_field(0, "BASE", Some(0));
     enter_main(&mut runner);
@@ -414,18 +460,29 @@ fn bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve() {
 
     let view = runner.pending_selection_view().expect("target prompt");
     assert!(view.is_optional);
-    runner.execute_action(0, PASS).expect("decline the digivolve");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the digivolve");
 
-    assert!(runner.pending_selection().is_none(), "declining ends the clause");
+    assert!(
+        runner.pending_selection().is_none(),
+        "declining ends the clause"
+    );
     assert_eq!(field_top_id(&runner, base.index as usize), "BASE");
     assert_eq!(runner.memory(), memory_before, "no digivolution cost paid");
-    assert!(trash_has(&runner, "OPT-HAND"), "the trash cost is not refunded");
+    assert!(
+        trash_has(&runner, "OPT-HAND"),
+        "the trash cost is not refunded"
+    );
     assert!(runner.game.player(0).battle_area[tamer.index as usize].is_suspended);
 }
 
 #[test]
 fn bt25_092_main_decline_result_pick_after_target() {
-    let mut runner = main_runner().hand(0, &["OPT-HAND", "EVO-HAND"]).memory(5).start();
+    let mut runner = main_runner()
+        .hand(0, &["OPT-HAND", "EVO-HAND"])
+        .memory(5)
+        .start();
     let tamer = runner.place_on_field(0, "BT25-092", Some(0));
     let base = runner.place_on_field(0, "BASE", Some(0));
     enter_main(&mut runner);
@@ -440,7 +497,9 @@ fn bt25_092_main_decline_result_pick_after_target() {
 
     let view = runner.pending_selection_view().expect("result prompt");
     assert!(view.is_optional);
-    runner.execute_action(0, PASS).expect("decline the result pick");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the result pick");
 
     assert!(runner.pending_selection().is_none());
     assert_eq!(field_top_id(&runner, base.index as usize), "BASE");
@@ -596,7 +655,8 @@ fn make_evo_ts(id: &str) -> digimon_engine::CardData {
 
 fn make_evo_tm_text(id: &str) -> digimon_engine::CardData {
     let mut card = make_lv5_purple(id);
-    card.effect_text = "[When Digivolving] 1 of your [Three Musketeers] Digimon gets +1000 DP.".to_string();
+    card.effect_text =
+        "[When Digivolving] 1 of your [Three Musketeers] Digimon gets +1000 DP.".to_string();
     card
 }
 

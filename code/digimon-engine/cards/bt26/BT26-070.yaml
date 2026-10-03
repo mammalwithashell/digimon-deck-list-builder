@@ -1,0 +1,91 @@
+# BT26-070 NightChiropmon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: Beastkin, Glowing Dawn, BEATBREAK. Form: Champion. Attribute: Virus.
+# Digivolve: Purple Lv.3 / cost 2; [Digivolve] Lv.3 w/[Glowing Dawn]: cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-070.md):
+#   [On Play] [When Digivolving] <Draw 1> and trash 1 card in your hand.
+#   [Main] [Once Per Turn] By trashing 2 bottom face-down cards from under any
+#     of your Tamers, you may use 1 Option card with the [Glowing Dawn] trait
+#     from your trash with the cost reduced by 2.
+#   Inherited: <Retaliation> (When only this Digimon is deleted in battle,
+#     delete the Digimon it battled.)
+#   Official Q&A: a "by" condition can't be met by trashing only some of the
+#     required cards — the [Main] needs 2 face-down cards.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_070.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + TopCard EqualsTraits "Glowing Dawn", cost 2.
+# [On Play][When Digivolving] (shared, optional:false): Draw 1 → if hand >= 1,
+#   mandatory (canNoSelect:false) discard pick of 1.
+#   → draw + select_hand (mandatory) + trash_from_hand_by_index.
+# [Main][OPT] (OnDeclaration, maxCount 1): CanActivate = a Tamer with >= 2
+#   face-down sources OR >= 2 Tamers with one each (= >= 2 face-down sources
+#   across Tamers). Tamer multi-pick (1 Tamer with 2, or 2 Tamers × 1) → trash
+#   the bottom face-down card(s); then canNoSelect:true trash pick over
+#   [Glowing Dawn] Options usable at cost-2 → PlayOptionCards(payCost) from
+#   trash with a one-shot -2 ChangeCost. RemoveUse only when nothing was
+#   trashed (the Tamer pick was cancelled).
+#   → main_on_field + once_per_turn + face_down_sources_under_tamers_gte 2;
+#   trash_bottom_face_down_sources_under_tamers count 2 (BT25-035 idiom —
+#   distributes across Tamers, each pick a real selection) →
+#   use_option_from_trash { optional, cost reduce 2 }. The activation itself
+#   is the player's choice, so the DCGO post-activation Tamer-pick cancel
+#   is not separately surfaced.
+# Inherited <Retaliation>: RetaliationSelfEffect(isInherited) → grant_keyword.
+
+card: BT26-070
+name: "NightChiropmon"
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Beastkin, Glowing Dawn, BEATBREAK]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Glowing Dawn"
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] <Draw 1> and trash 1 card in your hand ────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <Draw 1> and trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  # ─── [Main][OPT] by trashing 2 bottom face-down cards from under your
+  #     Tamers, may use 1 [Glowing Dawn] Option from trash at cost -2 ───────
+  - when: main_on_field
+    once_per_turn: true
+    condition: { face_down_sources_under_tamers_gte: 2 }
+    summary: "[Main][Once Per Turn] By trashing 2 bottom face-down cards from under any of your Tamers, you may use 1 Option card with the [Glowing Dawn] trait from your trash with the cost reduced by 2"
+    process:
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - use_option_from_trash:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Glowing Dawn"
+          cost: { reduce: 2 }
+          prompt: "You may use 1 [Glowing Dawn] Option card from your trash with the cost reduced by 2"
+
+  # ─── Inherited <Retaliation> ───────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Retaliation
+    summary: "Inherited <Retaliation>"

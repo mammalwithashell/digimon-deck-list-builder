@@ -426,6 +426,7 @@ impl<'a> EffectContext<'a> {
             // the effect performing the discard.
             let cause_controller = self.player;
             self.game.note_effect_hand_discard(cause_controller, player);
+            self.game.note_effect_hand_discard_card(player, card_handle);
         }
         trashed
     }
@@ -533,6 +534,9 @@ impl<'a> EffectContext<'a> {
     /// Trash every digivolution source below `target`'s top card, preserving
     /// the live permanent and dispatching source-trash observers per source.
     pub fn trash_all_sources(&mut self, target: PermanentHandle) -> bool {
+        if self.player != target.player && self.stack_trash_blocked(target) {
+            return false;
+        }
         let Some(permanent) = self
             .game
             .player(target.player)

@@ -87,6 +87,9 @@ pub enum ActivationCostKind {
     ReturnSelfToDeckBottom,
     /// "By trashing this card, …" (`<Delay>` bodies).
     TrashSelf,
+    /// "By placing this Digimon as the bottom security card, …"
+    /// (BT26-022 Sorcermon). G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY.
+    PlaceSelfAtSecurityBottom,
 }
 
 impl ActivationCostKind {
@@ -125,6 +128,15 @@ impl ActivationCostKind {
             // refuse only when the source permanent is already gone, which
             // the lookup above has just ruled out.
             ActivationCostKind::ReturnSelfToDeckBottom | ActivationCostKind::TrashSelf => true,
+            // `place_self_at_security` refuses under the owner's
+            // player-scoped `CannotAddSecurityByEffect` (DCGO
+            // `Owner.CanAddSecurity`). A would-leave / would-place
+            // replacement can still intercept at payment time; that is a
+            // resolution-time cost failure, not a mask-time one.
+            ActivationCostKind::PlaceSelfAtSecurityBottom => !game.modifiers.player_has(
+                handle.player,
+                crate::enums::ModifierType::CannotAddSecurityByEffect,
+            ),
         }
     }
 }
@@ -137,6 +149,18 @@ pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 /// Predicate used by parameterized `<Overclock (...)>` to decide which own
 /// battle-area permanents can be deleted as the cost.
+/// A card's own use-cost INCREASE, read from the controller's state
+/// (BT26-033 Jupitermon's Option face: "For each of your security cards, add 1
+/// to this card's use cost"). G-ENGINE-OPTION-SELF-USE-COST-INCREASE.
+pub type UseCostFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
+/// `<Succession ([X])>` source filter: does the digivolution card at
+/// `source` (a below-top card of the carrier) match the keyword's `[X]`?
+pub type SuccessionFilterFn = Box<
+    dyn Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+        + Send
+        + Sync
+        + 'static,
+>;
 pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
@@ -393,6 +417,15 @@ pub struct Effect {
     /// Filter closure selecting legal host Digimon for a Link Option.
     /// Set by `.link(cost, filter)`.
     pub link_filter: Option<LinkFilterFn>,
+    /// `<Succession ([X])>` (G-ENGINE-SUCCESSION-KEYWORD): set on the
+    /// declarative clause of a card printing the keyword. While that card is
+    /// the top card, its permanent gains every non-inherited effect of the
+    /// TOPMOST digivolution card this filter matches — see
+    /// `Game::succession_source_indices`.
+    pub succession_filter: Option<SuccessionFilterFn>,
+    /// Self use-cost increase (see [`UseCostFn`]); summed by
+    /// `Game::option_use_cost`.
+    pub use_cost_increase_fn: Option<UseCostFn>,
     pub alt_path_registration: Option<AltPathRegistrationEffect>,
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
@@ -856,6 +889,8 @@ impl EffectBuilder {
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
+                succession_filter: None,
+                use_cost_increase_fn: None,
                 alt_path_registration: None,
                 training: false,
                 linked: false,
@@ -1276,6 +1311,9 @@ impl EffectBuilder {
             ActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
             ActivationCostKind::ReturnSelfToDeckBottom => ctx.return_self_to_deck_bottom_as_cost(),
             ActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
+            ActivationCostKind::PlaceSelfAtSecurityBottom => {
+                ctx.place_self_at_security(crate::enums::StackPosition::Bottom, false)
+            }
         }));
         self
     }
@@ -1326,6 +1364,28 @@ impl EffectBuilder {
     /// (`Effect::link_condition(card).link_host(cost, filter)`), where the
     /// link metadata must coexist with `EffectTiming::LinkCondition` rather
     /// than the Option `OptionMain` body timing.
+    /// Mark this declarative effect as `<Succession ([X])>`: `filter` picks
+    /// which digivolution cards qualify as `[X]` (the topmost one is adopted).
+    pub fn succession<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.inner.succession_filter = Some(Box::new(filter));
+        self
+    }
+
+    /// Mark this declarative effect as a self use-cost increase.
+    pub fn use_cost_increase<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.use_cost_increase_fn = Some(Box::new(f));
+        self
+    }
+
     pub fn link_host<F>(mut self, cost: u16, digimon_filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,

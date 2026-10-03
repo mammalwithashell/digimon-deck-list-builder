@@ -156,7 +156,11 @@ fn ex12_046_effect_initiated_digivolve_still_draws_the_rule_8_1_3_3_card() {
     select_hand_card(&mut runner, 0, "TB-LV6");
     runner.auto_resolve().expect("finish effect digivolve");
 
-    assert_eq!(top_card_id(&runner, 0, 0), "TB-LV6", "the digivolve resolved");
+    assert_eq!(
+        top_card_id(&runner, 0, 0),
+        "TB-LV6",
+        "the digivolve resolved"
+    );
     // Hand: TB-LV6 left it (-1) and the §8-1-3-3 draw replaced it (+1).
     assert_eq!(
         runner.hand_size(0),

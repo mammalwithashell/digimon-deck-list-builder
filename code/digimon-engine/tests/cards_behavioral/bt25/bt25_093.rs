@@ -266,10 +266,16 @@ fn bt25_093_security_flip_links_then_host_when_attacking_deletes_dp_bounded_mand
         !view.is_optional,
         "printed text has no 'you may'; DCGO canNoSelect:false — no decline"
     );
-    assert!(view.valid_action_ids.contains(&encode_attack(0, eq.index as u16)));
-    assert!(view.valid_action_ids.contains(&encode_attack(0, low.index as u16)));
+    assert!(view
+        .valid_action_ids
+        .contains(&encode_attack(0, eq.index as u16)));
+    assert!(view
+        .valid_action_ids
+        .contains(&encode_attack(0, low.index as u16)));
     assert!(
-        !view.valid_action_ids.contains(&encode_attack(0, big.index as u16)),
+        !view
+            .valid_action_ids
+            .contains(&encode_attack(0, big.index as u16)),
         "6000 DP exceeds the host's 5000 — not offered"
     );
     runner
@@ -343,7 +349,11 @@ fn bt25_093_hand_link_pays_after_the_host_is_chosen_not_at_declaration() {
         before - 3,
         "the printed <Link> [TS] trait: Cost 3 is paid once the host is chosen"
     );
-    assert_eq!(runner.hand_size(0), 0, "§10-1-3-3: the card leaves the hand");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "§10-1-3-3: the card leaves the hand"
+    );
     let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
     assert_eq!(linked.len(), 1, "plugged in sideways");
     assert_eq!(linked[0].card_id(&runner.game.card_data), "BT25-093");

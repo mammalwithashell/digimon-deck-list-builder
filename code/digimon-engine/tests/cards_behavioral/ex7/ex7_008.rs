@@ -37,8 +37,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
@@ -147,7 +146,10 @@ fn ex7_008_has_mandatory_on_play_clause_and_inherited_your_turn_aura() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .count();
-    assert_eq!(digivolve_paths, 2, "standard Red Lv.2/0 + special TM-text Lv.2/0");
+    assert_eq!(
+        digivolve_paths, 2,
+        "standard Red Lv.2/0 + special TM-text Lv.2/0"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,7 +168,13 @@ fn ex7_008_on_play_adds_one_tm_text_card_and_one_cost_six_option_bottoms_rest() 
     runner.play(0, 0).expect("play ToyAgumon");
 
     let view = runner.pending_selection_view().expect("bucket 0 prompt");
-    assert!(matches!(view.kind, SelectionKind::RevealBucket { bucket_index: 0, .. }));
+    assert!(matches!(
+        view.kind,
+        SelectionKind::RevealBucket {
+            bucket_index: 0,
+            ..
+        }
+    ));
     assert!(
         !view.valid_action_ids.contains(&PASS),
         "bucket 0 has a candidate → mandatory (Q&A: add as many as possible)"
@@ -175,17 +183,33 @@ fn ex7_008_on_play_adds_one_tm_text_card_and_one_cost_six_option_bottoms_rest() 
         .execute_action(0, reveal_action(&runner, "TM-TEXT"))
         .expect("pick TM-TEXT");
     let view = runner.pending_selection_view().expect("bucket 1 prompt");
-    assert!(matches!(view.kind, SelectionKind::RevealBucket { bucket_index: 1, .. }));
+    assert!(matches!(
+        view.kind,
+        SelectionKind::RevealBucket {
+            bucket_index: 1,
+            ..
+        }
+    ));
     runner
         .execute_action(0, reveal_action(&runner, "OPT6"))
         .expect("pick OPT6");
     runner.auto_resolve().expect("finish");
 
     let hand = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
-    assert!(hand.contains(&"TM-TEXT".to_string()), "TM-text card added; hand={hand:?}");
-    assert!(hand.contains(&"OPT6".to_string()), "cost-6 Option added; hand={hand:?}");
+    assert!(
+        hand.contains(&"TM-TEXT".to_string()),
+        "TM-text card added; hand={hand:?}"
+    );
+    assert!(
+        hand.contains(&"OPT6".to_string()),
+        "cost-6 Option added; hand={hand:?}"
+    );
     assert_eq!(runner.hand_size(0), 2);
-    assert_eq!(runner.deck_size(0), deck_before - 2, "1 of the 3 revealed returned to the deck");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "1 of the 3 revealed returned to the deck"
+    );
     let bottom = runner.game.players[0].deck[0].card_id(&runner.game.card_data);
     assert_eq!(bottom, "FILL", "the rest go to the BOTTOM of the deck");
     assert!(runner.game.revealed_cards.is_empty());
@@ -205,7 +229,11 @@ fn ex7_008_on_play_same_card_cannot_fill_both_buckets() {
         .expect("pick Der Blitz for bucket 0");
     runner.auto_resolve().expect("finish");
     let hand = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
-    assert_eq!(hand, vec![DER_BLITZ.to_string()], "Der Blitz added exactly once");
+    assert_eq!(
+        hand,
+        vec![DER_BLITZ.to_string()],
+        "Der Blitz added exactly once"
+    );
 }
 
 #[test]
@@ -218,8 +246,16 @@ fn ex7_008_on_play_no_match_bottoms_all_three() {
     let deck_before = runner.deck_size(0);
     runner.play(0, 0).expect("play ToyAgumon");
     runner.auto_resolve().expect("finish");
-    assert_eq!(runner.hand_size(0), 0, "nothing qualifies (OPT5 costs 5, no TM text)");
-    assert_eq!(runner.deck_size(0), deck_before, "all 3 revealed cards returned");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "nothing qualifies (OPT5 costs 5, no TM text)"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "all 3 revealed cards returned"
+    );
     assert!(runner.game.revealed_cards.is_empty());
 }
 
@@ -250,7 +286,11 @@ fn ex7_008_inherited_your_turn_dp_applies_on_own_turn_only() {
     let mut runner = base().start();
     let stack = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     runner.game.tick_declarative_effects();
-    assert_eq!(runner.effective_dp(stack), Some(3000 + 2000), "+2000 on your turn");
+    assert_eq!(
+        runner.effective_dp(stack),
+        Some(3000 + 2000),
+        "+2000 on your turn"
+    );
 
     runner.end_turn();
     runner.game.tick_declarative_effects();
@@ -266,7 +306,11 @@ fn ex7_008_face_up_toyagumon_gets_no_dp_from_its_inherited_effect() {
     let mut runner = base().start();
     let alone = runner.place_on_field(0, CARD_ID, Some(0));
     runner.game.tick_declarative_effects();
-    assert_eq!(runner.effective_dp(alone), Some(1000), "printed DP only when face-up");
+    assert_eq!(
+        runner.effective_dp(alone),
+        Some(1000),
+        "printed DP only when face-up"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,7 +328,9 @@ fn ex7_008_digivolves_for_zero_from_lv2_with_tm_in_text_regardless_of_color() {
         .start();
     let base_perm = runner.place_on_field(0, "BLK-TM-LV2", Some(0));
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before, "cost 0");
 }
 
@@ -296,5 +342,7 @@ fn ex7_008_cannot_digivolve_from_plain_black_lv2() {
         .memory(5)
         .start();
     let base_perm = runner.place_on_field(0, "BLK-LV2", Some(0));
-    assert!(!runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(!runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }

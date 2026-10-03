@@ -1643,35 +1643,24 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        //
-        // A level-less base (a Tamer) is only reachable when the level
-        // requirement is waived: "ignoring digivolution requirements"
+        // A level-less target can still digivolve when it has no printed
+        // level-matched circle to satisfy: through a special `alt_paths:
+        // kind: digivolve` route (BT26-085 Giant Slayer "[Giant Slayer]:
+        // Cost 5", G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS), or when the
+        // level requirement is waived — "ignoring digivolution requirements"
         // (EX13-074 Rie Kishibe "[Main] … this Tamer may digivolve into
         // [LordKnightmon] … for a digivolution cost of 3, ignoring
         // digivolution requirements") or "ignoring level". The Tamer card
         // and every card under it simply become the new Digimon's
         // digivolution cards (DCGO stacks onto `card.PermanentOfThisCard()`
-        // the same way, BT22_090.cs). G-TAMER-DIGIVOLVE-INTO-DIGIMON.
-        let base_level = {
+        // the same way, BT22_090.cs). G-TAMER-DIGIVOLVE-INTO-DIGIMON. Only
+        // the printed level-matched circles need a level; with none, the
+        // route scan below simply finds no printed match.
+        let base_level: Option<u8> = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
-            match identity.level {
-                Some(level) => level,
-                None if matches!(
-                    waiver,
-                    DigivolveRequirementWaiver::All | DigivolveRequirementWaiver::Level
-                ) =>
-                {
-                    0
-                }
-                None => {
-                    self.logger.log(
-                        "[Rejected] effect_initiated_digivolve: target top card has no level",
-                    );
-                    return false;
-                }
-            }
+            identity.level
         };
 
         let matching_memory_cost = if ignore_requirements {
@@ -1710,7 +1699,7 @@ impl Game {
                 let waived = self.card_data[evo_card_data_index]
                     .evo_costs
                     .iter()
-                    .filter(|ec| ec.level == base_level)
+                    .filter(|ec| Some(ec.level) == base_level)
                     .map(|ec| ec.memory_cost)
                     .min();
                 match (route_cost, waived) {
@@ -1723,7 +1712,7 @@ impl Game {
         };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
-                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, waiver={:?})",
+                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={:?}, waiver={:?})",
                 base_level, waiver
             ));
             return false;

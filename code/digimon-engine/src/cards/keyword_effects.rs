@@ -1457,7 +1457,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 // parenthetical, all-or-nothing, a lone candidate taken
                 // without a prompt. Only a card that publishes no slot specs
                 // falls through to the historical slot-blind pick below.
-                if let Some(slots) = partition_slots_for(rctx.effect.game, prov.source_card, subject)
+                if let Some(slots) =
+                    partition_slots_for(rctx.effect.game, prov.source_card, subject)
                 {
                     if partition_gate_satisfied(rctx.effect.game, prov, subject, &slots) {
                         drive_partition_picks(rctx.effect.game, prov, subject, slots, Vec::new());

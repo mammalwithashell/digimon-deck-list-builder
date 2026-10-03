@@ -485,7 +485,11 @@ fn ex7_059_blast_digivolve_draws_one_card() {
         hand_before, // -1 (the ACE left hand) +1 (the 8-1-3-3 draw)
         "Blast Digivolve draws 1 card as part of the digivolution"
     );
-    assert_eq!(runner.deck_size(1), deck_before - 1, "one card drawn from deck");
+    assert_eq!(
+        runner.deck_size(1),
+        deck_before - 1,
+        "one card drawn from deck"
+    );
 }
 
 #[test]

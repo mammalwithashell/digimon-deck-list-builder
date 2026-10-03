@@ -1,0 +1,160 @@
+# BT26-086 Dantemon — Digimon, Lv.7, White, DP 14000, Cost 14.
+# Form: Unknown/Appmon. Type: Open. Attribute: Unknown.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-086.md):
+#   <Rush> <Reboot> <Blocker> <Link +6>
+#   [On Play] [When Digivolving] You may link up to 7 [Appmon] trait cards with
+#     different names from this Digimon's digivolution cards to this Digimon
+#     without paying the costs. Then, this Digimon may attack without
+#     suspending.
+#   [All Turns] [Once Per Turn] When this Digimon gets linked, you may delete 1
+#     of your opponent's Digimon. Then, if this Digimon has 7 link cards,
+#     return your opponent's top security card to the bottom of the deck.
+#   Special Play Condition: Assembly -7: 7 [Seven Code] trait Digimon cards
+#     w/different names.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/White/BT26_086.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(HasGodAppTraits,
+#   cost 4, no level) — the "God" grade circle (the official DB lists no
+#   colour/level circle; BT25-060 Rebootmon "Ult." trait-gate idiom).
+#   → alt_paths digivolve from { trait_has: God } cost 4.
+# Rush / Reboot / Blocker: *SelfStaticEffect → grant_keyword.
+# Link +6: ChangeSelfLinkMaxStaticEffect(6) → aura modifier ChangeLinkMax
+#   modifier_value 6 (BT25-060 idiom).
+# Shared OP/WD (optional:false, isSkippable): sources EqualsTraits("Appmon")
+#   && CanLinkToTargetPermanent(this); SelectCardEffect maxCount min(7, n),
+#   canNoSelect, canEndNotMax, CanTargetCondition_ByPreSelecetedList = no
+#   shared card name with an already-picked card → AddLinkCard each (free).
+#   Then, if CanAttack(withoutTap), SelectAttackEffect.SetWithoutTap (the
+#   attack itself is declinable).
+#   → link_cards { from: [self_sources], filter: { trait_has: Appmon,
+#   name_not_in_binding: dante_links }, count: { up_to: 7 }, cost: free,
+#   bind_as: dante_links } (per-pick PASS ends early; the engine's LinkGate
+#   rejects a card whose own <Link> condition refuses this host) +
+#   may_attack_now { attacker: source, without_suspending, optional }.
+# All Turns When Linked (maxCount 1, CanTriggerWhenLinked(this)): optional
+#   (canNoSelect:true) Destroy pick of an opponent Digimon; then if this
+#   permanent has exactly 7 LinkedCards → AddLibraryBottomCards(opponent's
+#   top security) + IReduceSecurity. RemoveUse when nothing was deleted and
+#   the 7-link branch did not run.
+#   → when_card_linked_to_this + once_per_turn; optional
+#   select_opponent_permanent + delete; `if` (source has ≥7 and not ≥8 link
+#   cards) → return_top_security_to_deck { of: opponent, position: bottom }
+#   else-if nothing deleted → refund_opt.
+# Assembly: 7 elements (IsDigimon && Seven Code), different names, reduceCost
+#   7 → kind: assembly repeat 7, distinct_by: name, trash, cost 7.
+#
+# KNOWN ENGINE DIVERGENCE (pre-existing, not introduced here): the engine's
+#   base link max is 5 (game_actions/mod.rs link_host_candidates) whereas DCGO
+#   `Permanent.LinkedMax` starts at 1, so <Link +6> yields 11 here vs 7 in
+#   DCGO. Dantemon's own effects never link more than 7 and the "7 link
+#   cards" check is exact, so this card's printed behaviour is unaffected in
+#   normal play; logged in docs/RUST_ENGINE_GAPS.md.
+
+card: BT26-086
+name: Dantemon
+kind: digimon
+level: 7
+color: [white]
+cost: 14
+dp: 14000
+traits: [Unknown, Appmon, Open]
+attribute: Unknown
+
+alt_paths:
+  # "God" grade circle / cost 4 (DCGO HasGodAppTraits; no colour/level).
+  - kind: digivolve
+    from: { trait_has: God }
+    cost: 4
+  # Assembly -7: 7 [Seven Code] trait Digimon cards with different names.
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - trait_has: Seven Code
+        repeat: { min: 7, max: 7 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 7
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 6
+    summary: "<Link +6> This Digimon's maximum links raised by 6"
+
+  # ─── [On Play][When Digivolving] link up to 7 different-name [Appmon]
+  #     sources free; then may attack without suspending ─────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link up to 7 [Appmon] trait cards with different names from this Digimon's digivolution cards to this Digimon without paying the costs. Then, this Digimon may attack without suspending"
+    process:
+      - link_cards:
+          from: [self_sources]
+          filter:
+            all_of:
+              - trait_has: Appmon
+              - name_not_in_binding: dante_links
+          to: self
+          count: { up_to: 7 }
+          cost: free
+          bind_as: dante_links
+          prompt: "You may link an [Appmon] trait card with a different name from this Digimon's digivolution cards to this Digimon"
+      - may_attack_now:
+          attacker: source
+          targets: any
+          without_suspending: true
+          optional: true
+          prompt: "This Digimon may attack without suspending"
+
+  # ─── [All Turns][OPT] When this Digimon gets linked → may delete; if 7 links,
+  #     opponent's top security to the bottom of the deck ──────────────────────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When this Digimon gets linked, you may delete 1 of your opponent's Digimon. Then, if this Digimon has 7 link cards, return your opponent's top security card to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: dante_del
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: dante_del }
+          then:
+            - delete_permanent: { target: dante_del }
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter:
+                    zone: [battle_area]
+                    is_source: true
+                    link_card_count: { filter: {}, at_least: 7 }
+                  n: 1
+              - count_lte:
+                  filter:
+                    zone: [battle_area]
+                    is_source: true
+                    link_card_count: { filter: {}, at_least: 8 }
+                  n: 0
+          then:
+            - return_top_security_to_deck: { of: opponent, position: bottom }
+          else:
+            - if:
+                condition: { binding_absent: dante_del }
+                then:
+                  - refund_opt: {}

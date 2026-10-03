@@ -1,0 +1,152 @@
+# BT26-049 Rosemon — Digimon, Lv.6, Green, DP 12000, Cost 12.
+# Traits: Fairy, DATA SQUAD. Attribute: Data.
+# Printed digivolve box: Green Lv.5 / cost 4; [Digivolve] [Lilamon] / Lv.5
+#   w/[DATA SQUAD] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-049.md):
+#   [When Digivolving] [When Attacking] [Once Per Turn] Suspend 2 of your
+#     opponent's Digimon or Tamers.
+#   [All Turns] [Once Per Turn] When any of your opponent's Digimon or Tamers
+#     suspend, or effects trash cards from under your Tamers, you may play or
+#     use 1 play or use cost 3 or lower [DATA SQUAD] trait card from your hand
+#     without paying the cost. For each suspended Digimon or Tamer, add 1 to the
+#     cost maximum.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_049.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve ×2: TopCard EqualsCardName "Lilamon" (no level gate) cost 3;
+#   level 5 + EqualsTraits DATA SQUAD cost 3. (ST24-11 shape.)
+# Shared WD/WA (maxCountPerTurn 1, shared hash): maxCount = min(2, #opp
+#   Digimon/Tamers — suspended ones INCLUDED), canNoSelect:false Mode.Tap.
+#   → select_count_capped_multi min 2 max 2 clamp_to_available + suspend each.
+# [All Turns] reactive (OnTappedAnyone | OnDigivolutionCardDiscarded, maxPerTurn
+#   1, skippable, not optional): an OPPONENT Digimon/Tamer suspended, or a card
+#   trashed by an EFFECT (cardEffect != null) from under an OWN Tamer. The cost
+#   cap is 3 + every suspended Digimon/Tamer on the battle area (BOTH players,
+#   IsPermanentExistsOnBattleArea). CanActivate requires a candidate in hand.
+#   canNoSelect:true pick of a DATA SQUAD card (EqualsTraits) whose own cost
+#   (GetCostItself — play cost for Digimon/Tamer, use cost for an Option) is
+#   within the cap → play free (Digimon/Tamer, activateETB) or use free
+#   (Option). Nothing picked → RemoveUse.
+#   → select_hand (play_or_use_cost_lte formula) + play_or_use_from_hand
+#   cost_delta: free; refund_opt on decline (a non-cost select_hand decline
+#   runs its tail).
+
+card: BT26-049
+name: "Rosemon"
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+traits: [Fairy, DATA SQUAD]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Lilamon" }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  # ─── [WD][WA][OPT] suspend 2 of the opponent's Digimon/Tamers ─────────────
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] Suspend 2 of your opponent's Digimon or Tamers"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 2
+          max: 2
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: to_suspend
+          prompt: "Suspend 2 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: to_suspend
+          bind_as: susp
+          body:
+            - suspend: { target: susp }
+
+  # ─── [All Turns][OPT] opp Digimon/Tamer suspends OR effects trash from under
+  #     your Tamers → may play/use a [DATA SQUAD] card free (cap 3 + suspended) ─
+  - when: [on_suspend, on_digivolution_card_trashed]
+    once_per_turn: true
+    active_when: { all_turns: true }
+    timing_conditions:
+      - when: on_suspend
+        condition:
+          all_of:
+            - event_target_owner: opponent
+            - any_of:
+                - event_target_kind: digimon
+                - event_target_kind: tamer
+      - when: on_digivolution_card_trashed
+        # DCGO also requires cardEffect != null; every source trash from under
+        # a Tamer is effect-driven (costs included), and the engine's
+        # SourceTrashedFromStack context carries no effect-initiated flag, so
+        # the host gate alone is the faithful reading (ST24-11 idiom).
+        condition:
+          event_host_is_own_tamer: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "DATA SQUAD"
+          play_or_use_cost_lte:
+            formula:
+              base: 3
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: any
+                  filter:
+                    all_of:
+                      - is_suspended: true
+                      - any_of:
+                          - kind: digimon
+                          - kind: tamer
+              delta: 1
+        n: 1
+    summary: "[All Turns][OPT] When an opp Digimon/Tamer suspends or effects trash cards from under your Tamers, you may play or use 1 [DATA SQUAD] card with play/use cost <= 3 (+1 per suspended Digimon/Tamer) from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: ds_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: "DATA SQUAD"
+              - play_or_use_cost_lte:
+                  formula:
+                    base: 3
+                    per:
+                      card_count_in_zone:
+                        zone: battle_area
+                        of: any
+                        filter:
+                          all_of:
+                            - is_suspended: true
+                            - any_of:
+                                - kind: digimon
+                                - kind: tamer
+                    delta: 1
+          prompt: "You may play or use 1 [DATA SQUAD] card (cost 3 or lower, +1 per suspended Digimon/Tamer) from your hand without paying the cost"
+      - if:
+          condition: { binding_present: ds_pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: ds_pick
+                cost_delta: free
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}

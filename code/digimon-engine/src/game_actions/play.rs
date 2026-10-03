@@ -430,12 +430,16 @@ impl Game {
                 player: player_id,
                 index: field_index as u8,
             };
-            let mut infos: Vec<(bool, String, crate::card_source::CardHandle)> =
+            // `<Succession>`: an adopted source's top-scope `[Main]` is the
+            // carrier's own (mirrors `main_effect_select::field_main_match`).
+            let adopted = self.succession_source_indices(handle);
+            let mut infos: Vec<(usize, usize, bool, String, crate::card_source::CardHandle)> =
                 Vec::with_capacity(stack_size);
             for (i, source) in perm.card_sources.iter().enumerate() {
-                let is_under = i + 1 < stack_size;
                 infos.push((
-                    is_under,
+                    i,
+                    stack_size,
+                    adopted.contains(&i),
                     source.card_id(&self.card_data).to_string(),
                     source.handle(),
                 ));
@@ -443,7 +447,7 @@ impl Game {
             (handle, infos)
         };
 
-        for (is_under, card_id, source_handle) in sources {
+        for (source_index, stack_size, is_adopted, card_id, source_handle) in sources {
             // Use `effects_for_card` rather than the raw registry so that
             // keyword-derived auto-installed effects (e.g. printed
             // `MaterialSave(N)`) are visible here. The action mask uses the
@@ -457,12 +461,24 @@ impl Game {
                 if effect.timing != EffectTiming::MainOnField {
                     continue;
                 }
-                if is_under != effect.inherited {
+                if !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect) {
                     continue;
                 }
+                // G-OPT-MULTI-TIMING-SHARED-LOCKOUT / G-OPT-REFUND-ON-DECLINE:
+                // key the OPT counter exactly as the mask
+                // (`main_effect_select`) and the `refund_opt` step do — the
+                // clause's `shared_opt_group` when set, else the slot (moved
+                // onto its own counter for a `<Succession>` copy).
+                let opt_key = self.opt_key_for_source(
+                    perm_handle,
+                    source_handle,
+                    effect.inherited,
+                    effect.linked,
+                    effect.shared_opt_group.unwrap_or(slot as u8),
+                );
                 if effect.max_per_turn > 0 {
                     let perm = &self.players[player_id as usize].battle_area[field_index];
-                    if perm.activation_count(source_handle, slot as u8) >= effect.max_per_turn {
+                    if perm.activation_count(source_handle, opt_key) >= effect.max_per_turn {
                         continue;
                     }
                 }
@@ -479,7 +495,7 @@ impl Game {
                     .battle_area
                     .get_mut(field_index)
                 {
-                    perm.record_activation(source_handle, slot as u8);
+                    perm.record_activation(source_handle, opt_key);
                 }
                 // Printed "By <cost>, …" gate — an OPTIONAL PROCESSING
                 // CONDITION (general_rule.pdf 15-7-1). 15-7-2: "If the content

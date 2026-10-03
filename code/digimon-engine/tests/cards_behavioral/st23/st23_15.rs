@@ -455,4 +455,3 @@ fn st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn() {
         "the structural Delay marker must not let the turn scan trash e-Pulse --          its only printed exit is the [Start of Your Main Phase] relocate"
     );
 }
-

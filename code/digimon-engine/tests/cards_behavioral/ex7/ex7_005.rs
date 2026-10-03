@@ -101,8 +101,11 @@ impl CardEffect for PlaceHandUnder {
             .name("test placer: tuck hand cards under a permanent")
             .process(move |ctx| {
                 for _ in 0..count {
-                    let ok =
-                        ctx.place_as_bottom_source(CardSourceRef::Hand(ctx.player, 0), target, false);
+                    let ok = ctx.place_as_bottom_source(
+                        CardSourceRef::Hand(ctx.player, 0),
+                        target,
+                        false,
+                    );
                     assert!(ok, "placement must succeed");
                 }
             })
@@ -138,11 +141,18 @@ fn host_with_kapurimon(r: &mut DebugRunner) -> PermanentHandle {
 /// Play `placer_id` for `player` (already in the registry with a
 /// `PlaceHandUnder` effect) and let its [On Play] tuck `player`'s hand[0..n]
 /// under `target`.
-fn tuck(r: &mut DebugRunner, player: PlayerId, placer_id: &str, count: usize, target: PermanentHandle) {
+fn tuck(
+    r: &mut DebugRunner,
+    player: PlayerId,
+    placer_id: &str,
+    count: usize,
+    target: PermanentHandle,
+) {
     r.register_effect(placer_id, Arc::new(PlaceHandUnder { count, target }));
     let placer = r.place_on_field(player, placer_id, Some(0));
     r.game.fire_on_play(player, placer.index as usize);
-    r.auto_resolve().expect("no selection expected from a mandatory gain");
+    r.auto_resolve()
+        .expect("no selection expected from a mandatory gain");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,7 +165,11 @@ fn ex7_005_is_a_black_lv2_lesser_digi_egg() {
     let c = r.compiled_card(CARD_ID).expect("compiled");
     assert_eq!(c.level, Some(2));
     assert_eq!(c.cost, Some(0));
-    assert!(c.traits.iter().any(|t| t == "Lesser"), "traits={:?}", c.traits);
+    assert!(
+        c.traits.iter().any(|t| t == "Lesser"),
+        "traits={:?}",
+        c.traits
+    );
 }
 
 #[test]
@@ -176,21 +190,30 @@ fn ex7_005_single_inherited_opt_your_turn_on_add_digivolution_cards_clause() {
     assert_eq!(t.scope, CompiledScope::Inherited, "Inherited Effect");
     assert_eq!(t.when, vec![CompiledTiming::OnAddDigivolutionCards]);
     assert!(t.once_per_turn, "[Once Per Turn]");
-    assert!(!t.optional, "gain 1 memory is mandatory (DCGO isOptional: false)");
+    assert!(
+        !t.optional,
+        "gain 1 memory is mandatory (DCGO isOptional: false)"
+    );
     let gate = t.active_when.as_ref().expect("[Your Turn] gate");
     assert_eq!(gate.your_turn, Some(true));
     let cond = t.condition.as_ref().expect("host + added-card gate");
     let leaves = &cond.all_of;
     assert!(!leaves.is_empty(), "all_of");
     assert!(
-        leaves.iter().any(|p| p.event_host_permanent_is_source == Some(true)),
+        leaves
+            .iter()
+            .any(|p| p.event_host_permanent_is_source == Some(true)),
         "\"this Digimon's digivolution cards\" → host == self"
     );
     let added = leaves
         .iter()
         .find_map(|p| p.event_added_card_any.as_deref())
         .expect("event_added_card_any gate");
-    assert_eq!(added.kind, Some(CompiledCardKind::Option), "Option cards only");
+    assert_eq!(
+        added.kind,
+        Some(CompiledCardKind::Option),
+        "Option cards only"
+    );
     assert_eq!(
         added.trait_has.as_deref(),
         Some("Three Musketeers"),
@@ -232,7 +255,11 @@ fn ex7_005_no_gain_when_placed_card_is_a_tm_digimon_not_an_option() {
     let host = host_with_kapurimon(&mut r);
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, host);
-    assert_eq!(r.memory(), before, "a Digimon card does not satisfy \"Option cards\"");
+    assert_eq!(
+        r.memory(),
+        before,
+        "a Digimon card does not satisfy \"Option cards\""
+    );
 }
 
 /// NEGATIVE (trait gate): an Option WITHOUT the [Three Musketeers] trait → no
@@ -243,7 +270,11 @@ fn ex7_005_no_gain_when_placed_option_lacks_the_trait() {
     let host = host_with_kapurimon(&mut r);
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, host);
-    assert_eq!(r.memory(), before, "an Option lacking the trait does not qualify");
+    assert_eq!(
+        r.memory(),
+        before,
+        "an Option lacking the trait does not qualify"
+    );
 }
 
 /// NEGATIVE (host gate): the Option is tucked under a SIBLING Digimon, not
@@ -255,7 +286,11 @@ fn ex7_005_no_gain_when_tm_option_is_placed_under_a_sibling() {
     let sib = r.place_on_field(0, "SIB", Some(0));
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, sib);
-    assert_eq!(r.memory(), before, "\"this Digimon's digivolution cards\" only");
+    assert_eq!(
+        r.memory(),
+        before,
+        "\"this Digimon's digivolution cards\" only"
+    );
 }
 
 /// NEGATIVE (inherited only): a face-up Kapurimon on the battle area (not a
@@ -269,7 +304,11 @@ fn ex7_005_face_up_kapurimon_does_not_gain() {
     let egg = r.place_on_field(0, CARD_ID, Some(0));
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 1, egg);
-    assert_eq!(r.memory(), before, "inherited effects only work from the digivolution cards");
+    assert_eq!(
+        r.memory(),
+        before,
+        "inherited effects only work from the digivolution cards"
+    );
 }
 
 /// POSITIVE (any effect): the OPPONENT's effect placing a [Three Musketeers]
@@ -281,7 +320,11 @@ fn ex7_005_gains_when_opponent_effect_places_tm_option_on_your_turn() {
     let host = host_with_kapurimon(&mut r); // player 0's turn
     let before = r.memory();
     tuck(&mut r, 1, "OPP-PLACER", 1, host);
-    assert_eq!(r.memory(), before + 1, "any effect qualifies; the gain is player 0's");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "any effect qualifies; the gain is player 0's"
+    );
 }
 
 /// NEGATIVE ([Your Turn]): the same placement on the OPPONENT's turn does not
@@ -304,7 +347,11 @@ fn ex7_005_multi_card_placement_in_one_effect_gains_once() {
     let host = host_with_kapurimon(&mut r);
     let before = r.memory();
     tuck(&mut r, 0, "PLACER", 2, host);
-    assert_eq!(r.memory(), before + 1, "one trigger condition → one activation (15-5-2)");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "one trigger condition → one activation (15-5-2)"
+    );
     assert_eq!(
         r.game.players[0].battle_area[host.index as usize]
             .card_sources
@@ -325,7 +372,11 @@ fn ex7_005_second_placement_in_the_same_turn_is_locked_out() {
     tuck(&mut r, 0, "PLACER", 1, host);
     assert_eq!(r.memory(), before + 1, "first placement gains");
     tuck(&mut r, 0, "SIB", 1, host); // a second placer (SIB re-registered as a placer)
-    assert_eq!(r.memory(), before + 1, "[Once Per Turn]: the second placement gains nothing");
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "[Once Per Turn]: the second placement gains nothing"
+    );
 }
 
 #[test]

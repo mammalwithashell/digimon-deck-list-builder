@@ -1,0 +1,36 @@
+# BT26-002 Budmon — Digi-Egg, Lv.2, Green.
+# Traits: Vegetation, DATA SQUAD. Form: In-Training.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-002.md):
+#   Inherited: [Your Turn] [Once Per Turn] When effects trash cards from under
+#     your Tamers, <Draw 1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_002.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Inherited (OnDigivolutionCardDiscarded, maxPerTurn 1, not optional):
+#   IsOwnerTurn && CanTriggerOnTrashDigivolutionCard(permanent = one of the
+#   OWNER's battle-area Tamers, cardEffect != null i.e. by an effect, any card).
+#   → on_digivolution_card_trashed, your_turn, event_host_is_own_tamer (the
+#   ST24-11 / BT25-029 idiom; sources are only trashed from a Tamer by effects).
+
+card: BT26-002
+name: "Budmon"
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Vegetation, DATA SQUAD]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_host_is_own_tamer: true
+    summary: "Inherited [Your Turn][OPT] When effects trash cards from under your Tamers, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

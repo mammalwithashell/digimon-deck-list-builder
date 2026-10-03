@@ -1,0 +1,118 @@
+# BT26-085 Giant Slayer — Digimon (no level), White, DP 14000, Cost 12.
+#   Traits: TS. Attribute: NO DATA.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-085.md):
+#   <Collision> <Reboot> <Blocker>
+#   [On Play] Until your opponent's turn ends, your opponent's effects can't
+#     reduce this Digimon's DP or trash its stacked cards.
+#   [All Turns] When this Digimon would leave the battle area, by digivolving
+#     it into [Chronomon: Destroy Mode] in the hand or trash without paying the
+#     cost, it doesn't leave.
+#   Special Play Condition: Assembly -5: 5 different-level cards w/[Chronomon]
+#     in text or w/[Shaman] trait.
+#   Official Q&A: "can't trash stacked cards" prevents trashing the top
+#     stacked cards (de-digivolve-style) and the bottom ones ("trash a
+#     digivolution card").
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/White/BT26_085.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Collision / Reboot / Blocker (self static effects) → grant_keyword ×3.
+# Assembly: 5 elements `HasText("Chronomon") || EqualsTraits("Shaman")`,
+#   CanTargetCondition_ByPreSelecetedList = HasLevel && no already-picked
+#   card shares its level; reduceCost 5.
+#   → `kind: assembly`, one material `repeat: 5`, `distinct_by: level`,
+#   `level_gte: 1` (HasLevel), trash materials stacked under (BT26-073 idiom).
+# [On Play] (OnEnterFieldAnyone + CanTriggerOnPlay): GainImmuneFromDPMinus
+#   (IsOpponentEffect) + ImmuneStackTrashingClass(IsOpponentEffect), both
+#   UntilOpponentTurnEnd.
+#   → `grant_narrow_opponent_effect_protection` (opp-scoped ImmuneFromDPMinus
+#   + CannotBeDeDigivolved) + NEW `grant_stack_trash_immunity_from_opponent_
+#   effects` (opp-scoped ImmuneFromStackTrashing; G-DSL-STACK-TRASH-IMMUNITY-
+#   FROM-OPPONENT-EFFECTS — the BT26-029 bundle also locks return-to-hand/deck,
+#   which this card does not print).
+# [All Turns] WhenRemoveField (not OPT, isSkippable, CanActivate: an
+#   EqualsCardName("Chronomon: Destroy Mode") card in hand or trash): zone
+#   choice (hand / trash / "Don't Digivolve") → DigivolveIntoHandOrTrashCard
+#   (payCost:false, requirements honored) → on success the Digimon doesn't
+#   leave.
+#   → `kind: replacement` / `when_would_leave_battle_area` (self-scoped),
+#   optional, condition on a candidate; `select_union_zone { zones: [hand,
+#   trash] }` filtered `can_digivolve_from_source` + `effect_initiated_
+#   digivolve { cost: free }`; `cancel_replacement` only when the digivolve
+#   happened (`effect_digivolved_any_digimon`).
+
+card: BT26-085
+name: "Giant Slayer"
+kind: digimon
+color: [white]
+cost: 12
+dp: 14000
+traits: [TS]
+
+alt_paths:
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_gte: 1
+            - any_of:
+                - in_text_contains: "Chronomon"
+                - trait_has: Shaman
+        repeat: { min: 5, max: 5 }
+        distinct_by: level
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: on_play
+    summary: "[On Play] Until your opponent's turn ends, your opponent's effects can't reduce this Digimon's DP or trash its stacked cards"
+    process:
+      - grant_narrow_opponent_effect_protection:
+          target: source
+          expiry: end_of_opponents_turn
+      - grant_stack_trash_immunity_from_opponent_effects:
+          target: source
+          expiry: end_of_opponents_turn
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          name_is: "Chronomon: Destroy Mode"
+          can_digivolve_from_source: true
+        n: 1
+    summary: "[All Turns] When this Digimon would leave the battle area, by digivolving it into [Chronomon: Destroy Mode] in the hand or trash without paying the cost, it doesn't leave"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: destroy_mode
+          filter:
+            all_of:
+              - name_is: "Chronomon: Destroy Mode"
+              - can_digivolve_from_source: true
+          prompt: "Digivolve this Digimon into [Chronomon: Destroy Mode] in your hand or trash without paying the cost"
+      - effect_initiated_digivolve:
+          target: replacement_subject
+          source: destroy_mode
+          cost: free
+      - if:
+          condition: { effect_digivolved_any_digimon: true }
+          then:
+            - cancel_replacement: {}

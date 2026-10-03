@@ -134,9 +134,7 @@ fn ex10_020_prints_no_digivolve_circles_nothing_digivolves_into_it() {
     let slot = r.place_on_field(0, "GREEN-LV5", Some(0)).index as usize;
 
     let mem_before = r.game.memory;
-    let proceeded = r
-        .game
-        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
     assert!(
         !proceeded,
         "EX10-020 has no digivolve requirements — digivolve_from_hand must reject"

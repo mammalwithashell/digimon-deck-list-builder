@@ -281,8 +281,7 @@ fn ex12_063_inherited_on_deletion_fires_after_declined_barrier_in_exam_stack_sha
     // the assertion below judges the OnDeletion trigger itself.)
     let mut declined = 0;
     while let Some(sel) = runner.game.pending_selection.as_ref() {
-        let is_replacement_gate =
-            sel.prompt.contains("Barrier") || sel.prompt.contains("Evade");
+        let is_replacement_gate = sel.prompt.contains("Barrier") || sel.prompt.contains("Evade");
         if !is_replacement_gate {
             break;
         }

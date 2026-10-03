@@ -16684,6 +16684,11 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Amphibian",
+      "TS",
+      "Titan"
     ]
   },
   "BT26-022": {
@@ -17077,7 +17082,13 @@
     ],
     "effect_description_eng": "＜Security A. +1＞\r\n＜Reboot＞\r\n＜Blocker＞\r\n＜Succession (Lv.6 w/[Chronomon] in name)＞ (This Digimon gains all effects other than ＜Succession＞ on its topmost specified digivolution card.)\r\n[On Play] [When Digivolving] Return the top 5 stacked cards of 3 of your opponent's Digimon to the top of the deck.\r\n[All Turns] [Once Per Turn] When your effects add to decks, you may delete 1 of your opponent's Digimon.",
     "inherited_effect_description_eng": "",
-    "xros_req": "[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5"
+    "xros_req": "[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5",
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Titan"
+    ]
   },
   "BT26-062": {
     "evo_costs": [
@@ -17408,7 +17419,13 @@
     "xros_req": "[Digivolve] Lv.6 w/[Olympos XII] trait: Cost 5"
   },
   "BT26-104": {
-    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+    "type_eng": [
+      "Shambala",
+      "SW",
+      "TB",
+      "TS"
+    ]
   },
   "EX12-033": {
     "evo_costs": [

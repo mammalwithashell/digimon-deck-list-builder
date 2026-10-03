@@ -45,8 +45,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
@@ -123,7 +122,11 @@ fn trash_pick(runner: &DebugRunner, card_id: &str) -> u16 {
 
 fn assert_union_prompt(runner: &DebugRunner, optional: bool) {
     let view = runner.pending_selection_view().expect("union prompt");
-    assert!(matches!(view.kind, SelectionKind::UnionZone { .. }), "kind={:?}", view.kind);
+    assert!(
+        matches!(view.kind, SelectionKind::UnionZone { .. }),
+        "kind={:?}",
+        view.kind
+    );
     assert_eq!(runner.pending_is_optional(), optional, "PASS legality");
 }
 
@@ -143,8 +146,15 @@ fn ex7_043_structure_matches_printed_text() {
             _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 1, "one shared [On Play][When Digivolving] clause");
-    assert_eq!(triggered[0].when, vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving]);
+    assert_eq!(
+        triggered.len(),
+        1,
+        "one shared [On Play][When Digivolving] clause"
+    );
+    assert_eq!(
+        triggered[0].when,
+        vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving]
+    );
     assert!(triggered[0].optional, "'By returning ...' is declinable");
     assert!(!triggered[0].once_per_turn);
 
@@ -197,8 +207,17 @@ fn ex7_043_non_tm_cards_are_not_selectable() {
     runner.inject_trash(0, "TM-3");
     runner.play(0, 0).expect("play Tankmon");
     let view = runner.pending_selection_view().expect("union prompt");
-    let picks: Vec<u16> = view.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
-    assert_eq!(picks.len(), 3, "TM-1 (hand) + TM-2/TM-3 (trash); PLAIN excluded in both zones");
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    assert_eq!(
+        picks.len(),
+        3,
+        "TM-1 (hand) + TM-2/TM-3 (trash); PLAIN excluded in both zones"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,30 +234,58 @@ fn ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent()
 
     // Pick 1 (declinable), pick 2 and 3 (mandatory once engaged).
     assert_union_prompt(&runner, true);
-    runner.execute_action(0, hand_pick(&runner, "TM-2")).expect("pick TM-2");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-2"))
+        .expect("pick TM-2");
     assert_union_prompt(&runner, false);
-    runner.execute_action(0, trash_pick(&runner, "TM-3")).expect("pick TM-3");
+    runner
+        .execute_action(0, trash_pick(&runner, "TM-3"))
+        .expect("pick TM-3");
     assert_union_prompt(&runner, false);
-    runner.execute_action(0, hand_pick(&runner, "TM-1")).expect("pick TM-1");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-1"))
+        .expect("pick TM-1");
 
-    let view = runner.pending_selection_view().expect("De-Digivolve target prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("De-Digivolve target prompt");
     assert_eq!(view.kind, SelectionKind::OppField);
-    assert!(!view.valid_action_ids.contains(&PASS), "mandatory once the cost is paid");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("choose OPP");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "mandatory once the cost is paid"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose OPP");
     runner.auto_resolve().expect("finish");
 
-    assert_eq!(runner.deck_size(0), deck_before + 3, "3 cards returned to the deck");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before + 3,
+        "3 cards returned to the deck"
+    );
     let deck = zone_ids(&runner.game.players[0].deck, &runner.game.card_data);
     let n = deck.len();
-    assert_eq!(&deck[n - 3..], &["TM-2", "TM-3", "TM-1"], "deck top (last) = last pick; order = pick order");
+    assert_eq!(
+        &deck[n - 3..],
+        &["TM-2", "TM-3", "TM-1"],
+        "deck top (last) = last pick; order = pick order"
+    );
     assert_eq!(runner.hand_size(0), 0);
     assert_eq!(runner.trash_size(0), 0, "TM-3 left the trash");
-    assert_eq!(sources_of(&runner, opp), 1, "De-Digivolve 1: OPP-LV4 trashed, OPP-LV3 is the new top");
+    assert_eq!(
+        sources_of(&runner, opp),
+        1,
+        "De-Digivolve 1: OPP-LV4 trashed, OPP-LV3 is the new top"
+    );
     let top = runner.game.players[1].battle_area[opp.index as usize]
         .top_card()
         .card_id(&runner.game.card_data);
     assert_eq!(top, "OPP-LV3");
-    assert!(zone_ids(&runner.game.players[1].trash, &runner.game.card_data).contains(&"OPP-LV4".to_string()));
+    assert!(
+        zone_ids(&runner.game.players[1].trash, &runner.game.card_data)
+            .contains(&"OPP-LV4".to_string())
+    );
 }
 
 #[test]
@@ -259,10 +306,19 @@ fn ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards() {
     let mut runner = base().hand(0, &[CARD_ID, "TM-1", "TM-2", "TM-3"]).start();
     let deck_before = runner.deck_size(0);
     runner.play(0, 0).expect("play Tankmon");
-    runner.execute_action(0, hand_pick(&runner, "TM-1")).expect("pick 1");
-    runner.execute_action(0, hand_pick(&runner, "TM-2")).expect("pick 2");
-    runner.execute_action(0, hand_pick(&runner, "TM-3")).expect("pick 3");
-    assert!(runner.pending_selection().is_none(), "no opponent Digimon → no De-Digivolve prompt");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-1"))
+        .expect("pick 1");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-2"))
+        .expect("pick 2");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-3"))
+        .expect("pick 3");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opponent Digimon → no De-Digivolve prompt"
+    );
     assert_eq!(runner.deck_size(0), deck_before + 3);
 }
 
@@ -271,13 +327,27 @@ fn ex7_043_de_digivolve_stops_at_level_three() {
     let mut runner = base().hand(0, &[CARD_ID, "TM-1", "TM-2", "TM-3"]).start();
     let opp = runner.place_on_field(1, "OPP-LV3", Some(0));
     runner.play(0, 0).expect("play Tankmon");
-    runner.execute_action(0, hand_pick(&runner, "TM-1")).expect("pick 1");
-    runner.execute_action(0, hand_pick(&runner, "TM-2")).expect("pick 2");
-    runner.execute_action(0, hand_pick(&runner, "TM-3")).expect("pick 3");
-    let view = runner.pending_selection_view().expect("target prompt (a Lv.3 is still a legal target)");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("choose OPP-LV3");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-1"))
+        .expect("pick 1");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-2"))
+        .expect("pick 2");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-3"))
+        .expect("pick 3");
+    let view = runner
+        .pending_selection_view()
+        .expect("target prompt (a Lv.3 is still a legal target)");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose OPP-LV3");
     runner.auto_resolve().expect("finish");
-    assert_eq!(runner.battle_area_size(1), 1, "a lone Lv.3 cannot be de-digivolved past level 3");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "a lone Lv.3 cannot be de-digivolved past level 3"
+    );
 }
 
 #[test]
@@ -287,16 +357,30 @@ fn ex7_043_when_digivolving_offers_the_same_cost() {
     let base_perm = runner.place_on_field(0, "BLK-LV3", Some(0));
     let opp = runner.place_stack(1, &["OPP-LV4", "OPP-LV5"]);
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before - 2, "Black Lv.3 / cost 2");
     assert_union_prompt(&runner, true);
-    runner.execute_action(0, hand_pick(&runner, "TM-1")).expect("pick 1");
-    runner.execute_action(0, hand_pick(&runner, "TM-2")).expect("pick 2");
-    runner.execute_action(0, trash_pick(&runner, "TM-3")).expect("pick 3");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-1"))
+        .expect("pick 1");
+    runner
+        .execute_action(0, hand_pick(&runner, "TM-2"))
+        .expect("pick 2");
+    runner
+        .execute_action(0, trash_pick(&runner, "TM-3"))
+        .expect("pick 3");
     let view = runner.pending_selection_view().expect("target prompt");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("choose OPP");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose OPP");
     runner.auto_resolve().expect("finish");
-    assert_eq!(sources_of(&runner, opp), 1, "OPP-LV5 trashed → OPP-LV4 on top");
+    assert_eq!(
+        sources_of(&runner, opp),
+        1,
+        "OPP-LV5 trashed → OPP-LV4 on top"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,7 +393,10 @@ fn ex7_043_inherited_reboot_grants_keyword_to_carrier() {
     let stack = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     assert!(runner.game.has_keyword(stack, Keyword::Reboot));
     let alone = runner.place_on_field(0, CARD_ID, Some(0));
-    assert!(!runner.game.has_keyword(alone, Keyword::Reboot), "inherited only");
+    assert!(
+        !runner.game.has_keyword(alone, Keyword::Reboot),
+        "inherited only"
+    );
 }
 
 #[test]
@@ -319,7 +406,9 @@ fn ex7_043_digivolves_from_red_lv3_with_tm_in_text_for_two() {
     let mut runner = base().add_card(red).hand(0, &[CARD_ID]).start();
     let base_perm = runner.place_on_field(0, "RED-TM-LV3", Some(0));
     let memory_before = runner.memory();
-    assert!(runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before - 2);
 }
 
@@ -330,5 +419,7 @@ fn ex7_043_cannot_digivolve_from_plain_red_lv3() {
         .hand(0, &[CARD_ID])
         .start();
     let base_perm = runner.place_on_field(0, "RED-LV3", Some(0));
-    assert!(!runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
+    assert!(!runner
+        .game
+        .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }

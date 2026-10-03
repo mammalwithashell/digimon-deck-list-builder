@@ -1,0 +1,73 @@
+# BT26-088 Hiroko Sagisaka — Tamer, Red, Cost 4. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-088.md):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any [Boss] or [TS] trait Digimon cards would be played, by
+#     suspending this Tamer, reduce the cost by 1. If you have no Digimon,
+#     instead reduce the cost by 2.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_088.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP: CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect — IsOwnerTurn,
+#   opponent has >= 1 battle-area Digimon → AddMemory 1.
+# Cost reduction (BeforePayCost, optional TRUE): triggers when an OWN Digimon
+#   card with a play cost and EqualsTraits "Boss" || HasTSTraits (EqualsTraits
+#   "TS") would be played; CanActivate = IsOwnerTurn + suspend cost payable.
+#   Body: suspend self → reduceAmount = (own battle-area Digimon count == 0)
+#   ? 2 : 1 → play cost -reduceAmount.
+#   → `kind: cost_reduction` + `when_any_ally_played` (BT25-088 idiom) with
+#   the suspend-self pay_cost (BT5-092 idiom), optional, your_turn; amount =
+#   max(1, 2 - own Digimon count) (= 2 with no Digimon, else 1).
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT26-088
+name: "Hiroko Sagisaka"
+kind: tamer
+color: [red]
+cost: 4
+traits: [TS]
+
+effects:
+  # ─── [Start of Your Main Phase] If opponent has a Digimon, gain 1 memory ──
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── [Your Turn] When a [Boss]/[TS] Digimon card would be played, by
+  #     suspending this Tamer, reduce the cost by 1 (2 if you have no Digimon)
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - any_of:
+            - trait_has: "Boss"
+            - trait_has: "TS"
+    optional: true
+    pay_cost:
+      - suspend: { target: source }
+    amount:
+      max:
+        - 1
+        - base: 2
+          per:
+            card_count_in_zone:
+              of: you
+              zone: battle_area
+              filter: { kind: digimon }
+          delta: -1
+    summary: "[Your Turn] When a [Boss]/[TS] Digimon card would be played, by suspending this Tamer, reduce the cost by 1 (by 2 if you have no Digimon)"
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

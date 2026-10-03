@@ -135,9 +135,9 @@ fn bt21_047_registers_appmon_alt_digivolve_cost_0() {
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
-            && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon")
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon"))
     });
     assert!(
         has,

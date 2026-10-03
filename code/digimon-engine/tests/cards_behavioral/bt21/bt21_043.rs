@@ -214,7 +214,9 @@ fn bt21_043_has_link_condition_appmon_cost_2() {
     // HasAppmonTraits, linkCost: 2).
     let has = card.effects.iter().any(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition {
-            cost, filter, ..
+            cost,
+            filter,
+            ..
         }) => *cost == 2 && filter.trait_has.as_deref() == Some("Appmon"),
         _ => false,
     });

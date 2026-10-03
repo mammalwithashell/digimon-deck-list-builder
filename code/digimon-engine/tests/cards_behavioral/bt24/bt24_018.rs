@@ -861,9 +861,7 @@ fn bt24_018_digivolves_from_lamiamon_with_owen_for_cost_6() {
     );
 
     let mem_before = runner.game.memory;
-    let proceeded = runner
-        .game
-        .digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    let proceeded = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
     assert!(
         proceeded,
         "the single applicable route (alt path, cost 6) must digivolve directly"

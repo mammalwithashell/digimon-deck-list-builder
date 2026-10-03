@@ -757,6 +757,16 @@ fn required_selection_step_has_candidate(
             .get_permanent("replacement_subject")
             .and_then(|h| ctx.game.player(h.player).battle_area.get(h.index as usize))
             .is_some_and(|perm| !perm.linked_cards.is_empty()),
+        // BT26 <Detach ([X] trait)> — payable only when the leaving permanent
+        // has ≥1 link card matching the keyword's card condition.
+        CompiledStep::TrashOwnLinkCardMatchingAndCancelLeave { filter } => bindings
+            .get_permanent("replacement_subject")
+            .is_some_and(|h| {
+                !crate::dsl_cards::step::replacement_outcome::matching_link_cards_read(
+                    ctx, bindings, h, filter,
+                )
+                .is_empty()
+            }),
         // EX7-048 — the protect-OTHERS Option-trash cost is payable only when the
         // CARRIER (the effect's own `source_permanent`, NOT the leaving subject)
         // has ≥1 Option among its below-top digivolution sources. Gates the
