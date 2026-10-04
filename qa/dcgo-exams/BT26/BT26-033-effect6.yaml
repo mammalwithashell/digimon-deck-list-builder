@@ -1,0 +1,96 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#6 --
+# DUAL Effect "For each of your security cards, add 1 to this card's use
+#  cost."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
+# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+#
+# THE LINE: T1 P-213 (red Lv.5 [TS], 0 -> -7); T2 P1 plays Biyomon (7 -> 5)
+# and passes; T3 (P0, 3) Inori Misono BT24-084 (yellow [TS] Tamer, 3 -> 0),
+# then USE Jupitermon's Option face from hand with 5 security cards.
+# P0's field is red + yellow, so the Yellow/Red colour requirement is met
+# NATIVELY -- this line does not lean on <Use Req.> (effect#7's file does).
+#
+# WITNESS (at 9): p0.memory 0 -> -7 = 2 (printed use cost) + 5 (security
+# count). Without the clause it would read -2. [Main] then deletes Biyomon
+# and <Recovery +1> takes security to 6 (effect#8's marks, asserted only as
+# context); BT26-033 ends in p0.trash because <Arts Digivolve> onto P-213 is
+# DECLINED.
+#
+# Option use from hand: `play: { card: BT26-033, from: hand }` lowers as an
+# Option USE (card_kind 4 + dual block in cards.json); DCGO routes a dual
+# card played with no target permanent to UseOptionClass (NOTES-BT25-085.md),
+# no face-selection prompt on either side. [Main] is mandatory (no
+# OptionalSkill). <Arts Digivolve> is offered on EVERY use with a legal
+# target (ours optional OwnField pick; DCGO SelectPermanentEffect
+# canNoSelect:true).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#6
+seed: 424242
+decks:
+  p0:
+    # hand (0-4): P-213 Aegiochusmon (red Lv.5 [TS], the digivolve base),
+    # Jupitermon, Inori Misono (the cost-reduced play), two quiet TS cards.
+    # security (5-9), stack[9] = TOP = the card the [When Digivolving] takes.
+    # draws (10..): T3 turn draw, the digivolve-bonus draw, T5 turn draw.
+    stack: [P-213, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, BT1-009, BT3-007, ST1-04, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play P-213 Aegiochusmon
+  # (cost 7: 0 -> -7). It has no [On Play]; its [When Digivolving] never
+  # fires (it is played, not digivolved). -> P1 at 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): Biyomon (7 -> 5); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Inori (3 -> 0), then THE CLAUSE -- use the Option face
+  # at 2 + 5 = 7 (0 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-084, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-033, from: hand } }
+    expect: { prompt: main_phase }
+  # <Arts Digivolve> onto P-213 offered -- declined (the Option is trashed).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      p0.memory: 0
+      p0.security: 5
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -7
+      p0.security: 6
+      p0.trash: [BT26-033]
+      p1.field: []
+      p1.trash: [ST1-02]

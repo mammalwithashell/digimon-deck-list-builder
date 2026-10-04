@@ -1,0 +1,148 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#5 --
+# "[All Turns] When any of your [TS] trait Digimon or Tamers would leave the
+#  battle area, by placing this Digimon's top stacked card as the bottom
+#  security card, they don't leave."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
+# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+#
+# THE LINE: T1 P-213 (0 -> -7); T2 P1 plays Biyomon ST1-02 (7 -> 5; a red
+# permanent for Gaia Force's colour) and passes; T3 Jupitermon onto P-213
+# (cost 4, 3 -> -1); T4 P1 passes; T5 P0 plays Elecmon BT25-030 (3 -> 0, a
+# [TS] Digimon) and passes; T6 (P1, 3) Gaia Force ST1-16 (8: 3 -> -5) targets
+# ELECMON. The clause replaces the deletion: Jupitermon's TOP card goes to
+# the bottom of P0's security and Elecmon stays.
+#
+# The subject is Elecmon, NOT Jupitermon, on purpose: P-213's inherited
+# <Decode> ("when this Digimon would leave the battle area other than in
+# battle") would also trigger on Jupitermon itself and open an ordering
+# question that is not this clause.
+#
+# WITNESS (at 20): Elecmon still on the field; the Jupitermon permanent is
+# now just P-213 (sources []); p0.security 4 -> 5 (BT26-033 went under it,
+# face down); BT26-033 is in neither p0.trash nor p0.hand; p1.trash
+# [ST1-16]. (Projection sorts, so the bottom POSITION is not witnessed.)
+#
+# PROMPT SHAPE: optional replacement -> ours Replacement (EffectChoice phase)
+# answered `yes`; DCGO WhenRemoveField optional:true -> OptionalSkill. Gaia
+# Force: mandatory SelectPermanentEffect for P1. T5's end carries a second
+# dcgo_only <Engage> decline (Jupitermon unsuspended; P1 has Biyomon).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#5
+seed: 424242
+decks:
+  p0:
+    # hand (0-4): P-213 Aegiochusmon (red Lv.5 [TS], the digivolve base),
+    # Jupitermon, Inori Misono (the cost-reduced play), two quiet TS cards.
+    # security (5-9), stack[9] = TOP = the card the [When Digivolving] takes.
+    # draws (10..): T3 turn draw, the digivolve-bonus draw, T5 turn draw.
+    stack: [P-213, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-16, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play P-213 Aegiochusmon
+  # (cost 7: 0 -> -7). It has no [On Play]; its [When Digivolving] never
+  # fires (it is played, not digivolved). -> P1 at 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): Biyomon (7 -> 5); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Jupitermon onto P-213 in the battle area. Both the
+  # printed Red Lv.5 circle (5) and the [Digivolve] Lv.5 w/[TS] circle (4)
+  # are open, so both engines ask which cost to pay (ours EffectChoice, DCGO
+  # SelectCountEffect over the distinct cost list) -- answered by VALUE 4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-033 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
+  # top security -> hand (mandatory), then the optional "play or use 1
+  # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T3's end (memory -1 -> the turn ends). DCGO-ONLY ROW: Jupitermon (on
+  # P-213, in play since T1, unsuspended) has <Engage>, so DCGO's
+  # EndTurnProcess asks the <Engage> OptionalSkill gate. Our engine NEVER
+  # parks it for a DUAL top card (suspected engine bug -- see
+  # BT26-033-effect3.yaml): `Game::has_end_of_turn_keywords`
+  # (game_phases.rs ~596) skips any permanent whose top card fails
+  # `CardSource::is_digimon` (card_kind == Digimon), and a board-resident DUAL
+  # card is CardKind::Dual. Declined on the DCGO side only; this row's
+  # EXISTENCE is the measurement of that gap.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T4 (P1, memory 1): all-pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): Elecmon (3 -> 0); pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-030, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: the same <Engage> gate as at T3's end (see that row).
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T6 (P1, memory 3): Gaia Force on Elecmon (slot 1).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: P0 pays -- Jupitermon's top card to the bottom of security.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+assert:
+  - at: 19
+    that:
+      p0.security: 4
+      p1.memory: -5
+  - at: 20
+    that:
+      turn: 7
+      p0.security: 5
+      p0.trash: []
+      p1.trash: [ST1-16]
+      p0.field:
+        - { card_id: BT25-030, dp: 2000, suspended: false, sources: [] }
+        - { card_id: P-213, dp: 7000, suspended: false, sources: [] }

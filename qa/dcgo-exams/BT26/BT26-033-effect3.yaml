@@ -1,0 +1,136 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#3 --
+# "<Engage> (At the end of your turn, this Digimon may attack.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
+# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+#
+# *** THIS LINE ENCODES A SUSPECTED ENGINE BUG AND IS EXPECTED TO ABORT AT
+# *** THE ORACLE (prompt mismatch at step 13). That abort IS the finding.
+#
+# THE LINE: T1 P-213 (0 -> -7); T2 P1 passes; T3 Jupitermon onto P-213 (cost
+# 4, 3 -> -1); T4 P1 passes; T5 (P0, memory 3) P0 passes breeding AND the
+# whole main phase with Jupitermon UNSUSPENDED, attack-legal (it attacks
+# legally at this exact point in BT26-033-effect1/-effect2) and P1's board
+# empty -- the textbook <Engage> window.
+#
+# WHAT SHOULD HAPPEN (printed text; general_rule.pdf <Engage>): at the end of
+# P0's turn Jupitermon may attack. DCGO: EndTurnProcess asks the <Engage>
+# OptionalSkill gate (then SelectAttackEffect on yes).
+#
+# WHAT OUR ENGINE DOES (measured): NOTHING. No EndOfTurnAction park; the turn
+# rotates straight to P1 (at 14: turn 6, Breeding). Cause, read from source:
+# `Game::has_end_of_turn_keywords` (code/digimon-engine/src/game_phases.rs
+# ~596) does `if !perm.top_card().is_digimon(&self.card_data) { continue; }`,
+# and `CardSource::is_digimon` is `card_kind == CardKind::Digimon` -- false for
+# a board-resident DUAL card (CardKind::Dual). The mask (mask.rs ~590) and
+# decode (decode.rs ~331) DO accept Engage; only the park gate excludes it, so
+# the window never opens. `is_digimon_for_rules` (permanent.rs ~380, which
+# includes Dual) is the predicate the gate should use. Same gap silently
+# drops Vortex / Overclock / MayAttack end-of-turn attacks on any DUAL top
+# card. The keyword's end_of_your_turn auto-effect DOES fire (it shows up as a
+# TriggerOrder candidate beside other end-of-turn triggers), it just grants a
+# MayAttack window that is never parked.
+#
+# The ideal step 13 is `attack: { attacker: field.0, target: security }` in
+# the end-of-turn window (witness p1.security 5 -> 4, cf.
+# EX12/EX12-019-effect5.yaml); it cannot lower against our engine today. This
+# file therefore asserts what our engine does and leaves the DCGO gate
+# UNANSWERED at T5's end, so the oracle pass aborts there instead of
+# laundering the gap. Re-author with the attack row once the gate is fixed.
+#
+# T3's end also carries the shared dcgo_only <Engage> decline row (the same
+# bug at a memory-overflow turn end).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#3
+seed: 424242
+decks:
+  p0:
+    # hand (0-4): P-213 Aegiochusmon (red Lv.5 [TS], the digivolve base),
+    # Jupitermon, Inori Misono (the cost-reduced play), two quiet TS cards.
+    # security (5-9), stack[9] = TOP = the card the [When Digivolving] takes.
+    # draws (10..): T3 turn draw, the digivolve-bonus draw, T5 turn draw.
+    stack: [P-213, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play P-213 Aegiochusmon
+  # (cost 7: 0 -> -7). It has no [On Play]; its [When Digivolving] never
+  # fires (it is played, not digivolved). -> P1 at 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): all-pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Jupitermon onto P-213 in the battle area. Both the
+  # printed Red Lv.5 circle (5) and the [Digivolve] Lv.5 w/[TS] circle (4)
+  # are open, so both engines ask which cost to pay (ours EffectChoice, DCGO
+  # SelectCountEffect over the distinct cost list) -- answered by VALUE 4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-033 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
+  # top security -> hand (mandatory), then the optional "play or use 1
+  # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T3's end (memory -1 -> the turn ends). DCGO-ONLY ROW: Jupitermon (on
+  # P-213, in play since T1, unsuspended) has <Engage>, so DCGO's
+  # EndTurnProcess asks the <Engage> OptionalSkill gate. Our engine NEVER
+  # parks it for a DUAL top card (suspected engine bug -- see
+  # BT26-033-effect3.yaml): `Game::has_end_of_turn_keywords`
+  # (game_phases.rs ~596) skips any permanent whose top card fails
+  # `CardSource::is_digimon` (card_kind == Digimon), and a board-resident DUAL
+  # card is CardKind::Dual. Declined on the DCGO side only; this row's
+  # EXISTENCE is the measurement of that gap.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T4 (P1, memory 1): all-pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): pass breeding, pass the main phase -> the <Engage>
+  # window (DCGO asks here; ours rotates -- see header).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): our engine is already here.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      turn: 6
+      phase: Breeding
+      p1.security: 5
+      p0.field:
+        - { card_id: BT26-033, dp: 13000, suspended: false, sources: [P-213] }
