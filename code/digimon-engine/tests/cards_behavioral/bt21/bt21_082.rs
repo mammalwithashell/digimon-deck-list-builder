@@ -49,8 +49,24 @@ fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .add_card(filler("FILLER"))
         .add_card(digimon("BASE3", "Base", CardColor::Red, 3, 3, &[], None))
-        .add_card(digimon("HERO4", "Hero Four", CardColor::Red, 4, 5, &["Hero"], Some(4)))
-        .add_card(digimon("PLAIN4", "Plain Four", CardColor::Red, 4, 5, &["Beast"], Some(4)))
+        .add_card(digimon(
+            "HERO4",
+            "Hero Four",
+            CardColor::Red,
+            4,
+            5,
+            &["Hero"],
+            Some(4),
+        ))
+        .add_card(digimon(
+            "PLAIN4",
+            "Plain Four",
+            CardColor::Red,
+            4,
+            5,
+            &["Beast"],
+            Some(4),
+        ))
         .add_card(digimon("ATK", "Attacker", CardColor::Blue, 3, 3, &[], None))
         .add_card(tamer("RED-T2", "Other Red Tamer", CardColor::Red))
         .add_card(tamer("BLUE-T", "Blue Tamer", CardColor::Blue))
@@ -71,7 +87,8 @@ fn setup() -> DebugRunner {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -100,11 +117,15 @@ fn bt21_082_structure() {
         .collect();
     assert_eq!(triggered.len(), 3);
     assert!(triggered[0].when.contains(&CompiledTiming::OnSecurity));
-    assert!(triggered[1].when.contains(&CompiledTiming::StartOfYourMainPhase));
+    assert!(triggered[1]
+        .when
+        .contains(&CompiledTiming::StartOfYourMainPhase));
     assert!(!triggered[1].optional, "choice lives in the optional pick");
     let inh = triggered[2];
     assert_eq!(inh.scope, CompiledScope::Inherited);
-    assert!(inh.when.contains(&CompiledTiming::OnOpponentSecurityRemoved));
+    assert!(inh
+        .when
+        .contains(&CompiledTiming::OnOpponentSecurityRemoved));
     assert!(inh.optional, "'you may play'");
     assert!(inh.once_per_turn, "[Once Per Turn]");
 }
@@ -213,7 +234,9 @@ fn bt21_082_somp_fires_through_real_turn_flow() {
     r.end_turn();
     assert_eq!(r.game.turn_player(), 0);
     r.game.enter_main_phase();
-    let v = r.pending_selection_view().expect("Takuya's start-of-main prompt");
+    let v = r
+        .pending_selection_view()
+        .expect("Takuya's start-of-main prompt");
     assert!(v.is_optional);
 }
 
@@ -310,7 +333,9 @@ fn bt21_082_inherited_ignores_own_security_removal_on_opponents_turn() {
     r.game.enter_main_phase();
     let idx = data_idx(&r, "BLUE-T");
     let next = r.game.next_card_index();
-    r.game.players[0].security.push(CardSource::new(idx, 0, next));
+    r.game.players[0]
+        .security
+        .push(CardSource::new(idx, 0, next));
     let atk = r.place_on_field(1, "ATK", Some(0));
     r.attack_player(atk, 0, false);
     let _ = r.auto_resolve();

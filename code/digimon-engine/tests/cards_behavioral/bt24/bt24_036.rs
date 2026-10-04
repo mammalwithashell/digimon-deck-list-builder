@@ -107,7 +107,11 @@ fn host_with_medicmon_linked(runner: &mut DebugRunner) -> PermanentHandle {
     let medic = runner.place_on_field(0, CARD_ID, Some(0));
     runner.game.enter_main_phase();
     do_link(runner, medic);
-    assert_eq!(runner.battle_area_size(0), 1, "Medicmon left the field into the link");
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "Medicmon left the field into the link"
+    );
     assert_eq!(
         runner.game.players[0].battle_area[host.index as usize]
             .linked_cards
@@ -187,7 +191,9 @@ fn bt24_036_link_condition_appmon_cost_2() {
     let card = runner.compiled_card(CARD_ID).unwrap();
     let has = card.effects.iter().any(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition {
-            cost, filter, ..
+            cost,
+            filter,
+            ..
         }) => *cost == 2 && filter.trait_has.as_deref() == Some("Appmon"),
         _ => false,
     });
@@ -279,8 +285,11 @@ fn bt24_036_digivolves_from_yellow_lv3_for_2() {
 
 #[test]
 fn bt24_036_digivolves_from_offcolor_stnd_appmon_for_2() {
-    let (ok, paid) =
-        try_digivolve_over(make_lv3_base("R-STND", CardColor::Red, &["Stnd.", "Appmon"]));
+    let (ok, paid) = try_digivolve_over(make_lv3_base(
+        "R-STND",
+        CardColor::Red,
+        &["Stnd.", "Appmon"],
+    ));
     assert!(ok, "DCGO HasStandardAppTraits route");
     assert_eq!(paid, 2);
 }
@@ -423,9 +432,7 @@ fn bt24_036_cannot_link_to_non_appmon_host() {
     let _host = runner.place_on_field(0, "PLAIN-HOST", Some(0));
     let medic = runner.place_on_field(0, CARD_ID, Some(0));
     runner.game.enter_main_phase();
-    runner
-        .game
-        .decode_action(link_action_id(medic.index), 0);
+    runner.game.decode_action(link_action_id(medic.index), 0);
     assert_eq!(
         runner.game.players[0].battle_area[0].linked_cards.len(),
         0,
@@ -447,14 +454,21 @@ fn bt24_036_link_on_deletion_applies_minus_5000_only() {
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
     assert!(!runner.pending_is_optional());
     runner.auto_resolve().unwrap();
-    assert!(runner.pending_selection().is_none(), "exactly one effect fired");
+    assert!(
+        runner.pending_selection().is_none(),
+        "exactly one effect fired"
+    );
     assert_eq!(
         runner.dp_of(opp),
         Some(3000),
         "8000 - 5000 (link effect only; no extra -3000)"
     );
     assert_eq!(runner.battle_area_size(0), 0);
-    assert_eq!(runner.trash_size(0), trash_before + 2, "host + Medicmon trashed");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 2,
+        "host + Medicmon trashed"
+    );
 }
 
 #[test]

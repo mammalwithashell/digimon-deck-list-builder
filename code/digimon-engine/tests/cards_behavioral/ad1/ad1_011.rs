@@ -36,14 +36,23 @@ use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType, PlaySource};
+use digimon_engine::enums::{
+    CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType, PlaySource,
+};
 use digimon_engine::permanent::PermanentHandle;
 
 const CARD_ID: &str = "AD1-011";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
-fn digimon(id: &str, name: &str, color: CardColor, level: u8, dp: i32, traits: &[&str]) -> CardData {
+fn digimon(
+    id: &str,
+    name: &str,
+    color: CardColor,
+    level: u8,
+    dp: i32,
+    traits: &[&str],
+) -> CardData {
     let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Digimon;
     c.level = Some(level);
@@ -68,18 +77,60 @@ fn builder() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("AD1-011 YAML loads")
         .add_card(digimon("BLUE4", "Veemon", CardColor::Blue, 4, 5000, &[]))
-        .add_card(digimon("GREEN4", "Stingmon", CardColor::Green, 4, 5000, &[]))
-        .add_card(digimon("HERO4", "Hero Lv4", CardColor::Yellow, 4, 5000, &["Hero"]))
-        .add_card(digimon("FREE4", "Free Lv4", CardColor::Red, 4, 5000, &["Free"]))
-        .add_card(digimon("PLAIN4", "Plain Lv4", CardColor::Yellow, 4, 5000, &["Beast"]))
+        .add_card(digimon(
+            "GREEN4",
+            "Stingmon",
+            CardColor::Green,
+            4,
+            5000,
+            &[],
+        ))
+        .add_card(digimon(
+            "HERO4",
+            "Hero Lv4",
+            CardColor::Yellow,
+            4,
+            5000,
+            &["Hero"],
+        ))
+        .add_card(digimon(
+            "FREE4",
+            "Free Lv4",
+            CardColor::Red,
+            4,
+            5000,
+            &["Free"],
+        ))
+        .add_card(digimon(
+            "PLAIN4",
+            "Plain Lv4",
+            CardColor::Yellow,
+            4,
+            5000,
+            &["Beast"],
+        ))
         .add_card(with_evo(
-            digimon("IMP", "Imperialdramon: Test Mode", CardColor::Blue, 6, 12000, &[]),
+            digimon(
+                "IMP",
+                "Imperialdramon: Test Mode",
+                CardColor::Blue,
+                6,
+                12000,
+                &[],
+            ),
             CardColor::Blue,
             5,
             5,
         ))
         .add_card(with_evo(
-            digimon("IMP-RED", "Imperialdramon: Red Mode", CardColor::Red, 6, 12000, &[]),
+            digimon(
+                "IMP-RED",
+                "Imperialdramon: Red Mode",
+                CardColor::Red,
+                6,
+                12000,
+                &[],
+            ),
             CardColor::Red,
             5,
             5,
@@ -178,7 +229,8 @@ fn pick_hand(r: &mut DebugRunner, id: &str) {
 
 fn decline(r: &mut DebugRunner) {
     let view = r.pending_selection_view().expect("optional prompt pending");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
 }
 
 /// Standard (player-initiated) digivolve of hand card `id` onto `target`.
@@ -196,7 +248,10 @@ fn digivolve(r: &mut DebugRunner, id: &str, target: PermanentHandle) -> bool {
 fn dna_digivolve(r: &mut DebugRunner, a: PermanentHandle, b: PermanentHandle) {
     r.game.current_phase = GamePhase::Main;
     let idx = hand_index(r, 0, CARD_ID);
-    assert!(r.game.initiate_dna_digivolve(0, idx), "DNA digivolve must initiate");
+    assert!(
+        r.game.initiate_dna_digivolve(0, idx),
+        "DNA digivolve must initiate"
+    );
     r.game
         .resolve_selection(0, a.index as u16)
         .expect("first DNA material");
@@ -235,7 +290,11 @@ fn ad1_011_alt_paths_standard_trait_and_dna() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
-    assert_eq!(digis.len(), 3, "blue Lv.4/4, green Lv.4/4, Free/Hero Lv.4/3");
+    assert_eq!(
+        digis.len(),
+        3,
+        "blue Lv.4/4, green Lv.4/4, Free/Hero Lv.4/3"
+    );
     assert_eq!(
         digis
             .iter()
@@ -316,7 +375,10 @@ fn ad1_011_digivolves_from_hero_trait_lv4_for_3() {
     let mut r = start(builder(), &[CARD_ID]);
     let base = r.place_on_field(0, "HERO4", Some(0));
     let m0 = r.memory();
-    assert!(digivolve(&mut r, CARD_ID, base), "Lv.4 [Hero] → cost 3 alt route");
+    assert!(
+        digivolve(&mut r, CARD_ID, base),
+        "Lv.4 [Hero] → cost 3 alt route"
+    );
     assert_eq!(field_ids(&r, 0), vec![CARD_ID.to_string()]);
     assert_eq!(m0 - r.memory(), 3);
 }
@@ -326,7 +388,10 @@ fn ad1_011_digivolves_from_free_trait_lv4_for_3() {
     let mut r = start(builder(), &[CARD_ID]);
     let base = r.place_on_field(0, "FREE4", Some(0));
     let m0 = r.memory();
-    assert!(digivolve(&mut r, CARD_ID, base), "Lv.4 [Free] → cost 3 alt route");
+    assert!(
+        digivolve(&mut r, CARD_ID, base),
+        "Lv.4 [Free] → cost 3 alt route"
+    );
     assert_eq!(m0 - r.memory(), 3);
 }
 
@@ -344,7 +409,10 @@ fn ad1_011_cannot_digivolve_from_off_color_lv4_without_trait() {
     let mut r = start(builder(), &[CARD_ID]);
     let base = r.place_on_field(0, "PLAIN4", Some(0));
     let m0 = r.memory();
-    assert!(!digivolve(&mut r, CARD_ID, base), "yellow Lv.4 without Free/Hero has no route");
+    assert!(
+        !digivolve(&mut r, CARD_ID, base),
+        "yellow Lv.4 without Free/Hero has no route"
+    );
     assert_eq!(field_ids(&r, 0), vec!["PLAIN4".to_string()]);
     assert_eq!(r.memory(), m0);
 }
@@ -394,7 +462,10 @@ fn ad1_011_battle_immunity_lasts_until_end_of_opponents_turn() {
     let h = handle_of(&r, 0, CARD_ID);
     r.pass_turn();
     assert_eq!(r.turn_player(), 1);
-    assert!(has(&r, h, ModifierType::CannotBeDestroyedByBattle), "active on opp turn");
+    assert!(
+        has(&r, h, ModifierType::CannotBeDestroyedByBattle),
+        "active on opp turn"
+    );
     r.pass_turn();
     assert!(
         !has(&r, h, ModifierType::CannotBeDestroyedByBattle),
@@ -410,7 +481,10 @@ fn ad1_011_target_lock_expires_at_end_of_turn() {
     dna_digivolve(&mut r, a, b);
     let h = handle_of(&r, 0, CARD_ID);
     r.pass_turn();
-    assert!(!has(&r, h, ModifierType::CannotSwitchAttackTarget), "for the turn only");
+    assert!(
+        !has(&r, h, ModifierType::CannotSwitchAttackTarget),
+        "for the turn only"
+    );
     assert!(has(&r, h, ModifierType::CannotBeDestroyedByBattle));
 }
 
@@ -478,7 +552,11 @@ fn ad1_011_standard_digivolve_still_allows_block() {
     let h = handle_of(&r, 0, CARD_ID);
     let res = r.attack_player(h, 1, false);
     assert_eq!(res, AttackResult::InProgress);
-    assert_eq!(r.current_phase(), GamePhase::BlockTiming, "non-DNA → Block allowed");
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::BlockTiming,
+        "non-DNA → Block allowed"
+    );
 }
 
 // ─── Section 4 — [When Attacking] digivolve into [Imperialdramon] ────────────
@@ -526,7 +604,10 @@ fn ad1_011_when_attacking_without_candidate_does_nothing() {
     let mut r = start(builder(), &["WARG"]);
     let h = r.place_on_field(0, CARD_ID, Some(0));
     r.attack_player(h, 1, false);
-    assert!(r.pending_selection().is_none(), "no [Imperialdramon] → no prompt");
+    assert!(
+        r.pending_selection().is_none(),
+        "no [Imperialdramon] → no prompt"
+    );
     let _ = r.auto_resolve();
     assert_eq!(field_ids(&r, 0), vec![CARD_ID.to_string()]);
 }

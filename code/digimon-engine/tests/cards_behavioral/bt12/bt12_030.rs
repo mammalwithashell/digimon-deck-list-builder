@@ -25,8 +25,7 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
@@ -71,13 +70,25 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(digimon("GREEN-SRC", "Wormmon", CardColor::Green, 4, 5000))
         .add_card(digimon("RED-SRC", "Agumon", CardColor::Red, 4, 5000))
         .add_card(with_evo(
-            digimon("PALADIN", "Imperialdramon: Paladin Mode", CardColor::Blue, 7, 15000),
+            digimon(
+                "PALADIN",
+                "Imperialdramon: Paladin Mode",
+                CardColor::Blue,
+                7,
+                15000,
+            ),
             CardColor::Blue,
             6,
             6,
         ))
         .add_card(with_evo(
-            digimon("IMP-RED", "Imperialdramon: Red Mode", CardColor::Red, 7, 15000),
+            digimon(
+                "IMP-RED",
+                "Imperialdramon: Red Mode",
+                CardColor::Red,
+                7,
+                15000,
+            ),
             CardColor::Red,
             6,
             6,
@@ -184,7 +195,8 @@ fn pick_hand(r: &mut DebugRunner, id: &str) {
 
 fn decline(r: &mut DebugRunner) {
     let view = r.pending_selection_view().expect("optional prompt pending");
-    r.execute_action(view.selecting_player, PASS).expect("decline");
+    r.execute_action(view.selecting_player, PASS)
+        .expect("decline");
 }
 
 fn digivolve(r: &mut DebugRunner, id: &str, target: PermanentHandle) -> bool {
@@ -337,7 +349,10 @@ fn bt12_030_green_source_suspends_chosen_opponent_digimon() {
     let suspended_count = [a, b].iter().filter(|h| suspended(&r, **h)).count();
     assert_eq!(suspended_count, 1, "exactly 1 opponent Digimon suspended");
     let h = handle_of(&r, 0, CARD_ID);
-    assert!(suspended(&r, h), "no blue digivolution card → stays suspended");
+    assert!(
+        suspended(&r, h),
+        "no blue digivolution card → stays suspended"
+    );
 }
 
 #[test]

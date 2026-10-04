@@ -121,7 +121,12 @@ fn on_play_runner(extra: Vec<CardData>, deck: &[&str]) -> DebugRunner {
 }
 
 fn gb_digimon(id: &str) -> CardData {
-    card(id, id, CardKind::Digimon, &[CardColor::Green, CardColor::Blue])
+    card(
+        id,
+        id,
+        CardKind::Digimon,
+        &[CardColor::Green, CardColor::Blue],
+    )
 }
 
 fn ken(id: &str) -> CardData {
@@ -214,7 +219,11 @@ fn p_118_clause_shapes() {
 #[test]
 fn p_118_on_play_adds_multicolor_and_ken_bottoms_rest() {
     let mut runner = on_play_runner(
-        vec![gb_digimon("GB"), ken("KEN"), make_test_card("FILL", "Filler")],
+        vec![
+            gb_digimon("GB"),
+            ken("KEN"),
+            make_test_card("FILL", "Filler"),
+        ],
         &["GB", "KEN", "FILL"],
     );
     runner.play(0, 0).expect("play P-118");
@@ -236,22 +245,38 @@ fn p_118_on_play_adds_multicolor_and_ken_bottoms_rest() {
 fn p_118_multicolor_bucket_filter_positive_and_negative() {
     let mut runner = on_play_runner(
         vec![
-            card("BP-OPT", "BluePurpleOption", CardKind::Option, &[CardColor::Blue, CardColor::Purple]),
+            card(
+                "BP-OPT",
+                "BluePurpleOption",
+                CardKind::Option,
+                &[CardColor::Blue, CardColor::Purple],
+            ),
             lv_digimon("MONO-BLUE", 3, CardColor::Blue),
-            card("RY", "RedYellow", CardKind::Digimon, &[CardColor::Red, CardColor::Yellow]),
+            card(
+                "RY",
+                "RedYellow",
+                CardKind::Digimon,
+                &[CardColor::Red, CardColor::Yellow],
+            ),
         ],
         &["BP-OPT", "MONO-BLUE", "RY"],
     );
     runner.play(0, 0).expect("play P-118");
 
     pick_bucket(&mut runner, &["BP-OPT"], "BP-OPT", "multicolor bucket");
-    runner.auto_resolve().expect("Ken bucket skipped, remainder bottom");
+    runner
+        .auto_resolve()
+        .expect("Ken bucket skipped, remainder bottom");
 
     let hand = hand_ids(&runner);
     assert!(hand.contains(&"BP-OPT".to_string()));
     assert!(!hand.contains(&"MONO-BLUE".to_string()));
     assert!(!hand.contains(&"RY".to_string()));
-    assert_eq!(deck_ids(&runner).len(), 2, "two unchosen cards returned to deck");
+    assert_eq!(
+        deck_ids(&runner).len(),
+        2,
+        "two unchosen cards returned to deck"
+    );
 }
 
 /// Q&A: only the Ken Tamer is revealed → it alone is added. A non-Ken Tamer
@@ -261,8 +286,18 @@ fn p_118_on_play_only_ken_found() {
     let mut runner = on_play_runner(
         vec![
             ken("KEN"),
-            card("OTHER-TAMER", "Davis Motomiya", CardKind::Tamer, &[CardColor::Blue]),
-            card("KEN-DIGI", "Ken Ichijoji Digimon", CardKind::Digimon, &[CardColor::Green]),
+            card(
+                "OTHER-TAMER",
+                "Davis Motomiya",
+                CardKind::Tamer,
+                &[CardColor::Blue],
+            ),
+            card(
+                "KEN-DIGI",
+                "Ken Ichijoji Digimon",
+                CardKind::Digimon,
+                &[CardColor::Green],
+            ),
         ],
         &["KEN", "OTHER-TAMER", "KEN-DIGI"],
     );
@@ -319,7 +354,12 @@ fn p_118_on_play_no_match_bottoms_all() {
 fn p_118_no_duplicate_card_across_buckets() {
     let mut runner = on_play_runner(
         vec![
-            card("GB-KEN", "Ken Ichijoji", CardKind::Tamer, &[CardColor::Green, CardColor::Blue]),
+            card(
+                "GB-KEN",
+                "Ken Ichijoji",
+                CardKind::Tamer,
+                &[CardColor::Green, CardColor::Blue],
+            ),
             gb_digimon("GB"),
             make_test_card("F1", "Filler1"),
         ],
@@ -386,7 +426,9 @@ fn p_118_eot_dna_digivolves_and_pays_printed_dna_cost() {
 
     let mut saw_partner_pick = false;
     for _ in 0..8 {
-        let Some(view) = runner.pending_selection_view() else { break };
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
         if view.kind == SelectionKind::Hand {
             // The hand holds only the DNA target, so it is the sole candidate.
             let non_pass: Vec<u16> = view
@@ -397,7 +439,9 @@ fn p_118_eot_dna_digivolves_and_pays_printed_dna_cost() {
                 .collect();
             assert_eq!(non_pass.len(), 1, "the legal DNA target is offered");
             let action = non_pass[0];
-            runner.execute_action(view.selecting_player, action).unwrap();
+            runner
+                .execute_action(view.selecting_player, action)
+                .unwrap();
             break;
         }
         if view.kind == SelectionKind::OwnField {
@@ -418,12 +462,22 @@ fn p_118_eot_dna_digivolves_and_pays_printed_dna_cost() {
     }
     let _ = runner.auto_resolve();
 
-    assert!(saw_partner_pick, "the partner choice must be exposed to the player");
+    assert!(
+        saw_partner_pick,
+        "the partner choice must be exposed to the player"
+    );
     let tops = top_ids(&runner);
-    assert_eq!(tops, vec![target.clone()], "both materials merged under the DNA result; field={tops:?}");
+    assert_eq!(
+        tops,
+        vec![target.clone()],
+        "both materials merged under the DNA result; field={tops:?}"
+    );
     let stack = ids(&runner.game.players[0].battle_area[0].card_sources, &runner);
     for m in ["CARRIER", "PARTNER", CARD_ID] {
-        assert!(stack.contains(&m.to_string()), "{m} must be in the DNA stack; {stack:?}");
+        assert!(
+            stack.contains(&m.to_string()),
+            "{m} must be in the DNA stack; {stack:?}"
+        );
     }
     assert_eq!(runner.memory(), 1, "printed DNA cost 2 paid from 3 memory");
     assert!(!hand_ids(&runner).contains(&target));
@@ -444,7 +498,9 @@ fn p_118_eot_dna_decline_changes_nothing() {
     let mut guard = 0;
     while runner.pending_selection_view().is_some() && guard < 6 {
         let v = runner.pending_selection_view().unwrap();
-        runner.execute_action(v.selecting_player, PASS).expect("decline");
+        runner
+            .execute_action(v.selecting_player, PASS)
+            .expect("decline");
         guard += 1;
     }
     let _ = runner.auto_resolve();
@@ -470,7 +526,9 @@ fn p_118_eot_dna_requires_printed_dna_requirements() {
                 v.valid_action_ids.iter().all(|a| *a == PASS),
                 "requirement-breaking hand card must not be offered: {v:?}"
             );
-            runner.execute_action(v.selecting_player, PASS).expect("pass");
+            runner
+                .execute_action(v.selecting_player, PASS)
+                .expect("pass");
             continue;
         }
         let a = v
@@ -479,7 +537,9 @@ fn p_118_eot_dna_requires_printed_dna_requirements() {
             .copied()
             .find(|a| *a != PASS)
             .unwrap_or(PASS);
-        runner.execute_action(v.selecting_player, a).expect("advance");
+        runner
+            .execute_action(v.selecting_player, a)
+            .expect("advance");
     }
     let _ = runner.auto_resolve();
     let mut tops = top_ids(&runner);
@@ -506,9 +566,19 @@ fn p_118_eot_dna_no_partner_no_prompt() {
     runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     runner.game.fire_end_of_your_turn(0);
     while let Some(v) = runner.pending_selection_view() {
-        assert_ne!(v.kind, SelectionKind::Hand, "no hand pick without a partner");
-        assert_ne!(v.kind, SelectionKind::OwnField, "no partner pick without a partner");
-        runner.execute_action(v.selecting_player, PASS).expect("pass");
+        assert_ne!(
+            v.kind,
+            SelectionKind::Hand,
+            "no hand pick without a partner"
+        );
+        assert_ne!(
+            v.kind,
+            SelectionKind::OwnField,
+            "no partner pick without a partner"
+        );
+        runner
+            .execute_action(v.selecting_player, PASS)
+            .expect("pass");
     }
     assert_eq!(top_ids(&runner), vec!["CARRIER".to_string()]);
     assert!(hand_ids(&runner).contains(&"DNA-RESULT".to_string()));

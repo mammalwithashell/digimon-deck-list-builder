@@ -85,20 +85,15 @@ fn bt16_002_has_single_inherited_dp_aura() {
 
 #[test]
 fn bt16_002_two_color_carrier_gets_plus_1000_on_your_turn() {
-    let (runner, handle) = stack_with_top(carrier(
-        "DUAL",
-        vec![CardColor::Blue, CardColor::Green],
-    ));
+    let (runner, handle) = stack_with_top(carrier("DUAL", vec![CardColor::Blue, CardColor::Green]));
     assert_eq!(runner.turn_player(), 0);
     assert_eq!(runner.effective_dp(handle), Some(4000));
 }
 
 #[test]
 fn bt16_002_two_color_carrier_gets_plus_1000_on_opponents_turn() {
-    let (mut runner, handle) = stack_with_top(carrier(
-        "DUAL",
-        vec![CardColor::Blue, CardColor::Green],
-    ));
+    let (mut runner, handle) =
+        stack_with_top(carrier("DUAL", vec![CardColor::Blue, CardColor::Green]));
     runner.end_turn();
     assert_eq!(runner.turn_player(), 1, "[All Turns] — still active");
     runner.game.tick_declarative_effects();

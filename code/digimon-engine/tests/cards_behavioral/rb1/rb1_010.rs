@@ -71,8 +71,8 @@ fn gamma_tamer(id: &str) -> CardData {
     card.card_kind = CardKind::Tamer;
     card.level = None;
     card.dp = None;
-    card.effect_text = "[Your Turn] Your Digimon with [Gammamon] in their texts get +1000 DP."
-        .to_string();
+    card.effect_text =
+        "[Your Turn] Your Digimon with [Gammamon] in their texts get +1000 DP.".to_string();
     card
 }
 
@@ -99,14 +99,26 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("RB1-010 in embedded DSL pack")
         .add_card(digimon("RED5", "Red Five", CardColor::Red, 5, 7000))
-        .add_card(digimon("YEL5", "Plain Yellow Five", CardColor::Yellow, 5, 7000))
+        .add_card(digimon(
+            "YEL5",
+            "Plain Yellow Five",
+            CardColor::Yellow,
+            5,
+            7000,
+        ))
         .add_card(gamma_text_lv5("GAMMA5"))
         .add_card(gammamon_in_hand("GAMMA-HAND"))
         .add_card(digimon("PLAIN-HAND", "Agumon", CardColor::Red, 3, 3000))
         .add_card(gamma_tamer("GAMMA-TAMER"))
         .add_card(digimon("OPP-11K", "Opp Eleven", CardColor::Blue, 6, 11000))
         .add_card(digimon("OPP-12K", "Opp Twelve", CardColor::Blue, 6, 12000))
-        .add_card(digimon("OPP-13K", "Opp Thirteen", CardColor::Blue, 6, 13000))
+        .add_card(digimon(
+            "OPP-13K",
+            "Opp Thirteen",
+            CardColor::Blue,
+            6,
+            13000,
+        ))
         .add_card(digimon("OPP-SMALL", "Opp Small", CardColor::Blue, 3, 3000))
         .add_card(digimon("FILL", "Filler", CardColor::Green, 3, 1000))
         .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
@@ -165,7 +177,11 @@ fn opp_field_action(runner: &DebugRunner, card_id: &str) -> Option<u16> {
 /// Place `base_id` on P0's field and digivolve Siriusmon (hand slot 0) onto
 /// it through the real action pipeline. Returns the permanent handle, or
 /// `None` when the digivolve action is illegal.
-fn digivolve_onto(runner: &mut DebugRunner, base_id: &str, suspended: bool) -> Option<PermanentHandle> {
+fn digivolve_onto(
+    runner: &mut DebugRunner,
+    base_id: &str,
+    suspended: bool,
+) -> Option<PermanentHandle> {
     let perm = runner.place_on_field(0, base_id, Some(0));
     runner.game.players[0].battle_area[perm.index as usize].is_suspended = suspended;
     let slot = hand_index(runner, 0, CARD_ID) as u16;
@@ -275,18 +291,34 @@ fn rb1_010_wd_place_gammamon_bottom_then_delete_dp_lte_self() {
     let sirius = digivolve_onto(&mut runner, "RED5", false).unwrap();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
-    assert!(runner.pending_is_optional(), "the placement cost is optional");
-    assert!(hand_action(&runner, "PLAIN-HAND").is_none(), "non-Gammamon Digimon excluded");
-    assert!(hand_action(&runner, "GAMMA-TAMER").is_none(), "non-Digimon card excluded");
+    assert!(
+        runner.pending_is_optional(),
+        "the placement cost is optional"
+    );
+    assert!(
+        hand_action(&runner, "PLAIN-HAND").is_none(),
+        "non-Gammamon Digimon excluded"
+    );
+    assert!(
+        hand_action(&runner, "GAMMA-TAMER").is_none(),
+        "non-Digimon card excluded"
+    );
     let pick = hand_action(&runner, "GAMMA-HAND").expect("Gammamon Digimon selectable");
     runner.execute_action(0, pick).unwrap();
 
     let sources = source_ids(&runner, sirius);
-    assert_eq!(sources.first().map(String::as_str), Some("GAMMA-HAND"), "placed at the BOTTOM: {sources:?}");
+    assert_eq!(
+        sources.first().map(String::as_str),
+        Some("GAMMA-HAND"),
+        "placed at the BOTTOM: {sources:?}"
+    );
     assert!(!hand_contains(&runner, 0, "GAMMA-HAND"));
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
-    assert!(opp_field_action(&runner, "OPP-12K").is_none(), "12000 DP > 11000 excluded");
+    assert!(
+        opp_field_action(&runner, "OPP-12K").is_none(),
+        "12000 DP > 11000 excluded"
+    );
     let target = opp_field_action(&runner, "OPP-11K").expect("11000 DP == 11000 selectable");
     runner.execute_action(0, target).unwrap();
     runner.auto_resolve().unwrap();
@@ -303,7 +335,10 @@ fn rb1_010_wd_decline_placement_skips_delete() {
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
     runner.execute_action(0, PASS).unwrap();
 
-    assert!(runner.pending_selection().is_none(), "no delete prompt after declining the cost");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no delete prompt after declining the cost"
+    );
     assert_eq!(field_ids(&runner, 1), vec!["OPP-SMALL".to_string()]);
     assert!(hand_contains(&runner, 0, "GAMMA-HAND"));
     assert!(!source_ids(&runner, sirius).contains(&"GAMMA-HAND".to_string()));
@@ -385,7 +420,10 @@ fn rb1_010_unsuspends_when_opponent_digimon_deleted_on_your_turn() {
     let opp = runner.place_on_field(1, "OPP-SMALL", None);
 
     runner.game.delete_permanent_with_effects(opp);
-    assert!(runner.pending_selection().is_some(), "optional unsuspend prompt");
+    assert!(
+        runner.pending_selection().is_some(),
+        "optional unsuspend prompt"
+    );
     assert!(runner.pending_is_optional());
     runner.accept_optional_trigger().unwrap();
     runner.auto_resolve().unwrap();
@@ -462,7 +500,10 @@ fn rb1_010_unsuspend_is_once_per_turn_and_resets() {
     suspend(&mut runner, sirius);
     let c = opp_handle(&runner, "OPP-12K");
     runner.game.delete_permanent_with_effects(c);
-    assert!(runner.pending_is_optional(), "OPT reset on the next own turn");
+    assert!(
+        runner.pending_is_optional(),
+        "OPT reset on the next own turn"
+    );
     runner.accept_optional_trigger().unwrap();
     runner.auto_resolve().unwrap();
     assert!(!is_suspended(&runner, sirius));
@@ -497,7 +538,10 @@ fn rb1_010_integrated_digivolve_on_suspended_delete_then_unsuspend() {
     let mut runner = base().hand(0, &[CARD_ID, "GAMMA-HAND"]).start();
     runner.place_on_field(1, "OPP-11K", None);
     let sirius = digivolve_onto(&mut runner, "GAMMA5", true).unwrap();
-    assert!(is_suspended(&runner, sirius), "digivolving keeps the suspended state");
+    assert!(
+        is_suspended(&runner, sirius),
+        "digivolving keeps the suspended state"
+    );
 
     let pick = hand_action(&runner, "GAMMA-HAND").unwrap();
     runner.execute_action(0, pick).unwrap();
@@ -505,7 +549,10 @@ fn rb1_010_integrated_digivolve_on_suspended_delete_then_unsuspend() {
     runner.execute_action(0, target).unwrap();
 
     assert!(field_ids(&runner, 1).is_empty());
-    assert!(runner.pending_is_optional(), "unsuspend observer fires off the WD deletion");
+    assert!(
+        runner.pending_is_optional(),
+        "unsuspend observer fires off the WD deletion"
+    );
     runner.accept_optional_trigger().unwrap();
     runner.auto_resolve().unwrap();
     assert!(!is_suspended(&runner, sirius));

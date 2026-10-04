@@ -57,15 +57,56 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(filler("FILLER"))
         .add_card(digimon("RED3", "Red Three", CardColor::Red, 3, 3, &[]))
         .add_card(digimon("BLUE3", "Blue Three", CardColor::Blue, 3, 3, &[]))
-        .add_card(digimon("HYB-DISCARD", "Hybrid Discard", CardColor::Red, 3, 3, &["Hybrid"]))
-        .add_card(digimon("HERO-CARD", "Hero Card", CardColor::Red, 3, 3, &["Hero"]))
+        .add_card(digimon(
+            "HYB-DISCARD",
+            "Hybrid Discard",
+            CardColor::Red,
+            3,
+            3,
+            &["Hybrid"],
+        ))
+        .add_card(digimon(
+            "HERO-CARD",
+            "Hero Card",
+            CardColor::Red,
+            3,
+            3,
+            &["Hero"],
+        ))
         .add_card(digimon("ATK", "Attacker", CardColor::Blue, 3, 3, &[]))
         // Plain (no-route) Hybrid — can't digivolve onto a Tamer.
-        .add_card(digimon("HYB-NOROUTE", "Hybrid No Route", CardColor::Red, 4, 5, &["Hybrid"]))
-        .add_card(tamer("RED-TAMER-INH", "Red Spirit Tamer", CardColor::Red, true))
-        .add_card(tamer("RED-TAMER-PLAIN", "Red Plain Tamer", CardColor::Red, false))
-        .add_card(tamer("BLUE-TAMER-INH", "Blue Spirit Tamer", CardColor::Blue, true))
-        .add_card(tamer("BLUE-TAMER-PLAIN", "Blue Plain Tamer", CardColor::Blue, false))
+        .add_card(digimon(
+            "HYB-NOROUTE",
+            "Hybrid No Route",
+            CardColor::Red,
+            4,
+            5,
+            &["Hybrid"],
+        ))
+        .add_card(tamer(
+            "RED-TAMER-INH",
+            "Red Spirit Tamer",
+            CardColor::Red,
+            true,
+        ))
+        .add_card(tamer(
+            "RED-TAMER-PLAIN",
+            "Red Plain Tamer",
+            CardColor::Red,
+            false,
+        ))
+        .add_card(tamer(
+            "BLUE-TAMER-INH",
+            "Blue Spirit Tamer",
+            CardColor::Blue,
+            true,
+        ))
+        .add_card(tamer(
+            "BLUE-TAMER-PLAIN",
+            "Blue Plain Tamer",
+            CardColor::Blue,
+            false,
+        ))
         .from_dsl_yaml(HYBRID_EVO_YAML)
         .expect("hybrid fixture")
         .dsl_card(CARD_ID)
@@ -147,9 +188,15 @@ fn bt21_091_structure() {
     let c = r.compiled_card(CARD_ID).unwrap();
     assert_eq!(c.cost, Some(3));
     assert_eq!(c.traits, vec!["Ten Warriors".to_string()]);
-    let req = c.use_requirement.as_ref().expect("color-bypass use requirement");
+    let req = c
+        .use_requirement
+        .as_ref()
+        .expect("color-bypass use requirement");
     let any = req.any_permanent.as_ref().expect("any_permanent gate");
-    assert!(any.predicate.has_inherited.is_some(), "Tamer with inherited effects");
+    assert!(
+        any.predicate.has_inherited.is_some(),
+        "Tamer with inherited effects"
+    );
     let main = c
         .effects
         .iter()
@@ -161,7 +208,10 @@ fn bt21_091_structure() {
         })
         .expect("[Main]");
     assert!(!main.optional);
-    assert_eq!(main.process.last(), Some(&CompiledStep::PlaceSelfAsDelayOption));
+    assert_eq!(
+        main.process.last(),
+        Some(&CompiledStep::PlaceSelfAsDelayOption)
+    );
     let delay = c
         .effects
         .iter()
@@ -293,7 +343,9 @@ fn bt21_091_main_without_hybrid_in_hand_still_places() {
 // ─── Clause 2: <Delay> ──────────────────────────────────────────────────────
 
 fn accept_delay(r: &mut DebugRunner) {
-    let v = r.pending_selection_view().expect("<Delay> activation offered");
+    let v = r
+        .pending_selection_view()
+        .expect("<Delay> activation offered");
     assert_eq!(v.kind, SelectionKind::Replacement);
     assert!(r.pending_is_optional(), "<Delay> is optional");
     r.execute_action(v.selecting_player, REPLACEMENT_ACCEPT)
@@ -324,7 +376,10 @@ fn bt21_091_delay_tamer_digivolves_into_hybrid_for_free() {
         "the Tamer becomes a digivolution card"
     );
     assert_eq!(r.memory(), mem_after_play, "without paying the cost");
-    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()), "Delay trashes this card");
+    assert!(
+        trash_ids(&r, 0).contains(&CARD_ID.to_string()),
+        "Delay trashes this card"
+    );
     assert!(delayed_state(&r).is_none());
 }
 
@@ -337,7 +392,10 @@ fn bt21_091_delay_tamer_without_route_is_not_offered() {
         r.pending_selection_view().is_none(),
         "no Tamer has a legal [Hybrid] digivolution → nothing to choose"
     );
-    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()), "Delay still paid");
+    assert!(
+        trash_ids(&r, 0).contains(&CARD_ID.to_string()),
+        "Delay still paid"
+    );
 }
 
 #[test]
@@ -362,7 +420,9 @@ fn bt21_091_delay_digivolve_is_optional() {
 fn bt21_091_declining_delay_keeps_it_parked() {
     let mut r = parked_with("RED-TAMER-INH", &["T-HYB-EVO"]);
     play_from_hand_by_id(&mut r, "RED-TAMER-INH");
-    let v = r.pending_selection_view().expect("<Delay> activation offered");
+    let v = r
+        .pending_selection_view()
+        .expect("<Delay> activation offered");
     pass(&mut r, v.selecting_player);
     let _ = r.auto_resolve();
     assert!(delayed_state(&r).is_some(), "declined <Delay> stays");
@@ -451,11 +511,18 @@ fn bt21_091_security_plays_inherited_tamer_from_hand_then_adds_self() {
     r.attack_player(atk, 1, false);
     let v = r.pending_selection_view().expect("security play prompt");
     assert!(v.is_optional, "'you may play'");
-    assert_eq!(non_pass(&r).len(), 1, "only the Tamer with inherited effects");
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "only the Tamer with inherited effects"
+    );
     pick_hand(&mut r, 1, "RED-TAMER-INH");
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).contains(&"RED-TAMER-INH".to_string()));
-    assert!(hand_ids(&r, 1).contains(&CARD_ID.to_string()), "then add this card");
+    assert!(
+        hand_ids(&r, 1).contains(&CARD_ID.to_string()),
+        "then add this card"
+    );
     assert_eq!(r.memory(), 3, "without paying the cost");
 }
 
