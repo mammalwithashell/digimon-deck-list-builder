@@ -1,0 +1,104 @@
+# Exam scenario: Hyokomon (BT26-009), clause BT26-009#inherited#1 -- the
+# payoff half of the inherited "[When Attacking] [Once Per Turn] <Draw 1>.
+# Then, if your hand has 6 or more cards, return 1 card in your hand to the
+# bottom of the deck." (clause_coverage splits at the <Draw 1> keyword:
+# #inherited#0 = the [When Attacking][OPT] <Draw 1> head, #inherited#1 = the
+# ". Then, if hand >= 6, return 1 to the bottom" tail.) This line takes the
+# hand >= 6 branch; BT26-009-inherited0.yaml takes the hand < 6 branch.
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + this pass's variant
+# book (variants-A.json). P0 = VARIANT `cm-chronomon-iso` (see
+# variants-A.json; the relevant swaps: eggs 4x BT24-003 Tsunomon so no
+# Yokomon "when your effects add to decks" observer sits in the stack, and
+# BT26-033 -> BT25-034 Angemon, a quiet Lv.4 carrier). P1 = `tm-quiet-red`.
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Tsunomon; digivolve Hyokomon over it in breeding (alt,
+#      cost 0); digivolve-draw stack[10] BT25-100. Pass.
+#   T2 (P1, 3): pass, pass.
+#   T3 (P0, 3): draw stack[11] BT26-090. Move the stack out (Hyokomon's own
+#      [Start of Your Main Phase] STARVED: no [Chronomon]-text/[Shaman] card
+#      in hand). Digivolve Angemon BT25-034 over Hyokomon (Lv.3 w/[TS] alt,
+#      cost 2 -> memory 1; Angemon has no [When Digivolving]);
+#      digivolve-draw stack[12] BT26-101. Attack P1's security: Hyokomon's
+#      inherited <Draw 1> (stack[13] BT26-092) -> hand 7 >= 6 -> THE CLAUSE:
+#      return BT8-097 Crimson Blaze to the bottom of the deck. P1's top
+#      security is Tai Kamiya ST1-12 ([Security] play) -- no battle.
+#
+# WITNESS: at 8 (after the draw, before the return) hand = 7 incl. the 2nd
+# BT26-092; at 9 hand = 6 and BT8-097 is gone from hand AND not in trash
+# (deck contents are not observable -- it left to the deck). Angemon
+# suspended over [BT24-003, BT26-009]; P1 security 4 + Tai on its field.
+#
+# PROMPT SHAPE: DCGO (BT26-009.yaml notes): non-optional OnAllyAttack, Draw 1,
+# then a MANDATORY SelectHandEffect (canNoSelect:false) -> AddLibraryBottomCards.
+# Ours: select_union_zone over [hand] (UnionZone kind -- sim-side cannot
+# assert the class, DCGO asserts SelectHandEffect strictly). With a single
+# zone DCGO's union-zone generic_int menu does not apply (the C# uses a
+# plain hand pick), so 1:1.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-009
+clause: BT26-009#inherited#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT25-034, BT26-092, BT26-087, BT8-097,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT25-100, BT26-090, BT26-101, BT26-092]
+    rest: cm-chronomon-iso
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-12, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-034 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT8-097] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [BT25-100, BT26-087, BT26-090, BT26-092, BT26-101, BT8-097]
+  - at: 8
+    that:
+      turn: 3
+      p0.hand: [BT25-100, BT26-087, BT26-090, BT26-092, BT26-092, BT26-101, BT8-097]
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [BT25-100, BT26-087, BT26-090, BT26-092, BT26-092, BT26-101]
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-034, dp: 5000, suspended: true, sources: [BT24-003, BT26-009] }
+      p1.security: 4
+      p1.field:
+        - { card_id: ST1-12, dp: -1, suspended: false, sources: [] }

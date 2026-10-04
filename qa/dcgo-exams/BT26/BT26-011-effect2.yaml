@@ -1,0 +1,113 @@
+# Exam scenario: Buraimon (BT26-011), clause BT26-011#effect#2 --
+# "[On Play] [When Digivolving] By trashing 1 card with [Chronomon] in its
+#  text or the [Shaman] trait from your hand, <Draw 2>."
+# BOTH timings are witnessed in one line (two copies of Buraimon).
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Yokomon; digivolve Coronamon over it in the breeding
+#      area (cost 0; digivolve-draw stack[10] BT26-092). Hard-play Buraimon #1
+#      (hand.0; 0 -> -5): [ON PLAY] -- trash Chronomon: Holy Mode BT26-016
+#      ([Chronomon] in name, [Shaman]) -> <Draw 2> (stack[11] BT8-097,
+#      stack[12] BT26-087). Memory -5 -> P1.
+#   T2 (P1, 5): pass, pass (P0 -> 3).
+#   T3 (P0, 3): draw stack[13] BT25-100. Move the Coronamon stack out
+#      (field.1; its [When Moving] pick declined). Digivolve Buraimon #2 over
+#      it (2 -> memory 1; digivolve-draw stack[14] BT26-090): [WHEN
+#      DIGIVOLVING] -- trash the 2nd BT26-016 -> <Draw 2> (stack[15]
+#      BT26-101, stack[16] BT9-103).
+#
+# WITNESS:
+#   [On Play]  at 4 vs at 3: hand loses BT26-016, gains BT26-087 + BT8-097;
+#              trash = [BT26-016].
+#   [When Dig] at 10 vs at 9: hand loses BT26-016, gains BT26-101 + BT9-103;
+#              trash = [BT26-016, BT26-016]; memory 1; the 2nd Buraimon over
+#              [BT25-008, BT26-001] (7000 = 5000 + Coronamon's [Your Turn]
+#              inherited +2000).
+#
+# PROMPT SHAPE: DCGO (BT26-011.yaml notes) = ActivateClassesForSharedEffects
+# optional:false -> no OptionalSkill; ONE SelectHandEffect (Mode.Discard,
+# canNoSelect:true) over HasText("Chronomon") || EqualsTraits("Shaman"). Ours
+# = one optional Hand pick. 1:1 both times. The [When Moving] decline is
+# SelectHandEffect canNoSelect on DCGO (shared optional:false effect).
+#
+# PARTIAL: the [Shaman]-trait-only branch of the filter (a [Shaman] card
+# WITHOUT [Chronomon] text, e.g. Aegiomon BT24-034) and the decline branch
+# are not witnessed.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-011
+clause: BT26-011#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-011, BT26-011, BT25-008, BT26-016, BT26-016,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-092, BT8-097, BT26-087, BT25-100, BT26-090, BT26-101, BT9-103]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-016] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT26-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-016] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 3
+    that:
+      turn: 1
+      p0.memory: -5
+      p0.hand: [BT26-011, BT26-016, BT26-016, BT26-092]
+      p0.trash: []
+  - at: 4
+    that:
+      turn: 2
+      p0.hand: [BT26-011, BT26-016, BT26-087, BT26-092, BT8-097]
+      p0.trash: [BT26-016]
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [BT25-100, BT26-016, BT26-087, BT26-090, BT26-092, BT8-097]
+      p0.trash: [BT26-016]
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [BT25-100, BT26-087, BT26-090, BT26-092, BT26-101, BT8-097, BT9-103]
+      p0.trash: [BT26-016, BT26-016]
+      p0.field:
+        - { card_id: BT26-011, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT26-011, dp: 7000, suspended: false, sources: [BT25-008, BT26-001] }

@@ -1,0 +1,97 @@
+# Exam scenario: Tokomon (BT25-001), clause BT25-001#inherited#0 --
+# "[When Attacking] [Once Per Turn] If this Digimon has the [TS] trait,
+#  <Draw 1>."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# -- the real list whose eggs are 4x BT25-001 -- vs `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Tokomon; digivolve Coronamon BT25-008 over it in the
+#      breeding area (cost 0: Red Lv.2 circle and the Lv.2 w/[TS] alt agree on
+#      0, so one cost, no cost prompt); digivolve-draw stack[10] BT25-034.
+#      Coronamon's [On Play] does not fire on a digivolve. Pass (P1 -> 3).
+#   T2 (P1, 3): pass breeding, pass main (P0 -> 3).
+#   T3 (P0, 3): draw stack[11] BT24-102. Move the stack out: Coronamon's
+#      [When Moving] opens its "trash up to 2 [Iliad]/[TS]" hand pick --
+#      DECLINED (BT25-008-effect1.yaml covers it). Attack security: THE
+#      CLAUSE -- Tokomon sits under Coronamon, whose top card has [TS], so
+#      <Draw 1> (stack[12] BT26-067). P1's top security (stack[9]) is Tai
+#      Kamiya ST1-12, whose [Security] plays it for free -- no battle, so the
+#      attacker survives and the board is clean.
+#
+# WITNESS (at 8 = after the attack vs at 7 = before it): hand gains exactly
+# BT26-067 (6 -> 7); Coronamon suspended with Tokomon as its only source;
+# memory unchanged (3); P1 security 5 -> 4 with Tai on its field.
+#
+# PROMPT SHAPE: the clause itself asks nothing on either side (DCGO
+# BT25_001.cs: OnAllyAttack, non-optional, maxCount 1, TopCard.EqualsTraits
+# ("TS") gate; ours: condition source_permanent_trait_has TS, no optional).
+# The only selection is Coronamon's [When Moving] pick: ours = declinable
+# Hand pick; DCGO = SelectHandEffect canNoSelect:true behind
+# ActivateClassesForSharedEffects(optional:false) -> no OptionalSkill.
+#
+# PARTIAL: the "if [TS]" negative branch (carrier without [TS] -> no draw,
+# OPT refunded) and the [Once Per Turn] cap are not witnessed: every Lv.3 in
+# the pool's red line carries [TS], and a 2nd attack in one turn is not
+# reachable this early.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT25-001
+clause: BT25-001#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT25-022, BT24-031, BT8-097, BT24-034,
+            BT24-041, BT24-041, BT25-022, BT24-031, BT24-034,
+            BT25-034, BT24-102, BT26-067]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-12, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT24-031, BT24-034, BT24-102, BT25-022, BT25-034, BT8-097]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [BT25-001] }
+      p1.security: 5
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT24-031, BT24-034, BT24-102, BT25-022, BT25-034, BT26-067, BT8-097]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: true, sources: [BT25-001] }
+      p1.security: 4
+      p1.field:
+        - { card_id: ST1-12, dp: -1, suspended: false, sources: [] }

@@ -1,0 +1,104 @@
+# Exam scenario: Buraimon (BT26-011), clause BT26-011#inherited#0 --
+# inherited "<Raid> (When this Digimon attacks, you may change the attack
+# target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + this pass's variant
+# book (variants-A.json). P0 = VARIANT `cm-chronomon-iso` (`bt26-chronomon`
+# with BT9-103 -> BT25-022, BT25-092 -> BT25-039 Sirenmon, BT26-033 -> BT25-034,
+# eggs 4x BT24-003;
+# Sirenmon is the swap that matters here). P1 = `tm-quiet-red`.
+#
+# CARRIER: Sirenmon BT25-039 (yellow/green Lv.5 [Shaman]/[TS], 6000 DP) has
+# NO <Raid> of its own and no [When Digivolving]/[When Attacking], so a Raid
+# window on its attack can only come from Buraimon's INHERITED box. It
+# reaches the red Buraimon only through its "Lv.4 w/[TS]: Cost 3" alt (its
+# circles are yellow/green) -> one route, no cost prompt.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; hard-play Buraimon (0 -> -5); [On Play]
+#      STARVED (no [Chronomon]-text/[Shaman] card in the stacked hand).
+#   T2 (P1, 5): play Biyomon ST1-02 (3000) and Agumon ST1-03 (2000); pass.
+#   T3 (P0, 3): draw stack[10] Sirenmon (drawn now so it is NOT in hand at
+#      T1, where its [Shaman] trait would have woken Buraimon's [On Play]).
+#      Digivolve Sirenmon over Buraimon (3 -> 0; digivolve-draw stack[11]
+#      BT26-101). Attack P1's SECURITY. THE CLAUSE: inherited <Raid>
+#      switches to Biyomon (highest-DP unsuspended); 6000 vs 3000, Biyomon
+#      deleted, no security check.
+#
+# WITNESS (at 10 vs at 8): P1 security stays 5; Biyomon ST1-02 in P1's trash;
+# Agumon untouched; Sirenmon (sources [BT26-011]) suspended.
+#
+# PROMPT SHAPE: the <Raid> fold -- DCGO OptionalSkill + SelectPermanentEffect
+# (canNoSelect); ours one declinable OppField pick; `expect: OptionalSkill`
+# marks the fold (as BT26-011-effect1.yaml / BT20-020-effect1.yaml).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-011
+clause: BT26-011#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-011, BT26-092, BT26-087, BT8-097, BT25-100,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT25-039, BT26-101]
+    rest: cm-chronomon-iso
+  p1:
+    stack: [ST1-02, ST1-03, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-039 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 0
+      p1.security: 5
+      p0.field:
+        - { card_id: BT25-039, dp: 6000, suspended: false, sources: [BT26-011] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 0
+      p1.security: 5
+      p1.trash: [ST1-02]
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+      p0.field:
+        - { card_id: BT25-039, dp: 6000, suspended: true, sources: [BT26-011] }

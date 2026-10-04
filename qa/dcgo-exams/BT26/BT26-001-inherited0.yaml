@@ -1,0 +1,121 @@
+# Exam scenario: Yokomon (BT26-001), clause BT26-001#inherited#0 --
+# inherited "[Your Turn] [Once Per Turn] When your effects add to decks, this
+# Digimon may digivolve into a Digimon card with [Chronomon] in its text in
+# the hand with the cost reduced by 1."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` --
+# the real list whose eggs are 4x BT26-001 -- vs `tm-quiet-red`).
+#
+# THE ADD-TO-DECK SOURCE: Toya Kuga BT26-087's [Start of Your Main Phase]
+# ("By returning 1 [TS] trait Digimon card from your trash to the bottom of
+# the deck, gain 1 memory") -- an OWN effect adding to OWN deck. The carrier
+# is Coronamon (no [Chronomon] text, no SOMP of its own), and the [Chronomon]
+# -text target in hand is Buraimon BT26-011 (its printed text names
+# [Chronomon]); Coronamon -> Buraimon costs 2 on both routes (Red Lv.3 circle
+# and Lv.3 w/[TS] alt), so -1 -> 1.
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Yokomon; digivolve Coronamon over it in breeding
+#      (cost 0; digivolve-draw stack[10] BT26-092). Play Toya Kuga (0 -> -3):
+#      its [On Play] trashes Hyokomon BT26-009 (a [TS] DIGIMON -- the fuel for
+#      T3) -> <Draw 2> (stack[11] BT25-100, stack[12] BT26-090).
+#   T2 (P1, 3): pass, pass.
+#   T3 (P0, 3): draw stack[13] BT26-101. Move the Coronamon stack out (its
+#      [When Moving] pick declined). Start of main: Toya's SOMP returns
+#      Hyokomon from the trash to the bottom of the deck, +1 memory (3 -> 4);
+#      no [Giant Slayer] in trash, so its "after" pick does not open.
+#      THE CLAUSE: Yokomon (under Coronamon, battle area, P0's turn, the
+#      add caused by P0's own effect) asks "may" -> yes -> digivolve into
+#      Buraimon from hand for 2 - 1 = 1 (4 -> 3); digivolve-draw stack[14]
+#      BT9-103. Buraimon's [When Digivolving] is STARVED (no [Chronomon]-text
+#      / [Shaman] card left in hand), so nothing more is asked.
+#
+# WITNESS: at 9 (after Toya's return, before the "may") memory 4 and the trash
+# is empty (Hyokomon went to the deck); at 11 memory 3 -- exactly the REDUCED
+# cost 1 -- Buraimon over [BT25-008, BT26-001] (7000 with Coronamon's
+# [Your Turn] +2000), Buraimon left the hand, BT9-103 drawn.
+#
+# PROMPT SHAPE:
+#   Toya [On Play] (T1): DCGO not optional, SelectHandEffect canNoSelect;
+#     ours one optional Hand pick. 1:1.
+#   Toya SOMP (T3): DCGO not optional (skippable), canNoSelect trash pick
+#     (SelectCardEffect); ours optional Trash pick. 1:1.
+#   Yokomon (BT26-001.yaml notes: OnAddLibraryAnyone, optional, OPT):
+#     DCGO OptionalSkill, then DigivolveIntoHandOrTrashCard ->
+#     SelectHandEffect (canNoSelect). Ours: Replacement yes/no gate
+#     (outer "You may activate ...") then the Hand pick. 1:1 + 1:1.
+#
+# PARTIAL: [Once Per Turn] and the [Your Turn] gate are not witnessed, nor
+# the "decks" plural (an own effect adding to the OPPONENT's deck).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-001
+clause: BT26-001#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT26-087, BT26-009, BT26-011, BT8-097,
+            BT26-078, BT26-078, BT26-087, BT26-073, BT26-073,
+            BT26-092, BT25-100, BT26-090, BT26-101, BT9-103]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-12, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-087, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { cards: [BT26-009] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT26-011] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT25-100, BT26-011, BT26-090, BT26-092, BT26-101, BT8-097]
+      p0.trash: [BT26-009]
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 4
+      p0.trash: []
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT25-100, BT26-090, BT26-092, BT26-101, BT8-097, BT9-103]
+      p0.trash: []
+      p0.field:
+        - { card_id: BT26-011, dp: 7000, suspended: false, sources: [BT25-008, BT26-001] }
+        - { card_id: BT26-087, dp: -1, suspended: false, sources: [] }

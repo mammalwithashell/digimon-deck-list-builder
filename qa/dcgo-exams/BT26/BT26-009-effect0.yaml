@@ -1,0 +1,88 @@
+# Exam scenario: Hyokomon (BT26-009), clause BT26-009#effect#0 --
+# "[Digivolve] Lv.2 w/[TS] trait: Cost 0" (special digivolution condition).
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + this pass's variant
+# book (variants-A.json). P0 = VARIANT `cm-chronomon-iso`: `bt26-chronomon`
+# with 1-for-1 swaps BT9-103 -> BT25-022 Lunamon (blue Lv.3 [TS]), BT25-092 ->
+# BT25-039 Sirenmon, BT26-033 -> BT25-034 Angemon, and the egg deck 4x
+# BT26-001 -> 4x BT24-003 Tsunomon (YELLOW Lv.2, [TS] trait). P1 = `tm-quiet-red`.
+#
+# ISOLATION: Hyokomon's only printed circle is Red Lv.2 (official bundle). A
+# YELLOW Lv.2 cannot use it, so the only route onto Tsunomon is the [TS] alt
+# condition -- the digivolve being LEGAL (lowering resolves it against our
+# live action mask) at cost 0 is the clause.
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Tsunomon BT24-003; digivolve Hyokomon over it in the
+#      breeding area -- THE CLAUSE (cost 0, memory stays 0); digivolve-draw
+#      stack[10] BT26-090. Pass.
+#   T2 (P1, 3): pass, pass.
+#   T3 (P0, 3): draw stack[11] BT26-101. Move the stack out so it is
+#      observable on p0.field. Hyokomon's own [Start of Your Main Phase] is
+#      STARVED (no [Chronomon]-text / [Shaman] card in hand: BT26-092,
+#      BT26-087, BT8-097, BT25-100, BT26-090, BT26-101 -- all checked), so it
+#      asks nothing on either side (DCGO CanActivate needs a matching card).
+#
+# WITNESS: at 2 (after the digivolve) memory still 0, Hyokomon left the hand,
+# the digivolve-draw BT26-090 arrived; at 6 p0.field = Hyokomon over exactly
+# [BT24-003].
+#
+# PROMPT SHAPE: one route at one cost -> no cost-choice prompt; no selection
+# anywhere in the line.
+#
+# PARTIAL: cost 0 is indistinguishable from the red circle's cost 0 -- only
+# the colour/route is isolated.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-009
+clause: BT26-009#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-092, BT26-087, BT8-097, BT25-100,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-090, BT26-101]
+    rest: cm-chronomon-iso
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 1
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT25-100, BT26-009, BT26-087, BT26-092, BT8-097]
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT25-100, BT26-087, BT26-090, BT26-092, BT8-097]
+      p0.field: []
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [BT24-003] }

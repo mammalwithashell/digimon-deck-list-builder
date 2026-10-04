@@ -1,0 +1,94 @@
+# Exam scenario: Coronamon (BT25-008), clause BT25-008#effect#1 -- the
+# [When Moving] timing of "[When Moving] [On Play] By trashing up to 2
+# [Iliad] or [TS] trait cards from your hand, <Draw 1> for each card trashed."
+# (clause_coverage splits the shared box: #effect#1 = the [When Moving]
+#  marker, #effect#2 = [On Play] + the body; BT25-008-effect2.yaml is the
+#  [On Play] half.)
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): hatch Yokomon BT26-001; digivolve Coronamon over it in the
+#      breeding area (cost 0); digivolve-draw stack[10] BT26-085. Pass.
+#   T2 (P1, 3): pass, pass.
+#   T3 (P0, 3): draw stack[11] BT26-060. MOVE Coronamon to the battle area:
+#      THE CLAUSE. Trash the MAX (2): Hyokomon BT26-009 ([TS]) and Aegiomon
+#      BT24-034 ([TS]) -> <Draw 1> x2 (stack[12] BT26-015, stack[13]
+#      BT26-078). Non-[Iliad]/[TS] cards in hand (BT8-097 Crimson Blaze,
+#      BT26-060 Destroy Mode is [TS] -- not picked) show the pick is a choice.
+#
+# WITNESS (at 9 vs at 6): hand loses BT26-009 + BT24-034 and gains BT26-015 +
+# BT26-078 (6 -> 6); trash = exactly those two; memory 3 (no cost); Coronamon
+# on the field (unsuspended) over Yokomon.
+#
+# PROMPT SHAPE -- CARDINALITY MISMATCH, scripted explicitly:
+#   DCGO (BT25-008.yaml DCGO notes): ActivateClassesForSharedEffects(onPlay,
+#   whenMoving, optional:false) -> ONE SelectHandEffect (Mode.Discard,
+#   maxCount = min(2, eligible), canNoSelect, canEndNotMax), then
+#   Draw(cardSources.Count). -> the dcgo_only row answering [BT26-009,
+#   BT24-034] at once.
+#   Ours: the YAML models "up to 2" as two sequential optional single picks
+#   (trash 1 -> draw 1 -> trash 1 -> draw 1) -> two sim_only rows. End state
+#   is identical; intermediate order differs (ours draws between the two
+#   trashes, so the 2nd pick's candidate set includes the first draw).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT25-008
+clause: BT25-008#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT26-009, BT24-034, BT8-097, BT26-087,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT26-015, BT26-078]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-008 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT26-009, BT24-034], dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { cards: [BT26-009], sim_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-034], sim_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT24-034, BT26-009, BT26-060, BT26-085, BT26-087, BT8-097]
+      p0.trash: []
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT26-015, BT26-060, BT26-078, BT26-085, BT26-087, BT8-097]
+      p0.trash: [BT24-034, BT26-009]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [BT26-001] }
