@@ -35,8 +35,8 @@ effects:
   # your trash without paying its memory cost. Any [On Play] effects on Digimon
   # played with this effect don't activate.
   #
-  # `scope: inherited` — the Security effect rides on the option's inherited
-  # surface (fired at the SecuritySkill timing on a security reveal).
+  # Default scope — the Security effect fires at the SecuritySkill timing
+  # on a security reveal.
   # `optional: true` — the printed "You may play" makes the trash play optional;
   # surfaced via the optional `select_trash` selection.
   #

@@ -181,7 +181,6 @@ effects:
   # "You may play 1 LIBERATOR (cost ≤ 4) from hand or trash free;
   #  then add this card to the hand."
   # DCGO: EffectTiming.SecuritySkill, optional ("you may").
-  # scope: inherited — security effect on an option card (inherited by carrier).
   - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 LIBERATOR (cost ≤4) from hand or trash free; add this card to hand"

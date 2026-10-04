@@ -423,8 +423,8 @@ fn bt19_093_main_applies_minus_3000_and_cannot_activate_when_digivolving() {
 // Section 3 — Behavioral: Clause 2 [Security] Security A. -2 on 2 opp + add self
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Drives the inherited [Security] clause directly via `run_inherited_security_effect`
-/// (the host carries BT19-093 as a digivolution source). With 2 opponent Digimon
+/// Drives the [Security] clause through the real security check: BT19-093 is
+/// player 1's only security card and player 0 attacks it. With 2 opponent Digimon
 /// present, both selected get SecurityAttackChange -2, and BT19-093 is routed to
 /// the controller's hand.
 ///

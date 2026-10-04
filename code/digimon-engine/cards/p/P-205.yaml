@@ -126,8 +126,8 @@
 #   BT15-096 Clause 2's `play_from_hand` sibling for the identical
 #   `cost_delta: { reduce: N }` shape applied to a different origin zone.
 #
-# - Clause 3 (inherited security mirror): identical Draw-2/Trash-2/place-self
-#   body to Clause 1, under `scope: inherited` + `when: on_security` — matches
+# - Clause 3 ([Security] mirror): identical Draw-2/Trash-2/place-self
+#   body to Clause 1, under `when: on_security` — matches
 #   DCGO's shared `SharedActivateCoroutine` reuse between [Main] and
 #   [Security].
 #

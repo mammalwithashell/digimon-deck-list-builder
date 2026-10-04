@@ -34,9 +34,9 @@ cost: 8
 #       this single play event only.
 #
 # Clause 1 — [Security] mirror:
-#   "[Security] Activate this card's [Main] effects." The inherited Security
+#   "[Security] Activate this card's [Main] effects." The [Security]
 #   clause re-runs the whole [Main] body. Modeled as a second triggered clause
-#   at `on_security` with `scope: inherited` (matching ST6-16 / BT5-106 /
+#   at `on_security` (matching ST6-16 / BT5-106 /
 #   ST1-16 security-mirror shape).
 
 effects:

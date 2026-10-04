@@ -40,7 +40,7 @@
 #       declaration (the Link-Requirements play path; no separate clause).
 #   (4) `EffectTiming.SecuritySkill` → AddActivateMainOptionSecurityEffect —
 #       "[Security] Activate this card's [Main] effects." → Clause 4 below,
-#       mirrors the Main body (BT24-091/BT24-095 idiom: scope: inherited,
+#       mirrors the Main body (BT24-091/BT24-095 idiom:
 #       when: on_security).
 #   (5) `EffectTiming.OptionSkill` → ActivateClass — the Standard [Main] play
 #       mode's body. Two sequential SelectPermanentEffect calls:

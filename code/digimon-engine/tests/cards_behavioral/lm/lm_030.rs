@@ -710,49 +710,71 @@ fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
 // trash; then add this card to hand
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Security clause fires without panic when the engine triggers it.
+/// Security clause fires through the real security check with an empty trash:
+/// LM-030 is the defender's (P1's) only security card and P0 attacks. The
+/// optional trash play has no eligible target, so no prompt for it installs;
+/// the mandatory tail ("Then, add this card to the hand") still moves LM-030
+/// from security to P1's hand.
 #[test]
 fn lm_030_security_clause_no_panic_with_empty_trash() {
+    let mut attacker = make_filler("LM030-ATK-NOPANIC");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["LM-030"])
         .start();
 
-    // Place LM-030 on P0's field as an option permanent (as it would be after
-    // the Delay clause lands it there).
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-NOPANIC", Some(0));
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
 
-    // Drain any pending selections (optional clause — engine may install no
-    // selection when trash is empty).
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // No eligible Digimon in the trash → no trash-pick prompt may install.
+    if let Some(view) = runner.pending_selection_view() {
+        assert!(
+            view.valid_action_ids.iter().all(|&a| a == PASS),
+            "an empty trash offers nothing to play; got prompt {:?} with {:?}",
+            view.kind,
+            view.valid_action_ids
+        );
+        runner.auto_resolve().expect("decline-only prompt resolves");
     }
-    // No panic is the primary assertion.
+    assert!(
+        runner.pending_selection().is_none(),
+        "the clause must finish without further prompts"
+    );
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-030 left the security stack"
+    );
+    assert_eq!(runner.battle_area_size(1), 0, "nothing was played");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "the mandatory tail must add LM-030 to the defender's hand"
+    );
+    assert_eq!(
+        runner.game.players[1].hand[0].card_id(&runner.game.card_data),
+        "LM-030",
+        "the card added to hand must be LM-030 itself"
+    );
 }
 
 /// When the defender's trash has a green Digimon, a real attack on the

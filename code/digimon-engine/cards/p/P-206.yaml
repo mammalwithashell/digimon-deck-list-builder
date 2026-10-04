@@ -126,7 +126,6 @@ use_requirement:
 #   security Option card into its owner's hand.
 #
 # DSL modelling:
-#   - scope: inherited
 #   - when: on_security
 #   - optional: true ("you may")
 #   - process:

@@ -76,7 +76,6 @@ cost: 3
 #     persistent placement as Main's PlaceDelayOptionCards).
 #
 # DSL modelling:
-#   - scope: inherited  (inherited security effect)
 #   - when: on_security
 #   - process: [ place_self_as_delay_option: {} ]
 #     In the security context `place_self_as_delay_option` consumes the

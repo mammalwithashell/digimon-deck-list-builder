@@ -1044,31 +1044,49 @@ fn p_106_security_clause_is_face_up_scope() {
     );
 }
 
-/// The on_security clause fires without panic when triggered on a field permanent.
+/// The on_security clause fires through the real security check: P-106 is the
+/// defender's (P1's) only security card and P0 attacks. The clause is
+/// mandatory and non-interactive ("Place this card in the battle area"), so
+/// no prompt installs, and P-106 lands on P1's field as a Delay-Option.
 #[test]
 fn p_106_security_clause_fires_without_panic() {
+    let mut attacker = make_filler("P106-ATK-NOPANIC");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .deck(0, &["FILL"])
         .deck(1, &["FILL"])
         .hand(0, &["FILL"])
         .hand(1, &["FILL"])
+        .security(1, &["P-106"])
         .memory(10)
         .start();
 
-    // Place P-106 in the battle area (as if it was placed by the Main clause).
-    let field_handle = runner.place_on_field(0, "P-106", Some(0));
+    let attacker_handle = runner.place_on_field(0, "P106-ATK-NOPANIC", Some(0));
+    let _ = runner.attack_player(attacker_handle, 1, false);
 
-    // Fire the SecuritySkill timing for this permanent.
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    assert_eq!(
+        drain_selections(&mut runner),
+        0,
+        "the mandatory self-placement [Security] clause must not prompt"
     );
-    runner.game.drain_effect_queue();
-    drain_selections(&mut runner);
-    // No panic is the primary assertion.
+    assert_eq!(runner.security_count(1), 0, "P-106 left the security stack");
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-106")
+        .expect("P-106 must be placed in the defender's battle area");
+    assert!(
+        matches!(placed.option_state, OptionState::Delayed { owner: 1, .. }),
+        "P-106 must be a Delay-Option permanent owned by the defender; got {:?}",
+        placed.option_state
+    );
 }
 
 /// [Security] "Place this card in the battle area." — driven through the real

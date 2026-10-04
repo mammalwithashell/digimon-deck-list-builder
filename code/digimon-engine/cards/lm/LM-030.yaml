@@ -84,7 +84,6 @@ cost: 2
 #      controller's hand.
 #
 # DSL modelling:
-#   - scope: inherited
 #   - when: on_security
 #   - optional: true  (DCGO canNoSelect: true at SelectTrashCardEffect — "you may")
 #   - select_trash (filter: digimon + color_is: green + dp_lte: 2000)

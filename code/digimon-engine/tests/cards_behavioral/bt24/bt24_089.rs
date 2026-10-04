@@ -1146,38 +1146,80 @@ fn bt24_089_main_free_play_emits_play_event() {
 
 // ─── §4 Security clause behavioral ───────────────────────────────────────────
 
-/// The on_security clause fires from the security trigger without panic and
-/// installs the same union-zone selection as the Main clause.
+/// The on_security clause fires from the real security check and installs the
+/// same union-zone (hand ∪ trash) selection as the Main clause. BT24-089 is
+/// the defender's (P1's) only security card, P1 holds Elizamon in hand, and
+/// P0 attacks P1. The union-zone pick is REQUIRED to appear; picking Elizamon
+/// plays it for free, and the "Then, place this card in the battle area" tail
+/// seats BT24-089 on P1's field.
 #[test]
 fn bt24_089_security_clause_fires_union_zone_selection() {
+    let mut attacker = make_filler("BT24089-ATK");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(make_elizamon())
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
-        .deck(0, &["FILL"])
-        .deck(1, &["FILL"])
-        .hand(0, &["ELIZAMON"])
-        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 3])
+        .deck(1, &["FILL"; 3])
+        .hand(1, &["ELIZAMON"])
+        .security(1, &["BT24-089"])
         .memory(10)
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT24-089", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT24089-ATK", Some(0));
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT24-089 in the defender's security stack"
     );
+
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // The security clause mirrors Main: a union-zone Elizamon/Owen pick MUST fire.
+    let view = runner
+        .pending_selection_view()
+        .expect("the [Security] clause must install a union-zone selection");
+    assert!(
+        matches!(view.kind, SelectionKind::UnionZone { .. }),
+        "security clause must install a union-zone (hand ∪ trash) selection; got {:?}",
+        view.kind
+    );
+    assert_eq!(view.selecting_player, 1, "the security owner chooses");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("Elizamon in hand must be an eligible pick");
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("pick Elizamon");
     runner.game.drain_effect_queue();
-
-    // The security clause mirrors Main: a union-zone Elizamon/Owen pick fires.
-    if let Some(view) = runner.pending_selection_view() {
-        assert!(
-            matches!(view.kind, SelectionKind::UnionZone { .. }),
-            "security clause should install a union-zone (hand ∪ trash) selection"
-        );
-    }
-
-    // Resolve to completion without panic.
     runner.auto_resolve().expect("security clause resolves");
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT24-089 left the defender's security stack"
+    );
+    let on_field = |id: &str| {
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == id)
+    };
+    assert!(
+        on_field("ELIZAMON"),
+        "the union-zone pick must play Elizamon from hand for free"
+    );
+    assert!(
+        on_field("BT24-089"),
+        "the mirrored [Main] tail must place BT24-089 in the battle area"
+    );
 }

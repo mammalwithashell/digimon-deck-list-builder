@@ -14,7 +14,7 @@
 #       None) → AddLinkCard onto a chosen own Digimon.
 #       → link_cards { from: [self_option, trash], filter trait_has TS,
 #         to: own_digimon, count { up_to: 1 }, cost: free }.
-#   [Security] Activate this card's [Main] effects. → scope: inherited,
+#   [Security] Activate this card's [Main] effects. →
 #     when: on_security, same body.
 #   Inherited link ESS (SetIsLinkedEffect(true)): <Security A. +1>; <Reboot>.
 #     → scope: inherited security_attack +1 ; scope: inherited grant_keyword Reboot.

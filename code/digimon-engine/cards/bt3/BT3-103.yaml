@@ -80,10 +80,10 @@
 #   it. Precedents: BT17-095 Clause C, EX7-074, EX6-072 (earlier raw_rust
 #   shim now superseded), LM-027.
 #
-# Scope note: The inherited text says "Security Effect [Security] Add this
-# card to the hand." The `scope: inherited` + `when: on_security` shape
-# is standard for Option cards whose security trigger is printed on the
-# inherited face (cf. BT7-107 in _examples/, BT17-095 Clause C).
+# Scope note: the security text says "Security Effect [Security] Add this
+# card to the hand." → `when: on_security` with the default scope (the
+# ingest stores it in the inherited-text field, but a [Security] effect
+# fires from the security check, never from under a Digimon).
 # No `optional:` flag — "[Security]" effects are mandatory per the rules
 # manual and DCGO (no `isOptional: true` on the SecuritySkill ActivateClass).
 

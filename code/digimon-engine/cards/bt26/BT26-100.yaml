@@ -33,7 +33,7 @@
 #   play_union_bound_free.
 # [Security] (SecuritySkill): same hand/trash choice over IsDigimon && Level
 #   <= 4 && Titan → PlayByEffect free.
-#   → scope: inherited + when: on_security (the Option blue-[Security] idiom,
+#   → when: on_security (the Option blue-[Security] idiom,
 #   BT24-094) + optional select_union_zone + play_union_bound_free.
 
 card: BT26-100

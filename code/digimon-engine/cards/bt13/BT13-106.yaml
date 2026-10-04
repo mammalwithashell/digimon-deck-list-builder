@@ -45,7 +45,7 @@
 #       below.
 #   (3) `EffectTiming.SecuritySkill` ([Security]):
 #       `AddActivateMainOptionSecurityEffect` — re-runs the same [Main] body.
-#       → `scope: inherited, when: on_security` clause below (BT24-097 /
+#       → `when: on_security` clause below (BT24-097 /
 #       BT24-091/095 idiom: security-triggered Main re-run).
 #
 # ─── Substrate (all shipped — no engine/DSL gap) ─────────────────────────────
@@ -146,7 +146,7 @@ effects:
   # ─── Clause 3 — Inherited [Security] Activate [Main] effects ────────────
   # "Security Effect [Security] Activate this card's [Main] effects." DCGO
   # SecuritySkill -> AddActivateMainOptionSecurityEffect (BT24-097 idiom:
-  # scope: inherited, when: on_security, body mirrors Main).
+  # when: on_security, body mirrors Main).
   - when: on_security
     summary: "[Security] Activate [Main] effects: -3000 DP to 1 opp Digimon; then maybe <Security A. -1> to all opp Digimon"
     process:

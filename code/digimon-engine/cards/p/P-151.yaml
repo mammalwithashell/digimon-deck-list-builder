@@ -77,7 +77,7 @@ use_requirement:
 #     the same SimplifiedRevealDeckTopCardsAndSelect + SelectHandEffect path.
 #
 # DSL modelling:
-#   scope: inherited, when: on_security
+#   when: on_security
 #   process mirrors the Main clause steps exactly (same reveal + select + play body).
 #   This is the standard "[Security] Activate this card's [Main] effects" pattern
 #   (same as P-035, P-103, BT22-084, etc. that use AddActivateMainOptionSecurityEffect).

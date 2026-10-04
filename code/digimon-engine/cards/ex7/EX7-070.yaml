@@ -94,7 +94,7 @@
 #   Destroy. Same target selector as Clause 3a, no placement tail (Security
 #   resolution trashes the card, per standard non-Tamer security disposition
 #   — no `add_this_option_to_hand` in the DCGO body).
-#   → `scope: inherited`, `when: on_security`, `select_opponent_permanent {
+#   → `when: on_security`, `select_opponent_permanent {
 #   filter: { kind: digimon }, selector: lowest_play_cost }` wrapped in its
 #   own `if any_permanent(...)` guard → `delete_permanent`.
 #

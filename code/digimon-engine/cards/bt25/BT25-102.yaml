@@ -129,8 +129,8 @@ effects:
 
   # [Security] You may play 1 level 4 or lower black or red [TS] trait
   # Digimon card from your hand or trash without paying the cost.
-  # (Printed as the card's inherited/security-triggered effect — same shape
-  # BT24-090 authors as scope: inherited, when: on_security.)
+  # (Printed in the card's security-effect box — same shape BT24-090
+  # authors as when: on_security.)
   - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 level 4 or lower black/red [TS] Digimon from hand or trash free"

@@ -70,17 +70,27 @@ impl CardEffect for SecurityPlacesSelfAsStartDelay {
     }
 }
 
+/// Engine-level test of `EffectContext::place_self_as_delay_option_permanent`
+/// when the resolving card sits in a digivolution-source position (the
+/// `run_inherited_security_effect` harness builds an Option-kind context whose
+/// source card is a buried source under `host`). The effect body is the inline
+/// closure below, not any card's DSL clause, so this does not depend on a real
+/// card carrying an inherited [Security] clause (none do any more: [Security]
+/// clauses fire from the security check with the default face-up scope). The
+/// synthetic option uses a neutral id so it is not mistaken for P-035's real
+/// clause; the real P-035 [Security] path is covered by
+/// `cards_behavioral::p::p_035::p_035_inherited_security_places_self_in_battle_area`.
 #[test]
 fn inherited_security_places_source_option_as_delay_permanent() {
     let mut r = DebugRunner::builder()
         .add_card(digimon_card("HOST"))
-        .add_card(option_source("P-035"))
+        .add_card(option_source("SRC-OPTION"))
         .memory(0)
         .start();
     let host = r.place_on_field(0, "HOST", Some(0));
-    r.push_source(host, "P-035");
+    r.push_source(host, "SRC-OPTION");
 
-    r.run_inherited_security_effect(host, "P-035", |ctx| {
+    r.run_inherited_security_effect(host, "SRC-OPTION", |ctx| {
         ctx.place_self_as_delay_option_permanent();
     });
 
@@ -100,9 +110,11 @@ fn inherited_security_places_source_option_as_delay_permanent() {
         placed.option_state,
         OptionState::Delayed { owner: 0, .. }
     ));
-    assert_eq!(placed.top_card().card_id(&r.game.card_data), "P-035");
+    assert_eq!(placed.top_card().card_id(&r.game.card_data), "SRC-OPTION");
 }
 
+/// Negative twin of the test above: the same source-position placement helper
+/// must leave a NON-option source card in its host's digivolution stack.
 #[test]
 fn inherited_security_does_not_place_non_option_source() {
     let mut r = DebugRunner::builder()

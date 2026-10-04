@@ -630,51 +630,88 @@ fn bt17_097_delay_fires_for_battle_deletion_of_free_digimon() {
 // Section 4 — Clause C: [Security] Davis/Ken Tamer + place self
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Smoke test: firing the Security clause on a placed BT17-097 (inherited)
-/// with no eligible Tamers in hand or trash installs a zone-choice prompt and
-/// completes without panic.
+/// Smoke test, driven through the real security check: BT17-097 is the
+/// defender's (P1's) only security card and neither P1's hand nor trash holds
+/// a [Davis Motomiya] / [Ken Ichijoji] Tamer. P0's attack flips BT17-097; the
+/// optional Tamer play has no eligible card (no prompt may offer one), and the
+/// "Then, place this card in the battle area" tail still seats BT17-097 as a
+/// Delay-Option permanent on P1's field instead of trashing it.
 #[test]
 fn bt17_097_security_smoke_no_eligible_tamer_no_panic() {
+    let mut attacker = make_filler("BT17097-ATK-SMOKE");
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
+        .hand(1, &["FILL"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK-SMOKE", Some(0));
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-097 in security"
     );
-    runner.game.drain_effect_queue();
 
-    // G-DSL-UNION-PLAY-FREE workaround installs a zone choice prompt.
-    // Drive through any selections; with no eligible Davis/Ken Tamer, the
-    // select_hand / select_trash steps are no-ops.
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // Drive any prompts. With no eligible Tamer anywhere, no union-zone pick
+    // may offer a card action.
     let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 30 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
+    while let Some(view) = runner.pending_selection_view() {
+        assert!(steps < 30, "selection loop did not terminate");
+        if matches!(view.kind, SelectionKind::UnionZone { .. }) {
+            assert!(
+                view.valid_action_ids.iter().all(|&a| a == PASS),
+                "no Davis/Ken Tamer exists, so the union-zone pick must offer \
+                 no card; got {:?}",
+                view.valid_action_ids
+            );
+        }
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("resolve pending selection");
         runner.game.drain_effect_queue();
         steps += 1;
     }
-    // Primary assertion: no panic. Secondary: card may appear on field as
-    // Delay-Option after the security activation (place_self_as_delay_option).
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack"
+    );
+    // Nothing was played: the only permanent on P1's field is BT17-097 itself,
+    // seated as a Delay-Option by the clause's placement tail.
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "only BT17-097 itself lands on the defender's field (no Tamer played)"
+    );
+    let placed = &runner.game.players[1].battle_area[0];
+    assert_eq!(
+        placed.top_card().card_id(&runner.game.card_data),
+        "BT17-097",
+        "the [Security] tail must place BT17-097 in the battle area"
+    );
+    assert!(
+        matches!(placed.option_state, OptionState::Delayed { owner: 1, .. }),
+        "BT17-097 must be a Delay-Option permanent owned by the defender; got {:?}",
+        placed.option_state
+    );
+    assert!(
+        !runner.game.players[1]
+            .trash
+            .iter()
+            .any(|cs| cs.card_id(&runner.game.card_data) == "BT17-097"),
+        "BT17-097 must not fall through to the trash"
+    );
 }
 
 /// [Security] + Davis Motomiya in the defender's hand → a real attack on the

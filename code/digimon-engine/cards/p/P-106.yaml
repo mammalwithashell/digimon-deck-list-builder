@@ -90,7 +90,6 @@ cost: 2
 #     persistent placement as Main's PlaceDelayOptionCards).
 #
 # DSL modelling:
-#   - scope: inherited (this is an inherited security effect per card layout)
 #   - when: on_security
 #   - process: [ place_self_as_delay_option: {} ] — the resolved verb removes the
 #     security-resolving Option from the security/digivolution-source context and
