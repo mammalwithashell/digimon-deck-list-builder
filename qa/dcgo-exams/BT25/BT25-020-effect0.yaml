@@ -21,13 +21,13 @@
 #   T3 (P0, 3): draw stack[10]; THE CLAUSE: digivolve Crescemon -> Marsmon
 #      for 3 (3 -> 0), draw stack[11]. Marsmon's [When Digivolving]
 #      (#effect#2) gives +3000 to itself (12000 -> 15000); its optional
-#      battle has no target. Pass.
+#      battle has no target, so neither side asks. Pass.
 #
-# WITNESS (at 8, before T3's pass): memory 0, Marsmon (15000) over Crescemon.
+# WITNESS (at 7, before T3's pass): memory 0, Marsmon (15000) over Crescemon.
 #
 # PROMPT SHAPE: the +3000 pick is ours OwnField (mandatory) vs DCGO
-# SelectPermanentEffect canNoSelect:false; then a SIM-ONLY declined attacker
-# pick (see the step comment).
+# SelectPermanentEffect canNoSelect:false; no attacker pick on either side
+# (empty opponent board).
 card: BT25-020
 clause: BT25-020#effect#0
 seed: 424242
@@ -68,12 +68,9 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY: our engine still offers the optional "may battle" attacker
-  # pick with NO opponent Digimon on the board; DCGO only opens it when the
-  # opponent has a Digimon to target (BT25-020 DCGO notes, step 2). Declined.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: SelectPermanentEffect }
+  # No "may battle" attacker pick: P1 has no Digimon, and (like DCGO) our
+  # engine opens it only when the opponent has a Digimon to target. (Until
+  # the 2026-10-04 BT25-020.yaml fix this needed a sim-only decline row.)
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -81,7 +78,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 8
+  - at: 7
     that:
       turn: 3
       p0.memory: 0
