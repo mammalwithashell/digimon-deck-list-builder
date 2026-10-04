@@ -15,19 +15,19 @@
 #      accept <Ascension> -> Angemon goes from the trash to the TOP of P0's
 #      security (5 -> 6). Pass.
 #
-# WITNESS: at 7 (before the Ascension answer) Angemon in P0's trash, security
-# 5, field empty; at 8 (before T3's pass) trash empty, security 6.
+# WITNESS: at 6 (before the Ascension answer) Angemon in P0's trash, security
+# 5, field empty; at 7 (before T3's pass) trash empty, security 6.
 #
 # PROMPT SHAPE: DCGO = ONE generic_bool (CardEffectCommons.AscensionProcess ->
 # SetBoolSelection, see EX12-047-effect4.yaml). Ours = a two-branch
 # EffectChoice (yes -> branch 0).
-# EXPECTED DIVERGENCE (step 6, sim-only row): our engine stacks <Ascension>
-# TWICE for BT25-034 -- a TriggerOrder over [BT25-034 <Ascension>, BT25-034
-# <Ascension>] -- before the yes/no. Accepting the first makes the second
-# fizzle silently (the card is no longer in the trash), so the end state is
-# right, but the extra decision is phantom; DCGO has one Ascension and no
-# MultipleSkills row. Reported as a suspected engine bug (duplicate keyword
-# registration).
+# FIXED (G-ENGINE-DUPLICATE-ASCENSION-TRIGGER, 2026-10-04): our engine used to
+# stack <Ascension> TWICE here (a TriggerOrder over two BT25-034 <Ascension>
+# entries -- the top card's own grant_keyword clause plus the aura-grant
+# dispatch, because the real-text `＜Ascension＞` after prose isn't parsed as
+# innate). `has_keyword_from_card_sources` now counts the top card's own
+# grants, so exactly one <Ascension> triggers, as in DCGO; the sim-only
+# TriggerOrder row is gone.
 card: BT25-034
 clause: BT25-034#effect#2
 seed: 424242
@@ -64,10 +64,6 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our duplicate <Ascension> TriggerOrder (see header).
-  - actor: 0
-    do: { select: { cards: [BT25-034], ordinal: 0, sim_only: true } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-034, BT25-034] }
   # THE CLAUSE: place Angemon as the top security card.
   - actor: 0
     do: { select: { yes: true } }
@@ -80,12 +76,12 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 7
+  - at: 6
     that:
       p0.security: 5
       p0.trash: [BT25-034]
       p0.field: []
-  - at: 8
+  - at: 7
     that:
       turn: 3
       p0.memory: 3

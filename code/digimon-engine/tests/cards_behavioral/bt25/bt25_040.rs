@@ -247,3 +247,52 @@ fn bt25_040_has_inherited_minus_4000_clause_structure() {
         "inherited security-removed DP-minus clause must be [Once Per Turn]"
     );
 }
+
+/// G-ENGINE-DUPLICATE-ASCENSION-TRIGGER: with the real printed text,
+/// `＜Ascension＞` starts a line after prose (not an innate face keyword), and
+/// the top card's own `grant_keyword` clause plus the aura-grant dispatch both
+/// queued it. A deletion must offer exactly ONE <Ascension>.
+#[test]
+fn bt25_040_deletion_offers_exactly_one_ascension() {
+    let mut runner = base().start();
+    {
+        // Mirror `CardData::load` (cards.json printed text + parsed keywords).
+        let effect = "When effects trash this card from the security stack, you may play 1 level 4 or lower [Angel] or [Iliad]\u{a0}trait card from your hand without paying the cost.\r\n＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.)\r\n[On Play] [When Digivolving] By trashing your top or bottom security card, 1 of your opponent's Digimon gets -8000 DP until their turn ends.";
+        let inherited = "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -4000 DP for the turn.";
+        let cd = std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+            .iter_mut()
+            .find(|c| c.card_id == CARD_ID)
+            .expect("BT25-040 registered");
+        cd.effect_text = effect.to_string();
+        cd.inherited_text = inherited.to_string();
+        cd.keywords = digimon_engine::card_data::parse_printed_keywords(effect, inherited, "");
+    }
+    let sec_before = runner.security_count(0);
+    let magna = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.tick_declarative_effects();
+    runner.game.delete_permanents_batch(
+        vec![magna],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    let (player, action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("<Ascension> asks its yes/no");
+        assert_ne!(
+            pending.kind,
+            digimon_engine::selection::SelectionKind::TriggerOrder,
+            "exactly one <Ascension> may trigger — no TriggerOrder over duplicates"
+        );
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("accept <Ascension>");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(runner.security_count(0), sec_before + 1);
+}

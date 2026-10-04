@@ -111,6 +111,40 @@ impl Game {
         for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             if !is_under {
+                // The TOP card's own declarative `grant_keyword` clauses
+                // (G-ENGINE-DUPLICATE-ASCENSION-TRIGGER). `build_effects_for_card`
+                // synthesizes the granted keyword's auto-effects for every
+                // non-inherited grant, and the top-card scan in
+                // `enqueue_from_permanent` dispatches them — so the keyword is
+                // already covered and the aura-grant dispatch must not queue a
+                // second copy. This only went unnoticed while the face parse
+                // also found the keyword: BT25-034 / BT25-040 print
+                // `＜Ascension＞` after prose (not innate), BT10-111 likewise
+                // `<Material Save 1>`. The grant's condition must hold, as it
+                // gates the synthesized body at fire time.
+                let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
+                    continue;
+                };
+                for effect in effects.iter() {
+                    if !effect.declarative
+                        || !Game::source_effect_is_active(source_index, stack_size, false, effect)
+                        || effect.granted_keyword != Some(keyword)
+                    {
+                        continue;
+                    }
+                    if let Some(cond) = &effect.condition {
+                        let ctx = crate::effect_context::EffectReadContext::new(
+                            self,
+                            src_handle,
+                            Some(handle),
+                            handle.player,
+                        );
+                        if !cond(&ctx) {
+                            continue;
+                        }
+                    }
+                    return true;
+                }
                 continue;
             }
             let is_adopted = adopted.contains(&source_index);
