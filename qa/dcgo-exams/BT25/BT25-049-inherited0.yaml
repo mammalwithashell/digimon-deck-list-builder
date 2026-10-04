@@ -1,0 +1,125 @@
+# Exam scenario: Armalizamon (BT25-049), clause BT25-049#inherited#0 --
+# INHERITED "<Piercing> (When this Digimon deletes your opponent's Digimon in
+#  battle while attacking, it checks security before the attack ends.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01); digivolve in the breeding area into
+#       Chiropmon ST23-12 (alt "Lv.2 w/[Glowing Dawn]", cost 0) [0] and on into
+#       Armalizamon (alt "Lv.3 w/[Glowing Dawn]" -- purple Chiropmon misses
+#       the green circle -- cost 2) [-2]. Breeding: nothing activates.
+#   T2 P1 [2]: plays Monodramon BT1-009 (cost 2) [0], passes.
+#   T3 P0 [3]: move Armalizamon to the battle area; pass (no attack).
+#   T4 P1 [3]: Monodramon attacks P0's security; the top card (stack[9],
+#       Ukkomon BT16-082, 2000, no [Security] effect) loses the security
+#       battle. Monodramon ends the turn SUSPENDED. P1 passes.
+#   T5 P0 [3]: digivolve Armalizamon into Murasamemon BT25-041 (yellow circle
+#       misses green -> only the "Lv.4 w/[Glowing Dawn]" alt, cost 3) [0].
+#       BT25-041's "[When Digivolving][When Attacking][Once Per Turn] ... you
+#       may play or use ..." is DECLINED at both timings (declining does not
+#       spend the once-per-turn). <Alliance> has no other Digimon to suspend.
+#       Murasamemon (7000) attacks the suspended Monodramon (3000) -> deleted.
+#   THE CLAUSE: the only <Piercing> in play is inherited from Armalizamon in
+#       the sources -> security check: P1's top (ST1-02, 3000) is trashed.
+#   Witness: P1 security 5 -> 4 on an attack that targeted a Digimon, P1 trash
+#   [BT1-009, ST1-02].
+#
+# WHY CHIROPMON, NOT LIOLLMON, AT LV.3: built first on Liollmon BT25-032
+# (inherited <Barrier>). ENGINE FINDING: with a <Barrier> source under the
+# ATTACKER, deleting the defender parks a "May accept replacement: <Barrier>"
+# prompt owned by PLAYER 1 (the defender's controller), and whichever way P1
+# answers, Monodramon is deleted but Armalizamon's inherited <Piercing> check
+# never happens (P1 security stays 5). See frag-D findings; repro =
+# this file with ST23-12 -> BT25-032 plus an actor-1 select row after the
+# attack. Chiropmon's inherited <Retaliation> only fires when IT is deleted.
+#
+# PROMPT SHAPE (BT25-049.yaml DCGO crosscheck): PierceSelfEffect(
+# isInheritedEffect: true) -- no prompt. BT25-041's optional WD/WA: our
+# Replacement gate "You may activate BT25-041's triggered effect" vs DCGO's
+# OptionalSkill (1:1), declined twice.
+card: BT25-049
+clause: BT25-049#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-12, BT25-049, BT25-041, ST23-13, ST23-13,
+            BT26-089, BT26-089, ST23-15, BT16-082, BT16-082,
+            BT16-082, BT16-082, BT26-089, BT26-089, ST23-13]
+    rest: gd-bt26-1st
+  p1:
+    stack: [BT1-009, ST1-04, ST1-03, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-041 } }
+    expect: { prompt: main_phase }
+  # BT25-041 [When Digivolving] optional play/use -> decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # BT25-041 [When Attacking] (same once-per-turn effect, unspent) -> decline.
+  # Then battle, deletion, and THE CLAUSE's security check, prompt-free.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 16
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.security: 4
+      p1.security: 4
+      p0.trash: [BT16-082]
+      p1.trash: [BT1-009, ST1-02]
+      p1.field: []
+      p0.field:
+        - card_id: BT25-041
+          dp: 7000
+          suspended: true
+          sources: [BT25-049, ST23-01, ST23-12]

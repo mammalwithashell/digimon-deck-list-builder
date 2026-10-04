@@ -1,0 +1,175 @@
+# Exam scenario: ScourgeChiropmon (BT26-075), clause BT26-075#effect#3 --
+# "[Security] [On Deletion] By trashing the bottom face-down card from under
+# any of your Tamers, you may play 1 [Glowing Dawn] trait card with a play
+# cost of 5 or less from your trash without paying the cost." Measured
+# through the [Security] arm (the [On Deletion] arm shares the body; it is
+# shown fizzling after <Ascension> in BT26-075-effect2.yaml).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE: T1..T3 exactly as BT26-075-effect2.yaml (Scourge loses a battle
+# to Phoenixmon and <Ascension> puts it on top of P0's security; Kyo keeps
+# ST23-15 face down). Memory: P0 ends T3 on 3 -> p1 gets 3.
+#   T4 p1's Phoenixmon attacks security: the check flips ScourgeChiropmon,
+#      its [Security] effect trashes ST23-15 from under Kyo and plays
+#      Armalizamon from the trash for free (p1 memory stays 3 = p0 -3).
+#      Armalizamon's [On Play] "may suspend" has no unsuspended target
+#      (Phoenixmon is attacking/suspended) -> silent. Scourge then battles
+#      as a security Digimon (8000 < 12000) and is trashed. Kyo's
+#      security-loss trigger (accepted) suspends Kyo and places BT26-026.
+# WITNESS: Armalizamon on P0's field with no memory paid, ST23-15 in trash,
+# security 6 -> 5.
+#
+# PROMPT SHAPE (BT26-075.yaml DCGO crosscheck: shared [Security]/[On
+# Deletion] coroutine, not optional; canNoSelect:true Tamer pick
+# (SelectPermanentEffect) -> trash its bottom face-down card -> PlayByEffect
+# from trash via a canNoSelect pick (SelectCardEffect)). Ours: optional
+# Tamer pick + optional trash pick, 1:1. ORDER RISK: our engine resolves the
+# [Security] effect BEFORE Kyo's OnLoseSecurity trigger (which triggered
+# when the card left security); if DCGO resolves Kyo's first, the oracle
+# will diverge on prompt order at step 22 -- triage against
+# general_rule.pdf (security effects resolve during the check, triggers
+# after) before concluding.
+card: BT26-075
+clause: BT26-075#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT26-089, BT25-049, BT26-075, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            ST23-12, ST23-06, BT25-046, BT25-057, ST23-12,
+            BT26-026, BT25-090, BT25-043]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Liollmon's [When Moving] (Kyo is a [Glowing Dawn] Tamer): decline the
+  # cancellable Tamer pick -- keeps the security stack and Kyo untouched.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Kyo's [Start of Your Main Phase]: ST23-15 face down under Kyo, Draw 1,
+  # +1 memory (7 -> 8).
+  - actor: 0
+    do: { select: { cards: [ST23-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  # Armalizamon [When Digivolving] "you may suspend": suspend Phoenixmon so
+  # it can be attacked.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT26-075 } }
+    expect: { prompt: main_phase }
+  # ENGINE FINDING: Armalizamon's "[Your Turn][OPT] When you would USE a
+  # [Glowing Dawn] Option card ... reduce the cost by 3" is offered on a
+  # DIGIVOLVE into the DUAL ScourgeChiropmon (its `kind: option` filter
+  # matches a DUAL). DCGO keys it on option USE only -> declined here; no
+  # DCGO counterpart expected -> sim_only.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: field.0 } }
+    expect: { prompt: main_phase }
+  # [When Attacking]: Kekkomon's and Liollmon's inherited texts stack.
+  # Kekkomon first: its "by trashing ... may digivolve" -> declined.
+  - actor: 0
+    do: { select: { cards: [ST23-01] } }
+  - actor: 0
+    do: { select: { decline: true } }
+  # Liollmon's inherited "may add top security": our 2-way EffectChoice
+  # (no decline form) answered by label sim-side; DCGO's Yes/No as a
+  # dcgo_only "no".
+  - actor: 0
+    do: { select: { choice: "Don't add", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+  # Battle: Scourge 8000 < Phoenixmon 12000 -> Scourge deleted. <Ascension>
+  # and [On Deletion] stack (official Q&A: player orders them).
+  # <Ascension> first (named by keyword), then "you may place
+  # this card as the top security card" -> yes. The card left the trash, so
+  # the pending [On Deletion] can no longer activate (Q&A) -- no more prompts.
+  - actor: 0
+    do: { select: { cards: [BT26-075], trigger: Ascension } }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+  # T4 (p1): Phoenixmon (unsuspended in p1's unsuspend phase) attacks P0's
+  # security. The check flips ScourgeChiropmon -> THE CLAUSE's [Security]
+  # arm: Tamer pick (Kyo) trashes its bottom face-down ST23-15, then the
+  # optional trash pick plays Armalizamon (BT25-049, cost 4 <= 5) for free.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: SelectCardEffect }
+  # Kyo's [All Turns] "When your security stack is removed from, by
+  # suspending this Tamer, place the top card of your deck face down under
+  # this Tamer" (optional): our single-candidate TriggerOrder doubles as the
+  # accept (DCGO OptionalSkill yes). Deck top stack[15] BT26-026 goes under
+  # Kyo; "removed by effects" is false (a security check), so no SA -1 pick.
+  - actor: 0
+    do: { select: { cards: [BT26-089] } }
+  - actor: 1
+    do: { pass: {} }
+assert:
+  - at: 19
+    that:
+      turn: 3
+      p0.security: 6
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [ST23-15]
+  - at: 25
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 5
+      p0.trash: [BT26-025, BT26-075, ST23-01, ST23-15]
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: false
+          sources: []
+        - card_id: BT26-089
+          dp: -1
+          suspended: true
+          sources: [BT26-026]
+      p1.field:
+        - card_id: ST1-10
+          dp: 12000
+          suspended: true
+          sources: []

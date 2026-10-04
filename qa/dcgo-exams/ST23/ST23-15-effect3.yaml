@@ -1,0 +1,101 @@
+# Exam scenario: e-Pulse (ST23-15), clause ST23-15#effect#3 --
+# "[Security] Activate this card's [Main] effects."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# STACK MAPPING: stack[5..9] security, stack[9] the TOP. ST23-15 sits at P0's
+# stack[9]; P1's Agumon attacks and the single check flips it.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): all-pass -> P1 3.
+#   T2 P1 (3): play Agumon ST1-03 (3 -> 0); pass -> P0 3.
+#   T3 P0 (3): draw stack[10]; all-pass -> P1 3.
+#   T4 P1 (3): Agumon attacks security -> e-Pulse's [Security] runs its [Main]:
+#      P0 plays Tomoro Tenma BT25-090 from hand for free.
+# WITNESS: BT25-090 on P0's field with no memory paid. See the ENGINE FINDING
+# in the assert block on where e-Pulse itself ends up.
+#
+# WHY NOT KYO (BT26-089, cost 3): played this way, our engine fires Kyo's
+# "[All Turns] When your security stack is removed from" for the check that
+# happened BEFORE Kyo entered play (a TriggerOrder for P0 right after the
+# play). A trigger cannot see an event from before its source was in play --
+# ENGINE FINDING recorded in the group fragment, kept out of this line.
+# BT25-090's own triggers cannot fire here (Agumon suspended before it
+# entered; no Option is used).
+#
+# PROMPT SHAPE (ST23-15.yaml DCGO crosscheck): SecuritySkill
+# AddActivateMainOptionSecurityEffect -> the [Main] body.
+card: ST23-15
+clause: ST23-15#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-090, BT25-043, BT16-082, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, ST23-15,
+            BT25-057]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the security e-Pulse activates its [Main] for P0 on P1's turn.
+  # Trash empty -> DCGO's zone menu collapses to the hand -> SelectHandEffect
+  # PlayForFree; Tomoro Tenma BT25-090 is the only [BEATBREAK] cost<=4 card.
+  - actor: 0
+    do: { select: { cards: [BT25-090] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # T4 after the check (before P1's trailing pass): Tomoro Tenma was played
+  # from P0's hand for free (P1 still holds 3 -> p0.memory -3), security 5 -> 4.
+  # ENGINE FINDING (expected oracle divergence): e-Pulse ends in P0's TRASH.
+  # The [Main] it activates ends "Then, place this card in the battle area",
+  # so the printed text (and DCGO's AddActivateMainOptionSecurityEffect, which
+  # re-runs the whole [Main] incl. PlaceDelayOptionCards -- cf.
+  # EX12-071-security0, where DCGO placed the Option on the field) puts
+  # ST23-15 on P0's FIELD with an empty trash. Our on_security body omits the
+  # placement. Asserted as OUR behaviour.
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [ST23-15]
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-043, BT25-057]
+      p0.field:
+        - card_id: BT25-090
+          dp: -1
+          suspended: false
+          sources: []

@@ -1,0 +1,144 @@
+# Exam scenario: Habakirimon (BT25-043), clause BT25-043#effect#3 --
+# "[All Turns] [Once Per Turn] When any of your [Glowing Dawn] trait Digimon
+#  would leave the battle area, by trashing your top security card, they
+#  don't leave."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# ENGINE FINDING -- EXPECTED ORACLE DIVERGENCE. Our engine does NOT offer the
+# replacement: Habakirimon is deleted outright and no security is trashed
+# (measured; the assert block records OUR behaviour, which contradicts the
+# printed text). Likely cause: the clause's `active_when` gates on
+# `any_permanent { of: you, zone: [security] }`, but security cards are not
+# Permanents (see the ST20-15.yaml note on that predicate), so the gate never
+# holds; `security_count_gte: 1` is the faithful gate. ST23-05.yaml carries the
+# byte-identical clause. The per-card test
+# bt25_043_glowing_dawn_leave_prevention_installs has a catch-all `_ =>` arm
+# that accepts "no prompt", which is why this never went red.
+#
+# THE WITNESS (intended). On P1's turn ([All Turns]) P1 uses Gaia Force ST1-16 ("Delete
+# 1 of your opponent's Digimon") on Habakirimon itself -- a [Glowing Dawn]
+# Digimon. P0 accepts the replacement: its top security card is trashed
+# (6 -> 5) and Habakirimon stays in play. Without the clause it would be in
+# P0's trash.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7          -> P1 7
+#   T2 P1 (7): Agumon BT3-007 (2): 7 -> 5; passes                    -> P0 3
+#   T3 P0 (3): digivolve Habakirimon (cost route 3): 3 -> 0; [WD] Recovery
+#              5 -> 6 (stack[12] ST23-06 on top), trash declined; passes -> P1 3
+#   T4 P1 (3): Gaia Force (8): 3 -> -5 (Agumon is the red permanent its colour
+#              requirement needs) -> the replacement fires          -> P0 5
+#
+# PROMPT SHAPE.
+#   * Cost pick + [WD] menu as BT25-043-effect0.yaml (dcgo_only value 3 is a
+#     GUESS there).
+#   * Gaia Force: SelectPermanentEffect (Mode.Destroy), one candidate.
+#   * The replacement (BT25-043.yaml; ST23-05.yaml crosscheck of the
+#     byte-identical clause: WhenRemoveField ActivateClass, maxPerTurn 1,
+#     OPTIONAL, gated on own SecurityCards.Count > 0): DCGO OptionalSkill
+#     yes/no; ours a `Replacement` prompt whose body opens with a mandatory
+#     step, so it is a plain gate -- 1:1, `yes: true`.
+card: BT25-043
+clause: BT25-043#effect#3
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9, stack[9] top); stack[10] T3 draw,
+    # stack[11] digivolve-bonus draw, stack[12] the <Recovery +1> card.
+    stack: [BT25-041, BT25-043, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, ST23-12, ST23-06, ST23-13]
+    rest: gd-bt26-1st
+  p1:
+    # hand (0-4): Agumon BT3-007 (the red permanent Gaia Force needs) and
+    # Gaia Force ST1-16; security (5-9) never flipped; draws (10+).
+    stack: [BT3-007, ST1-16, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Agumon (7 -> 5), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): digivolve Habakirimon via the [Glowing Dawn] route (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-043 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving] after <Recovery +1>: decline the security trash.
+  - actor: 0
+    do: { select: { choice: "Don't trash", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # End T3 (P1 -> 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): use Gaia Force for 8 (3 -> -5) targeting Habakirimon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # THE CLAUSE: Habakirimon (a [Glowing Dawn] Digimon) would leave the battle
+  # area -> P0 may trash its top security card so it doesn't leave. Accept.
+  # DCGO-ONLY -- ENGINE FINDING: our engine parks NOTHING here (measured: the
+  # row "answered no live prompt" when authored as a shared row) and deletes
+  # Habakirimon. DCGO is expected to ask this OptionalSkill and keep it.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # T5 (P0): one step past the clause; P1's -5 handed the turn over (P0 5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the Gaia Force: Habakirimon in play, P0 security 6 (5 + Recovery).
+  - at: 11
+    that:
+      turn: 4
+      p0.security: 6
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+  # After -- OUR ENGINE (expected to DIVERGE from DCGO and from the printed
+  # text): Habakirimon was deleted, no security card was paid. The printed
+  # clause would leave Habakirimon in play, P0 security 5 and the ST23-06
+  # (recovered T3, top card) in P0's trash.
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: 5
+      p0.security: 6
+      p0.trash: [BT25-041, BT25-043]
+      p0.field: []
+      p1.trash: [ST1-16]

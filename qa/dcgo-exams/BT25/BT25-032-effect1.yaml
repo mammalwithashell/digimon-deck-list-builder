@@ -1,0 +1,72 @@
+# Exam scenario: Liollmon (BT25-032), clause BT25-032#effect#1 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait
+#  card and 1 yellow [BEATBREAK] trait card among them to the hand. Return the
+#  rest to the bottom of the deck."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hard-play Liollmon from hand (cost 3) [-3]. THE CLAUSE: reveal
+#       stack[10..12] = ST23-09 (Atratusmon: [Glowing Dawn], green/black),
+#       ST23-03 (Cougarmon: [Glowing Dawn]/[BEATBREAK], YELLOW), BT16-082
+#       (Ukkomon: white, neither trait).
+#       Bucket 1 ([Glowing Dawn]) offers ST23-09 and ST23-03 -> ST23-09.
+#       Bucket 2 (yellow [BEATBREAK]) offers only ST23-03 (ST23-09 is not
+#       yellow; no_duplicate_cards would also forbid re-using bucket 1's
+#       pick) -> ST23-03. BT16-082 goes to the bottom. The overshoot ends the
+#       turn; P1's breeding pass is the trailing step.
+#   Witness: both picks in hand, nothing trashed, Liollmon on the field.
+#
+# PROMPT SHAPE (BT25-032.yaml DCGO crosscheck): SimplifiedRevealDeckTopCards
+# AndSelect(revealCount 3, bucket0 [Glowing Dawn] AddHand, bucket1 yellow
+# [BEATBREAK] AddHand, mutualConditions: true, remainder DeckBottom) -> two
+# SelectCardEffect rows. DCGO adds bucket 0's pick to the hand when that
+# prompt closes (docs/DCGO_EXAM.md "RevealBucket add timing" -- expected
+# one-field p0.hand quirk on the 2nd pick row, outcome-neutral; none of
+# our asserts sit there). Our 1-card remainder ordering is the
+# OrderedPermutation-at-N=1 prompt DCGO never asks -> sim_only.
+card: BT25-032
+clause: BT25-032#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-032, ST23-15, ST23-15, ST23-13, BT26-089,
+            ST23-12, ST23-04, BT26-089, BT26-089, BT26-089,
+            ST23-09, ST23-03, BT16-082]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-032, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: our OrderedPermutation at N=1; DCGO asks nothing.
+  - actor: 0
+    do: { select: { cards: [BT16-082], sim_only: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 5
+    that:
+      turn: 2
+      p1.memory: 3
+      p0.hand: [BT26-089, ST23-03, ST23-09, ST23-13, ST23-15, ST23-15]
+      p0.trash: []
+      p0.field:
+        - card_id: BT25-032
+          dp: 2000
+          suspended: false
+          sources: []

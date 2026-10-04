@@ -1,0 +1,76 @@
+# Exam scenario: Chiropmon (ST23-12), clause ST23-12#effect#0 --
+# "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE ROUTE IS THE ONLY ROUTE. Chiropmon's standard circle is "Purple Lv.2 /
+# cost 0"; Kekkomon (ST23-01) is GREEN, so the standard circle cannot apply and
+# the digivolve is legal ONLY through the special condition (Lv.2 with the
+# [Glowing Dawn] trait). Kekkomon carries [Glowing Dawn].
+#
+# THE LINE: T1 P0 (memory 0): hatch Kekkomon; digivolve it in the breeding area
+# into Chiropmon -- 0 -> 0 (cost 0), digivolve draw = stack[10] (BT25-043).
+# P0 keeps the turn (memory did not cross to P1's side), proving cost 0; a
+# cost-1 route would have ended the turn at -1. P0 then passes (-> P1 3), P1
+# passes out (-> P0 3), and on T3 P0 moves the stack to the battle area so the
+# Chiropmon-over-Kekkomon stack is visible to the field projection.
+#
+# PROMPT SHAPE (ST23-12.yaml DCGO crosscheck: AddSelfDigivolutionRequirement
+# StaticEffect(level 2, TopCard EqualsTraits("Glowing Dawn"), cost 0)): one
+# route, cost 0 -> no SelectCountEffect cost-route prompt expected on either
+# side. Chiropmon's [On Play] does not fire on a digivolve.
+card: ST23-12
+clause: ST23-12#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-12, BT25-049, BT16-082, BT16-082, ST23-13,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-043, BT25-043]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before P0's pass: still P0's main phase at memory 0, Chiropmon has left the
+  # hand and the digivolve draw (BT25-043) has arrived.
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-049, ST23-13]
+      p0.trash: []
+  # T3 after the move: the stack is Chiropmon over Kekkomon.
+  - at: 6
+    that:
+      turn: 3
+      p0.field:
+        - card_id: ST23-12
+          dp: 2000
+          suspended: false
+          sources: [ST23-01]

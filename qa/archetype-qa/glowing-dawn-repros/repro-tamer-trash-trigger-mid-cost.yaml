@@ -1,0 +1,112 @@
+# REPRO (not an exam scenario; lives outside qa/dcgo-exams on purpose).
+# Found authoring the Glowing Dawn exam (NOTES-GLOWING-DAWN.md): NightChiropmon
+# BT26-070 [On Play] "By trashing 2 bottom face-down cards from under any of
+# your Tamers, you may use 1 [Glowing Dawn] Option from your trash..." with
+# ST23-13 as the Tamer. ST23-13's "[Your Turn] When effects trash cards from
+# under this Tamer, by suspending this Tamer, +3000" fires and resolves
+# BETWEEN the two trashed cards (assert at 14: one card still under the
+# Tamer), i.e. mid-cost, before the Option use. Rule 15-8-3-2: a trigger
+# raised mid-effect waits until the effect finishes. Asserts pin the CURRENT
+# behaviour. The committed exam line (BT26-070-effect3) uses BT26-089 instead.
+# Run: dcgo-harness exam --scenario <this> --sim-only --cards-json data/cards.json
+#      --decks qa/dcgo-exams/ST23/glowing_dawn_pool.json
+card: BT26-070
+clause: BT26-070#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-070, ST23-13, ST23-09, BT25-090, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-12,
+            BT25-046, ST23-06, BT26-089, BT25-057, ST23-12,
+            BT25-049]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Mid-effect: ONE face-down card (ST23-12) trashed, the second (BT26-089)
+  # still under the Tamer, and ST23-13's trash-trigger already offered.
+  - at: 14
+    that:
+      p0.trash: [ST23-09, ST23-12]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [BT26-089]
+  - at: 19
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.trash: [BT26-089, ST23-09, ST23-12]
+      p0.hand: [BT25-046, BT25-057, BT25-090, ST23-06, ST23-15]
+      p0.field:
+        - card_id: BT26-070
+          dp: 8000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: true
+          sources: []

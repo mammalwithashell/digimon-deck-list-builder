@@ -1,0 +1,78 @@
+# Exam scenario: Tomoro Tenma & Kyo Sawashiro (ST23-13), clause
+# ST23-13#effect#0 -- "[Start of Your Main Phase] [On Play] You may place the
+# top card of your deck face down under this Tamer. Then, if your opponent has
+# a Digimon, gain 1 memory."  (Measured through the [On Play] arm, with BOTH
+# halves live: the place AND the opponent-has-a-Digimon memory gain.)
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): all-pass -> P1 3.
+#   T2 P1 (3): play Agumon ST1-03 (3 -> 0) so the opponent HAS a Digimon;
+#      pass -> P0 3.
+#   T3 P0 (3): draw stack[10]. Play Tomoro & Kyo (3 -> -1). [On Play]:
+#      "You may place" -> yes: stack[11] ST23-03 goes face down under it;
+#      then P1 has a Digimon -> gain 1 (-1 -> 0).
+# WITNESS: P0 keeps the turn at memory 0 (the next prompt is P0's main phase;
+# without the gain the play would have ended the turn at -1), and ST23-03 is
+# the Tamer's only source.
+#
+# PROMPT SHAPE (ST23-13.yaml DCGO crosscheck of ST23_13.cs): shared OP/SOMP,
+# optional:false; the "may" is an internal Yes/No SetIntSelection
+# (generic_int on DCGO's side, our EffectChoice answered `yes:` as in
+# ST23-06-effect2.yaml); the memory gain is unconditional on the Yes/No.
+card: ST23-13
+clause: ST23-13#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, BT25-049, BT16-082, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-057, ST23-03]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  # P0 still holds the turn at memory 0 -- this decision exists only because
+  # of the memory gain.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-049, BT25-057]
+      p0.field:
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-03]

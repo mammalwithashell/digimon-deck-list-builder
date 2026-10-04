@@ -1,0 +1,88 @@
+# REPRO (not an exam scenario; lives outside qa/dcgo-exams on purpose).
+# Found authoring the Glowing Dawn exam (NOTES-GLOWING-DAWN.md, BT25-049
+# finding): Armalizamon BT25-049's "[Your Turn][OPT] When you would use an
+# Option card with the [Glowing Dawn] trait ... reduce the cost by 3" fires on
+# a DIGIVOLVE into the DUAL card BT25-057 Monarchlizamon, because its
+# `when_any_ally_played: { kind: option }` filter matches CardKind::Dual.
+# With ST23-13 holding face-down cards, the reducer is accepted (steps 15-16)
+# and the cost-3 digivolve is cut to 0. Digivolving is not using an Option.
+# The assert pins the CURRENT (buggy) state.
+# Run: dcgo-harness exam --scenario <this> --sim-only --cards-json data/cards.json
+#      --decks qa/dcgo-exams/ST23/glowing_dawn_pool.json
+card: BT25-049
+clause: BT25-049#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, ST23-13, BT25-049, BT25-057, BT16-082,
+            ST23-15, ST23-15, BT16-082, BT26-089, ST23-15,
+            BT26-089, ST23-03, BT25-090, ST23-09, ST23-04,
+            ST23-12, BT25-043, BT25-043]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-04] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-12], sim_only: true } }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-057 } }
+  - actor: 0
+    do: { select: { value: 3 } }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-057], ordinal: 0 } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+  - actor: 0
+    do: { select: { cards: [ZZ] } }
+assert:
+  - at: 18
+    that:
+      p0.memory: 1
+      p0.trash: [BT25-043]

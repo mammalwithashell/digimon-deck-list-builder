@@ -1,0 +1,86 @@
+# Exam scenario: Kyo Sawashiro (BT25-088, yellow Tamer, cost 4), clause
+# BT25-088#effect#2 -- "[Your Turn] [Once Per Turn] When any of your [Glowing
+# Dawn] trait cards would be played, by trashing the bottom face-down card
+# from under any of your Tamers, reduce the cost by 1."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P0 perspective):
+#   T1 (0): pass breeding; hard-play Kyo Sawashiro BT26-089 (3) -> -3.
+#   T2: P1 passes -> P0 at 3.
+#   T3 (3): draw stack[10] ST23-13. BT26-089 SOMP: ST23-12 face down under
+#       it, draw stack[11] ST23-03, +1 -> 4. Play BT25-088 (4, corrected
+#       cost) -> 0 (BT25-088 is in hand while it is played, so its own
+#       reduction is not live for itself). THE CLAUSE: play Liollmon
+#       ST23-02 ([Glowing Dawn], cost 3, no [On Play]) -> accept the
+#       reduction, trash the bottom face-down card (ST23-12) from under
+#       BT26-089 (the only Tamer with one) -> cost 2 -> memory -2, turn
+#       ends.
+#   Witness: memory -2 (an unreduced play would read -3), ST23-12 in the
+#   trash, BT26-089 with no sources, ST23-02 on the field.
+#
+# PROMPT SHAPE (cards/bt25/BT25-088.yaml DCGO crosscheck of BT25_088.cs,
+# BeforePayCost): OURS parks an EffectChoice "Use Cost reduction to reduce
+# play cost?" (yes) and then an OwnField pick over Tamers holding a
+# face-down card ("installs a 1-option Tamer selection -- no-approximations
+# never auto-resolves"). Expected DCGO: OptionalSkill (isOptional) then a
+# SelectPermanentEffect over own Tamers with face-down sources -- one
+# candidate here. The EffectChoice -> OptionalSkill mapping is unasserted
+# sim-side (the harness says so); DCGO asserts it strictly.
+card: BT25-088
+clause: BT25-088#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-088, ST23-12, ST23-02, ST23-09,
+            ST23-03, ST23-04, ST23-06, ST23-07, ST23-08,
+            ST23-13, ST23-03]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-12] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT25-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST23-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.trash: [ST23-12]
+      p0.field:
+        - { card_id: BT25-088, dp: -1, suspended: false, sources: [] }
+        - { card_id: BT26-089, dp: -1, suspended: false, sources: [] }
+        - { card_id: ST23-02, dp: 2000, suspended: false, sources: [] }

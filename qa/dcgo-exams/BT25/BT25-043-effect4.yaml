@@ -1,0 +1,98 @@
+# Exam scenario: Habakirimon / Habakiri (BT25-043), clause BT25-043#effect#4
+# -- the OPTION face's
+#   "<Use Req. ([Glowing Dawn] trait)> (Specified cards let you ignore color
+#    requirements.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# WHY THIS LINE MEASURES THE CLAUSE. Habakiri is a YELLOW Option. When it is
+# used, P0's only permanent is the hatched Kekkomon ST23-01 in the BREEDING
+# area -- a GREEN Lv.2 with the [Glowing Dawn] trait (P0's battle area is
+# empty). The ordinary colour requirement fails; the use is admitted solely by
+# <Use Req.>, which DCGO checks over own battle-area OR breeding permanents
+# (CardEffectFactory.UseRequirements, NOTES-BT25-085.md) and ours over
+# `any_field_permanent` (battle area + breeding). The witness is that the use
+# happened: memory 3 -> -3 (Use 6), the [Main] resolved (Biyomon -8000 DP ->
+# deleted at 0), the Option is in P0's trash.
+#
+# NO Arts Digivolve prompt: Habakirimon needs a Lv.5 and Kekkomon is Lv.2.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hatch Kekkomon; passes                       -> P1 3
+#   T2 P1 (3): Biyomon ST1-02 (2): 3 -> 1; passes            -> P0 3
+#   T3 P0 (3): (no breeding prompt: a Lv.2 cannot move) USE Habakiri (6):
+#              3 -> -3. THE CLAUSE. The turn ends (P1 3).
+#
+# PROMPT SHAPE (BT25-043.yaml DCGO crosscheck, Option side):
+#   * UseRequirements(HasGlowingDawnTraits) -- no prompt; no face-selection
+#     prompt (a dual card used with no target permanent is an Option use).
+#   * [Main] (OptionSkill, not optional): SelectPermanentEffect over opp
+#     Digimon (one candidate, still asked) -> -8000 for the turn.
+#   * "Then, by trashing your top security card": DCGO a Yes/No
+#     (SetBoolSelection -> generic_bool) gated on own security >= 1; ours a
+#     2-way EffectChoice. DECLINED here: sim_only `choice:` + dcgo_only
+#     `decline:` (the EX7-048 convention). The accept arm is
+#     BT25-043-effect5.yaml.
+card: BT25-043
+clause: BT25-043#effect#4
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9) untouched; draws (10+).
+    stack: [BT25-043, BT16-082, BT16-082, ST23-15, ST23-15,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-032, BT25-032, ST23-12]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hatch Kekkomon, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon (3 -> 1), pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- use the yellow Option with only a green
+  # [Glowing Dawn] Kekkomon (breeding) on P0's side (3 -> -3).
+  - actor: 0
+    do: { play: { card: BT25-043, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main]: Biyomon gets -8000 DP (3000 -> 0: deleted).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # "Then, by trashing your top security card ...": decline.
+  - actor: 0
+    do: { select: { choice: "Don't trash", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # T4 (P1): one step past the clause; P0's -3 handed the turn over (P1 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p1.memory: 3
+      p0.security: 5
+      p0.trash: [BT25-043]
+      p0.field: []
+      p1.field: []
+      p1.trash: [ST1-02]

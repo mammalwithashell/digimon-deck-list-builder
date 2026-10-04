@@ -1,0 +1,114 @@
+# Exam scenario: Reina Sakuya & Makoto Kuonji (ST23-14, purple/black
+# Tamer, cost 4), clause ST23-14#effect#1 -- "[Your Turn] When effects trash
+# cards from under this Tamer, by suspending this Tamer, 1 of your [Glowing
+# Dawn] trait Digimon gains <Jamming> (This Digimon can't be deleted in
+# battles against Security Digimon.) for the turn."
+#
+# The trashing effect is Chiropmon's (ST23-12) [On Play] cost "By trashing
+# the bottom face-down card from under any of your Tamers" pointed at
+# ST23-14.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P0 perspective):
+#   T1 (0): pass breeding; hard-play ST23-14 (4) -> -4. [On Play] place yes
+#       -> stack[10] ST23-03 face down under it (P1 has no Digimon: no
+#       memory).
+#   T2: P1 passes -> P0 at 3.
+#   T3 (3): draw stack[11] ST23-13. ST23-14 [SOMP] place yes -> stack[12]
+#       ST23-02 face down (placed at the BOTTOM -- card Q&A). Play Chiropmon
+#       ST23-12 (3) -> 0. Its [On Play]: trash the bottom face-down card
+#       (ST23-02) from under ST23-14. THE CLAUSE: ST23-14 suspends and
+#       Chiropmon (the only [Glowing Dawn] Digimon) gains <Jamming> for the
+#       turn. Chiropmon's tail then returns ST23-02 (a [Glowing Dawn]
+#       Digimon) from the trash to the hand.
+#   Witness: ST23-14 SUSPENDED (the clause's cost) with one source left
+#   (ST23-03); ST23-02 back in hand; trash empty; memory 0.
+#   LIMIT: <Jamming> itself is not observable in the assert vocabulary
+#   (field rows carry card_id/dp/suspended/sources only) and Chiropmon is
+#   summoning-sick, so no security battle can show it this turn. The grant
+#   is witnessed by the Jamming target-pick row. A visible-battle upgrade
+#   needs an attack on a board holding a Tamer + 2 permanents, which runs
+#   into DCGO's centre-out compact slot order (NOTES-BT25-083.md) -- not
+#   attempted.
+#
+# PROMPT SHAPE (cards/st23/ST23-14.yaml + cards/st23/ST23-12.yaml DCGO
+# crosschecks):
+#   - ST23_12.cs On Play: SelectPermanentEffect (Tamer, canNoSelect:true)
+#     -> TrashDigivolutionCardsFromTopOrBottom(bottom) -> SelectCardEffect
+#     Root.Trash AddHand (canNoSelect:true). OURS: a 1-pending TriggerOrder
+#     gate (the clause's optional: true) BEFORE the Tamer pick -> authored
+#     sim_only; the Tamer pick is the shared SelectPermanentEffect row.
+#   - ST23_14.cs OnDigivolutionCardDiscarded (CanActivateSuspendCostEffect)
+#     -> OptionalSkill (ours: TriggerOrder, 1 declinable -> OptionalSkill)
+#     -> SelectPermanentEffect over own [Glowing Dawn] Digimon -> GainJamming.
+#   ENGINE FINDING / EXPECTED ORACLE DIVERGENCE (prompt order): OUR engine
+#   resolves ST23-14's trigger IMMEDIATELY after the cost is paid -- the
+#   OptionalSkill + Jamming pick come BEFORE Chiropmon's own "return from
+#   trash" pick. 15-8-3-2: a trigger-type effect cannot activate during
+#   effect processing; it waits as pending until Chiropmon's [On Play]
+#   finishes. Rules-correct (and likely DCGO) order is: Tamer pick -> trash
+#   return pick -> OptionalSkill -> Jamming pick. End state is identical.
+card: ST23-14
+clause: ST23-14#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-14, ST23-12, ST23-09, ST23-06, ST23-08,
+            ST23-03, ST23-04, ST23-06, ST23-07, ST23-08,
+            ST23-03, ST23-13, ST23-02]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-14, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: ST23-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-02] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.hand: [ST23-02, ST23-06, ST23-08, ST23-09, ST23-13]
+      p0.trash: []
+      p0.field:
+        - { card_id: ST23-12, dp: 2000, suspended: false, sources: [] }
+        - { card_id: ST23-14, dp: -1, suspended: true, sources: [ST23-03] }
