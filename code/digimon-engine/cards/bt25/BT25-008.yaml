@@ -10,9 +10,9 @@
 # Inherited Effect:
 #   [Your Turn] This Digimon gets +2000 DP.
 #
-# Digivolve: printed evo_costs list a Lv.2 Red cost-1 alternate path; DCGO adds
-# a self digivolution requirement gated on `TopCard.HasTSTraits` at level 2 for
-# cost 0.
+# Digivolve: printed circles are Red Lv.2 / cost 0 and Blue Lv.2 / cost 0
+# (official DB bundle + card_overrides.json evo_costs); DCGO adds a self
+# digivolution requirement gated on `TopCard.HasTSTraits` at level 2 for cost 0.
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_008.cs
 #

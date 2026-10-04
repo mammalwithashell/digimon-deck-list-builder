@@ -59,9 +59,9 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  - kind: aura
-    target: {}
-    security_attack: 1
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
     summary: "<Security A. +1>"
 
   - kind: grant_keyword

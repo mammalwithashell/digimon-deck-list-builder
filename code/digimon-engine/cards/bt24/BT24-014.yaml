@@ -37,8 +37,10 @@
 #   "[Digivolve] [Aegiomon]: Cost 3" black text (xros_req in cards.json).
 #
 # Region "Security A. +1" (None) — ChangeSelfSAttackStaticEffect(+1,
-#   isInheritedEffect: false). Own (face-up) scope keyword aura,
-#   `security_attack: 1`, matching the BT10-013 idiom (`target: {}` = self).
+#   isInheritedEffect: false). Face-up `grant_keyword: SecurityAttackPlus`
+#   (the BT21-029 form). NOT a self `security_attack` aura: the engine also
+#   parses the printed keyword off the face text, so the aura double-counted in
+#   real-text games (G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
 #
 # Region "Decode <[Aegiomon]>" (WhenRemoveField, own) — DecodeSelfEffect with
 #   sourceCondition EqualsCardName("Aegiomon"), isInheritedEffect: false. This
@@ -82,7 +84,7 @@
 # | Std digivolve Lv.4 Red / Cost 4                                  | IMPLEMENTED (printed evo_costs) |
 # | Std digivolve Lv.4 Yellow / Cost 4                               | IMPLEMENTED (official DB — 2nd printed circle, dropped by cards.json) |
 # | Special [Digivolve] [Aegiomon]: Cost 3                           | IMPLEMENTED (alt_paths name_contains) |
-# | <Security A. +1>                                                 | IMPLEMENTED (aura security_attack: 1) |
+# | <Security A. +1>                                                 | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) |
 # | <Decode ([Aegiomon])> own — play source on non-battle leave      | IMPLEMENTED (replacement + select_material + play_from_materials) |
 # | [WD] -5000 DP to 1 opp Digimon (mandatory, turn-scoped)          | IMPLEMENTED (add_dp_modifier expiry: end_of_turn) |
 # | [WD][Then] if <=3 security, delete 1 opp Digimon DP<=7000        | IMPLEMENTED (if security_count_lte: 3 -> select dp_lte: 7000 -> delete; dp measured post-modifier via effective_dp) |
@@ -112,9 +114,9 @@ alt_paths:
 
 effects:
   # ─── <Security A. +1> (own) ────────────────────────────────────────────────
-  - kind: aura
-    target: {}
-    security_attack: 1
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
     summary: "<Security A. +1>"
 
   # ─── <Decode ([Aegiomon])> — own scope: play Aegiomon source on non-battle leave ──

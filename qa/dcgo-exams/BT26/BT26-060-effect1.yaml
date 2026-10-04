@@ -18,17 +18,20 @@
 #      P1's security; Agumon has no <Blocker>. P0 passes.
 #   T6 (P1): breeding pass.
 #
-# WITNESS: at 15 P1 has 5 security; at 16 (after the one attack) P1's
-# security dropped and the flipped vanilla Digimon (BT1-009, ST1-02, BT3-007:
-# all lose to 16000) are in P1's trash.
+# WITNESS: at 15 P1 has 5 security; at 16 (after the one attack) P1 has 3
+# security and the two flipped vanilla Digimon (BT1-009, ST1-02: both lose to
+# 16000) are in P1's trash; BT3-007, the third card down, stays in security.
 #
-# EXPECTED DIVERGENCE: the printed keyword makes Destroy Mode check 1 + 1 = 2
-# cards (5 -> 3). Our engine checks THREE (5 -> 2): BT26-060.yaml encodes
-# <Security A. +1> as an `aura` with `security_attack: 1` while the engine
-# ALSO parses the printed "<Security A. +1>" off the face text
-# (Game::security_attack_keyword_bonus -> face_keywords ->
-# parse_printed_keywords), so the bonus is counted twice. DCGO
-# (SecurityAttackSelfEffect, +1) should read p1.security 3 at step 16.
+# The printed keyword makes Destroy Mode check 1 + 1 = 2 cards (5 -> 3), as
+# DCGO (SecurityAttackSelfEffect, +1) does. This scenario is the real-text
+# regression guard for G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT:
+# BT26-060.yaml used to encode <Security A. +1> as a self `aura` with
+# `security_attack: 1` while the engine ALSO parses the printed keyword off the
+# face text (Game::security_attack_keyword_bonus -> face_keywords), so real-text
+# games checked THREE (5 -> 2). Fixed 2026-10-04 by switching the YAML to
+# `grant_keyword: SecurityAttackPlus` (skipped when already printed); the
+# step-16 asserts now read 5 -> 3. (cards_behavioral
+# `security_attack_real_text` pins the same count for all six affected cards.)
 #
 # SLOT HYGIENE: every slot-addressed step (`digivolve from:`, `attack:`) is
 # taken while the addressed side has exactly ONE permanent in its battle area
@@ -122,5 +125,5 @@ assert:
       turn: 5
       p0.field:
         - { card_id: BT26-060, dp: 16000, suspended: true, sources: [BT26-085] }
-      p1.security: 2
-      p1.trash: [BT1-009, BT3-007, ST1-02, ST1-16]
+      p1.security: 3
+      p1.trash: [BT1-009, ST1-02, ST1-16]

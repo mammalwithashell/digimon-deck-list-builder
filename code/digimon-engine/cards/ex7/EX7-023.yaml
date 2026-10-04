@@ -32,9 +32,10 @@
 #
 # Security A. +1 (None): ChangeSelfSAttackStaticEffect(changeValue: 1,
 #   isInheritedEffect: false, condition: null) → face-up UNCONDITIONAL
-#   self-aura `security_attack: 1` (BT10-013 idiom; lowers to
-#   ModifierType::SecurityAttackChange +1, consulted at
-#   combat raw_security_strike).
+#   `grant_keyword: SecurityAttackPlus, value: 1` (the BT21-029 form; summed
+#   by Game::security_attack_keyword_bonus at combat raw_security_strike). A
+#   self `security_attack` aura double-counted the printed keyword in
+#   real-text games (G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
 #
 # Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
 #   face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad consumed at
@@ -119,8 +120,8 @@
 #
 # ─── Clause layout ───────────────────────────────────────────────────────────
 #
-# Clause 1 — <Security A. +1>: IMPLEMENTED (face-up unconditional self-aura
-#   security_attack: 1).
+# Clause 1 — <Security A. +1>: IMPLEMENTED (face-up unconditional
+#   grant_keyword SecurityAttackPlus 1).
 # Clause 2 — <Iceclad>: IMPLEMENTED (face-up grant_keyword).
 # Clause 3 — [When Digivolving] trash any 4 opp digivolution cards, then
 #   conditional opponent-Tamer bottom-deck return: IMPLEMENTED
@@ -155,12 +156,13 @@ effects:
   #
   # "(This Digimon checks 1 additional security card.)"
   #
-  # Face-up UNCONDITIONAL self-aura (BT10-013 idiom). Lowers to a
-  # per-declarative-tick ModifierType::SecurityAttackChange +1 on the carrier,
-  # summed into the security strike at combat raw_security_strike.
-  - kind: aura
-    target: {}
-    security_attack: 1
+  # Face-up UNCONDITIONAL keyword grant (BT21-029 form). With real printed
+  # text the declarative tick skips it (the face already prints the keyword,
+  # which security_attack_keyword_bonus parses); either way it is counted
+  # exactly once in combat raw_security_strike.
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
     summary: "<Security A. +1> (This Digimon checks 1 additional security card)"
 
   # ─── Clause 2: <Iceclad> ─────────────────────────────────────────────────────

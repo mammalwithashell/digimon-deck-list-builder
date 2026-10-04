@@ -317,3 +317,48 @@ fn bt24_051_mask_keeps_printed_cost_when_condition_is_false() {
     runner.play(0, 0).expect("plays at printed cost");
     assert_eq!(runner.memory(), -10, "paid the printed 12");
 }
+
+// ─── Cost reduction counts BOTH players' Digimon ─────────────────────────────
+
+/// "When this card would be played, if there are 3 or more Digimon, reduce the
+/// play cost by 5." The count is board-wide (BT25-059 / BT25-050 / BT25-055
+/// read the same wording with `owner: any`; DCGO counts both players): 1 own +
+/// 2 opponent Digimon = 3 → play cost 12 - 5 = 7.
+#[test]
+fn bt24_051_cost_reduction_counts_opponent_digimon() {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("OWN-ILIAD", CardColor::Green))
+        .add_card(opponent_digimon("OPP-A", 4000))
+        .add_card(opponent_digimon("OPP-B", 4000))
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "OWN-ILIAD", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.place_on_field(1, "OPP-B", Some(0));
+    runner.play(0, 0).expect("play Merukimon");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "1 own + 2 opponent Digimon = 3 Digimon: paid 7 (12 - 5) from 10"
+    );
+}
+
+/// Negative: 2 Digimon on the board (1 own + 1 opponent) → full cost 12.
+#[test]
+fn bt24_051_cost_not_reduced_with_two_digimon() {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("OWN-ILIAD", CardColor::Green))
+        .add_card(opponent_digimon("OPP-A", 4000))
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "OWN-ILIAD", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.play(0, 0).expect("play Merukimon");
+    assert_eq!(
+        runner.memory(),
+        -2,
+        "only 2 Digimon: full cost 12 paid from 10"
+    );
+}
