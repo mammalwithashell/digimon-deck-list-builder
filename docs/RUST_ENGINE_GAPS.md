@@ -4595,13 +4595,30 @@ with the root cause inferred and not traced.
   `[Opponent's Turn]` window before the unsuspend phase.
 - **Pinned by:** `qa/dcgo-exams/BT24/BT24-041-effect3.yaml` (step-16 assert `suspended: true`; DCGO expected `false`).
 
-### Trashed BT24-101 Jupitermon's `[All Turns]` "security removed" trigger fires from the trash  [G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH] — observed
+### A security card's own `[All Turns]` "security removed" trigger fires as it leaves security  [G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH] — observed on two cards
 - When BT24-101 is itself the security card trashed (Barrier cost, Blinding Ray), its
   `[All Turns][OPT] When your security stack is removed from, trash your opponent's top security card`
   still fires (no prompt via the Barrier cost; offered as a TriggerOrder candidate beside Blinding Ray).
   A security card is not in play (§13-1-5 analogue: not a battle-area permanent), so its `[All Turns]`
   effect should not be live. Workaround in `BT24-034-effect1`, `BT24-034-inherited0`,
   `BT25-025-inherited0`: a different card sits on top of security.
+- **Second card:** BT25-044 Junomon's `[All Turns]` "When your security stack is removed from" fires
+  when Junomon ITSELF leaves security (Blinding Ray trash → `TriggerOrder [BT4-104, BT25-044]`; a
+  security check flipping it → its `UnionZone` "Play 1 cost 8 or lower…" prompt). Avoided in the
+  BT26-083 lines by trashing Junomon from hand. Likely one root cause: the removal observer scan
+  includes the card that was removed.
+
+### Decode-played Digimon's `[On Play]` opens while the Decode carrier is still on the field  [G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES] — observed
+- BT26-083 `<Decode>` plays BT25-044 Junomon from its sources; Junomon's `[On Play]` "other Digimon"
+  pick opens with BT26-083 still offered (`own.field.0`). Picking it moved BT26-083 to security, then
+  the pending `<Execute>` deletion hit Junomon instead — a likely slot/handle mix-up as well as a
+  timing error (the triggered effect should wait until the carrier has left, §16-35). Declined in
+  `qa/dcgo-exams/BT26/BT26-083-effect4.yaml`, so the scenario does not depend on it.
+
+### BT25-044 Junomon card data wrong  [G-DATA-BT25-044-COLOR-ATTRIBUTE] — confirmed against the official bundle
+- `code/digimon-engine/cards/bt25/BT25-044.yaml`: `color: [yellow, white]`, `attribute: Vaccine`, no
+  Purple Lv.5 circle. `data/card_bundles/BT25-044.md` (official Bandai DB): Yellow/Purple, Virus, with
+  `Purple Lv.5 / cost 4`. Affects colour-requirement checks (e.g. Option use) and purple digivolve lines.
 
 ### Mervamon's `[On Play]` free-play pick is skipped after an `[Assembly]` play  [G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK] — observed
 - BT26-081: after the Assembly material pick, the "play up to 8 play cost's total of [Iliad] cards from

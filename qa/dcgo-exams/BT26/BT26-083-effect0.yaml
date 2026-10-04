@@ -1,0 +1,103 @@
+# Exam scenario: Junomon: Hysteric Mode (BT26-083), clause BT26-083#effect#0 --
+# "Special Digivolution Condition: [Digivolve] Lv.6 w/[TS] trait: Cost 4"
+#
+# Book: qa/dcgo-exams/BT26/tsj_extra_BT26-083.json, deck
+# `tsj-bt26-083-neptune` (= `ts-jupitermon` with -1 BT4-104 +1 BT24-030), vs
+# `tm-quiet-red`. Merge the extra book into the pool to run it (the
+# orchestrator merges it into ts_jupitermon_pool.json).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO
+# -- unconfirmed until the oracle pass.
+#
+# WHY AN EXTRA DECK. The printed colour circles (Purple Lv.6 / Yellow Lv.6)
+# also cost 4, and EVERY Lv.6 in `ts-jupitermon` is yellow, so digivolving
+# from any of them can't tell the [TS] path from a colour circle. Neptunemon
+# BT24-030 is a BLUE/BLACK Lv.6 [TS] -- only the [TS] special condition admits
+# it. It is already exam-authored (qa/dcgo-exams/BT24/BT24-030-*.yaml) and its
+# [On Play] (return P1's fewest-source Digimon) is a no-op on an empty board.
+#
+# THE LINE:
+#   T1 (P0, 0): pass.  T2 (P1, 3): pass.
+#   T3 (P0, 3): hard-play Neptunemon (12; P1 has no Digimon, no reduction):
+#            3 -> -9. [On Play]: no P1 Digimon -> nothing.
+#   T4 (P1, 9): pass -> P0 3.
+#   T5 (P0, 3): THE CLAUSE. Digivolve Neptunemon -> BT26-083 via the [TS]
+#            condition: 3 -> -1, digivolve draw (stack[12]). [When Digivolving]
+#            (effect#5 WD arm): trash 5 security, delete min(5, 0) = 0,
+#            Recovery +3. Turn ends; <Execute> end-of-turn gate declined.
+#
+# WITNESS: at 9 Neptunemon (no sources) and P0 memory 3; at 10 BT26-083 sits
+# on top of BT24-030 and P0 memory is -1 (exactly 4 paid).
+#
+# PROMPT SHAPE. One legal digivolve cost -> no cost-choice prompt on either
+# side. WD: no target pick (0 candidates); DCGO SelectPermanentEffect with 0
+# candidates should be skipped. <Execute> gate: documented end-of-turn fold.
+card: BT26-083
+clause: BT26-083#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-030, BT26-083, BT24-034, BT24-101, BT26-090,
+            BT24-031, BT25-030, BT25-033, BT24-031, BT25-030,
+            BT24-034, BT24-031, BT25-033, BT25-030, BT24-034,
+            BT24-031, BT25-030]
+    rest: tsj-bt26-083-neptune
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-030, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: digivolve via "Lv.6 w/[TS] trait: Cost 4".
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-083 } }
+    expect: { prompt: main_phase }
+  # <Execute> end-of-turn gate: decline.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      p0.memory: 3
+      p0.security: 5
+      p0.field:
+        - { card_id: BT24-030, dp: 12000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      p0.memory: -1
+      p0.security: 3
+      p0.trash: [BT24-031, BT24-031, BT25-030, BT25-030, BT25-033]
+      p0.hand: [BT24-031, BT24-034, BT24-034, BT24-101, BT25-033, BT26-090]
+      p0.field:
+        - { card_id: BT26-083, dp: 14000, suspended: false, sources: [BT24-030] }
+      p1.field: []
