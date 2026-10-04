@@ -1,0 +1,80 @@
+# Exam scenario: Aegiochusmon: Blue (BT25-025), clause BT25-025#effect#0 --
+# the special digivolution condition "[Digivolve] [Aegiomon]: Cost 3".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# WHY THIS SOURCE SEPARATES THE PATH. The printed circles are Blue Lv.4 /
+# cost 4 and Black Lv.4 / cost 4. Aegiomon BT24-034 is a YELLOW Lv.4, so
+# neither circle accepts it: the only route that makes the digivolve legal is
+# the name condition under exam, and the memory delta pins its cost at 3.
+# One route -> no cost-choice prompt on either side.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (no [TS] Tamer in hand -> its
+#       [On Play] is silent).
+#   T2 (P1, 5): hard-play Phoenixmon ST1-10 (vanilla Lv.6): 5 -> -5 -> P0 5.
+#   T3 (P0, 5): THE CLAUSE -- digivolve Aegiochusmon onto Aegiomon: 5 -> 2.
+#       Its [When Digivolving] asks ONE mandatory pick (<De-Digivolve 1> on
+#       Phoenixmon, which has no digivolution cards: nothing trashed);
+#       security 5 > 3, so no unsuspend pick.
+#   Trailing pass.
+#
+# WITNESS: p0.memory 5 -> 2 and Aegiochusmon on the field over Aegiomon.
+# PROMPT SHAPE: the digivolve asks nothing (one route). The WD body asks one
+# mandatory SelectPermanentEffect (de-digivolve; ours select_opponent_permanent);
+# the unsuspend pick is gated off (security 5). 1:1 expected.
+card: BT25-025
+clause: BT25-025#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT25-030, BT24-031, BT26-029, BT25-044,
+            BT25-030, BT24-031, BT26-073, BT26-081, BT24-101,
+            BT25-025, BT25-030, BT4-104, BT24-031, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-03, ST1-04, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: the [Aegiomon]-named route, cost 3.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-025 } }
+    expect: { prompt: main_phase }
+  # Its [When Digivolving]: <De-Digivolve 1> on Phoenixmon (sole candidate).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 5
+    that:
+      p0.memory: 5
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.field:
+        - { card_id: BT25-025, dp: 8000, suspended: false, sources: [BT24-034] }
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }

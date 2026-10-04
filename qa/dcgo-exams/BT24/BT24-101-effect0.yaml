@@ -1,0 +1,81 @@
+# Exam scenario: Jupitermon (BT24-101), clause BT24-101#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.5 w/[TS] trait: Cost 5".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# ISOLATION: Jupitermon's printed circle is Yellow Lv.5 / cost 5, and its
+# second special condition is "Lv.5 w/[Aegiochusmon] in name: Cost 1 per
+# security card". The base here is P-213 -- RED Lv.5 [Shaman/Iliad/TS], NOT
+# named Aegiochusmon -- so neither the circle nor the Aegiochusmon route
+# applies and the digivolve is legal ONLY through this clause, at cost 5.
+# Single legal route => no route-choice prompt.
+#
+# THE LINE:
+#   T1 (P0, memory 0): hard-play P-213 (cost 7: 0 -> -7; P-213 has no [On
+#      Play] -- only [When Digivolving] -- and passive <Raid>/<Decode>).
+#   T2 (P1, memory 7): all-pass -> P0 3.
+#   T3 (P0, memory 3): THE CLAUSE -- digivolve Jupitermon over P-213 for 5:
+#      3 -> -2 (digivolve draw stack[11]). Jupitermon's [When Digivolving]
+#      (effect#2) then trashes P0's top security (5 -> 4); P1 has no Digimon
+#      so its -13000 has no target; 4 > 1 so no Recovery. That security
+#      removal fires effect#3 (trash P1's top security, 5 -> 4). The turn
+#      passes to P1 at 2.
+#
+# WITNESS: memory 3 -> -2 (paid exactly 5); Jupitermon stands over P-213.
+#
+# PROMPT SHAPE: the digivolve itself asks nothing. Jupitermon's WD is
+# mandatory and its -13000 target pick is empty here (no P1 Digimon):
+# measured -- our engine asks nothing; DCGO is expected to skip an empty
+# SelectPermanentEffect as well. effect#3 is mandatory, no prompt.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT24-101
+clause: BT24-101#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [P-213, BT24-101, BT25-030, BT4-104, BT24-083,
+            BT25-022, BT24-031, BT25-030, BT24-102, BT26-090,
+            BT24-031, BT25-022, BT24-084]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: Jupitermon over the red [TS] Lv.5 for 5.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-101 } }
+    expect: { prompt: main_phase }
+  # T4 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.field:
+        - { card_id: BT24-101, dp: 13000, suspended: false, sources: [P-213] }
+      p0.security: 4
+      p1.security: 4
