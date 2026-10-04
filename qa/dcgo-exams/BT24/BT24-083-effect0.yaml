@@ -1,0 +1,105 @@
+# Exam scenario: Hiroko Sagisaka (BT24-083), clause BT24-083#effect#0 --
+# "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer
+#  to the bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait
+#  Digimon card with 5000 DP or less from your hand without paying the cost."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Hiroko (0 -> -3); her [On Play] (effect#1) reveals
+#            stack[10..12] = BT25-033, BT24-031, BT24-031: add Aegiomon, two
+#            identical Elecmon to the bottom.
+#   T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): THE CLAUSE (memory 3 <= 4). YES: Hiroko returns to the deck
+#            bottom; play Elecmon BT25-030 (2000 DP, [TS]) from hand free.
+#            Then the T3 draw (BT26-029). Elecmon's own [Start of Your Main
+#            Phase] optional cost ("by adding your top security card to the
+#            hand, gain 1 memory") opens after the breeding step -> declined.
+#            Pass -> P1 3.
+#
+# WITNESS: at 6 Hiroko is P0's only permanent, memory 3, Elecmon BT25-030 in
+# hand; at 8 Hiroko is gone (and NOT in the trash -- she went to the deck),
+# Elecmon BT25-030 is on the field, and memory is still 3 (free play).
+#
+# PROMPT SHAPE. Ours: TriggerOrder(1) -> OptionalSkill (the "by returning"
+# cost gate), then a declinable SelectHandEffect over the [TS] <=5000 DP Digimon in
+# hand (BT24-034, BT25-033, BT25-030). DCGO:
+# OptionalSkill then SelectHandEffect (canNoSelect) -- or the pick may come
+# first with the return as its cost; watch the order. Elecmon BT25-030 SoMP:
+# DCGO OptionalSkill.
+card: BT24-083
+clause: BT24-083#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-083, BT24-034, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-031, BT26-029, BT24-102, BT26-092,
+            BT25-033, BT24-031, BT24-031, BT26-029, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-031, BT24-031] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: return Hiroko to the deck bottom...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ...and play Elecmon BT25-030 from hand free.
+  - actor: 0
+    do: { select: { cards: [BT25-030] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Elecmon BT25-030 [Start of Your Main Phase]: decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      p0.memory: 3
+      p0.hand: [BT24-034, BT24-101, BT25-030, BT25-033, BT26-090]
+      p0.field:
+        - { card_id: BT24-083, dp: -1, suspended: false, sources: [] }
+  - at: 8
+    that:
+      p0.memory: 3
+      p0.hand: [BT24-034, BT24-101, BT25-033, BT26-029, BT26-090]
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-030, dp: 2000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      p0.memory: -3
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-030, dp: 2000, suspended: false, sources: [] }

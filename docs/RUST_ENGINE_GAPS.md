@@ -4572,6 +4572,108 @@ Effect"), with `inherited_keywords` reading only true inherited text.
 - **Fix:** `Game::check_turn_end` (`src/game/lifecycle.rs`) is a no-op during the End phase (`EndTurn` / `EndOfTurnAction` — `end_turn`'s own continuation decides rotation vs swing-back) and DEFERS (`Game::turn_end_check_deferred`) while an effect is still resolving: inside a drain (`effect_drain_depth > 0`), a deferred-drain scope, a `resolve_generic_selection` (callback + post-callback continuations, new `selection_resolution_depth`), or an attack in progress (`pending_attack`). The outermost `drain_effect_queue` exit and the tail of `resolve_generic_selection` re-run the deferred check. This covers every `check_turn_end` call site (Options, digivolve, link, breeding, combat terminal, decoder) at once.
 - **Tests:** `cards_behavioral` `bt24::bt24_085::bt24_085_turn_does_not_pass_mid_effect_after_used_option` (real End-phase flow via `end_turn`; failed with `turn_player() == 1` without the fix) and `bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack` (Main-phase harness; failed at the attacker prompt once `can_attack` gained the turn-player clause, without the fix).
 
+## TS Jupitermon exam-authoring findings (2026-10-04) — OPEN, logged not fixed
+
+Found while authoring the TS Jupitermon DCGO-exam scenarios
+(`qa/dcgo-exams/BT26/NOTES-BT26-TS-JUPITERMON.md`). No engine code was changed. Each
+entry names the scenario that pins today's behaviour; where that behaviour is believed
+wrong, the scenario asserts what our engine does and is expected to diverge at the oracle.
+"Confirmed in code" means the cited line was read; "suspected" means observed in a probe
+with the root cause inferred and not traced.
+
+### End-of-turn attack window never opens for a DUAL card on top  [G-ENGINE-DUAL-END-OF-TURN-WINDOW] — confirmed in code
+- **Card:** BT26-033 Jupitermon (DUAL) `<Engage>` "(At the end of your turn, this Digimon may attack.)".
+- **Cause:** `Game::has_end_of_turn_keywords` (`code/digimon-engine/src/game_phases.rs:596`) skips any
+  permanent where `!perm.top_card().is_digimon(&self.card_data)`; `CardSource::is_digimon`
+  (`card_source.rs:194`) is `card_kind == CardKind::Digimon`, false for `CardKind::Dual`. The mask
+  (`mask.rs` ~590) and decoder (`decode.rs` ~331) accept the attack — only this gate excludes it.
+  `Permanent::is_digimon_for_rules` (`permanent.rs:380`) counts Dual.
+- **Blast radius:** every end-of-turn attack keyword (Engage / Vortex / Overclock / MayAttack / Execute)
+  on a DUAL card in play.
+- **Pinned by:** `qa/dcgo-exams/BT26/BT26-033-effect3.yaml` (asserts no window; the oracle line is
+  expected to abort on DCGO's unanswered end-of-turn OptionalSkill — that abort is the finding).
+
+### `<Barrier>` replacement offered for a deletion that is not the carrier's  [G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED] — reported twice, consistent
+- **Symptom:** P0's Digimon carries `<Barrier>` (printed BT24-034, or inherited via P-213 / Aegiomon).
+  When the OPPONENT's Digimon is deleted in battle against it, the opponent (player 1) is parked on
+  "May accept replacement: <Barrier>". Yes and No leave identical state.
+- **Cause (suspected, by comparison):** `code/digimon-engine/src/cards/keyword_effects.rs` ~611 — the
+  Barrier `replacement_condition` does not check that the deleted card is the Barrier carrier;
+  `replacement_process` does (and no-ops otherwise). The `Keyword::Evade` arm below checks at
+  candidate collection, with a comment describing this symptom.
+- **Effect:** a phantom, outcome-free RL decision for the wrong player; DCGO asks nothing.
+- **Pinned by:** `qa/dcgo-exams/P/P-213-effect1.yaml`, `qa/dcgo-exams/BT24/BT24-041-effect3.yaml`
+  (each answers the phantom prompt with a `sim_only` decline row for actor 1).
+
+### No Counter window when the attack targets the player  [G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK] — confirmed in code, impact unverified
+- `try_enter_counter` (`code/digimon-engine/src/combat/mod.rs:1499`) returns `false` for
+  `AttackTarget::Player(_)`. `general_rule.pdf` §11-1-3 places Counter timing in every attack
+  (declaration → Counter → Block → …), and `<Blast Digivolve>` is commonly used against attacks on the
+  player. Verify against DCGO (`OnCounterTiming`) before fixing; it may be intentional for a reason not
+  documented at the site. Related: G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG in `qa/dsl-vocab-gaps.md`.
+
+### Aura-granted `<Reboot>` does not unsuspend in the opponent's unsuspend phase  [G-ENGINE-AURA-REBOOT-NOT-APPLIED] — suspected
+- **Card:** BT24-041 Minervamon `[Opponent's Turn] All of your [Iliad] trait Digimon gain <Reboot> and <Blocker>`.
+- **Symptom:** the granted `<Blocker>` works on the opponent's turn; the granted `<Reboot>` does not —
+  the [Iliad] Digimon stays suspended through the opponent's T6 main phase.
+- **Suspected cause:** the Reboot scan (`game_phases.rs` ~166-190) reads `has_keyword`, whose granted
+  half comes from the materialized keyword map, which is likely not refreshed for the
+  `[Opponent's Turn]` window before the unsuspend phase.
+- **Pinned by:** `qa/dcgo-exams/BT24/BT24-041-effect3.yaml` (step-16 assert `suspended: true`; DCGO expected `false`).
+
+### A security card's own `[All Turns]` "security removed" trigger fires as it leaves security  [G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH] — observed on two cards
+- When BT24-101 is itself the security card trashed (Barrier cost, Blinding Ray), its
+  `[All Turns][OPT] When your security stack is removed from, trash your opponent's top security card`
+  still fires (no prompt via the Barrier cost; offered as a TriggerOrder candidate beside Blinding Ray).
+  A security card is not in play (§13-1-5 analogue: not a battle-area permanent), so its `[All Turns]`
+  effect should not be live. Workaround in `BT24-034-effect1`, `BT24-034-inherited0`,
+  `BT25-025-inherited0`: a different card sits on top of security.
+- **Second card:** BT25-044 Junomon's `[All Turns]` "When your security stack is removed from" fires
+  when Junomon ITSELF leaves security (Blinding Ray trash → `TriggerOrder [BT4-104, BT25-044]`; a
+  security check flipping it → its `UnionZone` "Play 1 cost 8 or lower…" prompt). Avoided in the
+  BT26-083 lines by trashing Junomon from hand. Likely one root cause: the removal observer scan
+  includes the card that was removed.
+
+### Decode-played Digimon's `[On Play]` opens while the Decode carrier is still on the field  [G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES] — observed
+- BT26-083 `<Decode>` plays BT25-044 Junomon from its sources; Junomon's `[On Play]` "other Digimon"
+  pick opens with BT26-083 still offered (`own.field.0`). Picking it moved BT26-083 to security, then
+  the pending `<Execute>` deletion hit Junomon instead — a likely slot/handle mix-up as well as a
+  timing error (the triggered effect should wait until the carrier has left, §16-35). Declined in
+  `qa/dcgo-exams/BT26/BT26-083-effect4.yaml`, so the scenario does not depend on it.
+
+### BT25-044 Junomon card data wrong  [G-DATA-BT25-044-COLOR-ATTRIBUTE] — confirmed against the official bundle
+- `code/digimon-engine/cards/bt25/BT25-044.yaml`: `color: [yellow, white]`, `attribute: Vaccine`, no
+  Purple Lv.5 circle. `data/card_bundles/BT25-044.md` (official Bandai DB): Yellow/Purple, Virus, with
+  `Purple Lv.5 / cost 4`. Affects colour-requirement checks (e.g. Option use) and purple digivolve lines.
+
+### Mervamon's `[On Play]` free-play pick is skipped after an `[Assembly]` play  [G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK] — observed
+- BT26-081: after the Assembly material pick, the "play up to 8 play cost's total of [Iliad] cards from
+  hand or trash" pick is never parked although the hand holds eligible cards; the next prompt is the DP
+  pick. A hard play from the same board parks it. Not covered by `bt26_081.rs` (no On-Play-after-Assembly test).
+- **Pinned by:** `qa/dcgo-exams/BT26/BT26-081-effect4.yaml`.
+
+### `[Once Per Turn]` trigger re-queued after resolving with no target  [G-ENGINE-OPT-NOOP-REQUEUE] — observed, low
+- BT26-103 `#effect#6` ("When security stacks are removed from, 1 of your opponent's Digimon gets
+  -15000 DP") resolved as a no-op is re-queued on each further security removal in the same turn
+  (three times in `BT26-103-effect4.yaml`). Likely the same family as
+  G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER; adds TriggerOrder rows DCGO will not have.
+
+### `refire_effect` offers a combined `[On Play][When Digivolving]` effect as two choices  [G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING] — observed, low
+- BT24-102 Homeros `[End of Your Turn]` "activate 1 [On Play] or [When Digivolving] effect" lists
+  BT24-101's single dual-timing effect as two branches — a decision the rules do not grant.
+  Answered `sim_only` in `qa/dcgo-exams/BT24/BT24-102-effect1.yaml`.
+
+### Exam tooling
+- **`PlayCostBudget` always maps to `SelectPermanentEffect`** [G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE] —
+  wrong for a hand/trash budget pick (BT26-081 Mervamon), where DCGO uses a zone menu then the zone's
+  widget. Worked around with a `sim_only` + `dcgo_only` row pair in the BT26-081 scenarios.
+- **`actor:` not validated on `pass` / main-phase steps** [G-TOOLING-EXAM-ACTOR-UNCHECKED] — a `pass`
+  written for actor 0 lowered and applied during P1's breeding phase with no error, so a wrong-seat
+  step can hide in a sim-only run.
+- **No OptionalSkill fold on a `Security`-kind pick** [G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD] — BT24-031's
+  inherited "you may add your top security card to the hand" is our Security pick; DCGO most likely asks
+  a bare OptionalSkill. The harness refuses `expect: OptionalSkill` on that kind, so
+  `BT24-031-inherited0.yaml` is expected to show a prompt-class mismatch at the oracle.
 
 ## Residual gaps surfaced by the BT26 meta-blockers pass (2026-10-03)
 

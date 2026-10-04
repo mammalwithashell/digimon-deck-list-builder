@@ -1,0 +1,101 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#0 -- the special
+# digivolution condition "[Digivolve] [Minervamon]: Cost 2".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION. Minervamon BT24-041 is a Lv.6; Mervamon's printed circles and its
+# other special condition ("Lv.5 w/[TS]: Cost 4") all require a Lv.5 base, so
+# the T5 digivolve is legal ONLY through the [Minervamon] name condition.
+#
+# THE LINE:
+#   T1 (P0, 0): pass -> P1 3.      T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): hard-play Minervamon (12; no [Iliad] on board, so no -5
+#       reduction): 3 -> -9. Its [On Play] optional hand play of a cost<=5
+#       [Iliad] card is DECLINED (De-Digivolve half: no opponent Digimon).
+#   T4 (P1, 9): pass -> P0 3.
+#   T5 (P0, 3): THE CLAUSE -- digivolve Minervamon -> Mervamon for 2 (3 -> 1).
+#       Mervamon's [When Digivolving] (effect#2): the "up to 8 cost of [Iliad]
+#       from hand or trash" pick is DECLINED; the -4000 DP half has no
+#       opponent Digimon (skipped). Pass at 1.
+#
+# WITNESS: the digivolve lowers off a Lv.6 at all; Mervamon stands over
+# Minervamon (dp 15000 = 13000 + its own [All Turns] +2000 to [Iliad]); P0
+# paid exactly 2 (memory 3 -> 1); hand = 5 opening - 2 played + T3/T5 draws +
+# digivolve bonus draw.
+#
+# PROMPT SHAPE / DCGO quirks to triage:
+#   - Minervamon [On Play]: ours = one declinable hand pick; authored as the
+#     OptionalSkill fold. If DCGO's effect is non-optional, change to
+#     SelectHandEffect.
+#   - Mervamon WD pick: ours parks a PlayCostBudget trampoline (adapter maps it
+#     to SelectPermanentEffect, which is wrong for this card -- DCGO loops a
+#     zone menu hand/trash/stop then picks from the zone widget). Authored as
+#     a sim_only decline + a dcgo_only SelectHandEffect decline, GUESSING that
+#     DCGO skips the zone menu when only the hand qualifies (trash empty). If
+#     DCGO asks the menu, replace the dcgo_only row with its "stop" generic_int
+#     value from the oracle abort message.
+card: BT26-081
+clause: BT26-081#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-081, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-081 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [BT24-041] }
+      p0.hand: [BT24-034, BT24-034, BT24-101, BT25-030, BT25-030, BT26-090]
+      p1.field: []

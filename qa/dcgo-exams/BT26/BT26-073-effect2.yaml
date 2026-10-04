@@ -1,0 +1,94 @@
+# Exam scenario: Aegiochusmon: Dark (BT26-073), clause BT26-073#effect#2 --
+# "[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less
+#  from your hand or trash without paying the cost. (Rule) Trait: Has [Wizard]
+#  Type."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (BT26-073-effect1.yaml's line, accepting the [On Deletion]):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): Agumon ST1-03 (3 -> 0); pass -> P0 3.
+#   T3 (P0, 3): hard-play Dark (8: 3 -> -5). [On Play] (effect#1): cost
+#       "Delete this Digimon" -> Dark deleted -> Agumon deleted. THE CLAUSE:
+#       Dark's [On Deletion] -- play Inori Misono BT24-084 ([TS] Tamer, cost 3,
+#       NO [On Play], so the free play is silent) from the HAND for free.
+#   T4 (P1, 5): the trailing step.
+#
+# WITNESS: Inori is on P0's field (unsuspended, no sources) and gone from the
+# hand; Dark and Agumon are in the trashes from effect#1.
+# The (Rule) [Wizard] grant has no observable consumer in this deck; it rides
+# along as part of the clause text only.
+#
+# PROMPT SHAPE / DCGO quirks to triage:
+#   - Cost menu (sim-only choice + dcgo_only generic_int value 1): value is a
+#     GUESS (DCGO C# unreadable in the authoring container).
+#   - [On Deletion]: DCGO = OptionalSkill (yes, dcgo_only) then a zone menu
+#     {From hand | From trash | Don't play} -- expected to be SKIPPED because
+#     only the hand holds a qualifying card (trash: Dark itself, cost 8) --
+#     then SelectHandEffect. Ours = one UnionZone pick over hand+trash. If
+#     DCGO asks the zone menu anyway, add a dcgo_only `value: 1` row before
+#     the pick.
+card: BT26-073
+clause: BT26-073#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-073, BT24-084, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-073, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Delete this", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT24-084] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      turn: 4
+      p0.field:
+        - { card_id: BT24-084, dp: -1, suspended: false, sources: [] }
+      p1.field: []
+      p0.trash: [BT26-073]
+      p1.trash: [ST1-03]
+      p1.memory: 5
+      p0.hand: [BT24-034, BT24-101, BT25-030, BT26-090]

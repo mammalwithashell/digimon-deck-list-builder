@@ -1,0 +1,114 @@
+# Exam scenario: Shota Kuroi (BT26-092), clause BT26-092#effect#1 --
+# "[Opponent's Turn] When one of your opponent's Digimon attacks, by returning
+#  1 of your [TS] trait Tamers to the bottom of the deck, you may change the
+#  attack target to 1 of your Digimon with the [TS] trait."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, memory 0): hard-play Shota Kuroi (0 -> -3) -> P1 3.
+#   T2 (P1, memory 3): play Biyomon ST1-02 (vanilla 3000, cost 2: 3 -> 1);
+#      pass -> P0 3.
+#   T3 (P0, memory 3): Shota's own [Start of Your Main Phase] (BT26-092#
+#      effect#0) asks for a [TS] hand card to trash -- declined. Play Elecmon
+#      BT25-030 ([TS], 2000 DP, no [On Play]): 3 -> 0; pass -> P1 3.
+#   T4 (P1, memory 3): Biyomon attacks P0 (security). THE CLAUSE:
+#      Shota returns ITSELF (the only [TS] Tamer) to the bottom of P0's deck
+#      and the attack is redirected to Elecmon. Biyomon 3000 beats Elecmon
+#      2000: Elecmon is deleted, and NO security card is checked.
+#
+# WITNESS (pre-state of P1's trailing pass): p0.security still 5 (the attack
+# never reached security); p0.field empty (Shota left to the deck bottom --
+# NOT the trash -- and Elecmon was deleted in the redirected battle);
+# p0.trash = [BT25-030]; Biyomon suspended.
+#
+# PROMPT SHAPE: ours = an optional trigger whose first body step is a
+# declinable OwnField pick of the [TS] Tamer (one prompt = gate + pick), then
+# a second declinable OwnField pick of the new defender. DCGO (YAML crosscheck
+# of BT26_092.cs): OnAllyAttack optional -> OptionalSkill, then a
+# canNoSelect SelectPermanentEffect for the Tamer, DeckBounce, then a
+# canNoSelect SelectPermanentEffect for the [TS] Digimon -> SwitchDefender.
+# The Tamer pick is therefore authored with the optional_gate_fold
+# (`expect: {prompt: OptionalSkill}` -> OptionalSkill(yes) + the pick on the
+# wire). The T3 Shota start-of-main decline: DCGO's trigger is not optional
+# but its hand pick is canNoSelect -> one SelectHandEffect, 1:1.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-092
+clause: BT26-092#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-092, BT25-030, BT24-034, BT24-101, BT4-104,
+            BT25-022, BT24-031, BT26-029, BT24-102, BT26-090,
+            BT24-083, BT25-033, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-092, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Shota's [Start of Your Main Phase] trash-a-[TS]-card cost -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT25-030, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, cost: return Shota (the only [TS] Tamer) to the deck bottom.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE, effect: redirect the attack to Elecmon (slot 0 once Shota has
+  # left; the wire carries the card identity BT25-030, not the slot).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field: []
+      p0.trash: [BT25-030]
+      p0.hand: [BT24-034, BT24-101, BT4-104, BT24-083]
+      p1.security: 5
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
