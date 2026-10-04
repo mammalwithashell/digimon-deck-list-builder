@@ -95282,7 +95282,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Virus"
     ],
     "effect_description_eng": "When this card would be played, if there are 6 or fewer total cards in both players' security stacks, reduce the cost by 5.\r\n[On Play] [When Digivolving] By placing 1 other Digimon as the top security card, trash both players' top security cards.\r\n[All Turns] [Once Per Turn] When your security stack is removed from, you may play 1 play cost 8 or lower [Angel], [Archangel] or [Iliad] trait card from your hand or trash without paying the cost.",
     "inherited_effect_description_eng": "",

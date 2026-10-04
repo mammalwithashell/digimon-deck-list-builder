@@ -55,6 +55,8 @@ REVIEWED = (
     "ST24-11",
     # Missing or misfiled text, a missing trait, or a missing special digivolution condition.
     "BT8-061", "BT13-006", "BT22-001", "BT24-020", "BT24-022", "EX10-069", "BT20-073", "BT24-025",
+    # Its Virus attribute override (d3fb5686e) had never been applied to cards.json (2026-10-04).
+    "BT25-044",
 )
 
 # What the card prints, where data/card_official.json is wrong (checked against the card
