@@ -37,7 +37,7 @@
 //!   (same DCGO factory `Gain2MemoryOptionDelayEffect`).
 //!
 //! - **Inherited [Security] place-self-as-Delay** — `place_self_as_delay_option`
-//!   step under `scope: inherited` + `when: on_security`. RESOLVED gap
+//!   step under `when: on_security`. RESOLVED gap
 //!   G-PLACE-SELF-AS-OPTION-PERMANENT (2026-05-02). Behavioral coverage of
 //!   the substrate lives in `option_flow::inherited_security_option`; this
 //!   test asserts that the clause is structurally present and lowers to the
@@ -70,7 +70,7 @@
 //!    No [OPT] — single-fire is enforced by the trash-cost self-limit.
 //!
 //! 3. **[Security] (inherited) place this card in battle area** —
-//!    `scope: inherited` + `when: on_security` + `process:
+//!    `when: on_security` + `process:
 //!    [place_self_as_delay_option: {}]`. Matches DCGO
 //!    `PlaceSelfDelayOptionSecurityEffect`. Mandatory (no canNoSelect on
 //!    the DCGO factory; `optional: false` here).

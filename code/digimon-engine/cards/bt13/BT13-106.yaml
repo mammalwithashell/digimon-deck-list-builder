@@ -147,8 +147,7 @@ effects:
   # "Security Effect [Security] Activate this card's [Main] effects." DCGO
   # SecuritySkill -> AddActivateMainOptionSecurityEffect (BT24-097 idiom:
   # scope: inherited, when: on_security, body mirrors Main).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate [Main] effects: -3000 DP to 1 opp Digimon; then maybe <Security A. -1> to all opp Digimon"
     process:
       - select_opponent_permanent:

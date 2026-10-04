@@ -34,8 +34,7 @@ effects:
     process:
       - gain_memory: 2
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Place this card in the battle area"
     process:
       # G-PLACE-SELF-AS-OPTION-PERMANENT resolved 2026-05-02.

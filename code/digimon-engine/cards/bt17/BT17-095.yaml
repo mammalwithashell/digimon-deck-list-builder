@@ -278,8 +278,7 @@ effects:
   #
   # `add_this_option_to_hand: {}` (RESOLVED 2026-05-02) handles the printed
   # tail "Then, add this card to the hand."
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 [Tai Kamiya]/[Matt Ishida] from hand or trash free; then add self to hand"
     process:

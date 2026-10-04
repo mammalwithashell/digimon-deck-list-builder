@@ -203,8 +203,7 @@ effects:
   # DCGO: SecuritySkill timing → SelectTrashCardEffect(canNoSelect: true) →
   #        PlayFromTrashEffect → AddThisCardToHand.
   # optional: true — "you may" gates the entire clause.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 green Digimon (≤2000 DP) from trash free; then add this card to hand"
     process:

@@ -133,8 +133,7 @@ effects:
   # without paying the cost. Then, add this card to the hand."
   # optional: true — "you may" gates the trash play; the add-to-hand tail is
   # mandatory and runs regardless (G-OPTIONAL-SELECTION-CONTINUE-TAIL closed).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 black Digimon (<=2000 DP) from trash free; then add this card to hand"
     process:

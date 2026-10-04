@@ -164,8 +164,7 @@ effects:
           cost_delta: { reduce: 3 }
 
   # ─── [Security][Inherited] play lvl4- green/yellow TS from hand/trash free ──
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 level 4 or lower green/yellow TS Digimon from hand or trash free"
     process:

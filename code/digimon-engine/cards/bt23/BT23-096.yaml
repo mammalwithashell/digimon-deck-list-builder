@@ -239,8 +239,7 @@ effects:
   # no canNoSelect — mandatory. `place_self_as_delay_option: {}` (RESOLVED
   # 2026-05-02 G-PLACE-SELF-AS-OPTION-PERMANENT) places this Option from the
   # security-resolution context as `OptionState::Delayed`.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] <De-Digivolve 4> 1 opp Digimon; then place self in battle area as Delay"
     condition:

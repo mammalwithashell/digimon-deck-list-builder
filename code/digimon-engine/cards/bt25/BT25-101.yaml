@@ -90,8 +90,7 @@ effects:
                 prompt: "Link this card or 1 [TS] trait card from your trash to 1 of your Digimon"
 
   # ─── [Security] Activate this card's [Main] effects ─────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate [Main]: trash 1 [TS] from hand → Draw 2 → may link self/TS-from-trash"
     process:
       - select_hand:

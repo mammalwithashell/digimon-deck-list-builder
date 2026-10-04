@@ -34,7 +34,7 @@
 //!     ALL opponent battle-area Digimon. -> `when: main_from_hand`.
 //!   - `EffectTiming.SecuritySkill` ([Security]):
 //!     `AddActivateMainOptionSecurityEffect` re-runs the same [Main] body. ->
-//!     `scope: inherited, when: on_security`.
+//!     `when: on_security`.
 //!
 //! # Patterns this test covers (docs/RUST_DSL_TEST_API.md §4.3)
 //! - F5-adjacent  OnDiscardSecurity re-activates [Main] (not a normal

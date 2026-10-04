@@ -86,8 +86,7 @@ effects:
             - preattach_digixros_material: { card: placed_one, cost_delta: -2 }
 
   # ─── Clause 3 — [Security] play this card free ─────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Play this card without paying its memory cost"
     process:
       - play_from_security: {}

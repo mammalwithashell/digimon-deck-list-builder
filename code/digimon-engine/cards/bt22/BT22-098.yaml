@@ -54,8 +54,7 @@ effects:
       - play_union_bound_free:
           binding: pick
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Activate [Main]: union-zone play (Shoemon/Arisa from hand or trash), then place self in battle area"
     process:

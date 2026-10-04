@@ -58,8 +58,7 @@ effects:
   # Security Effect: may play [Omekamon] or [Cool Boy] from hand or trash free;
   # then place this card in the battle area. Branching mirrors existing union
   # hand/trash play workarounds.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security] You may play [Omekamon] or [Cool Boy] from hand or trash free; then place self in battle area"
     process:

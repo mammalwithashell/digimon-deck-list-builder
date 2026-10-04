@@ -98,8 +98,7 @@ effects:
 
   # ─── [Security] may play 1 play cost ≤ 5 [Appmon] card from hand or trash,
   #     free; then add this card to the hand ──────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost. Then, add this card to the hand"
     process:
       - select_union_zone:

@@ -170,8 +170,7 @@ effects:
   # `select_count_capped_multi { max: 2, clamp_to_available }` (Math.Min(2,
   # count)) + per_selected add_modifier SecurityAttackChange -2 end_of_turn.
   # `add_this_option_to_hand` routes this Option from security staging to hand.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] 2 opp Digimon get <Security A. -2> for the turn; then add this card to hand"
     process:

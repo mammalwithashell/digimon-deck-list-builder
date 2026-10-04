@@ -55,8 +55,7 @@ effects:
           hand_index: revived
 
   # ─── Clause 1 — [Security] mirror ──────────────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate this card's [Main] effect"
     process:
       - select_opponent_permanent:

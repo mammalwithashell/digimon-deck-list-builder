@@ -118,8 +118,7 @@ effects:
       - play_union_bound_free: { binding: titan_pick }
 
   # ─── [Security] may play 1 Lv.<=4 [Titan] Digimon from hand or trash free ─
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost"
     process:
       - select_union_zone:

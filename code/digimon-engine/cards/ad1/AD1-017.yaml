@@ -117,8 +117,7 @@ effects:
   # turn") on the first, then -3000 DP (expiry end_of_your_turn = "until your
   # turn ends") on the second. From the security owner's perspective, "your
   # opponent" is resolved by `select_opponent_permanent`.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Give 1 opp Digimon Security A. -1; then 1 opp Digimon gets -3000 DP until your turn ends"
     process:
       - select_opponent_permanent:

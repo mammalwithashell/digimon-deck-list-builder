@@ -552,6 +552,25 @@ fn validate_triggered(
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
+    // A blue `[Security]` effect activates from the security check, never
+    // from under a Digimon, and the engine's security-check path ignores the
+    // inherited flag. `scope: inherited` here only mirrors where the
+    // digimoncard.io ingest happens to store an Option's security text
+    // (`inherited_effect_description_eng`), so reject it as misleading.
+    let has_on_security = match &t.when {
+        crate::clause::TimingSet::Single(w) => *w == crate::clause::Timing::OnSecurity,
+        crate::clause::TimingSet::Multi(ws) => ws.contains(&crate::clause::Timing::OnSecurity),
+    };
+    if has_on_security && t.scope == crate::clause::ClauseScope::Inherited {
+        errors.push(ValidationError {
+            card_id: card_id.to_string(),
+            path: format!("{prefix}.scope"),
+            message: "`when: on_security` with `scope: inherited` — a [Security] effect \
+                      never fires from under a Digimon; drop `scope:` (or use \
+                      `scope: security` for a pink {Security} effect)"
+                .to_string(),
+        });
+    }
     if let Some(cond) = &t.condition {
         validate_predicate(cond, &format!("{prefix}.condition"), card_id, ctx, errors);
     }
@@ -3065,6 +3084,42 @@ effects:
         assert!(errs
             .iter()
             .any(|e| e.message.contains("unregistered_formula_fn")));
+    }
+
+    fn security_clause_spec(scope_line: &str) -> CardSpec {
+        let yaml = format!(
+            r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: on_security{scope_line}
+    process:
+      - set_memory: 3
+"#
+        );
+        serde_yml::from_str(&yaml).unwrap()
+    }
+
+    #[test]
+    fn on_security_rejects_inherited_scope() {
+        let spec = security_clause_spec("\n    scope: inherited");
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.path == "effects[0].scope" && e.message.contains("on_security")));
+    }
+
+    #[test]
+    fn on_security_accepts_default_and_security_scope() {
+        let reg = StubRegistry::empty();
+        for scope_line in ["", "\n    scope: security"] {
+            let spec = security_clause_spec(scope_line);
+            assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+        }
     }
 
     #[test]

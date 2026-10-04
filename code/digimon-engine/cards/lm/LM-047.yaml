@@ -52,8 +52,7 @@ effects:
       - gain_memory: 2
 
   # Security Effect [Security] Place this card in the battle area.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

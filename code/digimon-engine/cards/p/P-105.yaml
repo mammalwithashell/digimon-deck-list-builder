@@ -53,8 +53,7 @@ effects:
           cost: { reduce: 2 }
           ignore_requirements: false
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Place this card in the battle area"
     process:

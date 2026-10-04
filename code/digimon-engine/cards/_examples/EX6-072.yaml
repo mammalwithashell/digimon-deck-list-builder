@@ -77,8 +77,7 @@ effects:
   # to the hand. Then, add this card to the hand."
   # select_trash is NON-optional (DCGO canNoSelect: () => false); it auto-skips
   # when no eligible card exists, so add_this_option_to_hand always fires.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Return 1 L6+ Digimon from trash to hand, then add this card to hand"
     process:
       - select_trash:

@@ -178,8 +178,7 @@ effects:
   # Printed: "[Security] Activate this card's [Main] effects."
   # DCGO: AddActivateMainOptionSecurityEffect — the security trigger re-runs
   # the same Main process (mandatory delete, then optional free link).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate [Main] effects: delete 1 opponent's level 6 or higher Digimon; then you may link this card free"
     process:
       - select_opponent_permanent:

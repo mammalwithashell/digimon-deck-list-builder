@@ -71,8 +71,7 @@ effects:
                 suppress_on_play: true
 
   # ─── Clause 1 — [Security] mirror ────────────────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate this card's [Main] effects"
     process:
       - select_opponent_permanent:

@@ -65,8 +65,7 @@ effects:
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Activate [Main]: play Sunarizamon/Close from hand or trash, then place self in battle area"
     process:

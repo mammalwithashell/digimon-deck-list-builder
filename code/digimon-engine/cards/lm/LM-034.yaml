@@ -237,8 +237,7 @@ effects:
   # in the owner's battle area, then dispatches `OnOptionPlaced`.
   # (RESOLVED 2026-05-02 — see qa/dsl-vocab-gaps.md
   # G-PLACE-SELF-AS-OPTION-PERMANENT for the inherited-security context.)
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] Place this card in the battle area as a Delay permanent"
     process:

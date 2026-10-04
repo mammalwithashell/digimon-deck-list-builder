@@ -39,8 +39,7 @@ effects:
     process:
       - gain_memory: 2
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

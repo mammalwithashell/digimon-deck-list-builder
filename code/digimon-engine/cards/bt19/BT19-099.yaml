@@ -201,8 +201,7 @@ effects:
   # Printed inherited (security): "Security Effect [Security] Place this card
   # in the battle area." A bare mandatory self-placement (DCGO:
   # PlaceSelfDelayOptionSecurityEffect).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] Place self in the battle area as a Delay-Option"
     process:

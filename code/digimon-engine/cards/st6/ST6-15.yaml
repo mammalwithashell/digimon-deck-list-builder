@@ -26,8 +26,7 @@ effects:
                 prompt: "Delete 1 opponent level 4 or lower Digimon"
             - delete_permanent: { target: target }
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Delete 1 opponent level 4 or lower Digimon"
     process:
       - select_opponent_permanent:

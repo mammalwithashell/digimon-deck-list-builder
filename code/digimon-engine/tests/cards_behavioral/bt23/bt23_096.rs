@@ -36,7 +36,7 @@
 //!   event-gated Delay lowering, attack-event fan-out, and attacker context.
 //!
 //! - **Inherited [Security] same-shape body + `place_self_as_delay_option`** —
-//!   `scope: inherited` + `when: on_security` mirrors BT22-099 Clause 3 with
+//!   `when: on_security` mirrors BT22-099 Clause 3 with
 //!   the BT17-095 placement tail.
 //!
 //! # Faithfulness audit (per clause)
@@ -60,8 +60,7 @@
 //!    `DelayTrigger::OnEvent(OnAllyAttack)`, rejects non-CS attackers, and
 //!    trashes BT23-096 before the de-digivolve body resolves.
 //!
-//! 3. **[Security] (inherited) same body** — `scope: inherited` + `when:
-//!    on_security` + same select/de-digi/place body. Mandatory (no canNoSelect
+//! 3. **[Security] same body** — `when: on_security` + same select/de-digi/place body. Mandatory (no canNoSelect
 //!    on DCGO `SetIsSecurityEffect(true)` factory; `optional: false` here).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]

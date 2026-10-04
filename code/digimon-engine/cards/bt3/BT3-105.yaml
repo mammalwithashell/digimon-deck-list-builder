@@ -87,8 +87,7 @@ effects:
           expiry: end_of_opponents_next_turn
 
   # ─── Clause 2: [Security] opponent's Digimon can't attack players this turn ─
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Your opponent's Digimon can't attack players for the turn"
     process:

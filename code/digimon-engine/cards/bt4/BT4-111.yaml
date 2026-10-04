@@ -44,8 +44,7 @@ effects:
             - 10
 
   # ─── [Security] gain 2 memory ────────────────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Gain 2 memory"
     process:

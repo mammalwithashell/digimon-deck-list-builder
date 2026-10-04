@@ -298,8 +298,7 @@ effects:
   # (DrawAndDiscardCards + PlaceDelayOptionCards) under
   # `EffectTiming.SecuritySkill`. Mandatory (no canNoSelect on the DCGO
   # activate class; [Security] effects are not opt-out per RULES_CONTEXT §16).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] Draw 2; trash 2 cards from hand; place self as Delay"
     process:

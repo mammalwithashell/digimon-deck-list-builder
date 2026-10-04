@@ -117,8 +117,7 @@ effects:
   # Printed: "Security Effect [Security] Add this card to the hand."
   # Mandatory — no optional: flag. Lowers to
   # EffectContext::add_pending_security_to_hand() via add_this_option_to_hand.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Add this card to the hand"
     process:
       - add_this_option_to_hand: {}

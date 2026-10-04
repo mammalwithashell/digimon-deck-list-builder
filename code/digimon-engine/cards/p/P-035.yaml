@@ -132,8 +132,7 @@ effects:
   # DCGO: PlaceSelfDelayOptionSecurityEffect — places option as Delay permanent.
   # place_self_as_delay_option consumes the pending_security card and places it
   # in the owner's battle area as an OptionState::Delayed permanent.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

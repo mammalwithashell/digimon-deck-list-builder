@@ -148,8 +148,7 @@ effects:
   # "Security Effect [Security] Activate this card's [Main] effects."
   # DCGO: AddActivateMainOptionSecurityEffect — replays the OptionSkill coroutine.
   # The process mirrors Clause 1 exactly (same reveal + select + free-play body).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security][Inherited] Activate [Main] effects (reveal top 3 + free-play)"
     process:

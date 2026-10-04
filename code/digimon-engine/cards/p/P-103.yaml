@@ -151,8 +151,7 @@ effects:
   # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
   # "Security Effect [Security] Place this card in the battle area."
   # DCGO: PlaceSelfDelayOptionSecurityEffect — places option as Delay permanent.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

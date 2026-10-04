@@ -243,8 +243,7 @@ effects:
   #   - optional Digimon play is guarded by count_gte and an explicit
   #     select_effect_choice ["Play Digimon", "Decline"] branch
   #   - add_this_option_to_hand is a sibling tail step that always fires
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Inherited][Security] You may play 1 Digimon cost <=3 from hand or trash free; then add self to hand (mandatory)"
     process:

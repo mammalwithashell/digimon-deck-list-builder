@@ -295,14 +295,13 @@ fn delay_attack_triggers_lower_to_on_event_delay() {
 fn place_self_as_delay_option_step_parses_and_compiles() {
     let yaml = r#"
 card: TEST-PLACE
-name: "Inherited Security Placement"
+name: "Security Placement"
 kind: option
 color: [red]
 cost: 0
 traits: []
 effects:
-  - scope: inherited
-    when: on_security
+  - when: on_security
     process:
       - place_self_as_delay_option: {}
 "#;

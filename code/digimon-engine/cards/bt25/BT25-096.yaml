@@ -136,8 +136,7 @@ effects:
 
   # ─── [Security] may play a [Gaomon]/[Thomas H. Norstein] from hand or trash
   #     free; then add this card to hand ────────────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] You may play 1 [Gaomon] or [Thomas H. Norstein] from your hand or trash without paying the cost; then add this card to the hand"
     process:
       - select_union_zone:

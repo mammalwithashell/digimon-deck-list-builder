@@ -66,8 +66,7 @@ effects:
               - kind: digimon
               - trait_has: TS
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate [Main] effects: return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
     process:
       - for_each:

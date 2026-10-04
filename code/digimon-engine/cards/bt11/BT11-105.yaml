@@ -223,8 +223,7 @@ effects:
                       cost: printed
 
   # ─── Clause 2 — [Security] (inherited scope) ────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: true
     summary: "[Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest"
     process:

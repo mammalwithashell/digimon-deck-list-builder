@@ -52,8 +52,7 @@ effects:
           source_controller: opponent
           expiry: end_of_opponents_turn
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] De-Digivolve 1, then delete opponent Digimon with play cost 3 or less"
     process:
       - select_opponent_permanent:

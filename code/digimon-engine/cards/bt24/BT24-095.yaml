@@ -57,8 +57,7 @@ effects:
               - kind: digimon
               - trait_has: TS
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate [Main] effects: suspend 1 opponent Digimon or Tamer; it cannot unsuspend; then optionally link this card"
     process:
       - select_opponent_permanent:

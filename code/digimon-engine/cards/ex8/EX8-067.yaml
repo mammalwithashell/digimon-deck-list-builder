@@ -136,8 +136,7 @@ effects:
                 target: event_target
 
   # ─── Clause 2: [Security] Play this card without paying the cost ──────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

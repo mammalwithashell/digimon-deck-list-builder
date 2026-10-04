@@ -41,7 +41,7 @@
 //!   - The comprehensive Delay flow (cost, hand pick, digivolve, prevent) is
 //!     already exercised by option_flow/replacement_integration.rs.
 //!
-//! - Clause C (Security inherited): `scope: inherited`, `when: on_security`,
+//! - Clause C (Security): `when: on_security`,
 //!   `optional: true`. Workaround G-DSL-UNION-PLAY-FREE: zone-choice
 //!   branching (select_effect_choice). Places self as Delay-Option permanent.
 //!   - Structural: scope, timing, optional.
@@ -627,7 +627,7 @@ fn bt17_097_delay_fires_for_battle_deletion_of_free_digimon() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — Clause C: [Security] (inherited) Davis/Ken Tamer + place self
+// Section 4 — Clause C: [Security] Davis/Ken Tamer + place self
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Smoke test: firing the Security clause on a placed BT17-097 (inherited)

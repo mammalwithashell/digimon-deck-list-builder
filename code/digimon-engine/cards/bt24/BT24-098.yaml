@@ -109,8 +109,7 @@ effects:
 
   # ─── [Security] may play 1 level 4 or lower [Titan] Digimon from hand or
   #     trash free; then add this card to the hand ──────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] You may play 1 level 4 or lower [Titan] Digimon card from your hand or trash without paying the cost. Then, add this card to the hand"
     process:

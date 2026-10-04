@@ -216,8 +216,7 @@ effects:
   # "Security Effect [Security] Delete 1 of your opponent's Digimon with the
   # lowest play cost." Mandatory, silently skipped if the opponent has no
   # Digimon (no add-to-hand tail — standard non-Tamer security disposition).
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security][Inherited] Delete 1 of your opponent's Digimon with the lowest play cost"
     process:
       - if:

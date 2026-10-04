@@ -88,8 +88,7 @@ effects:
   # highest DP." Mandatory (no "may"); the `highest_dp` aggregate selector
   # scopes to the opponent's battle area (BT18-013 idiom). Fizzles silently
   # if the opponent has no Digimon.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Delete 1 of your opponent's Digimon with the highest DP"
     process:
       - select_opponent_permanent:

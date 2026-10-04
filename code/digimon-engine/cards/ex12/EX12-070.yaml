@@ -51,8 +51,7 @@ effects:
           prompt: "Play 1 [Sanmyojin] Digimon from hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: sanmyojin }
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate this card's [Main] effect"
     process:
       - select_hand:

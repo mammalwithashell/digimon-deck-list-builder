@@ -75,8 +75,7 @@ effects:
           filter: { trait_has: Appmon }
           prompt: "You may play 1 [Appmon] trait card with the cost reduced by 3"
       - play_from_hand: { of: you, hand_index: play_pick, cost_delta: { reduce: 3 } }
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

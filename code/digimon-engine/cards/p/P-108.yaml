@@ -118,8 +118,7 @@ effects:
                 ignore_requirements: false
 
   # ─── Clause 3: [Security] (inherited) Place this card in the battle area ───
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Place this card in the battle area"
     process:

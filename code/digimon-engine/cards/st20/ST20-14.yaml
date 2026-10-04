@@ -205,8 +205,7 @@ effects:
   # Printed inherited (security): "Security Effect [Security] Place this card in
   # the battle area." DCGO `PlaceSelfDelayOptionSecurityEffect(card)` — seats it
   # as a Delay-Option straight from security resolution.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Place this card in the battle area as a Delay-Option"
     process:
       - place_self_as_delay_option: {}

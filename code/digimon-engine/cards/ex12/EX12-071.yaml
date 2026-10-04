@@ -59,8 +59,7 @@ effects:
           cost: 0
           ignore_requirements: false
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Activate this card's [Main] effect"
     process:
       - select_hand:

@@ -74,8 +74,7 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: liberator_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Activate [Main] search effects, then place self in battle area"
     process:

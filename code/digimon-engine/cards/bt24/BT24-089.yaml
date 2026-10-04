@@ -111,8 +111,7 @@ effects:
           ignore_requirements: false
 
   # ─── Clause 2: Inherited [Security] ───────────────────────────────────────
-  - scope: inherited
-    when: on_security
+  - when: on_security
     optional: false
     summary: "[Security] Activate [Main] effects: play 1 Elizamon or Owen Dreadnought from hand or trash free, then place in battle area"
     process:

@@ -170,8 +170,7 @@ effects:
   # DCGO: EffectTiming.SecuritySkill — PlaceSelfDelayOptionSecurityEffect(card).
   #
   # DSL: scope: inherited, when: on_security — mirrors BT25-098.
-  - scope: inherited
-    when: on_security
+  - when: on_security
     summary: "[Security] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

@@ -32,8 +32,7 @@
 //!     filter { kind: digimon, trait_has: TS }.
 //!   - `EffectTiming.OnDeclaration` LinkEffect — generic Link play mode.
 //!   - `EffectTiming.SecuritySkill` AddActivateMainOptionSecurityEffect —
-//!     [Security] Activate this card's [Main] effects. → scope: inherited,
-//!     when: on_security, body mirrors the Main clause (BT24-091/095 idiom).
+//!     [Security] Activate this card's [Main] effects. → when: on_security, body mirrors the Main clause (BT24-091/095 idiom).
 //!   - `EffectTiming.OptionSkill` ActivateClass: mandatory delete of 1 opp
 //!     Lv6+ Digimon (CanSelectTargetCondition: opp Digimon, HasLevel, Level>=6;
 //!     canNoSelect: false, gated on HasMatchConditionPermanent so a card with
