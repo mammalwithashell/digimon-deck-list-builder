@@ -1,6 +1,9 @@
-# BT25-044 Junomon — Digimon, Lv.6, Yellow/White, DP 12000, Cost 12.
-# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine.
-# Standard digivolution: Lv.5 Yellow / cost 4 (printed evo_costs).
+# BT25-044 Junomon — Digimon, Lv.6, Yellow/Purple, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Virus.
+# Standard digivolution: Lv.5 Yellow / cost 4 AND Lv.5 Purple / cost 4.
+# (Colour/attribute/circles per the official Bandai DB, data/card_bundles/
+# BT25-044.md — G-DATA-BT25-044-COLOR-ATTRIBUTE; cards.json drops the Virus
+# attribute, corrected in data/card_overrides.json.)
 #
 # Printed card text (card image BT25-044 — authoritative for printed text):
 #   When this card would be played, if there are 6 or fewer total cards in both
@@ -31,6 +34,7 @@
 #
 # Implementation status (faithfulness diff):
 # | Std digivolve Lv.5 Yellow / Cost 4                          | IMPLEMENTED (evo_costs) |
+# | Std digivolve Lv.5 Purple / Cost 4                          | IMPLEMENTED (evo_costs) |
 # | Alt-source Lv.5 [Angel]/[Archangel]/[TS] / Cost 3 ignore    | IMPLEMENTED (alt_paths x3) |
 # | Cost -5 if total security in both stacks <= 6               | IMPLEMENTED (cost_reduction + sum formula) |
 # | [OP][WD] place 1 OTHER Digimon as top sec → trash both top  | IMPLEMENTED (optional select_any_permanent + place_permanent_on_security + trash both) |
@@ -40,15 +44,18 @@ card: BT25-044
 name: Junomon
 kind: digimon
 level: 6
-color: [yellow, white]
+color: [yellow, purple]
 cost: 12
 dp: 12000
 traits: [Shaman, Olympos XII, Iliad, TS]
-attribute: Vaccine
+attribute: Virus
 
 alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
     cost: 4
   - kind: digivolve
     from: { level_eq: 5, trait_has: TS }
