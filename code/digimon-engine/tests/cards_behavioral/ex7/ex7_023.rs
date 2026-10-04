@@ -290,22 +290,37 @@ fn ex7_023_face_up_keyword_clause_shapes() {
         "EX7-023 must encode <Iceclad> as a face-up grant_keyword clause"
     );
 
-    let sa_aura = compiled.effects.iter().find_map(|clause| match clause {
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+    let sa_grant = compiled.effects.iter().find_map(|clause| match clause {
+        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+            keyword,
+            value,
             scope,
             active_when,
-            security_attack: Some(sa),
-            modifier: None,
             ..
-        }) if *scope == CompiledScope::FaceUp => Some((active_when, *sa)),
+        }) if keyword == "SecurityAttackPlus" && *scope == CompiledScope::FaceUp => {
+            Some((active_when, *value))
+        }
         _ => None,
     });
-    let (active_when, sa) = sa_aura
-        .expect("EX7-023 must encode <Security A. +1> as a face-up self-aura with security_attack");
-    assert_eq!(sa, 1, "the aura grants a flat <Security A. +1>");
+    let (active_when, sa) = sa_grant.expect(
+        "EX7-023 must encode <Security A. +1> as a face-up grant_keyword SecurityAttackPlus",
+    );
+    assert_eq!(sa, Some(1), "a flat <Security A. +1>");
     assert!(
         active_when.is_none(),
         "the printed <Security A. +1> is unconditional — no active_when gate"
+    );
+    // A self `security_attack` aura double-counts the printed keyword in
+    // real-text games (G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
+    assert!(
+        !compiled.effects.iter().any(|clause| matches!(
+            clause,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                security_attack: Some(_),
+                ..
+            })
+        )),
+        "no self security_attack aura"
     );
 }
 
@@ -396,7 +411,7 @@ fn ex7_023_opp_turn_aura_clause_shape() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// The placed Hexeblaumon answers has_keyword(Iceclad) and, after a
-/// declarative tick, carries SecurityAttackChange +1 — total strike 2.
+/// declarative tick, checks 1 + <Security A. +1> = 2 security cards.
 #[test]
 fn ex7_023_face_up_keywords_live_on_placed_permanent() {
     let mut runner = base_builder().start();
@@ -407,14 +422,6 @@ fn ex7_023_face_up_keywords_live_on_placed_permanent() {
     assert!(
         runner.game.has_keyword(hexe, Keyword::Iceclad),
         "the placed Hexeblaumon must answer has_keyword(Iceclad)"
-    );
-    assert_eq!(
-        runner
-            .game
-            .modifiers
-            .sum(hexe, ModifierType::SecurityAttackChange),
-        1,
-        "the face-up <Security A. +1> aura installs SecurityAttackChange +1"
     );
     assert_eq!(
         runner.game.effective_security_strike(hexe),

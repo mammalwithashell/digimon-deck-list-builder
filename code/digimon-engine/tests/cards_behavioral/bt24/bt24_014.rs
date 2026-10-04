@@ -238,12 +238,28 @@ fn bt24_014_grants_security_attack_plus_one() {
     let card = runner.compiled_card(CARD_ID).expect("BT24-014 present");
     let has = card.effects.iter().any(|c| matches!(
         c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura { security_attack: Some(1), scope, .. })
-            if *scope == CompiledScope::FaceUp
+        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, value: Some(1), scope, .. })
+            if keyword == "SecurityAttackPlus" && *scope == CompiledScope::FaceUp
     ));
     assert!(
         has,
-        "own <Security A. +1> aura; effects: {:?}",
+        "own <Security A. +1> must be a face-up grant_keyword SecurityAttackPlus; effects: {:?}",
+        card.effects
+    );
+    // A self `security_attack` aura double-counts the printed keyword in
+    // real-text games (G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
+    let has_aura = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                security_attack: Some(_),
+                ..
+            })
+        )
+    });
+    assert!(
+        !has_aura,
+        "no self security_attack aura; effects: {:?}",
         card.effects
     );
 }
@@ -381,21 +397,16 @@ fn bt24_014_special_alt_path_is_aegiomon_cost3() {
 
 #[test]
 fn bt24_014_security_attack_bonus_is_one_at_runtime() {
-    use digimon_engine::enums::ModifierType;
-
     let mut runner = base().memory(10).start();
     let handle = place_aegiochusmon(&mut runner);
-    // The self-aura `security_attack: 1` clause is a materialized declarative
-    // effect — it installs a `SecurityAttackChange` modifier on each
-    // declarative tick, not a one-shot OnPlay/OnDigivolve trigger.
+    // The `grant_keyword: SecurityAttackPlus` clause is a materialized
+    // declarative effect, refreshed on each declarative tick.
     runner.game.tick_declarative_effects();
 
-    let bonus = runner
-        .modifiers()
-        .sum(handle, ModifierType::SecurityAttackChange);
     assert_eq!(
-        bonus, 1,
-        "own <Security A. +1> must grant a +1 SecurityAttackChange modifier at runtime"
+        runner.game.effective_security_strike(handle),
+        2,
+        "own <Security A. +1>: base 1 + 1 = 2 security checks"
     );
 }
 

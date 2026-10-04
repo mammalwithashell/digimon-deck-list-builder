@@ -25,7 +25,9 @@
 # Alt-digivolve: TopCard.EqualsCardName("Bacchusmon") && HasPlayCost &&
 #   GetCostItself == 12, cost 2 → from { name_is Bacchusmon, play_cost 12 }.
 #   (The Black Lv.5 circle is a card_overrides.json-carried printed circle.)
-# <Security A. +1>: ChangeSelfSAttackStaticEffect(+1) → aura security_attack.
+# <Security A. +1>: ChangeSelfSAttackStaticEffect(+1) → grant_keyword
+#   SecurityAttackPlus (not a self aura — that double-counted the printed
+#   keyword, G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
 # <Succession ([Bacchusmon])>: SuccessionSelfEffect(EqualsCardName
 #   "Bacchusmon") → `kind: succession { filter: { name_is: Bacchusmon } }`
 #   (G-ENGINE-SUCCESSION-KEYWORD).
@@ -92,9 +94,9 @@ alt_paths:
 
 effects:
   # ─── <Security A. +1> ──────────────────────────────────────────────────────
-  - kind: aura
-    target: {}
-    security_attack: 1
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
     summary: "<Security A. +1>"
 
   # ─── <Succession ([Bacchusmon])> ────────────────────────────────────────────────

@@ -32,7 +32,7 @@
 #      before effect#5 ran -- Kokatorimon is still on the field); at 17
 #      effect#5 has peeled Kokatorimon.
 #   3. at 19 (the end-of-turn gate, after the main-phase PASS) Destroy Mode is
-#      unsuspended and P1 has 5 security; at 20 it is suspended and P1 has 2 --
+#      unsuspended and P1 has 5 security; at 20 it is suspended and P1 has 3 --
 #      an END-OF-TURN attack, i.e. <Engage>, printed only on Holy Mode. At 21
 #      (T6) <Reboot> has unsuspended it again.
 #
@@ -54,9 +54,9 @@
 #   * effect#5: one SelectPermanentEffect (Kokatorimon is the only Digimon left).
 #   * <Engage>: end-of-turn OptionalSkill + SelectAttackEffect (the documented
 #     end-of-turn fold); the trailing sim-only PASS exits our EndOfTurnAction.
-# EXPECTED DIVERGENCE (step 20 on, NOT a Succession finding): P1 security
-# 5 -> 2 here vs 5 -> 3 on DCGO -- the <Security A. +1> double count
-# (BT26-060-effect1.yaml).
+# Step 20 on: P1 security 5 -> 3 (<Security A. +1> = 2 checks). Before the
+# 2026-10-04 card-data fix (G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT,
+# see BT26-060-effect1.yaml) our engine double-counted the keyword (5 -> 2).
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
 card: BT26-060
@@ -180,10 +180,10 @@ assert:
       turn: 5
       p0.field:
         - { card_id: BT26-060, dp: 16000, suspended: true, sources: [BT26-016] }
-      p1.security: 2
+      p1.security: 3
   - at: 21
     that:
       turn: 6
       p0.field:
         - { card_id: BT26-060, dp: 16000, suspended: false, sources: [BT26-016] }
-      p1.security: 2
+      p1.security: 3
