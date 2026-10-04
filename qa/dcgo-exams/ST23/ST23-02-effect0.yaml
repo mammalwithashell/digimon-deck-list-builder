@@ -1,0 +1,71 @@
+# Exam scenario: Liollmon (ST23-02), clause ST23-02#effect#0 -- the Special
+# Digivolution Condition "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0".
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# Why this witnesses the ALT path and not the corner circle: Liollmon's only
+# standard circle is Yellow Lv.2 / 0, and Kekkomon (ST23-01) is a GREEN Lv.2
+# [Glowing Dawn] egg -- so the only digivolve route onto it is the printed
+# [Glowing Dawn] condition. The digivolve lowering at all is the witness; the
+# memory staying at 0 shows the printed cost 0, and the T3 move puts the stack
+# where the projection can see it (sources [ST23-01]).
+#
+# THE LINE (memory ledger): T1 p0 (0) hatches Kekkomon, digivolves Liollmon
+# onto it in breeding for 0 (0 -> 0; digivolve draw = stack[10] ST23-09),
+# passes (p1 3). T2 p1 all-pass (p0 3). T3 p0 moves Liollmon to the battle
+# area; asserted before the T3 main-phase pass.
+#
+# PROMPT SHAPE: none beyond the main-phase actions. DCGO ST23_02.cs models the
+# condition as AddSelfDigivolutionRequirementStaticEffect(level 2,
+# TopCard.EqualsTraits("Glowing Dawn"), cost 0) (card YAML crosscheck); there
+# is one distinct cost, so neither engine opens a cost-choice prompt.
+card: ST23-02
+clause: ST23-02#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-02, BT25-088, BT25-032, BT25-035, BT26-070,
+            ST23-15, ST23-15, BT25-057, BT25-057, BT25-043,
+            ST23-09]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-02 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT25-032, BT25-035, BT25-088, BT26-070, ST23-09]
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - card_id: ST23-02
+          dp: 2000
+          suspended: false
+          sources: [ST23-01]

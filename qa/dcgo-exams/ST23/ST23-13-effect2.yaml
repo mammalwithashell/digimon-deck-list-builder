@@ -1,0 +1,95 @@
+# Exam scenario: Tomoro Tenma & Kyo Sawashiro (ST23-13), clause
+# ST23-13#effect#2 -- "[Security] Play this card without paying the cost."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# STACK MAPPING: stack[0..4] hand, stack[5..9] security with stack[9] the TOP
+# (flipped first), stack[10..] draws. ST23-13 sits at P0's stack[9].
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): all-pass -> P1 3.
+#   T2 P1 (3): play Agumon ST1-03 (3 -> 0); pass -> P0 3.
+#   T3 P0 (3): draw stack[10]; all-pass -> P1 3.
+#   T4 P1 (3): Agumon attacks security -> the check flips ST23-13 -> THE
+#      CLAUSE plays it for free into P0's battle area. Its [On Play] then
+#      places stack[11] ST23-03 under it and (P1 has a Digimon) P0 gains 1
+#      memory -> P1 3 -> 2. P1 passes (attacking spent nothing).
+# WITNESS: the Tamer on P0's field (not in trash) with no memory paid for it
+# (the only memory move is the +1 from its [On Play]).
+#
+# PROMPT SHAPE (ST23-13.yaml DCGO crosscheck): SecuritySkill
+# PlaySelfTamerSecurityEffect -- no prompt; the [On Play]'s internal Yes/No
+# (SetIntSelection) is P0's decision on P1's turn. P1's hand keeps Digimon,
+# so DCGO's CanSelect() stays true for the trailing pass.
+card: ST23-13
+clause: ST23-13#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-049, BT25-049, BT16-082, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, ST23-13,
+            BT25-057, ST23-03]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The security-played Tamer's [On Play] (ST23-13#effect#0) fires on P1's
+  # turn: P0 answers the internal "You may place" Yes/No.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # T4, after the check (before P1's trailing pass): Tomoro & Kyo is in P0's
+  # battle area -- played for free by its [Security] rather than trashed --
+  # security 5 -> 4, P0's trash empty. Its [On Play] then ran on P1's turn:
+  # ST23-03 placed under it and, P1 having Agumon, P0 gained 1 (P1 3 -> 2).
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.security: 4
+      p0.trash: []
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-049, BT25-049, BT25-057]
+      p0.field:
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-03]
+      p1.field:
+        - card_id: ST1-03
+          dp: 2000
+          suspended: true
+          sources: []

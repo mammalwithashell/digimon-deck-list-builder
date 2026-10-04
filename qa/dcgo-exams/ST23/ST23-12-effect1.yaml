@@ -1,0 +1,111 @@
+# Exam scenario: Chiropmon (ST23-12), clause ST23-12#effect#1 --
+# "[On Play] By trashing the bottom face-down card from under any of your
+#  Tamers, you may return 1 Digimon card with the [Glowing Dawn] trait from
+#  your trash to the hand."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): hard-play Tomoro & Kyo ST23-13 (0 -> -4); its [On Play] "You may
+#      place" -> yes, stack[10] BT25-049 goes face down under it. P1 has no
+#      Digimon -> no memory. Turn passes.
+#   T2 P1 (4): pass -> P0 3.
+#   T3 P0 (3): draw stack[11]. The Tamer's [Start of Your Main Phase] -> yes,
+#      stack[12] ST23-03 goes to the BOTTOM of its sources. Play Chiropmon
+#      (3 -> 0). [On Play]: trash the bottom face-down card (ST23-03, a
+#      [Glowing Dawn] Digimon) and return that same ST23-03 from the trash.
+# WITNESS: ST23-03 travels source -> trash -> hand (trash ends empty, hand
+# gains ST23-03, the Tamer keeps only BT25-049).
+#
+# PROMPT SHAPE (ST23-12.yaml DCGO crosscheck of ST23_12.cs): SelectPermanent
+# Effect over Tamers with a face-down source (maxCount 1, canNoSelect:true),
+# then SelectCardEffect Root.Trash AddHand (canNoSelect:true). ST23-13's
+# "You may place" is an internal Yes/No (answered with `yes:`, as in
+# ST23-06-effect2.yaml). See the ENGINE FINDING row on the trigger order.
+card: ST23-12
+clause: ST23-12#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, ST23-12, BT16-082, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-049, BT25-057, ST23-03]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: ST23-12, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our Replacement gate for the clause-level `optional: true`.
+  # DCGO (ST23-12.yaml crosscheck) carries the "may" on the Tamer pick's
+  # canNoSelect:true instead, so it asks ONE prompt where we ask two.
+  # UNCERTAIN: if ST23_12.cs registers the ActivateClass as optional too, the
+  # oracle will abort here asking OptionalSkill -- drop sim_only then.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # ENGINE FINDING (expected oracle divergence): the cost trash fires
+  # Tomoro & Kyo's [Your Turn] "When effects trash cards from under this
+  # Tamer" trigger, and OUR engine resolves it HERE -- mid-way through
+  # Chiropmon's [On Play], before the payoff pick. general_rule.pdf 15-8-3-2:
+  # a trigger-type effect can't activate during effect processing; it waits
+  # pending until Chiropmon's effect finishes. Expected DCGO order: the trash
+  # pick (SelectCardEffect) FIRST, then OptionalSkill + the DP target.
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+    expect: { prompt: SelectCardEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  # Before the trailing pass (T3, P0 main): the bottom face-down card (ST23-03,
+  # placed by the T3 [Start of Your Main Phase]) was trashed as the cost and
+  # returned to hand by the payoff, so the trash is empty again and ST23-03 is
+  # in hand; BT25-049 (placed T1) is the only card left under the Tamer.
+  # Side effect of the trash: Tomoro & Kyo suspended and Chiropmon is 5000.
+  - at: 13
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-057, ST23-03]
+      p0.trash: []
+      p0.field:
+        - card_id: ST23-12
+          dp: 5000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: true
+          sources: [BT25-049]

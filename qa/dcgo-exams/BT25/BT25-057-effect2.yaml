@@ -1,0 +1,132 @@
+# Exam scenario: Monarchlizamon (BT25-057), clause BT25-057#effect#2 --
+# "[When Digivolving] This Digimon may battle 1 of your opponent's Digimon."
+#
+# Witness: the battle (8000 vs Birdramon 5000) deletes p1's Digimon (ST1-02 +
+# ST1-05 in p1's trash, p1's field empty) while Monarchlizamon stays
+# UNSUSPENDED -- a battle, not an attack (no suspension, no security check;
+# p1's security unchanged at 5 is implicit in the line).
+#
+# PROVISIONAL: every assert below is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (stacked gd-bt26-1st vs tm-quiet-red; BT26-089 is the Tamer because
+# it has NO trash-reaction, unlike ST23-13, so trashing its face-down card
+# opens nothing extra):
+#   T1 p0 (mem 0): hatch Kekkomon, Ukkomon (BT25-032) over it in breeding for 0
+#      (Lv.2 [Glowing Dawn] route), hard-play BT26-089 for 3 -> -3.
+#   T2 p1 (mem 3): Biyomon (ST1-02, 2) -> 1, Birdramon (ST1-05) over it for 2
+#      -> -1 (turn hands over). p1 now has a Digimon WITH a digivolution card.
+#   T3 p0 (mem 1): move Ukkomon out. BT26-089 [Start of Your Main Phase]:
+#      ST23-06 from hand goes face down under it, Draw 1, +1 memory -> 2.
+#      Cougarmon (ST23-03) over Ukkomon for 2 -> 0; its [When Digivolving]
+#      adds the top security to hand + <Recovery +1> (no prompt), which fires
+#      BT26-089's "security removed" reaction -- declined (OptionalSkill).
+#      Monarchlizamon over Cougarmon for 3 -> -3. Cougarmon is YELLOW, so the
+#      only open route is the "Lv.4 w/[Glowing Dawn]: Cost 3" condition (the
+#      printed circles are Green/Black Lv.4 cost 4). Cougarmon's own [Your Turn]
+#      "reduce by 2" is offered first -- declined (OptionalSkill).
+#   Monarchlizamon's two [When Digivolving] effects stack (MultipleSkills).
+#   ordinal 1 = the battle effect, resolved FIRST so it runs on its own.
+#   Then the De-Digivolve resolves with no opponent Digimon left: our engine
+#   still asks the Tamer pick and trashes BT26-089's face-down ST23-06 (the
+#   cost is paid; the De-Digivolve has no target).
+#
+# PROMPT SHAPE (BT25_057.cs per the card YAML: WD battle = OnEnterFieldAnyone,
+# skippable -> OptionalSkill then a SelectPermanentEffect over opponent
+# Digimon; IBattle isAttack:true is a battle, not an attack):
+#   * DCGO: MultipleSkills -> OptionalSkill(yes) -> SelectPermanentEffect.
+#     OURS: choosing an optional trigger in our TriggerOrder prompt COMMITS to
+#     it (the following OppField pick is not declinable) -- no separate
+#     OptionalSkill row. Expected prompt-shape divergence at step 13; if DCGO
+#     asks it, this line needs a `dcgo_only` OptionalSkill row (not authored
+#     blind).
+#   * The `sim_only` decline for actor 1 answers a PHANTOM <Barrier> prompt:
+#     ENGINE FINDING -- our <Barrier> replacement_condition does not check that
+#     the subject is its carrier, so Monarchlizamon's inherited <Barrier>
+#     (from Ukkomon/Cougarmon) is offered to p1, the DELETED Digimon's
+#     controller, when p1's Birdramon dies in battle. Accepting does nothing
+#     (the process re-checks the subject). DCGO asks nothing here.
+#   * De-Digivolve with no target: whether DCGO still asks the Tamer pick
+#     (and trashes) is unverified -- the C# "RemoveUse if no cost paid" note
+#     suggests the cost is still offered. Possible divergence at step 15.
+card: BT25-057
+clause: BT25-057#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-032, ST23-03, BT25-057, BT16-082,
+            BT25-049, ST23-06, BT25-049, ST23-06, BT16-082,
+            ST23-06, BT25-049, ST23-09, BT25-043, ST23-09,
+            BT25-043, ST23-09, BT25-041, BT25-041, BT25-041]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-05, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-08, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-06] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-057 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-057], ordinal: 1 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-057, BT25-057] }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.trash: [ST23-06]
+      p1.trash: [ST1-02, ST1-05]
+      p1.field: []
+      p0.field:
+        - card_id: BT25-057
+          dp: 8000
+          suspended: false
+          sources: [BT25-032, ST23-01, ST23-03]
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: []
