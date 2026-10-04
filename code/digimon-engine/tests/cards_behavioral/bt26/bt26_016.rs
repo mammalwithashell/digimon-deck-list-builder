@@ -151,6 +151,52 @@ fn bt26_016_partial_return_pays_nothing_and_refunds_opt() {
     assert!(r.pending_selection_view().is_some(), "RemoveUse");
 }
 
+/// "0 own + 3 opponent" is a legal split even when your own trash is not
+/// empty: the own-trash share must accept PASS before any pick
+/// (`optional_zero`), then the opponent share takes all 3.
+#[test]
+fn bt26_016_zero_own_three_opponent_returns_and_recovers() {
+    let mut r = setup();
+    push_trash(&mut r, 0, "TR");
+    for _ in 0..3 {
+        push_trash(&mut r, 1, "TR");
+    }
+    let h = chrono(&mut r);
+    fire(&mut r, EffectTiming::WhenAttacking, h);
+    let v = r.pending_selection_view().expect("own trash share");
+    assert!(v.is_optional, "own share may be 0 (PASS before any pick)");
+    pass(&mut r, 0); // 0 from own trash
+    let v = r.pending_selection_view().expect("opponent trash pick");
+    assert!(v.is_optional, "0 or exactly 3");
+    pick_n_then_finish(&mut r, 3);
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(trash_ids(&r, 0), vec!["TR"], "own trash untouched");
+    assert!(trash_ids(&r, 1).is_empty(), "all 3 opponent cards returned");
+    assert_eq!(deck_ids(&r, 1).len(), 9, "each card to its owner's deck");
+    assert_eq!(r.security_count(0), 4, "<Recovery +1>");
+}
+
+/// Declining entirely (0 own, then 0 opponent) returns nothing, recovers
+/// nothing, and — nothing deleted either — leaves the OPT unspent.
+#[test]
+fn bt26_016_decline_both_shares_returns_nothing() {
+    let mut r = setup();
+    push_trash(&mut r, 0, "TR");
+    for _ in 0..3 {
+        push_trash(&mut r, 1, "TR");
+    }
+    let h = chrono(&mut r);
+    fire(&mut r, EffectTiming::WhenAttacking, h);
+    pass(&mut r, 0); // 0 from own trash
+    pass(&mut r, 0); // 0 from opponent trash
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(trash_ids(&r, 0), vec!["TR"]);
+    assert_eq!(trash_ids(&r, 1).len(), 3);
+    assert_eq!(r.security_count(0), 3, "no recovery");
+    fire(&mut r, EffectTiming::OnPlay, h);
+    assert!(r.pending_selection_view().is_some(), "OPT not spent");
+}
+
 #[test]
 fn bt26_016_shared_once_per_turn_after_use() {
     let mut r = setup();

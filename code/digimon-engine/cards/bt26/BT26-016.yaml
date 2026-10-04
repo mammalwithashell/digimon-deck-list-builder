@@ -34,7 +34,7 @@
 #   `dp_lte: { formula: { source_dp } }`. (b) The 45-slot trash action range
 #   addresses ONE player's trash per prompt, so the zone split is exposed the
 #   same way DCGO's area choice does it: pick 0-3 from your trash
-#   (`select_count_capped_multi`, min 0), then exactly the remaining 3-k from
+#   (`select_count_capped_multi`, `optional_zero` so 0 is legal), then exactly the remaining 3-k from
 #   the opponent's trash (`optional_zero` — "0 or exactly 3-k"); only a full 3
 #   returns + recovers (Q&A). Every split DCGO allows is reachable. (c)
 #   `refund_opt` when neither `effect_deleted_any_opponent_digimon` nor
@@ -110,11 +110,13 @@ effects:
             - delete_permanent: { target: victim }
       # "by returning 3 cards in trashes" — your share first (0-3), then the
       # rest from the opponent's trash.
+      # `optional_zero`: the own share may be 0 (e.g. 0 own + 3 opponent, or
+      # decline entirely). A bare `min: 0` means "at least 1" — not enough.
       - select_count_capped_multi:
           of: you
           zone: trash
-          min: 0
           max: 3
+          optional_zero: true
           filter: {}
           bind_as: own_back
           prompt: "Return cards in your trash to the bottom of the deck (3 in total across both trashes) for <Recovery +1>"
