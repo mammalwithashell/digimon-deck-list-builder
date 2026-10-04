@@ -88,13 +88,22 @@ effects:
     summary: "When played, if both players' security stacks total 6 or fewer, reduce cost by 5"
 
   # ─── [On Play][When Digivolving] place 1 OTHER Digimon as top sec → trash both ─
-  # Optional ("By placing…"): the player may decline (no other Digimon, or choose
-  # not to). On a successful placement, trash both players' top security cards.
+  # DCGO BT25_044.cs "Shared OP / WD" (:48-118): the gate is ANY other battle-
+  # area Digimon on EITHER side (`OtherDigimon`: `permanent != this &&
+  # IsPermanentExistsOnBattleAreaDigimon`) -- the printed "1 other Digimon"
+  # carries no "your". optional:false (no OptionalSkill): the "By placing" cost
+  # is declined at the pick itself (SelectPermanentEffect canNoSelect: true);
+  # our effect-level `optional` folds into the leading optional pick, so the
+  # player sees exactly one declinable pick. The placed card goes to its
+  # OWNER's security (CardObjectController.cs:1099-1120 AddSecurityCard into
+  # cardSource.Owner.SecurityCards) and the trash-both tail runs only if the
+  # placement succeeded (PlacePermanentInSecurityAndProcessAccordingToResult).
   - when: [on_play, when_digivolving]
     optional: true
-    summary: "[OP][WD] By placing 1 other Digimon as your top security card, trash both players' top security cards"
+    summary: "[OP][WD] By placing 1 other Digimon as the top security card, trash both players' top security cards"
     condition:
       any_permanent:
+        of: any
         zone: [battle_area]
         all_of:
           - kind: digimon
@@ -107,17 +116,21 @@ effects:
             all_of:
               - kind: digimon
               - other: true
-          prompt: "Place 1 other Digimon as your top security card"
+          prompt: "Place 1 other Digimon as the top security card"
       - if:
           condition: { binding_present: placed }
           then:
             - place_on_security:
                 source: { permanent: placed }
-                of: you
+                to_owner: true
                 position: top
                 face_up: false
-            - trash_top_security: { of: opponent }
-            - trash_top_security: { of: you }
+                bind_placed_as: placed_card
+            - if:
+                condition: { binding_present: placed_card }
+                then:
+                  - trash_top_security: { of: opponent }
+                  - trash_top_security: { of: you }
 
   # ─── [All Turns][OPT] security removed → play cost<=8 Angel/Archangel/Iliad free ─
   - when: on_lose_security
@@ -140,3 +153,10 @@ effects:
                   - trait_has: Iliad
           prompt: "Play 1 cost 8 or lower [Angel]/[Archangel]/[Iliad] card from hand or trash (free)"
       - play_union_bound_free: { binding: pick }
+      # DCGO BT25_044.cs:208 `if (!executed) activateClass.RemoveUse()`:
+      # playing nothing does not consume the [Once Per Turn] use (§15-14-1
+      # counts activations; G-OPT-REFUND-ON-DECLINE convention).
+      - if:
+          condition: { binding_absent: pick }
+          then:
+            - refund_opt: {}

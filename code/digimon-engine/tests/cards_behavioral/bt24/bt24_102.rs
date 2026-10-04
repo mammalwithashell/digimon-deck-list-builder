@@ -77,6 +77,51 @@ fn enqueue_homeros_eot(runner: &mut DebugRunner, homeros: PermanentHandle) {
     runner.game.drain_effect_queue();
 }
 
+/// Accept Homeros's "By suspending this Tamer, you may ..." OptionalSkill
+/// gate (DCGO BT24_102.cs:84 `SetUpActivateClass(..., true, ...)`).
+fn accept_homeros_gate(runner: &mut DebugRunner) {
+    let pending = runner
+        .pending_selection()
+        .expect("Homeros's optional activation gate");
+    assert!(pending.is_optional, "the 'By suspending' gate is optional");
+    assert_ne!(
+        pending.kind,
+        SelectionKind::OwnField,
+        "the gate precedes the target pick (cost is paid before the pick)"
+    );
+    let accept = pending
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != digimon_engine::action::space::PASS)
+        .expect("accept action");
+    runner.execute_action(0, accept).expect("accept Homeros's gate");
+}
+
+/// §15-7-5 (digest.md: the "By X" cost may be paid even when the result
+/// cannot happen) + DCGO BT24_102.cs:121-135: `CanActivateCondition` is only
+/// "on the battle area and can pay the suspend cost" -- no eligible-target
+/// check. With NO [Olympos XII] Digimon the gate is still offered, accepting
+/// suspends Homeros, and no pick follows (SelectPermanentEffect with no
+/// candidate opens nothing, SelectPermanentEffect.cs:181-199).
+#[test]
+fn bt24_102_gate_offered_without_olympos_target_and_suspends() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-102 YAML parses")
+        .add_card(make_filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+    let homeros = runner.place_on_field(0, "BT24-102", Some(0));
+    enqueue_homeros_eot(&mut runner, homeros);
+    accept_homeros_gate(&mut runner);
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[0].battle_area[homeros.index as usize].is_suspended);
+    assert!(runner.pending_selection().is_none(), "no target -> no pick");
+}
+
 #[test]
 fn bt24_102_yaml_compiles_with_refire_clause() {
     let runner = DebugRunner::builder()
@@ -145,6 +190,11 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
     let homeros_card = runner.top_card(homeros);
 
     enqueue_homeros_eot(&mut runner, homeros);
+    accept_homeros_gate(&mut runner);
+    assert!(
+        runner.game.players[0].battle_area[homeros.index as usize].is_suspended,
+        "accepting the gate pays Homeros's suspend cost first (DCGO BT24_102.cs:137-138)"
+    );
 
     let pending = runner
         .pending_selection()
@@ -164,10 +214,6 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
         .execute_action(0, target_action)
         .expect("choose Olympos XII target");
 
-    assert!(
-        runner.game.players[0].battle_area[homeros.index as usize].is_suspended,
-        "choosing a refire target pays Homeros's suspend cost"
-    );
 
     let pending = runner
         .pending_selection()
@@ -238,6 +284,7 @@ effects:
     let homeros = runner.place_on_field(0, "BT24-102", Some(0));
     let _target = runner.place_on_field(0, "TEST-OLY-COMBINED", Some(0));
     enqueue_homeros_eot(&mut runner, homeros);
+    accept_homeros_gate(&mut runner);
 
     let pending = runner.pending_selection().expect("target selection");
     assert_eq!(pending.kind, SelectionKind::OwnField);

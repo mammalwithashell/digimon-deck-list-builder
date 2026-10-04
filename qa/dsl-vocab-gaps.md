@@ -8779,6 +8779,17 @@ pins that the turn scan does not trash such a marker.
 
 ## TS Jupitermon exam-authoring findings (2026-10-04) — OPEN, logged not fixed
 
+### `place_on_security` could not target the placed card's owner or report success  [G-DSL-PLACE-ON-SECURITY-OWNER-AND-SUCCESS] — **RESOLVED 2026-10-04**
+- **Card:** BT25-044 Junomon "By placing 1 other Digimon as the top security card, trash both players' top
+  security cards" — the Digimon may be either player's, goes to its OWNER's security (DCGO
+  `CardObjectController.cs:1099-1120`), and the tail runs only if the placement happened
+  (`PlacePermanentInSecurityAndProcessAccordingToResult`).
+- **Fix:** `place_on_security` (permanent source, no disposition) gains `to_owner: bool` (ignore `of`, use the
+  top card's owner) and `bind_placed_as: <name>` (bound only on success, gate the tail with `binding_present`).
+  Lowered onto `CompiledStep::PlacePermanentOnSecurity { to_owner, bind_placed_as }`
+  (`dsl_cards/step/permanent_mutations.rs`). Test:
+  `cards_behavioral -- bt25_044_on_play_offers_opponent_digimon_and_places_it_in_opponents_security`.
+
 ### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG] — **RESOLVED 2026-10-04**
 - **RESOLVED (2026-10-04):** `lower_triggered` sets `Effect::counter` for every `counter` timing; the field-Counter
   candidate scan also skips a spent [Once Per Turn] ability or one whose activation `condition` fails (no phantom

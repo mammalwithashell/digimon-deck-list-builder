@@ -47,6 +47,10 @@
 # canNoSelect:true).
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
 # DCGO -- unconfirmed until the oracle pass.
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-102.yaml no longer
+# requires an [Olympos XII] Digimon before offering Homeros' "By suspending"
+# gate (BT24_102.cs:121-135; §15-7-5), so both Homeros gate rows are shared
+# now. (Header text below predates the fix.)
 card: BT26-033
 clause: BT26-033#effect#7
 seed: 424242
@@ -67,10 +71,10 @@ steps:
   - actor: 0
     do: { play: { card: BT24-102, from: hand } }
     expect: { prompt: main_phase }
-  # T1's end (memory -5): DCGO-only Homeros [End of Your Turn] gate (see the
-  # header) -- declined. Our engine parks nothing here.
+  # T1's end (memory -5): Homeros [End of Your Turn] gate (shared since the
+  # 2026-10-04 fix) -- declined.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # T2 (P1, memory 5): Biyomon (5 -> 3); pass -> P0 at 3.
   - actor: 1
@@ -89,9 +93,9 @@ steps:
   - actor: 0
     do: { play: { card: BT26-033, from: hand } }
     expect: { prompt: main_phase }
-  # T3's end (memory -3): the same DCGO-only Homeros gate -- declined.
+  # T3's end (memory -3): the same Homeros gate -- declined.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }

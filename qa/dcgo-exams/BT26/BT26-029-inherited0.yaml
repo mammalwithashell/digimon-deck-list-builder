@@ -59,6 +59,11 @@
 #     trigger that cannot activate is a phantom choice; minor engine note.)
 #   - De-Digivolve target: the inherited clause's SelectPermanentEffect
 #     (Mode.Degenerate, mandatory) over Birdramon, 1:1.
+# FIXED 2026-10-04 (G-CARD-BT25-044-PLACE-OTHER-DIGIMON): BT25-044.yaml now
+# gates Junomon's [On Play]/[When Digivolving] on ANY other Digimon (either
+# side, BT25_044.cs:48-57) and places into the card owner's security, so the
+# former `dcgo_only` Junomon pick row is a shared row. (Header text below
+# predates the fix.)
 card: BT26-029
 clause: BT26-029#inherited#0
 seed: 424242
@@ -104,10 +109,10 @@ steps:
   - actor: 0
     do: { select: { value: 3 } }
     expect: { prompt: SelectCountEffect }
-  # DCGO-only: Junomon's WD "place 1 other Digimon" pick offers P1's Birdramon
-  # (any-side filter); decline. Ours asks nothing (see header).
+  # Junomon's WD "place 1 other Digimon" pick offers P1's Birdramon (either-
+  # side gate, shared since the 2026-10-04 fix); decline.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectPermanentEffect }
   - actor: 0
     do: { play: { card: BT4-104, from: hand } }

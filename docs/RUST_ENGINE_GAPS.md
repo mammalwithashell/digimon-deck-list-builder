@@ -4588,8 +4588,8 @@ with the root cause inferred and not traced.
 - **Status:** RESOLVED 2026-10-04. `Keyword::Barrier`'s `replacement_condition` now requires the subject to be the
   carrier (as Evade / Armor Purge already did). Sibling audit: `Keyword::Fragment` had the same omission (fixed the
   same way); `Keyword::Decoy`'s self / same-controller / Digimon / colour filters were body-only and now also gate
-  candidate collection. Armor Purge, Evade, Scapegoat, Partition, Guard were already candidate-scoped. Residual (not
-  changed): Decoy's printed "by an opponent's effect" cause gate is not applied. Test:
+  candidate collection. Armor Purge, Evade, Scapegoat, Partition, Guard were already candidate-scoped. Residual
+  (Decoy's printed "by an opponent's effect" cause gate) RESOLVED 2026-10-04 as G-ENGINE-DECOY-CAUSE-GATE. Test:
   `cards_behavioral -- bt24_034_barrier_not_offered_when_opponents_digimon_is_deleted_in_battle`. Scenario rows
   removed from `P-213-effect1.yaml` and `BT24-041-effect3.yaml`.
 - **Symptom:** P0's Digimon carries `<Barrier>` (printed BT24-034, or inherited via P-213 / Aegiomon).
@@ -4717,6 +4717,39 @@ with the root cause inferred and not traced.
   BT24-101's single dual-timing effect as two branches — a decision the rules do not grant.
   Answered `sim_only` in `qa/dcgo-exams/BT24/BT24-102-effect1.yaml`.
 
+### `<Decoy>` replaced deletions not caused by an opponent's effect  [G-ENGINE-DECOY-CAUSE-GATE] — **RESOLVED 2026-10-04**
+- Rules 16-17 (`keyword-semantics.md`): "another of your (X) Digimon would be deleted **by an opponent's effect**";
+  DCGO `KeyWordEffects/Decoy.cs:51-70` gates `CanUseCondition` on `IsByEffect(... EffectSourceCard.Owner ==
+  card.Owner.Enemy)`. Our `Keyword::Decoy` (`cards/keyword_effects.rs`) offered the dialog for own-effect, battle
+  and rule deletions too. Fix: its `replacement_condition` now also requires `ReplacementCause::OpponentEffect`
+  (subject-relative; the subject is always the Decoy controller's) — same gate `<Guard>` uses. Test:
+  `keyword_phase_d -- decoy_does_not_replace_own_effect_or_non_effect_deletion` (failed before); the positive
+  Decoy tests now delete under an opponent effect source.
+
+### BT25-044 Junomon OP/WD placement: own-side gate, wrong security, unconditional tail  [G-CARD-BT25-044-PLACE-OTHER-DIGIMON] — **RESOLVED 2026-10-04**
+- DCGO `BT25_044.cs:48-118`: gate = any OTHER battle-area Digimon on EITHER side; declinable pick
+  (`SelectPermanentEffect canNoSelect`, no OptionalSkill); placement into the card OWNER's security
+  (`CardObjectController.cs:1099-1120`); trash-both only on success. Ours gated on own Digimon (`any_permanent`
+  default `of: you`), placed into the activating player's security, and ran the tail regardless. Fix
+  (`cards/bt25/BT25-044.yaml`): `of: any` gate + new `place_on_security` args `to_owner` / `bind_placed_as`
+  (qa/dsl-vocab-gaps.md G-DSL-PLACE-ON-SECURITY-OWNER-AND-SUCCESS) with a `binding_present` success gate.
+  Also: the `[All Turns][OPT]` play now refunds its use when nothing is played (`BT25_044.cs:208`
+  `RemoveUse`; §15-14-1 counts activations; `refund_opt` convention) — test
+  `bt25_044_all_turns_declined_play_does_not_consume_once_per_turn` (failed before). Placement test:
+  `bt25_044_on_play_offers_opponent_digimon_and_places_it_in_opponents_security` (failed before).
+
+### BT24-034 Aegiomon / BT24-102 Homeros "By X" gates required the payoff to be possible  [G-CARD-BY-X-GATE-NEEDS-PAYOFF] — **RESOLVED 2026-10-04**
+- §15-7-5 (digest.md): the "By X" cost may be chosen even if the result can't be executed. DCGO asks the
+  OptionalSkill on security > 0 only (`BT24_034.cs` `SharedCanActivateCondition`) / on "can suspend" only
+  (`BT24_102.cs:121-135`), pays the cost first, then offers a declinable pick. Ours required a [TS] Tamer in hand
+  (Aegiomon; via an EffectChoice gate, with a forced Tamer pick) / an [Olympos XII] Digimon (Homeros) before
+  asking. Fix: `BT24-034.yaml` → `optional: true` + `security_count_gte: 1`, cost then optional `select_hand`
+  (a [TS] Tamer revealed from security is now playable); `BT24-102.yaml` → drop the target condition, suspend
+  before the optional pick. Tests: `bt24_034_gate_offered_without_ts_tamer_in_hand_and_cost_is_paid`,
+  `bt24_034_ts_tamer_from_security_is_playable_and_pick_is_declinable`,
+  `bt24_102_gate_offered_without_olympos_target_and_suspends` (all failed before). The exam scenarios'
+  `dcgo_only` gate rows for these cards became shared rows.
+
 ### Exam tooling
 - **`PlayCostBudget` always maps to `SelectPermanentEffect`** [G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE] —
   **RESOLVED 2026-10-04.** Was: wrong for a hand/trash budget pick (BT26-081 Mervamon), worked around
@@ -4735,9 +4768,10 @@ with the root cause inferred and not traced.
   granted `<Execute>` window already opens at the end of T3, so P1's T4 `pass` was silently declining
   P0's window and the rest of the line ran one decision early). Fixed by declining the T3 window too.
 - **No OptionalSkill fold on a `Security`-kind pick** [G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD] —
-  **RESOLVED 2026-10-04.** Fix: `expect: {prompt: OptionalSkill}` over a declinable ONE-candidate
-  `Security` pick is now a gate-only fold (`SelectWire::fold_gate_only`): the wire carries
-  OptionalSkill(yes) alone on accept (OptionalSkill(no) on decline), with no pick row, on the
-  assumption that DCGO opens no card widget for a forced card. Multi-candidate Security picks keep the
-  1:1 `SelectCardEffect` mapping. Test `gate_only_fold_emits_the_gate_row_alone` (+ the wire-row-count
-  pin); `BT24-031-inherited0.yaml` uses the fold.
+  **SUPERSEDED 2026-10-04: DCGO asks `generic_bool`; author `sim_only` + `dcgo_only` rows.** The
+  gate-only fold (`SelectWire::fold_gate_only` / `is_forced_security_pick`) assumed DCGO asks an
+  OptionalSkill for BT24-031's inherited `[When Attacking]` "you may add your top security card".
+  It does not: `BT24_031.cs` registers it `isOptional: false` and asks
+  `userSelectionManager.SetBoolSelection` (wire `generic_bool`) with no card widget. The fold, its
+  tests and its `DCGO_EXAM.md` row were removed; a forced one-candidate Security pick is authored
+  as a `sim_only` pick + a `dcgo_only` `generic_bool` row (`BT24-031-inherited0.yaml`).

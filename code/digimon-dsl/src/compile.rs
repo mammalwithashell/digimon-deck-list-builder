@@ -2986,6 +2986,15 @@ fn compile_step(
                     message: "include_sources is only valid with disposition: observed".to_string(),
                 });
             }
+            if (a.to_owner || a.bind_placed_as.is_some())
+                && !(is_permanent && matches!(a.disposition, D::None))
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security"),
+                    message: "to_owner / bind_placed_as require source: permanent with no disposition".to_string(),
+                });
+            }
             match &a.source {
                 SecuritySource::Card { card } => CompiledStep::PlaceOnSecurity {
                     of: compile_player_ref(a.of),
@@ -3014,6 +3023,8 @@ fn compile_step(
                             target,
                             position,
                             face_up: a.face_up,
+                            to_owner: a.to_owner,
+                            bind_placed_as: a.bind_placed_as.clone(),
                         },
                         D::Handle => CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
                             of,

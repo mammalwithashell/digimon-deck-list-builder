@@ -2258,6 +2258,22 @@ pub struct PlaceOnSecurityArgs {
     pub disposition: SecurityReplacementDisposition,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
+    /// `source: permanent`, `disposition: none` only: place the card into its
+    /// OWNER's security stack instead of `of`'s (DCGO
+    /// `CardObjectController.AddSecurityCard` adds to
+    /// `cardSource.Owner.SecurityCards`). For printed text with no "your"
+    /// whose target may be either player's Digimon — BT25-044 Junomon "By
+    /// placing 1 other Digimon as the top security card".
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub to_owner: bool,
+    /// `source: permanent`, `disposition: none` only: on a SUCCESSFUL
+    /// placement bind the placed card under this name, so a "By placing X,
+    /// do Y" tail can gate on `binding_present` (DCGO
+    /// `PlacePermanentInSecurityAndProcessAccordingToResult` runs its
+    /// success process only when the placement happened). Unbound when the
+    /// placement fails or is replaced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_placed_as: Option<String>,
 }
 
 /// What `place_on_security` puts onto the security stack.

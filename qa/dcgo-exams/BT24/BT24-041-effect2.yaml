@@ -50,6 +50,11 @@
 # Main Phase] and inherited [When Attacking]). Garudamon ST1_08.cs's WD is
 # non-optional with one SelectPermanentEffect (verified). The count of 3
 # exceeds the trashable depth (2) and is clamped at Lv.3 by the rule (16-11).
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
 card: BT24-041
 clause: BT24-041#effect#2
 seed: 424242
@@ -71,13 +76,10 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
-  # DCGO-ONLY: Aegiomon BT24-034's [On Play] OptionalSkill, declined. BT24_034.cs
-  # SharedCanActivateCondition checks only `SecurityCards.Count() > 0` (no
-  # [TS]-Tamer-in-hand gate, unlike our BT24-034.yaml `condition`), and the
-  # effect is optional (SetUpActivateClass(..., -1, true, ...)) -> DCGO asks;
-  # our engine is silent.
+  # Aegiomon BT24-034's [On Play] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }

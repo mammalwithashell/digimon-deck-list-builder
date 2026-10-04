@@ -24,6 +24,9 @@
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): Homeros' [End of Your
+# Turn] gate now opens whenever it can suspend, so T1's end carries a shared
+# declined OptionalSkill row (asserts shifted +1).
 card: BT24-102
 clause: BT24-102#effect#0
 seed: 424242
@@ -46,6 +49,12 @@ steps:
   - actor: 0
     do: { play: { card: BT24-102, from: hand } }
     expect: { prompt: main_phase }
+  # T1's end (memory -5): Homeros [End of Your Turn] "By suspending this
+  # Tamer" OptionalSkill gate -- offered with no [Olympos XII] Digimon
+  # (BT24_102.cs:121-135, §15-7-5); declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 5): Phoenixmon -> -5.
   - actor: 1
     do: { pass: {} }
@@ -65,14 +74,14 @@ steps:
     expect: { prompt: breeding_action }
 assert:
   # Start of T3, before Start of Main: 5 memory, Homeros unsuspended.
-  - at: 4
+  - at: 5
     that:
       turn: 3
       p0.memory: 5
       p0.field:
         - { card_id: BT24-102, dp: -1, suspended: false, sources: [] }
   # First main-phase decision of T3: +1 memory, suspended, drew BT24-084.
-  - at: 5
+  - at: 6
     that:
       turn: 3
       p0.memory: 6
