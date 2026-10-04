@@ -4,35 +4,43 @@
 # may attack (incl. an opponent's unsuspended Digimon); at the end of that
 # attack it is deleted.
 #
-# ENGINE FINDING -- EXPECTED ORACLE DIVERGENCE. This file does NOT witness
-# <Execute> working; it pins our engine's actual behaviour: the end-of-turn
-# window never opens for ScourgeChiropmon. Root cause (read, not fixed):
-# `Game::has_end_of_turn_keywords` (game_phases.rs) skips every permanent
-# whose `perm.top_card().is_digimon(..)` is false, and `CardSource::
-# is_digimon` (card_source.rs) is `card_kind == Digimon` -- a DUAL top card
-# (CardKind::Dual) fails it. The <Execute> EndOfYourTurn body still grants
-# MayAttack/CanAttackUnsuspended, but the phase never parks in
-# EndOfTurnAction, so the granted attack is unreachable. Same skip applies
-# to Vortex / Overclock / Engage on any DUAL Digimon. (`Permanent::
-# is_digimon` -- the permanent-level helper -- does include Dual.)
-# Probed three ways: memory -2 overspend end of T3 (field, after Kyo SoMP),
-# explicit pass at memory 4 end of T5 after a move, and this line.
+# UPDATED 2026-10-04 (post-#708): this file used to pin an ENGINE FINDING --
+# the end-of-turn window never opened for ScourgeChiropmon because
+# `has_end_of_turn_keywords` skipped a DUAL top card
+# (G-ENGINE-END-OF-TURN-KEYWORDS-SKIP-DUAL). #708 fixed that root cause as
+# G-ENGINE-DUAL-END-OF-TURN-WINDOW (RESOLVED 2026-10-04,
+# docs/RUST_ENGINE_GAPS.md), so the window now parks in EndOfTurnAction and
+# the old trailing p1 `pass` was refused as wrong-seat. The line now takes
+# the "ONCE FIXED" shape this header used to describe and WITNESSES the
+# clause.
 #
-# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# PROVISIONAL: the assert blocks are OUR engine's result, not backfilled from
 # DCGO.
 #
 # THE LINE: BT26-075-effect0.yaml (Scourge built in breeding via the
 # [Glowing Dawn] routes [3 -> 1 -> -2], moved on T5 [memory 3]); then P0
 # passes T5's main phase with Scourge unsuspended in the battle area and p1
 # holding 5 security and no Digimon.
-# WHAT THE PRINTED TEXT SAYS SHOULD HAPPEN: an optional <Execute> attack
-# (DCGO: OptionalSkill, then SelectAttackEffect -- BT24-081-effect2.yaml's
-# fold: one `attack:` row with `expect: OptionalSkill`); after the attack
-# Scourge is deleted, firing <Ascension> + [On Deletion].
-# ONCE FIXED: replace the final two rows with
-#   - { actor: 0, do: { attack: { attacker: field.0, target: security } },
-#       expect: { prompt: OptionalSkill } }
-# plus the post-attack Ascension/On Deletion rows and a sim-only EOT pass.
+#   End of T5: THE CLAUSE -- <Execute> attack on the player (fold: DCGO
+#     OptionalSkill(yes) + SelectAttackEffect, one `attack:` row
+#     with `expect: OptionalSkill` -- the BT24-081-effect2.yaml shape; DCGO
+#     ExecuteSelfEffect is SetUpActivateClass(..., -1, true, ...)).
+#   [When Attacking]: Liollmon's (BT26-025) inherited "may add top security"
+#     declined -- ours a 2-way EffectChoice answered by label (`sim_only`),
+#     DCGO's SetBoolSelection No (`dcgo_only` decline), the
+#     BT26-075-effect2.yaml pairing. Kekkomon's (ST23-01) inherited WA is not
+#     offered on either side (no Tamer with a face-down card: ST23_01.cs
+#     CanActivateCondition). BT25-049 inherits only <Piercing>.
+#   Security check: ST1-02 (5 -> 4). End of attack: <Execute> deletes
+#     Scourge. Its [On Deletion] needs a Tamer with a face-down card
+#     (BT26_075.cs CanActivateCondition; our clause condition) -> not
+#     offered, so <Ascension> is alone: our EffectChoice <-> DCGO OptionalSkill
+#     (yes) -> Scourge becomes p0's top security card (5 -> 6).
+#   Our engine then sits in EndOfTurnAction until a PASS (sim-only phase
+#     exit; DCGO rotates by itself -- EX12-004-effect0.yaml convention).
+# WITNESS: no main-phase attack was declared, yet p1's security went 5 -> 4
+# and Scourge left the field at the end of that attack (on top of security
+# via <Ascension>).
 card: BT26-075
 clause: BT26-075#effect#1
 seed: 424242
@@ -80,12 +88,26 @@ steps:
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
-  # End of T5: THE CLAUSE's window. Our engine rotates straight to p1 (no
-  # EndOfTurnAction park). DCGO is expected to ask the <Execute>
-  # OptionalSkill here instead -> EXPECTED ORACLE DIVERGENCE on this row.
+  # Pass T5's main phase -> the <Execute> end-of-turn window.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # THE CLAUSE (fold: OptionalSkill(yes) + SelectAttackEffect).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: OptionalSkill }
+  # Liollmon's inherited [When Attacking]: don't add.
+  - actor: 0
+    do: { select: { choice: "Don't add", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+  # End of attack: <Execute> deletes Scourge; <Ascension> alone -> yes.
+  - actor: 0
+    do: { select: { yes: true } }
+  # Sim-only phase exit (our EndOfTurnAction park; nothing on the wire).
+  - actor: 0
+    do: { pass: {} }
+  # One step past: P1's turn-6 breeding decision.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -100,14 +122,20 @@ assert:
           dp: 8000
           suspended: false
           sources: [BT25-049, BT26-025, ST23-01]
-  # Our engine's actual behaviour (ENGINE FINDING): turn 6 began with no
-  # end-of-turn attack -- p1 security still 5, Scourge alive and unsuspended.
-  - at: 12
+  # THE CLAUSE: the <Execute> attack checked p1's top security (5 -> 4,
+  # ST1-02 trashed); at the end of that attack Scourge was deleted and its
+  # <Ascension> put it on top of p0's security (5 -> 6). Liollmon's add was
+  # declined.
+  - at: 16
+    that:
+      turn: 5
+      p0.security: 6
+      p1.security: 4
+      p1.trash: [ST1-02]
+      p0.field: []
+      p0.trash: [BT25-049, BT26-025, ST23-01]
+  - at: 17
     that:
       turn: 6
-      p1.security: 5
-      p0.field:
-        - card_id: BT26-075
-          dp: 8000
-          suspended: false
-          sources: [BT25-049, BT26-025, ST23-01]
+      p0.security: 6
+      p0.field: []
