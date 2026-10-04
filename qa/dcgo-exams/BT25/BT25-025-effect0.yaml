@@ -13,7 +13,9 @@
 #
 # THE LINE.
 #   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (no [TS] Tamer in hand -> its
-#       [On Play] is silent).
+#       [On Play] is silent on OUR side; DCGO asks it -- BT24_034.cs gates only
+#       on security > 0 -> dcgo_only decline row; predicted divergence
+#       recorded in BT24-034-effect2.yaml).
 #   T2 (P1, 5): hard-play Phoenixmon ST1-10 (vanilla Lv.6): 5 -> -5 -> P0 5.
 #   T3 (P0, 5): THE CLAUSE -- digivolve Aegiochusmon onto Aegiomon: 5 -> 2.
 #       Its [When Digivolving] asks ONE mandatory pick (<De-Digivolve 1> on
@@ -24,7 +26,11 @@
 # WITNESS: p0.memory 5 -> 2 and Aegiochusmon on the field over Aegiomon.
 # PROMPT SHAPE: the digivolve asks nothing (one route). The WD body asks one
 # mandatory SelectPermanentEffect (de-digivolve; ours select_opponent_permanent);
-# the unsuspend pick is gated off (security 5). 1:1 expected.
+# the unsuspend pick is gated off (security 5). 1:1 expected. VERIFIED (DCGO
+# C#, 2026-10-04): BT25_025.cs shared OP/WD optional: false; de-digivolve =
+# SelectPermanentEffect Mode.Degenerate canNoSelect false; unsuspend half
+# needs SecurityCards.Count <= 3; alt route "Aegiomon" cost 3 is the only
+# CostList entry.
 card: BT25-025
 clause: BT25-025#effect#0
 seed: 424242
@@ -46,6 +52,14 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: Aegiomon BT24-034's [On Play] OptionalSkill, declined. BT24_034.cs
+  # SharedCanActivateCondition checks only `SecurityCards.Count() > 0` (no
+  # [TS]-Tamer-in-hand gate, unlike our BT24-034.yaml `condition`), and the
+  # effect is optional (SetUpActivateClass(..., -1, true, ...)) -> DCGO asks;
+  # our engine is silent.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -67,10 +81,10 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 5
+  - at: 6
     that:
       p0.memory: 5
-  - at: 7
+  - at: 8
     that:
       turn: 3
       p0.memory: 2

@@ -21,9 +21,16 @@
 # WITNESS: P1 field goes from [Biyomon, Phoenixmon, Phoenixmon] to [Biyomon,
 # Phoenixmon]; P1's trash gains exactly one ST1-10.
 #
-# PROMPT SHAPE: mandatory pick (YAML crosscheck: DCGO's pick is mandatory, no
-# OptionalSkill) -> SelectPermanentEffect over P1's 3 Digimon. A lone trigger
-# (Minervamon base: <Succession> copies nothing) -> no MultipleSkills.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): rows as in
+# BT26-103-effect1.yaml up to the clause. The clause is BT26_103.cs "All
+# Turns" region: `SetUpActivateClass(..., 1, false, ...)` (mandatory, no
+# OptionalSkill), body a SelectPermanentEffect (maxCount 1, canNoSelect false)
+# over P1's 3 Digimon; a lone trigger (Minervamon base: <Succession> copies
+# nothing) -> no MultipleSkills.
+# NOTE: the two Phoenixmon share id ST1-10, and DCGO matches the wire's
+# card ids in occurrence order (SelectionAnswer.MatchCardIds), so DCGO deletes
+# the FIRST ST1-10 (the T2 one) where we delete opp.field.2. Indistinguishable
+# in the projection (both unsuspended, 12000, no sources) -> not a divergence.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

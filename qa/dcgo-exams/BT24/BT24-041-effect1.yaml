@@ -13,7 +13,9 @@
 #
 # THE LINE.
 #   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (no [TS] Tamer in hand -> its
-#       [On Play] is silent).
+#       [On Play] is silent on OUR side; DCGO asks it anyway -- BT24_034.cs
+#       gates only on security > 0 -> dcgo_only decline row; predicted
+#       divergence recorded in BT24-034-effect2.yaml).
 #   T2 (P1, 5): Biyomon ST1-02 (2): 5 -> 3; pass -> P0 3.
 #   T3 (P0, 3): THE CLAUSE -- hard-play Minervamon for 12 - 5 = 7: 3 -> -4.
 #       Its [On Play] (#effect#2): no play-cost <=5 [Iliad] card in hand
@@ -23,9 +25,19 @@
 #   Trailing P1 breeding pass.
 #
 # WITNESS: p0.memory -4 / p1.memory 4 at P1's T4 breeding decision.
-# PROMPT SHAPE: the reduction asks nothing. [On Play]: empty optional hand pick
-# skipped (same caveat as BT24-041-effect0: a DCGO OptionalSkill over an empty
-# pool would need a dcgo_only decline row), then ONE SelectPermanentEffect.
+# PROMPT SHAPE -- VERIFIED against DCGO C# (2026-10-04): the reduction is
+# CardEffectFactory.MandatorySelfPlayCostReduction(5, ...) -> no prompt.
+# [On Play]: BT24_041.cs registers [On Play]/[When
+# Digivolving]/[On Deletion] with SetUpActivateClass(..., -1, false, ...) --
+# NOT optional, so no OptionalSkill; the "you may" lives in the
+# SelectHandEffect (canNoSelect true) whose maxCount is
+# min(1, HandCards.Count(play cost <= 5 [Iliad] & CanPlayAsNewPermanent)),
+# and SelectHandEffect.active() returns false at maxCount <= 0 -> NO hand
+# row when nothing qualifies. Then, if the opponent has a Digimon, ONE
+# SelectPermanentEffect (maxCount 1, canNoSelect false) whose callback runs
+# IDegeneration(permanent, 1) once per own battle-area Digimon (count taken
+# AFTER the free play).
+# -> ONE SelectPermanentEffect, matching ours.
 card: BT24-041
 clause: BT24-041#effect#1
 seed: 424242
@@ -47,6 +59,14 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: Aegiomon BT24-034's [On Play] OptionalSkill, declined. BT24_034.cs
+  # SharedCanActivateCondition checks only `SecurityCards.Count() > 0` (no
+  # [TS]-Tamer-in-hand gate, unlike our BT24-034.yaml `condition`), and the
+  # effect is optional (SetUpActivateClass(..., -1, true, ...)) -> DCGO asks;
+  # our engine is silent.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -70,10 +90,10 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 6
+  - at: 7
     that:
       p0.memory: 3
-  - at: 8
+  - at: 9
     that:
       turn: 4
       p0.memory: -4

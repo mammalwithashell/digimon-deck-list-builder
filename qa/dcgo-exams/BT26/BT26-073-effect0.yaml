@@ -24,14 +24,19 @@
 # WITNESS: the digivolve lowers off a yellow Aegiomon at all; Dark stands over
 # BT25-033 and P0 paid exactly 3 (memory 3 -> 0).
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - T1: DCGO may skip Aegiomon's optional gate when the opponent has no
-#     Digimon (ours asks; our condition is only `security_count_gte: 1`).
-#   - T3: our EffectChoice is sim-only; DCGO's SetIntSelection over the payable
-#     costs is a dcgo_only generic_int row. The value 3 ("Don't use") is a
-#     GUESS by analogy with the BT25-083 menu (Delete=1, Return=2, Don't=3) --
-#     DCGO C# was not readable in the authoring container; correct it from
-#     the oracle abort message if it differs.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T1: Aegiomon BT25-033 OP/WD is optional:true (BT25_033.cs:88) gated only
+#     on `SecurityCards.Any()` (BT25_033.cs:41) -> DCGO DOES ask OptionalSkill
+#     on an empty opposing board; declined here.
+#   - T3: one legal digivolve route -> no cost prompt. Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     This line answers value 3.
 card: BT26-073
 clause: BT26-073#effect#0
 seed: 424242

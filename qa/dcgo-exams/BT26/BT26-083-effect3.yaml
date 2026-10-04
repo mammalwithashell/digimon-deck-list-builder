@@ -25,12 +25,20 @@
 # happened; at 23 BT26-083 and its source BT25-044 are in P0's trash -- the
 # self-delete at the end of the attack.
 #
-# PROMPT SHAPE. End-of-turn gate SPENT with `attack:` + expect OptionalSkill
-# (the EX12-004-effect0 shape; DCGO OptionalSkill then SelectAttackEffect).
-# Decode: ours = Replacement gate (body opens with a MANDATORY material pick,
-# so the gate is installed separately) -> OptionalSkill; DCGO asks
-# OptionalSkill too (docs/DCGO_EXAM.md "Replacement on <Decode>"). The
-# security target is the player, so `attack:` is index-safe.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Prefix as BT26-083-effect2.yaml (Asuna OptionalSkill fold FIXED).
+#   - <Execute> (KeyWordEffects/Execute.cs) is an optional OnEndTurn
+#     ActivateClass gated on CanActivateExecute == CanAttack -> OptionalSkill,
+#     then SelectAttackEffect on yes (CardEffectCommons Execute.cs:18-70):
+#     the documented end-of-turn fold.
+#     Spent with `attack:` + expect OptionalSkill.
+#   - The self-delete is an OnEndAttack DeleteSelfEffect (Execute.cs ~55-70)
+#     run through DestroyPermanentsClass with battle == null, so <Decode>
+#     (KeyWordEffects/Decode.cs, `!IsByBattle`) triggers at WhenRemoveField:
+#     optional ActivateClass -> OptionalSkill (declined), then SelectCardEffect
+#     over DigivolutionCards on yes (CardEffectCommons Decode.cs:26-60).
+#   - [On Deletion] is mandatory (BT26_083.cs:124) and the only trigger -> no
+#     MultipleSkills row, no prompt.
 card: BT26-083
 clause: BT26-083#effect#3
 seed: 424242
@@ -55,7 +63,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [BT25-044] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }

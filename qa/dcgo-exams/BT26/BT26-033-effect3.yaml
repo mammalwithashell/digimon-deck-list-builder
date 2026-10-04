@@ -2,8 +2,9 @@
 # "<Engage> (At the end of your turn, this Digimon may attack.)"
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
-# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
-# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
 #
 # THE LINE: T1 P-213 (0 -> -7); T2 P1 passes; T3 Jupitermon onto P-213 (cost
 # 4, 3 -> -1); T4 P1 passes; T5 (P0, memory 3) P0 passes breeding AND the
@@ -17,6 +18,11 @@
 # EndOfTurnAction (attack bits + PASS); the `attack:` row below folds to
 # OptionalSkill "yes" + the SelectAttackEffect answer (docs/DCGO_EXAM.md,
 # "End-of-turn attack gate").
+# VERIFIED vs DCGO C#: Engage.cs (factory) :37 isOptional true -> OptionalSkill;
+# EngageProcess (CardEffectCommons Engage.cs:16-29) then opens
+# SelectAttackEffect (canAttackPlayerCondition true). <Raid> / <Alliance>
+# trigger on the Engage attack but neither can activate (no P1 Digimon, no
+# second P0 Digimon), so no further rows.
 #
 # FIXED 2026-10-04 (G-ENGINE-DUAL-END-OF-TURN-WINDOW): this file used to
 # assert that NO window opened -- `Game::has_end_of_turn_keywords`
@@ -68,6 +74,9 @@ steps:
   # printed Red Lv.5 circle (5) and the [Digivolve] Lv.5 w/[TS] circle (4)
   # are open, so both engines ask which cost to pay (ours EffectChoice, DCGO
   # SelectCountEffect over the distinct cost list) -- answered by VALUE 4.
+  # Verified: CardController.cs PlayCardClass.SelectCost (~:620-740) builds
+  # CostList.Distinct() = [5, 4] and, at Count >= 2, opens SelectCountEffect
+  # "Which digivolution cost do you pay?" (CanNoSelect false).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -80,6 +89,10 @@ steps:
   # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
   # top security -> hand (mandatory), then the optional "play or use 1
   # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  # Verified (BT26_033.cs:56-135): SetUpActivateClass(..., isOptional false)
+  # -> no OptionalSkill; one SelectHandEffect (canNoSelect true, maxCount 1),
+  # opened only if a hand card passes CanPlayOrUse at max(0, cost - 5) --
+  # Inori / Aegiomon / Shota do here (MaxMemoryCost = |10 - memory| = 11).
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
@@ -90,6 +103,15 @@ steps:
   # to OptionalSkill "no"). This row was dcgo_only until
   # G-ENGINE-DUAL-END-OF-TURN-WINDOW was fixed (2026-10-04): our engine used
   # to skip the park for a DUAL top card (CardKind::Dual).
+  # Verified, including on this NEGATIVE-memory turn end:
+  # AutoProcessing.cs EndTurnCheck (:635) runs EndTurnProcess as soon as the
+  # non-turn player has >= 1 memory, and EndTurnProcess (:679) stacks
+  # EffectTiming.OnEndTurn BEFORE moving to phase.End -- the same path as a
+  # pass. <Engage> is CardEffectFactory EngageEffect (Engage.cs:37,
+  # isOptional true -> OptionalSkill as the lone stacked effect), CanUse =
+  # owner's turn + IsPermanentExistsOnBattleAreaDigimon (Permanent.IsDigimon
+  # is true for the DUAL top card: CardSource.IsDigimon = cardKind contains
+  # Digimon), CanActivate = CanActivateEngage (CanAttack && !IsAttacking).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: OptionalSkill }

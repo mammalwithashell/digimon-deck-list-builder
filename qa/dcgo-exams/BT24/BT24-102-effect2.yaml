@@ -14,9 +14,13 @@
 # WITNESS: after the attack, p0.field holds Homeros (unsuspended), p0.security
 # is 4, and the gauge did not move (P1 still holds 3: p0.memory -3).
 #
-# PROMPT SHAPE: the [Security] effect is mandatory and target-less -> no
-# OptionalSkill, no selection. P0 has no Blocker on the field, so no block
-# prompt. Expect DCGO to log nothing between the attack and P1's pass.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): the [Security] effect
+# is CardEffectFactory.PlaySelfTamerSecurityEffect (CardEffectFactory.cs:132)
+# -- `SetUpActivateClass(..., false, ...)`, mandatory, body PlayPermanentCards
+# with payCost false -> no OptionalSkill, no selection. AttackProcess.cs
+# CounterTiming stacks only OnCounterTiming effects (none in P0's pool) and
+# BlockTiming opens SelectPermanentEffect only when a Blocker exists (P0's
+# field is empty) -> DCGO logs nothing between the attack and P1's pass.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

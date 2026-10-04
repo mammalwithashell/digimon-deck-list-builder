@@ -10,7 +10,9 @@
 # so both observables below exist only because of the clause.
 #
 # THE LINE.
-#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (silent: no [TS] Tamer).
+#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (silent on OUR side: no [TS]
+#       Tamer; DCGO asks it -- BT24_034.cs gates only on security > 0 ->
+#       dcgo_only decline row).
 #   T2 (P1, 5): Agumon ST1-03 (3, 2000): 5 -> 2; pass -> P0 3.
 #   T3 (P0, 3): hard-play Minervamon for 12 - 5 = 7: 3 -> -4. [On Play]: no
 #       play-cost <=5 [Iliad] card in hand (stacked) -> no free play; ONE
@@ -29,17 +31,23 @@
 # (T5) Aegiomon suspended after its attack; (T6) Aegiomon's suspended flag at
 # P1's breeding decision.
 #
-# FIXED 2026-10-04 (G-ENGINE-AURA-REBOOT-NOT-APPLIED): the step-15 assert
+# FIXED 2026-10-04 (G-ENGINE-AURA-REBOOT-NOT-APPLIED): the step-16 assert (step 15 before the 2026-10-04 dcgo_only row)
 # used to record Aegiomon STILL SUSPENDED -- the [Opponent's Turn]-gated
 # declarative aura was not re-materialized after the turn-player change, so
 # the Reboot scan in `game_phases.rs` (which reads `has_keyword`, whose
 # granted half is the materialized keyword map) missed the granted <Reboot>.
 # The unsuspend phase now ticks declarative effects before the scan, and the
-# step-15 assert records `suspended: false` (printed text + rules 16-10).
+# step-16 assert records `suspended: false` (printed text + rules 16-10).
 # The <Blocker> half of the clause always worked (T4).
 #
 # PROMPT SHAPE: the blocker window is SelectPermanentEffect on DCGO / our
 # blocker prompt, answered by identity (Aegiomon). Reboot asks nothing.
+# VERIFIED (DCGO C#, 2026-10-04): AttackProcess.cs BlockTiming raises ONE
+# SelectPermanentEffect (canNoSelect !HasCollision) over the defender's
+# Blocker Digimon; BT24_041.cs grants Reboot/Blocker via static
+# RebootStaticEffect/BlockerStaticEffect gated on IsOpponentTurn -- no
+# prompts. Minervamon's [On Play] here = one SelectPermanentEffect (no
+# qualifying hand card -> SelectHandEffect.active() false).
 # (FIXED 2026-10-04: an earlier draft carried a SIM-ONLY decline row for a
 # phantom <Barrier> accept our engine offered P1 when P1's Agumon would be
 # deleted in battle -- G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED. The row
@@ -66,6 +74,14 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: Aegiomon BT24-034's [On Play] OptionalSkill, declined. BT24_034.cs
+  # SharedCanActivateCondition checks only `SecurityCards.Count() > 0` (no
+  # [TS]-Tamer-in-hand gate, unlike our BT24-034.yaml `condition`), and the
+  # effect is optional (SetUpActivateClass(..., -1, true, ...)) -> DCGO asks;
+  # our engine is silent.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 5): Agumon, pass.
   - actor: 1
     do: { pass: {} }
@@ -114,7 +130,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 11
+  - at: 12
     that:
       turn: 4
       p0.security: 5
@@ -123,14 +139,14 @@ assert:
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
-  - at: 14
+  - at: 15
     that:
       p1.security: 4
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
   # Aegiomon unsuspended by the aura-granted <Reboot> in P1's unsuspend phase.
-  - at: 15
+  - at: 16
     that:
       turn: 6
       p0.field:

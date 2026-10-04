@@ -24,10 +24,21 @@
 #   Trailing pass.
 #
 # WITNESS: p0.memory 3 -> 0 and Minervamon on the field over P-213.
-# PROMPT SHAPE: no cost prompt (one route). WD: the optional hand pick has no
-# candidate -- ours skips it; if DCGO still raises an OptionalSkill for the
-# "you may" with an empty pool, the oracle aborts at the de-digivolve row
-# (add a dcgo_only decline). Then ONE SelectPermanentEffect.
+# PROMPT SHAPE -- VERIFIED against DCGO C# (2026-10-04): no cost prompt
+# (one route: P-213 fails both Lv.5 circles, CostList has one entry ->
+# CardController.cs SelectCost takes it). WD: BT24_041.cs registers [On Play]/[When
+# Digivolving]/[On Deletion] with SetUpActivateClass(..., -1, false, ...) --
+# NOT optional, so no OptionalSkill; the "you may" lives in the
+# SelectHandEffect (canNoSelect true) whose maxCount is
+# min(1, HandCards.Count(play cost <= 5 [Iliad] & CanPlayAsNewPermanent)),
+# and SelectHandEffect.active() returns false at maxCount <= 0 -> NO hand
+# row when nothing qualifies. Then, if the opponent has a Digimon, ONE
+# SelectPermanentEffect (maxCount 1, canNoSelect false) whose callback runs
+# IDegeneration(permanent, 1) once per own battle-area Digimon (count taken
+# AFTER the free play).
+# So DCGO asks exactly ONE SelectPermanentEffect here, like ours. P-213's
+# own [When Digivolving] does not fire (P-213 is the digivolved-FROM card);
+# its inherited <Decode> is WhenRemoveField -- inert.
 card: BT24-041
 clause: BT24-041#effect#0
 seed: 424242

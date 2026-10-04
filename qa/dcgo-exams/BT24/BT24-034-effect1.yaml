@@ -10,7 +10,9 @@
 #
 # THE LINE.
 #   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5. No [TS] Tamer in hand, so
-#       its [On Play] (#effect#2) is silent on both sides.
+#       its [On Play] (#effect#2) is silent on OUR side; DCGO still asks the
+#       OptionalSkill (security > 0) -> dcgo_only decline row (see PREDICTED
+#       DIVERGENCE).
 #   T2 (P1, 5): hard-play Vermilimon BT4-014 (vanilla Lv.5, 8000): 5 -> 0;
 #       pass -> P0 3.
 #   T3 (P0, 3): Aegiomon attacks P1's security (Vermilimon has no <Blocker>),
@@ -36,7 +38,24 @@
 # PROMPT SHAPE: <Barrier> is "by trashing ... (optional cost) it isn't
 # deleted" (rules 16-24). Ours: an optional Replacement accept -> `yes`;
 # DCGO: OptionalSkill. No other trigger in the window (Aegiomon has no
-# [When Attacking]/[On Deletion]; Vermilimon is vanilla).
+# [When Attacking]/[On Deletion]; Vermilimon is vanilla). VERIFIED (DCGO C#,
+# 2026-10-04): KeyWordEffects/Barrier.cs BarrierEffect is
+# SetUpActivateClass(..., -1, true, ...) (OptionalSkill), CanUse requires
+# IsByBattle; only the top card's printed Barrier is live (the inherited copy
+# needs Aegiomon in sources). The trailing P1 pass is a main_phase row.
+#
+# PREDICTED DIVERGENCE (prompt only on this line; DCGO C# read 2026-10-04):
+# BT24_034.cs gates Aegiomon's [When Moving]/[On Play]/[When Digivolving] on
+# `IsExistOnBattleAreaDigimon && SecurityCards.Count() > 0` ONLY, asks it as
+# an OptionalSkill (isOptional true), pays the cost (top security -> hand)
+# and only THEN looks for a [TS] Tamer in hand (`HandCards.Count(ValidTamer)
+# >= 1` -> SelectHandEffect, canNoSelect true). Our BT24-034.yaml requires a
+# [TS] Tamer in hand BEFORE the cost (`condition: count_gte ... kind: tamer`)
+# and is silent otherwise. Rules side with DCGO: digest.md 15-7 ("By X, Y" --
+# the player may choose X even if the result can't be executed, 15-7-5), and
+# a [TS] Tamer that arrives FROM the security card is playable in DCGO but
+# not in ours. The DCGO gate is carried as a `dcgo_only` decline row; the
+# end state is unchanged (declined).
 card: BT24-034
 clause: BT24-034#effect#1
 seed: 424242
@@ -59,6 +78,14 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: Aegiomon BT24-034's [On Play] OptionalSkill, declined. BT24_034.cs
+  # SharedCanActivateCondition checks only `SecurityCards.Count() > 0` (no
+  # [TS]-Tamer-in-hand gate, unlike our BT24-034.yaml `condition`), and the
+  # effect is optional (SetUpActivateClass(..., -1, true, ...)) -> DCGO asks;
+  # our engine is silent.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 5): Vermilimon (5 -> 0), pass.
   - actor: 1
     do: { pass: {} }
@@ -94,13 +121,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 9
+  - at: 10
     that:
       p0.security: 5
       p1.security: 4
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
-  - at: 11
+  - at: 12
     that:
       turn: 4
       p0.security: 4

@@ -24,11 +24,29 @@
 #   Ours (BT24-034.yaml): a 2-branch EffectChoice ("Add top security to hand
 #   and play a TS Tamer" / "Decline") -> answered by the sim-only `choice:` row,
 #   then `select_hand` (Hand <-> SelectHandEffect) over the [TS] Tamers.
-#   DCGO (expected, BT24_034.cs not readable in this container): an
-#   OptionalSkill yes/no for the "you may" -> the `dcgo_only` yes row -- then
-#   a SelectHandEffect for the Tamer. If DCGO instead gates on the cost with a
-#   different widget (generic_bool) or skips the gate, the run aborts at the
-#   dcgo_only row and THAT is the finding.
+#   DCGO -- VERIFIED against BT24_034.cs (2026-10-04): the [On Play]
+#   ActivateClass is SetUpActivateClass(SharedCanActivateCondition, ..., -1,
+#   true, ...) -> an OptionalSkill yes/no (the `dcgo_only` yes row); the body
+#   then adds SecurityCards[0] to the hand + IReduceSecurity, and, since the
+#   hand holds a ValidTamer ([TS] Tamer, name not on a field Tamer,
+#   CanPlayAsNewPermanent), opens ONE SelectHandEffect (maxCount 1,
+#   canNoSelect true) -> the shared Inori row; PlayPermanentCards(payCost:
+#   false, activateETB: true). Inori BT24-084 has no [On Play]; her [All
+#   Turns] OnLoseSecurity is NOT on the stack -- DCGO stacks OnLoseSecurity
+#   skill infos at the removal (CardController.cs StackSkillInfos(...,
+#   OnLoseSecurity)), while she is still in the hand.
+#
+# PREDICTED DIVERGENCES (not exercised by this accept-and-pick line):
+#   (1) Gate: DCGO's CanActivate is `SecurityCards.Count() > 0` only and the
+#       Tamer check runs AFTER the security card is added; ours requires a
+#       [TS] Tamer in hand BEFORE the cost (BT24-034.yaml `condition`).
+#       digest.md 15-7 (15-7-5: the "By X" cost may be chosen even if the
+#       result can't execute) sides with DCGO; ours also cannot play a [TS]
+#       Tamer that arrives FROM security.
+#   (2) Pick optionality: DCGO's SelectHandEffect is canNoSelect true ("you
+#       MAY play"); our `select_hand` in BT24-034.yaml carries no
+#       `optional: true`, so after accepting the cost our engine forces a
+#       Tamer pick. Printed text ("you may play") sides with DCGO.
 card: BT24-034
 clause: BT24-034#effect#2
 seed: 424242

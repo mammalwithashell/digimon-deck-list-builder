@@ -21,18 +21,25 @@
 # 5) and instead P1's 4000-DP Agumon is in trash; the 3000-DP Biyomon stays.
 # P-213 is suspended from attacking.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - Raid: authored `expect: OptionalSkill` over our live declinable OppField
-#     pick -- the documented <Raid>-family FOLD (DCGO gates OptionalSkill yes,
-#     then the pick; the emitter splits the row). EX12-076-effect1 precedent.
-#   - WD "may attack" decline: ours `Target` decline vs DCGO SelectAttackEffect
-#     "no attack" (see P-213-effect0 note).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Raid: CardEffectFactory/KeyWordEffects/Raid.cs is an optional
+#     ActivateClass (OptionalSkill) whose RaidProcess then opens a
+#     SelectPermanentEffect (canNoSelect true) over the opponent's
+#     highest-DP unsuspended Digimon (Agumon alone; still asked) -> the
+#     shared row is the optional_gate_fold marker (`expect: OptionalSkill`):
+#     OptionalSkill(yes) + the pick. EX12-076-effect1 precedent.
+#   - WD "may attack" decline: P_213.cs runs SelectAttackEffect directly behind CanAttack -- NO OptionalSkill gate
+#     (P/Red/P_213.cs "When Digivolving" region); the decline is that widget's
+#     cancel (SelectAttackEffect.cs SetAttackTarget harness hook, -2).
+#   - No other prompts: P1 has no OnCounterTiming effects
+#     (AttackProcess.cs CounterTiming) and no Blocker (BlockTiming opens no
+#     SelectPermanentEffect); Agumon BT3-007 / Biyomon have no DCGO script.
 #   - (FIXED 2026-10-04) An earlier draft carried a SIM-ONLY decline row for
 #     actor 1: our engine parked a phantom `<Barrier>` Replacement prompt for
 #     P1 when P1's Agumon "would be deleted in battle" (P0's inherited
 #     <Barrier> was not self-scoped at candidate collection).
 #     G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED is fixed; the row is gone,
-#     matching DCGO (which asks nothing here).
+#     matching DCGO (Barrier.cs triggers only for its own carrier).
 card: P-213
 clause: P-213#effect#1
 seed: 424242

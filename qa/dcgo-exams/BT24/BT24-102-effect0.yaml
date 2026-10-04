@@ -15,8 +15,12 @@
 # WITNESS (asked at P0's first main-phase decision on T3): p0.memory 6,
 # Homeros suspended, BT24-084 in hand.
 #
-# PROMPT SHAPE: mandatory, target-less SOMP trigger -> no OptionalSkill, no
-# selection; a lone trigger -> no MultipleSkills.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): BT24/White/BT24_102.cs
+# OnStartMainPhase region is `SetUpActivateClass(..., -1, false, ...)` --
+# mandatory -> no OptionalSkill; body is AddMemory(1) then, at
+# MemoryForPlayer >= 5, SuspendPermanentsClass + DrawClass -- no selection. It
+# is P0's only SOMP trigger -> MultipleSkills short-circuits at 1 active skill
+# (MultipleSkills.cs `skillInfos_active.Count == 1`), no row.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

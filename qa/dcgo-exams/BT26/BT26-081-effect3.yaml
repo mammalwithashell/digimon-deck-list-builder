@@ -24,18 +24,23 @@
 # <Reboot> are not separately observed on this line (Alliance needs a second
 # attacker on P0's turn; Reboot would need P1's NEXT unsuspend phase).
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Mervamon OP pick decline: ours parks a PlayCostBudget per-pick trampoline over HAND
-#     cards only (trash empty). FIXED 2026-10-04
-#     (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE): the adapter now maps a budget pick
-#     by its candidates' zone, so this is ONE shared row asserting
-#     SelectHandEffect (was a sim_only + dcgo_only pair). Still a GUESS that
-#     DCGO skips its hand/trash/stop zone menu when only the hand qualifies;
-#     if DCGO asks the menu, add its "stop"/zone generic_int value as a
-#     dcgo_only row from the oracle abort message.
-#   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
-#   - Blocker window: SelectPermanentEffect on both sides (EX12-026-effect0
-#     shape).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is DCGO's.
+#   - DP pick: SelectPermanentEffect maxCount 1, canNoSelect false; asked even
+#     with one candidate under the harness (SelectPermanentEffect.cs ~376-407).
+#   - Blocker window: AttackProcess.cs:333-365 -- SelectPermanentEffect for the
+#     defending player (canNoSelect unless Collision); Mervamon has <Blocker>
+#     via its own BlockerStaticEffect grant to [Iliad] (BT26_081.cs).
 card: BT26-081
 clause: BT26-081#effect#3
 seed: 424242

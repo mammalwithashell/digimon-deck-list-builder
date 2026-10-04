@@ -32,15 +32,30 @@
 # resolver now spends the trailing PASS only on a multi-pick that took a
 # pick, so the free-play decline is an explicit sim_only row again.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Asuna [On Play]: optional_gate_fold (OptionalSkill + SelectHandEffect).
-#   - Assembly: ours = CountCappedMultiSelect {0..1} over the trash; DCGO =
-#     SelectCardEffect (may also ask "use Assembly?" first).
-#   - Mervamon OP pick: ONE shared decline row expecting SelectHandEffect
-#     (hand-only PlayCostBudget -> SelectHandEffect since
-#     G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE), GUESSING DCGO skips its
-#     hand/trash/stop zone menu (trash empty after the Assembly).
-#   - DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Asuna [On Play] is optional (BT24_088.cs:112) -> OptionalSkill, then
+#     SelectHandEffect canNoSelect (BT24_088.cs:143): authored as the
+#     optional_gate_fold (`expect: OptionalSkill` over our Hand pick).
+#   - Asuna [Start of Your Turn] at 7 memory: not activatable -> no prompt.
+#   - Assembly is ONE SelectCardEffect over the trash (root Trash,
+#     canNoSelect true, maxCount = elementCount 1) from
+#     SelectAssemblyClass.SelectTrashCard, called from the play flow
+#     (CardController.cs:928-932). There is NO separate "use Assembly?"
+#     gate: if the trash can fulfil the element the pick just opens.
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: Minervamon left the trash as the Assembly source before the On
+#     Play resolves -> hand-only -> no zone menu; one shared decline row.
+#   - DP pick: SelectPermanentEffect maxCount 1 (x2: Mervamon + Asuna, a [TS]
+#     Tamer); asked even with one candidate (SelectPermanentEffect.cs ~376-407).
 card: BT26-081
 clause: BT26-081#effect#4
 seed: 424242

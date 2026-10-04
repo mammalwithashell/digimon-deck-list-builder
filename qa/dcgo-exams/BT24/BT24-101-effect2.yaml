@@ -24,10 +24,11 @@
 # from effect#3); P1 security 4.
 #
 # PROMPT SHAPE: ours = one OppField pick for the -13000 (SelectPermanentEffect).
-# The clause is mandatory: no OptionalSkill on either side. DCGO may order
-# "trash top security" vs the target pick differently (the target is picked
-# after the trash on our side) -- the row's state would then differ only in
-# p0.security / p0.trash at the pick step.
+# The clause is mandatory: no OptionalSkill on either side. VERIFIED (DCGO
+# C#, 2026-10-04): BT24_101.cs SharedActivateCoroutine runs IDestroySecurity
+# BEFORE the SelectPermanentEffect (canNoSelect false), exactly our order, so
+# the pick row's p0.security / p0.trash agree; effect#3 is the only
+# OnLoseSecurity trigger (no MultipleSkills, no prompt).
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

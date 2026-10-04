@@ -31,13 +31,27 @@
 # BT26-033 in P0's trash, Kanan suspended. T3 main -> memory 4.
 #
 # PROMPT SHAPE (end-of-turn half): ours = see the steps (an optional window,
-# then the [TS] Option hand pick). DCGO (YAML crosscheck of BT26_090.cs):
+# then the [TS] Option hand pick). DCGO -- VERIFIED 2026-10-04 against
+# BT26_090.cs at the pinned submodule (b9a0638cd):
 # OnEndTurn optional -> OptionalSkill; SuspendPermanent; canNoSelect hand pick
 # (SelectHandEffect) over affordable [TS] Options at cost - opponent memory;
 # PlayOptionCards(payCost: true). The DUAL card's use-cost formula and the
 # <Use Req.> colour waiver both have to agree across engines for the cost to
 # match. End-of-turn window: ours EndOfTurnAction vs DCGO Main (the
 # documented end-of-turn pair). The SoMP half is mandatory with no prompt.
+# Citations: BT26_090.cs:48 SetUpActivateClass(..., true) -> OptionalSkill;
+# CanActivate (:68-70) = on field + CanActivateSuspendCostEffect only (no
+# hand-candidate check, so the T3 gate is asked with no [TS] Option in hand,
+# as ours does); SuccessProcess (:80-145) opens SelectHandEffect (canNoSelect
+# true) only if a hand card passes IsOption && HasTSTraits && affordable at
+# cost - opponent memory (reduceCost read at selection time = 3), then a
+# paying-cost ChangeCostClass -3 + PlayOptionCards(payCost true). The DUAL
+# card's +5 is a card-cost ChangeCostClass (BT26_033.cs:288), so 2 + 5 - 3 =
+# 4. Arts: no own Digimon -> ArtsDigivolve CanResolve false -> trashed, no
+# prompt. Both gates fire on memory-overflow / pass turn ends alike
+# (AutoProcessing.cs EndTurnCheck :635 -> EndTurnProcess :679). SoMP
+# (:17-37) isOptional false. Kanan is the only [TS] Tamer, so <Use Req.>
+# holds (CardEffectFactory.UseRequirements, CardEffectFactory.cs:706).
 #
 # FIXED 2026-10-04 (G-DSL-USE-OPTION-ONLY): our engine used to park an
 # EffectChoice "Play as Digimon or use as Option" for the DUAL card after the

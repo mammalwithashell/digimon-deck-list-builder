@@ -3,8 +3,9 @@
 #  DP. Then, <Recovery +1>."
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
-# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
-# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
 #
 # THE LINE: T1 P-213 (0 -> -7); T2 P1 fields Biyomon (3000), Monodramon
 # (3000) and Agumon BT3-007 (4000); T3 (P0, 3) uses Jupitermon's Option face
@@ -27,6 +28,16 @@
 # OptionalSkill). <Arts Digivolve> is offered on EVERY use with a legal
 # target (ours optional OwnField pick; DCGO SelectPermanentEffect
 # canNoSelect:true).
+# VERIFIED vs DCGO C#: the [Main] is SetUpActivateClass(..., false) +
+# SetIsOptionEffect (BT26_033.cs:343) -> no OptionalSkill; it deletes the
+# whole CardEffectCommons.IsMinDP group with no pick, then IRecovery (no
+# prompt). The +1-per-security use cost is a ChangeCostClass with
+# isChangePayingCost false (BT26_033.cs:288), i.e. it changes the card's OWN
+# cost (CardSource.cs ~:800-860), so it IS paid. <Arts Digivolve> is an
+# OptionResolutionClass (ArtsDigivolve.cs): CardController.cs PlayOptionCards
+# (~:2027-2130) resolves a lone resolution directly (no MultipleSkills / no
+# OptionalSkill), opening SelectPermanentEffect canNoSelect true over own
+# Digimon Jupitermon can be played onto (Root.Execution, payCost false).
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
 # DCGO -- unconfirmed until the oracle pass.
 card: BT26-033

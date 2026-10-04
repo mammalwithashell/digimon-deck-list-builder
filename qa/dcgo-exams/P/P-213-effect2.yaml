@@ -21,12 +21,20 @@
 # WITNESS: a source-less Aegiomon BT25-033 on P0's field (played out of
 # P-213's stack), P-213 alone in P0's trash, P0 security still 5.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - Decode: Replacement gate (OptionalSkill yes) + SelectCardEffect source
-#     pick. DCGO's post-gate pick is skippable (canNoSelect true, DCGO_EXAM.md
-#     "<Decode>" row) -- same row count here since we pick.
-#   - WD "may attack" decline: ours `Target` decline vs DCGO
-#     SelectAttackEffect "no attack" (see P-213-effect0 note).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Decode: P_213.cs "Decode <[Aegiomon]>" = DecodeSelfEffect (optional
+#     ActivateClass -> OptionalSkill yes), then CardEffectCommons
+#     KeyWordEffects/Decode.cs DecodeProcess's SelectCardEffect over the
+#     DigivolutionCards (canNoSelect true) -- 1:1 with our gate + pick. Only
+#     the top card's non-inherited copy fires (the "- ESS" copy is inherited
+#     and Permanent.EffectList_ForCard skips inherited effects on the top card).
+#   - The played Aegiomon's [On Play] is stacked on the MAIN autoProcessing
+#     (CardController.cs ~1925) while Decode runs on the cut-in stack
+#     (CardController.cs WhenRemoveField -> autoProcessing_CutIn), so it
+#     resolves after Gaia Force completes, alone -> OptionalSkill (decline).
+#   - WD "may attack" decline: P_213.cs runs SelectAttackEffect directly behind CanAttack -- NO OptionalSkill gate
+#     (P/Red/P_213.cs "When Digivolving" region); the decline is that widget's
+#     cancel (SelectAttackEffect.cs SetAttackTarget harness hook, -2).
 card: P-213
 clause: P-213#effect#2
 seed: 424242

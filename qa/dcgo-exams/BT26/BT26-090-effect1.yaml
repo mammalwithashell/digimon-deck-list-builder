@@ -22,6 +22,10 @@
 # paying its cost of 3.
 #
 # PROMPT SHAPE: mandatory [Security] effect, no selection on either side.
+# VERIFIED vs DCGO C#: BT26_090.cs:152-155 -> CardEffectFactory
+# PlaySelfTamerSecurityEffect (CardEffectFactory.cs:132-172, isOptional false,
+# PlayPermanentCards payCost false). Kanan's [End of Your Turn] needs the
+# owner's turn, so nothing fires at P1's turn end.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

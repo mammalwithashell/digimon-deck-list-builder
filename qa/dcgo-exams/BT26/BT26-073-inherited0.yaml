@@ -22,14 +22,23 @@
 # trash. Minervamon itself prints no <Security A.>; the +1 comes only from
 # Dark's inherited effect.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - T1 cost menu: sim-only choice + dcgo_only generic_int `value: 3` (GUESS,
-#     DCGO C# unreadable in the authoring container); DCGO may skip the menu
-#     outright when the opponent has no Lv.<=5 Digimon.
-#   - Minervamon WD: ours = one declinable hand pick; DCGO likely OptionalSkill
-#     (authored as the fold `decline:` + `expect: OptionalSkill`). If DCGO's
-#     effect is non-optional with a canNoSelect hand pick, change the expect to
-#     SelectHandEffect.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T1: Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     This line answers value 3.
+#   - T3 Minervamon WD -- FIXED 2026-10-04 (was an OptionalSkill fold):
+#     Minervamon BT24-041 OP/WD is NOT optional (SetUpActivateClass(..., false),
+#     BT24_041.cs:149/167): DCGO opens SelectHandEffect directly
+#     (maxCount = min(1, candidates), canNoSelect true, BT24_041.cs:79-93),
+#     so the decline is a select_cancel on SelectHandEffect -- NOT an
+#     OptionalSkill fold. Its De-Digivolve half is skipped when the
+#     opponent has no Digimon (HasMatchConditionPermanent guard).
 card: BT26-073
 clause: BT26-073#inherited#0
 seed: 424242
@@ -68,7 +77,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }

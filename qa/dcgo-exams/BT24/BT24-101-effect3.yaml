@@ -32,6 +32,10 @@
 #
 # PROMPT SHAPE: mandatory trigger, no selection on either side. The T6 check
 # also runs the security battle. No MultipleSkills expected (one trigger).
+# VERIFIED (DCGO C#, 2026-10-04): BT24_101.cs effect#3 is OnLoseSecurity,
+# SetUpActivateClass(..., 1, false, ...) (once per turn, not optional), body
+# IDestroySecurity on the enemy -- no prompt. The [On Play] -13000 pick is
+# skipped with no P1 Digimon (SelectPermanentEffect.active() false).
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

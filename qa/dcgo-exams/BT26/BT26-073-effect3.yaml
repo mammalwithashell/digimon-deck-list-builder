@@ -22,16 +22,29 @@
 # WITNESS: memory 7 -> 1 (6 = 8 - 2 paid, not the printed 8); Elecmon moved
 # from P0's trash to Dark's sources.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Asuna [On Play]: ours = one declinable hand pick; DCGO = OptionalSkill +
-#     SelectHandEffect (authored as optional_gate_fold, `expect: OptionalSkill`;
-#     the BT24-088-effect2.yaml shape).
-#   - Assembly: ours = CountCappedMultiSelect {min 0, max 1} over the trash
-#     (one element). DCGO = SelectCardEffect (or its Assembly UI); DCGO may
-#     additionally ask "use Assembly?" before the pick -- not modelled here.
-#   - Cost menu: sim-only choice + dcgo_only generic_int `value: 3` ("Don't
-#     use") is a GUESS (DCGO C# unreadable in the authoring container). DCGO
-#     may also skip the menu entirely when no opponent Lv.<=5 Digimon exists.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Asuna [On Play] is optional (BT24_088.cs:112) -> OptionalSkill, then
+#     SelectHandEffect canNoSelect (BT24_088.cs:143): authored as the
+#     optional_gate_fold (`expect: OptionalSkill` over our Hand pick).
+#   - Asuna [Start of Your Turn] on T3: CanActivate is `memory <= 4`
+#     (BT24_088.cs:31-35); MultipleSkills drops non-activatable triggers
+#     before prompting (MultipleSkills.cs ~218), so no OptionalSkill at 7.
+#   - Assembly is ONE SelectCardEffect over the trash (root Trash,
+#     canNoSelect true, maxCount = elementCount 1) from
+#     SelectAssemblyClass.SelectTrashCard, called from the play flow
+#     (CardController.cs:928-932). There is NO separate "use Assembly?"
+#     gate: if the trash can fulfil the element the pick just opens.
+#   - Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     Elecmon is under Dark by the time the On Play resolves (sources are
+#     added during the play, CardController.cs:1869), so the trash is empty
+#     -> menu {1,3}; this line answers value 3.
 card: BT26-073
 clause: BT26-073#effect#3
 seed: 424242

@@ -12,6 +12,26 @@
 #   [11] BT24-084 Inori Misono -- [TS] only
 #   [12] BT4-104  Blinding Ray -- neither
 # Iliad bucket -> Aegiomon, TS bucket -> Inori; Blinding Ray to the bottom.
+#
+# PROMPT SHAPE -- VERIFIED against DCGO C# (2026-10-04):
+#   * NO leading generic_bool. BT24_031.cs calls
+#     SimplifiedRevealDeckTopCardsAndSelect (RevealLibrary.cs), which forwards
+#     to RevealDeckTopCardsAndSelect WITHOUT `canNoAction`; the "Select cards /
+#     Not select" SetBoolSelection there is guarded by
+#     `selectCardConditions.Length >= 2 && canNoAction` -> skipped.
+#   * ONE SelectCardEffect row PER BUCKET, in condition order ([Iliad] first,
+#     then [TS]): the `foreach (selectCondition in selectCardConditions)` loop,
+#     each with maxCount = min(1, matching revealed cards), canNoSelect false,
+#     Root.Library (SelectCardEffect.active() is true for Root.Library even at
+#     one candidate -- no auto-pick). Each bucket is Mode.AddHand, so the Iliad
+#     pick reaches the hand when ITS prompt closes: expect the documented
+#     one-field p0.hand divergence on the 2nd pick row (DCGO quirk; ours adds
+#     after both buckets).
+#   * NO prompt for the 1-card remainder: ReturnRevealedCardsToLibraryBottom
+#     (RevealLibrary.cs) bottoms a single card directly
+#     (`remainingCards.Count == 1`); hence our OrderedPermutation N=1 row is
+#     sim_only. The On Play is non-optional (SetUpActivateClass(..., -1,
+#     false, ...)) -> no OptionalSkill.
 card: BT24-031
 clause: BT24-031#effect#1
 seed: 424242

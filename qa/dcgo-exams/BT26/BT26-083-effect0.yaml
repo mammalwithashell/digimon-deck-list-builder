@@ -28,9 +28,19 @@
 # WITNESS: at 9 Neptunemon (no sources) and P0 memory 3; at 10 BT26-083 sits
 # on top of BT24-030 and P0 memory is -1 (exactly 4 paid).
 #
-# PROMPT SHAPE. One legal digivolve cost -> no cost-choice prompt on either
-# side. WD: no target pick (0 candidates); DCGO SelectPermanentEffect with 0
-# candidates should be skipped. <Execute> gate: documented end-of-turn fold.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   One legal digivolve cost -> no cost prompt. Neptunemon BT24-030 [On Play]
+#   is mandatory (BT24_030.cs:75) and no-ops on an empty board. WD:
+#   The delete pick is ONE SelectPermanentEffect maxCount = min(trashed,
+#     opp Digimon), canNoSelect false (BT26_083.cs:85-99); asked even when
+#     candidates == maxCount (the forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407). 0 candidates -> no prompt
+#     (`if (deleteCount >= 1)`). The OP/WD is optional:false
+#     (BT26_083.cs:115): no OptionalSkill.
+#   - <Execute> (KeyWordEffects/Execute.cs) is an optional OnEndTurn
+#     ActivateClass gated on CanActivateExecute == CanAttack -> OptionalSkill,
+#     then SelectAttackEffect on yes (CardEffectCommons Execute.cs:18-70):
+#     the documented end-of-turn fold. Declined here.
 card: BT26-083
 clause: BT26-083#effect#0
 seed: 424242

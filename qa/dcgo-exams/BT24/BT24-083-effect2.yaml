@@ -19,10 +19,13 @@
 # field, P0 security is 4, and P1 still holds 3 memory (p0.memory -3) --
 # she cost nothing; Aegiomon has joined the hand from her [On Play].
 #
-# PROMPT SHAPE. [Security]: mandatory, no prompt on either side. Her [On
-# Play]: RevealBucket (1 row) + OrderedPermutation over 2 IDENTICAL copies
-# (one `cards:` row, DCGO single multi-pick). [Start of Your Turn]: ours
-# TriggerOrder(1) -> OptionalSkill; DCGO OptionalSkill.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - [Security]: PlaySelfTamerSecurityEffect is mandatory
+#     (CardEffectFactory.cs:132-136) -- no prompt.
+#   - Her [On Play]: as BT24-083-effect1.yaml (one bucket row + one 2-pick
+#     bottom-order row, identical copies still asked).
+#   - [Start of Your Turn] (optional, BT24_083.cs:20, memory 3 <= 4) ->
+#     OptionalSkill, declined.
 card: BT24-083
 clause: BT24-083#effect#2
 seed: 424242
