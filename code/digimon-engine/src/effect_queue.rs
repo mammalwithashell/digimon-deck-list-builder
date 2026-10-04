@@ -4779,6 +4779,18 @@ impl Game {
         } else {
             (sel.callback)(self, action_id);
         }
+        // G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: when this selection
+        // was the last nested pick of a replacement process (e.g. <Decode>'s
+        // source pick, which PLAYS a Digimon), the parked replacement's commit
+        // — the original event completing, e.g. the carrier leaving — is
+        // still part of the same immediate-effect processing (§16-35; an
+        // immediate effect's processing completes before waiting triggered
+        // effects resolve). Commit it INSIDE the deferred-drain scope so
+        // triggers the process raised (the played Digimon's [On Play]) wait
+        // until the carrier has actually left.
+        if self.pending_selection.is_none() && !self.parked_replacement.is_empty() {
+            crate::replacement::try_drain_parked_replacement_with_guard(self);
+        }
         self.exit_deferred_drain_and_flush();
 
         // Phase C §4.4: drain parked-replacement slot (if any). If the
