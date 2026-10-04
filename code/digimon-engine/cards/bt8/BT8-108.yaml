@@ -1,0 +1,44 @@
+# BT8-108 Mist Memory Boost! — Option, Purple, Cost 3.
+#
+# Printed text (official Bandai DB):
+#   [Main] Trash the top 2 cards of your deck and <Draw 1>. Then, place this
+#     card in the battle area.
+#   [Main] <Delay> ・Gain 2 memory.
+#   [Security] Place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Purple/BT8_108.cs
+#   OptionSkill: IAddTrashCardsFromLibraryTop(2) → DrawClass(1) →
+#     PlaceDelayOptionCards(card)
+#   OnDeclaration: <Delay> trash self → AddMemory(2)
+#   SecuritySkill: PlaceSelfDelayOptionSecurityEffect
+#
+# Shape mirrors the LM Memory Boost! family (LM-033): a card with a
+# `kind: delay` clause is parked in the battle area after its [Main] resolves
+# ("Then, place this card in the battle area"), and the security clause uses
+# the native `place_self_as_delay_option` step.
+
+card: BT8-108
+name: "Mist Memory Boost!"
+kind: option
+color: [purple]
+cost: 3
+traits: []
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash top 2 of deck, <Draw 1>; place self in battle area"
+    process:
+      - trash_from_top: { of: you, count: 2 }
+      - draw: { of: you, count: 1 }
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

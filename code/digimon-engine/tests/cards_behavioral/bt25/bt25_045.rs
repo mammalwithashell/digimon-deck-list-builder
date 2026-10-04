@@ -173,9 +173,9 @@ fn bt25_045_has_appmon_alt_digivolve_and_link_condition() {
     let alt = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
-            && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon")
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon"))
     });
     assert!(alt, "must register cost-0 alt-digivolve over a Lv.2 Appmon");
     let link = card.effects.iter().any(|c| matches!(
@@ -483,8 +483,11 @@ fn bt25_045_digivolves_from_plain_green_lv2_for_0() {
 /// digivolves into BT25-045 for 0 via the trait-gated path.
 #[test]
 fn bt25_045_digivolves_from_offcolor_appmon_lv2_for_0() {
-    let (proceeded, delta) =
-        try_digivolve_over(make_lv2_base("BLUE-LV2-APPMON", CardColor::Blue, &["Appmon"]));
+    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
+        "BLUE-LV2-APPMON",
+        CardColor::Blue,
+        &["Appmon"],
+    ));
     assert!(
         proceeded,
         "special condition Lv.2 w/[Appmon]: an off-colour Appmon Lv.2 must be a legal base"

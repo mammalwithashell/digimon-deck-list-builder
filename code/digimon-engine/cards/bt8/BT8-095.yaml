@@ -1,0 +1,66 @@
+# BT8-095 Fire Rocket — Option, Red, Cost 1.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT8-095.md):
+#   While you have a Digimon with the [Armor Form] trait, you can ignore this
+#     card's color requirements.
+#   [Main] 1 of your multicolored Digimon gains <Security A. +1> for the turn.
+#   [Security] Delete 1 of your opponent's Digimon with <Blocker>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Red/BT8_095.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Colour bypass: IgnoreColorConditionClass on this card while the owner has a
+#   battle-area Digimon whose TopCard traits contain "Armor Form".
+#   → top-level `use_requirement:` (lowers to
+#   `option_color_requirement_bypass`; BT19-089 Red Card idiom — a flood_gate
+#   only materializes onto battle-area permanents, never the hand).
+# [Main]: SelectPermanentEffect (canNoSelect: false, max 1) over own Digimon
+#   with TopCard.CardColors.Count >= 2 → ChangeDigimonSAttack(+1,
+#   UntilEachTurnEnd). No target → nothing happens.
+#   → select_own_permanent (`self_color_count_gte: 2`) → add_modifier
+#   SecurityAttackChange +1, expiry end_of_turn.
+# [Security]: SelectPermanentEffect (canNoSelect: false, max 1, Destroy) over
+#   opponent Digimon with HasBlocker (live keyword).
+#   → select_opponent_permanent (`has_keyword: Blocker`) → delete_permanent.
+
+card: BT8-095
+name: "Fire Rocket"
+kind: option
+color: [red]
+cost: 1
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Armor Form"
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 of your Digimon with 2 or more colors gains <Security A. +1> for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - self_color_count_gte: 2
+          prompt: "Choose 1 of your Digimon with 2 or more colors to gain <Security A. +1> for the turn"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+
+  - when: on_security
+    summary: "[Security] Delete 1 of your opponent's Digimon with <Blocker>"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - has_keyword: Blocker
+          prompt: "Delete 1 of your opponent's Digimon with <Blocker>"
+      - delete_permanent: { target: target }

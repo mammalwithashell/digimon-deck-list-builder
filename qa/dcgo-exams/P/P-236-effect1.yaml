@@ -1,0 +1,85 @@
+# Exam scenario: Glowing Dawn (P-236, green Option, cost 3), clause
+# P-236#effect#1 -- "[Main] Reveal the top 3 cards of your deck. Add 1 card
+# with the [Glowing Dawn] trait among them to the hand. Return the rest to
+# the bottom of the deck. Then, place this card in the battle area."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (same as P-236-effect0; memory ledger, P0 perspective):
+#   T1 (0): pass breeding; hard-play BT26-089 (cost 3) -> -3, turn ends.
+#   T2: P1 passes everything -> P0 starts T3 at 3.
+#   T3 (3): draw stack[10] ST23-13. BT26-089 [Start of Your Main Phase]:
+#       ST23-03 from hand face down under it, <Draw 1> (stack[11] ST23-02),
+#       +1 -> 4. THE CLAUSE: use P-236 (3) -> 1. Reveal stack[12..14] =
+#       ST23-09, BT25-032, BT25-035 (all [Glowing Dawn]); ST23-09 is added
+#       to hand, BT25-032 + BT25-035 go to the deck bottom, and P-236 is
+#       placed in the battle area (NOT the trash) as a <Delay> Option.
+#   Witness: hand gains ST23-09 (hand = ST23-02, ST23-09 x2, ST23-12,
+#   ST23-13), trash empty, P-236 on the field.
+#
+# PROMPT SHAPE (cards/p/P-236.yaml DCGO crosscheck of P_236.cs):
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount 3, one EqualsTraits
+#   ("Glowing Dawn") bucket, maxCount 1, AddHand, DeckBottom) ->
+#   SelectCardEffect (mandatory: no canNoSelect); then the two leftovers ->
+#   DCGO's single deck-bottom ordering prompt = our OrderedPermutation
+#   {remaining:2} (one row, both identities); then PlaceDelayOptionCards
+#   (no prompt). SOMP row: BT26_089.cs canNoSelect:true SelectHandEffect.
+card: P-236
+clause: P-236#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, P-236, ST23-03, ST23-09, ST23-12,
+            ST23-03, ST23-04, ST23-06, ST23-07, ST23-08,
+            ST23-13, ST23-02, ST23-09, BT25-032, BT25-035]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: P-236, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+  - actor: 0
+    do: { select: { cards: [BT25-032, BT25-035] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [ST23-02, ST23-09, ST23-09, ST23-12, ST23-13]
+      p0.trash: []
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [ST23-03]
+        - card_id: P-236
+          dp: -1
+          suspended: false
+          sources: []

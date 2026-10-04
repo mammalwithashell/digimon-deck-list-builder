@@ -28,6 +28,21 @@ impl CardEffect for LoseSecurityGainTwo {
     }
 }
 
+/// `[Security]`-scoped variant for a removed security card's own reaction:
+/// only `[Security]` effects are live on a card leaving security
+/// (G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH).
+struct SecurityZoneLoseSecurityGainTwo;
+
+impl CardEffect for SecurityZoneLoseSecurityGainTwo {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_lose_security(card)
+            .name("gain 2 on lose security")
+            .security_zone()
+            .process(|ctx| ctx.gain_memory(2))
+            .build()]
+    }
+}
+
 struct DiscardSecurityGainThree;
 
 impl CardEffect for DiscardSecurityGainThree {
@@ -45,6 +60,8 @@ impl CardEffect for LoseSecurityAddPendingToHand {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_lose_security(card)
             .name("add removed security to hand")
+            // `[Security]`-scoped: only those are live on a removed security card.
+            .security_zone()
             .process(|ctx| {
                 assert!(ctx.add_pending_security_to_hand());
             })
@@ -58,6 +75,8 @@ impl CardEffect for LoseSecuritySelectThenAddPendingToHand {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_lose_security(card)
             .name("select then add removed security to hand")
+            // `[Security]`-scoped: only those are live on a removed security card.
+            .security_zone()
             .process(|ctx| {
                 ctx.select_hand(
                     0,
@@ -81,6 +100,8 @@ impl CardEffect for LoseSecuritySelectThenTryAddPendingToHand {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_lose_security(card)
             .name("select then try to add removed security to hand")
+            // `[Security]`-scoped: only those are live on a removed security card.
+            .security_zone()
             .process(|ctx| {
                 ctx.select_hand(
                     0,
@@ -102,6 +123,8 @@ impl CardEffect for LoseSecuritySelectThenTrashNextSecurity {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_lose_security(card)
             .name("select then trash next security")
+            // `[Security]`-scoped: only those are live on a removed security card.
+            .security_zone()
             .process(|ctx| {
                 ctx.select_hand(
                     0,
@@ -444,7 +467,7 @@ fn trash_top_security_fires_removed_cards_on_lose_security_once() {
         .memory(0)
         .start();
     runner.register_effect("OBS", Arc::new(OppSecurityRemovedGainOne));
-    runner.register_effect("SEC", Arc::new(LoseSecurityGainTwo));
+    runner.register_effect("SEC", Arc::new(SecurityZoneLoseSecurityGainTwo));
     runner.place_on_field(0, "OBS", Some(0));
 
     let source_card = runner.game.players[0].battle_area[0].top_card().handle();

@@ -1,0 +1,75 @@
+# Exam scenario: Elecmon (BT24-031), clause BT24-031#effect#1 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad]
+#  trait and 1 card with the [TS] trait among them to the hand. Return the rest
+#  to the bottom of the deck."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: the assert block is OUR engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE: P0 hard-plays Elecmon on T1 (0 -> -3). Revealed stack[10..12]:
+#   [10] BT25-033 Aegiomon     -- [Iliad] + [TS]
+#   [11] BT24-084 Inori Misono -- [TS] only
+#   [12] BT4-104  Blinding Ray -- neither
+# Iliad bucket -> Aegiomon, TS bucket -> Inori; Blinding Ray to the bottom.
+#
+# PROMPT SHAPE -- VERIFIED against DCGO C# (2026-10-04):
+#   * NO leading generic_bool. BT24_031.cs calls
+#     SimplifiedRevealDeckTopCardsAndSelect (RevealLibrary.cs), which forwards
+#     to RevealDeckTopCardsAndSelect WITHOUT `canNoAction`; the "Select cards /
+#     Not select" SetBoolSelection there is guarded by
+#     `selectCardConditions.Length >= 2 && canNoAction` -> skipped.
+#   * ONE SelectCardEffect row PER BUCKET, in condition order ([Iliad] first,
+#     then [TS]): the `foreach (selectCondition in selectCardConditions)` loop,
+#     each with maxCount = min(1, matching revealed cards), canNoSelect false,
+#     Root.Library (SelectCardEffect.active() is true for Root.Library even at
+#     one candidate -- no auto-pick). Each bucket is Mode.AddHand, so the Iliad
+#     pick reaches the hand when ITS prompt closes: expect the documented
+#     one-field p0.hand divergence on the 2nd pick row (DCGO quirk; ours adds
+#     after both buckets).
+#   * NO prompt for the 1-card remainder: ReturnRevealedCardsToLibraryBottom
+#     (RevealLibrary.cs) bottoms a single card directly
+#     (`remainingCards.Count == 1`); hence our OrderedPermutation N=1 row is
+#     sim_only. The On Play is non-optional (SetUpActivateClass(..., -1,
+#     false, ...)) -> no OptionalSkill.
+card: BT24-031
+clause: BT24-031#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-031, BT24-034, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT25-033, BT24-084, BT4-104, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-031, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, pick 1: [Iliad] bucket -> Aegiomon.
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  # THE CLAUSE, pick 2: [TS] bucket -> Inori Misono.
+  - actor: 0
+    do: { select: { cards: [BT24-084] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: the single leftover to the deck bottom (OrderedPermutation N=1).
+  - actor: 0
+    do: { select: { cards: [BT4-104], sim_only: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 5
+    that:
+      turn: 2
+      p0.hand: [BT24-034, BT25-030, BT24-101, BT26-090, BT25-033, BT24-084]
+      p0.field:
+        - { card_id: BT24-031, dp: 1000, suspended: false, sources: [] }
+      p0.trash: []

@@ -170,6 +170,7 @@ impl Game {
             dna_origin_context: None,
             granted_effect_id: None,
             keyword_effect: None,
+            trigger_batch: 0,
         }
     }
 
@@ -599,6 +600,25 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::LinkCardTrashed { .. } => {
+                // Board-wide observer scan (same shape as the PlayerBattleArea
+                // fan-out this dispatch replaced) with the host / trashed-card
+                // context attached. The trashed link card itself is in the
+                // trash; event-gated Delays are fanned out below.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::SourceReturnedToDeckBottom { .. } => {
                 // Sibling of SourceTrashedFromStack, but the card moved to the
                 // DECK (not trash), so there is no trashed-source zone to scan —
@@ -684,7 +704,9 @@ impl Game {
                     Some(trigger_context),
                 );
             }
-            TriggerSource::BattleResolved { .. } | TriggerSource::HandDiscarded { .. } => {
+            TriggerSource::BattleResolved { .. }
+            | TriggerSource::HandDiscarded { .. }
+            | TriggerSource::DeckGained { .. } => {
                 // Board-wide observer fan-out: scan EVERY player's battle area
                 // so both own-side and opponent-reactive observers see the
                 // event. The winner/owner/trait (BattleResolved) or trashing
@@ -756,6 +778,15 @@ impl Game {
                 | TriggerSource::AttackTargetChanged { .. }
                 | TriggerSource::BlockDeclared { .. }
                 | TriggerSource::EnteredField { .. }
+                // P-244's `<Delay>` is keyed to
+                // `OnEvent(OnAddDigivolutionCards)` ("When effects place
+                // [Vemmon] as any of your Digimon's digivolution cards").
+                // G-ENGINE-EVENT-DELAY-ON-ADD-DIGIVOLUTION-CARDS.
+                | TriggerSource::SourcesAddedToStack { .. }
+                // EX10-070's `<Delay>` is keyed to `OnEvent(OnLinkedCardTrashed)`
+                // ("When effects trash any of your Digimon's link cards").
+                // G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+                | TriggerSource::LinkCardTrashed { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
@@ -808,6 +839,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -879,8 +911,80 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
+        }
+    }
+
+    /// Enqueue the `scope: trash` `OnDiscardHand` clauses of ONE card that an
+    /// effect just moved from `owner`'s hand to the trash — the self-scoped
+    /// "When this card is trashed from the hand, …" trigger (BT26-069
+    /// Dobermon; DCGO `CanTriggerOnTrashSelfHand`). Called once per trashed
+    /// card from `flush_pending_hand_discard`; a card that already left the
+    /// trash is skipped. A `scope: trash` + `when: on_discard_hand` clause is
+    /// therefore reached ONLY on the discarded card itself (a card already
+    /// lying in the trash never sees it). G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) fn enqueue_self_trashed_from_hand(
+        &mut self,
+        owner: PlayerId,
+        card: CardHandle,
+        cause_controller: PlayerId,
+    ) {
+        let timing = EffectTiming::OnDiscardHand;
+        let Some((card_id, source_kind)) = self
+            .players
+            .get(owner as usize)
+            .and_then(|p| p.trash.iter().find(|c| c.handle() == card))
+            .map(|c| {
+                (
+                    c.card_id(&self.card_data).to_string(),
+                    source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                )
+            })
+        else {
+            return;
+        };
+        let Some(effects) = self.effects_for_card(&card_id, card) else {
+            return;
+        };
+        let trigger_context = TriggerContext {
+            event_card: Some(card),
+            discard_hand_player: Some(owner),
+            discard_cause_controller: Some(cause_controller),
+            affected_player: Some(owner),
+            source_player: Some(cause_controller),
+            effect_initiated: true,
+            ..TriggerContext::default()
+        };
+        let is_turn_player = owner == self.turn_player();
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.inherited || effect.linked || !effect.trash_zone {
+                continue;
+            }
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card,
+                source_permanent: None,
+                source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                controller: owner,
+                timing,
+                trigger_context: Some(trigger_context.clone()),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
+                keyword_effect: None,
+                trigger_batch: 0,
+            });
         }
     }
 
@@ -1079,6 +1183,23 @@ impl Game {
                     }
                 }
             }
+            // Flush the OnAddToDeck batch window the same way
+            // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
+            // deck has finished, so fire the observer ONCE (DCGO
+            // `FireOnAddLibraryAnyone` once per added list), then drain.
+            if self.pending_selection.is_none() {
+                let mut deck_guard: u16 = 0;
+                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                    self.flush_pending_deck_add();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    deck_guard += 1;
+                    if deck_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
             // Flush the OnAddDigivolutionCards batch windows the same way
             // (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS): the placing effect body
             // has finished, so each host's added-card batch is complete. Fire
@@ -1239,7 +1360,35 @@ impl Game {
                 }
             }
 
-            let Some(chooser) = self.next_chooser() else {
+            // §15-4-5-2/3 (digest.md): an effect that triggers while a
+            // pending effect is being resolved ("derived triggering") is
+            // activated BEFORE the effects that were already pending. Stamp
+            // every not-yet-stamped entry -- everything enqueued since the
+            // previous iteration, i.e. by the effect that just resolved (or by
+            // the action / rule processing that started this drain) -- with a
+            // fresh batch id, then stage ONLY the newest batch. Batches nest
+            // naturally: a derived batch's own derived triggers get a still
+            // higher id, and an older batch resumes once every newer one has
+            // emptied. DCGO: `MultipleSkills.cs` resolves newly triggered
+            // effects in a nested `TriggeredSkillProcess` before returning to
+            // the still-pending list. G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST.
+            if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+                self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
+                let batch = self.trigger_batch_seq;
+                for qe in self.effect_queue.iter_mut() {
+                    if qe.trigger_batch == 0 {
+                        qe.trigger_batch = batch;
+                    }
+                }
+            }
+            let top_batch = self
+                .effect_queue
+                .iter()
+                .map(|qe| qe.trigger_batch)
+                .max()
+                .unwrap_or(0);
+
+            let Some(chooser) = self.next_chooser_in_batch(top_batch) else {
                 self.effect_chain_depth = 0;
                 return;
             };
@@ -1265,19 +1414,26 @@ impl Game {
             // condition and fires the "1 of your Omnimon may attack a
             // player" prompt in the SAME EoT batch, matching DCGO.
             //
-            // Source-liveness and once-per-turn checks are NOT applied
-            // here: source-liveness can become false mid-drain due to a
-            // sibling trigger's body trashing the source, and the
-            // run-time check handles that case; OPT lockout is
-            // accounting-only and doesn't change user-visible choice.
-            let non_firing: Vec<usize> = self.non_firing_queued_effect_indices_for(chooser);
+            // Source-liveness is NOT checked here: it can become false
+            // mid-drain due to a sibling trigger's body trashing the source,
+            // and the run-time check handles that case. An EXHAUSTED
+            // once-per-turn count IS excluded (it only rises within a turn):
+            // an OPT-spent entry left in the bundle forced a dead
+            // `TriggerOrder` decision whose pick resolved as a no-op
+            // (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER /
+            // G-ENGINE-OPT-NOOP-REQUEUE).
+            let non_firing: Vec<usize> =
+                self.non_firing_queued_effect_indices_for(chooser, top_batch);
 
             let bundle: Vec<usize> = self
                 .effect_queue
                 .iter()
                 .enumerate()
                 .filter_map(|(i, qe)| {
-                    (qe.controller == chooser && !non_firing.contains(&i)).then_some(i)
+                    (qe.controller == chooser
+                        && qe.trigger_batch == top_batch
+                        && !non_firing.contains(&i))
+                    .then_some(i)
                 })
                 .collect();
 
@@ -1293,6 +1449,41 @@ impl Game {
                     self.effect_queue.remove(idx);
                 }
                 continue;
+            }
+
+            // G-ENGINE-ON-SUSPEND-BATCH: one suspend action that suspends
+            // several permanents is ONE `OnSuspend` event (rule 15-5-2: a
+            // condition met several times at once triggers once; DCGO fires a
+            // single `OnTappedAnyone` carrying the whole `Permanents` list).
+            // The engine enqueues one entry per suspended permanent, so the
+            // same observer can sit in this bundle several times. Keep the
+            // FIRST FIRING entry per observer and drop the rest — the
+            // non-firing ones were already excluded above, so "any of the
+            // batched permanents satisfies the condition" is preserved.
+            {
+                let mut seen = std::collections::HashSet::new();
+                let dup: Vec<usize> = bundle
+                    .iter()
+                    .copied()
+                    .filter(|&i| {
+                        let qe = &self.effect_queue[i];
+                        qe.timing == EffectTiming::OnSuspend
+                            && !seen.insert(format!(
+                                "{:?}|{:?}|{}|{:?}|{:?}",
+                                qe.source_card,
+                                qe.source_permanent,
+                                qe.effect_slot,
+                                qe.granted_effect_id,
+                                qe.keyword_effect
+                            ))
+                    })
+                    .collect();
+                if !dup.is_empty() {
+                    for idx in dup.into_iter().rev() {
+                        self.effect_queue.remove(idx);
+                    }
+                    continue;
+                }
             }
 
             if bundle.len() == 1 {
@@ -1554,6 +1745,10 @@ impl Game {
                 event_card: Some(card),
                 source_player: Some(defender),
                 was_security_skill: true,
+                // "if removed from by effects" (BT26-089) — see
+                // `pending_security_loss_effect_initiated`.
+                effect_initiated: timing == EffectTiming::OnLoseSecurity
+                    && self.pending_security_loss_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityStackCard { player, card } => TriggerContext {
@@ -1785,6 +1980,37 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
+            TriggerSource::LinkCardTrashed {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::BattleArea,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                effect_initiated: !matches!(
+                    cause,
+                    crate::trigger_context::EventCause::Rule
+                        | crate::trigger_context::EventCause::BattleDeletion
+                ),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
             // Sibling of SourceTrashedFromStack; the returned card moved to the
             // DECK, so the `moved_card_sets` destination is `Deck` (bottom).
             // Same host / event-card context so the host-scoped
@@ -1900,6 +2126,7 @@ impl Game {
             TriggerSource::HandDiscarded {
                 player,
                 cause_controller,
+                ref cards,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
@@ -1911,6 +2138,27 @@ impl Game {
                 discard_cause_controller: Some(cause_controller),
                 affected_player: Some(player),
                 source_player: Some(cause_controller),
+                effect_initiated: true,
+                // The trashed batch itself — "you may play 1 of them"
+                // (BT24-007). G-ENGINE-DISCARDED-HAND-CARDS.
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
+                    from: Some(crate::enums::Zone::Hand),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::DeckGained { cause_controller } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The causing effect's controller ("when YOUR effects add to
+                // decks" -> `event_caused_by_own_effect`). G-ENGINE-ON-ADD-TO-DECK.
+                source_player: Some(cause_controller),
+                event_cause_effect: Some(crate::trigger_context::EffectAttribution {
+                    controller: cause_controller,
+                    source_card: None,
+                    source_permanent: None,
+                }),
                 effect_initiated: true,
                 ..TriggerContext::default()
             },
@@ -2097,6 +2345,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2164,10 +2413,24 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
-            // Security trigger specifically: ignore effects that don't carry
-            // the security flag. Matches Python's
-            // `if getattr(effect, 'is_security_effect', False)` filter.
-            if timing == EffectTiming::SecuritySkill && !effect.security {
+            // `SecuritySkill` / `OnLoseSecurity`: only `[Security]`-scoped
+            // effects are live on a card that is leaving / has left the
+            // security stack — it is not a battle-area permanent (§13-1-5 "in
+            // no area"; §15-14-5). In particular a removed card's own
+            // `[All Turns]` "when your security stack is removed from"
+            // observer (BT24-101, BT25-044) must not fire for its own
+            // removal; the battle-area observer scan in `enqueue_triggered`
+            // is where such observers are collected.
+            // G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH. (For `SecuritySkill` this
+            // is the long-standing Python `is_security_effect` filter.)
+            // Other timings (e.g. `OnDiscardSecurity`, BT13-106's "when this
+            // card is trashed from security") are the card's own self-
+            // referential clauses and keep firing here.
+            if matches!(
+                timing,
+                EffectTiming::SecuritySkill | EffectTiming::OnLoseSecurity
+            ) && !effect.security
+            {
                 continue;
             }
             self.effect_queue.push_back(QueuedEffect {
@@ -2188,6 +2451,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2211,6 +2475,18 @@ impl Game {
         else {
             return;
         };
+        // Rule 15-14-5: a `{Security}` effect is active only while its card is
+        // FACE UP in the security stack (BT26-082's official Q&A: "It can't be
+        // triggered or activated in areas other than the face-up security
+        // cards"). A face-down security card has no active effects.
+        // G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP.
+        if !self
+            .player(player)
+            .face_up_security
+            .contains(&card_source.card_index)
+        {
+            return;
+        }
         let card_id = card_source.card_id(&self.card_data).to_string();
         let source_kind = source_kind_for_card_kind(card_source.card_kind(&self.card_data));
 
@@ -2247,6 +2523,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2364,6 +2641,7 @@ impl Game {
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
 
@@ -2412,6 +2690,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2497,6 +2776,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: Some(keyword),
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2562,6 +2842,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2653,6 +2934,7 @@ impl Game {
                         dna_origin_context: self.current_dna_origin,
                         granted_effect_id: None,
                         keyword_effect: None,
+                        trigger_batch: 0,
                     });
                 }
             }
@@ -2666,7 +2948,13 @@ impl Game {
         // keying (Track C) and predicates that read source identity remain
         // per-source-slot stable. `allow_below_top_liveness: true` lets the
         // liveness gate accept the stacked source as a valid origin.
-        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
+        //
+        // `<Succession>` (G-ENGINE-SUCCESSION-KEYWORD): an ADOPTED source also
+        // dispatches its top-scope effects through the carrier. Same entry
+        // shape; `run_queued_effect_inner`'s liveness gate re-checks the card
+        // is still the adopted one at activation time.
+        let adopted = self.succession_source_indices(handle);
+        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind, bool)> = {
             let Some(perm) = self
                 .players
                 .get(handle.player as usize)
@@ -2677,22 +2965,26 @@ impl Game {
             let stack_len = perm.card_sources.len();
             perm.card_sources
                 .iter()
+                .enumerate()
                 .take(stack_len.saturating_sub(1))
-                .map(|c| {
+                .map(|(i, c)| {
                     (
                         c.card_id(&self.card_data).to_string(),
                         c.handle(),
                         source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        adopted.contains(&i),
                     )
                 })
                 .collect()
         };
-        for (source_card_id, inherited_source, inherited_source_kind) in inherited_sources {
+        for (source_card_id, inherited_source, inherited_source_kind, is_adopted) in
+            inherited_sources
+        {
             let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
-                if !effect.inherited {
+                if !(effect.inherited || (is_adopted && Game::is_adoptable_effect(effect))) {
                     continue;
                 }
                 if !timing_flag_matches(effect, timing) {
@@ -2716,6 +3008,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2788,6 +3081,7 @@ impl Game {
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
 
@@ -2817,6 +3111,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2864,6 +3159,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2871,24 +3167,31 @@ impl Game {
 
     /// Who gets to choose the next effect to resolve. Turn player first,
     /// then clockwise through the remaining players.
-    fn next_chooser(&self) -> Option<PlayerId> {
-        if self.effect_queue.is_empty() {
-            return None;
-        }
-        if let Some(qe) = self.effect_queue.iter().find(|qe| qe.is_turn_player) {
+    /// Within §15-4-5 trigger batch `batch` (see `QueuedEffect::trigger_batch`)
+    /// — the turn player's entries are staged first (15-4-3-5).
+    fn next_chooser_in_batch(&self, batch: u32) -> Option<PlayerId> {
+        let in_batch = |pid: Option<PlayerId>, turn_player: bool| {
+            self.effect_queue.iter().find(|qe| {
+                qe.trigger_batch == batch
+                    && pid.map_or(true, |p| qe.controller == p)
+                    && (!turn_player || qe.is_turn_player)
+            })
+        };
+        let first = in_batch(None, false)?;
+        if let Some(qe) = in_batch(None, true) {
             return Some(qe.controller);
         }
         let n = self.turn_order.len();
         for offset in 0..n {
             let idx = (self.turn_player_idx + offset) % n;
             let pid = self.turn_order[idx];
-            if self.effect_queue.iter().any(|qe| qe.controller == pid) {
+            if in_batch(Some(pid), false).is_some() {
                 return Some(pid);
             }
         }
         // Defensive fallback — if somehow no turn-order player owns any
-        // queued effect (e.g. eliminated controller), use the front entry.
-        self.effect_queue.front().map(|qe| qe.controller)
+        // queued effect (e.g. eliminated controller), use the first entry.
+        Some(first.controller)
     }
 
     /// Return the indices of queued effects owned by `chooser` whose
@@ -2926,17 +3229,78 @@ impl Game {
     /// are NEVER excluded — their bodies have no `Effect` metadata and
     /// no clause-level condition, so the "would no-op" predicate is
     /// undefined for them. They keep their existing run-time path.
-    fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId) -> Vec<usize> {
+    fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId, batch: u32) -> Vec<usize> {
         let mut to_skip: Vec<usize> = Vec::new();
         for i in 0..self.effect_queue.len() {
-            if self.effect_queue[i].controller != chooser {
+            if self.effect_queue[i].controller != chooser
+                || self.effect_queue[i].trigger_batch != batch
+            {
                 continue;
             }
-            if !self.queued_effect_condition_passes(i) {
+            if self.queued_effect_opt_exhausted(i)
+                || !self.queued_effect_condition_passes(i)
+                || !self.queued_effect_index_is_live(i)
+            {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is a `[X Per Turn]` effect whose per-turn
+    /// count is already used up (and the entry does not bypass OPT). Such an
+    /// entry "does not activate again" (§15-14-1: `[X Per Turn]` counts each
+    /// activation), so the run-time path would skip it; it must not be an
+    /// orderable `TriggerOrder` entry either. Activation counts only rise
+    /// within a turn, so excluding it is never premature.
+    /// G-ENGINE-OPT-NOOP-REQUEUE / G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER.
+    fn queued_effect_opt_exhausted(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.bypass_once_per_turn || qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(perm_handle) = qe.source_permanent else {
+            return false;
+        };
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if effect.max_per_turn == 0 {
+            return false;
+        }
+        let opt_key = self.queued_opt_key(effect, qe);
+        matches!(
+            self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key),
+            Some(count) if count >= effect.max_per_turn
+        )
+    }
+
+    /// Staging-time liveness (G-PERMANENT-HANDLE-POSITIONAL-STALENESS part 3,
+    /// DCGO's `CanActivate` re-filter in MultipleSkills): an entry whose source
+    /// has left (15-4-4-3 — it became a new card) can never resolve, so it must
+    /// not be offered as a `TriggerOrder` branch. Live once a parked
+    /// replacement's leave commits before its triggers are staged
+    /// (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES). Granted bodies and
+    /// entries whose effect can't be looked up stay (the run-time path decides).
+    fn queued_effect_index_is_live(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            return true;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return true;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return true;
+        };
+        self.queued_effect_source_is_live(qe, effect)
     }
 
     /// Evaluate the clause-level condition of `effect_queue[i]` against the
@@ -3185,7 +3549,7 @@ impl Game {
 
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 let Some(activation_count) =
                     self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
                 else {
@@ -3272,7 +3636,7 @@ impl Game {
         let mut activation_cost_paid = false;
         if effect.activation_cost_fn.is_some() {
             let max_per_turn = effect.max_per_turn;
-            let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+            let opt_key = self.queued_opt_key(effect, &qe);
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
@@ -3330,7 +3694,7 @@ impl Game {
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3381,7 +3745,7 @@ impl Game {
             return;
         }
 
-        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        let opt_key = self.queued_opt_key(effect, &qe);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3625,6 +3989,13 @@ impl Game {
             .any(|c| c.card_index == qe.source_card.0);
         let inherited_source_matches =
             below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
+        // `<Succession>`: a copied effect is live only while its card is STILL
+        // the adopted source (DCGO `ValidCardSourceAtActivate`).
+        let adopted_source_matches = below_top_source_matches
+            && qe.allow_below_top_liveness
+            && !effect.inherited
+            && Game::is_adoptable_effect(effect)
+            && self.is_adopted_source_card(perm_handle, qe.source_card);
         let training_matches = self
             .players
             .get(perm_handle.player as usize)
@@ -3647,7 +4018,11 @@ impl Game {
                 })
             })
             .unwrap_or(false);
-        top_matches || linked_matches || inherited_source_matches || training_matches
+        top_matches
+            || linked_matches
+            || inherited_source_matches
+            || adopted_source_matches
+            || training_matches
     }
 
     /// Resolve the once-per-turn counter key for an effect. A multi-timing
@@ -3656,6 +4031,18 @@ impl Game {
     /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
         effect.shared_opt_group.unwrap_or(effect_slot)
+    }
+
+    /// [`Game::opt_slot_key`] for a queued entry, with a `<Succession>`-adopted
+    /// copy moved onto its own counter (`Game::opt_key_for_source`).
+    fn queued_opt_key(&self, effect: &crate::effect::Effect, qe: &QueuedEffect) -> u8 {
+        let key = Self::opt_slot_key(effect, qe.effect_slot);
+        match qe.source_permanent {
+            Some(perm) if qe.allow_below_top_liveness => {
+                self.opt_key_for_source(perm, qe.source_card, effect.inherited, effect.linked, key)
+            }
+            _ => key,
+        }
     }
 
     fn source_permanent_activation_count(
@@ -3800,8 +4187,20 @@ impl Game {
                 }
             }
         }
-        if let Some(security) = self.pending_security.take() {
+        if let Some(mut security) = self.pending_security.take() {
             if !security.played {
+                // G-DSL-SECURITY-TOP-AS-SOURCE: an effect placing a security
+                // card "face down" under a permanent (BT26-025) — consumed for
+                // every destination so a stale flag never leaks.
+                if std::mem::take(&mut self.pending_security_source_face_down)
+                    && matches!(
+                        pending.destination,
+                        SecurityRemovalDestination::BottomSource(_)
+                            | SecurityRemovalDestination::TopSource(_)
+                    )
+                {
+                    security.card.face_down = true;
+                }
                 match pending.destination {
                     SecurityRemovalDestination::Trash => {
                         let owner = security.card.owner;
@@ -3826,6 +4225,9 @@ impl Game {
                             deck.insert(0, security.card);
                         } else {
                             deck.push(security.card);
+                        }
+                        if !is_egg {
+                            self.note_effect_deck_add_if_resolving();
                         }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
@@ -4049,6 +4451,10 @@ impl Game {
             played: false,
         });
 
+        // Every caller of this function is an EFFECT removal: tag the
+        // OnLoseSecurity trigger contexts (built at enqueue time) so
+        // `event_is_effect_initiated` reads true. G-ENGINE-LOSE-SECURITY-BY-EFFECT.
+        self.pending_security_loss_effect_initiated = true;
         self.enqueue_triggered(
             EffectTiming::OnLoseSecurity,
             TriggerSource::SecurityRevealed {
@@ -4056,6 +4462,7 @@ impl Game {
                 card: card_handle,
             },
         );
+        self.pending_security_loss_effect_initiated = false;
         // 15-8-3-2: inside a resolving effect body (deferred scope) the
         // observers — and any SIBLING trigger already queued, e.g. EX13-036
         // Kentaurosmon's second [When Digivolving] — must wait until the body
@@ -4114,7 +4521,7 @@ impl Game {
         }
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                let opt_key = self.queued_opt_key(effect, &qe);
                 match self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key) {
                     Some(count) if count >= effect.max_per_turn => return false,
                     None => return false,
@@ -4313,6 +4720,7 @@ impl Game {
             }
         }
         let capped = bundle.len().min(HAND_MAIN_LIMIT);
+        let offered: Vec<usize> = bundle[..capped].to_vec();
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(capped);
         let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(capped);
         for pos in 0..capped {
@@ -4350,9 +4758,9 @@ impl Game {
             // never both apply to one effect.
             let keyword = qe.keyword_effect.or_else(|| {
                 self.effects_for_queued(qe).and_then(|effects| {
-                    effects.get(qe.effect_slot as usize).and_then(|effect| {
-                        effect.granted_keyword.or(effect.keyword_source)
-                    })
+                    effects
+                        .get(qe.effect_slot as usize)
+                        .and_then(|effect| effect.granted_keyword.or(effect.keyword_source))
                 })
             });
             debug_assert!(action_id < HAND_EFFECT_END);
@@ -4403,31 +4811,26 @@ impl Game {
             source_card,
             source_permanent,
             source_kind,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-                // Find the i-th entry in `game.effect_queue` controlled by
-                // `chooser` — this is the same bundle position the prompt
-                // offered. Recompute defensively; single-threaded + paused
-                // selection guarantees the queue hasn't shifted.
-                let target_idx = game
-                    .effect_queue
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, qe)| qe.controller == chooser)
-                    .nth(pos)
-                    .map(|(i, _)| i);
-                if let Some(idx) = target_idx {
-                    if let Some(qe) = game.effect_queue.remove(idx) {
-                        game.run_queued_effect(qe);
+            callback: Box::new({
+                let bundle = offered.clone();
+                move |game: &mut Game, action_id: u16| {
+                    let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+                    // The prompt's position -> the queue index it offered
+                    // (single-threaded + paused selection: the queue hasn't
+                    // shifted).
+                    if let Some(&idx) = bundle.get(pos) {
+                        if let Some(qe) = game.effect_queue.remove(idx) {
+                            game.run_queued_effect(qe);
+                        }
                     }
+                    // Generic resolver will call `drain_effect_queue` after we
+                    // return — no need to drain from inside the callback.
                 }
-                // Generic resolver will call `drain_effect_queue` after we
-                // return — no need to drain from inside the callback.
             }),
             on_decline: if allow_decline_all {
+                let bundle = offered.clone();
                 Some(Box::new(move |game: &mut Game| {
-                    game.effect_queue
-                        .retain(|qe| !(qe.controller == chooser && qe.is_optional));
+                    Self::drop_declined_trigger_bundle(game, &bundle);
                     // Drain is the generic resolver's responsibility.
                 }))
             } else {
@@ -4439,10 +4842,25 @@ impl Game {
                 crate::resume::TriggerOrderSelectionState {
                     chooser,
                     allow_decline_all,
+                    bundle: offered,
                     outer_conts: Vec::new(),
                 },
             )],
         });
+    }
+
+    /// Decline-all on a `TriggerOrder`: drop the OPTIONAL entries among the
+    /// offered queue indices (an all-optional bundle by construction).
+    fn drop_declined_trigger_bundle(game: &mut Game, bundle: &[usize]) {
+        let mut idxs: Vec<usize> = bundle
+            .iter()
+            .copied()
+            .filter(|&i| game.effect_queue.get(i).is_some_and(|qe| qe.is_optional))
+            .collect();
+        idxs.sort_unstable();
+        for i in idxs.into_iter().rev() {
+            game.effect_queue.remove(i);
+        }
     }
 
     pub(crate) fn run_trigger_order_selection_step(
@@ -4453,21 +4871,13 @@ impl Game {
     ) {
         if is_pass {
             if state.allow_decline_all {
-                self.effect_queue
-                    .retain(|qe| !(qe.controller == state.chooser && qe.is_optional));
+                Self::drop_declined_trigger_bundle(self, &state.bundle);
             }
             return;
         }
 
         let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-        let target_idx = self
-            .effect_queue
-            .iter()
-            .enumerate()
-            .filter(|(_, qe)| qe.controller == state.chooser)
-            .nth(pos)
-            .map(|(i, _)| i);
-        if let Some(idx) = target_idx {
+        if let Some(&idx) = state.bundle.get(pos) {
             if let Some(qe) = self.effect_queue.remove(idx) {
                 self.run_queued_effect(qe);
             }
@@ -4563,6 +4973,18 @@ impl Game {
             }
         } else {
             (sel.callback)(self, action_id);
+        }
+        // G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: when this selection
+        // was the last nested pick of a replacement process (e.g. <Decode>'s
+        // source pick, which PLAYS a Digimon), the parked replacement's commit
+        // — the original event completing, e.g. the carrier leaving — is
+        // still part of the same immediate-effect processing (§16-35; an
+        // immediate effect's processing completes before waiting triggered
+        // effects resolve). Commit it INSIDE the deferred-drain scope so
+        // triggers the process raised (the played Digimon's [On Play]) wait
+        // until the carrier has actually left.
+        if self.pending_selection.is_none() && !self.parked_replacement.is_empty() {
+            crate::replacement::try_drain_parked_replacement_with_guard(self);
         }
         self.exit_deferred_drain_and_flush();
 
@@ -4900,14 +5322,24 @@ impl Game {
     /// next chooser, so the turn player's bucket still resolves ahead of a
     /// non-turn player's Option trash (15-4-3-5-2).
     fn option_orderable_trigger_indices(&mut self, owner: PlayerId) -> Vec<usize> {
-        if self.effect_queue.is_empty() || self.next_chooser() != Some(owner) {
+        // The newest §15-4-5 batch: still-unstamped entries (caused by the
+        // Option body that just finished) when there are any, else the
+        // highest stamped batch.
+        let batch = if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+            0
+        } else {
+            self.effect_queue.iter().map(|qe| qe.trigger_batch).max().unwrap_or(0)
+        };
+        if self.effect_queue.is_empty() || self.next_chooser_in_batch(batch) != Some(owner) {
             return Vec::new();
         }
-        let non_firing = self.non_firing_queued_effect_indices_for(owner);
+        let non_firing = self.non_firing_queued_effect_indices_for(owner, batch);
         self.effect_queue
             .iter()
             .enumerate()
-            .filter(|(i, qe)| qe.controller == owner && !non_firing.contains(i))
+            .filter(|(i, qe)| {
+                qe.controller == owner && qe.trigger_batch == batch && !non_firing.contains(i)
+            })
             .map(|(i, _)| i)
             .collect()
     }

@@ -52,6 +52,12 @@
 # Arisa's suspend choice even though the TriggerOrder step answers ST19-14.
 #
 # Deck note: both seats use `st19-arisa`.
+# FIXED 2026-10-04 (G-ENGINE-TRIGGER-ORDER-PICK-MAPPING): the TriggerOrder
+# pick used to be mapped to "the n-th queued entry this player controls"
+# rather than the n-th OFFERED entry, so answering ST19-14 resolved Shoemon's
+# reveal first (the ORDERING NOTE below). The pick now resolves what was
+# picked: Arisa's suspend choice comes right after the ordering row, then
+# Shoemon's reveal. (The note below predates the fix.)
 card: ST19-14
 clause: ST19-14#effect#2
 seed: 424242
@@ -143,7 +149,11 @@ steps:
   - actor: 0
     do: { select: { cards: [ST19-14] } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [ST19-03, ST19-14] }
-  # Shoemon's own [On Play]: add 1 [Puppet] (real choice: ST19-04 or ST19-05)
+  # ST19-14 resolves first, as picked. Pay the cost -- suspend Arisa -- so the played Shoemon gains <Rush>.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Then Shoemon's own [On Play]: add 1 [Puppet] (real choice: ST19-04 or ST19-05)
   # and 1 [LIBERATOR] (only P-136), then bottom the remainder.
   - actor: 0
     do: { select: { cards: [ST19-04] } }
@@ -154,10 +164,6 @@ steps:
   - actor: 0
     do: { select: { cards: [ST19-05] } }
     expect: { prompt: SelectCardEffect }
-  # Pay the cost -- suspend Arisa -- so the played Shoemon gains <Rush>.
-  - actor: 0
-    do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
   # THE CLAUSE: Shoemon attacks on the turn it was played. Slot 2 of p0's battle
   # area; only <Rush> makes this action legal at all.
   - actor: 0

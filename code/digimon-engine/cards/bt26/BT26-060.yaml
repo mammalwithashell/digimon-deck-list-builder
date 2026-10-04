@@ -1,0 +1,132 @@
+# BT26-060 Chronomon: Destroy Mode — Digimon, Lv.7, Black/Red, DP 16000, Cost 16.
+#   Traits: Shaman, Titan, Iliad, TS. Form Mega. Attribute: Virus.
+# Printed digivolve box: Black Lv.6 / cost 6; Red Lv.6 / cost 6;
+#   [Digivolve] Lv.6 w/[Chronomon] in text / [Giant Slayer]: Cost 5.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-060.md):
+#   <Security A. +1> <Reboot> <Blocker> <Succession (Lv.6 w/[Chronomon] in
+#     name)> (This Digimon gains all effects other than <Succession> on its
+#     topmost specified digivolution card.)
+#   [On Play] [When Digivolving] Return the top 5 stacked cards of 3 of your
+#     opponent's Digimon to the top of the deck.
+#   [All Turns] [Once Per Turn] When your effects add to decks, you may delete 1
+#     of your opponent's Digimon.
+#   Official Q&A: choose 3 of your opponent's Digimon; the effect returns the top
+#     5 cards from each stack to the top of the deck.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_060.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 6 + TopCard.HasText("Chronomon"), cost 5; TopCard
+#   ContainsCardName("Giant Slayer"), cost 5.
+# Security A. +1 / Reboot / Blocker → aura security_attack + grant_keyword ×2.
+# Succession: cardCondition HasLevel && Level == 6 && ContainsCardName
+#   ("Chronomon") → `kind: succession` (G-ENGINE-SUCCESSION-KEYWORD).
+# OP / WD (not optional; needs an opponent Digimon): mandatory pick of min(3, n)
+#   opponent Digimon; for each (skipping ImmuneFromStackReturnToLibrary /
+#   CanNotBeAffected) the top min(stack - 1, 5) stacked cards, TOP CARD
+#   INCLUDED (at least one stays); 2+ cards → the owner orders them all
+#   ("card #1 is the one they'll draw first"); AddLibraryTopCards.
+#   → `select_count_capped_multi` + `return_top_stacked_to_deck` (ordered pick,
+#   G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK). An own-effect deck add, so this
+#   card's own [All Turns] clause below can fire off it.
+# All Turns OPT (OnAddLibraryAnyone, IsOwnerEffect; skippable; needs an
+#   opponent Digimon): canNoSelect pick of 1 opponent Digimon → delete; nothing
+#   picked → RemoveUse.
+#   → `on_add_to_deck` + `event_caused_by_own_effect`; optional + outer prompt;
+#   optional pick (continue_on_decline) + `refund_opt` when nothing was picked.
+
+card: BT26-060
+name: "Chronomon: Destroy Mode"
+kind: digimon
+level: 7
+color: [black, red]
+cost: 16
+dp: 16000
+traits: [Shaman, Titan, Iliad, TS]
+form: Mega
+attribute: Virus
+
+# The printed Black / Red Lv.6 circles come from the card data (cards.json
+# evo_costs); only the black-text conditions are alt paths.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - in_text_contains: "Chronomon"
+    cost: 5
+  - kind: digivolve
+    from: { name_contains: "Giant Slayer" }
+    cost: 5
+
+effects:
+  - kind: aura
+    target: {}
+    security_attack: 1
+    summary: "<Security A. +1>"
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: succession
+    filter:
+      all_of:
+        - level_eq: 6
+        - name_contains: "Chronomon"
+    summary: "<Succession (Lv.6 w/[Chronomon] in name)>"
+
+  # ─── [On Play][When Digivolving] return the top 5 stacked cards of 3 of the
+  #     opponent's Digimon to the top of the deck ─────────────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      any_field_permanent:
+        of: opponent
+        kind: digimon
+    summary: "[On Play][When Digivolving] Return the top 5 stacked cards of 3 of your opponent's Digimon to the top of the deck"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 3
+          max: 3
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: peeled
+          prompt: "Choose 3 of your opponent's Digimon to return the top 5 stacked cards of"
+      - return_top_stacked_to_deck:
+          targets: peeled
+          count: 5
+          position: top
+          prompt: "Choose the order to return these cards to the top of the deck (the 1st is drawn first)"
+
+  # ─── [All Turns][Once Per Turn] when your effects add to decks, you may
+  #     delete 1 of your opponent's Digimon ────────────────────────────────────
+  - when: on_add_to_deck
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_caused_by_own_effect: true
+    condition:
+      any_field_permanent:
+        of: opponent
+        kind: digimon
+    summary: "[All Turns][Once Per Turn] When your effects add to decks, you may delete 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - delete_permanent: { target: victim }
+          else:
+            - refund_opt: {}

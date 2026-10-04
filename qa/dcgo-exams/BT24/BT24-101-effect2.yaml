@@ -1,0 +1,94 @@
+# Exam scenario: Jupitermon (BT24-101), clause BT24-101#effect#2 --
+# "[On Play] [When Digivolving] Trash your top security card and 1 of your
+#  opponent's Digimon gets -13000 DP until their turn ends. Then, if you have
+#  1 or fewer security cards, <Recovery +2 <Deck>>." (the [On Play] arm; the
+#  [When Digivolving] arm runs inside BT24-101-effect0.yaml with no target).
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, memory 0): pass everything -> P1 3.
+#   T2 (P1, memory 3): play Biyomon ST1-02 (vanilla 3000, cost 2: 3 -> 1);
+#      pass -> P0 3.
+#   T3 (P0, memory 3): THE CLAUSE -- hard-play Jupitermon (cost 12: 3 -> -9).
+#      [On Play]: trash P0's top security (stack[9] = BT26-090) 5 -> 4; P0
+#      picks Biyomon for -13000 -> 0 DP -> deleted by rule; 4 security > 1 so
+#      the Recovery +2 branch does NOT fire (reaching it needs P0 at <= 2
+#      security before the play -- not reachable on a short scripted line).
+#      The security removal then fires effect#3 (trash P1's top security,
+#      stack[9] = BT4-014). The turn passes to P1 at 9.
+#
+# WITNESS (P1's T4 breeding decision): p0.security 4 with BT26-090 in P0's
+# trash; Biyomon gone from P1's field and in P1's trash (alongside BT4-014
+# from effect#3); P1 security 4.
+#
+# PROMPT SHAPE: ours = one OppField pick for the -13000 (SelectPermanentEffect).
+# The clause is mandatory: no OptionalSkill on either side. VERIFIED (DCGO
+# C#, 2026-10-04): BT24_101.cs SharedActivateCoroutine runs IDestroySecurity
+# BEFORE the SelectPermanentEffect (canNoSelect false), exactly our order, so
+# the pick row's p0.security / p0.trash agree; effect#3 is the only
+# OnLoseSecurity trigger (no MultipleSkills, no prompt).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT24-101
+clause: BT24-101#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-101, BT25-030, BT4-104, BT24-083, BT25-022,
+            BT24-031, BT25-030, BT24-102, BT24-031, BT26-090,
+            BT24-084, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: hard-play Jupitermon.
+  - actor: 0
+    do: { play: { card: BT24-101, from: hand } }
+    expect: { prompt: main_phase }
+  # -13000 on Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.memory: -9
+      p0.security: 4
+      p0.trash: [BT26-090]
+      p0.field:
+        - { card_id: BT24-101, dp: 13000, suspended: false, sources: [] }
+      p1.field: []
+      p1.trash: [ST1-02, BT4-014]
+      p1.security: 4

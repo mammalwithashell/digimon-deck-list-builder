@@ -1,0 +1,138 @@
+# Exam scenario: Aegiochusmon: Blue (BT25-025), clause BT25-025#effect#2 --
+# "<Decode ([Aegiomon])> (When this Digimon would leave the battle area other
+#  than in battle, you may play 1 [Aegiomon] from its digivolution cards
+#  without paying the cost.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LEAVE is an OPPONENT EFFECT deletion (other than in battle): P1 uses
+# Gaia Force ST1-16 ("[Main] Delete 1 of your opponent's Digimon"), its red
+# colour requirement met by P1's Biyomon.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT24-034 (5): 0 -> -5 (no [TS] Tamer in
+#       hand -> its [On Play] is silent on OUR side; DCGO asks it -> dcgo_only
+#       decline row).
+#   T2 (P1, 5): Biyomon ST1-02 (2): 5 -> 3; pass -> P0 3.
+#   T3 (P0, 3): digivolve Aegiochusmon onto Aegiomon via "[Digivolve]
+#       [Aegiomon]: Cost 3": 3 -> 0. [When Digivolving]: ONE mandatory
+#       <De-Digivolve 1> pick (Biyomon, a bare Lv.3); security 5 > 3 -> no
+#       unsuspend. Pass -> P1 3.
+#   T4 (P1, 3): Gaia Force (8): 3 -> -5; P1 picks Aegiochusmon to delete.
+#       THE CLAUSE: P0 accepts <Decode>, picks the Aegiomon source, and it is
+#       played without paying the cost; Aegiochusmon still leaves (trash).
+#       Aegiomon's own [On Play] is silent on OUR side (no [TS] Tamer in
+#       hand); DCGO asks it (Decode plays with activateETB: true) -> a second
+#       dcgo_only decline row. -> P0 5.
+#   Trailing P0 breeding pass.
+#
+# WITNESS: P0's field holds Aegiomon BT24-034 with NO sources (played from
+# the digivolution cards, not left as a stack), Aegiochusmon in p0.trash,
+# Gaia Force in p1.trash; memory -5 (the Aegiomon play was free).
+#
+# PROMPT SHAPE. Ours: Replacement accept (optional) -> Material pick over the
+# Aegiomon-named sources. DCGO: OptionalSkill, then a SelectCardEffect over
+# the digivolution cards (canNoSelect: true per docs/DCGO_EXAM.md "Rows where
+# one side looks rules-wrong" -- outcome-neutral here). If our Material pick
+# with a SINGLE candidate is auto-resolved, the select row is kept for the
+# wire (lowering notes it). VERIFIED (DCGO C#, 2026-10-04):
+# KeyWordEffects/Decode.cs DecodeEffect = WhenRemoveField,
+# SetUpActivateClass(..., -1, true, ...) (OptionalSkill), CanUse requires
+# `!IsByBattle` (Gaia Force's Destroy qualifies); DecodeProcess
+# (CardEffectCommons/KeyWordEffects/Decode.cs) opens ONE SelectCardEffect
+# (canNoSelect true, Root.Custom over DigivolutionCards) then
+# PlayPermanentCards(..., activateETB: true). Gaia Force ST1_16.cs = one
+# Destroy SelectPermanentEffect, canNoSelect false. The inherited <Barrier>
+# from Aegiomon does not trigger (IsByBattle only).
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
+card: BT25-025
+clause: BT25-025#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT25-030, BT24-031, BT26-029, BT25-044,
+            BT25-030, BT24-031, BT26-073, BT26-081, BT24-101,
+            BT25-025, BT25-030, BT4-104, BT24-031, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-16, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): hard-play Aegiomon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # Aegiomon BT24-034's [On Play] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1, 5): Biyomon (5 -> 3), pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Aegiochusmon onto Aegiomon (3 -> 0); WD de-digivolve; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): Gaia Force on Aegiochusmon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: accept <Decode>, play the Aegiomon source.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectCardEffect }
+  # The Decode-played Aegiomon's own [On Play] OptionalSkill (Decode plays
+  # it with activateETB: true; shared since the 2026-10-04 fix), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 5
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: false, sources: [] }
+      p0.trash: [BT25-025]
+      p1.trash: [ST1-16]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

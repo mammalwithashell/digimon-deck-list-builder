@@ -174,6 +174,15 @@ pub struct PredicateSpec {
     /// max of both faces; for a Digimon / Tamer it is exactly `play_cost`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_or_use_cost_lte: Option<DpConstraint>,
+    /// Card-subject leaf: the controller can afford to play (Digimon/Tamer) or
+    /// use (Option) this card right now with its cost reduced by N — i.e.
+    /// `own memory - max(0, cost - N) >= the memory floor`. Mirrors DCGO
+    /// `CanPlayAsNewPermanent(payCost: true, fixedCost: cost - N)` /
+    /// Option-use affordability in a "play or use 1 ... with the cost reduced
+    /// by N" pick filter (BT26-084 Copipemon), so an unpayable card is never
+    /// offered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub affordable_with_cost_reduce: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
     /// Card-subject leaf — the BINDING-TARGETED sibling of
@@ -288,6 +297,14 @@ pub struct PredicateSpec {
     pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
+    /// Ceiling twin of `self_color_count_gte`: the card / permanent has AT
+    /// MOST this many distinct colors. Pairs with the floor inside an
+    /// `any_of` to express "not exactly N colors" — BT25-084 Titamon's
+    /// "[Digivolve] [Titamon] w/o 3 colors" (DCGO `CardColors.Count != 3`):
+    /// `any_of: [{ self_color_count_lte: 2 }, { self_color_count_gte: 4 }]`.
+    /// G-DSL-SELF-COLOR-COUNT-LTE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_color_count_lte: Option<u8>,
     /// Permanent-subject predicate. Matches whether the permanent's
     /// digivolution stack contains at least one face-down source.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -377,6 +394,14 @@ pub struct PredicateSpec {
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_in_binding: Option<String>,
+    /// Card subject: true when the card shares NO card name with any card in
+    /// the named `CardList` binding (an absent binding ⇒ true — nothing chosen
+    /// yet). Models "N cards with different names" across a multi-pick loop
+    /// (BT26-086 Dantemon "link up to 7 [Appmon] trait cards with different
+    /// names", DCGO `CanTargetCondition_ByPreSelecetedList` +
+    /// `EqualsCardName`). Pair with the loop step's `bind_as`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_in_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_owner: Option<BindingOwnerPredicate>,
     /// True when the card bound to `binding` has the given card category.
@@ -656,6 +681,22 @@ pub struct PredicateSpec {
     /// 2; DCGO `CanTriggerOnTrashDigivolutionCard(IsPermanentExistsOnOwnerBattleAreaTamer)`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_host_is_own_tamer: Option<bool>,
+    /// Link/source-trash observer gate: true when the trashing event's host
+    /// permanent (located by its top card, `TriggerContext.event_host_card`)
+    /// is a **Digimon owned by the observer** still standing in the battle
+    /// area — "your Digimon's link cards" (EX10-070; DCGO
+    /// `CanTriggerOnTrashLinkedCard(IsPermanentExistsOnOwnerBattleAreaDigimon)`).
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_is_own_digimon: Option<bool>,
+    /// Subject-permanent gate: true when the evaluated permanent IS the
+    /// triggering event's host (its top card equals
+    /// `TriggerContext.event_host_card`; card-handle identity survives the
+    /// battle-area compaction a `<Delay>` self-trash causes). Used as a
+    /// `link_cards` `host_filter` for "… to 1 of THOSE Digimon" (EX10-070).
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_event_host: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     /// For `OnAddToHand` observers: the player whose hand gained cards
@@ -719,6 +760,24 @@ pub struct PredicateSpec {
     /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_added_card_any: Option<Box<PredicateSpec>>,
+    /// For `on_discard_hand` observers: the batch of cards the causing effect
+    /// just trashed from the event player's hand must contain AT LEAST ONE
+    /// card matching the inner card predicate. Mirrors DCGO
+    /// `CanTriggerOnTrashHand(hashtable, null, cardCondition)` over
+    /// `DiscardedCards`. BT24-007 Tsunomon "When level 4 or higher Digimon
+    /// cards with the [Demon] or [Titan] trait are trashed from your hand":
+    /// `event_discarded_card_any: { kind: digimon, level_gte: 4, … }`.
+    /// Fails outside that timing. G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_discarded_card_any: Option<Box<PredicateSpec>>,
+    /// Card-subject predicate for `on_discard_hand` clauses: true when the
+    /// candidate card is one of the cards the triggering effect just trashed
+    /// from the hand ("you may play 1 of THEM" — BT24-007 Tsunomon; DCGO
+    /// `GetDiscardedCardsFromHashtable`). Combine with a `zone: [trash]`
+    /// selection. Always false outside an `on_discard_hand` firing.
+    /// G-ENGINE-DISCARDED-HAND-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_event_discarded_cards: Option<bool>,
     /// True when the permanent carrying this effect was played by an effect
     /// (`PlaySource::ByEffect`) — read at the OnPlay firing. Models BT25-080's
     /// "if played by an effect, …" main-clause tail. G-ENGINE-ON-DISCARD-HAND.
@@ -887,6 +946,15 @@ pub struct PredicateSpec {
     pub count_lte: Option<CountAggregate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub count_gte: Option<CountAggregate>,
+    /// Board stat aggregate: the summed level of every permanent matching
+    /// `filter` (zone defaults to the battle area, owner to `you`; use
+    /// `owner: any` for both players) is `>= n`. Permanents without a level
+    /// (Tamers, Options) contribute 0. YAML:
+    /// `level_sum_gte: { filter: { owner: any, kind: digimon }, n: 12 }`.
+    /// BT25-077 Bacchusmon: "if there are 12 or more levels' total worth of
+    /// Digimon". G-DSL-BOARD-LEVEL-SUM.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_sum_gte: Option<CountAggregate>,
 
     // Existential
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -944,6 +1012,15 @@ pub struct PredicateSpec {
     /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_cost_target_permanent: Option<bool>,
+
+    /// Subject-free cost-calc leaf: true when the card whose cost is being
+    /// computed comes FROM THE HAND (`EffectReadContext.cost_target_from_hand`).
+    /// Gates "digivolves into … from the hand" reducers so an effect-driven
+    /// digivolve from trash / sources / reveal is not reduced (DCGO
+    /// `IsExistOnHand`, BT5-092). Always false outside cost-calc dispatch.
+    /// G-DSL-COST-TARGET-FROM-HAND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target_from_hand: Option<bool>,
 
     /// Canonical uniform DP comparator (unify-dsl-scalar-and-comparators §2).
     /// `dp: { op: lte, value: 5000 }` or `dp: [{op: gte, value: 3000}, {op:

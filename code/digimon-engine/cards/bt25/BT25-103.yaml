@@ -1,0 +1,130 @@
+# BT25-103 GraceNovamon — Digimon, Lv.7, Red/Blue, cost 15, 15000 DP.
+# Traits: Galaxy / Iliad / TS + (Rule) [Olympos XII]. Mega / Vaccine.
+#
+# Printed (official Bandai DB bundle data/card_bundles/BT25-103.md):
+#   <Security A. +1> <Iceclad> <Partition ([Apollomon] & [Dianamon])>
+#   [When Digivolving] [When Attacking] Return 1 of your opponent's Digimon with
+#   as many or fewer digivolution cards as this Digimon to the bottom of the deck.
+#   [When Attacking] [Counter] [Once Per Turn] For each of this Digimon's
+#   digivolution cards, you may trash any 1 digivolution card from your
+#   opponent's Digimon. Then, you may end this attack.
+#   Digivolve: Red Lv.6 / 5; Blue Lv.6 / 5; [Digivolve] Lv.6 w/[TS] trait: 5;
+#   [DNA Digivolve] Red Lv.6 + Blue Lv.6: 0 (stack unsuspended).
+#
+# DCGO (BT25/Red/BT25_103.cs):
+#   - AddSelfDigivolutionRequirementStaticEffect(level 6, HasTSTraits, cost 5,
+#     ignoreDigivolutionRequirement: false).
+#   - Jogress: Red Lv.6 + Blue Lv.6.
+#   - ChangeSelfSAttackStaticEffect(+1); IcecladSelfStaticEffect.
+#   - PartitionSelfEffect([Apollomon], [Dianamon]).
+#   - Shared WD/WA bounce: SelectPermanentEffect(maxCount 1, canNoSelect false,
+#     PutLibraryBottom) over opponent Digimon with sources <= this Digimon's.
+#     Mandatory; skipped when no candidate.
+#   - Shared WA/Counter (maxCountPerTurn 1, optional false, isSkippable):
+#     SelectTrashDigivolutionCards(IsEnemyDigimon, maxCount = own source count
+#     (clamped to available), canNoTrash: true, isFromOnly1Permanent: false);
+#     then a Yes/No "end the attack?"; `RemoveUse()` when nothing was trashed
+#     and the attack was not ended.
+#   → isSkippable is modelled as optional:false with in-body optional picks
+#     (BT25-084/056/072 convention); the RemoveUse is `refund_opt`
+#     (G-OPT-REFUND-ON-DECLINE).
+
+card: BT25-103
+name: GraceNovamon
+kind: digimon
+level: 7
+color: [red, blue]
+cost: 15
+dp: 15000
+traits: [Galaxy, Iliad, TS, Olympos XII]
+attribute: Vaccine
+form: Mega
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  # [Digivolve] Lv.6 w/[TS] trait: Cost 5 (DCGO ignoreDigivolutionRequirement: false).
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: TS }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: red }
+      - { level_eq: 6, color_is: blue }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: aura
+    target: {}
+    security_attack: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
+
+  - kind: partition
+    summary: "<Partition ([Apollomon] & [Dianamon])>"
+    sources:
+      - { name_is: "Apollomon" }
+      - { name_is: "Dianamon" }
+    exclude_cause: [own_effect, battle]
+
+  # ─── [When Digivolving][When Attacking] bottom-deck 1 opp Digimon ───────────
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte:
+                  formula:
+                    source_material_count: {}
+          prompt: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+      - return_to_deck:
+          target: bounce_target
+          position: bottom
+
+  # ─── [When Attacking][Counter][OPT] trash opp sources; may end attack ───────
+  - when: [when_attacking, counter]
+    once_per_turn: true
+    summary: "[When Attacking][Counter][OPT] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack"
+    process:
+      # DCGO SelectTrashDigivolutionCards(maxCount = own sources, canNoTrash:
+      # true, isFromOnly1Permanent: false) — cross-permanent (no `target`),
+      # each pick optional (min 0), clamped to what the opponent has.
+      - select_opponent_sources:
+          min: 0
+          max: { formula: { source_material_count: {} } }
+          clamp_to_available: true
+          filter: { host_kind_is: digimon }
+          bind_as: trashed
+          prompt: "For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed }
+      - select_effect_choice:
+          bind_as: end_choice
+          labels:
+            - "End this attack"
+            - "Don't end the attack"
+          prompt: "You may end this attack"
+      - if:
+          condition: { equals: [end_choice, 0] }
+          then:
+            - end_attack: true
+      # DCGO `if (!used) activateClass.RemoveUse()`: nothing trashed AND the
+      # attack was not ended → the [Once Per Turn] is not spent.
+      - if:
+          condition:
+            all_of:
+              - binding_count_eq: { binding: trashed, n: 0 }
+              - equals: [end_choice, 1]
+          then:
+            - refund_opt: {}

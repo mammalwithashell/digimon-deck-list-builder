@@ -103,8 +103,8 @@ class TrainingConfig:
     eval_seed: Optional[int] = None
     curriculum_pool: Optional[str] = None
     curriculum_pool_out: Optional[str] = None
-    # Declared scope for the eligible archetype set. Intersected with the
-    # DSL-implemented safety floor at load time. Applies to both generalist
+    # Declared scope for the eligible archetype set, applied on top of the
+    # per-decklist training-ready gate at load time. Applies to both generalist
     # mode (filters the deck pool) and gauntlet mode (filters opponents).
     # Names are canonicalized via the archetype alias index, so aliases like
     # "Red Hybrid" resolve to the canonical "Red Hybrid (AncientGreymon)".

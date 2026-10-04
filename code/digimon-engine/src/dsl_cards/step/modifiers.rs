@@ -347,6 +347,30 @@ pub fn try_run(
             );
             true
         }
+        CompiledStep::GrantKeywordContinuous {
+            targets,
+            keyword,
+            expiry,
+            value,
+        } => {
+            // G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT: a floating descriptor the
+            // declarative tick re-applies to every live match (see
+            // `Game::add_floating_mass_keyword`).
+            let Some(expiry) = resolve_expiry("grant_keyword_continuous", expiry) else {
+                return true;
+            };
+            let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
+                return true;
+            };
+            ctx.game.add_floating_mass_keyword(
+                targets.clone(),
+                kw,
+                ctx.source_card,
+                ctx.player,
+                expiry,
+            );
+            true
+        }
         CompiledStep::GrantKeyword {
             target,
             keyword,
@@ -423,6 +447,34 @@ pub fn try_run(
                 _ => None,
             }) {
                 ctx.grant_narrow_opponent_effect_protection(h, expiry);
+            }
+            true
+        }
+        CompiledStep::GrantStackProtectionFromOpponentEffects { target, expiry } => {
+            let Some(expiry) =
+                resolve_expiry("grant_stack_protection_from_opponent_effects", expiry)
+            else {
+                return true;
+            };
+            if let Some(h) = resolve_binding_ref(target, ctx, bindings).and_then(|b| match b {
+                ResolvedBinding::Permanent(h) => Some(h),
+                _ => None,
+            }) {
+                ctx.grant_stack_protection_from_opponent_effects(h, expiry);
+            }
+            true
+        }
+        CompiledStep::GrantStackTrashImmunityFromOpponentEffects { target, expiry } => {
+            let Some(expiry) =
+                resolve_expiry("grant_stack_trash_immunity_from_opponent_effects", expiry)
+            else {
+                return true;
+            };
+            if let Some(h) = resolve_binding_ref(target, ctx, bindings).and_then(|b| match b {
+                ResolvedBinding::Permanent(h) => Some(h),
+                _ => None,
+            }) {
+                ctx.grant_stack_trash_immunity_from_opponent_effects(h, expiry);
             }
             true
         }

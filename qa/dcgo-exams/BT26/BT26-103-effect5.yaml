@@ -1,0 +1,129 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#5 --
+# "[When Digivolving] [Counter] [Once Per Turn] Trash your top security card
+#  and <Recovery +2>."  -- the [When Digivolving] arm.
+#
+# WHY THE WD ARM: written when the [Counter] arm was unreachable on our
+# engine (no Counter window on a player attack, no `counter` flag from the
+# DSL). Both are fixed (2026-10-04, G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK
+# + G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG; BT26-103-effect3.yaml now crosses the
+# Counter window and declines it). DCGO's Counter arm is CounterClass,
+# optional by construction -> OptionalSkill; a Counter-arm line would author
+# `select: {yes: true}` + `expect: {prompt: OptionalSkill}` at the window.
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE: identical to BT26-103-effect0.yaml --
+#   T1 pass; T2 P1 hard-plays Phoenixmon ST1-10 (-> P0 7); T3 P0 hard-plays
+#   Minervamon BT24-041 (De-Digivolve pick on Phoenixmon, no-op; -> P1 5);
+#   T4 P1 pass (-> P0 3); T5 P0 digivolves Minervamon -> Wrath Mode by the
+#   cost-5 route (3 -> -2).
+#   THE CLAUSE (WD): trash P0's top security (stack[9] = Elecmon BT24-031),
+#   then <Recovery +2> from the deck top: 5 -> 4 -> 6.
+#   That removal fires effect#6: -15000 on Phoenixmon -> deleted.
+#
+# WITNESS: p0.security 5 before the digivolve, 6 after; P0's trash holds
+# exactly BT24-031 (the former top security card). Minervamon (a non-
+# [Jupitermon] base) means <Succession> copies nothing and this is the ONLY
+# When-Digivolving trigger -> no MultipleSkills row.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): identical to
+# BT26-103-effect0.yaml --
+#   * T3 Minervamon [On Play] (BT24/Yellow/BT24_041.cs shared OP/WD/OD,
+#     optional false): its "may play" SelectHandEffect has maxCount 0 (no
+#     cost<=5 [Iliad] card in hand) -> SelectHandEffect.active() returns false
+#     (`_maxCount <= 0`), NO prompt and no OptionalSkill; then the mandatory
+#     De-Digivolve SelectPermanentEffect (HasMatchConditionPermanent true) ->
+#     1:1 with our pick.
+#   * T5 cost route: CardController.cs SelectCost asks SelectCountEffect
+#     over the DISTINCT cost list [6 (Yellow Lv.6 circle), 5 (Olympos XII
+#     route)] (~720) -> answered by VALUE 5; ours is an EffectChoice.
+#   * Wrath Mode's WD (BT26_103.cs ActivateClassesForSharedEffects, optional:
+#     false, OPT hash "BT26_103_WD_Counter") is the lone WD trigger
+#     (<Succession> copies nothing off a non-[Jupitermon] source) -> no
+#     MultipleSkills, no OptionalSkill. Its IDestroySecurity queues effect#6
+#     ([All Turns][OPT], fires on EITHER player's removal), which resolves
+#     after the WD: mandatory SelectPermanentEffect (maxCount 1, canNoSelect
+#     false; a sole candidate is still asked).
+#   * The clause is mandatory and target-less (IDestroySecurity + IRecovery)
+#     -> no prompt of its own.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#5
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-103, BT24-101, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT26-081, BT4-104, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE resolved between these rows (no prompt of its own); its
+  # security removal fires effect#6, whose target pick is this row.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-103 } }
+    expect: { prompt: main_phase }
+  # The cost route (effect#0's subject) -- trait route, 5.
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  # THE CLAUSE resolved between these rows (no prompt of its own); its
+  # security removal fires effect#6, whose target pick is this row.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # T5, before the digivolve: full security, empty trash.
+  - at: 10
+    that:
+      turn: 5
+      p0.security: 5
+      p0.trash: []
+  # After it (P1's T6 breeding decision): 5 - 1 + 2 = 6; top card trashed.
+  - at: 13
+    that:
+      turn: 6
+      p0.security: 6
+      p0.trash: [BT24-031]
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-041] }

@@ -16,6 +16,7 @@ import numpy as np
 import gymnasium
 import pytest
 
+import digimon_gym.agents.gauntlet as gauntlet_module
 from digimon_gym.agents.gauntlet import (
     ArchetypeStats,
     DeckEntry,
@@ -24,6 +25,7 @@ from digimon_gym.agents.gauntlet import (
     GauntletWrapper,
     MetaGauntlet,
     UnimplementedDeckError,
+    _load_not_ready_card_ids,
     stable_deck_id,
     validate_implemented_deck,
 )
@@ -101,6 +103,41 @@ def _make_archetype(
         },
         "decklists": decklists,
     }
+
+
+def _with_card(card_id: str) -> str:
+    """A TTS decklist like `_make_archetype`'s, with one main-deck copy swapped for `card_id`."""
+    return json.dumps(["BT12-022"] * 49 + [card_id] + ["BT12-002"] * 5)
+
+
+def _write_dsl_ledger(tmp_path, rows: dict) -> str:
+    """Write a minimal `validated_cards_dsl.json`; `rows` maps card ID -> (status, archetype label)."""
+    ledger = {
+        "version": 1,
+        "cards": {
+            card_id: {"status": status, "archetype": label}
+            for card_id, (status, label) in rows.items()
+        },
+    }
+    path = tmp_path / "validated_cards_dsl.json"
+    path.write_text(json.dumps(ledger))
+    return str(path)
+
+
+@pytest.fixture
+def default_library(tmp_path, monkeypatch):
+    """Point the module's default deck library and DSL ledger at tmp files.
+
+    Loading the default library is the production path: it is the load that
+    reads the DSL ledger itself. Write the library to the returned path and the
+    ledger with `_write_dsl_ledger(tmp_path, ...)`.
+    """
+    library_path = tmp_path / "deck_library.json"
+    monkeypatch.setattr(gauntlet_module, "DECK_LIBRARY_PATH", str(library_path))
+    monkeypatch.setattr(
+        gauntlet_module, "_QA_DSL_STATUS_PATH", tmp_path / "validated_cards_dsl.json"
+    )
+    return library_path
 
 
 @pytest.fixture
@@ -193,30 +230,6 @@ class TestMetaGauntlet:
         assert set(g.archetypes) == {"Implemented"}
         assert g.deck_count == 1
         assert g._deck_pool[0].archetype_name == "Implemented"
-
-    def test_load_filters_archetypes_with_partial_dsl_verdicts(self, tmp_path):
-        lib = _make_deck_library({
-            "Ready": _make_archetype(
-                "Ready", n_decks=1,
-                digilab_times_played=10, digilab_conversion_rate=0.20,
-            ),
-            "StillPartial": _make_archetype(
-                "StillPartial", n_decks=1,
-                digilab_times_played=10, digilab_conversion_rate=0.90,
-            ),
-        })
-        path = tmp_path / "lib.json"
-        path.write_text(json.dumps(lib))
-
-        g = MetaGauntlet(
-            implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Ready"},
-        )
-        g.load(str(path))
-
-        assert set(g.archetypes) == {"Ready"}
-        assert g.deck_count == 1
-        assert g._deck_pool[0].archetype_name == "Ready"
 
     def test_random_sampling_mode_uses_uniform_deck_weights(self, tmp_path):
         lib = _make_deck_library({
@@ -614,6 +627,104 @@ class TestMetaGauntlet:
         assert decks[2].source == "file"
 
 
+# ─── Training-ready gate (per decklist) ─────────────────────────────
+
+
+class TestTrainingReadyGate:
+    """A decklist is admitted when every card is registered and none has a
+    not-ready DSL ledger verdict. The ledger's `archetype` field is a batch
+    label, so it plays no part in admission."""
+
+    @pytest.mark.parametrize(
+        "status", ["PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"],
+    )
+    def test_list_with_a_not_ready_card_is_rejected(self, tmp_path, status):
+        lib = _make_deck_library({"Mixed": _make_archetype("Mixed", n_decks=2)})
+        lib["archetypes"]["Mixed"]["decklists"][1]["decklist"] = _with_card("BT12-031")
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        ledger = _write_dsl_ledger(tmp_path, {
+            "BT12-022": ("IMPLEMENTED", "Mixed"),
+            "BT12-031": (status, "Mixed"),
+        })
+
+        g = MetaGauntlet(
+            # Every card is registered, so only the ledger can reject a list.
+            implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"},
+            not_ready_card_ids=_load_not_ready_card_ids(ledger),
+        )
+        g.load(str(path))
+
+        assert g.deck_count == 1
+        assert g._deck_pool[0].source_deck_id == "mixed_000"
+
+    def test_default_library_admits_a_ready_list_whose_archetype_has_no_ledger_label(
+        self, tmp_path, default_library,
+    ):
+        default_library.write_text(json.dumps(_make_deck_library({
+            "Three Musketeers": _make_archetype("Three Musketeers", n_decks=1),
+        })))
+        # Ledger labels are batch names that never match the library's archetype
+        # key, and BT12-002 has no ledger entry at all (a registered spec that was
+        # never ledgered still counts as ready).
+        _write_dsl_ledger(tmp_path, {"BT12-022": ("IMPLEMENTED", "store-champs-june-2026")})
+
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(default_library))
+
+        assert set(g.archetypes) == {"Three Musketeers"}
+        assert g.deck_count == 1
+
+    def test_default_library_drops_only_the_lists_that_play_a_not_ready_card(
+        self, tmp_path, default_library,
+    ):
+        lib = _make_deck_library({"Toho Braves": _make_archetype("Toho Braves", n_decks=2)})
+        lib["archetypes"]["Toho Braves"]["decklists"][1]["decklist"] = _with_card("BT12-031")
+        default_library.write_text(json.dumps(lib))
+        # One PARTIAL card under the archetype's own label: the list that never
+        # plays it stays trainable.
+        _write_dsl_ledger(tmp_path, {
+            "BT12-022": ("IMPLEMENTED", "Toho Braves"),
+            "BT12-031": ("PARTIAL", "Toho Braves"),
+        })
+
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"})
+        g.load(str(default_library))
+
+        assert [d.source_deck_id for d in g._deck_pool] == ["toho braves_000"]
+
+    def test_registered_card_missing_from_the_card_database_is_not_playable(
+        self, tmp_path, monkeypatch,
+    ):
+        # P-241 once had a YAML spec (so the registry listed it) but no
+        # cards.json entry, and building a game with it raised
+        # "Card P-241 not found in card database".
+        lib = _make_deck_library({"Mixed": _make_archetype("Mixed", n_decks=2)})
+        lib["archetypes"]["Mixed"]["decklists"][1]["decklist"] = _with_card("P-241")
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        class _CardDatabase:
+            def get_card(self, card_id):
+                return None if card_id == "P-241" else object()
+
+        monkeypatch.setattr(
+            gauntlet_module, "load_implemented_card_ids",
+            lambda: {"BT12-002", "BT12-022", "P-241"},
+        )
+        monkeypatch.setattr(gauntlet_module, "CardDatabase", _CardDatabase)
+
+        g = MetaGauntlet()  # no injected card IDs: the engine is asked
+        g.load(str(path))
+
+        assert [d.source_deck_id for d in g._deck_pool] == ["mixed_000"]
+
+    def test_missing_ledger_means_no_ledger_gate(self, tmp_path, caplog):
+        with caplog.at_level("WARNING", logger="digimon_gym.agents.gauntlet"):
+            assert _load_not_ready_card_ids(tmp_path / "absent.json") is None
+        assert any("ledger not found" in r.getMessage() for r in caplog.records)
+
+
 # ─── GauntletWrapper Tests ──────────────────────────────────────────
 
 class _FakeEnv(gymnasium.Env):
@@ -865,7 +976,6 @@ class TestAllowedArchetypes:
 
         g = MetaGauntlet(
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
             allowed_archetypes={"Rocks", "Yellow Hybrid"},
         )
         g.load(str(path))
@@ -885,7 +995,6 @@ class TestAllowedArchetypes:
 
         g = MetaGauntlet(
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks", "Other"},
             allowed_archetypes={"RockClose"},  # alias for "Rocks"
         )
         g.load(str(path))
@@ -904,7 +1013,6 @@ class TestAllowedArchetypes:
         with caplog.at_level("WARNING", logger="digimon_gym.agents.gauntlet"):
             g = MetaGauntlet(
                 implemented_card_ids={"BT12-002", "BT12-022"},
-                fully_implemented_archetypes={"Rocks"},
                 allowed_archetypes={"Rocks", "Definitely Not A Real Archetype"},
             )
             g.load(str(path))
@@ -918,28 +1026,39 @@ class TestAllowedArchetypes:
             for r in warnings
         ), f"expected warning naming the unrecognized entry; got {[r.getMessage() for r in warnings]}"
 
-    def test_safety_floor_overrides_allowed(self, tmp_path, caplog):
-        """Even if an archetype is allowed, it is excluded if not DSL-implemented."""
+    @pytest.mark.parametrize(
+        "bad_card, implemented, not_ready",
+        [
+            ("BT12-031", {"BT12-002", "BT12-022", "BT12-031"}, {"BT12-031"}),
+            ("BT99-999", {"BT12-002", "BT12-022"}, set()),
+        ],
+        ids=["not-ready-card", "unregistered-card"],
+    )
+    def test_safety_floor_overrides_allowed(
+        self, tmp_path, caplog, bad_card, implemented, not_ready,
+    ):
+        """An allowed archetype with no training-ready decklist is excluded and logged."""
         lib = _make_deck_library({
-            "Implemented": _make_archetype("Implemented", n_decks=1),
-            "NotImplemented": _make_archetype("NotImplemented", n_decks=1),
+            "Ready": _make_archetype("Ready", n_decks=1),
+            "NotReady": _make_archetype("NotReady", n_decks=1),
         })
+        lib["archetypes"]["NotReady"]["decklists"][0]["decklist"] = _with_card(bad_card)
         path = tmp_path / "lib.json"
         path.write_text(json.dumps(lib))
 
         with caplog.at_level("INFO", logger="digimon_gym.agents.gauntlet"):
             g = MetaGauntlet(
-                implemented_card_ids={"BT12-002", "BT12-022"},
-                fully_implemented_archetypes={"Implemented"},
-                allowed_archetypes={"Implemented", "NotImplemented"},
+                implemented_card_ids=implemented,
+                not_ready_card_ids=not_ready,
+                allowed_archetypes={"Ready", "NotReady"},
             )
             g.load(str(path))
 
-        assert set(g.archetypes) == {"Implemented"}
+        assert set(g.archetypes) == {"Ready"}
         # Spec requires logging the exclusion reason.
         info_msgs = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
         assert any(
-            "NotImplemented" in m and "DSL-implemented" in m for m in info_msgs
+            "NotReady" in m and "no training-ready decklist" in m for m in info_msgs
         ), f"expected info log naming dropped archetype; got {info_msgs}"
 
     def test_allowed_archetypes_empty_set_produces_empty_pool(self, tmp_path):
@@ -952,7 +1071,6 @@ class TestAllowedArchetypes:
 
         g = MetaGauntlet(
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks"},
             allowed_archetypes=set(),
         )
         g.load(str(path))
@@ -975,12 +1093,27 @@ class TestAllowedArchetypes:
         pool = load_generalist_deck_pool(
             str(path),
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
             allowed_archetypes={"Rocks"},
         )
 
         assert pool.archetype_names == ["Rocks"]
         assert pool.deck_count == 2
+
+    def test_load_generalist_deck_pool_forwards_not_ready_cards(self, tmp_path):
+        from digimon_gym.agents.gauntlet import load_generalist_deck_pool
+
+        lib = _make_deck_library({"Rocks": _make_archetype("Rocks", n_decks=2)})
+        lib["archetypes"]["Rocks"]["decklists"][1]["decklist"] = _with_card("BT12-031")
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        pool = load_generalist_deck_pool(
+            str(path),
+            implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"},
+            not_ready_card_ids={"BT12-031"},
+        )
+
+        assert pool.deck_count == 1
 
     def test_snapshot_roundtrip_preserves_filtered_pool(self, tmp_path):
         """Write a filtered snapshot, mutate library, reload, expect identical pool."""
@@ -997,7 +1130,6 @@ class TestAllowedArchetypes:
         pool = load_generalist_deck_pool(
             str(lib_path),
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
             allowed_archetypes={"Rocks", "Yellow Hybrid"},
         )
 
@@ -1037,7 +1169,6 @@ class TestAllowedArchetypes:
             seed=42,
             sampling_mode="meta",
             implemented_card_ids={"BT12-002", "BT12-022"},
-            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
             allowed_archetypes={"Rocks", "Yellow Hybrid"},
         )
         g.load(str(path))

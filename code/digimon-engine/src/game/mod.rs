@@ -187,6 +187,12 @@ pub(crate) struct PendingHandDiscard {
     /// first-seen order. Almost always a single player, but an effect that
     /// trashes from both hands in one body fires one event per affected owner.
     pub(crate) trashed_players: Vec<PlayerId>,
+    /// Every card this window moved hand→trash, with its owner, in trash
+    /// order. Drives the self-scoped "When this card is trashed from the
+    /// hand" trigger (BT26-069 Dobermon; DCGO `CanTriggerOnTrashSelfHand`):
+    /// on flush, each still-in-trash card's `scope: trash` `on_discard_hand`
+    /// clauses are enqueued. G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) trashed_cards: Vec<(PlayerId, crate::card_source::CardHandle)>,
 }
 
 /// One host's share of an open `OnAddDigivolutionCards` batch window
@@ -559,6 +565,9 @@ pub struct Game {
     /// Consumed by the drainer in PR2.
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
+    /// Last §15-4-5 trigger-batch id handed out by the drainer (see
+    /// `QueuedEffect::trigger_batch`). Monotonic within a game.
+    pub(crate) trigger_batch_seq: u32,
 
     /// Re-entrancy depth for the state-based ≤0-DP rules-check
     /// (`run_state_based_rules_check`). `drain_effect_queue` is called
@@ -1152,6 +1161,12 @@ pub struct Game {
     /// the whole discard list before firing the trigger once.
     pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
 
+    /// Open coalescing window for the `OnAddToDeck` batch trigger
+    /// (G-ENGINE-ON-ADD-TO-DECK): the controller of the effect that added
+    /// cards to a deck during the current effect body. Flushed (fires the
+    /// trigger once) at the outermost drain, alongside `pending_hand_discard`.
+    pub(crate) pending_deck_add: Option<PlayerId>,
+
     /// Open coalescing windows for the `OnAddDigivolutionCards` batch trigger
     /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS), one per host permanent that an
     /// effect placed sources under during the current effect body. Flushed
@@ -1169,6 +1184,20 @@ pub struct Game {
     /// the `BottomSource` / `TopSource` destination is seated. `None`
     /// otherwise. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub(crate) pending_security_source_cause_card: Option<crate::card_source::CardHandle>,
+    /// `true` only around the `OnLoseSecurity` enqueue inside
+    /// `fire_effect_security_removal` (every caller of which is an EFFECT
+    /// removal — the combat security check enqueues its own drain). Read by
+    /// `trigger_context_for_source` so `event_is_effect_initiated` can tell
+    /// "removed from by effects" apart from a security check (BT26-089 Kyo
+    /// Sawashiro; DCGO `CardEffectCommons.IsByEffect`).
+    /// G-ENGINE-LOSE-SECURITY-BY-EFFECT.
+    pub(crate) pending_security_loss_effect_initiated: bool,
+    /// Face-down flag for an in-flight effect-driven security→digivolution
+    /// source placement (`place_as_source_observed`'s Security branch);
+    /// consumed when `complete_effect_security_removal` seats the card
+    /// (BT26-025 Liollmon "place your top security card face down under …").
+    /// G-DSL-SECURITY-TOP-AS-SOURCE.
+    pub(crate) pending_security_source_face_down: bool,
 
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
@@ -1208,6 +1237,7 @@ mod queries;
 mod setup;
 mod snapshot;
 mod staging;
+mod succession;
 mod suspend;
 mod triggers;
 mod until_condition;
@@ -1712,6 +1742,98 @@ impl Game {
         true
     }
 
+    /// The battle-area permanent whose TOP card is `card`, if any.
+    pub fn permanent_with_top_card(
+        &self,
+        card: crate::card_source::CardHandle,
+    ) -> Option<PermanentHandle> {
+        for (pid, player) in self.players.iter().enumerate() {
+            for (i, perm) in player.battle_area.iter().enumerate() {
+                if perm.card_sources.last().is_some_and(|c| c.handle() == card) {
+                    return Some(PermanentHandle {
+                        player: pid as PlayerId,
+                        index: i as u8,
+                    });
+                }
+            }
+        }
+        None
+    }
+
+    /// Effect-initiated SIMULTANEOUS free play of `controller`'s hand / trash
+    /// cards (`play_cards_free`, BT26-081 Mervamon "play up to 8 play cost's
+    /// total worth of [Iliad] trait cards from your hand or trash without
+    /// paying the costs" — DCGO `PlayPermanentCards` over the whole list).
+    /// Only Digimon / Tamer cards are played; a card no longer in its zone,
+    /// or one an effect forbids playing / without a free field slot, is
+    /// skipped. All cards enter before any of their play triggers resolve.
+    pub fn play_cards_from_zones_free(
+        &mut self,
+        controller: PlayerId,
+        cards: &[crate::card_source::CardHandle],
+    ) -> usize {
+        use crate::enums::{CardKind, CardSourceRef};
+        let mut taken_cards: Vec<CardSource> = Vec::new();
+        let mut required_slots = 0usize;
+        for &card in cards {
+            let Some(src) = self.locate_card_source_ref(card) else {
+                continue;
+            };
+            let in_own_zone = matches!(
+                src,
+                CardSourceRef::Hand(p, _) | CardSourceRef::Trash(p, _) if p == controller
+            );
+            if !in_own_zone {
+                continue;
+            }
+            if !matches!(
+                self.card_kind_for_handle(card),
+                Some(CardKind::Digimon) | Some(CardKind::Tamer)
+            ) {
+                continue;
+            }
+            if !self.can_play_card_from_effect_without_cost(controller, card, required_slots + 1) {
+                continue;
+            }
+            let _ = src;
+            if let Some(taken) = self.take_card_by_handle(card) {
+                required_slots += 1;
+                taken_cards.push(taken);
+            }
+        }
+
+        let turn = self.turn_count;
+        let mut entered = Vec::with_capacity(taken_cards.len());
+        for mut card_source in taken_cards {
+            card_source.face_down = false;
+            let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let emitted_card_name = card_source.card_name(&self.card_data).to_string();
+            let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
+            let player = self.player_mut(controller);
+            player
+                .battle_area
+                .push(crate::permanent::Permanent::new(card_source, turn));
+            let field_index = player.battle_area.len() - 1;
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Play {
+                seq,
+                player: controller,
+                card_id: emitted_card_id,
+                card_name: emitted_card_name,
+                field_index: field_index as u8,
+                cost_paid: 0,
+                cost_printed,
+                via_alt_path: None,
+            });
+            entered.push(field_index);
+        }
+        let n = entered.len();
+        for field_index in entered {
+            self.fire_play_event_triggers(controller, field_index, true, false);
+        }
+        n
+    }
+
     pub fn can_play_card_from_effect_without_cost(
         &self,
         player_id: PlayerId,
@@ -1982,10 +2104,47 @@ impl Game {
                 .get_or_insert_with(|| crate::game::PendingHandDiscard {
                     cause_controller,
                     trashed_players: Vec::new(),
+                    trashed_cards: Vec::new(),
                 });
         if !window.trashed_players.contains(&trashing_player) {
             window.trashed_players.push(trashing_player);
         }
+    }
+
+    /// Record that an EFFECT controlled by `cause_controller` just added a
+    /// (non-Digi-Egg) card to a deck from outside it, opening or extending the
+    /// `OnAddToDeck` batch window (G-ENGINE-ON-ADD-TO-DECK). A window open
+    /// with a DIFFERENT controller is flushed first so two effect bodies never
+    /// merge. The trigger fires when the window is flushed after the causing
+    /// effect body completes (`flush_pending_deck_add`).
+    pub(crate) fn note_effect_deck_add(&mut self, cause_controller: crate::enums::PlayerId) {
+        if let Some(open) = self.pending_deck_add {
+            if open != cause_controller {
+                self.flush_pending_deck_add();
+            }
+        }
+        self.pending_deck_add = Some(cause_controller);
+    }
+
+    /// `note_effect_deck_add` for Game-level deck sinks: records only when an
+    /// effect is currently resolving (`effect_source_player`), so rule-driven
+    /// deck moves (mulligan, setup) never fire the observer.
+    pub(crate) fn note_effect_deck_add_if_resolving(&mut self) {
+        if let Some(cause) = self.effect_source_player {
+            self.note_effect_deck_add(cause);
+        }
+    }
+
+    /// Fire the `OnAddToDeck` batch trigger for the open window, then close it.
+    /// G-ENGINE-ON-ADD-TO-DECK.
+    pub(crate) fn flush_pending_deck_add(&mut self) {
+        let Some(cause_controller) = self.pending_deck_add.take() else {
+            return;
+        };
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAddToDeck,
+            crate::selection::TriggerSource::DeckGained { cause_controller },
+        );
     }
 
     /// Fire the `OnDiscardHand` batch trigger (once per affected owner) for the
@@ -1997,13 +2156,39 @@ impl Game {
         };
         let cause_controller = window.cause_controller;
         for trashing_player in window.trashed_players {
+            let cards = window
+                .trashed_cards
+                .iter()
+                .filter(|(owner, _)| *owner == trashing_player)
+                .map(|(_, card)| *card)
+                .collect();
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnDiscardHand,
                 crate::selection::TriggerSource::HandDiscarded {
                     player: trashing_player,
                     cause_controller,
+                    cards,
                 },
             );
+        }
+        // "When this card is trashed from the hand" (BT26-069 Dobermon):
+        // the trashed cards' own `scope: trash` clauses.
+        // G-ENGINE-SELF-TRASHED-FROM-HAND.
+        for (owner, card) in window.trashed_cards {
+            self.enqueue_self_trashed_from_hand(owner, card, cause_controller);
+        }
+    }
+
+    /// Record the specific card an effect just moved from `owner`'s hand to
+    /// the trash into the open `OnDiscardHand` window (call right after
+    /// `note_effect_hand_discard`). G-ENGINE-SELF-TRASHED-FROM-HAND.
+    pub(crate) fn note_effect_hand_discard_card(
+        &mut self,
+        owner: crate::enums::PlayerId,
+        card: crate::card_source::CardHandle,
+    ) {
+        if let Some(window) = self.pending_hand_discard.as_mut() {
+            window.trashed_cards.push((owner, card));
         }
     }
 
@@ -2869,6 +3054,37 @@ impl Game {
                 pending_skips,
                 effect_immunity,
                 payload,
+                keyword: None,
+            });
+        self.tick_declarative_effects();
+    }
+
+    /// Continuous mass KEYWORD grant (G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT):
+    /// every declarative tick grants `keyword` to each battle-area permanent
+    /// matching `filter` (relative to `source_player`) until `expiry`, so a
+    /// matching permanent that enters during the window is covered too.
+    pub fn add_floating_mass_keyword(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        keyword: crate::enums::Keyword,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+    ) {
+        let pending_skips =
+            crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
+        self.floating_mass_modifiers
+            .push(crate::floating_modifier::FloatingMassModifier {
+                filter,
+                modifier: ModifierType::ChangeDp,
+                value: 0,
+                source_card,
+                source_player,
+                expiry,
+                pending_skips,
+                effect_immunity: None,
+                payload: None,
+                keyword: Some(keyword),
             });
         self.tick_declarative_effects();
     }
@@ -3104,6 +3320,19 @@ impl Game {
                         Some(host),
                         player_id,
                         inherited_source,
+                        false,
+                    ));
+                }
+                // `<Succession>`: an adopted source's top-scope formula auras.
+                for source_index in self.succession_source_indices(host) {
+                    let source = &perm.card_sources[source_index];
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(host),
+                        player_id,
+                        false,
+                        true,
                     ));
                 }
             }
@@ -3120,18 +3349,24 @@ impl Game {
                     Some(host),
                     player_id,
                     false,
+                    false,
                 ));
             }
         }
 
         let mut total = 0;
         let mut found = false;
-        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+        for (card_id, source_card, source_permanent, controller, inherited_source, adopted_copy) in
+            sources
+        {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if adopted_copy && !Game::is_adoptable_effect(effect) {
                     continue;
                 }
                 let Some(formula_fn) = (if security_attack {
@@ -3446,11 +3681,11 @@ impl Game {
                             effect.inherited = grant.inherited;
                             if let Some(gc) = grant_condition.clone() {
                                 effect.condition = Some(match effect.condition.take() {
-                                    Some(own) => {
-                                        std::sync::Arc::new(move |rctx: &crate::effect_context::EffectReadContext| {
+                                    Some(own) => std::sync::Arc::new(
+                                        move |rctx: &crate::effect_context::EffectReadContext| {
                                             gc(rctx) && own(rctx)
-                                        })
-                                    }
+                                        },
+                                    ),
                                     None => gc,
                                 });
                             }

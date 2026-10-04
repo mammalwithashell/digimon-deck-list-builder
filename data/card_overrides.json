@@ -856,6 +856,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "BT25-051": {
@@ -16845,6 +16848,11 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Amphibian",
+      "TS",
+      "Titan"
     ]
   },
   "BT26-022": {
@@ -17238,7 +17246,13 @@
     ],
     "effect_description_eng": "＜Security A. +1＞\r\n＜Reboot＞\r\n＜Blocker＞\r\n＜Succession (Lv.6 w/[Chronomon] in name)＞ (This Digimon gains all effects other than ＜Succession＞ on its topmost specified digivolution card.)\r\n[On Play] [When Digivolving] Return the top 5 stacked cards of 3 of your opponent's Digimon to the top of the deck.\r\n[All Turns] [Once Per Turn] When your effects add to decks, you may delete 1 of your opponent's Digimon.",
     "inherited_effect_description_eng": "",
-    "xros_req": "[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5"
+    "xros_req": "[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5",
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Titan"
+    ]
   },
   "BT26-062": {
     "evo_costs": [
@@ -17569,7 +17583,13 @@
     "xros_req": "[Digivolve] Lv.6 w/[Olympos XII] trait: Cost 5"
   },
   "BT26-104": {
-    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+    "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\r\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\r\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+    "type_eng": [
+      "Shambala",
+      "SW",
+      "TB",
+      "TS"
+    ]
   },
   "EX12-033": {
     "evo_costs": [
@@ -18302,8 +18322,22 @@
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Deletion] By placing this card from your trash as the bottom digivolution card of 1 of your Digimon with [Myotismon] in its text, that Digimon may digivolve into a Digimon card with [Myotismon] in its name in the hand without paying the cost."
   },
   "P-240": {
+    "card_colors": [
+      6,
+      5
+    ],
+    "play_cost": 13,
+    "dp": 13000,
+    "level": 6,
+    "type_eng": [
+      "Dragonkin",
+      "VB"
+    ],
     "form_eng": [
       "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
     ],
     "evo_costs": [
       {
@@ -18317,9 +18351,18 @@
         "memory_cost": 5
       }
     ],
+    "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and your opponent blocks if possible.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (At blocker timing, by suspending this Digimon, the opponent's attacking Digimon attacks it instead.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. Then, by placing 2 cards with [Gammamon] in their texts or the [VB] trait from your trash as this Digimon's bottom digivolution cards, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends.\r\n[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost.",
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
     "xros_req": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 4\r\nAssembly Requirements [Assembly -6] Lv.5 × Lv.4 × Lv.3, all w/[Gammamon] in text or w/[VB] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
   },
   "P-244": {
+    "card_colors": [
+      5
+    ],
+    "play_cost": 3,
+    "type_eng": [
+      "LIBERATOR"
+    ],
     "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the cost reduced by 3."
   },
   "_note_cards_json_drift_2026_10": "2026-10-03 reconciliation against the official Bandai DB; every value checked against the card image and the DCGO card asset (code/tools/archive/reconcile_cards_json_drift_2026_10.py lists them). The API still serves these wrong unless noted: pre-release stubs BT24-028/061/068/078 (cost 0, no DP, no text, no special digivolution condition), BT24-044 and ST23-06 (cost 0, no DP); ST24-04 (the API now has its cost/DP, but its text is still the stale pre-release text); play cost or DP; the third colour of three-colour cards (the API has two colour fields; BT16-102's earlier override said white for black); '|applinkdp =' residue as inherited text; stale or misfiled text (EX11-033 and ST24-04 print [When Moving]; BT25-088's effect held its security text; Digi-Eggs BT13-006/BT22-001 keep inherited text in the inherited field); missing traits (P-169's LIBERATOR is a type, as printed); special digivolution conditions missing from xros_req. Where the official mirror itself is wrong, cards.json keeps the printed value: see PRINTED_OVER_MIRROR in code/tests/test_cards_json_integrity.py.",
@@ -18402,6 +18445,13 @@
   "BT25-076": {
     "inherited_effect_description_eng": ""
   },
+  "ST23-06": {
+    "play_cost": 3,
+    "dp": 1000
+  },
+  "ST24-08": {
+    "dp": 2000
+  },
   "BT25-088": {
     "play_cost": 4,
     "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When your security stack is removed from, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.\r\n[Your Turn] [Once Per Turn] When any of your [Glowing Dawn] trait cards would be played, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 1."
@@ -18443,12 +18493,5 @@
   },
   "ST23-05": {
     "inherited_effect_description_eng": ""
-  },
-  "ST23-06": {
-    "play_cost": 3,
-    "dp": 1000
-  },
-  "ST24-08": {
-    "dp": 2000
   }
 }

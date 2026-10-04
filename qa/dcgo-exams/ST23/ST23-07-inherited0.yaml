@@ -1,0 +1,113 @@
+# Exam scenario: Armalizamon (ST23-07), clause ST23-07#inherited#0 --
+# <Piercing> "(When this Digimon deletes your opponent's Digimon in battle while
+#  attacking, it checks security before the attack ends.)"
+#
+# PROVISIONAL: asserts are OUR engine's result, not DCGO's.
+#
+# THE LINE (the whole climb stays in BREEDING so no [When Digivolving] fires --
+# breeding-area Digimon can't activate effects, and Monarchlizamon's shared
+# OP/WD would otherwise open sim-only trigger-order rows):
+#   T1 hatch + ST23-12 (0).  T2 p1 plays Agumon BT3-007 (2).
+#   T3 ST23-12 -> Armalizamon in breeding (2; 3 -> 1).  T4 p1 all-pass.
+#   T5 Armalizamon -> Monarchlizamon ST23-08 in breeding (3; 3 -> 0).
+#   T6 p1's Agumon attacks p0's security (top BT26-025, 1000 DP, no
+#      [Security] text -> Agumon survives) and stays suspended.
+#   T7 p0 moves Monarchlizamon (7000, Armalizamon in its sources) out and
+#      attacks the suspended Agumon (4000): Agumon is deleted and the
+#      inherited <Piercing> checks p1's top security (ST1-02) -> p1.security
+#      5 -> 4, p1.trash [BT3-007, ST1-02] (asserted). Without Piercing the
+#      security would stay 5.
+#   Monarchlizamon's <Alliance> has no other Digimon to suspend: no prompt.
+#
+# PROMPT SHAPE: none -- Piercing is mandatory (16-6, keyword-semantics.md);
+# DCGO PierceSelfEffect(isInheritedEffect) (card YAML crosscheck).
+card: ST23-07
+clause: ST23-07#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-12, ST23-07, ST23-08, BT25-035, BT26-070,
+            ST23-15, ST23-15, BT25-057, BT25-057, BT26-025,
+            ST23-09, BT25-041, ST23-06, ST23-04, ST23-09,
+            BT25-043]
+    rest: gd-bt26-7th
+  p1:
+    stack: [BT3-007, ST1-04, BT1-009, ST1-03, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-07 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-08 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 19
+    that:
+      turn: 7
+      p0.memory: 3
+      p0.security: 4
+      p1.security: 4
+      p1.field: []
+      p1.trash: [BT3-007, ST1-02]
+      p0.field:
+        - card_id: ST23-08
+          dp: 7000
+          suspended: true
+          sources: [ST23-01, ST23-07, ST23-12]

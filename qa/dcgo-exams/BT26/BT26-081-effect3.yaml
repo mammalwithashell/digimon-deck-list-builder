@@ -1,0 +1,114 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#3 --
+# "[All Turns] All of your [Iliad] trait Digimon gain <Alliance>, <Reboot>,
+#  <Blocker> and +2000 DP."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): hard-play Phoenixmon ST1-10 (10: 3 -> -7) -> P0 7.
+#   T3 (P0, 7): hard-play Mervamon (13: 7 -> -6). Its [On Play] (effect#2):
+#       free-play pick DECLINED; then the mandatory -4000 x 1 (Mervamon is the
+#       only [Iliad]/[TS]) on Phoenixmon until P1's turn ends -> 8000.
+#   T4 (P1, 6): THE CLAUSE, on the opponent's turn -- Phoenixmon attacks P0's
+#       security; Mervamon (printed: NO <Blocker>; the grant is this clause's,
+#       Mervamon being [Iliad] itself) opens P0's blocker window and blocks.
+#       15000 (13000 + this clause's +2000) vs 8000: Phoenixmon deleted.
+#   Trailing: P1's main-phase pass.
+#
+# WITNESS: the <Blocker> half -- the block select lowers at all (no blocker
+# window exists without the grant) and P0's security stays 5; the +2000
+# half -- Mervamon projects 15000 on BOTH turns (T3/T4). <Alliance> and
+# <Reboot> are not separately observed on this line (Alliance needs a second
+# attacker on P0's turn; Reboot would need P1's NEXT unsuspend phase).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is DCGO's.
+#   - DP pick: SelectPermanentEffect maxCount 1, canNoSelect false; asked even
+#     with one candidate under the harness (SelectPermanentEffect.cs ~376-407).
+#   - Blocker window: AttackProcess.cs:333-365 -- SelectPermanentEffect for the
+#     defending player (canNoSelect unless Collision); Mervamon has <Blocker>
+#     via its own BlockerStaticEffect grant to [Iliad] (BT26_081.cs).
+card: BT26-081
+clause: BT26-081#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-081, BT24-034, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-081, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0's blocker window: block with Mervamon (its <Blocker> comes only from
+  # its own [All Turns] grant to [Iliad] Digimon).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before P1's attack: Mervamon at 15000 (13000 + the clause's +2000 on
+  # itself), Phoenixmon at 8000 (12000 - 4000 x 1 from effect#2).
+  - at: 9
+    that:
+      turn: 4
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-10, dp: 8000, suspended: false, sources: [] }
+  # After the block: P0's security untouched, Phoenixmon (8000) lost to the
+  # 15000 blocker, Mervamon suspended from blocking.
+  - at: 11
+    that:
+      turn: 4
+      p0.security: 5
+      p1.field: []
+      p1.trash: [ST1-10]
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: true, sources: [] }

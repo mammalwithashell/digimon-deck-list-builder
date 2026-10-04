@@ -87,6 +87,9 @@ pub enum ActivationCostKind {
     ReturnSelfToDeckBottom,
     /// "By trashing this card, …" (`<Delay>` bodies).
     TrashSelf,
+    /// "By placing this Digimon as the bottom security card, …"
+    /// (BT26-022 Sorcermon). G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY.
+    PlaceSelfAtSecurityBottom,
 }
 
 impl ActivationCostKind {
@@ -125,6 +128,15 @@ impl ActivationCostKind {
             // refuse only when the source permanent is already gone, which
             // the lookup above has just ruled out.
             ActivationCostKind::ReturnSelfToDeckBottom | ActivationCostKind::TrashSelf => true,
+            // `place_self_at_security` refuses under the owner's
+            // player-scoped `CannotAddSecurityByEffect` (DCGO
+            // `Owner.CanAddSecurity`). A would-leave / would-place
+            // replacement can still intercept at payment time; that is a
+            // resolution-time cost failure, not a mask-time one.
+            ActivationCostKind::PlaceSelfAtSecurityBottom => !game.modifiers.player_has(
+                handle.player,
+                crate::enums::ModifierType::CannotAddSecurityByEffect,
+            ),
         }
     }
 }
@@ -137,6 +149,18 @@ pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 /// Predicate used by parameterized `<Overclock (...)>` to decide which own
 /// battle-area permanents can be deleted as the cost.
+/// A card's own use-cost INCREASE, read from the controller's state
+/// (BT26-033 Jupitermon's Option face: "For each of your security cards, add 1
+/// to this card's use cost"). G-ENGINE-OPTION-SELF-USE-COST-INCREASE.
+pub type UseCostFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
+/// `<Succession ([X])>` source filter: does the digivolution card at
+/// `source` (a below-top card of the carrier) match the keyword's `[X]`?
+pub type SuccessionFilterFn = Box<
+    dyn Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+        + Send
+        + Sync
+        + 'static,
+>;
 pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
@@ -296,6 +320,15 @@ pub struct Effect {
     /// per-slot keying. See `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     pub shared_opt_group: Option<u8>,
 
+    /// Printed-clause identity for effects lowered from ONE multi-timing
+    /// clause (`when: [on_play, when_digivolving]`). Every lowered effect of
+    /// such a clause carries the same `Some(clause_index)`; single-timing
+    /// effects carry `None`. Consumers that enumerate "effects" as printed
+    /// objects (the Homeros-style `refire_effect` "activate 1 [On Play] or
+    /// [When Digivolving] effect") collapse a group to ONE choice.
+    /// `G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`.
+    pub clause_group: Option<u32>,
+
     // Behavior
     pub condition: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
@@ -385,6 +418,17 @@ pub struct Effect {
     /// Optional condition that lets this Option satisfy its play color
     /// requirement through printed `<Use Req. (...)>` text.
     pub option_color_requirement_bypass: Option<ConditionFn>,
+    /// True on an Option `[Main]` body that places the Option itself in the
+    /// battle area through an EXPLICIT `place_self_as_delay_option` step
+    /// (anywhere in its body, possibly behind a cost / condition — BT24-099,
+    /// EX12-071 "By trashing …, <Draw 2>. Then, place this card …"). For
+    /// such a card the [Main] body owns the placement: if it ends WITHOUT
+    /// claiming the in-flight Option, `dispose_option` trashes it instead of
+    /// seating it as a Delay permanent. A Delay Option without the step keeps
+    /// the implicit dispose-time placement (LM-027.., BT8-108).
+    /// Set by `.explicit_self_placement()`.
+    /// G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT.
+    pub explicit_self_placement: bool,
     /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
     pub delay_trigger: Option<DelayTrigger>,
     /// Memory cost paid to link this card to a host Digimon. Set by
@@ -393,6 +437,15 @@ pub struct Effect {
     /// Filter closure selecting legal host Digimon for a Link Option.
     /// Set by `.link(cost, filter)`.
     pub link_filter: Option<LinkFilterFn>,
+    /// `<Succession ([X])>` (G-ENGINE-SUCCESSION-KEYWORD): set on the
+    /// declarative clause of a card printing the keyword. While that card is
+    /// the top card, its permanent gains every non-inherited effect of the
+    /// TOPMOST digivolution card this filter matches — see
+    /// `Game::succession_source_indices`.
+    pub succession_filter: Option<SuccessionFilterFn>,
+    /// Self use-cost increase (see [`UseCostFn`]); summed by
+    /// `Game::option_use_cost`.
+    pub use_cost_increase_fn: Option<UseCostFn>,
     pub alt_path_registration: Option<AltPathRegistrationEffect>,
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
@@ -833,6 +886,7 @@ impl EffectBuilder {
                 blast_digivolve: false,
                 max_per_turn: 0,
                 shared_opt_group: None,
+                clause_group: None,
                 condition: None,
                 replacement_condition: None,
                 process: None,
@@ -853,9 +907,12 @@ impl EffectBuilder {
                 replacement_process: None,
                 option_main: false,
                 option_color_requirement_bypass: None,
+                explicit_self_placement: false,
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
+                succession_filter: None,
+                use_cost_increase_fn: None,
                 alt_path_registration: None,
                 training: false,
                 linked: false,
@@ -992,6 +1049,13 @@ impl EffectBuilder {
     /// See `Effect::shared_opt_group` and `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     pub fn shared_opt_group(mut self, group: u8) -> Self {
         self.inner.shared_opt_group = Some(group);
+        self
+    }
+
+    /// Tag this effect as one timing of a multi-timing printed clause.
+    /// See `Effect::clause_group`.
+    pub fn clause_group(mut self, group: u32) -> Self {
+        self.inner.clause_group = Some(group);
         self
     }
 
@@ -1276,6 +1340,9 @@ impl EffectBuilder {
             ActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
             ActivationCostKind::ReturnSelfToDeckBottom => ctx.return_self_to_deck_bottom_as_cost(),
             ActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
+            ActivationCostKind::PlaceSelfAtSecurityBottom => {
+                ctx.place_self_at_security(crate::enums::StackPosition::Bottom, false)
+            }
         }));
         self
     }
@@ -1313,6 +1380,13 @@ impl EffectBuilder {
         self
     }
 
+    /// Mark this Option `[Main]` body as owning its own battle-area
+    /// placement (see [`Effect::explicit_self_placement`]).
+    pub fn explicit_self_placement(mut self) -> Self {
+        self.inner.explicit_self_placement = true;
+        self
+    }
+
     /// Mark this effect as a Delay Option's body. Sets timing to
     /// `DelayEffect` and records the trigger. Dispatch lands in Task 3.
     pub fn delay(mut self, trigger: DelayTrigger) -> Self {
@@ -1326,6 +1400,28 @@ impl EffectBuilder {
     /// (`Effect::link_condition(card).link_host(cost, filter)`), where the
     /// link metadata must coexist with `EffectTiming::LinkCondition` rather
     /// than the Option `OptionMain` body timing.
+    /// Mark this declarative effect as `<Succession ([X])>`: `filter` picks
+    /// which digivolution cards qualify as `[X]` (the topmost one is adopted).
+    pub fn succession<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, crate::selection::SourceSelectionRef) -> bool
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.inner.succession_filter = Some(Box::new(filter));
+        self
+    }
+
+    /// Mark this declarative effect as a self use-cost increase.
+    pub fn use_cost_increase<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.use_cost_increase_fn = Some(Box::new(f));
+        self
+    }
+
     pub fn link_host<F>(mut self, cost: u16, digimon_filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,

@@ -1094,6 +1094,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -1139,6 +1140,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -1200,6 +1202,8 @@ impl Game {
         card: CardSource,
         position: crate::enums::StackPosition,
     ) {
+        // G-ENGINE-ON-ADD-TO-DECK: an effect-driven deck add opens the batch.
+        self.note_effect_deck_add_if_resolving();
         match position {
             crate::enums::StackPosition::Top => {
                 self.player_mut(player_id).deck.push(card);
@@ -1226,6 +1230,10 @@ impl Game {
         stack: Vec<CardSource>,
         position: crate::enums::StackPosition,
     ) {
+        // G-ENGINE-ON-ADD-TO-DECK: an effect-driven deck add opens the batch.
+        if !stack.is_empty() {
+            self.note_effect_deck_add_if_resolving();
+        }
         match position {
             crate::enums::StackPosition::Top => {
                 self.player_mut(player_id).deck.extend(stack);

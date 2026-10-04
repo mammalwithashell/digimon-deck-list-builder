@@ -1,0 +1,91 @@
+# Exam scenario: Gekkomon (BT25-046), clause BT25-046#inherited#0 --
+# INHERITED "<Piercing> (When this Digimon deletes your opponent's Digimon in
+#  battle while attacking, it checks security before the attack ends.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01); digivolve it in the breeding area into
+#       Gekkomon BT25-046 (Lv.2 -> Lv.3, cost 0) [0], draw stack[10]; pass.
+#       Breeding-area Digimon activate nothing (glossary), so BT25-046's
+#       [On Play] is not involved (it is a digivolve anyway, not a play).
+#   T2 P1 [3]: plays Agumon ST1-03 (cost 3) [0], passes.
+#   T3 P0 [3]: draw stack[11]; MOVE Gekkomon to the battle area (BT25-046 has
+#       no [When Moving]); digivolve it into Armalizamon BT25-049 (Lv.3 green,
+#       cost 2) [1], draw stack[12]. Armalizamon's [When Digivolving] "You may
+#       suspend 1 of your opponent's Digimon" suspends Agumon. Armalizamon
+#       (4000) attacks the suspended Agumon (2000 on P1's turn; ST1-03's
+#       +1000 is [Your Turn] for P1 only) -> deleted in battle.
+#   THE CLAUSE: Armalizamon's own printed <Piercing> is an INHERITED effect of
+#       a TOP card and so does not apply; the only <Piercing> in play is the
+#       one inherited from BT25-046 in its sources. P1's security drops 5 -> 4
+#       (top card ST1-02, 3000, loses the security battle and is trashed) on
+#       an attack that targeted a DIGIMON.
+#
+# PROMPT SHAPE (BT25-046.yaml DCGO crosscheck): PierceSelfEffect(
+# isInheritedEffect: true) on OnDetermineDoSecurityCheck -- no prompt, a
+# determination hook. Armalizamon's suspend is SelectPermanentEffect Mode.Tap
+# with canNoSelect: true (BT25-049.yaml crosscheck); ours is an optional
+# OppField pick -> one SelectPermanentEffect row.
+card: BT25-046
+clause: BT25-046#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-046, BT25-049, ST23-15, ST23-15, BT26-089,
+            ST23-12, ST23-12, ST23-09, ST23-09, ST23-09,
+            ST23-15, BT26-089, ST23-15]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-046 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 1
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-03]
+      p1.field: []
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: true
+          sources: [BT25-046, ST23-01]

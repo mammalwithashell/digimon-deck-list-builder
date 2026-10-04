@@ -718,6 +718,21 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::SecurityPlaceTopCard {
+            carrier,
+            of,
+            position,
+            face_up,
+        } => {
+            let target_player = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(carrier)) =
+                resolve_binding_ref(carrier, ctx, bindings)
+            {
+                let position = super::map_stack_position(*position);
+                let _ = ctx.security_place_top_card(carrier, target_player, position, *face_up);
+            }
+            true
+        }
         CompiledStep::ReturnAllTrashToDeckBottom { of } => {
             let player = resolve_player(ctx, *of);
             // The helper returns every moved card handle; record them in the

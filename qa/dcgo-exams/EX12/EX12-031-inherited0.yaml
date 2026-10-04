@@ -357,6 +357,17 @@ steps:
   - actor: 0
     do: { select: { cards: [EX12-026] } }
     expect: { prompt: SelectCardEffect }
+  # Since 2026-10-04 (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES) the
+  # Decode-played Shellmon's [On Play] waits until the carrier's deletion has
+  # completed, so it joins Kaguyamon's two deletion triggers in ONE stack.
+  # Resolve it first (target-starved: p1's board is empty) -- the order our
+  # engine used to force -- leaving the same two-entry Kaguyamon bundle below.
+  # SIM-ONLY: the confirmed oracle run shows DCGO's stack as just
+  # [EX12-065, EX12-065], i.e. DCGO does not stage the target-starved Shellmon
+  # trigger at all (its CanActivate re-filter, presumably); our Shellmon
+  # clause has no activation condition, so only we ask this ordering.
+  - actor: 0
+    do: { select: { cards: [EX12-026], sim_only: true } }
   # The deleted carrier's own bundle: Kaguyamon's [On Deletion] and its
   # mandatory <Fortitude>, both offering EX12-065 -- the stacked-trigger case
   # `ordinal:` exists for. See the ORDINAL CAVEAT above.
@@ -375,7 +386,7 @@ assert:
   # card in the trash. Kaguyamon's own mandatory <Fortitude> put IT back on
   # the battle area with an empty stack, which is why the trash holds one
   # card and the board holds three.
-  - at: 26
+  - at: 27
     that:
       p0.memory: -1
       p0.trash: [EX12-031]

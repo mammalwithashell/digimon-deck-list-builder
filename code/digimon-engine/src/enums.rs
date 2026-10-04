@@ -428,6 +428,18 @@ pub enum EffectTiming {
     /// non-null causing `CardEffect`). A multi-card discard batch fires this
     /// exactly ONCE (DCGO `DiscardHands()`). G-ENGINE-ON-DISCARD-HAND.
     OnDiscardHand,
+    /// Fires ONCE after an EFFECT adds one or more cards to a player's deck
+    /// (top or bottom) from outside it — a permanent / stack returned to the
+    /// deck, trash / hand / security / digivolution cards returned to the
+    /// deck ("When your effects add to decks", BT26-001 / BT26-015 /
+    /// BT26-060). Cards revealed FROM the deck and put back (the reveal
+    /// zone) do NOT fire it, nor do Digi-Eggs routed to the Digi-Egg deck
+    /// (DCGO `FireOnAddLibraryAnyone` ruling). Global observer — the
+    /// causing effect's controller rides in the `TriggerContext`
+    /// (`event_cause_effect`) so scripts gate "your effects" with
+    /// `event_caused_by_own_effect`. Mirrors DCGO
+    /// `EffectTiming.OnAddLibraryAnyone`. G-ENGINE-ON-ADD-TO-DECK.
+    OnAddToDeck,
 
     // Special
     None,
@@ -759,6 +771,15 @@ pub enum ModifierType {
     DrawBlock,
     MemoryBlock,
     CannotPlayFromHand,
+    /// Player-scoped: the affected player can't USE Option cards (rule
+    /// §6-5-1-3 "use an Option card" — Standard / Delay / Training `[Main]`
+    /// uses from hand, effect-driven `use_option_*` uses from any zone, and
+    /// hand Counter-timing Options). Does NOT block linking a Plug-In from
+    /// hand (§6-5-1-4 is a separate action) nor an Option's `[Security]`
+    /// effect (official EX1-072 Q&A: a security effect is not a use).
+    /// DCGO `CanNotPlayClass(cardSource.IsOption)` (EX1_072.cs, BT8_057.cs).
+    /// G-ENGINE-CANNOT-USE-OPTION-CARDS.
+    CannotUseOptionCards,
 
     // ── Phase 6 flood gates (player-scoped) ──────────────────────────────
     // Enforcement wires up in Tasks 3-4; for now these are pure data.
@@ -1101,6 +1122,9 @@ pub enum CardSourceRef {
     PendingSecurity,
     Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
+    /// A LINK card of a battle-area permanent: `(host, index into
+    /// linked_cards)` (BT26-102 Seven Code PAD materials from link cards).
+    Link(crate::permanent::PermanentHandle, usize),
 }
 
 /// Facet #9 — the source zone a chosen card is lifted from when an effect

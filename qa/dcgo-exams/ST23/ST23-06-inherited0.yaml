@@ -1,0 +1,107 @@
+# Exam scenario: Gekkomon (ST23-06), clause ST23-06#inherited#0 --
+# INHERITED "<Piercing> (When this Digimon deletes your opponent's Digimon in
+#  battle while attacking, it checks security before the attack ends.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01); digivolve it in the breeding area into
+#       Gekkomon ST23-06 (cost 0) [0], draw stack[10]; pass.
+#   T2 P1 [3]: plays Agumon ST1-03 (cost 3) [0], passes.
+#   T3 P0 [3]: draw stack[11]; MOVE Gekkomon. Its own [When Moving] fires
+#       (that is ST23-06#effect#1, not under exam here): with no
+#       [Glowing Dawn] Tamer only the add-to-hand bucket runs -- reveal
+#       stack[12..14] = ST23-09 / BT16-082 / BT25-090, add ST23-09 (the only
+#       [Glowing Dawn] card), bottom the other two. Digivolve into Armalizamon
+#       BT25-049 (cost 2) [1], draw stack[15]. Its [When Digivolving] suspends
+#       Agumon. Armalizamon (4000) attacks the suspended Agumon (2000) ->
+#       deleted in battle.
+#   THE CLAUSE: Armalizamon's own printed <Piercing> is a TOP card's inherited
+#       effect and does not apply; the only <Piercing> in play is inherited
+#       from ST23-06 in its sources (Kekkomon's inherited is a Tamer-cost
+#       [When Attacking] digivolve with no Tamer on board -> silent). P1's
+#       security drops 5 -> 4 (top ST1-02, 3000, trashed) although the attack
+#       targeted a Digimon.
+#
+# PROMPT SHAPE (ST23-06.yaml DCGO crosscheck): PierceSelfEffect(
+# isInheritedEffect: true) -- no prompt. The [When Moving] reveal with no GD
+# Tamer is SimplifiedRevealDeckTopCardsAndSelect with one AddHand bucket ->
+# one SelectCardEffect; the 2-card remainder is ONE DCGO ordering row vs our
+# two OrderedPermutation positions (sim_only x2 + a dcgo_only row, EX7-044
+# convention). Armalizamon's suspend: SelectPermanentEffect, canNoSelect: true.
+card: ST23-06
+clause: ST23-06#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, BT25-049, ST23-15, ST23-15, ST23-13,
+            ST23-12, ST23-04, BT26-089, BT26-089, BT26-089,
+            ST23-15, ST23-13, ST23-09, BT16-082, BT25-090,
+            BT26-089]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # [When Moving] (no [Glowing Dawn] Tamer -> add-to-hand bucket only).
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  # The remainder's order. Ours: one position at a time. DCGO: one row.
+  - actor: 0
+    do: { select: { cards: [BT16-082], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-090], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT16-082, BT25-090], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 3
+      p0.memory: 1
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-03]
+      p0.hand: [BT26-089, ST23-09, ST23-13, ST23-13, ST23-15, ST23-15, ST23-15]
+      p1.field: []
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: true
+          sources: [ST23-01, ST23-06]

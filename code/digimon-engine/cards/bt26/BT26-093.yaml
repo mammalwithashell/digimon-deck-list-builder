@@ -1,0 +1,103 @@
+# BT26-093 Reina Sakuya — Tamer, Black, Cost 3. Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-093.md):
+#   [Start of Your Main Phase] By placing 1 [BEATBREAK] trait card from your
+#     hand face down under this Tamer, <Draw 1> and gain 1 memory.
+#   [All Turns] When a Digimon attacks, by suspending this Tamer, place the top
+#     card of your deck face down under this Tamer. After, 1 of your
+#     [BEATBREAK] trait Digimon gains <Collision> and <Blocker> for the turn.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_093.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional, skippable): identical to BT26-089 —
+#   EqualsTraits("BEATBREAK") canNoSelect:true hand pick → place face down at
+#   the bottom → Draw 1 → AddMemory 1 (CanAddMemory-gated).
+#   → count_gte condition + optional select_hand + place_selected_card_under_
+#   tamer face_down + draw + gain_memory (BT26-091 idiom).
+# Attack reaction (OnAllyAttack + CanTriggerOnPermanentAttack(_ => true),
+#   optional TRUE): any Digimon of EITHER player attacking. CanActivate = can
+#   pay the suspend cost. Body: suspend self → on success, if deck non-empty,
+#   AddDigivolutionCardsBottom(deck top, face down) → if an own BEATBREAK
+#   Digimon exists, mandatory (canNoSelect:false) pick → GainCollision +
+#   GainBlocker (UntilEachTurnEnd).
+#   → when [on_ally_attack, on_opponent_attack] (a Tamer is never the
+#   attacker, so this covers every attack) + all_turns + optional +
+#   source_is_unsuspended; activation_cost suspend_self;
+#   place_as_bottom_source { deck_top } face down (no-op on an empty deck);
+#   select_own_permanent (mandatory; skipped when no candidate) →
+#   grant_keyword Collision + Blocker expiry end_of_turn.
+# Security: PlaySelfTamerSecurityEffect → on_security play_from_security.
+
+card: BT26-093
+name: "Reina Sakuya"
+kind: tamer
+color: [black]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [Start of Your Main Phase] place 1 [BEATBREAK] hand card face down
+  #     under this Tamer → <Draw 1> + 1 memory ─────────────────────────────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "BEATBREAK"
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [BEATBREAK] card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: { trait_has: "BEATBREAK" }
+          prompt: "Place 1 [BEATBREAK] card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── [All Turns] When a Digimon attacks, by suspending this Tamer, place the
+  #     deck top face down under it; 1 [BEATBREAK] Digimon gains <Collision>
+  #     and <Blocker> for the turn ─────────────────────────────────────────────
+  - when: [on_ally_attack, on_opponent_attack]
+    optional: true
+    active_when: { all_turns: true }
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When a Digimon attacks, by suspending this Tamer, place the top card of your deck face down under this Tamer. After, 1 of your [BEATBREAK] trait Digimon gains <Collision> and <Blocker> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+      - select_own_permanent:
+          bind_as: bb
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "BEATBREAK"
+          prompt: "1 of your [BEATBREAK] trait Digimon gains <Collision> and <Blocker> for the turn"
+      - grant_keyword:
+          target: bb
+          keyword: Collision
+          expiry: end_of_turn
+      - grant_keyword:
+          target: bb
+          keyword: Blocker
+          expiry: end_of_turn
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

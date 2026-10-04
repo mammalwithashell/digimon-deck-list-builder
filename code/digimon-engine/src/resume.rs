@@ -474,6 +474,10 @@ pub enum ResumeFrame {
     /// closure callbacks. The post-attach `install_pick(K+1)` runs inline exactly
     /// as the closure path does. See [`crate::dsl_cards::step::link_cards::LinkPickState`].
     LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    /// Zone-card multi-pick (`select_zone_cards` / `return_top_stacked_to_deck`):
+    /// concrete cards across hand / trash / stacks / link cards, set or ordered,
+    /// optional play-cost budget. See `dsl_cards::step::zone_cards`.
+    ZoneCardPickStep(crate::dsl_cards::step::zone_cards::ZoneCardPickState),
     /// Digivolve cost-choice (rule 17 — a base satisfies >1 of a hand card's
     /// digivolution requirements at different costs). A top-level player action,
     /// so it carries no `outer_conts` and is never nested in a DSL clause;
@@ -831,6 +835,13 @@ pub struct OuterOptionalTriggerState {
 pub struct TriggerOrderSelectionState {
     pub(crate) chooser: PlayerId,
     pub(crate) allow_decline_all: bool,
+    /// The `effect_queue` indices the prompt offered, in action-id order
+    /// (the queue does not move while the prompt is parked). The pick maps
+    /// `action_id - HAND_EFFECT_START` through this list, and decline-all
+    /// drops only these entries -- NOT every entry the chooser controls,
+    /// which may include non-firing entries or entries of an older
+    /// §15-4-5 trigger batch that were never offered.
+    pub(crate) bundle: Vec<usize>,
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 
@@ -1133,8 +1144,10 @@ pub struct CountCappedPermanentsState {
     pub prov: ResumeProvenance,
     pub selecting_player: PlayerId,
     pub previous_phase: GamePhase,
-    /// Drives the `OppField`/`OwnField` selection kind for the frontend router.
-    pub target_is_opponent: bool,
+    /// The selection kind for the frontend router: `OppField` / `OwnField`
+    /// for a one-player pick, `AnyField` when candidates span BOTH battle
+    /// areas (`of: any`, ids `encode_attack(player, index)`).
+    pub field_kind: crate::selection::SelectionKind,
     /// `min` is already clamped (`max.min(candidates)` when `clamp_to_available`).
     pub min: u8,
     pub max: u8,

@@ -1,0 +1,116 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#7 --
+# DUAL Effect "<Use Req. ([TS] trait)> (Specified cards let you ignore color
+#  requirements.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
+#
+# THE LINE: T1 P0 plays Homeros BT24-102 (WHITE [Iliad]/[TS] Tamer, 0 -> -5);
+# T2 P1 plays Biyomon (5 -> 3) and passes; T3 (P0, 3) Homeros' [Start of Your
+# Main Phase] +1 memory (3 -> 4; 4 < 5, so no suspend/draw), then USE
+# Jupitermon's Option face from hand. P0's ONLY permanent is white: neither
+# of the Option's colours (Yellow AND Red -- an Option needs ALL its colours,
+# mask.rs option_color_match_available, general_rule.pdf 4-19-3) is present,
+# so the use is admitted SOLELY by <Use Req. ([TS] trait)>.
+#
+# WITNESS (at 9): the use happened at all -- p0.memory 4 -> -3 (use cost 2 + 5
+# security = 7), BT26-033 in p0.trash, Biyomon deleted (p1.trash
+# [ST1-02]), p0.security 6 after <Recovery +1>. Without the clause our mask
+# would not offer the play and lowering would refuse step 7.
+#
+# Homeros' [End of Your Turn] ("By suspending this Tamer, you may activate 1
+# [On Play]/[When Digivolving] effect of 1 of your [Olympos XII] Digimon") has
+# no candidate on either turn end here (P0 has no Digimon); our engine parks
+# nothing. REFUTED vs DCGO C#: BT24_102.cs:81-135 registers it with
+# isOptional true, CanUse = on field + owner's turn, CanActivate = on field +
+# CanActivateSuspendCostEffect -- NO candidate check (the Olympos XII filter
+# is only applied inside ActivateCoroutine, after the suspend). So DCGO's
+# EndTurnProcess (AutoProcessing.cs:679, reached via EndTurnCheck :635 on
+# these memory-overflow turn ends) asks an OptionalSkill gate at the end of
+# T1 AND of T3 (Homeros stays unsuspended: the T3 [Start of Your Main Phase]
+# only reaches 4 memory). Both are authored below as `dcgo_only` declines.
+# PREDICTED DIVERGENCE (prompt shape, outcome-neutral when declined):
+# general_rule.pdf 15-7-5 (docs/digimon-rules/digest.md) lets a player pay the
+# "By X" cost even when the result can't be executed, so DCGO's gate is the
+# rules-correct one and our engine is MISSING a decision (suspend Homeros for
+# nothing). Not this card's clause; logged for the BT24-102 owner.
+# No P0 Digimon -> no <Arts Digivolve> target -> no Arts prompt.
+#
+# Option use from hand: `play: { card: BT26-033, from: hand }` lowers as an
+# Option USE (card_kind 4 + dual block in cards.json); DCGO routes a dual
+# card played with no target permanent to UseOptionClass (NOTES-BT25-085.md),
+# no face-selection prompt on either side. [Main] is mandatory (no
+# OptionalSkill). <Arts Digivolve> is offered on EVERY use with a legal
+# target (ours optional OwnField pick; DCGO SelectPermanentEffect
+# canNoSelect:true).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-102.yaml no longer
+# requires an [Olympos XII] Digimon before offering Homeros' "By suspending"
+# gate (BT24_102.cs:121-135; §15-7-5), so both Homeros gate rows are shared
+# now. (Header text below predates the fix.)
+card: BT26-033
+clause: BT26-033#effect#7
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-102, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, BT1-009, BT3-007, ST1-04, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): Homeros (cost 5: 0 -> -5) -> P1 at 5.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-102, from: hand } }
+    expect: { prompt: main_phase }
+  # T1's end (memory -5): Homeros [End of Your Turn] gate (shared since the
+  # 2026-10-04 fix) -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1, memory 5): Biyomon (5 -> 3); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3 -> 4 via Homeros' SOMP): THE CLAUSE -- use the Option.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-033, from: hand } }
+    expect: { prompt: main_phase }
+  # T3's end (memory -3): the same Homeros gate -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      p0.memory: 4
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 6
+      p0.trash: [BT26-033]
+      p1.field: []
+      p1.trash: [ST1-02]
+      p0.field:
+        - { card_id: BT24-102, dp: -1, suspended: false, sources: [] }

@@ -132,6 +132,43 @@ fn compile_activation_cost_lowers_to_return_self_kind() {
     }
 }
 
+const PLACE_SELF_SECURITY_BODY: &str = r#"
+card: TEST-AC-003
+name: PlaceSelfSecurityCostCard
+kind: digimon
+color: [blue]
+cost: 4
+level: 4
+dp: 4000
+effects:
+  - when: end_of_your_turn
+    optional: true
+    process:
+      - activation_cost: { place_self_at_security_bottom: true }
+      - draw: { of: you, count: 1 }
+"#;
+
+/// G-ACTIVATION-COST-PLACE-SELF-BOTTOM-SECURITY (BT26-022 Sorcermon).
+#[test]
+fn compile_activation_cost_lowers_to_place_self_at_security_bottom_kind() {
+    let spec = parse_card(PLACE_SELF_SECURITY_BODY);
+    let compiled = compile(&spec).expect("should compile cleanly");
+    let triggered = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .expect("compiled triggered clause");
+    match &triggered.process[0] {
+        CompiledStep::ActivationCost { kind } => {
+            assert_eq!(*kind, CompiledActivationCostKind::PlaceSelfAtSecurityBottom);
+        }
+        other => panic!("expected CompiledStep::ActivationCost, got {:?}", other),
+    }
+}
+
 fn collect_errors(yaml: &str) -> Vec<String> {
     let spec = parse_card(yaml);
     match compile(&spec) {

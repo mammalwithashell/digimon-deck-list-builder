@@ -31,11 +31,7 @@ use digimon_engine::PlayerId;
 /// Declare the card at `player`'s hand slot `hand_index`: the §6-5-1-4 link if
 /// that is what the slot's `HAND_EFFECT` bit means right now, else the
 /// §6-5-1-3 Option use.
-pub fn declare_from_hand(
-    game: &mut Game,
-    player: PlayerId,
-    hand_index: usize,
-) -> OptionPlayResult {
+pub fn declare_from_hand(game: &mut Game, player: PlayerId, hand_index: usize) -> OptionPlayResult {
     if !game.hand_effect_slot_is_link(player, hand_index) {
         return game.play_option_from_hand(player, hand_index);
     }

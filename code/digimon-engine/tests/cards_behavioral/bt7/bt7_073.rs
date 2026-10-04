@@ -33,8 +33,8 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -124,7 +124,11 @@ fn bt7_073_metadata_matches_printed_card() {
 fn bt7_073_has_two_printed_circles_and_the_purple_tamer_route() {
     let runner = builder().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
-    assert_eq!(card.alt_paths.len(), 3, "Lv.3/3 + Lv.4/1 circles + Tamer route");
+    assert_eq!(
+        card.alt_paths.len(),
+        3,
+        "Lv.3/3 + Lv.4/1 circles + Tamer route"
+    );
 
     let lv3 = &card.alt_paths[0];
     assert_eq!(lv3.from.as_ref().and_then(|f| f.level_eq), Some(3));
@@ -135,8 +139,15 @@ fn bt7_073_has_two_printed_circles_and_the_purple_tamer_route() {
 
     let hybrid = &card.alt_paths[2];
     assert_eq!(hybrid.kind, CompiledAltPathKind::Digivolve);
-    assert_eq!(hybrid.cost, Some(CompiledCost::Literal(2)), "for a memory cost of 2");
-    assert_eq!(hybrid.source_treated_as.as_deref(), Some("level_3_purple_digimon"));
+    assert_eq!(
+        hybrid.cost,
+        Some(CompiledCost::Literal(2)),
+        "for a memory cost of 2"
+    );
+    assert_eq!(
+        hybrid.source_treated_as.as_deref(),
+        Some("level_3_purple_digimon")
+    );
     assert_eq!(
         hybrid.from.as_ref().and_then(|f| f.kind),
         Some(CompiledCardKind::Tamer)
@@ -177,7 +188,10 @@ fn bt7_073_digivolving_onto_koichi_kimura_grants_retaliation() {
     let paid = digivolve_onto(&mut runner, koichi);
 
     assert_eq!(paid, 2, "Tamer route costs 2");
-    assert_eq!(stack_ids(&runner, koichi).first().map(String::as_str), Some("KOICHI"));
+    assert_eq!(
+        stack_ids(&runner, koichi).first().map(String::as_str),
+        Some("KOICHI")
+    );
     assert!(
         runner.game.has_keyword(koichi, Keyword::Retaliation),
         "[Koichi Kimura] beneath → gains <Retaliation>"

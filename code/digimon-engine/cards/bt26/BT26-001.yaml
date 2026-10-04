@@ -1,0 +1,67 @@
+# BT26-001 Yokomon — Digi-Egg, Lv.2, Red. Traits: Bulb, Iliad, TS.
+#   Form In-Training.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-001.md):
+#   Inherited: [Your Turn] [Once Per Turn] When your effects add to decks, this
+#     Digimon may digivolve into a Digimon card with [Chronomon] in its text in
+#     the hand with the cost reduced by 1.
+#   Official Q&A: "[X] in its text" covers name, traits, effects, inherited
+#     effects, (Rule), digivolve / DNA / DigiXros / Assembly requirements.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_001.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Inherited (OnAddLibraryAnyone, optional, maxCountPerTurn 1): IsOwnerTurn +
+#   CanTriggerOnAddLibrary(cardEffectCondition IsOwnerEffect) → the causing
+#   effect is the owner's; either player's deck counts ("add to decks").
+#   DigivolveIntoHandOrTrashCard(isHand, payCost, reduce 1, isOptional) over
+#   `IsDigimon && HasText("Chronomon")` cards that can digivolve onto this
+#   permanent.
+#   → `when: on_add_to_deck` (NEW engine timing G-ENGINE-ON-ADD-TO-DECK) +
+#   `active_when: { your_turn, event_caused_by_own_effect }`; clause optional
+#   ("may"), gated on a legal hand candidate (`in_text_contains` +
+#   `can_digivolve_from_source`, so the prompt offers exactly what the commit
+#   accepts); `effect_initiated_digivolve { cost: { reduce: 1 } }`.
+
+card: BT26-001
+name: "Yokomon"
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Bulb, Iliad, TS]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_add_to_deck
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_caused_by_own_effect: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          in_text_contains: "Chronomon"
+          can_digivolve_from_source: true
+        n: 1
+    summary: "Inherited [Your Turn][OPT] When your effects add to decks, this Digimon may digivolve into a [Chronomon]-text Digimon card in the hand with the cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chrono_evo
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: "Chronomon"
+              - can_digivolve_from_source: true
+          prompt: "Digivolve into a Digimon card with [Chronomon] in its text in your hand with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: chrono_evo
+          cost: { reduce: 1 }

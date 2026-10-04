@@ -203,6 +203,13 @@ fn resolve_card_source_ref(
     if let digimon_dsl::compiled::CompiledBindingRef::DeckTop(of) = source {
         return Some(CardSourceRef::DeckTop(resolve_player(ctx, *of)));
     }
+    // `SecurityTop` (G-DSL-SECURITY-TOP-AS-SOURCE): the top of the player's
+    // security stack (Vec end), or nothing on an empty stack.
+    if let digimon_dsl::compiled::CompiledBindingRef::SecurityTop(of) = source {
+        let p = resolve_player(ctx, *of);
+        let top = ctx.game.player(p).security.len().checked_sub(1)?;
+        return Some(CardSourceRef::Security(p, top));
+    }
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
@@ -242,6 +249,13 @@ fn peek_card_source_ref_handle(
             .and_then(|perm| perm.card_sources.get(i))
             .map(|c| c.handle()),
         CardSourceRef::Reveal(h) => Some(h),
+        CardSourceRef::Link(h, i) => ctx
+            .game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .and_then(|perm| perm.linked_cards.get(i))
+            .map(|c| c.handle()),
     }
 }
 
@@ -611,6 +625,32 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         );
                     }
                 }
+            } else if let Some(ResolvedBinding::HandIndex(owner, i)) = resolve_binding_ref(
+                &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
+                ctx,
+                bindings,
+            ) {
+                // G-DSL-USE-OPTION-ONLY: a `select_hand`-bound card is USED,
+                // never played. "Use 1 Option card" (BT26-090 Kanan Yuki)
+                // must not offer a DUAL card's Digimon face, so — unlike
+                // `play_or_use_from_hand` — there is no face choice: an
+                // Option or DUAL card goes straight to the Option-use path; a
+                // Digimon/Tamer bound here is a no-op (the printed text only
+                // permits using an Option).
+                let usable = ctx
+                    .game
+                    .player(owner)
+                    .hand
+                    .get(i as usize)
+                    .is_some_and(|c| {
+                        matches!(
+                            c.card_kind(&ctx.game.card_data),
+                            crate::enums::CardKind::Option | crate::enums::CardKind::Dual
+                        )
+                    });
+                if usable {
+                    let _ = ctx.use_option_from_hand_with_cost(owner, i as usize, delta);
+                }
             }
             true
         }
@@ -621,11 +661,27 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             trash_index,
             cost_delta,
         } => {
-            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
-                resolve_binding_ref(trash_index, ctx, bindings)
-            {
+            // The binding addresses the card by trash index, or directly by
+            // card handle (`self` — a `{Trash} [Main]` "play this card with
+            // the cost reduced by N", BT26-079 ZombiePlutomon;
+            // G-DSL-PLAY-SELF-FROM-TRASH-WITH-COST).
+            let located = match resolve_binding_ref(trash_index, ctx, bindings) {
+                Some(ResolvedBinding::TrashIndex(owner, i)) => Some((owner, i as usize)),
+                Some(ResolvedBinding::Card(h)) => {
+                    (0..ctx.game.players.len() as crate::enums::PlayerId).find_map(|p| {
+                        ctx.game
+                            .player(p)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == h)
+                            .map(|i| (p, i))
+                    })
+                }
+                _ => None,
+            };
+            if let Some((owner, i)) = located {
                 let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
-                if let Some(played) = ctx.play_from_trash_with_cost(owner, i as usize, delta) {
+                if let Some(played) = ctx.play_from_trash_with_cost(owner, i, delta) {
                     bindings.record_played(played);
                 }
             }
@@ -703,7 +759,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             binding,
             bind_as,
             suppress_on_play,
+            cost_delta,
         } => {
+            // G-DSL-PLAY-UNION-BOUND-COST-DELTA: omitted → free (the verb's
+            // historical behavior); otherwise the cost-adjusted play.
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(d) => lower_cost_delta(Some(d), ctx, bindings),
+            };
             // Resolve the union-zone binding: the picked card, the zone it
             // came from (hand, trash, or material), and the owner of that zone. The
             // binding is read directly (not via `resolve_binding_ref`) so the
@@ -721,9 +784,10 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             .iter()
                             .position(|c| c.handle() == card)
                             .and_then(|idx| {
-                                ctx.play_from_hand_free_suppress_on_play(
+                                ctx.play_from_hand_with_cost_suppress_on_play(
                                     owner,
                                     idx,
+                                    delta,
                                     *suppress_on_play,
                                 )
                             })
@@ -740,7 +804,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                                 ctx.play_from_trash_with_cost_suppress_on_play(
                                     owner,
                                     idx,
-                                    CostDelta::Free,
+                                    delta,
                                     *suppress_on_play,
                                 )
                             })
@@ -751,7 +815,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     } => ctx.play_from_materials_suppress_on_play(
                         carrier,
                         source_index as usize,
-                        CostDelta::Free,
+                        delta,
                         *suppress_on_play,
                     ),
                 };
@@ -833,6 +897,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let owner = resolve_player(ctx, *of);
             if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
                 let _ = ctx.trash_security_card(owner, handle);
+            }
+            true
+        }
+        CompiledStep::ReturnTopSecurityToDeck { of, position } => {
+            // G-DSL-RETURN-TOP-SECURITY-TO-DECK: the top security card
+            // (`security.last()`, the add_top_security_to_hand convention)
+            // moves to its owner's deck. No-op on an empty stack.
+            let owner = resolve_player(ctx, *of);
+            let to_bottom = matches!(
+                super::map_stack_position(*position),
+                crate::enums::StackPosition::Bottom
+            );
+            if let Some(handle) = ctx.game.player(owner).security.last().map(|c| c.handle()) {
+                if ctx.return_security_card_to_deck(owner, handle, to_bottom) {
+                    bindings.record_returned_to_deck(handle);
+                }
             }
             true
         }

@@ -62,15 +62,23 @@ fn base() -> DebugRunnerBuilder {
 fn has_all_protections(runner: &DebugRunner, h: PermanentHandle) -> bool {
     runner.game.has_keyword(h, Keyword::Reboot)
         && runner.modifiers().has(h, ModifierType::ImmuneFromDPMinus)
-        && runner.modifiers().has(h, ModifierType::CannotBeReturnedToHand)
-        && runner.modifiers().has(h, ModifierType::CannotBeReturnedToDeck)
+        && runner
+            .modifiers()
+            .has(h, ModifierType::CannotBeReturnedToHand)
+        && runner
+            .modifiers()
+            .has(h, ModifierType::CannotBeReturnedToDeck)
 }
 
 fn has_any_protection(runner: &DebugRunner, h: PermanentHandle) -> bool {
     runner.game.has_keyword(h, Keyword::Reboot)
         || runner.modifiers().has(h, ModifierType::ImmuneFromDPMinus)
-        || runner.modifiers().has(h, ModifierType::CannotBeReturnedToHand)
-        || runner.modifiers().has(h, ModifierType::CannotBeReturnedToDeck)
+        || runner
+            .modifiers()
+            .has(h, ModifierType::CannotBeReturnedToHand)
+        || runner
+            .modifiers()
+            .has(h, ModifierType::CannotBeReturnedToDeck)
 }
 
 // ─── Section 1: structural ───────────────────────────────────────────────────
@@ -95,7 +103,10 @@ fn bt3_105_metadata_and_clauses() {
         .iter()
         .find(|t| t.when == vec![CompiledTiming::MainFromHand])
         .expect("[Main] clause");
-    assert!(!main.optional, "no 'you may' — the target pick is mandatory");
+    assert!(
+        !main.optional,
+        "no 'you may' — the target pick is mandatory"
+    );
     let sec = triggered
         .iter()
         .find(|t| t.when == vec![CompiledTiming::OnSecurity])
@@ -111,17 +122,27 @@ fn bt3_105_main_grants_reboot_and_protections_to_the_chosen_digimon_only() {
     let a = runner.place_on_field(0, "MINE-A", Some(0));
     let b = runner.place_on_field(0, "MINE-B", Some(0));
 
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let view = runner.pending_selection_view().expect("target pick");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(!view.is_optional, "DCGO canNoSelect: false — no PASS");
-    assert_eq!(view.valid_action_ids.len(), 2, "both own Digimon are candidates");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both own Digimon are candidates"
+    );
 
     let pick_a = digimon_engine::action::space::encode_attack(a.player as u16, a.index as u16);
     runner.execute_action(0, pick_a).expect("choose MINE-A");
     let _ = runner.auto_resolve();
 
-    assert!(has_all_protections(&runner, a), "MINE-A gains Reboot + DP-minus immunity + no-return");
+    assert!(
+        has_all_protections(&runner, a),
+        "MINE-A gains Reboot + DP-minus immunity + no-return"
+    );
     assert!(!has_any_protection(&runner, b), "MINE-B is untouched");
     assert_eq!(runner.memory(), 3, "cost 2 paid");
 }
@@ -130,7 +151,10 @@ fn bt3_105_main_grants_reboot_and_protections_to_the_chosen_digimon_only() {
 fn bt3_105_protection_blocks_dp_reduction_from_the_opponent() {
     let mut runner = base().hand(0, &[CARD_ID]).memory(5).start();
     let a = runner.place_on_field(0, "MINE-A", Some(0));
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let pick_a = digimon_engine::action::space::encode_attack(a.player as u16, a.index as u16);
     runner.execute_action(0, pick_a).expect("choose MINE-A");
     let _ = runner.auto_resolve();
@@ -140,8 +164,12 @@ fn bt3_105_protection_blocks_dp_reduction_from_the_opponent() {
         let source_card = runner.game.players[0].battle_area[a.index as usize]
             .top_card()
             .handle();
-        let mut ctx =
-            digimon_engine::effect_context::EffectContext::new(&mut runner.game, source_card, None, 1);
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            source_card,
+            None,
+            1,
+        );
         ctx.add_dp_modifier(a, -3000, Expiry::EndOfTurn);
     }
     assert_eq!(
@@ -155,7 +183,10 @@ fn bt3_105_protection_blocks_dp_reduction_from_the_opponent() {
 fn bt3_105_protections_last_through_the_opponents_next_turn_then_expire() {
     let mut runner = base().hand(0, &[CARD_ID]).memory(5).start();
     let a = runner.place_on_field(0, "MINE-A", Some(0));
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let pick_a = digimon_engine::action::space::encode_attack(a.player as u16, a.index as u16);
     runner.execute_action(0, pick_a).expect("choose MINE-A");
     let _ = runner.auto_resolve();
@@ -163,19 +194,28 @@ fn bt3_105_protections_last_through_the_opponents_next_turn_then_expire() {
     runner.game.set_memory(3);
     runner.end_turn(); // P1's turn — still protected
     assert_eq!(runner.game.turn_player(), 1);
-    assert!(has_all_protections(&runner, a), "protection persists during the opponent's next turn");
+    assert!(
+        has_all_protections(&runner, a),
+        "protection persists during the opponent's next turn"
+    );
 
     runner.game.set_memory(3);
     runner.end_turn(); // end of P1's turn — expires
     assert_eq!(runner.game.turn_player(), 0);
-    assert!(!has_any_protection(&runner, a), "everything expires at the end of the opponent's next turn");
+    assert!(
+        !has_any_protection(&runner, a),
+        "everything expires at the end of the opponent's next turn"
+    );
 }
 
 #[test]
 fn bt3_105_reboot_unsuspends_during_the_opponents_unsuspend_phase() {
     let mut runner = base().hand(0, &[CARD_ID]).memory(5).start();
     let a = runner.place_on_field(0, "MINE-A", Some(0));
-    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     let pick_a = digimon_engine::action::space::encode_attack(a.player as u16, a.index as u16);
     runner.execute_action(0, pick_a).expect("choose MINE-A");
     let _ = runner.auto_resolve();
@@ -193,10 +233,10 @@ fn bt3_105_reboot_unsuspends_during_the_opponents_unsuspend_phase() {
 fn bt3_105_main_with_no_own_digimon_resolves_without_a_prompt() {
     let mut runner = base().hand(0, &[CARD_ID]).memory(5).start();
     runner.place_on_field(0, "FILL", Some(0)); // colour requirement only
-    // Remove it again so there is genuinely no own Digimon; keep a Tamer-less
-    // board by relying on the Option's own colour check having passed at the
-    // time of validation — simplest: no Digimon at all means Invalid
-    // (colour), so instead assert on the opponent-only board below.
+                                               // Remove it again so there is genuinely no own Digimon; keep a Tamer-less
+                                               // board by relying on the Option's own colour check having passed at the
+                                               // time of validation — simplest: no Digimon at all means Invalid
+                                               // (colour), so instead assert on the opponent-only board below.
     runner.game.players[0].battle_area.clear();
     let opp = runner.place_on_field(1, "OPP-A", Some(0));
     let result = runner.game.play_option_from_hand(0, 0);
@@ -204,7 +244,10 @@ fn bt3_105_main_with_no_own_digimon_resolves_without_a_prompt() {
     // refused up front and nothing is spent (DCGO would not even offer it).
     assert_eq!(result, OptionPlayResult::Invalid);
     assert!(runner.pending_selection().is_none());
-    assert!(!has_any_protection(&runner, opp), "opponent Digimon are never candidates");
+    assert!(
+        !has_any_protection(&runner, opp),
+        "opponent Digimon are never candidates"
+    );
 }
 
 // ─── Section 3: [Security] opponent's Digimon can't attack players ───────────
@@ -230,10 +273,16 @@ fn bt3_105_security_stops_opponent_digimon_attacking_players_for_the_turn() {
     let result = runner.attack_player(opp_a, 0, false);
     let _ = runner.auto_resolve();
     assert_ne!(result, AttackResult::Invalid, "the first attack is legal");
-    assert_eq!(runner.security_count(0), 1, "Breath of the Gods was checked");
+    assert_eq!(
+        runner.security_count(0),
+        1,
+        "Breath of the Gods was checked"
+    );
 
     assert!(
-        runner.modifiers().has(opp_b, ModifierType::CannotAttackPlayer),
+        runner
+            .modifiers()
+            .has(opp_b, ModifierType::CannotAttackPlayer),
         "every opponent Digimon is bound for the turn"
     );
     assert_eq!(
@@ -242,7 +291,9 @@ fn bt3_105_security_stops_opponent_digimon_attacking_players_for_the_turn() {
         "OPP-B can no longer attack the player this turn"
     );
     assert!(
-        !runner.modifiers().has(mine, ModifierType::CannotAttackPlayer),
+        !runner
+            .modifiers()
+            .has(mine, ModifierType::CannotAttackPlayer),
         "the security owner's own Digimon are not affected"
     );
 
@@ -256,6 +307,8 @@ fn bt3_105_security_stops_opponent_digimon_attacking_players_for_the_turn() {
     runner.end_turn(); // → P0
     runner.game.set_memory(3);
     runner.end_turn(); // → P1 again
-    assert!(!runner.modifiers().has(opp_b, ModifierType::CannotAttackPlayer));
+    assert!(!runner
+        .modifiers()
+        .has(opp_b, ModifierType::CannotAttackPlayer));
     assert_ne!(runner.attack_player(opp_b, 0, false), AttackResult::Invalid);
 }

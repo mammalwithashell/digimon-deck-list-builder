@@ -166,8 +166,12 @@ fn register_dsl_yaml(r: &mut DebugRunner, yaml: &str) {
 
 // ─── Tests ─────────────────────────────────────────────────────────────
 
-/// Test 1: playing a Link Option installs a host-selection `PendingSelection`
-/// and parks `pending_option` in `LinkSelectHost` phase. The card is NOT yet
+/// Test 1: declaring a Plug-In Option link from the hand installs a
+/// host-selection `PendingSelection` BEFORE anything is paid or moved: the
+/// card stays in the hand (§9-1-8) and no `pending_option` exists yet — the
+/// host pick is the clone-safe `OptionHandLinkHostSelection` resume frame
+/// (general_rule.pdf §10-1-3-1 → -2 → -3: host, then cost, then plug in;
+/// `9af21698c`, G-ENGINE-OPTION-HAND-LINK-COST-TIMING). The card is NOT yet
 /// attached.
 #[test]
 fn link_installs_host_selection() {
@@ -185,15 +189,21 @@ fn link_installs_host_selection() {
     assert_eq!(result, OptionPlayResult::Pending);
     assert!(
         r.game.pending_selection.is_some(),
-        "Link dispose installs a host-selection"
+        "the link declaration installs a host-selection"
     );
     assert!(
-        r.game.pending_option.is_some(),
-        "pending_option carries through LinkSelectHost"
+        r.game.pending_option.is_none(),
+        "§10-1-3-1: the host is chosen before the Option lifecycle starts"
     );
-    assert_eq!(
-        r.game.pending_option.as_ref().unwrap().resolution_phase,
-        digimon_engine::selection::OptionResolutionPhase::LinkSelectHost
+    assert_eq!(r.hand_size(0), 1, "§9-1-8: the revealed card is still in the hand");
+    let resume = r
+        .game
+        .pending_selection_resume
+        .as_ref()
+        .expect("the host pick parks on a clone-safe resume frame");
+    assert!(
+        format!("{:?}", resume.frames).starts_with("[OptionHandLinkHostSelection("),
+        "the host pick is the OptionHandLinkHostSelection frame"
     );
     // Not yet attached.
     assert!(
@@ -811,7 +821,10 @@ effects:
 }
 
 #[test]
-fn dsl_link_requirement_pays_nonzero_link_cost_before_host_selection() {
+fn dsl_link_requirement_pays_nonzero_link_cost_after_host_selection() {
+    // general_rule.pdf §10-1-3: the host is chosen (10-1-3-1) BEFORE the link
+    // cost is paid (10-1-3-2). This test used to assert the opposite order;
+    // `9af21698c` (G-ENGINE-OPTION-HAND-LINK-COST-TIMING) fixed the engine.
     let mut r = DebugRunner::builder()
         .add_card(option_card("LINK-COST", 0, CardColor::Red))
         .add_card(digimon_card("HOST", CardColor::Red))
@@ -838,13 +851,14 @@ effects:
         crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
         OptionPlayResult::Pending
     );
-    assert_eq!(r.memory(), 1, "Link requirement cost is paid");
+    assert_eq!(r.memory(), 3, "nothing is paid before the host is chosen");
     assert!(
         r.game.pending_selection.is_some(),
-        "host selection remains player-visible after cost payment"
+        "host selection is player-visible before cost payment"
     );
     let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action);
+    assert_eq!(r.memory(), 1, "Link requirement cost is paid after the host pick");
     assert_eq!(
         r.game.player(0).battle_area[host.index as usize]
             .linked_cards
@@ -1407,8 +1421,16 @@ effects:
 
     // The mask offers the link on GATCH-DSL's hand slot and NOT on FILLER's.
     let mask = build_action_mask(&r.game, 0);
-    assert_eq!(mask[hand_link_bit(1)], 1.0, "hand link offered for GATCH-DSL");
-    assert_eq!(mask[hand_link_bit(0)], 0.0, "no hand link for a plain Digimon");
+    assert_eq!(
+        mask[hand_link_bit(1)],
+        1.0,
+        "hand link offered for GATCH-DSL"
+    );
+    assert_eq!(
+        mask[hand_link_bit(0)],
+        0.0,
+        "no hand link for a plain Digimon"
+    );
 
     // Declare → host prompt (never auto-picked, rule 17) → pick HOST.
     let mem_before = r.memory();
@@ -1420,14 +1442,21 @@ effects:
         .as_ref()
         .expect("declaring a hand link installs the host-selection prompt");
     assert_eq!(pending.kind, SelectionKind::OwnField);
-    assert!(pending.source_permanent.is_none(), "a hand card has no source permanent");
+    assert!(
+        pending.source_permanent.is_none(),
+        "a hand card has no source permanent"
+    );
     let action = pending.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action);
 
     // Attached from hand (the hand lost GATCH-DSL and gained the WhenLinked
     // draw: net 0), nothing was absorbed from the field, cost paid, and the
     // linked Raid ESS reaches the host.
-    assert_eq!(r.battle_area_size(0), 1, "HOST alone stands; nothing was played");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "HOST alone stands; nothing was played"
+    );
     let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
     assert_eq!(linked.len(), 1, "GATCH-DSL attached as a linked card");
     assert_eq!(linked[0].card_id(&r.game.card_data), "GATCH-DSL");
@@ -1470,14 +1499,21 @@ fn digimon_link_from_hand_is_withheld_without_a_host_or_the_memory() {
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(mask[hand_link_bit(0)], 0.0, "no host → no hand link");
     r.game.decode_action(hand_link_bit(0) as u16, 0);
-    assert!(r.game.pending_selection.is_none(), "nothing parked without a host");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "nothing parked without a host"
+    );
     assert_eq!(r.hand_size(0), 1, "GATCH still in hand");
 
     // With a host the bit appears (cost 1 against memory 0 is affordable down
     // to the -10 floor, as for the field origin).
     r.place_on_field(0, "HOST", Some(0));
     let mask = build_action_mask(&r.game, 0);
-    assert_eq!(mask[hand_link_bit(0)], 1.0, "a host makes the hand link legal");
+    assert_eq!(
+        mask[hand_link_bit(0)],
+        1.0,
+        "a host makes the hand link legal"
+    );
 }
 
 /// Facet #6/#11 (DSL host-side) — a host Digimon authored in YAML with
@@ -1735,6 +1771,8 @@ effects:
 
 /// Gap 1 — filter-target aura form (BT25-075 / BT25-102: "all of your [TS]
 /// trait Digimon gain Link +1"). The modifier_value reaches each matched host.
+/// (`controller: you` was never a predicate key — it was silently dropped until
+/// `5138087f3` made unknown DSL keys a hard error; `of: you` matches BT25-075.)
 #[test]
 fn gap1_filter_target_link_max_aura_grants_nonzero_delta() {
     let yaml = r#"
@@ -1743,7 +1781,7 @@ name: Vulcanusmon
 kind: digimon
 effects:
   - kind: aura
-    target: { trait_has: TS, controller: you }
+    target: { of: you, kind: digimon, trait_has: TS }
     modifier: ChangeLinkMax
     modifier_value: 1
 "#;

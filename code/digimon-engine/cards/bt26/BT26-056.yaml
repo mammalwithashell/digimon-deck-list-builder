@@ -1,0 +1,128 @@
+# BT26-056 Cerberusmon: Werewolf Mode // (DUAL) — Digimon Lv.5 Black/Purple
+#   DP 8000 // Option Black use cost 3. Traits: Wizard, Titan, TS + (Rule)
+#   Dark Animal. Form: Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Black Lv.4 / cost 4; Purple Lv.4 / cost 4;
+#   [Digivolve] [Cerberusmon]: Cost 1; [Digivolve] Lv.4 w/[TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-056.md):
+#   Digimon face:
+#   <Jamming> <Reboot> <Blocker>
+#   [On Deletion] You may play 1 level 4 or lower Digimon card with the [Titan]
+#     trait from your trash without paying the cost.
+#   (Rule) Trait: Has [Dark Animal] Type.
+#   Option face (DUAL): <Use Req. ([TS] trait)> [Main] Trash 1 card in your
+#     hand. Then, <De-Digivolve 3> 1 of your opponent's Digimon.
+#   DUAL Rule: <Arts Digivolve>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_056.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Cerberusmon"), cost 1 (no level
+#   gate); level 4 && TopCard.HasTSTraits, cost 3.
+# <Jamming> / <Reboot> / <Blocker>: the self static keyword factories →
+#   grant_keyword ×3.
+# [On Deletion] (OnDestroyedAnyone, skippable, not optional; CanActivate = a
+#   playable Lv.<=4 [Titan] Digimon in trash): PlayByEffect(Root.Trash,
+#   payCost false) — the pick is the "you may".
+#   → condition count_gte + optional select_trash + play_from_trash_free.
+# Option [Main] (OptionSkill): if hand >= 1, MANDATORY (canNoSelect:false)
+#   hand Discard pick; then, if an opponent Digimon exists, a mandatory
+#   Degenerate(3) pick → <De-Digivolve 3> (stops at level 3).
+#   → select_hand (mandatory) + trash; select_opponent_permanent +
+#   de_digivolve amount 3 stop_at_level 3.
+# Use Req ([TS]) + <Arts Digivolve>: BT26-050 / BT26-080 idiom.
+
+card: BT26-056
+name: "Cerberusmon: Werewolf Mode"
+kind: dual
+
+level: 5
+color: [black, purple]
+dp: 8000
+traits: [Wizard, Titan, TS, Dark Animal]
+form: Ultimate
+attribute: Vaccine
+
+dual:
+  digimon:
+    level: 5
+    dp: 8000
+    colors: [black, purple]
+    traits: [Wizard, Titan, TS, Dark Animal]
+    effect_text: "<Jamming> <Reboot> <Blocker> [On Deletion] You may play 1 level 4 or lower Digimon card with the [Titan] trait from your trash without paying the cost. (Rule) Trait: Has [Dark Animal] Type."
+    inherited_text: ""
+  option:
+    use_cost: 3
+    colors: [black]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: TS
+    effect_text: "<Use Req. ([TS] trait)> [Main] Trash 1 card in your hand. Then, <De-Digivolve 3> 1 of your opponent's Digimon. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Cerberusmon" }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── <Jamming> <Reboot> <Blocker> ─────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Jamming
+  - kind: grant_keyword
+    keyword: Reboot
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── [On Deletion] may play 1 Lv.<=4 [Titan] Digimon from trash free ─────
+  - when: on_deletion
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          level_lte: 4
+          trait_has: Titan
+        n: 1
+    summary: "[On Deletion] You may play 1 level 4 or lower [Titan] Digimon card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: Titan
+          prompt: "You may play 1 level 4 or lower [Titan] Digimon card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive }
+
+  # ─── Option face [Main] trash 1 hand card; then <De-Digivolve 3> 1 opp
+  #     Digimon ──────────────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Trash 1 card in your hand. Then, <De-Digivolve 3> 1 of your opponent's Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 3
+          stop_at_level: 3

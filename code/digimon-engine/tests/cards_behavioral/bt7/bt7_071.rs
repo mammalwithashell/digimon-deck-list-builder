@@ -31,7 +31,8 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathDirection, CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledAltPathDirection, CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor,
+    CompiledCost,
 };
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::encode_digivolve;
@@ -103,7 +104,11 @@ fn bt7_071_metadata_matches_printed_card() {
 fn bt7_071_has_printed_circle_and_purple_tamer_hybrid_route() {
     let runner = builder().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
-    assert_eq!(card.alt_paths.len(), 2, "Purple Lv.3 circle + purple-Tamer route");
+    assert_eq!(
+        card.alt_paths.len(),
+        2,
+        "Purple Lv.3 circle + purple-Tamer route"
+    );
 
     let circle = &card.alt_paths[0];
     assert_eq!(circle.kind, CompiledAltPathKind::Digivolve);
@@ -167,10 +172,22 @@ fn bt7_071_digivolves_onto_purple_tamer_for_2() {
         "Loweemon digivolves from hand onto the purple Tamer"
     );
     let stack = stack_ids(&runner, 0, tamer.index);
-    assert_eq!(stack.first().map(String::as_str), Some("TAMER-PU"), "Tamer is the bottom source");
-    assert_eq!(stack.last().map(String::as_str), Some(CARD_ID), "Loweemon is the top card");
+    assert_eq!(
+        stack.first().map(String::as_str),
+        Some("TAMER-PU"),
+        "Tamer is the bottom source"
+    );
+    assert_eq!(
+        stack.last().map(String::as_str),
+        Some(CARD_ID),
+        "Loweemon is the top card"
+    );
     assert_eq!(memory_before - runner.game.memory, 2, "memory cost of 2");
-    assert_eq!(runner.hand_size(0), 1, "digivolving draws 1 (hand: Loweemon out, draw in)");
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "digivolving draws 1 (hand: Loweemon out, draw in)"
+    );
 }
 
 #[test]
@@ -211,7 +228,9 @@ fn bt7_071_standard_circle_still_digivolves_from_a_purple_lv3_digimon() {
         .game
         .digivolve_from_hand(0, 0, rookie.index as usize, PlaySource::ByHand));
     assert_eq!(
-        stack_ids(&runner, 0, rookie.index).last().map(String::as_str),
+        stack_ids(&runner, 0, rookie.index)
+            .last()
+            .map(String::as_str),
         Some(CARD_ID)
     );
     assert_eq!(memory_before - runner.game.memory, 2);

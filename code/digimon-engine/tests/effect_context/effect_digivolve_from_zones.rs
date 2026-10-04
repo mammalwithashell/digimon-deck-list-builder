@@ -19,6 +19,9 @@ impl CardEffect for SecurityLossAndDigivolveOrder {
         vec![
             Effect::on_lose_security(card)
                 .name("record lose security")
+                // `[Security]`-scoped: only those are live on a card leaving
+                // security (G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH).
+                .security_zone()
                 .process(move |_ctx| {
                     lose_seen.lock().unwrap().push("lose_security");
                 })

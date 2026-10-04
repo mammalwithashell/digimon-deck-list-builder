@@ -1,0 +1,112 @@
+# BT26-010 Roleplaymon — Digimon, Lv.3, Red, DP 4000, Cost 4.
+# Form: Stnd./Appmon. Type: Role-playing/Seven Code. Attribute: Game.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-010.md):
+#   Digivolve: Red Lv.2 / cost 0; [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#     area other than by your effects, by trashing 1 of its specified link
+#     cards, it doesn't leave.)
+#   [When Attacking] By trashing 1 [Game], [Open] or [Seven Code] trait card
+#     from your hand, <Draw 2>.
+#   Link DP: DP+3000. Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: <Progress> <Piercing>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_010.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: HasAppmonTraits, level 2, cost 0 (+ printed Red Lv.2 circle).
+# Detach: DetachSelfEffect(EqualsTraits("Seven Code")) — BT26-019 idiom.
+# When Attacking: OnAllyAttack, SetIsSkippable; CanActivate requires a hand
+#   card with Game/Open/Seven Code; SelectHandEffect(canNoSelect: true,
+#   Mode.Discard) → on a trashed card, DrawClass(2).
+#   → condition (a candidate) + optional select_hand + trash_from_hand_by_index
+#   + draw 2 (BT26-011 idiom).
+# Link condition [Appmon] cost 3; Link DP +3000 (linked aura).
+# Link effect: ProgressSelfStaticEffect(isLinkedEffect) +
+#   PierceSelfEffect(isLinkedEffect) → scope: linked grant_keyword Progress /
+#   Piercing (BT25-100/BT25-101 linked-keyword idiom).
+
+card: BT26-010
+name: Roleplaymon
+kind: digimon
+level: 3
+color: [red]
+cost: 4
+dp: 4000
+traits: ["Stnd.", Appmon, Game, Role-playing, Seven Code]
+attribute: Game
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [When Attacking] By trashing 1 [Game]/[Open]/[Seven Code] card, <Draw 2>
+  - when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          owner: you
+          zone: [hand]
+          any_of:
+            - trait_has: Game
+            - trait_has: Open
+            - trait_has: Seven Code
+        n: 1
+    summary: "[When Attacking] By trashing 1 [Game], [Open] or [Seven Code] trait card from your hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: rp_cost
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Game
+              - trait_has: Open
+              - trait_has: Seven Code
+          prompt: "Trash 1 [Game], [Open] or [Seven Code] trait card from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: rp_cost }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: rp_cost }
+            - draw: { of: you, count: 2 }
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── Link effect: <Progress> <Piercing> ─────────────────────────────────────
+  - kind: grant_keyword
+    scope: linked
+    keyword: Progress
+    summary: "[Link] <Progress>"
+
+  - kind: grant_keyword
+    scope: linked
+    keyword: Piercing
+    summary: "[Link] <Piercing>"

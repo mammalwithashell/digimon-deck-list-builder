@@ -14,7 +14,8 @@
 //!     and lands in Cleanup; no AttackerWins is claimed
 //!   - Vortex bypasses CounterTiming
 //!   - Counter → Block sequence (declare Counter then Block fires next)
-//!   - Player-target attack skips Counter entirely (Python parity)
+//!   - Player-target attack ALSO opens Counter (general_rule 11-1-3;
+//!     G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK)
 //!   - wrong player cannot resolve counter selection
 
 use digimon_engine::action::build_action_mask;
@@ -412,7 +413,7 @@ fn counter_then_block_sequence() {
 }
 
 #[test]
-fn player_target_attack_skips_counter() {
+fn player_target_attack_opens_counter() {
     let mut r = DebugRunner::builder()
         .add_card(blast_card("TEST-013", 4, 3, 0))
         .add_card(dgmn("ATK", 4, 9000))
@@ -424,20 +425,65 @@ fn player_target_attack_skips_counter() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let _base = r.place_on_field(1, "BASE", Some(0));
 
-    // Player-target attack — Counter should be skipped (Python parity).
+    // Counter timing is part of EVERY attack (rule 11-1-3), including an
+    // attack on the player: DCGO `AttackProcess.CounterTiming` has no target
+    // check and `CounterClass` fires whenever an opponent's permanent
+    // attacks. (The retired Python engine skipped it for player targets.)
     r.attack_player(atk, 1, false);
 
-    // Either synchronously completed (no blockers either) or parked on
-    // BlockOpen. Either way the current phase is NOT CounterTiming.
-    assert_ne!(
+    assert_eq!(
         r.current_phase(),
         GamePhase::CounterTiming,
-        "Player-target attacks skip Counter"
+        "player-target attacks open the Counter window"
     );
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Counter selection installed");
+    assert_eq!(sel.selecting_player, 1, "the attacked player chooses");
+
+    // Declining the Counter lets the attack proceed normally.
+    r.game.resolve_selection(1, PASS).expect("decline counter");
+    let _ = r.auto_resolve();
     assert!(
-        r.game.pending_attack.is_none() || r.current_phase() == GamePhase::BlockTiming,
-        "expected attack to be done or parked on Block"
+        r.game.pending_attack.is_none(),
+        "attack completes after decline"
     );
+}
+
+#[test]
+fn player_target_attack_counter_accepts_blast_digivolve() {
+    // Accepting a Counter on a player-target attack: the offered Blast
+    // digivolve resolves and the attack continues on the player
+    // (G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK; see also
+    // `player_target_attack_opens_counter` for the decline path).
+    let mut r = DebugRunner::builder()
+        .add_card(blast_card("TEST-013", 4, 3, 0))
+        .add_card(dgmn("ATK", 4, 9000))
+        .add_card(dgmn("BASE", 3, 3000))
+        .add_card(dgmn("SEC", 4, 1))
+        .hand(1, &["TEST-013"])
+        .security(1, &["SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let base = r.place_on_field(1, "BASE", Some(0));
+
+    r.attack_player(atk, 1, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let sel = r.game.pending_selection.as_ref().expect("counter prompt");
+    let blast = encode_digivolve(0, base.index as u16);
+    assert!(sel.valid_action_ids.contains(&blast));
+    assert!(sel.is_optional);
+
+    r.game.resolve_selection(1, blast).expect("blast");
+    assert_eq!(
+        r.game.players[1].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-013"
+    );
+    assert!(r.game.players[1].hand.is_empty());
 }
 
 #[test]

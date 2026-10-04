@@ -34,36 +34,26 @@ effects:
     timing_conditions:
       - when: on_move
         condition: { event_permanent_is_source: true }
-    condition:
-      all_of:
-        - security_count_gte: 1
-        - count_gte:
-            filter:
-              of: you
-              zone: [hand]
-              kind: tamer
-              trait_has: TS
-              name_not_shared_by_field_tamer: { of: you }
-            n: 1
-    summary: "[When Moving][On Play][When Digivolving] Add top security to hand to play a TS Tamer from hand free, excluding names of your Tamers"
+    # "By adding your top security card to the hand, you may play 1 [TS] Tamer":
+    # DCGO BT24_034.cs asks the OptionalSkill (isOptional true) whenever this
+    # is on the battle area and security > 0 (`SharedCanActivateCondition`, no
+    # hand check) -- §15-7-5: the "By X" cost may be paid even if the result
+    # can't happen. The cost is paid FIRST; only then is the hand checked, so a
+    # [TS] Tamer that arrives from the security card is playable. The Tamer
+    # pick is declinable (SelectHandEffect canNoSelect: true).
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[When Moving][On Play][When Digivolving] By adding your top security card to the hand, you may play 1 TS Tamer from hand free, excluding names of your Tamers"
     process:
-      - select_effect_choice:
-          bind_as: branch
-          labels:
-            - "Add top security to hand and play a TS Tamer"
-            - "Decline"
-          prompt: "Use Aegiomon's TS Tamer play effect?"
-      - if:
-          condition: { equals: [branch, 0] }
-          then:
-            - add_top_security_to_hand: { of: you }
-            - select_hand:
-                of: you
-                bind_as: pick
-                filter:
-                  all_of:
-                    - kind: tamer
-                    - trait_has: TS
-                    - name_not_shared_by_field_tamer: { of: you }
-                prompt: "Play 1 TS Tamer from your hand without paying the cost"
-            - play_from_hand_free: { of: you, hand_index: pick }
+      - add_top_security_to_hand: { of: you }
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: TS
+              - name_not_shared_by_field_tamer: { of: you }
+          prompt: "You may play 1 TS Tamer from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }

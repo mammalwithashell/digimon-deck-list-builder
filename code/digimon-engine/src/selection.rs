@@ -483,6 +483,14 @@ pub struct QueuedEffect {
     /// `card_id` is still the carrier's top card for labelling. Mirrors the
     /// replacement side's `CandidateKind::GrantedKeywordEffect`.
     pub keyword_effect: Option<crate::enums::Keyword>,
+    /// §15-4-5-2/3 trigger batch (0 = not stamped yet). The drainer stamps
+    /// every unstamped entry with a fresh, strictly increasing batch id at the
+    /// top of each drain iteration, so entries triggered while an earlier
+    /// entry was resolving carry a HIGHER id than the entries that were
+    /// already pending. Only the highest-id batch is staged (ordered /
+    /// resolved) — derived triggers resolve before the still-pending ones
+    /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
+    pub trigger_batch: u32,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
@@ -681,6 +689,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing (`OnLinkedCardTrashed`) fired after an EFFECT trashes a
+    /// link card from a host that stays in the battle area
+    /// (`Game::trash_specific_link_card`). Scans all players' battle areas
+    /// (and the event-gated `<Delay>` fan-out) while carrying the host
+    /// (`host` / `host_card`), the trashed link card (`card`) and the cause.
+    /// DCGO `OnLinkCardDiscarded` + `CanTriggerOnTrashLinkedCard`.
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    LinkCardTrashed {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing fired after a digivolution source is RETURNED to the
     /// BOTTOM of a player's deck (not trashed). Sibling of
     /// `SourceTrashedFromStack`: scans all players' battle areas while carrying
@@ -750,6 +772,11 @@ pub enum TriggerSource {
     HandDiscarded {
         player: PlayerId,
         cause_controller: PlayerId,
+        /// The cards this batch moved from `player`'s hand to the trash, in
+        /// trash order (DCGO `DiscardedCards`). Read by
+        /// `event_discarded_card_any` / `in_event_discarded_cards`
+        /// (BT24-007 Tsunomon "play 1 of THEM"). G-ENGINE-DISCARDED-HAND-CARDS.
+        cards: Vec<crate::card_source::CardHandle>,
     },
     /// `OnAddDigivolutionCards` observer fan-out fired after an EFFECT placed
     /// one or more cards into `host`'s digivolution cards
@@ -761,6 +788,13 @@ pub enum TriggerSource {
     /// whole added batch (fires ONCE per host per batch — rule 15-5-2 / DCGO
     /// `AddDigivolutionCards*` once per list); `cause` is the placing effect
     /// (DCGO's non-null hashtable `CardEffect`). Mirrors `HandDiscarded`.
+    /// `OnAddToDeck` observer fan-out fired after an EFFECT controlled by
+    /// `cause_controller` added one or more cards to a deck (either
+    /// player's). Scans EVERY battle-area permanent of both players; the
+    /// scope gate lives in each observer's `active_when:`
+    /// (`event_caused_by_own_effect`). Mirrors DCGO `FireOnAddLibraryAnyone`.
+    /// G-ENGINE-ON-ADD-TO-DECK.
+    DeckGained { cause_controller: PlayerId },
     SourcesAddedToStack {
         host: PermanentHandle,
         host_card: CardHandle,

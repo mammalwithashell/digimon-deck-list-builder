@@ -1,0 +1,143 @@
+# BT26-059 Plutomon — Digimon, Lv.6, Black/Purple, DP 13000, Cost 13.
+# Traits: Shaman, Titan, TS. Form: Mega. Attribute: Virus.
+# Printed digivolve box: Black Lv.5 / cost 5; Purple Lv.5 / cost 5;
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 4.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-059.md):
+#   When this card would be played, if your hand has fewer cards than your
+#     opponent's, reduce the cost by 6.
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1
+#     card in your hand, if it's your turn, you may play 1 [Titan] trait
+#     Digimon card from your trash with the cost reduced by 7. This effect
+#     can't play [Plutomon].
+#   [All Turns] [Once Per Turn] When hands are trashed from, you may delete all
+#     of your opponent's lowest level Digimon.
+#   Official Q&A: the card is still in the hand when its play is announced, so
+#     both hand sizes are compared with it counted.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_059.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5 && TopCard.HasTSTraits, cost 4.
+# Play-cost reduction: MandatorySelfPlayCostReduction(6) while own hand count
+#   < opponent hand count. → kind: cost_reduction (before_pay_cost, when_playing_this) amount 6, condition own hand
+#   count <= opponent hand count - 1 (card_count_in_zone formula).
+# Shared OP / WD / WA (maxCountPerTurn 1, optional false, skippable;
+#   additional condition hand >= 1): canNoSelect:true hand pick → trash; on
+#   success and IsOwnerTurn, canNoSelect:true trash pick over IsDigimon &&
+#   EqualsTraits Titan && !EqualsCardName Plutomon → PlayPermanentCards(
+#   payCost, cost -7). RemoveUse only when the hand cost was not paid.
+#   → condition hand >= 1; optional select_hand; refund_opt when declined;
+#   trash; if your_turn: optional select_trash → play_from_trash reduce 7.
+# [All Turns][OPT] (OnDiscardHand, CanTriggerOnTrashHand(any player, any
+#   cause), optional TRUE; CanActivate = an opponent Digimon at the minimum
+#   level exists): DestroyPermanentsClass over every opponent Digimon with
+#   IsMinLevel (one batch).
+#   → on_discard_hand + all_turns + once_per_turn + optional + condition;
+#   delete_all_permanents over opponent Digimon with level <= the opponent's
+#   lowest Digimon level.
+
+card: BT26-059
+name: Plutomon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 13
+dp: 13000
+traits: [Shaman, Titan, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 4
+
+effects:
+  # ─── When played with fewer hand cards than the opponent: cost -6 ─────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 6
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n:
+          base: -1
+          per:
+            card_count_in_zone:
+              of: opponent
+              zone: hand
+          delta: 1
+    summary: "When this card would be played, if your hand has fewer cards than your opponent's, reduce the cost by 6"
+
+  # ─── [On Play][When Digivolving][When Attacking][OPT] by trashing 1 hand
+  #     card, if your turn, may play 1 [Titan] Digimon (not [Plutomon]) from
+  #     trash at -7 ───────────────────────────────────────────────────────
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] By trashing 1 card in your hand, if it's your turn, you may play 1 [Titan] Digimon card from your trash with the cost reduced by 7. This effect can't play [Plutomon]"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - if:
+          condition: { binding_absent: cost_card }
+          then:
+            - refund_opt: {}
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - if:
+          condition:
+            all_of:
+              - binding_present: cost_card
+              - your_turn: true
+          then:
+            - select_trash:
+                of: you
+                bind_as: titan_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Titan
+                    - not: { name_is: "Plutomon" }
+                prompt: "You may play 1 [Titan] Digimon card (not [Plutomon]) from your trash with the cost reduced by 7"
+      - play_from_trash:
+          of: you
+          hand_index: titan_pick
+          cost_delta: { reduce: 7 }
+
+  # ─── [All Turns][OPT] when hands are trashed from, may delete all of the
+  #     opponent's lowest-level Digimon ─────────────────────────────────────
+  - when: on_discard_hand
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      any_field_permanent:
+        of: opponent
+        kind: digimon
+    summary: "[All Turns][Once Per Turn] When hands are trashed from, you may delete all of your opponent's lowest level Digimon"
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - level_lte:
+                  aggregate:
+                    selector: lowest_level
+                    scope: opponent

@@ -778,14 +778,12 @@ fn bt25_085_data_cards_json_is_a_dual_card() {
         .expect("BT25-085 must carry a `dual` block in data/cards.json");
     assert_eq!(dual.digimon.level, 6);
     assert_eq!(dual.digimon.dp, 12000);
-    assert!(dual
-        .digimon
-        .traits
-        .iter()
-        .any(|t| t == "Three Musketeers"));
+    assert!(dual.digimon.traits.iter().any(|t| t == "Three Musketeers"));
     assert_eq!(dual.option.use_cost, 6);
     assert!(
-        dual.option.effect_text.contains("[Three Musketeers] trait card"),
+        dual.option
+            .effect_text
+            .contains("[Three Musketeers] trait card"),
         "option face must carry the printed [Main] text; got {:?}",
         dual.option.effect_text
     );
@@ -796,4 +794,41 @@ fn bt25_085_data_cards_json_is_a_dual_card() {
         "BT25-085 prints no inherited effect; got {:?}",
         card.inherited_text
     );
+}
+
+// ─── Real-combat Counter window (G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG) ───────
+
+/// The `[Counter]` arm is a real field Counter candidate when the opponent
+/// attacks — but only while its activation condition (an Option in some own
+/// stack / link) holds; otherwise no Counter window opens (no phantom offer).
+#[test]
+fn bt25_085_counter_window_respects_activation_condition() {
+    use digimon_engine::enums::GamePhase;
+
+    // Condition false: no Option under any of P1's Digimon.
+    let mut runner = base().memory(3).start();
+    let atk = runner.place_on_field(0, "OPP-LV6", Some(0));
+    let beel = runner.place_on_field(1, CARD_ID, Some(0));
+    runner.game.players[1].battle_area[beel.index as usize].is_suspended = true;
+    runner.attack_player(atk, 1, false);
+    assert_ne!(
+        runner.current_phase(),
+        GamePhase::CounterTiming,
+        "condition false: the [Counter] arm is not offered"
+    );
+
+    // Condition true: an Option in another own Digimon's stack.
+    let mut runner = base().memory(3).start();
+    let atk = runner.place_on_field(0, "OPP-LV6", Some(0));
+    let beel = runner.place_on_field(1, CARD_ID, Some(0));
+    let other = runner.place_on_field(1, "PLAIN-DIGI", Some(0));
+    runner.push_source(other, "PLAIN-OPT");
+    runner.game.players[1].battle_area[beel.index as usize].is_suspended = true;
+    runner.attack_player(atk, 1, false);
+    assert_eq!(runner.current_phase(), GamePhase::CounterTiming);
+    let view = runner.pending_selection_view().expect("counter prompt");
+    assert_eq!(view.selecting_player, 1);
+    assert!(view
+        .valid_action_ids
+        .contains(&encode_attack(0, beel.index as u16)));
 }

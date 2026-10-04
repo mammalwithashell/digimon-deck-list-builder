@@ -1,0 +1,174 @@
+# BT26-079 ZombiePlutomon — Digimon, Lv.6, Purple, DP 12000, Cost 12.
+# Traits: Undead, Titan, TS. Form: Mega. Attribute: Virus.
+# Printed digivolve box: Purple Lv.5 / cost 4; [Digivolve] [Plutomon]: Cost 1;
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 3.
+# Special play: Assembly -2: [Plutomon].
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-079.md):
+#   {Trash} [Main] If your hand has 5 or fewer cards, play this card with the
+#     cost reduced by 4.
+#   <Security A. +1> <Decode ([Plutomon])> <Retaliation>
+#   [On Play] [When Digivolving] [When Attacking] By trashing 1 card in your
+#     hand, delete 1 of your opponent's level 6 or lower Digimon.
+#   [All Turns] [Once Per Turn] When any of your opponent's Digimon are played
+#     or digivolve, both players trash cards in their hand so that they have 4
+#     left.
+#   Official Q&A: a {Trash} effect only works while the card is in the trash.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_079.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Plutomon"), cost 1 (no level gate);
+#   level 5 && TopCard.EqualsTraits("TS"), cost 3.
+# Assembly: 1 element, EqualsCardName("Plutomon"), reduceCost 2 → kind:
+#   assembly (trash material, stacked under).
+# {Trash}[Main] (OnDeclaration; IsOwnerTurn && IsExistOnTrash && hand <= 5):
+#   PlayPermanentCards(this, payCost, Root.Trash) with a -4 ChangeCostClass.
+#   → scope trash + main_from_trash + condition; play_from_trash { self,
+#   reduce 4 } (the `self` card-handle binding — G-DSL-PLAY-SELF-FROM-TRASH-
+#   WITH-COST).
+# <Security A. +1>: ChangeSelfSAttackStaticEffect(+1).
+# <Decode ([Plutomon])>: DecodeSelfEffect(source IsDigimon && EqualsCardName
+#   Plutomon) → would-leave-other-than-battle replacement (EX12-031 idiom),
+#   optional select_material + play_from_materials free.
+# <Retaliation>: RetaliationSelfEffect.
+# Shared OP / WD / WA (optional false, skippable, NO per-turn cap; additional
+#   condition hand >= 1): canNoSelect:true hand pick → trash; on success a
+#   mandatory pick of 1 opponent level <= 6 Digimon (if any) → delete.
+#   → select_hand optional cost:true + trash; select_opponent_permanent → delete.
+# [All Turns][OPT] (OnEnterFieldAnyone play || digivolving of an OPPONENT
+#   Digimon; CanActivate = either hand > 4): for each player with > 4 hand
+#   cards, THAT player selects (hand - 4) cards (canNoSelect false) → discard.
+#   → when [on_enter_field_anyone, on_digivolve] + event_target_owner
+#   opponent + once_per_turn + condition (either hand >= 5);
+#   trash_opponent_hand_to_count { you → 4 } then { opponent → 4 } (each hand
+#   owner chooses their own discards).
+
+card: BT26-079
+name: ZombiePlutomon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Undead, Titan, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Plutomon" }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter: { name_is: "Plutomon" }
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  # ─── {Trash}[Main] hand <= 5 → play this card from the trash at -4 ───────
+  - scope: trash
+    when: main_from_trash
+    condition:
+      all_of:
+        - your_turn: true
+        - count_lte:
+            filter: { of: you, zone: [hand] }
+            n: 5
+    summary: "{Trash} [Main] If your hand has 5 or fewer cards, play this card with the cost reduced by 4"
+    process:
+      - play_from_trash:
+          of: you
+          hand_index: self
+          cost_delta: { reduce: 4 }
+
+  # ─── <Security A. +1> ──────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── <Retaliation> ─────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Retaliation
+
+  # ─── <Decode ([Plutomon])> ─────────────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Plutomon])> When this Digimon would leave the battle area other than in battle, you may play 1 [Plutomon] from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Plutomon"
+          prompt: "Choose 1 [Plutomon] digivolution card to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [On Play][When Digivolving][When Attacking] by trashing 1 hand card,
+  #     delete 1 opponent level 6 or lower Digimon ─────────────────────────
+  - when: [on_play, when_digivolving, when_attacking]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's level 6 or lower Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete 1 of your opponent's level 6 or lower Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 6
+          prompt: "Delete 1 of your opponent's level 6 or lower Digimon"
+      - delete_permanent: { target: victim }
+
+  # ─── [All Turns][OPT] an opponent's Digimon is played or digivolves → both
+  #     players trash down to 4 hand cards ──────────────────────────────────
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+        - event_target_owner: opponent
+    condition:
+      any_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 5
+        - count_gte:
+            filter: { of: opponent, zone: [hand] }
+            n: 5
+    summary: "[All Turns][Once Per Turn] When any of your opponent's Digimon are played or digivolve, both players trash cards in their hand so that they have 4 left"
+    process:
+      - trash_opponent_hand_to_count:
+          opponent: you
+          target_count: 4
+      - trash_opponent_hand_to_count:
+          opponent: opponent
+          target_count: 4

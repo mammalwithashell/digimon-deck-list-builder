@@ -150,12 +150,26 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         // applies), snapshot each survivor's pre-removal DP for the result
         // log (rule 25), then run ONE batched deletion so the whole set leaves
         // the field simultaneously (DCGO `DestroyPermanentsClass(list)`).
-        CompiledStep::DeleteAllPermanents { over } => {
-            let matches: Vec<crate::permanent::PermanentHandle> =
-                crate::dsl_cards::step::permanent_scan::scan(ctx, over, Some(bindings))
-                    .into_iter()
-                    .filter(|h| ctx.can_affect_permanent(*h))
-                    .collect();
+        CompiledStep::DeleteAllPermanents { over, selector } => {
+            let mut scanned: Vec<crate::permanent::PermanentHandle> =
+                crate::dsl_cards::step::permanent_scan::scan(ctx, over, Some(bindings));
+            // G-DSL-DELETE-ALL-EXTREME-AMONG-FILTER: keep only the matches at
+            // the selector's extreme value among ALL matches (DCGO `IsMinDP`
+            // is computed over the condition-filtered set, before immunity).
+            if let Some(sel) = selector {
+                if let Some(extreme) = crate::dsl_cards::step::selections::selected_field_extreme(
+                    ctx.game, &scanned, *sel,
+                ) {
+                    scanned.retain(|h| {
+                        crate::dsl_cards::step::selections::field_value(ctx.game, *h, *sel)
+                            == Some(extreme)
+                    });
+                }
+            }
+            let matches: Vec<crate::permanent::PermanentHandle> = scanned
+                .into_iter()
+                .filter(|h| ctx.can_affect_permanent(*h))
+                .collect();
             if matches.is_empty() {
                 return true;
             }
@@ -243,12 +257,27 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             target,
             position,
             face_up,
+            to_owner,
+            bind_placed_as,
         } => {
-            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
+                let top = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .map(|p| (p.top_card().owner, p.top_card().handle()));
+                let player = match (*to_owner, top) {
+                    // DCGO AddSecurityCard -> `cardSource.Owner.SecurityCards`.
+                    (true, Some((owner, _))) => owner,
+                    _ => crate::dsl_cards::step::resolve_player(ctx, *of),
+                };
                 let position = super::map_stack_position(*position);
-                let _ = ctx.place_permanent_on_security(player, h, position, *face_up);
+                let placed = ctx.place_permanent_on_security(player, h, position, *face_up);
+                if let (true, Some(name), Some((_, card))) = (placed, bind_placed_as.as_ref(), top) {
+                    bindings.insert_card(name, card);
+                }
             }
             true
         }

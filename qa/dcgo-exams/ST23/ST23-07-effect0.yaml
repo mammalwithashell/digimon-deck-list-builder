@@ -1,0 +1,63 @@
+# Exam scenario: Armalizamon (ST23-07), clause ST23-07#effect#0 -- the Special
+# Digivolution Condition "[Digivolve] Lv.3 w/[Glowing Dawn] trait: Cost 2".
+#
+# PROVISIONAL: asserts are OUR engine's result, not DCGO's.
+#
+# THE LINE: T1 hatch Kekkomon + ST23-12 (purple Lv.3 [Glowing Dawn], its own
+# alt, 0). T3 move ST23-12 out, digivolve Armalizamon on it in the battle area.
+# Armalizamon's corner circle is GREEN Lv.3 / 2 and ST23-12 is PURPLE, so the
+# [Glowing Dawn] condition is the only route: memory 3 -> 1 (asserted) and the
+# stack is [ST23-01, ST23-12] under ST23-07. ST23-12 (not Liollmon) is the base
+# deliberately -- Liollmon's -1 would muddy the printed cost 2.
+# Armalizamon's [When Digivolving] finds no [Glowing Dawn] Tamer in hand.
+#
+# PROMPT SHAPE: none (one distinct cost; ST23_07.cs AddSelfDigivolution
+# RequirementStaticEffect, card YAML crosscheck).
+card: ST23-07
+clause: ST23-07#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-12, ST23-07, BT25-032, BT25-035, BT26-070,
+            ST23-15, ST23-15, BT25-057, BT25-057, BT25-043,
+            ST23-09, BT25-041, ST23-06]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST23-07 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.hand: [BT25-032, BT25-035, BT25-041, BT26-070, ST23-06, ST23-09]
+      p0.field:
+        - card_id: ST23-07
+          dp: 6000
+          suspended: false
+          sources: [ST23-01, ST23-12]

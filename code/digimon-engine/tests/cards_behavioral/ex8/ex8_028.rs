@@ -330,10 +330,7 @@ fn ex8_028_compiles_with_printed_stats_and_digivolve_paths() {
                         (from.level_eq == Some(5)
                             || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
                             && (from.color_is == Some(color)
-                                || from
-                                    .all_of
-                                    .iter()
-                                    .any(|pred| pred.color_is == Some(color)))
+                                || from.all_of.iter().any(|pred| pred.color_is == Some(color)))
                     })
             }),
             "Skadimon must digivolve from a {color:?} Lv.5 for cost 4 \
@@ -1112,8 +1109,8 @@ fn ex8_028_when_attacking_effect_resolves_and_attack_completes_without_wedge() {
     assert!(!runner.game_over(), "the game continues");
 
     // Skadimon unsuspended via the effect and the game can proceed normally.
-    let skadimon_perm = &runner.game.players[0].battle_area
-        [find_permanent(&runner, 0, CARD_ID).index as usize];
+    let skadimon_perm =
+        &runner.game.players[0].battle_area[find_permanent(&runner, 0, CARD_ID).index as usize];
     assert!(
         !skadimon_perm.is_suspended,
         "Skadimon unsuspends after paying the cost"

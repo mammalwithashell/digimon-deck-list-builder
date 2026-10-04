@@ -178,9 +178,7 @@ fn bt25_070_has_both_standard_lv3_cost3_circles() {
             matches!(p.kind, CompiledAltPathKind::Digivolve)
                 && p.cost == Some(CompiledCost::Literal(3))
                 && p.from.as_ref().is_some_and(|f| {
-                    f.level_eq == Some(3)
-                        && f.color_is == Some(color)
-                        && f.trait_has.is_none()
+                    f.level_eq == Some(3) && f.color_is == Some(color) && f.trait_has.is_none()
                 })
         });
         assert!(

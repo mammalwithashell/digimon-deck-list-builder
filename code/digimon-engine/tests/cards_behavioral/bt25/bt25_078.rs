@@ -571,7 +571,10 @@ fn bt25_078_top_card_gazimon_has_no_retaliation() {
     runner.attack_digimon(gazi, big, false);
     let _ = runner.auto_resolve();
 
-    assert!(runner.game.players[0].battle_area.is_empty(), "Gazimon lost");
+    assert!(
+        runner.game.players[0].battle_area.is_empty(),
+        "Gazimon lost"
+    );
     assert_eq!(
         runner.game.players[1].battle_area.len(),
         1,
@@ -605,6 +608,10 @@ fn printed_only_inherited_retaliation_resolves_after_the_stack_is_trashed() {
     let big = runner.place_on_field(1, "BIG", Some(0));
     runner.game.players[1].battle_area[big.index as usize].is_suspended = true;
     runner.attack_digimon(host, big, false);
-    assert!(runner.pending_selection().is_none(), "{:?}", runner.pending_kind());
+    assert!(
+        runner.pending_selection().is_none(),
+        "{:?}",
+        runner.pending_kind()
+    );
     assert!(runner.game.players[1].battle_area.is_empty(), "BIG deleted");
 }

@@ -1,0 +1,124 @@
+# BT26-069 Dobermon — Digimon, Lv.4, Purple, DP 6000, Cost 5.
+# Traits: Dark Animal, Titan, TS. Form: Champion. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.3 / cost 2; [Digivolve] Lv.3 w/[TS] trait:
+#   Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-069.md):
+#   When this card is trashed from the hand, if your hand has 5 or fewer
+#     cards, <Draw 1>.
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, delete 1
+#     level 4 or lower Digimon.
+#   Inherited: [Your Turn] [Once Per Turn] When your hand is trashed from, this
+#     [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait
+#     Digimon card in the trash with the cost reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_069.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 && TopCard.HasTSTraits, cost 2.
+# Trashed from hand (OnDiscardHand, CanTriggerOnTrashSelfHand(card), not
+#   optional, no per-turn cap; CanActivate = IsExistOnTrash && hand <= 5):
+#   DrawClass 1.
+#   → `scope: trash` + `when: on_discard_hand` — the engine reaches a trash-
+#   scoped on_discard_hand clause ONLY on the card that was itself just
+#   trashed from the hand (G-ENGINE-SELF-TRASHED-FROM-HAND); condition hand
+#   count_lte 5; draw 1.
+# [OP][WD] (shared, optional false, skippable; additional condition hand >= 1):
+#   canNoSelect:true hand pick → TrashHandAndProcessAccordingToResult → on
+#   success, MANDATORY (canNoSelect:false) Destroy pick of 1 level <= 4
+#   Digimon on EITHER side (IsPermanentExistsOnBattleAreaDigimon).
+#   → condition hand >= 1; select_hand optional cost:true (declining ends the
+#   clause) + trash; select_any_permanent level_lte 4 → delete.
+# Inherited: identical to BT26-066 Salamon's inherited (same DCGO body).
+
+card: BT26-069
+name: Dobermon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 6000
+traits: [Dark Animal, Titan, TS]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── When this card is trashed from the hand, hand <= 5 → <Draw 1> ───────
+  - scope: trash
+    when: on_discard_hand
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 5
+    summary: "When this card is trashed from the hand, if your hand has 5 or fewer cards, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── [On Play][When Digivolving] by trashing 1 hand card, delete 1 level 4
+  #     or lower Digimon ───────────────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 card in your hand, delete 1 level 4 or lower Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete 1 level 4 or lower Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_any_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 level 4 or lower Digimon"
+      - delete_permanent: { target: victim }
+
+  # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Titan]
+  #     Digimon may digivolve into [Titamon] / a [Titan] trash card, cost -1 ──
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition: { source_permanent_trait_has: Titan }
+    summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Titan] Digimon may digivolve into [Titamon] or a [Titan] Digimon card in the trash with the cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Titamon"
+                  - trait_has: Titan
+          prompt: "This Digimon may digivolve into [Titamon] or a [Titan] Digimon card in your trash with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+          else:
+            - refund_opt: {}

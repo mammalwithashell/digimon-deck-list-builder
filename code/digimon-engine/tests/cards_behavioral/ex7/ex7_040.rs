@@ -38,8 +38,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
@@ -75,8 +74,18 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX7-040 YAML loads from the embedded pack")
-        .add_card(digimon("TM-HAND", 4, CardColor::Black, &["Three Musketeers"]))
-        .add_card(digimon("TM-HAND-2", 4, CardColor::Black, &["Three Musketeers"]))
+        .add_card(digimon(
+            "TM-HAND",
+            4,
+            CardColor::Black,
+            &["Three Musketeers"],
+        ))
+        .add_card(digimon(
+            "TM-HAND-2",
+            4,
+            CardColor::Black,
+            &["Three Musketeers"],
+        ))
         .add_card(digimon("PLAIN-HAND", 4, CardColor::Black, &["Puppet"]))
         .add_card(filler("FILL"))
         .add_card(digimon("CARRIER", 4, CardColor::Black, &[]))
@@ -108,7 +117,11 @@ fn ex7_040_has_optional_on_play_clause_and_inherited_reboot() {
             _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 1, "exactly one triggered clause ([On Play])");
+    assert_eq!(
+        triggered.len(),
+        1,
+        "exactly one triggered clause ([On Play])"
+    );
     let op = triggered[0];
     assert_eq!(op.when, vec![CompiledTiming::OnPlay]);
     assert!(op.optional, "'By trashing ...' is a declinable cost");
@@ -122,7 +135,10 @@ fn ex7_040_has_optional_on_play_clause_and_inherited_reboot() {
                 if *scope == CompiledScope::Inherited && keyword == "Reboot"
         )
     });
-    assert!(reboot, "inherited <Reboot> grant_keyword clause must be present");
+    assert!(
+        reboot,
+        "inherited <Reboot> grant_keyword clause must be present"
+    );
 }
 
 #[test]
@@ -158,7 +174,10 @@ fn ex7_040_on_play_prompts_when_tm_card_in_hand() {
         Some(SelectionKind::Hand),
         "a TM-trait card in hand → the trash-as-cost prompt installs"
     );
-    assert!(runner.pending_is_optional(), "the cost is declinable (PASS legal)");
+    assert!(
+        runner.pending_is_optional(),
+        "the cost is declinable (PASS legal)"
+    );
 }
 
 #[test]
@@ -174,7 +193,11 @@ fn ex7_040_on_play_no_prompt_without_tm_card_in_hand() {
         runner.pending_selection().is_none(),
         "no [Three Musketeers] card in hand → the cost is unpayable, nothing installs"
     );
-    assert_eq!(runner.hand_size(0), hand_before - 1, "only the play left the hand");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before - 1,
+        "only the play left the hand"
+    );
 }
 
 #[test]
@@ -192,7 +215,11 @@ fn ex7_040_on_play_only_tm_trait_cards_are_selectable() {
         .copied()
         .filter(|&a| a != PASS)
         .collect();
-    assert_eq!(picks, vec![hand_action(&runner, 0, "TM-HAND")], "PLAIN-HAND is filtered out");
+    assert_eq!(
+        picks,
+        vec![hand_action(&runner, 0, "TM-HAND")],
+        "PLAIN-HAND is filtered out"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,11 +241,20 @@ fn ex7_040_on_play_trash_tm_card_draws_two() {
     runner.auto_resolve().expect("resolve");
 
     assert_eq!(runner.deck_size(0), deck_before - 2, "Draw 2");
-    assert_eq!(runner.trash_size(0), trash_before + 1, "the TM card was trashed");
-    assert!(
-        zone_ids(&runner.game.players[0].trash, &runner.game.card_data).contains(&"TM-HAND".to_string())
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "the TM card was trashed"
     );
-    assert_eq!(runner.hand_size(0), 2, "hand: -1 trashed, +2 drawn (ToyAgumon already played)");
+    assert!(
+        zone_ids(&runner.game.players[0].trash, &runner.game.card_data)
+            .contains(&"TM-HAND".to_string())
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        2,
+        "hand: -1 trashed, +2 drawn (ToyAgumon already played)"
+    );
 }
 
 #[test]
@@ -278,7 +314,9 @@ fn ex7_040_digivolves_for_zero_from_lv2_with_tm_in_text_regardless_of_color() {
     let base_perm = runner.place_on_field(0, "RED-TM-LV2", Some(0));
     let memory_before = runner.memory();
     assert!(
-        runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
+        runner
+            .game
+            .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
         "special path: Lv.2 with [Three Musketeers] in text, cost 0 (colour irrelevant)"
     );
     assert_eq!(runner.memory(), memory_before, "cost 0");
@@ -293,7 +331,9 @@ fn ex7_040_digivolves_for_zero_from_plain_black_lv2() {
         .start();
     let base_perm = runner.place_on_field(0, "BLK-LV2", Some(0));
     assert!(
-        runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
+        runner
+            .game
+            .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
         "standard printed circle: Black Lv.2 / cost 0"
     );
 }
@@ -307,7 +347,9 @@ fn ex7_040_cannot_digivolve_from_plain_red_lv2() {
         .start();
     let base_perm = runner.place_on_field(0, "RED-LV2", Some(0));
     assert!(
-        !runner.game.digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
+        !runner
+            .game
+            .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand),
         "a red Lv.2 without [Three Musketeers] in text satisfies neither route"
     );
 }

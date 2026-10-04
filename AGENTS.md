@@ -450,6 +450,15 @@ Pipeline:
 code/tools/meta_loader.py -> data/deck_library.json -> MetaGauntlet.load()
 ```
 
+## 4.5 Deck Admission
+
+`MetaGauntlet.load()` (and `load_generalist_deck_pool`, which wraps it) admits each decklist on its own:
+
+1. Every card ID is playable (`gauntlet.load_playable_card_ids()`): registered in the Rust engine (`digimon_engine.load_implemented_card_ids()`) and present in the card database `RustHeadlessGame` loads (`data/cards.json`). A YAML spec alone registers a card without giving the runner its card data.
+2. No card has a not-ready verdict in `qa/qa-reports/validated_cards_dsl.json`: `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
+
+The ledger's `archetype` field is a batch label and is never matched against library archetype names. An archetype is eligible when at least one of its lists is admitted; `allowed_archetypes` narrows that set and logs, at INFO, each scoped name left with no admitted list.
+
 ---
 
 # 5. GauntletOrchestrator (DB-Backed Pipeline)

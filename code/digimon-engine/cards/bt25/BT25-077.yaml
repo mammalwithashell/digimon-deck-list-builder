@@ -1,6 +1,6 @@
 # BT25-077 Bacchusmon — Digimon, Lv.6, Black/Green, DP 12000, Cost 12.
 # Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Virus.
-# Standard digivolution: Lv.5 Black / cost 4 (printed evo_costs).
+# Standard digivolution: Lv.5 Black / cost 4 and Lv.5 Green / cost 4 (official DB).
 #
 # Printed card text (card image BT25-077 — authoritative for printed text):
 #   When this card would be played, if there are 12 or more levels' total worth
@@ -18,9 +18,9 @@
 #   Alt Digivolution (None): AddSelfDigivolutionRequirementStaticEffect(TopCard
 #     HasTSTraits, cost 3, ignoreReq:true, level 5).
 #   Reduce Play Cost (None): MandatorySelfPlayCostReduction(5) when the sum of
-#     levels of all battle-area Digimon (BOTH players) >= 12. → OMITTED: the DSL
-#     has no board-wide level-sum predicate (G-DSL-BOARD-LEVEL-SUM, logged in
-#     qa/dsl-vocab-gaps.md). Verdict PARTIAL.
+#     levels of all battle-area Digimon (BOTH players) >= 12. → `cost_reduction`
+#     gated on the `level_sum_gte` predicate (G-DSL-BOARD-LEVEL-SUM, resolved
+#     2026-10-03).
 #   Shared OP/WD (optional:false, isSkippable:true, additionalActivateCondition:
 #     a playable [TS] <=6000 DP Digimon in hand): SelectHand PlayForFree
 #     (canNoSelect:true) of a [TS] Digimon with HasDP && CardDP <= 6000.
@@ -30,11 +30,12 @@
 #     (mandatory once the suspend resolved / by-effect).
 #
 # Implementation status (faithfulness diff):
-# | Std digivolve Lv.5 Black / Cost 4                          | IMPLEMENTED (evo_costs) |
+# | Std digivolve Lv.5 Black or Green / Cost 4                 | IMPLEMENTED (alt_paths; official DB lists both circles) |
 # | Alt-source Lv.5 [TS] / Cost 3 ignore                       | IMPLEMENTED (alt_paths) |
-# | Cost -5 if total Digimon levels >= 12                      | OMITTED — G-DSL-BOARD-LEVEL-SUM -> PARTIAL |
+# | Cost -5 if total Digimon levels >= 12                      | IMPLEMENTED (cost_reduction + level_sum_gte) |
 # | [OP][WD] may play 1 [TS] <=6000 DP Digimon from hand free  | IMPLEMENTED (select_hand + play_from_hand_free) |
-# | [All Turns][OPT] suspend 1; if by effect, delete opp lowest DP | IMPLEMENTED (optional suspend + effect-gated lowest-DP delete) |
+# | [All Turns][OPT] suspend 1; if by effect, delete opp lowest DP | IMPLEMENTED (optional suspend + mandatory effect-gated lowest-DP delete) |
+# |   OPT refund when not by effect and nothing suspended       | IMPLEMENTED (refund_opt; DCGO RemoveUse) |
 
 card: BT25-077
 name: Bacchusmon
@@ -51,12 +52,26 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
   - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
     from: { level_eq: 5, trait_has: TS }
     cost: 3
     ignore_requirements: true
 
 effects:
-  # Cost reduction (total board levels >= 12) OMITTED — G-DSL-BOARD-LEVEL-SUM.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 5
+    condition:
+      level_sum_gte:
+        filter:
+          owner: any
+          zone: [battle_area]
+          kind: digimon
+        n: 12
+    summary: "When played, if there are 12 or more levels' total worth of Digimon (both players), reduce the cost by 5"
 
   - when: [on_play, when_digivolving]
     optional: true
@@ -74,9 +89,11 @@ effects:
           prompt: "Play 1 [TS] Digimon with 6000 DP or less from your hand (free)"
       - play_from_hand_free: { of: you, hand_index: pick }
 
+  # DCGO: optional:false + isSkippable(!IsByEffect). Only the suspend is
+  # "you may" (canNoSelect); the by-effect lowest-DP delete is mandatory.
+  # RemoveUse() when NOT by effect AND nothing was suspended → refund_opt.
   - when: [on_enter_field_anyone, on_digivolve]
     once_per_turn: true
-    optional: true
     active_when:
       all_of:
         - all_turns: true
@@ -86,6 +103,9 @@ effects:
       - select_any_permanent:
           bind_as: to_suspend
           optional: true
+          # DCGO canNoSelect: a PASS continues the coroutine (the by-effect
+          # delete and the RemoveUse refund still run).
+          continue_on_decline: true
           filter: { kind: digimon }
           prompt: "You may suspend 1 Digimon"
       - suspend: { target: to_suspend }
@@ -103,3 +123,10 @@ effects:
                           scope: opponent
                 prompt: "Delete 1 of your opponent's lowest DP Digimon"
             - delete_permanent: { target: victim }
+      - if:
+          condition:
+            all_of:
+              - { not: { binding_present: to_suspend } }
+              - { not: { event_is_effect_initiated: true } }
+          then:
+            - refund_opt: {}

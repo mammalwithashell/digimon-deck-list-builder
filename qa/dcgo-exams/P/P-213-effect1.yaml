@@ -1,0 +1,108 @@
+# Exam scenario: Aegiochusmon (P-213), clause P-213#effect#1 -- "<Raid>"
+# (When this Digimon attacks, you may switch the target of attack to 1 of your
+# opponent's unsuspended Digimon with the highest DP.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); decline its [On Play].
+#   T2 (P1, 5): Agumon BT3-007 (4000; 5 -> 3), Biyomon ST1-02 (3000; 3 -> 1);
+#        pass -> P0 3. Two unsuspended Digimon with DIFFERENT DP, so "the
+#        highest DP" discriminates (Agumon, field.0).
+#   T3 (P0, 3): digivolve Aegiomon -> P-213 ([Aegiomon] route, 3 -> 0, single
+#        route); WD: 5 security, no buff; decline its "may attack". Then a
+#        normal main-phase attack: P-213 -> P1's SECURITY. THE CLAUSE: <Raid>
+#        -> switch to Agumon. 7000 vs 4000: Agumon deleted. Trailing pass is
+#        the asserted step.
+#
+# WITNESS: the attack declared on the PLAYER never checks security (P1 still
+# 5) and instead P1's 4000-DP Agumon is in trash; the 3000-DP Biyomon stays.
+# P-213 is suspended from attacking.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Raid: CardEffectFactory/KeyWordEffects/Raid.cs is an optional
+#     ActivateClass (OptionalSkill) whose RaidProcess then opens a
+#     SelectPermanentEffect (canNoSelect true) over the opponent's
+#     highest-DP unsuspended Digimon (Agumon alone; still asked) -> the
+#     shared row is the optional_gate_fold marker (`expect: OptionalSkill`):
+#     OptionalSkill(yes) + the pick. EX12-076-effect1 precedent.
+#   - WD "may attack" decline: P_213.cs runs SelectAttackEffect directly behind CanAttack -- NO OptionalSkill gate
+#     (P/Red/P_213.cs "When Digivolving" region); the decline is that widget's
+#     cancel (SelectAttackEffect.cs SetAttackTarget harness hook, -2).
+#   - No other prompts: P1 has no OnCounterTiming effects
+#     (AttackProcess.cs CounterTiming) and no Blocker (BlockTiming opens no
+#     SelectPermanentEffect); Agumon BT3-007 / Biyomon have no DCGO script.
+#   - (FIXED 2026-10-04) An earlier draft carried a SIM-ONLY decline row for
+#     actor 1: our engine parked a phantom `<Barrier>` Replacement prompt for
+#     P1 when P1's Agumon "would be deleted in battle" (P0's inherited
+#     <Barrier> was not self-scoped at candidate collection).
+#     G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED is fixed; the row is gone,
+#     matching DCGO (Barrier.cs triggers only for its own carrier).
+card: P-213
+clause: P-213#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, P-213, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [BT3-007, ST1-02, ST1-03, ST1-04, BT1-009,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-213 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.field:
+        - { card_id: P-213, dp: 7000, suspended: true, sources: [BT25-033] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [BT3-007]
+      p1.security: 5
+      p0.security: 5

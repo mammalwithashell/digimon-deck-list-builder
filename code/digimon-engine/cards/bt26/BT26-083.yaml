@@ -1,0 +1,144 @@
+# BT26-083 Junomon: Hysteric Mode — Digimon, Lv.7, Purple/Yellow, DP 14000,
+#   Cost 14. Traits: Shaman, Olympos XII, Iliad, TS. Form Mega. Attribute: Virus.
+# Printed digivolve box: Purple Lv.6 / cost 4; Yellow Lv.6 / cost 4;
+#   [Digivolve] Lv.6 w/[TS] trait: Cost 4.
+# Special play: Assembly -4: [Junomon].
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-083.md):
+#   <Rush> <Piercing> <Execute> <Decode ([Junomon]/Lv.5 or lower w/[Iliad]
+#     trait)>
+#   [On Play] [When Digivolving] Trash all of your security cards. For each card
+#     this effect trashed, delete 1 of your opponent's Digimon. Then,
+#     <Recovery +3>.
+#   [On Deletion] Give all of your opponent's Digimon <Security A. -1> until
+#     their turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_083.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsTraits("TS"), cost 4, level 6.
+# Rush / Piercing / Execute → grant_keyword ×3.
+# Decode: DecodeSelfEffect(source IsDigimon && (EqualsCardName "Junomon" ||
+#   (Level <= 5 && EqualsTraits "Iliad"))) → BT25-025 non-cancelling
+#   replacement (non-battle leave; play the matching source free).
+# Shared OP / WD (optional:false): n = SecurityCards.Count; IDestroySecurity(n);
+#   then a MANDATORY (canNoSelect:false, canEndNotMax:false) Destroy pick of
+#   exactly min(n, opp Digimon) opponent Digimon; then IRecovery(3).
+#   → trash_top_security { leave: 0, bind_count_as } + count-capped multi pick
+#   (max = trashed count, clamp_to_available ⇒ exactly min(trashed, n); the
+#   BT19-075 idiom) + per_selected delete +
+#   recover 3. (DCGO sizes the pick by the pre-trash count; the printed "for
+#   each card this effect trashed" is the actually-trashed count, which is the
+#   same unless a replacement stops a trash.)
+# On Deletion (not optional): ChangeDigimonSAttackPlayerEffect(-1) over
+#   "opponent's battle-area Digimon" (a player-level condition, so Digimon
+#   played later are covered), UntilOpponentTurnEnd.
+#   → add_modifier { continuous: true, target: opp Digimon,
+#   SecurityAttackChange -1, end_of_opponents_turn }.
+# Assembly: 1 element EqualsCardName("Junomon"), reduceCost 4 → kind: assembly.
+
+card: BT26-083
+name: "Junomon: Hysteric Mode"
+kind: digimon
+level: 7
+color: [purple, yellow]
+cost: 14
+dp: 14000
+traits: [Shaman, Olympos XII, Iliad, TS]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: TS
+    cost: 4
+  - kind: assembly
+    materials:
+      - filter: { name_is: "Junomon" }
+        zones: [trash]
+        stack_under: true
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Execute
+    summary: "<Execute>"
+
+  # ─── <Decode ([Junomon]/Lv.5 or lower w/[Iliad] trait)> ──────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Junomon]/Lv.5 or lower w/[Iliad] trait)> play 1 matching source when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: "Junomon"
+                  - all_of:
+                      - level_lte: 5
+                      - trait_has: Iliad
+          prompt: "Choose a [Junomon] or level 5 or lower [Iliad] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [On Play][When Digivolving] trash all security; delete 1 opp Digimon
+  #     per card trashed; then <Recovery +3> ─────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash all of your security cards. For each card this effect trashed, delete 1 of your opponent's Digimon. Then, <Recovery +3>"
+    process:
+      - trash_top_security:
+          of: you
+          leave: 0
+          bind_count_as: trashed
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula: { binding_value: trashed }
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: victims
+          prompt: "For each card this effect trashed, delete 1 of your opponent's Digimon"
+      - per_selected:
+          selection: victims
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+      - recover: { of: you, count: 3 }
+
+  # ─── [On Deletion] all opp Digimon <Security A. -1> until their turn ends ──
+  - when: on_deletion
+    summary: "[On Deletion] Give all of your opponent's Digimon <Security A. -1> until their turn ends"
+    process:
+      - add_modifier:
+          continuous: true
+          target:
+            of: opponent
+            kind: digimon
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn

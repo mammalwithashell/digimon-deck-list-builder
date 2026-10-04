@@ -136,7 +136,7 @@ python -m digimon_gym.agents.pilot_training --opponent pool --opponent-pool-mani
 # With MetaGauntlet opponent sampling
 python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 
-# With uniform random sampling across QA-clean gauntlet decks
+# With uniform random sampling across training-ready gauntlet decks
 python -m digimon_gym.agents.pilot_training --gauntlet --gauntlet-sampling random --timesteps 500000
 
 # Generalist base pilot: sample both player decks from eligible Rust DSL archetypes
@@ -222,9 +222,9 @@ python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
 | `--eval-episodes` | 20 | Games per evaluation |
 | `--log-dir` | `runs/pilot_ppo` | TensorBoard log directory |
 | `--save-dir` | `models` | Model save directory |
-| `--gauntlet` | off | Enable MetaGauntlet opponent sampling from QA-clean fully implemented DSL archetypes |
+| `--gauntlet` | off | Enable MetaGauntlet opponent sampling from training-ready decklists (see §2) |
 | `--gauntlet-sampling` | meta | Sampling mode for `--gauntlet`: `meta` threat-index weights or `random` uniform deck sampling |
-| `--generalist` | off | Sample both player decks from eligible fully implemented Rust DSL archetypes |
+| `--generalist` | off | Sample both player decks from training-ready decklists (see §2) |
 | `--curriculum-seed` | none | Seed for generalist deck-pair sampling, independent from the training seed |
 | `--eval-seed` | none | Seed for generalist evaluation deck-pair sampling |
 | `--curriculum-pool` | none | Reuse a frozen generalist deck-pool snapshot |
@@ -252,7 +252,13 @@ python code/tools/meta_loader.py --build
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
 - Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
-- Runtime gauntlet loading keeps only archetypes whose `qa/qa-reports/validated_cards_dsl.json` entries are all `IMPLEMENTED`, then keeps only decklists where every card ID is present in the Rust engine's implemented-card registry.
+- Runtime gauntlet loading admits each decklist on its own. A list is training-ready when:
+  1. every card ID is playable: registered in the Rust engine and present in the card database the game runner loads (`data/cards.json`), and
+  2. no card's verdict in `qa/qa-reports/validated_cards_dsl.json` is `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
+- The ledger's `archetype` field is a batch label (`store-champs-june-2026`, `three-musketeers`), not a deck-library archetype key, so it plays no part in admission. An archetype is eligible when at least one of its lists is admitted.
+- `--archetypes` / `allowed_archetypes` narrows the pool further; each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected.
+- The ledger is read only when loading the default `data/deck_library.json`, and a missing ledger skips check 2. The training image does not ship `qa/`, so cloud runs apply check 1 alone.
+- `code/tools/meta_coverage.py` reports the field share this gate admits as **Trainable today**.
 
 ### Configuration Parameters
 
@@ -281,14 +287,14 @@ for row in g.get_archetype_summary()[:10]:
 ## 3. Generalist Pilot Pretraining
 
 Generalist pilot pretraining creates a reusable base weights file by exposing
-the pilot to multiple fully implemented Rust DSL archetypes. Unlike gauntlet
+the pilot to the training-ready decklists of many archetypes. Unlike gauntlet
 training, which varies only the opponent deck, generalist mode samples both
 `deck1` and `deck2` on each episode reset.
 
 Sampling is intentionally broad:
 
-1. Choose a fully eligible archetype uniformly.
-2. Choose a deck uniformly from that archetype.
+1. Choose an archetype uniformly among those with at least one training-ready deck.
+2. Choose a training-ready deck uniformly from that archetype.
 3. Repeat independently for `deck1` and `deck2`.
 
 This avoids over-weighting archetypes simply because they have more decklists

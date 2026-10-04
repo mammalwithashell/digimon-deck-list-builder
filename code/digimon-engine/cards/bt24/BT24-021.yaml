@@ -1,0 +1,159 @@
+# BT24-021 SnowGoblimon — Digimon, Lv.3, Blue/Purple, DP 1000, Cost 3.
+# Traits: Demon, Titan, TS. Form: Rookie. Attribute: Virus.
+# Printed digivolve box (official Bandai DB — data/card_bundles/BT24-021.md):
+#   Blue Lv.2 / cost 1; Purple Lv.2 / cost 1 (cards.json evo_costs keeps only
+#   the Blue circle — Purple authored explicitly below);
+#   [Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0.
+#
+# Printed card text (official Bandai DB):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the
+#     [Demon] or [Shaman] trait and 1 card with the [Titan] trait among them
+#     to the hand. Return the rest to the bottom of the deck. If this effect
+#     added, trash 1 card in your hand.
+#   Inherited: [Your Turn] [Once Per Turn] When your hand is trashed from, this
+#     [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a
+#     [Titan] trait Digimon card in the trash with the digivolution cost
+#     reduced by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Blue/BT24_021.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Tsunomon") || (IsLevel2 &&
+#   HasTSTraits), cost 0.
+# [On Play] (OnEnterFieldAnyone, isOptional false):
+#   SimplifiedRevealDeckTopCardsAndSelect(3, [bucket A: IsDigimon && (Demon |
+#   Shaman), AddHand, max 1; bucket B: Titan, AddHand, max 1], remaining →
+#   DeckBottom). Then `addedCard` = "any revealed card satisfies bucket A or
+#   B" and, if so and hand >= 1, a MANDATORY (canNoSelect false) discard of
+#   1 hand card.
+#   → reveal_top_deck 3 + select_reveal_buckets (min 1 / max 1 per bucket —
+#   "Add 1 ... and 1 ..." is mandatory whenever a matching card exists;
+#   no_duplicate_cards: one physical card fills at most one bucket) →
+#   add_to_hand_from_reveal ×2 → bottom the rest.
+#   "If this effect added" is implemented by its printed meaning: a card was
+#   actually added (either bucket binding holds a card — `binding_count_eq`
+#   0 on both means nothing was added). Because each
+#   bucket pick is mandatory whenever the reveal holds a candidate, this is
+#   equivalent to DCGO's `addedCard` predicate (any revealed card matching
+#   either bucket). Then a mandatory select_hand + trash (the trash is an
+#   effect hand-trash → fires `on_discard_hand`, e.g. this card's own
+#   inherited siblings under the stack).
+# Inherited (OnDiscardHand, maxPerTurn 1, isOptional true, inherited):
+#   identical to BT24-009 Shamanmon / BT26-066 Salamon (trait gate Demon OR
+#   Titan on the host TopCard).
+
+card: BT24-021
+name: SnowGoblimon
+kind: digimon
+level: 3
+color: [blue, purple]
+cost: 3
+dp: 1000
+traits: [Demon, Titan, TS]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  # Standard Blue Lv.2 / cost 1 circle (also in cards.json evo_costs; authored
+  # explicitly so the compiled card carries it — the DSL-compiled CardData
+  # does not read cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  # Standard Purple Lv.2 / cost 1 circle (dropped by cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1
+  # [Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0.
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: "Tsunomon"
+        - all_of:
+            - level_eq: 2
+            - trait_has: TS
+    cost: 0
+
+effects:
+  # ─── [On Play] reveal 3: add 1 [Demon]/[Shaman] Digimon + 1 [Titan] card;
+  #     rest to bottom; if added, trash 1 card in hand ─────────────────────
+  - when: on_play
+    summary: "[On Play] Reveal the top 3; add 1 [Demon]/[Shaman] Digimon card and 1 [Titan] card to hand; rest to the bottom; if this effect added, trash 1 card in your hand"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: demon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Demon
+                      - trait_has: Shaman
+            - bind_as: titan_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Titan }
+          prompt: "Add 1 [Demon]/[Shaman] Digimon card and 1 [Titan] card to the hand"
+      - add_to_hand_from_reveal: { of: you, card: demon_pick }
+      - add_to_hand_from_reveal: { of: you, card: titan_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - if:
+          # A bucket with no pick binds an EMPTY card list (binding_present
+          # would read true), so "added" is tested by count: not (both
+          # buckets hold 0 cards).
+          condition:
+            none_of:
+              - all_of:
+                  - binding_count_eq: { binding: demon_pick, n: 0 }
+                  - binding_count_eq: { binding: titan_pick, n: 0 }
+          then:
+            - select_hand:
+                of: you
+                bind_as: discard
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
+  #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
+  #     cost -1 (BT26-066 idiom; trait gate widened to Demon OR Titan) ───────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition:
+      any_of:
+        - source_permanent_trait_has: Demon
+        - source_permanent_trait_has: Titan
+    summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] Digimon may digivolve into [Titamon] or a [Titan] Digimon card in the trash with the cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - name_is: "Titamon"
+                  - trait_has: Titan
+          prompt: "This Digimon may digivolve into [Titamon] or a [Titan] Digimon card in your trash with the cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+          else:
+            - refund_opt: {}

@@ -126,7 +126,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // memory budget. An empty set means no mode is
                     // affordable right now.
                     if game
-                        .option_legal_play_modes(card, player_id, crate::game_actions::OptionSource::Hand(i))
+                        .option_legal_play_modes(
+                            card,
+                            player_id,
+                            crate::game_actions::OptionSource::Hand(i),
+                        )
                         .is_empty()
                     {
                         continue;
@@ -886,6 +890,10 @@ pub(crate) fn option_has_active_counter_effect(
     game: &Game,
     player_id: PlayerId,
 ) -> bool {
+    // G-ENGINE-CANNOT-USE-OPTION-CARDS: a hand Counter-timing Option is a use.
+    if game.option_use_blocked(player_id) {
+        return false;
+    }
     let card_id = card.card_id(&game.card_data);
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
         return false;

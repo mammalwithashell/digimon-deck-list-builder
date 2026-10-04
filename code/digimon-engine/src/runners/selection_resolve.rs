@@ -425,6 +425,31 @@ fn source_multi_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, St
     )
 }
 
+/// `(action_id, card_id)` pairs of a parked zone-card pick
+/// (`select_zone_cards` / `return_top_stacked_to_deck`): candidates span hand,
+/// trash, stack and link cards, so each live option is decoded through the
+/// frame itself (`dsl_cards::step::zone_cards`). `None` when the live prompt is
+/// not a zone-card pick.
+fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
+    use crate::resume::ResumeFrame;
+    let stack = game.pending_selection_resume.as_ref()?;
+    let state = stack.frames.iter().rev().find_map(|f| match f {
+        ResumeFrame::ZoneCardPickStep(s) => Some(s),
+        _ => None,
+    })?;
+    let pairs: Vec<(u16, String)> = state
+        .candidates
+        .iter()
+        .filter(|c| !state.picked.contains(c))
+        .filter_map(|c| {
+            let id = crate::dsl_cards::step::zone_cards::encode_zone_card(game, *c)?;
+            let card_id = game.card_data_for_handle(*c)?.card_id.clone();
+            valid.contains(&id).then_some((id, card_id))
+        })
+        .collect();
+    (!pairs.is_empty()).then_some(pairs)
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -518,10 +543,20 @@ pub fn resolve_next(
                 // printed cost before its own row was reached.
                 // `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`.
                 SelectionKind::SourceMulti { picked, .. } => picked > 0,
-                SelectionKind::CountCappedMultiSelect { .. }
-                | SelectionKind::RevealBucket { .. }
-                | SelectionKind::DpBudget { .. }
-                | SelectionKind::PlayCostBudget { .. } => true,
+                // Same rule for every multi-pick kind that counts its own
+                // picks: one with ZERO picks is a FRESH prompt the row's last
+                // pick caused (it cannot be this row's prompt, which just took
+                // `picks_done > 0` picks). Driver: BT26-081 Mervamon played via
+                // [Assembly] — the 1-card material pick completes the play, the
+                // played Digimon's [On Play] parks its optional
+                // `PlayCostBudget { picked: 0 }` free-play pick, and the
+                // trailing PASS declined it, reading as "the engine skipped
+                // the pick" (G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK —
+                // retracted to this resolver).
+                SelectionKind::CountCappedMultiSelect { picked, .. }
+                | SelectionKind::DpBudget { picked, .. }
+                | SelectionKind::PlayCostBudget { picked, .. } => picked > 0,
+                SelectionKind::RevealBucket { .. } => true,
                 _ => false,
             };
         let pass_legal = pending.is_optional;
@@ -609,7 +644,10 @@ pub fn resolve_next(
             && crate::selection::is_dna_material_prompt(&pending.prompt)
             && t.player == pending.selecting_player)
             .then_some(slot);
-        for cand in [side_implicit, absolute].into_iter().chain(dna_material_slot) {
+        for cand in [side_implicit, absolute]
+            .into_iter()
+            .chain(dna_material_slot)
+        {
             if accepts(cand) {
                 return Ok(Some(cand));
             }
@@ -623,9 +661,7 @@ pub fn resolve_next(
     // ── Card-identity picks (hand / trash / reveal / security) ───────────
     if let Some(card_ids) = &payload.card_ids {
         let want = &card_ids[picks_done];
-        let zone_owner = pending
-            .zone_owner
-            .unwrap_or(pending.selecting_player);
+        let zone_owner = pending.zone_owner.unwrap_or(pending.selecting_player);
         let find_id = |ids: &[String], base: u16| -> Option<u16> {
             ids.iter().enumerate().find_map(|(i, cid)| {
                 let id = base + i as u16;
@@ -638,14 +674,33 @@ pub fn resolve_next(
                 .map(|c| c.card_id(&game.card_data).to_string())
                 .collect()
         };
+        // A zone-card pick (hand / trash / stack / link cards in one prompt)
+        // carries its own candidate list; it is answered from the parked frame
+        // whatever kind tag it shows (CountCappedMultiSelect / PlayCostBudget /
+        // OrderedPermutation).
+        if let Some(pairs) = zone_card_candidate_ids(game, valid) {
+            if let Some(id) = pairs
+                .iter()
+                .find_map(|(id, cid)| (cid == want && accepts(*id)).then_some(*id))
+            {
+                return Ok(Some(id));
+            }
+        }
         let hit = match pending.kind {
-            SelectionKind::Hand | SelectionKind::UnionZone { .. } => {
-                find_id(&zone_card_ids(&game.player(zone_owner).hand), PLAY_HAND_START)
-                    .or_else(|| find_id(&zone_card_ids(&game.player(zone_owner).trash), TRASH_EFFECT_START))
-            }
-            SelectionKind::Trash => {
-                find_id(&zone_card_ids(&game.player(zone_owner).trash), TRASH_EFFECT_START)
-            }
+            SelectionKind::Hand | SelectionKind::UnionZone { .. } => find_id(
+                &zone_card_ids(&game.player(zone_owner).hand),
+                PLAY_HAND_START,
+            )
+            .or_else(|| {
+                find_id(
+                    &zone_card_ids(&game.player(zone_owner).trash),
+                    TRASH_EFFECT_START,
+                )
+            }),
+            SelectionKind::Trash => find_id(
+                &zone_card_ids(&game.player(zone_owner).trash),
+                TRASH_EFFECT_START,
+            ),
             SelectionKind::Reveal | SelectionKind::RevealBucket { .. } => {
                 find_id(&zone_card_ids(&game.revealed_cards), SEL_REVEAL_START)
             }
@@ -1441,6 +1496,91 @@ mod tests {
             resolve_next(&runner.game, &card_row("SRC-A"), 1),
             Ok(Some(PASS))
         );
+    }
+
+    /// Park an optional budgeted / count-capped multi-pick with `picked`
+    /// picks already taken and no resume frame (a zone-card pick's frame is
+    /// not one the `open_field_multi_pick` probe recognises).
+    fn park_multi_kind(game: &mut Game, kind: SelectionKind) {
+        game.pending_selection = Some(PendingSelection {
+            kind,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![crate::action::space::PLAY_HAND_START, PASS],
+            is_optional: true,
+            prompt: "You may play up to 8 play cost's total worth".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+        game.pending_selection_resume = None;
+    }
+
+    /// G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK (retracted to this resolver):
+    /// the Assembly material row's single pick completed BT26-081's play and
+    /// its [On Play] parked a FRESH `PlayCostBudget { picked: 0 }`. The
+    /// trailing PASS must not decline it; the same holds for a fresh
+    /// `DpBudget` / `CountCappedMultiSelect`.
+    #[test]
+    fn trailing_pass_does_not_decline_a_freshly_parked_budget_or_count_pick() {
+        let mut runner = runner_with_cards(&["SRC-A"]);
+        for kind in [
+            SelectionKind::PlayCostBudget {
+                remaining_play_cost: 8,
+                picked: 0,
+            },
+            SelectionKind::DpBudget {
+                remaining_dp: 8000,
+                picked: 0,
+            },
+            SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 3,
+                picked: 0,
+                distinct: false,
+            },
+        ] {
+            park_multi_kind(&mut runner.game, kind);
+            assert_eq!(
+                resolve_next(&runner.game, &card_row("SRC-A"), 1),
+                Ok(None),
+                "{kind:?}"
+            );
+        }
+    }
+
+    /// Once the multi-pick has taken a pick it is the row's own prompt still
+    /// awaiting its stop, so the trailing PASS is still spent.
+    #[test]
+    fn trailing_pass_still_stops_a_budget_or_count_pick_that_took_a_pick() {
+        let mut runner = runner_with_cards(&["SRC-A"]);
+        for kind in [
+            SelectionKind::PlayCostBudget {
+                remaining_play_cost: 5,
+                picked: 1,
+            },
+            SelectionKind::DpBudget {
+                remaining_dp: 3000,
+                picked: 1,
+            },
+            SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 3,
+                picked: 1,
+                distinct: false,
+            },
+        ] {
+            park_multi_kind(&mut runner.game, kind);
+            assert_eq!(
+                resolve_next(&runner.game, &card_row("SRC-A"), 1),
+                Ok(Some(PASS)),
+                "{kind:?}"
+            );
+        }
     }
 
     #[test]

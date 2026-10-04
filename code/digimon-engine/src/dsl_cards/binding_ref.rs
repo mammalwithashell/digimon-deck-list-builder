@@ -51,6 +51,16 @@ pub fn resolve_binding_ref(
                     .resolve_token_as_battle_area_top(*token)
                     .map(ResolvedBinding::Permanent);
             }
+            // G-DSL-TRASH-INDEX-BINDING-STALE: a pinned trash pick resolves
+            // by the card's identity, not the (possibly shifted) index.
+            if let Some(BindingValue::TrashIndex(p, _)) = bindings.get_ref(name) {
+                let p = *p;
+                if let Some(pos) =
+                    bindings.resolve_pinned_trash_index(name, &ctx.game.player(p).trash)
+                {
+                    return pos.map(|i| ResolvedBinding::TrashIndex(p, i));
+                }
+            }
             resolve_named(name, bindings)
         }
         CompiledBindingRef::EventTarget => {
@@ -98,6 +108,7 @@ pub fn resolve_binding_ref(
         // (permanent / card-handle) form. Card-source steps resolve it
         // directly via `resolve_card_source_ref`; here it resolves to nothing.
         CompiledBindingRef::DeckTop(_) => None,
+        CompiledBindingRef::SecurityTop(_) => None,
         // The controller's own breeding-area carrier (the single breeding
         // Digimon). Resolves to the `BREEDING_TARGET`-indexed sentinel handle
         // only when a breeding permanent actually exists, so `material_of`

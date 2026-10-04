@@ -2576,7 +2576,9 @@ fn describe_board(game: &Game) -> String {
                     };
                     let dp = perm
                         .base_dp(&game.card_data)
-                        .map(|base| base + game.modifiers.sum(handle, crate::ModifierType::ChangeDp))
+                        .map(|base| {
+                            base + game.modifiers.sum(handle, crate::ModifierType::ChangeDp)
+                        })
                         .map(|d| d.to_string())
                         .unwrap_or_else(|| "-".to_string());
                     format!(
@@ -2591,8 +2593,10 @@ fn describe_board(game: &Game) -> String {
                 .collect();
             out.push_str(&entries.join(", "));
         }
-        out.push_str("
-");
+        out.push_str(
+            "
+",
+        );
     }
     // Zone counts alongside the board. A permanent that vanished between two
     // steps went SOMEWHERE, and trash-vs-security tells you whether it was
@@ -2613,15 +2617,27 @@ fn describe_board(game: &Game) -> String {
                 .collect::<Vec<_>>()
                 .join(" ")
         };
-        out.push_str(&format!("P{} hand:  {}
-", pid, list(&p.hand)));
-        out.push_str(&format!("P{} trash: {}
-", pid, list(&p.trash)));
+        out.push_str(&format!(
+            "P{} hand:  {}
+",
+            pid,
+            list(&p.hand)
+        ));
+        out.push_str(&format!(
+            "P{} trash: {}
+",
+            pid,
+            list(&p.trash)
+        ));
         // Security top is the END of the vec. A battle outcome hinges entirely
         // on which card the check flips, so a divergence in the security stack
         // masquerades as a combat bug.
-        out.push_str(&format!("P{} sec:   {} (top = last)
-", pid, list(&p.security)));
+        out.push_str(&format!(
+            "P{} sec:   {} (top = last)
+",
+            pid,
+            list(&p.security)
+        ));
         out.push_str(&format!(
             "P{} zones: hand={} deck={} trash={} security={} memory={}
 ",
@@ -2974,7 +2990,10 @@ mod tests {
     fn slot_map_matches_by_identity_not_position() {
         // DCGO ordered by frame; the engine by play order. Same two
         // permanents, opposite indexes.
-        let map = build_slot_map(&ids(&["BT16-082", "EX10-010"]), &ids(&["EX10-010", "BT16-082"]));
+        let map = build_slot_map(
+            &ids(&["BT16-082", "EX10-010"]),
+            &ids(&["EX10-010", "BT16-082"]),
+        );
         assert_eq!(map, vec![Some(1), Some(0)]);
     }
 
@@ -3046,7 +3065,12 @@ mod tests {
         }
     }
 
-    fn dcgo_action_row(step: u32, actor: u8, action_id: u16, phase: &str) -> crate::dcgo_recording::Row {
+    fn dcgo_action_row(
+        step: u32,
+        actor: u8,
+        action_id: u16,
+        phase: &str,
+    ) -> crate::dcgo_recording::Row {
         crate::dcgo_recording::Row::Action(crate::dcgo_recording::ActionRow {
             step,
             actor,
@@ -3096,7 +3120,10 @@ mod tests {
     fn dcgo_adapter_retains_play_range_action_with_correlated_action_detail() {
         let recording = crate::dcgo_recording::RecordingV1 {
             start: dcgo_game_start(vec![], Some(vec![])),
-            rows: vec![dcgo_action_row(0, 0, 5, "Main"), dcgo_action_detail_row(0, 0)],
+            rows: vec![
+                dcgo_action_row(0, 0, 5, "Main"),
+                dcgo_action_detail_row(0, 0),
+            ],
             end: dcgo_game_end(),
         };
         let adapter =
@@ -3146,8 +3173,8 @@ mod tests {
             start: dcgo_game_start(vec![], Some(vec![])),
             rows: vec![
                 dcgo_action_row(0, 0, 60, "Breeding"), // hatch
-                dcgo_action_row(1, 0, 62, "Main"),      // pass
-                dcgo_action_row(2, 0, 100, "Main"),     // attack slot 0 -> security
+                dcgo_action_row(1, 0, 62, "Main"),     // pass
+                dcgo_action_row(2, 0, 100, "Main"),    // attack slot 0 -> security
                 // Detail row elsewhere proves the gate is armed and these
                 // still are not skipped.
                 dcgo_action_detail_row(99, 0),

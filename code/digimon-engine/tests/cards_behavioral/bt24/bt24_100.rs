@@ -239,9 +239,7 @@ fn bt24_100_delay_activation_gains_two_memory_and_trashes_delay_option() {
         .player(0)
         .battle_area
         .iter()
-        .position(|permanent| {
-            permanent.top_card().card_id(&runner.game.card_data) == "BT24-100"
-        })
+        .position(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "BT24-100")
         .map(|index| digimon_engine::permanent::PermanentHandle {
             player: 0,
             index: index as u8,

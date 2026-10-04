@@ -85,10 +85,10 @@ effects:
                   - name_is: X Antibody
                   - trait_has: Chronicle
           prompt: "Use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1"
-      - play_or_use_from_hand:
-          of: you
-          hand_index: option_pick
-          cost_delta: { reduce: 1 }
+      # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
+      - use_option_bound:
+          binding: option_pick
+          cost: { reduce: 1 }
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

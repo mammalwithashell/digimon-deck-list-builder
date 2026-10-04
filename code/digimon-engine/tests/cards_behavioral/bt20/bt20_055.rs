@@ -18,6 +18,14 @@ fn bt20_055_security_end_of_opponents_turn_plays_self_from_security() {
         .deck(1, &filler)
         .memory(3)
         .start();
+    // Rule 15-14-5: {Security} effects are active only while FACE UP.
+    let idx = runner.game.players[0]
+        .security
+        .iter()
+        .find(|c| c.card_id(&runner.game.card_data) == "BT20-055")
+        .map(|c| c.card_index)
+        .expect("BT20-055 in security");
+    runner.game.players[0].face_up_security.insert(idx);
 
     runner.end_turn();
     assert_eq!(runner.game.turn_player(), 1);

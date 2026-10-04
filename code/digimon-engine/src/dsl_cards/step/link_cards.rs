@@ -59,6 +59,7 @@ pub fn try_install(
         bind_as,
         host_filter,
         exclude_source,
+        cost_reduce,
     } = step
     else {
         return false;
@@ -74,6 +75,7 @@ pub fn try_install(
         bind_as: bind_as.clone(),
         host_filter: host_filter.clone(),
         exclude_source: *exclude_source,
+        cost_reduce: *cost_reduce,
     });
 
     install_pick(
@@ -107,6 +109,88 @@ pub(crate) struct LinkCardsSpec {
     /// Exclude the effect's source permanent from host candidates ("other
     /// Digimon", EX11-027).
     exclude_source: bool,
+    /// `cost: { reduce: N }` — pay each card's printed link cost (after
+    /// `ChangeLinkCost` deltas) minus N; unaffordable cards are not offered
+    /// (DCGO `CanLink(payCost: true)` under a `GrantedReduceLinkCostClass`).
+    /// `None` ⇒ pay the flat `cost`.
+    cost_reduce: Option<u8>,
+}
+
+/// The memory a `cost: { reduce: N }` link of `card` pays: its printed link
+/// cost (0 when it carries no link condition) after the controller's
+/// `ChangeLinkCost` delta, minus N, floored at 0. BT26-007 Swipemon.
+fn reduced_link_cost(
+    game: &crate::game::Game,
+    player: crate::enums::PlayerId,
+    card: CardHandle,
+    reduce: u8,
+) -> u16 {
+    let base = game
+        .card_data_for_handle(card)
+        .and_then(|d| game.effects_for_card(&d.card_id, card))
+        .and_then(|effects| {
+            effects.iter().find_map(|e| {
+                (e.timing == crate::enums::EffectTiming::LinkCondition)
+                    .then_some(e.link_cost)
+                    .flatten()
+            })
+        })
+        .unwrap_or(0);
+    game.effective_link_cost(player, base)
+        .saturating_sub(reduce as u16)
+}
+
+/// Per-card link gates beyond the author's `filter` (BT26 Appmon slice):
+/// - `cost_reduce`: the controller must be able to pay the reduced link cost
+///   (DCGO `CanLink(payCost: true)`).
+/// - `self_host`: for `to: self`, a card that carries its own `<Link>`
+///   condition may only be linked if that condition accepts the host (and the
+///   host has link room) — DCGO `CanLinkToTargetPermanent(host, ...)`. A card
+///   with no link condition is unrestricted (legacy behaviour).
+#[derive(Debug, Clone, Copy)]
+struct LinkGate {
+    cost_reduce: Option<u8>,
+    self_host: Option<PermanentHandle>,
+}
+
+impl LinkGate {
+    fn for_spec(spec: &LinkCardsSpec, source_permanent: Option<PermanentHandle>) -> Self {
+        LinkGate {
+            cost_reduce: spec.cost_reduce,
+            self_host: matches!(spec.to, CompiledLinkTo::SelfPermanent)
+                .then_some(source_permanent)
+                .flatten(),
+        }
+    }
+
+    fn ok(
+        self,
+        game: &crate::game::Game,
+        player: crate::enums::PlayerId,
+        card: CardHandle,
+    ) -> bool {
+        if let Some(n) = self.cost_reduce {
+            let cost = reduced_link_cost(game, player, card, n);
+            if (game.memory as i32 - cost as i32) < game.rules.memory_range.0 as i32 {
+                return false;
+            }
+        }
+        if let Some(host) = self.self_host {
+            let effects = game
+                .card_data_for_handle(card)
+                .and_then(|d| game.effects_for_card(&d.card_id, card));
+            if let Some(effects) = effects {
+                if effects.iter().any(|e| e.link_cost.is_some())
+                    && !game
+                        .link_host_candidates(host.player, card, &effects)
+                        .contains(&host)
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }
 }
 
 impl LinkCardsSpec {
@@ -147,6 +231,11 @@ pub(crate) struct LinkPickState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub outer_conts: Vec<crate::resume::OuterContinuation>,
+    /// The trigger context active when the step parked, restored for every
+    /// resumed stage so event-reading predicates (`host_filter: {
+    /// is_event_host: true }` — EX10-070 "1 of those Digimon") still see the
+    /// triggering event. G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    pub trigger_context: Option<crate::trigger_context::TriggerContext>,
 }
 
 /// Which pick stage a `LinkPickState` is paused at (data — no closures).
@@ -206,6 +295,7 @@ fn park_link_frame(
             bindings,
             runtime,
             outer_conts: Vec::new(),
+            trigger_context: ctx.game.current_trigger_context.clone(),
         })],
     });
 }
@@ -307,7 +397,10 @@ pub(crate) fn run_link_pick_step(
         bindings,
         runtime,
         outer_conts,
+        trigger_context,
     } = state;
+    let previous_trigger_context =
+        std::mem::replace(&mut game.current_trigger_context, trigger_context);
 
     // What the resolved action advances the loop to. Computed with immutable
     // reads first so the mutable EffectContext can be built afterward.
@@ -338,7 +431,14 @@ pub(crate) fn run_link_pick_step(
                 } else {
                     action_id.saturating_sub(PLAY_HAND_START) as usize
                 };
-                match link_card_at_index(game, &prov, &spec.filter, &bindings, is_trash, idx) {
+                match link_card_at_index(game, &prov, &spec.filter, &bindings, is_trash, idx)
+                    .filter(|c| {
+                        LinkGate::for_spec(&spec, prov.source_permanent).ok(
+                            game,
+                            prov.controller,
+                            *c,
+                        )
+                    }) {
                     Some(card) => {
                         let source = if is_trash {
                             LinkCardSource::Trash(prov.controller)
@@ -364,7 +464,14 @@ pub(crate) fn run_link_pick_step(
                     *restrict_to,
                     field,
                     source_index,
-                ) {
+                )
+                .filter(|s| {
+                    LinkGate::for_spec(&spec, prov.source_permanent).ok(
+                        game,
+                        prov.controller,
+                        s.card,
+                    )
+                }) {
                     Some(sref) => Advance::CardChosen(
                         sref.card,
                         LinkCardSource::DigivolutionSource(sref.permanent),
@@ -414,6 +521,7 @@ pub(crate) fn run_link_pick_step(
             Advance::Nothing => {}
         }
     }
+    game.current_trigger_context = previous_trigger_context;
 
     crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
 }
@@ -426,11 +534,13 @@ fn zone_has_candidate(
     zone: CompiledLinkSourceZone,
     filter: &CompiledPredicate,
     bindings: &Bindings,
+    gate: LinkGate,
 ) -> bool {
     let player = ctx.player;
     let read = ctx.as_read();
     let matches = |card: CardHandle| {
         eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(card), Some(bindings))
+            && gate.ok(ctx.game, player, card)
     };
     match zone {
         CompiledLinkSourceZone::Hand => ctx
@@ -447,7 +557,7 @@ fn zone_has_candidate(
             .any(|c| matches(c.handle())),
         CompiledLinkSourceZone::SelfSources => ctx
             .source_permanent
-            .is_some_and(|host| permanent_has_source_candidate(ctx, host, filter, bindings)),
+            .is_some_and(|host| permanent_has_source_candidate(ctx, host, filter, bindings, gate)),
         CompiledLinkSourceZone::OwnDigimonSources => (0..ctx.game.player(player).battle_area.len())
             .any(|index| {
                 permanent_has_source_candidate(
@@ -458,6 +568,7 @@ fn zone_has_candidate(
                     },
                     filter,
                     bindings,
+                    gate,
                 )
             }),
         // Gap 3b — the in-play Option is a candidate iff it is currently held in
@@ -477,6 +588,7 @@ fn permanent_has_source_candidate(
     perm: PermanentHandle,
     filter: &CompiledPredicate,
     bindings: &Bindings,
+    gate: LinkGate,
 ) -> bool {
     let read = ctx.as_read();
     let Some(p) = ctx
@@ -494,7 +606,7 @@ fn permanent_has_source_candidate(
             &read,
             PredicateSubject::Card(c.handle()),
             Some(bindings),
-        )
+        ) && gate.ok(ctx.game, ctx.player, c.handle())
     })
 }
 
@@ -519,7 +631,15 @@ fn install_pick(
         .from
         .iter()
         .copied()
-        .filter(|z| zone_has_candidate(ctx, *z, &spec.filter, &bindings))
+        .filter(|z| {
+            zone_has_candidate(
+                ctx,
+                *z,
+                &spec.filter,
+                &bindings,
+                LinkGate::for_spec(&spec, ctx.source_permanent),
+            )
+        })
         .collect();
 
     if eligible.is_empty() {
@@ -662,6 +782,7 @@ fn install_card_select_zone_indexed(
     let source_kind = ctx.source_kind;
     let filter_bindings = bindings.clone();
     let is_trash = matches!(zone, CompiledLinkSourceZone::Trash);
+    let gate = LinkGate::for_spec(&spec, ctx.source_permanent);
 
     let candidate_at = move |game: &crate::game::Game, idx: usize| -> Option<CardHandle> {
         let card = if is_trash {
@@ -677,12 +798,12 @@ fn install_card_select_zone_indexed(
             source_kind,
             player,
         );
-        eval_predicate_with_bindings(
+        (eval_predicate_with_bindings(
             &filter,
             &read,
             PredicateSubject::Card(card),
             Some(&filter_bindings),
-        )
+        ) && gate.ok(game, player, card))
         .then_some(card)
     };
 
@@ -769,6 +890,7 @@ fn install_card_select_sources(
         _ => None,
     };
     let filter_bindings = bindings.clone();
+    let gate = LinkGate::for_spec(&spec, ctx.source_permanent);
 
     // `select_own_sources` exposes PASS once min is met; min=0 for UpTo,
     // min=1 for Exactly (the pick is mandatory). max=1: exactly one card.
@@ -795,7 +917,7 @@ fn install_card_select_sources(
             &read,
             PredicateSubject::Card(sref.card),
             Some(&filter_bindings),
-        )
+        ) && gate.ok(game, player, sref.card)
     };
 
     // Resumable-VM copies captured before the callback moves them.
@@ -1014,8 +1136,12 @@ fn attach_and_continue(
     // Pay the per-card cost (currently always 0 for the cards this serves; the
     // primitive does not pay). `pay_memory` deducts from the active player's
     // memory exactly like `commit_digimon_link`.
-    if spec.cost > 0 {
-        let _ = ctx.game.pay_memory(spec.cost as u16);
+    let pay = match spec.cost_reduce {
+        Some(n) => reduced_link_cost(ctx.game, ctx.player, card, n),
+        None => spec.cost as u16,
+    };
+    if pay > 0 {
+        let _ = ctx.game.pay_memory(pay);
     }
 
     let _ = ctx.link_chosen_card_into_host(host, card, source);

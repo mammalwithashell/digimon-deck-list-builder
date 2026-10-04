@@ -1,0 +1,136 @@
+# BT26-098 Queen of Thorns — Option, Green, Cost 5. Traits: DATA SQUAD.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-098.md):
+#   When this card would be used, by trashing the bottom face-down card from
+#     under any of your Tamers, reduce the cost by 2.
+#   [Main] By placing 1 [Sunflowmon] and 1 [Lilamon] from your trash as 1 of
+#     your [Lalamon]'s bottom digivolution cards, that Digimon may digivolve into
+#     [Rosemon] in the hand, ignoring digivolution requirements and without
+#     paying the cost.
+#   [Security] You may play 1 [Lalamon] or [Yoshino Fujieda] from your hand or
+#     trash without paying the cost. Then, add this card to the hand.
+#   Official Q&A: the [Main] "by" condition is all-or-nothing — placing only one
+#   of the two cards does not meet it.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_098.cs
+# Sister card: BT25-096 Mirage Beast Knight (same template, Gaomon line).
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Cost reduction (BeforePayCost, skippable): canNoSelect Tamer pick → trash its
+#   bottom face-down card → -2. → kind: cost_reduction when_playing_this,
+#   pay_cost trash_bottom_face_down_source_under_tamer (BT25-096 idiom).
+# [Main]: only if a [Lalamon] (top card name) Digimon AND a [Sunflowmon] AND a
+#   [Lilamon] in trash exist: canNoSelect Lalamon pick; canNoSelect Sunflowmon
+#   pick; canNoSelect Lilamon pick; ONLY if both were picked, the player orders
+#   them and they go under as bottom sources; then DigivolveIntoHandOrTrashCard
+#   ([Rosemon] name, hand, payCost false, IgnoreRequirement.All) — the select is
+#   the "may". → both picks bound before anything moves (the Q&A's
+#   all-or-nothing), then place both, then optional free digivolve.
+#   NOTE: DCGO additionally lets the player choose the relative ORDER of the
+#   two placed cards; this spec places Sunflowmon then Lilamon (Lilamon ends
+#   bottom-most). Source order under a Lalamon has no rules consequence for
+#   this line, but it is a surfaced DCGO choice we do not expose.
+# [Security]: hand-or-trash choice (Don't play allowed) → PlayByEffect free;
+#   then AddThisCardToHand unconditionally. → optional select_union_zone +
+#   play_union_bound_free + add_this_option_to_hand (BT25-096 idiom).
+
+card: BT26-098
+name: "Queen of Thorns"
+kind: option
+color: [green]
+cost: 5
+traits: [DATA SQUAD]
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    # DCGO CanUseCondition: a Tamer with a face-down card must exist, so no
+    # prompt is offered when the cost is unpayable.
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    optional: true
+    amount: 2
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "When this card would be used, by trashing the bottom face-down card under a Tamer, reduce the use cost by 2"
+
+  - when: main_from_hand
+    summary: "[Main] Place a [Sunflowmon] + a [Lilamon] from trash under a [Lalamon]; that Digimon may free-digivolve into a [Rosemon] in hand, ignoring requirements"
+    process:
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "Sunflowmon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "Lilamon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [battle_area], kind: digimon, name_is: "Lalamon" }
+                  n: 1
+          then:
+            - select_own_permanent:
+                bind_as: lalamon
+                optional: true
+                filter: { kind: digimon, name_is: "Lalamon" }
+                prompt: "Select 1 [Lalamon] to gain digivolution cards"
+            - if:
+                condition: { binding_present: lalamon }
+                then:
+                  # Both picks precede both moves. select_trash pins the picked
+                  # card's identity, so the first placement shifting the trash
+                  # does not stale the second binding
+                  # (G-DSL-TRASH-INDEX-BINDING-STALE, resolved).
+                  - select_trash:
+                      of: you
+                      bind_as: sunflowmon_card
+                      optional: true
+                      filter: { name_is: "Sunflowmon" }
+                      prompt: "Select 1 [Sunflowmon] from your trash"
+                  - select_trash:
+                      of: you
+                      bind_as: lilamon_card
+                      optional: true
+                      filter: { name_is: "Lilamon" }
+                      prompt: "Select 1 [Lilamon] from your trash"
+                  # All-or-nothing: nothing moves unless BOTH were chosen.
+                  - if:
+                      condition:
+                        all_of:
+                          - binding_present: sunflowmon_card
+                          - binding_present: lilamon_card
+                      then:
+                        - place_as_bottom_source: { source: sunflowmon_card, target: lalamon }
+                        - place_as_bottom_source: { source: lilamon_card, target: lalamon }
+                        - select_hand:
+                            of: you
+                            bind_as: rosemon
+                            optional: true
+                            filter: { kind: digimon, name_is: "Rosemon" }
+                            prompt: "That Digimon may digivolve into a [Rosemon] in your hand, ignoring requirements and without paying the cost"
+                        - if:
+                            condition: { binding_present: rosemon }
+                            then:
+                              - effect_initiated_digivolve:
+                                  target: lalamon
+                                  from_hand: rosemon
+                                  cost: free
+                                  ignore_requirements: true
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 [Lalamon] or [Yoshino Fujieda] from your hand or trash without paying the cost; then add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: play_pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Lalamon"
+              - name_is: "Yoshino Fujieda"
+          prompt: "You may play 1 [Lalamon] or [Yoshino Fujieda] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: play_pick }
+      - add_this_option_to_hand: {}

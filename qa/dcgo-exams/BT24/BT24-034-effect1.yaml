@@ -1,0 +1,141 @@
+# Exam scenario: Aegiomon (BT24-034), clause BT24-034#effect#1 --
+# "<Barrier> (When this Digimon would be deleted in battle, by trashing your
+#  top security card, it isn't deleted.)"  (Aegiomon's OWN printed Barrier;
+#  the extractor's `text` for this id is the stray "[When Moving]" marker of
+#  the next clause -- the keyword is what this id binds to.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5. No [TS] Tamer in hand, so
+#       its [On Play] (#effect#2) is silent on OUR side; DCGO still asks the
+#       OptionalSkill (security > 0) -> dcgo_only decline row (see PREDICTED
+#       DIVERGENCE).
+#   T2 (P1, 5): hard-play Vermilimon BT4-014 (vanilla Lv.5, 8000): 5 -> 0;
+#       pass -> P0 3.
+#   T3 (P0, 3): Aegiomon attacks P1's security (Vermilimon has no <Blocker>),
+#       flipping p1 stack[9] = Biyomon ST1-02 (3000, vanilla): Biyomon loses
+#       and is trashed. Aegiomon is now SUSPENDED. Pass -> P1 3.
+#   T4 (P1, 3): Vermilimon (8000) attacks the suspended Aegiomon (5000).
+#       THE CLAUSE: Aegiomon would be deleted in battle; P0 accepts <Barrier>,
+#       trashing its top security card (p0 stack[9] = Mervamon BT26-081),
+#       and Aegiomon is NOT deleted.
+#   Trailing P1 main-phase pass (P1's hand still holds Digimon, so DCGO's
+#   CanSelect() keeps the decision point).
+#
+# WITNESS: p0.security 5 -> 4, BT26-081 in p0.trash, Aegiomon still on the
+# field (suspended), Vermilimon suspended on P1's field.
+#
+# WHY MERVAMON ON TOP OF SECURITY (not Jupitermon BT24-101): measured while
+# authoring, our engine fires a security-TRASHED BT24-101's "[All Turns]
+# [Once Per Turn] When your security stack is removed from, trash your
+# opponent's top security card" FROM THE TRASH (P1's security went 4 -> 3,
+# BT1-009 trashed) -- a suspected engine bug, reported separately. The
+# `p1.security: 4` assert guards that nothing else rode the Barrier trash.
+#
+# PROMPT SHAPE: <Barrier> is "by trashing ... (optional cost) it isn't
+# deleted" (rules 16-24). Ours: an optional Replacement accept -> `yes`;
+# DCGO: OptionalSkill. No other trigger in the window (Aegiomon has no
+# [When Attacking]/[On Deletion]; Vermilimon is vanilla). VERIFIED (DCGO C#,
+# 2026-10-04): KeyWordEffects/Barrier.cs BarrierEffect is
+# SetUpActivateClass(..., -1, true, ...) (OptionalSkill), CanUse requires
+# IsByBattle; only the top card's printed Barrier is live (the inherited copy
+# needs Aegiomon in sources). The trailing P1 pass is a main_phase row.
+#
+# PREDICTED DIVERGENCE (prompt only on this line; DCGO C# read 2026-10-04):
+# BT24_034.cs gates Aegiomon's [When Moving]/[On Play]/[When Digivolving] on
+# `IsExistOnBattleAreaDigimon && SecurityCards.Count() > 0` ONLY, asks it as
+# an OptionalSkill (isOptional true), pays the cost (top security -> hand)
+# and only THEN looks for a [TS] Tamer in hand (`HandCards.Count(ValidTamer)
+# >= 1` -> SelectHandEffect, canNoSelect true). Our BT24-034.yaml requires a
+# [TS] Tamer in hand BEFORE the cost (`condition: count_gte ... kind: tamer`)
+# and is silent otherwise. Rules side with DCGO: digest.md 15-7 ("By X, Y" --
+# the player may choose X even if the result can't be executed, 15-7-5), and
+# a [TS] Tamer that arrives FROM the security card is playable in DCGO but
+# not in ours. The DCGO gate is carried as a `dcgo_only` decline row; the
+# end state is unchanged (declined).
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
+card: BT24-034
+clause: BT24-034#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT25-030, BT24-031, BT26-029, BT25-044,
+            BT25-030, BT24-031, BT26-073, BT24-101, BT26-081,
+            BT25-033, BT25-030, BT4-104, BT24-031, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [BT4-014, ST1-03, ST1-04, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): hard-play Aegiomon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # Aegiomon BT24-034's [On Play] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1, 5): Vermilimon (5 -> 0), pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Aegiomon attacks security (suspends), pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): Vermilimon attacks the suspended Aegiomon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: accept <Barrier> (trash top security, not deleted).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      p0.security: 5
+      p1.security: 4
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+  - at: 12
+    that:
+      turn: 4
+      p0.security: 4
+      p0.trash: [BT26-081]
+      p1.security: 4
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+      p1.field:
+        - { card_id: BT4-014, dp: 8000, suspended: true, sources: [] }

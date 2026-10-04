@@ -1,0 +1,113 @@
+# Exam scenario: ScourgeChiropmon (BT26-075), clause BT26-075#effect#1 --
+# "<Execute>" (the extractor emits it with EMPTY text; effect#2 is the
+# <Ascension> reminder). Rule 16-37: at the end of your turn this Digimon
+# may attack (incl. an opponent's unsuspended Digimon); at the end of that
+# attack it is deleted.
+#
+# ENGINE FINDING -- EXPECTED ORACLE DIVERGENCE. This file does NOT witness
+# <Execute> working; it pins our engine's actual behaviour: the end-of-turn
+# window never opens for ScourgeChiropmon. Root cause (read, not fixed):
+# `Game::has_end_of_turn_keywords` (game_phases.rs) skips every permanent
+# whose `perm.top_card().is_digimon(..)` is false, and `CardSource::
+# is_digimon` (card_source.rs) is `card_kind == Digimon` -- a DUAL top card
+# (CardKind::Dual) fails it. The <Execute> EndOfYourTurn body still grants
+# MayAttack/CanAttackUnsuspended, but the phase never parks in
+# EndOfTurnAction, so the granted attack is unreachable. Same skip applies
+# to Vortex / Overclock / Engage on any DUAL Digimon. (`Permanent::
+# is_digimon` -- the permanent-level helper -- does include Dual.)
+# Probed three ways: memory -2 overspend end of T3 (field, after Kyo SoMP),
+# explicit pass at memory 4 end of T5 after a move, and this line.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO.
+#
+# THE LINE: BT26-075-effect0.yaml (Scourge built in breeding via the
+# [Glowing Dawn] routes [3 -> 1 -> -2], moved on T5 [memory 3]); then P0
+# passes T5's main phase with Scourge unsuspended in the battle area and p1
+# holding 5 security and no Digimon.
+# WHAT THE PRINTED TEXT SAYS SHOULD HAPPEN: an optional <Execute> attack
+# (DCGO: OptionalSkill, then SelectAttackEffect -- BT24-081-effect2.yaml's
+# fold: one `attack:` row with `expect: OptionalSkill`); after the attack
+# Scourge is deleted, firing <Ascension> + [On Deletion].
+# ONCE FIXED: replace the final two rows with
+#   - { actor: 0, do: { attack: { attacker: field.0, target: security } },
+#       expect: { prompt: OptionalSkill } }
+# plus the post-attack Ascension/On Deletion rows and a sim-only EOT pass.
+card: BT26-075
+clause: BT26-075#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT25-049, BT26-075, ST23-12, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-057, ST23-12,
+            BT26-026, BT25-090]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-075 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # End of T5: THE CLAUSE's window. Our engine rotates straight to p1 (no
+  # EndOfTurnAction park). DCGO is expected to ask the <Execute>
+  # OptionalSkill here instead -> EXPECTED ORACLE DIVERGENCE on this row.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 3
+      p1.security: 5
+      p0.field:
+        - card_id: BT26-075
+          dp: 8000
+          suspended: false
+          sources: [BT25-049, BT26-025, ST23-01]
+  # Our engine's actual behaviour (ENGINE FINDING): turn 6 began with no
+  # end-of-turn attack -- p1 security still 5, Scourge alive and unsuspended.
+  - at: 12
+    that:
+      turn: 6
+      p1.security: 5
+      p0.field:
+        - card_id: BT26-075
+          dp: 8000
+          suspended: false
+          sources: [BT25-049, BT26-025, ST23-01]

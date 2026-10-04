@@ -1,0 +1,88 @@
+# BT24-007 Tsunomon — Digi-Egg, Lv.2, Purple. Traits: Lesser, Titan, TS.
+# Form: In-Training.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-007.md):
+#   Inherited: [Your Turn] [Once Per Turn] When level 4 or higher Digimon cards
+#     with the [Demon] or [Titan] trait are trashed from your hand, you may play
+#     1 of them with the play cost reduced by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_007.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# OnDiscardHand, inherited, maxCountPerTurn 1, optional (SetUpActivateClass
+#   (…, 1, true, …)). CanUseCondition: IsExistOnBattleAreaDigimon(card) &&
+#   CanTriggerOnTrashHand(hashtable, null, CardCondition) && IsOwnerTurn.
+#   CardCondition = IsDigimon && Level >= 4 && (Demon || Titan) &&
+#   CanPlayAsNewPermanent(payCost, fixedCost: cost - 2). Activation: the
+#   discarded cards (GetDiscardedCardsFromHashtable) filtered by CardCondition
+#   and still in the trash → canNoSelect pick of 1 → PlayPermanentCards(payCost
+#   true, Root.Trash, fixedCost = printed cost - 2).
+#   → `on_discard_hand` + `active_when: your_turn + event_discard_player: you`
+#   + `condition: event_discarded_card_any` (the trigger gate:
+#   "When level 4 or higher [Demon]/[Titan] Digimon cards are trashed from your
+#   hand") + ONE optional `select_union_zone` over the trash restricted to
+#   `in_event_discarded_cards` ("1 of THEM" — a card from an earlier discard
+#   batch is not a candidate) → `play_union_bound_free { cost_delta: reduce 2 }`
+#   (plays from its true zone, paying printed cost - 2).
+#   "trashed from YOUR hand": DCGO's own-hand test is the `CardCondition`
+#   filter over `DiscardedCards` plus `IsOwnerTurn`; the batch is per hand
+#   owner in the engine, so `event_discard_player: you` is the same gate.
+# Optionality / [Once Per Turn]: DCGO's optional activation prompt is
+#   declinable without spending the use; here the clause is non-optional and
+#   the single pick is optional — declining refunds the use (`refund_opt`), so
+#   a later qualifying discard the same turn can still be answered (same
+#   collapse as BT26-066's inherited clause).
+#
+# Implementation status:
+# | Inherited [Your Turn][OPT] Lv.4+ [Demon]/[Titan] Digimon trashed from hand → may play 1 of them, cost -2 | IMPLEMENTED (G-ENGINE-DISCARDED-HAND-CARDS) |
+
+card: BT24-007
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, Titan, TS]
+
+effects:
+  # ─── Inherited [Your Turn][OPT] Lv.4+ [Demon]/[Titan] Digimon cards trashed
+  #     from your hand → you may play 1 of them with the play cost reduced by 2
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_discard_player: you
+    condition:
+      event_discarded_card_any:
+        all_of:
+          - kind: digimon
+          - level_gte: 4
+          - any_of:
+              - trait_has: Demon
+              - trait_has: Titan
+    summary: "[Inherited][Your Turn][Once Per Turn] When level 4 or higher [Demon]/[Titan] Digimon cards are trashed from your hand, you may play 1 of them with the play cost reduced by 2"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          bind_as: pick
+          filter:
+            all_of:
+              - in_event_discarded_cards: true
+              - kind: digimon
+              - level_gte: 4
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Titan
+          prompt: "You may play 1 of the level 4 or higher [Demon]/[Titan] Digimon cards just trashed from your hand with the play cost reduced by 2"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_union_bound_free:
+                binding: pick
+                cost_delta: { reduce: 2 }
+          else:
+            - refund_opt: {}

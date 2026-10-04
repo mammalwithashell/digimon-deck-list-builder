@@ -3,7 +3,7 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PLAY_HAND_START;
+use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
@@ -62,9 +62,11 @@ fn bt24_034_yaml_metadata_keywords_alt_paths_and_timings_match_printed_card() {
         ]
     );
     assert!(trigger.condition.is_some());
+    // DCGO BT24_034.cs: OptionalSkill gate (isOptional true), cost first.
+    assert!(trigger.optional, "the 'By adding...' gate is an optional activation");
     assert!(matches!(
         trigger.process.first(),
-        Some(CompiledStep::SelectEffectChoice { .. })
+        Some(CompiledStep::AddTopSecurityToHand { .. })
     ));
 }
 
@@ -99,10 +101,7 @@ fn bt24_034_on_play_adds_top_security_and_plays_only_ts_tamer_without_field_name
     let hand_before = runner.hand_size(0);
 
     runner.play(0, 0).expect("play Aegiomon");
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
-    runner
-        .execute_branch(0)
-        .expect("choose play TS Tamer branch");
+    accept_gate(&mut runner);
 
     assert_eq!(
         runner.security_count(0),
@@ -150,8 +149,8 @@ fn bt24_034_on_play_decline_branch_does_not_take_security_cost() {
     let security_before = runner.security_count(0);
 
     runner.play(0, 0).expect("play Aegiomon");
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
-    runner.execute_branch(1).expect("decline Aegiomon effect");
+    assert!(runner.pending_is_optional(), "optional activation gate");
+    runner.execute_action(0, PASS).expect("decline Aegiomon effect");
     runner.auto_resolve().expect("settle decline");
 
     assert_eq!(
@@ -159,6 +158,76 @@ fn bt24_034_on_play_decline_branch_does_not_take_security_cost() {
         security_before,
         "declining must not add top security to hand"
     );
+}
+
+fn accept_gate(runner: &mut DebugRunner) {
+    let sel = runner
+        .pending_selection()
+        .expect("Aegiomon's optional activation gate surfaces");
+    assert!(sel.is_optional, "the 'By adding...' gate is optional");
+    let accept = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("an accept action is offered");
+    runner.execute_action(0, accept).expect("accept Aegiomon's gate");
+}
+
+/// §15-7-5 (digest.md: a "By X" cost may be paid even if the result can't
+/// be carried out) + DCGO BT24_034.cs `SharedCanActivateCondition` (only
+/// `SecurityCards.Count() > 0`, no hand check): the gate is offered with NO
+/// [TS] Tamer in hand, and accepting still pays the cost.
+#[test]
+fn bt24_034_gate_offered_without_ts_tamer_in_hand_and_cost_is_paid() {
+    let mut runner = aegiomon_runner()
+        .add_card(non_ts_tamer("NON-TS", "Plain Tamer"))
+        .add_card(filler("SEC"))
+        .hand(0, &[CARD_ID, "NON-TS"])
+        .security(0, &["SEC", "SEC"])
+        .memory(10)
+        .start();
+    runner.play(0, 0).expect("play Aegiomon");
+    accept_gate(&mut runner);
+    runner.auto_resolve().expect("settle");
+    assert_eq!(runner.security_count(0), 1, "cost paid: top security to hand");
+    assert!(runner.pending_selection().is_none(), "no eligible Tamer -> no pick");
+    assert!(runner.game.player(0).hand.iter().any(|c| c.card_id(&runner.game.card_data) == "SEC"));
+}
+
+/// DCGO BT24_034.cs checks the hand for a valid Tamer AFTER the cost: a [TS]
+/// Tamer that arrives from the security card is playable. The pick is
+/// declinable (`canNoSelect: true`).
+#[test]
+fn bt24_034_ts_tamer_from_security_is_playable_and_pick_is_declinable() {
+    let build = || {
+        aegiomon_runner()
+            .add_card(ts_tamer("TS-TAMER", "Fresh TS Tamer"))
+            .hand(0, &[CARD_ID])
+            .security(0, &["TS-TAMER"])
+            .memory(10)
+            .start()
+    };
+    let mut runner = build();
+    runner.play(0, 0).expect("play Aegiomon");
+    accept_gate(&mut runner);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let (optional, first) = {
+        let sel = runner.pending_selection().expect("Tamer pick");
+        (sel.is_optional, sel.valid_action_ids[0])
+    };
+    assert!(optional, "the Tamer pick is declinable (canNoSelect)");
+    runner.execute_action(0, first).expect("play the Tamer");
+    runner.auto_resolve().expect("settle");
+    assert!(runner.game.player(0).battle_area.iter().any(|p| p.top_card().card_id(&runner.game.card_data) == "TS-TAMER"));
+
+    let mut runner = build();
+    runner.play(0, 0).expect("play Aegiomon");
+    accept_gate(&mut runner);
+    runner.execute_action(0, PASS).expect("decline the Tamer pick");
+    runner.auto_resolve().expect("settle");
+    assert!(runner.game.player(0).hand.iter().any(|c| c.card_id(&runner.game.card_data) == "TS-TAMER"));
+    assert_eq!(runner.security_count(0), 0);
 }
 
 fn aegiomon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
@@ -218,4 +287,42 @@ fn hand_action_for_id(runner: &DebugRunner, id: &str) -> u16 {
             (card.card_id(&runner.game.card_data) == id).then_some(PLAY_HAND_START + idx as u16)
         })
         .expect("hand card exists")
+}
+
+/// G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED: `<Barrier>` is "when THIS
+/// Digimon would be deleted". When the OPPONENT's Digimon loses a battle to
+/// the Barrier carrier, no `<Barrier>` replacement prompt may be offered to
+/// anyone (previously a phantom, outcome-free accept prompt parked for the
+/// deleted Digimon's controller).
+#[test]
+fn bt24_034_barrier_not_offered_when_opponents_digimon_is_deleted_in_battle() {
+    let mut weak = make_test_card("WEAK", "WEAK");
+    weak.card_kind = CardKind::Digimon;
+    weak.dp = Some(2000);
+    weak.level = Some(3);
+    let mut runner = aegiomon_runner()
+        .add_card(weak)
+        .add_card(filler("SEC"))
+        .security(0, &["SEC"])
+        .memory(0)
+        .start();
+    let aegio = runner.place_on_field(0, CARD_ID, Some(0));
+    let weak = runner.place_on_field(1, "WEAK", Some(0));
+
+    let _ = runner.battle_digimon(aegio, weak);
+
+    let barrier_prompt = runner
+        .pending_selection()
+        .map(|sel| format!("{sel:?}"))
+        .filter(|dbg| dbg.contains("Barrier"));
+    assert!(
+        barrier_prompt.is_none(),
+        "no <Barrier> prompt for the opponent's Digimon's deletion: {barrier_prompt:?}"
+    );
+    runner.auto_resolve().expect("settle");
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "the losing opponent Digimon is deleted"
+    );
+    assert_eq!(runner.security_count(0), 1, "Barrier did not trash security");
 }

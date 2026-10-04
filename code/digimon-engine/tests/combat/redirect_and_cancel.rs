@@ -680,7 +680,10 @@ fn ctx_cancel_attack_memory_rollback() {
 }
 
 #[test]
-fn ctx_cancel_attack_rejected_after_counter_window_opens() {
+fn ctx_cancel_attack_accepted_in_counter_window() {
+    // A [Counter] body may end the attack it counters (BT25-103 "Then, you
+    // may end this attack"); DCGO `AttackProcess.CounterTiming` re-checks
+    // `IsEndAttack` after the [Counter] effects resolve.
     let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
 
     let mut r = DebugRunner::builder()
@@ -703,23 +706,15 @@ fn ctx_cancel_attack_rejected_after_counter_window_opens() {
         .expect("defender resolves field Counter ability");
 
     let recorded = slot.lock().unwrap().take().expect("counter cancel result");
-    assert_eq!(
-        recorded,
-        Err(AttackError::InvalidPhase),
-        "Counter-window cancellation must be rejected"
-    );
+    assert_eq!(recorded, Ok(()), "Counter-window cancellation is accepted");
     assert!(
         r.game.pending_attack.is_none(),
-        "attack should continue to normal cleanup after rejected cancel"
+        "the cancelled attack is cleaned up"
     );
     assert_eq!(
         r.battle_area_size(1),
-        0,
-        "defender should be deleted by normal battle when late cancel is rejected"
-    );
-    assert_eq!(
-        r.battle_area_size(0),
         1,
-        "attacker survives the normal battle"
+        "no battle ran: the defender survives the ended attack"
     );
+    assert_eq!(r.battle_area_size(0), 1, "attacker is untouched");
 }

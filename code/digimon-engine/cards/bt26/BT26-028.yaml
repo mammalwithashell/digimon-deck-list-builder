@@ -1,0 +1,153 @@
+# BT26-028 Medicmon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Form: Sup./Appmon. Type: Medical/Seven Code. Attribute: Life.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-028.md):
+#   Digivolve: Yellow Lv.3 / cost 2; [App Fusion] [Aidmon] & [Supplemon] &
+#     [Spamon]: Cost 0.
+#   <Barrier> <Detach ([Seven Code] trait)> (When this Digimon would leave the
+#     battle area other than by your effects, by trashing 1 of its specified
+#     link cards, it doesn't leave.)
+#   [On Play] [When Digivolving] You may link 1 level 3 Digimon card with the
+#     [Life], [System] or [Seven Code] trait from this Digimon's digivolution
+#     cards to this Digimon without paying the cost.
+#   Special Play Condition: Assembly -2: Lv.3 [Life]/[System]/[Seven Code]
+#     trait Digimon card.
+#   Link DP: DP+3000. Link Condition: <Link> [Appmon] trait: Cost 3.
+#   Link Effect: [When Linking] Until your opponent's turn ends, 1 of their
+#     Digimon can't activate [When Digivolving] effects and gets -3000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_028.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits,
+#   cost 2, no level) — the "Stnd." circle (BT25-052 idiom: trait-only gate);
+#   plus the printed Yellow Lv.3 / 2 circle.
+# App Fusion: AddAppfuseMethodByName([Aidmon, Supplemon, Spamon]) — any two
+#   DIFFERENT listed names (host top + link card, i != j). → app_fusion
+#   name_in [Aidmon, Supplemon, Spamon] cost 0 (engine enforces 2 distinct
+#   names).
+# Barrier: BarrierSelfEffect → grant_keyword Barrier.
+# Detach: DetachSelfEffect(EqualsTraits("Seven Code")) — BT26-019 idiom.
+# Assembly: 1 element (IsDigimon && IsLevel3 && Life/System/Seven Code),
+#   reduceCost 2 → kind: assembly, trash material stacked under, cost 2.
+# Shared OP/WD (optional:false, isSkippable; CanActivate needs a matching
+#   source that CanLinkToTargetPermanent(this)): SelectCardEffect
+#   Root.DigivolutionCards canNoSelect:true → AddLinkCard (free).
+#   → link_cards { from: [self_sources], to: self, count: { up_to: 1 },
+#   cost: free } (the engine's LinkGate rejects a card whose own <Link>
+#   condition refuses this host).
+# Link condition [Appmon] cost 3; Link DP +3000.
+# When Linking (linked effect): mandatory (canNoSelect false) pick of an
+#   opponent Digimon → DisableEffect(IsWhenDigivolving) on
+#   UntilOwnerTurnEndEffects (the opponent's turn end) + ChangeDigimonDP(-3000,
+#   UntilOpponentTurnEnd). → select_opponent_permanent + add_modifier
+#   CannotActivateWhenDigivolvingEffects + add_dp_modifier -3000, both
+#   expiry end_of_opponents_turn (EX12-036 idiom).
+
+card: BT26-028
+name: Medicmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: ["Sup.", Appmon, Life, Medical, Seven Code]
+attribute: Life
+
+alt_paths:
+  # Printed circle: Yellow Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  # "Stnd." circle / cost 2 (any colour, no level — DCGO HasStandardAppTraits).
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
+  # [App Fusion] [Aidmon] & [Supplemon] & [Spamon]: Cost 0.
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Aidmon, Supplemon, Spamon]
+    cost: 0
+  # Assembly -2: Lv.3 [Life]/[System]/[Seven Code] trait Digimon card.
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - any_of:
+                - trait_has: Life
+                - trait_has: System
+                - trait_has: Seven Code
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  # ─── <Detach ([Seven Code] trait)> ──────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
+
+  # ─── [On Play][When Digivolving] may link 1 Lv.3 Life/System/Seven Code source
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link 1 level 3 [Life]/[System]/[Seven Code] trait Digimon card from this Digimon's digivolution cards to this Digimon without paying the cost"
+    process:
+      - link_cards:
+          from: [self_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - any_of:
+                  - trait_has: Life
+                  - trait_has: System
+                  - trait_has: Seven Code
+          to: self
+          count: { up_to: 1 }
+          cost: free
+          prompt: "You may link 1 level 3 [Life]/[System]/[Seven Code] trait Digimon card from this Digimon's digivolution cards to this Digimon"
+
+  # ─── Link condition: [Appmon] host, cost 3 ──────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] DP+3000"
+
+  # ─── [When Linking] opp Digimon: no [When Digivolving] + -3000 DP ──────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: med_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects and gets -3000 DP until their turn ends"
+      - add_modifier:
+          target: med_target
+          modifier: CannotActivateWhenDigivolvingEffects
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: med_target
+          value: -3000
+          expiry: end_of_opponents_turn

@@ -1,0 +1,98 @@
+# Exam scenario: Aegiochusmon (P-213), clause P-213#effect#3 -- "[When
+# Digivolving] If you have 3 or fewer security cards, this Digimon gains
+# <Rush> and +3000 DP until your opponent's turn ends. Then, this Digimon may
+# attack."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); ACCEPT its [On Play]
+#        cost "By adding your top security card to the hand" (Kanan Yuki
+#        BT26-090 -> hand; security 5 -> 4). P1 has no Digimon, so the -5000
+#        rider has no target and no prompt.
+#   T2 (P1, 5): pass -> P0 3.
+#   T3 (P0, 3): Blinding Ray BT4-104 (0; yellow Aegiomon on field): trash top
+#        security (Aegiomon BT24-034; 4 -> 3), gain 2 (3 -> 5). Digivolve
+#        Aegiomon -> P-213 ([Aegiomon] route, 5 -> 2). THE CLAUSE: 3 security
+#        -> the gate is OPEN: <Rush> + 3000 DP; then "may attack" -> attack
+#        the player. Security check flips P1's top card (stack[9] = Monodramon
+#        BT1-009, 3000, vanilla) -> lost to 10000, trashed. Trailing pass.
+#
+# WITNESS: P-213 at 10000 DP (7000 + 3000) and suspended by the effect's
+# attack; P1 security 5 -> 4 with Monodramon in P1's trash. The <Rush> grant
+# is not separately observable on this line (P-213 sits on a T1 Aegiomon that
+# could attack anyway).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - "may attack" target = the player: two rows for one decision (EX7-013
+#     precedent) -- ours a single-accept-id `yes:` SIM-ONLY, DCGO's
+#     SelectAttackEffect `value: -1` DCGO-ONLY (P_213.cs runs SelectAttackEffect
+#     directly, no OptionalSkill; the harness hook takes select_value -1 as
+#     "attack the player").
+#   - No prompt for the gated buff (WD isOptional false; GainRush +
+#     ChangeDigimonDP take no input).
+#   - T1 Aegiomon [On Play] accept: OptionalSkill(yes); its -5000 rider is
+#     skipped (HasMatchConditionOpponentsPermanent false, P1 empty).
+#   - The attack's <Raid> is stacked but filtered out of MultipleSkills by
+#     CanActivate (CanActivateRaid needs an unsuspended opponent Digimon) ->
+#     no prompt; P1 has no Counter/Blocker.
+card: P-213
+clause: P-213#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, P-213, BT4-104, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT3-007, ST1-08, BT1-014,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT4-104, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-213 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { value: -1, dcgo_only: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.security: 3
+      p0.trash: [BT24-034, BT4-104]
+      p0.field:
+        - { card_id: P-213, dp: 10000, suspended: true, sources: [BT25-033] }
+      p1.security: 4
+      p1.trash: [BT1-009]

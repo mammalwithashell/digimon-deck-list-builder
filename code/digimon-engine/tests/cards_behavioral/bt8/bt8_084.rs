@@ -285,7 +285,6 @@ fn bt8_084_your_turn_color_clauses_are_authored() {
     );
 }
 
-
 fn contains_step_recursive(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {
     steps.iter().any(|s| {
         if pred(s) {
@@ -339,10 +338,11 @@ fn bt8_084_when_digivolving_with_eligible_card_installs_prompt() {
 #[test]
 fn bt8_084_accepting_placement_puts_card_at_stack_bottom() {
     let mut runner = kimeramon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_lv5_digimon("MAT-BLUE", "Blue Material", CardColor::Blue));
+    runner.game.card_data.push(make_lv5_digimon(
+        "MAT-BLUE",
+        "Blue Material",
+        CardColor::Blue,
+    ));
     push_to_trash(&mut runner, 0, "MAT-RED");
     let trash_before = runner.trash_size(0);
 
@@ -488,10 +488,17 @@ fn color_runner() -> DebugRunner {
         .from_dsl_yaml(YAML)
         .expect("BT8-084 YAML parses")
         .add_card(make_filler("FILL"))
-        .add_card(colored_digimon("SRC-RG", &[CardColor::Red, CardColor::Green]))
+        .add_card(colored_digimon(
+            "SRC-RG",
+            &[CardColor::Red, CardColor::Green],
+        ))
         .add_card(colored_digimon("SRC-BLUE", &[CardColor::Blue]))
         .add_card(colored_digimon("SRC-WHITE", &[CardColor::White]))
-        .add_card(make_lv5_digimon("TRASH-YELLOW", "Yellow Material", CardColor::Yellow))
+        .add_card(make_lv5_digimon(
+            "TRASH-YELLOW",
+            "Yellow Material",
+            CardColor::Yellow,
+        ))
         .add_card(opp_digimon("OPP-A"))
         .add_card(opp_digimon("OPP-B"))
         .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
@@ -636,7 +643,11 @@ fn bt8_084_dp_minus_counts_colors_after_placement() {
         Some(9000),
         "white + blue + yellow = 3 colors -> -3000"
     );
-    assert_eq!(runner.effective_dp(opp_b), Some(12000), "unpicked target untouched");
+    assert_eq!(
+        runner.effective_dp(opp_b),
+        Some(12000),
+        "unpicked target untouched"
+    );
 }
 
 /// Declining the placement still runs the DP-minus leg ("Then" is not
@@ -696,7 +707,6 @@ fn bt8_084_no_opponent_digimon_no_dp_prompt() {
         "empty trash + empty opponent field -> nothing to choose"
     );
 }
-
 
 /// A single opponent Digimon is still a PICK (DCGO SelectPermanentEffect with
 /// maxCount 1, canNoSelect: false) — never auto-selected.

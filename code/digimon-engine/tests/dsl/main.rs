@@ -146,6 +146,7 @@ mod royal_knights_union_source_flows;
 mod s2_2_union_hand_trash_name_exclusion;
 mod schema_export;
 mod security_boundary;
+mod security_icon_lint;
 mod security_stack_steps;
 mod select_materials;
 mod stack_pair_and_protection;

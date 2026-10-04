@@ -464,6 +464,9 @@ fn evaluate_per(
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
             .unwrap_or(0),
+        CompiledPerSelector::EffectSuspendedCount => bindings
+            .map(|bindings| bindings.result_log().suspended.len() as i32)
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
             .unwrap_or(0),
@@ -522,8 +525,7 @@ fn evaluate_per(
         CompiledPerSelector::SourceRulesColorCount => ctx
             .source_permanent
             .and_then(|handle| {
-                target_permanent(ctx, handle)
-                    .map(|perm| rules_color_count(perm, ctx.game, handle))
+                target_permanent(ctx, handle).map(|perm| rules_color_count(perm, ctx.game, handle))
             })
             .unwrap_or(0),
     }
@@ -600,6 +602,9 @@ fn evaluate_per_read(
             .map(|bindings| {
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
+            .unwrap_or(0),
+        CompiledPerSelector::EffectSuspendedCount => bindings
+            .map(|bindings| bindings.result_log().suspended.len() as i32)
             .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))
@@ -905,6 +910,12 @@ fn binding_play_cost(ctx: &EffectContext<'_>, name: &str, bindings: Option<&Bind
             .unwrap_or(0);
     }
     if let Some((player, index)) = bindings.get_trash_index_with_player(name) {
+        let trash = &ctx.game.player(player).trash;
+        let index = match bindings.resolve_pinned_trash_index(name, trash) {
+            Some(Some(i)) => i,
+            Some(None) => return 0,
+            None => index,
+        };
         return ctx
             .game
             .player(player)
@@ -960,6 +971,12 @@ fn binding_play_cost_read(
             .unwrap_or(0);
     }
     if let Some((player, index)) = bindings.get_trash_index_with_player(name) {
+        let trash = &ctx.game.player(player).trash;
+        let index = match bindings.resolve_pinned_trash_index(name, trash) {
+            Some(Some(i)) => i,
+            Some(None) => return 0,
+            None => index,
+        };
         return ctx
             .game
             .player(player)

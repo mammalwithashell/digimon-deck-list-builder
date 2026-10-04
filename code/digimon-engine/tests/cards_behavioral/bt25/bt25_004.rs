@@ -216,7 +216,9 @@ fn bt25_004_does_not_reduce_non_social_tool_game_link() {
 
     let mem_before = r.memory();
     r.game.decode_action(link_bit(src) as u16, 0);
-    let _ = r.game.resolve_selection(0, encode_attack(0, host.index as u16));
+    let _ = r
+        .game
+        .resolve_selection(0, encode_attack(0, host.index as u16));
     assert!(
         !r.pending_is_optional(),
         "a non-matching-trait link must not offer the reduce prompt"
@@ -281,7 +283,9 @@ fn bt25_004_reduces_social_link_cost_on_accept() {
     let mem_before = r.memory();
     r.game.decode_action(link_bit(src) as u16, 0);
     // Resolve the host-selection prompt (pick the HOST-APP stack explicitly).
-    let _ = r.game.resolve_selection(0, encode_attack(0, host.index as u16));
+    let _ = r
+        .game
+        .resolve_selection(0, encode_attack(0, host.index as u16));
     // The reducer is an optional WhenWouldLink replacement — ACCEPT it
     // explicitly, so the in-flight cost drops by 1.
     assert!(
@@ -329,7 +333,9 @@ fn bt25_004_declining_reducer_pays_full_link_cost() {
 
     let mem_before = r.memory();
     r.game.decode_action(link_bit(src) as u16, 0);
-    let _ = r.game.resolve_selection(0, encode_attack(0, host.index as u16));
+    let _ = r
+        .game
+        .resolve_selection(0, encode_attack(0, host.index as u16));
     assert!(
         r.pending_is_optional(),
         "the [Social] link must offer the optional 'you may reduce' prompt"
@@ -378,7 +384,9 @@ fn bt25_004_reducer_is_once_per_turn() {
     // First link — accept the reduce (1 -> 0).
     let before_a = r.memory();
     r.game.decode_action(link_bit(src_a) as u16, 0);
-    let _ = r.game.resolve_selection(0, encode_attack(0, host.index as u16));
+    let _ = r
+        .game
+        .resolve_selection(0, encode_attack(0, host.index as u16));
     assert!(r.pending_is_optional(), "first link offers the reduce");
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
@@ -407,7 +415,9 @@ fn bt25_004_reducer_is_once_per_turn() {
     let src_b_bit =
         FIELD_EFFECT_START + src_b_idx as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_LINK;
     r.game.decode_action(src_b_bit, 0);
-    let _ = r.game.resolve_selection(0, encode_attack(0, host.index as u16));
+    let _ = r
+        .game
+        .resolve_selection(0, encode_attack(0, host.index as u16));
     assert!(
         r.game.pending_selection.is_none(),
         "the second matching link the same turn must not offer the reduce ([Once Per Turn])"

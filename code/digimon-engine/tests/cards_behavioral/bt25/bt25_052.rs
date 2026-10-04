@@ -183,9 +183,7 @@ fn bt25_052_has_both_standard_lv3_cost3_circles() {
             matches!(p.kind, CompiledAltPathKind::Digivolve)
                 && p.cost == Some(CompiledCost::Literal(3))
                 && p.from.as_ref().is_some_and(|f| {
-                    f.level_eq == Some(3)
-                        && f.color_is == Some(color)
-                        && f.trait_has.is_none()
+                    f.level_eq == Some(3) && f.color_is == Some(color) && f.trait_has.is_none()
                 })
         });
         assert!(
@@ -282,9 +280,7 @@ fn bt25_052_has_main_once_per_turn_link_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::MainOnField) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField) => {
                 Some(t)
             }
             _ => None,
@@ -452,10 +448,7 @@ fn bt25_052_linked_host_gains_3000_dp() {
 /// link cost 2). [When Linking] then suspends an opponent Digimon.
 #[test]
 fn bt25_052_when_linking_suspends_opp_digimon() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let host = r.place_on_field(0, "APPMON-HOST", Some(0));
     let logi = r.place_on_field(0, CARD_ID, Some(0));
     let opp = r.place_on_field(1, "OPP-DIGI", Some(0));
@@ -488,10 +481,7 @@ fn bt25_052_when_linking_suspends_opp_digimon() {
 /// legal suspend target too.
 #[test]
 fn bt25_052_when_linking_can_suspend_opp_tamer() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let host = r.place_on_field(0, "APPMON-HOST", Some(0));
     let logi = r.place_on_field(0, CARD_ID, Some(0));
     let opp_tamer = r.place_on_field(1, "TAMER-A", Some(0));

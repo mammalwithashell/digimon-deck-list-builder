@@ -1,0 +1,123 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#2 --
+# "<Reboot>" (Unsuspend this Digimon during your opponent's unsuspend phase.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE: same T1-T5 prefix as BT26-103-effect1.yaml (Minervamon hard-play,
+# digivolve into Wrath Mode by the cost-5 route on T5, WD trash + Recovery,
+# effect#6 deletes one Phoenixmon), but Wrath Mode attacks P1's SECURITY:
+#   T5 (P0, 2): Wrath Mode attacks security -> suspends; P1's top security
+#            Kokatorimon BT1-014 (4000) is trashed in battle. P0 passes.
+#   T6 (P1): unsuspend phase -> THE CLAUSE: <Reboot> unsuspends Wrath Mode on
+#            the OPPONENT's unsuspend phase. P1 then just passes (no attack, so
+#            the line never opens a Counter/Block window while Wrath Mode is
+#            on the field).
+#
+# WITNESS: Wrath Mode suspended at P0's T5 pass; unsuspended at P1's T6
+# breeding decision (without Reboot it would stay suspended until P0's T7).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): rows as in
+# BT26-103-effect1.yaml (Minervamon pick, block decline, VALUE 5, effect#6
+# pick). The T5 security attack opens no P1 Counter/Block prompt, the checked
+# BT1-014 has no DCGO script, and effect#6's OPT is spent. <Reboot> is a
+# static (RebootSelfStaticEffect) -> asks nothing.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-103, BT24-101, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT26-081, BT25-025, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-10, ST1-10, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT1-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-103 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Wrath Mode attacks security (it suspends).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): unsuspend phase -> <Reboot> (THE CLAUSE); breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # P0's T5 pass, after the attack: Wrath Mode suspended, P1 security 4.
+  - at: 17
+    that:
+      turn: 5
+      p1.security: 4
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: true, sources: [BT24-041] }
+  # P1's T6 breeding decision: <Reboot> has unsuspended it.
+  - at: 18
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-041] }

@@ -117,7 +117,11 @@ fn bt25_028_hard_play_pays_12_without_level_6_opponent() {
     let _ = runner.auto_resolve();
     // 10 - 12 = -2 crosses zero: the turn passes and the gauge is then read
     // from P1's side (+2). Un-flip it before subtracting.
-    assert_eq!(runner.game.turn_player(), 1, "paying 12 from 10 ends the turn");
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "paying 12 from 10 ends the turn"
+    );
     let p0_memory = -runner.memory();
     assert_eq!(mem_before - p0_memory, 12, "no reduction: full 12");
 }
@@ -260,7 +264,9 @@ fn bt25_028_all_turns_offers_opponent_source_pick() {
             .pending_selection_view()
             .expect("gate view")
             .valid_action_ids[0];
-        runner.execute_action(0, view).expect("accept the [All Turns] gate");
+        runner
+            .execute_action(0, view)
+            .expect("accept the [All Turns] gate");
     }
 
     let view = runner
@@ -331,10 +337,7 @@ fn bt25_028_all_turns_offers_opponent_source_pick_on_opponent_digivolve() {
         memory_cost: 1,
     }];
 
-    let mut runner = base()
-        .add_card(opp_lv5)
-        .memory(12)
-        .start();
+    let mut runner = base().add_card(opp_lv5).memory(12).start();
     runner.game.turn_count = 2;
     // The exam's line runs this trigger on the OPPONENT's turn.
     runner.game.turn_player_idx = 1;

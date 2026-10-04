@@ -1510,6 +1510,9 @@ export function GamePage() {
         securityCount={store.player1?.securityCount ?? 0}
         opponentSecurityCount={store.player2?.securityCount ?? 0}
         battleArea={store.player1?.battleArea ?? []}
+        opponentBattleArea={store.player2?.battleArea ?? []}
+        trashIds={store.player1?.trashIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
         onAction={handleAction}
         localPlayer={1}
         onInspectCard={setInspectedCardId}

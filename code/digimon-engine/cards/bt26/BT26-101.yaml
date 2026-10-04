@@ -1,0 +1,144 @@
+# BT26-101 Cross Arts — Option, White, Cost 4. Traits: ADAMAS, TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-101.md):
+#   <Use Req. ([TS] trait)> (Specified cards let you ignore color
+#     requirements.)
+#   [Main] If you have a Tamer with [Dan Yuki] or [Kanan Yuki] in its name, all
+#     of your [TS] trait Digimon gain <Blocker> and +3000 DP until your
+#     opponent's turn ends. Then, activate 1 of the effects below:
+#     ・Delete 1 of your opponent's Digimon with as much DP as 1 of your [TS]
+#       trait Digimon or less.
+#     ・1 of your [TS] trait Digimon unsuspends.
+#   [Security] You may play 1 play cost 4 or lower [TS] trait card from your
+#     hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/White/BT26_101.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Use Req: UseRequirements(HasTSTraits) → `use_requirement` (own [TS] Digimon
+#   or Tamer) + color-ignore flood_gate (BT25-101 idiom).
+# [Main]: if an own Tamer's name contains [Dan Yuki] / [Kanan Yuki] →
+#   GainBlockerPlayerEffect + ChangeDigimonDPPlayerEffect(+3000) over "own
+#   Digimon with HasTSTraits" (player effects — re-evaluated, so a [TS] Digimon
+#   played later in the window is covered), UntilOpponentTurnEnd.
+#   → NEW step `grant_keyword_continuous` (Blocker; G-DSL-CONTINUOUS-MASS-
+#   KEYWORD-GRANT) + `add_modifier { continuous: true }` ChangeDp +3000.
+#   Then the 2-way choice is ALWAYS asked (SetIntSelection); the chosen branch
+#   runs only if an own [TS] Digimon exists:
+#   (1) mandatory pick of an own [TS] Digimon (compare) → mandatory pick of an
+#       opp Digimon with DP <= that DP → Destroy;
+#   (2) mandatory pick of an own [TS] Digimon → UnTap.
+#   → `select_effect_choice` + `select_own_permanent` + `dp_lte: { formula:
+#   { binding_dp } }` delete / unsuspend.
+# [Security] (blue security-check trigger): CanPlay(HasPlayCost && cost <= 4
+#   && HasTSTraits) from hand or trash (zone choice incl. "Don't play") →
+#   PlayByEffect(payCost:false).
+#   → `select_union_zone { zones: [hand, trash], optional }` +
+#   `play_union_bound_free`.
+
+card: BT26-101
+name: "Cross Arts"
+kind: option
+color: [white]
+cost: 4
+traits: [ADAMAS, TS]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT26-101" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  - when: main_from_hand
+    summary: "[Main] If you have a [Dan Yuki]/[Kanan Yuki] Tamer, your [TS] Digimon gain <Blocker> and +3000 DP until your opponent's turn ends. Then, delete 1 opp Digimon with as much DP as 1 of your [TS] Digimon or less, or 1 of your [TS] Digimon unsuspends"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              any_of:
+                - name_contains: "Dan Yuki"
+                - name_contains: "Kanan Yuki"
+          then:
+            - grant_keyword_continuous:
+                targets: { of: you, kind: digimon, trait_has: TS }
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+            - add_modifier:
+                continuous: true
+                target: { of: you, kind: digimon, trait_has: TS }
+                modifier: ChangeDp
+                value: 3000
+                expiry: end_of_opponents_turn
+      - select_effect_choice:
+          labels:
+            - "Delete 1 of your opponent's Digimon with as much DP as 1 of your [TS] trait Digimon or less"
+            - "1 of your [TS] trait Digimon unsuspends"
+          bind_as: arts_choice
+          prompt: "Activate 1 of the effects below"
+      - if:
+          condition: { equals: [arts_choice, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: compare
+                filter: { kind: digimon, trait_has: TS }
+                prompt: "Select 1 of your [TS] trait Digimon to compare DP"
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { binding_dp: compare } }
+                prompt: "Delete 1 of your opponent's Digimon with as much DP as that Digimon or less"
+            - delete_permanent: { target: victim }
+      - if:
+          condition: { equals: [arts_choice, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: woken
+                filter: { kind: digimon, trait_has: TS }
+                prompt: "1 of your [TS] trait Digimon unsuspends"
+            - unsuspend: { target: woken }
+
+  - when: on_security
+    summary: "[Security] You may play 1 play cost 4 or lower [TS] trait card from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: freebie
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: TS
+              - play_cost_lte: 4
+          prompt: "You may play 1 play cost 4 or lower [TS] trait card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: freebie }

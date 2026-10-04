@@ -1,0 +1,156 @@
+# Exam scenario: Murasamemon (ST23-04), clause ST23-04#effect#1 -- <Alliance>
+# "(When this Digimon attacks, by suspending 1 of your other Digimon, this
+#  Digimon gains <Security A. +1> and the suspended Digimon's DP for the
+#  attack.)"
+#
+# Witness: Murasamemon (7000) attacks; ST23-12 (2000) is suspended without
+# attacking (the Alliance cost); TWO security cards are checked (5 -> 3); the
+# first is BT4-014 (8000 DP), which a 7000 DP Murasamemon would lose to -- it
+# wins with the borrowed DP (9000) and survives.
+#
+# PROVISIONAL: every assert below is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (stacked gd-bt26-1st vs tm-quiet-red; Tamer = BT26-089, which has no
+# trash-reaction, so trashing its face-down cards opens nothing extra):
+#   T1 p0 (mem 0): hatch, Ukkomon (BT25-032) over Kekkomon for 0, BT26-089 for
+#      3 -> -3.
+#   T2 p1 (mem 3): Biyomon (ST1-02) for 2 -> 1, Birdramon (ST1-05) over it for
+#      2 -> -1.
+#   T3 p0 (mem 1): move Ukkomon; BT26-089 [SOMP] places ST23-06 face down,
+#      Draw 1, +1 -> 2. Armalizamon (BT25-049, GREEN Lv.4) over Ukkomon for 2
+#      -> 0 (its "may suspend" declined). Murasamemon (ST23-04) over Armalizamon for 3 -> -3
+#      (GREEN Lv.4 -> only the "Lv.4 w/[Glowing Dawn]: Cost 3" route).
+#   ST23-04 [On Play][When Digivolving] -- ours models it as TWO clauses (A the
+#      -5000, B the optional play); DCGO as ONE shared ActivateClass, so our
+#      TriggerOrder between them is a `sim_only` row (ordinal 0 = A).
+#      A: -5000 DP to Birdramon (5000 -> 0, deleted at the rule check).
+#      B: it is p0's turn -> yes (`sim_only`: DCGO's "may" is the canNoSelect
+#      Tamer pick itself), BT26-089 picked, its bottom face-down ST23-06
+#      trashed, ST23-12 played from hand for 3 - 3 = 0 (memory stays -3);
+#      ST23-12's own [On Play] declined.
+#   T4 p1 (mem 3): pass.
+#   T5 p0 (mem 3): SOMP places ST23-03 face down (+1 -> 4; BT26-089 gains
+#      memory unconditionally). Murasamemon attacks security: Kekkomon's
+#      (ST23-01) inherited [When Attacking] declined, then the <Alliance>
+#      window suspends ST23-12.
+#
+# PROMPT SHAPE (card YAML DCGO crosscheck of ST23_04.cs: shared OP/WD,
+# optional:false; mandatory SelectPermanentEffect -5000; then if owner's turn
+# AND a Tamer has a face-down source, a canNoSelect:true Tamer
+# SelectPermanentEffect, then a canNoSelect SelectHandEffect over [Glowing
+# Dawn] cards -> ChangeCostClass -3 -> PlayPermanentCards):
+#   DCGO rows: SPE(opp) -> SPE(Tamer) -> SelectHandEffect.
+#   Ours adds two `sim_only` rows (TriggerOrder between our two clauses; the
+#   optional-clause yes). ST23-12's [On Play] decline: ours Replacement,
+#   DCGO canNoSelect SPE (unasserted).
+#   * <Alliance>: ours is its own combat window (OwnField "Declare an ally");
+#     DCGO's AllianceSelfEffect (OnAllyAttack) may batch with ST23-01's
+#     trigger into a MultipleSkills that ours does not ask -- possible
+#     `dcgo_only` row needed after the oracle run.
+card: ST23-04
+clause: ST23-04#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-032, BT25-049, ST23-04, ST23-12,
+            BT16-082, ST23-06, BT16-082, ST23-06, BT25-043,
+            ST23-06, ST23-09, ST23-03, BT25-043, ST23-03,
+            ST23-03, BT26-089, BT26-089, ST23-15, ST23-15,
+            ST23-15]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-05, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-08, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-06] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-04 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-04], ordinal: 0, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-12] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 24
+    that:
+      turn: 5
+      p0.memory: 4
+      p1.security: 3
+      p1.trash: [BT1-009, BT4-014, ST1-02, ST1-05]
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [ST23-03]
+        - card_id: ST23-04
+          dp: 7000
+          suspended: true
+          sources: [BT25-032, BT25-049, ST23-01]
+        - card_id: ST23-12
+          dp: 2000
+          suspended: true
+          sources: []

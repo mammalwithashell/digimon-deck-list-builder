@@ -1,0 +1,141 @@
+# Exam scenario: Atratusmon / Eclipse Impact (ST23-09), clause
+# ST23-09#effect#6 -- the OPTION face's
+#   "[Main] Suspend 1 of your opponent's Digimon. Then, return 1 of your
+#    opponent's suspended Digimon with the highest DP to the bottom of the
+#    deck."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS -- the bounced Digimon is NOT the one the first half suspended.
+# When the Option resolves, P1 has Agumon BT3-007 (4000) ALREADY suspended
+# from its T4 attack and Biyomon ST1-02 (3000) unsuspended. The first pick
+# suspends Biyomon; the second pick is over P1's SUSPENDED Digimon with the
+# HIGHEST DP -- Agumon alone (4000 > 3000) -- which goes to the deck bottom.
+# Final state: Biyomon on the field; Agumon gone and NOT in the trash.
+# (Biyomon's suspension itself cannot be read: P0's -2 hands the turn over
+# and P1's unsuspend phase runs before the next step.) That separates "suspended" from "the one just suspended" and
+# "highest DP" from "any".
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Liollmon ST23-02 (3): 0 -> -3           -> P1 3
+#   T2 P1 (3): Agumon BT3-007 (2): 3 -> 1; passes                -> P0 3
+#   T3 P0 (3): passes                                            -> P1 3
+#   T4 P1 (3): Biyomon ST1-02 (2): 3 -> 1; Agumon attacks security:
+#              checks Gekkomon ST23-06 (1000 DP, no [Security]), Agumon wins,
+#              the card is trashed; P1 passes                    -> P0 3
+#   T5 P0 (3): USE Eclipse Impact (5): 3 -> -2. Use Req. admits it (Liollmon
+#              is a yellow [BEATBREAK]); the turn ends.
+#
+# PROMPT SHAPE (ST23-09.yaml DCGO crosscheck, Option [Main] OptionSkill):
+#   not optional -> no OptionalSkill; SelectPermanentEffect (Mode.Tap,
+#   2 candidates) then SelectPermanentEffect (Mode.PutLibraryBottom,
+#   IsMaxDP over IsSuspended, 1 candidate). Ours: two select_opponent_permanent
+#   picks (the second with selector highest_dp + is_suspended), measured.
+#   No Arts Digivolve prompt (Liollmon is Lv.3; Atratusmon needs a Lv.5).
+#   Liollmon's inherited <Barrier> is not reached (no battle on P0's side).
+card: ST23-09
+clause: ST23-09#effect#6
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9, stack[9] = ST23-06 is the TOP, checked T4);
+    # draws (10+).
+    stack: [ST23-02, ST23-09, ST23-06, ST23-06, ST23-13,
+            ST23-03, ST23-03, ST23-03, ST23-03, ST23-06,
+            ST23-07, ST23-07, ST23-12]
+    rest: gd-bt26-7th
+  p1:
+    stack: [BT3-007, ST1-02, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Liollmon for 3 (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Agumon (3 -> 1), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): Biyomon (3 -> 1); Agumon attacks P0's security and stays
+  # suspended; pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): use Eclipse Impact (3 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-09, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, first half: suspend Biyomon (the UNSUSPENDED one).
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Second half: the highest-DP SUSPENDED opponent Digimon is Agumon (4000).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # T6 (P1): one step past the clause; P0's -2 handed the turn over (P1 2).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the use: Agumon suspended by its attack, Biyomon not; P0 lost one
+  # security card to the T4 check.
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.security: 4
+      p1.field:
+        - card_id: BT3-007
+          dp: 4000
+          suspended: true
+          sources: []
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+  # After the use (read at P1's T6 breeding step, so P1's unsuspend phase has
+  # already unsuspended Biyomon -- P0's -2 ends T5 with no step in between):
+  # Biyomon is still on the field, Agumon is gone and not in the trash.
+  - at: 15
+    that:
+      turn: 6
+      p1.memory: 2
+      p0.trash: [ST23-06, ST23-09]
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p1.trash: []

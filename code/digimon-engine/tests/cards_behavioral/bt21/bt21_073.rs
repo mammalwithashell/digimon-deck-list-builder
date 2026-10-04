@@ -153,9 +153,9 @@ fn bt21_073_has_all_printed_digivolve_circles() {
     let has_circle = |color: CompiledColor| {
         digivolve_paths.iter().any(|p| {
             p.cost == Some(CompiledCost::Literal(4))
-                && p.from.as_ref().is_some_and(|f| {
-                    f.level_eq == Some(4) && f.color_is == Some(color)
-                })
+                && p.from
+                    .as_ref()
+                    .is_some_and(|f| f.level_eq == Some(4) && f.color_is == Some(color))
         })
     };
     assert!(
@@ -170,9 +170,9 @@ fn bt21_073_has_all_printed_digivolve_circles() {
 
     let has_sup = digivolve_paths.iter().any(|p| {
         p.cost == Some(CompiledCost::Literal(4))
-            && p.from.as_ref().is_some_and(|f| {
-                f.trait_has.as_deref() == Some("Sup.") && f.color_is.is_none()
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.trait_has.as_deref() == Some("Sup.") && f.color_is.is_none())
     });
     assert!(
         has_sup,

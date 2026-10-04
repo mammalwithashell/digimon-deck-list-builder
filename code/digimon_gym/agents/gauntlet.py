@@ -1,9 +1,9 @@
 """MetaGauntlet: meta-weighted opponent deck sampling for RL training.
 
-Loads the deck library (produced by tools/meta_loader.py), filters it to
-QA-clean DSL archetypes whose cards are all registered in the Rust engine,
-computes a Threat Index for each archetype, and samples opponent decks weighted
-by TI or uniformly.
+Loads the deck library (produced by tools/meta_loader.py), keeps the
+training-ready decklists (every card registered in the Rust engine and in its
+card database, none with a not-ready DSL ledger verdict), computes a Threat
+Index for each archetype, and samples opponent decks weighted by TI or uniformly.
 
 **Survivorship Bias Fix (v2):**
   - Statistical weights (Threat Index) are derived ONLY from DigiLab tournament
@@ -39,7 +39,7 @@ import json
 import logging
 import os
 import hashlib
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,7 +48,7 @@ from typing import Any, Dict, List, Optional, Set
 import numpy as np
 import gymnasium
 
-from digimon_engine import load_implemented_card_ids, parse_tts
+from digimon_engine import CardDatabase, load_implemented_card_ids, parse_tts
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +90,9 @@ def _normalize_archetype_quotes(name: str) -> str:
     """Fold typographic apostrophes/quotes to ASCII.
 
     Data sources disagree on apostrophe style — e.g. `data/deck_library.json`
-    has "ST-3 Heaven's Yellow" (straight U+0027) while the DSL ledger has
-    "ST-3 Heaven’s Yellow" (curly U+2019). Without folding, the two never
-    match and ST-3 is silently dropped from the training pool. Also lets a user
-    type a normal apostrophe in `--archetypes`.
+    has "ST-3 Heaven's Yellow" (straight U+0027) while other sources write
+    "ST-3 Heaven’s Yellow" (curly U+2019). Folding lets both spellings, and a
+    normal apostrophe typed in `--archetypes`, resolve to the same archetype.
     """
     return (
         name.replace("’", "'")
@@ -112,49 +111,38 @@ def canonicalize_archetype(name: str) -> str:
     return _ALIAS_MAP.get(name.lower(), name)
 
 
-# DSL ledger verdicts that count as "ready to train". A freshly IMPLEMENTED card
-# and an AUDITED-OK card (an existing YAML spec audited faithful against printed
-# text + DCGO) are both fully playable. Other verdicts (PARTIAL, AUDITED-DRIFT,
-# AUDITED-MISSING-TESTS, BLOCKED) are NOT ready and must still exclude their
-# archetype — `all(...)` below enforces that one non-ready card drops the deck.
-# Gate 2 (`missing_unimplemented_card_ids` against the live Rust registry) still
-# independently verifies every card actually exists in the engine, so widening
-# this verdict set cannot admit a card the engine can't play.
-_TRAINING_READY_DSL_STATUSES = frozenset({"IMPLEMENTED", "AUDITED-OK"})
+# DSL ledger verdicts that keep a card out of training: a decklist that plays any
+# card with one of these verdicts is not admitted to the deck pool. IMPLEMENTED
+# and AUDITED-OK cards are ready, and so is a playable card with no ledger entry:
+# the playability check (`missing_unimplemented_card_ids` against
+# `load_playable_card_ids()`) already proves the engine can build it. The
+# ledger's `archetype` field is a batch label, not a deck-library archetype key,
+# so it plays no part.
+_NOT_READY_DSL_STATUSES = frozenset({
+    "PARTIAL",
+    "BLOCKED",
+    "AUDITED-DRIFT",
+    "AUDITED-MISSING-TESTS",
+})
 
 
-def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> Optional[Set[str]]:
-    """Return archetypes whose DSL ledger entries are all training-ready.
+def _load_not_ready_card_ids(path: Optional[str | Path] = None) -> Optional[Set[str]]:
+    """Return the card IDs whose DSL ledger verdict is not training-ready.
 
-    "Training-ready" = every card's verdict is in `_TRAINING_READY_DSL_STATUSES`
-    (IMPLEMENTED or AUDITED-OK). Missing status files return None so non-standard
-    test/library callers can still load synthetic data. An existing file with no
-    entry for an archetype means that archetype is not considered ready.
+    `path` defaults to the repo ledger. A missing ledger returns None (no ledger
+    gate) so non-standard test/library callers can still load synthetic data.
     """
+    path = _QA_DSL_STATUS_PATH if path is None else path
     try:
         with open(path, "r", encoding="utf-8") as f:
             raw = json.load(f)
     except FileNotFoundError:
         logger.warning("DSL validation ledger not found: %s", path)
         return None
-
-    by_archetype: Dict[str, List[str]] = {}
-    for entry in raw.get("cards", {}).values():
-        archetype = entry.get("archetype")
-        status = entry.get("status")
-        if not archetype or not status:
-            continue
-        # Canonicalize so ledger entries that use an alias (e.g. "Red Hybrid")
-        # match library entries under the canonical name ("Red Hybrid
-        # (AncientGreymon)"). Without this, a ledger / library naming mismatch
-        # silently drops every decklist for the archetype from the pool.
-        canonical = canonicalize_archetype(str(archetype))
-        by_archetype.setdefault(canonical, []).append(str(status))
-
     return {
-        archetype
-        for archetype, statuses in by_archetype.items()
-        if statuses and all(status in _TRAINING_READY_DSL_STATUSES for status in statuses)
+        str(card_id)
+        for card_id, entry in raw.get("cards", {}).items()
+        if str(entry.get("status") or "").strip().upper() in _NOT_READY_DSL_STATUSES
     }
 
 # Deck source priority for within-archetype selection (higher = preferred).
@@ -180,6 +168,18 @@ def stable_deck_id(card_ids: List[str]) -> str:
         separators=(",", ":"),
     )
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def load_playable_card_ids() -> Set[str]:
+    """Card IDs a training game can be built with.
+
+    A card must be registered in the Rust engine AND present in the card
+    database `RustHeadlessGame` loads (`data/cards.json`). A YAML spec alone
+    registers a card: P-241 had one but no cards.json entry, and building a
+    game with it raised "Card P-241 not found in card database".
+    """
+    card_db = CardDatabase()
+    return {cid for cid in load_implemented_card_ids() if card_db.get_card(cid) is not None}
 
 
 def missing_unimplemented_card_ids(
@@ -386,15 +386,15 @@ def load_generalist_deck_pool(
     path: str = DECK_LIBRARY_PATH,
     *,
     implemented_card_ids: Optional[Set[str]] = None,
-    fully_implemented_archetypes: Optional[Set[str]] = None,
     allowed_archetypes: Optional[Set[str]] = None,
+    not_ready_card_ids: Optional[Set[str]] = None,
 ) -> GeneralistDeckPool:
     """Load the same implementation-safe eligible pool used by MetaGauntlet."""
     gauntlet = MetaGauntlet(
         sampling_mode="random",
         implemented_card_ids=implemented_card_ids,
-        fully_implemented_archetypes=fully_implemented_archetypes,
         allowed_archetypes=allowed_archetypes,
+        not_ready_card_ids=not_ready_card_ids,
     )
     gauntlet.load(path)
     return gauntlet.as_generalist_pool()
@@ -421,7 +421,7 @@ class MetaGauntlet:
     sampling_mode:
       - "meta": normalize Threat Index by archetype, then split each archetype's
         probability evenly across its decklists.
-      - "random": sample uniformly across all fully implemented decklists.
+      - "random": sample uniformly across all training-ready decklists.
     """
 
     def __init__(
@@ -435,8 +435,8 @@ class MetaGauntlet:
         sampling_mode: str = "meta",
         implemented_only: bool = True,
         implemented_card_ids: Optional[Set[str]] = None,
-        fully_implemented_archetypes: Optional[Set[str]] = None,
         allowed_archetypes: Optional[Set[str]] = None,
+        not_ready_card_ids: Optional[Set[str]] = None,
     ) -> None:
         if sampling_mode not in {"meta", "random"}:
             raise ValueError("sampling_mode must be 'meta' or 'random'")
@@ -448,8 +448,8 @@ class MetaGauntlet:
         self.sampling_mode = sampling_mode
         self.implemented_only = implemented_only
         self._implemented_card_ids = implemented_card_ids
-        self._fully_implemented_archetypes = fully_implemented_archetypes
         self._allowed_archetypes = allowed_archetypes
+        self._not_ready_card_ids = not_ready_card_ids
 
         self.archetypes: Dict[str, ArchetypeStats] = {}
         self._deck_pool: List[DeckEntry] = []
@@ -474,11 +474,13 @@ class MetaGauntlet:
             implemented = (
                 self._implemented_card_ids
                 if self._implemented_card_ids is not None
-                else load_implemented_card_ids()
+                else load_playable_card_ids()
             )
-        fully_implemented_archetypes = self._fully_implemented_archetypes
-        if fully_implemented_archetypes is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
-            fully_implemented_archetypes = _load_fully_implemented_archetypes()
+        # The default library reads the DSL ledger itself; synthetic libraries
+        # (tests) pass `not_ready_card_ids` explicitly.
+        not_ready_card_ids = self._not_ready_card_ids
+        if not_ready_card_ids is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
+            not_ready_card_ids = _load_not_ready_card_ids()
 
         canonical_allowed: Optional[Set[str]] = None
         if self._allowed_archetypes is not None:
@@ -495,15 +497,6 @@ class MetaGauntlet:
                     "allowed_archetypes entry %r did not match any archetype in %s",
                     name, path,
                 )
-            if fully_implemented_archetypes is not None:
-                dropped_by_dsl = (
-                    canonical_allowed & library_canonical
-                ) - fully_implemented_archetypes
-                for name in sorted(dropped_by_dsl):
-                    logger.info(
-                        "allowed_archetypes entry %r excluded: not in DSL-implemented set",
-                        name,
-                    )
 
         # First pass: gather DigiLab total_appearances for meta_share denominator
         # Aggregate aliased entries under canonical names
@@ -539,14 +532,10 @@ class MetaGauntlet:
                 canonical_groups[arch_name] = []
             canonical_groups[arch_name].append((raw_name, arch_data))
 
-        # Second pass: build archetype stats and deck pools
+        # Second pass: build archetype stats and deck pools. Each decklist is
+        # admitted on its own: every card registered and none not-ready.
+        rejected: Dict[str, Counter] = defaultdict(Counter)
         for arch_name, group in canonical_groups.items():
-            if (
-                fully_implemented_archetypes is not None
-                and arch_name not in fully_implemented_archetypes
-            ):
-                logger.debug("Skipping non-ready DSL archetype %s", arch_name)
-                continue
             if canonical_allowed is not None and arch_name not in canonical_allowed:
                 logger.debug(
                     "Skipping %s: not in allowed_archetypes",
@@ -581,7 +570,21 @@ class MetaGauntlet:
                         arch_name,
                         ", ".join(missing),
                     )
+                    rejected[arch_name]["unregistered"] += 1
                     continue
+                if not_ready_card_ids is not None:
+                    not_ready = sorted(
+                        {cid for cid in card_ids if cid in not_ready_card_ids}
+                    )
+                    if not_ready:
+                        logger.debug(
+                            "Skipping not-ready decklist %s for %s: %s",
+                            dl.get("deck_id", "?"),
+                            arch_name,
+                            ", ".join(not_ready),
+                        )
+                        rejected[arch_name]["not_ready"] += 1
+                        continue
                 decks.append(DeckEntry(
                     deck_id=stable_deck_id(card_ids),
                     archetype_name=arch_name,
@@ -623,6 +626,16 @@ class MetaGauntlet:
                 decks=decks,
             )
             self.archetypes[arch_name] = stats
+
+        if canonical_allowed is not None:
+            for name in sorted((canonical_allowed & set(canonical_groups)) - set(self.archetypes)):
+                logger.info(
+                    "allowed_archetypes entry %r excluded: no training-ready decklist "
+                    "(%d with unregistered cards, %d with not-ready ledger verdicts)",
+                    name,
+                    rejected[name]["unregistered"],
+                    rejected[name]["not_ready"],
+                )
 
         self._compute_threat_indices()
         self._compute_sampling_weights()

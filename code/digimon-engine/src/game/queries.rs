@@ -105,19 +105,28 @@ impl Game {
                 )
             })
             .collect();
+        // `<Succession>` adoption: the adopted card's FACE keywords and its
+        // top-scope `grant_keyword` clauses also reach the carrier.
+        let adopted = self.succession_source_indices(handle);
         for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             if !is_under {
                 continue;
             }
+            let is_adopted = adopted.contains(&source_index);
             if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+                return true;
+            }
+            if is_adopted && face_keywords(&self.card_data[data_index]).contains(&keyword) {
                 return true;
             }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
                 continue;
             };
             for effect in effects.iter() {
-                if !effect.declarative || !effect.inherited {
+                if !effect.declarative
+                    || !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect)
+                {
                     continue;
                 }
                 if effect.granted_keyword != Some(keyword) {
@@ -302,13 +311,17 @@ impl Game {
         // inherited text keywords.
         let mut total = 0i32;
         let stack_size = perm.card_sources.len();
+        let adopted = self.succession_source_indices(target);
         for (source_index, src) in perm.card_sources.iter().enumerate() {
             let card_data = &self.card_data[src.data_index];
-            let keywords = if source_index + 1 == stack_size {
+            let mut keywords = if source_index + 1 == stack_size {
                 face_keywords(card_data)
             } else {
                 inherited_keywords(card_data)
             };
+            if source_index + 1 < stack_size && adopted.contains(&source_index) {
+                keywords.extend(face_keywords(card_data));
+            }
             for kw in &keywords {
                 match kw {
                     Keyword::SecurityAttackPlus(n) => total += *n as i32,
@@ -340,15 +353,18 @@ impl Game {
         };
 
         let stack_size = permanent.card_sources.len();
+        let adopted = self.succession_source_indices(target);
         let mut total = 0;
         for (source_index, source) in permanent.card_sources.iter().enumerate() {
-            let inherited_source = source_index + 1 < stack_size;
+            let is_adopted = adopted.contains(&source_index);
             let card_id = source.card_id(&self.card_data).to_string();
             let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
                 continue;
             };
             for effect in effects.iter() {
-                if !effect.declarative || effect.inherited != inherited_source {
+                if !effect.declarative
+                    || !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect)
+                {
                     continue;
                 }
                 // `.linked()` effects are Link-ESS auras that boost the HOST when
@@ -480,7 +496,7 @@ impl Game {
         let Some(source) = permanent.card_sources.get(source_index) else {
             return 0;
         };
-        let is_under = source_index + 1 < stack_size;
+        let is_adopted = self.succession_source_indices(perm).contains(&source_index);
         let card_id = source.card_id(&self.card_data).to_string();
         let Some(impl_) = self.effect_registry.get(&card_id) else {
             return 0;
@@ -492,7 +508,7 @@ impl Game {
             if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {
                 continue;
             }
-            if is_under != effect.inherited {
+            if !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect) {
                 continue;
             }
             let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);

@@ -1,0 +1,109 @@
+# Exam scenario: Cougarmon (ST23-03), clause ST23-03#inherited#0 --
+# INHERITED "<Barrier> (When this Digimon would be deleted in battle, by
+#  trashing your top security card, it isn't deleted.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01); digivolve in the breeding area into
+#       Gekkomon ST23-06 (cost 0) [0] and on into Cougarmon ST23-03 (alt
+#       "Lv.3 w/[Glowing Dawn]", cost 2) [-2]; two digivolution draws. The Lv.3
+#       is Gekkomon (inherited <Piercing>), NOT Liollmon BT25-032, so the
+#       carrier has exactly one <Barrier> source.
+#   T2 P1 [2]: all-pass.
+#   T3 P0 [3]: move Cougarmon to the battle area; digivolve it into
+#       Monarchlizamon BT25-057 (green/black circles miss yellow, so only the
+#       "Lv.4 w/[Glowing Dawn]" alt, cost 3) [0].
+#       ENGINE FINDING (sim-only row): ST23-03's own printed "[Your Turn] When
+#       this Digimon would digivolve into a [Glowing Dawn] Digimon card, by
+#       trashing the bottom face-down card from under any of your Tamers,
+#       reduce the cost by 2" offers its accept gate ("Use Cost reduction to
+#       reduce digivolution cost?") although P0 has NO Tamer, i.e. the cost
+#       is unpayable. Probed: accepting pays the full 3 (no reduction) -- a
+#       phantom, outcome-neutral decision. DCGO gates the class on a Tamer
+#       carrying a face-down source (ST23-03.yaml crosscheck), so it asks
+#       nothing -> declined here as sim_only.
+#       Monarchlizamon's two [When Digivolving] effects are both
+#       target-starved (no Tamer to pay the De-Digivolve cost, no opponent
+#       Digimon to battle) but our engine still queues both and asks a
+#       TriggerOrder -> SIM-ONLY row (expected: DCGO's CanActivate gates keep
+#       both off its stack; unverified -- no C# in this container).
+#       Monarchlizamon (8000) attacks P1's security; the top card (stack[9])
+#       is Phoenixmon ST1-10, 12000 DP: it would be deleted in battle.
+#   THE CLAUSE: the only <Barrier> in play is inherited from ST23-03 in the
+#       sources. Accept -> P0's top security card (stack[9], ST23-12) is
+#       trashed and Monarchlizamon survives, suspended. Trailing pass.
+#   Witness: P0 security 5 -> 4 with ST23-12 in P0's trash, Monarchlizamon
+#   still on the field (suspended), Phoenixmon in P1's trash.
+#
+# PROMPT SHAPE (ST23-03.yaml DCGO crosscheck): BarrierSelfEffect(
+# isInheritedEffect: true) on WhenPermanentWouldBeDeleted -> OptionalSkill;
+# ours is a Replacement accept (1:1).
+card: ST23-03
+clause: ST23-03#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, ST23-03, BT25-057, ST23-15, ST23-13,
+            BT26-089, BT26-089, BT16-082, BT16-082, ST23-12,
+            BT16-082, BT16-082, BT26-089, BT26-089]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-10,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-057 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: ST23-03's phantom cost-reducer gate (no Tamer) -- see header.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # SIM-ONLY: our TriggerOrder over Monarchlizamon's two target-starved
+  # [When Digivolving] effects -- see header.
+  - actor: 0
+    do: { select: { cards: [BT25-057], ordinal: 0, sim_only: true } }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    # THE CLAUSE: the inherited <Barrier> replacement -> accept.
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 4
+      p1.security: 4
+      p0.trash: [ST23-12]
+      p1.trash: [ST1-10]
+      p0.field:
+        - card_id: BT25-057
+          dp: 8000
+          suspended: true
+          sources: [ST23-01, ST23-03, ST23-06]

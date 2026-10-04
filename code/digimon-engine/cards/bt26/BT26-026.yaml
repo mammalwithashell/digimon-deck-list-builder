@@ -1,0 +1,155 @@
+# BT26-026 Cougarmon — Digimon, Lv.4, Yellow, DP 4000, Cost 4.
+# Traits: Mammal, Glowing Dawn, BEATBREAK. Form: Champion. Attribute: Virus.
+# Digivolve: Yellow Lv.3 / cost 2; [Digivolve] Lv.3 w/[Glowing Dawn]: cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-026.md):
+#   <Barrier> [When Attacking] [Once Per Turn] By trashing the bottom face-down
+#     card from under any of your Tamers or your top security card, you may use
+#     1 Option card with the [Glowing Dawn] trait from your hand with the cost
+#     reduced by 2.
+#   Inherited: <Barrier> (When this Digimon would be deleted in battle, by
+#     trashing your top security card, it isn't deleted.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_026.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + TopCard EqualsTraits "Glowing Dawn", cost 2.
+# <Barrier> (face) + inherited <Barrier>: BarrierSelfEffect → grant_keyword.
+# [When Attacking][OPT] (OnAllyAttack + CanTriggerOnAttack(self), maxCount 1,
+#   NOT optional): CanActivate = security >= 1 OR a Tamer with a face-down
+#   source. SetIntSelection over ONLY the payable costs ("Trash 1 Tamer's
+#   bottom face-down card" iff such a Tamer exists, "Trash top security card"
+#   iff security >= 1) + "Don't pay the cost" (the use is still spent).
+#   Face-down branch: canNoSelect:true Tamer pick → trash its bottom face-down
+#   card (paid only if picked). Security branch: IDestroySecurity(1, top).
+#   If paid: canNoSelect:true hand pick over [Glowing Dawn] Options →
+#   PlayOptionCards(payCost) with a one-shot -2 ChangeCost.
+#   → when_attacking once_per_turn (not optional) + `any_of` condition; three
+#   resource-gated select_effect_choice menus (both / face-down only /
+#   security only) so an unpayable cost is never offered; security branch
+#   (trash_top_security) runs BEFORE the face-down branch because the latter's
+#   declinable Tamer pick (`optional: true`) aborts the rest of the body on
+#   decline; each branch → optional select_hand (Option + [Glowing Dawn]) →
+#   play_or_use_from_hand cost_delta reduce 2.
+
+card: BT26-026
+name: "Cougarmon"
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Mammal, Glowing Dawn, BEATBREAK]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Glowing Dawn"
+    cost: 2
+
+effects:
+  # ─── <Barrier> ─────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  # ─── [When Attacking][OPT] by trashing a Tamer's bottom face-down card or
+  #     your top security card, may use 1 [Glowing Dawn] Option from hand with
+  #     the cost reduced by 2 ─────────────────────────────────────────────────
+  - when: when_attacking
+    once_per_turn: true
+    condition:
+      any_of:
+        - security_count_gte: 1
+        - face_down_sources_under_tamers_gte: 1
+    summary: "[When Attacking][Once Per Turn] By trashing the bottom face-down card from under any of your Tamers or your top security card, you may use 1 Option card with the [Glowing Dawn] trait from your hand with the cost reduced by 2"
+    process:
+      # Pay-cost menu — only the payable costs + "Don't pay the cost".
+      - if:
+          condition:
+            all_of:
+              - security_count_gte: 1
+              - face_down_sources_under_tamers_gte: 1
+          then:
+            - select_effect_choice:
+                bind_as: pay_both
+                labels:
+                  - "Trash the bottom face-down card from under 1 of your Tamers"
+                  - "Trash your top security card"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost to use a [Glowing Dawn] Option card?"
+      - if:
+          condition:
+            all_of:
+              - security_count_gte: 1
+              - not: { face_down_sources_under_tamers_gte: 1 }
+          then:
+            - select_effect_choice:
+                bind_as: pay_sec
+                labels:
+                  - "Trash your top security card"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost to use a [Glowing Dawn] Option card?"
+      - if:
+          condition:
+            all_of:
+              - security_count_lte: 0
+              - face_down_sources_under_tamers_gte: 1
+          then:
+            - select_effect_choice:
+                bind_as: pay_fd
+                labels:
+                  - "Trash the bottom face-down card from under 1 of your Tamers"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost to use a [Glowing Dawn] Option card?"
+      # Security branch.
+      - if:
+          condition:
+            any_of:
+              - equals: [pay_both, 1]
+              - equals: [pay_sec, 0]
+          then:
+            - trash_top_security: { of: you }
+            - select_hand:
+                of: you
+                bind_as: opt_sec
+                optional: true
+                filter:
+                  all_of:
+                    - kind: option
+                    - trait_has: "Glowing Dawn"
+                prompt: "You may use 1 [Glowing Dawn] Option card from your hand with the cost reduced by 2"
+            # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
+            - use_option_bound:
+                binding: opt_sec
+                cost: { reduce: 2 }
+      # Face-down branch (last: its declinable Tamer pick ends the body).
+      - if:
+          condition:
+            any_of:
+              - equals: [pay_both, 0]
+              - equals: [pay_fd, 0]
+          then:
+            - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+            - select_hand:
+                of: you
+                bind_as: opt_fd
+                optional: true
+                filter:
+                  all_of:
+                    - kind: option
+                    - trait_has: "Glowing Dawn"
+                prompt: "You may use 1 [Glowing Dawn] Option card from your hand with the cost reduced by 2"
+            - use_option_bound:
+                binding: opt_fd
+                cost: { reduce: 2 }
+
+  # ─── Inherited <Barrier> ───────────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

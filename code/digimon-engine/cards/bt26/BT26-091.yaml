@@ -1,0 +1,125 @@
+# BT26-091 Yoshino Fujieda — Tamer, Green, Cost 3. Traits: DATA SQUAD.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-091.md):
+#   [Start of Your Main Phase] By placing 1 [DATA SQUAD] trait card from your
+#     hand face down under this Tamer, <Draw 1> and gain 1 memory.
+#   [Your Turn] When any of your opponent's Digimon or Tamers suspend, or effects
+#     trash cards from under this Tamer, by suspending this Tamer, 1 of your
+#     Digimon may digivolve into a [Vegetation], [Fairy] or [DATA SQUAD] trait
+#     Digimon card in the hand with the cost reduced by 1.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_091.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional): IsOwnerTurn; CanActivate requires a
+#   [DATA SQUAD] (EqualsTraits) card in hand. canNoSelect:true hand pick →
+#   AddDigivolutionCardsBottom(face down) → Draw 1 → AddMemory 1 (all only if a
+#   card was picked). → condition + optional select_hand + place under self +
+#   draw + gain_memory, gated on the pick.
+# Reactive (OnTappedAnyone | OnDigivolutionCardDiscarded, optional TRUE):
+#   IsOwnerTurn && (an OPPONENT Digimon/Tamer suspended || a card trashed from
+#   under THIS Tamer — any cause, any card); CanActivate = can pay the suspend
+#   cost. Body: suspend self; then canNoSelect:true pick of 1 own Digimon →
+#   DigivolveIntoHandOrTrashCard(isHand, payCost, reduce 1) over EqualsTraits
+#   Vegetation | ContainsTraits Fairy | EqualsTraits DATA SQUAD.
+#   → ST24-11 per-timing gates + ST24-13 suspend_self activation cost +
+#   BT25-092 has_digivolve_candidate / can_digivolve_onto digivolve.
+#   (DCGO uses ContainsTraits for "Fairy"; trait_contains mirrors it.)
+# Security: PlaySelfTamerSecurityEffect.
+
+card: BT26-091
+name: "Yoshino Fujieda"
+kind: tamer
+color: [green]
+cost: 3
+traits: [DATA SQUAD]
+
+effects:
+  # ─── [Start of Your Main Phase] place 1 [DATA SQUAD] hand card face down
+  #     under this Tamer → <Draw 1> + 1 memory ─────────────────────────────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "DATA SQUAD"
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [DATA SQUAD] card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: { trait_has: "DATA SQUAD" }
+          prompt: "Place 1 [DATA SQUAD] card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── [Your Turn] opp Digimon/Tamer suspends OR effects trash from under this
+  #     Tamer → suspend this Tamer → 1 Digimon may digivolve (cost -1) ─────────
+  - when: [on_suspend, on_digivolution_card_trashed]
+    optional: true
+    active_when: { your_turn: true }
+    timing_conditions:
+      - when: on_suspend
+        condition:
+          all_of:
+            - event_target_owner: opponent
+            - any_of:
+                - event_target_kind: digimon
+                - event_target_kind: tamer
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_permanent_is_source: true
+    summary: "[Your Turn] When an opponent's Digimon/Tamer suspends or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your Digimon may digivolve into a [Vegetation]/[Fairy]/[DATA SQUAD] hand card with the cost reduced by 1"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - trait_has: "Vegetation"
+                          - trait_contains: "Fairy"
+                          - trait_has: "DATA SQUAD"
+          prompt: "Select 1 of your Digimon that may digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto: base
+              - any_of:
+                  - trait_has: "Vegetation"
+                  - trait_contains: "Fairy"
+                  - trait_has: "DATA SQUAD"
+          prompt: "Digivolve into a [Vegetation]/[Fairy]/[DATA SQUAD] Digimon card in your hand with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: { reduce: 1 }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

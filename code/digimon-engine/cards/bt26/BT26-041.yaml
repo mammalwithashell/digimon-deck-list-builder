@@ -1,0 +1,76 @@
+# BT26-041 Hudiemon — Digimon, Lv.4, Green/Yellow, DP 5000, Cost 4.
+# Traits: Insectoid, NSp. Form: Champion. Attribute: Free.
+# Printed digivolve box: Green Lv.3 / cost 3; Yellow Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[Larva]/[Insectoid]/[NSp] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-041.md):
+#   [On Play] [When Digivolving] Add your top security card to the hand and
+#     <Recovery +1>. Then, you may suspend 1 Digimon.
+#   Inherited: [Your Turn] [Once Per Turn] When this Digimon wins a battle,
+#     gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_041.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3, TopCard EqualsTraits Larva | Insectoid | NSp, cost 2.
+# Shared OP/WD (optional false, no CanActivate gate): if security ≥ 1, add the
+#   top security card to the hand; then IRecovery(1) (unconditional); then, if
+#   an unsuspended Digimon exists on EITHER battle area, canNoSelect:true Tap
+#   pick. → add_top_security_to_hand + recover 1 + optional
+#   select_any_permanent + suspend.
+# Inherited (OnEndBattle, CanTriggerWhenWinBattle(winner contains this card),
+#   IsOwnerTurn, maxPerTurn 1): AddMemory(1). → on_any_deletion +
+#   source_deleted_battle_opponent (BT25-048 idiom) + your_turn + OPT.
+
+card: BT26-041
+name: "Hudiemon"
+kind: digimon
+level: 4
+color: [green, yellow]
+cost: 4
+dp: 5000
+traits: [Insectoid, NSp]
+form: Champion
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - trait_has: "Larva"
+            - trait_has: "Insectoid"
+            - trait_has: "NSp"
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] top security → hand, <Recovery +1>; then
+  #     you may suspend 1 Digimon ──────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Add your top security card to the hand and <Recovery +1>. Then, you may suspend 1 Digimon"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+      - select_any_permanent:
+          bind_as: susp
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "You may suspend 1 Digimon"
+      - if:
+          condition: { binding_present: susp }
+          then:
+            - suspend: { target: susp }
+
+  # ─── Inherited [Your Turn][OPT] win a battle → gain 1 memory ────────────
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "Inherited [Your Turn][OPT] When this Digimon wins a battle, gain 1 memory"
+    process:
+      - gain_memory: 1

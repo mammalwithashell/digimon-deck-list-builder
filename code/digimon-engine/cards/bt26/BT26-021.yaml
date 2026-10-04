@@ -1,0 +1,142 @@
+# BT26-021 Gekomon — Digimon, Lv.4, Blue/Purple, DP 4000, Cost 4.
+# Traits: Amphibian, Titan, TS (official Bandai DB — cards.json drops Titan).
+# Attribute: Virus. Form: Champion.
+# Printed digivolve box: Blue Lv.3 / cost 3; Purple Lv.3 / cost 3;
+#   [Digivolve] Lv.3 w/[TS] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-021.md):
+#   [On Play] [When Digivolving] 1 of your [TS] trait Digimon's attack target
+#     can't change for the turn.
+#   [Main] [Once Per Turn] You may play 1 [TS] trait Tamer card from your trash
+#     with the cost reduced by 2.
+#   Inherited: [All Turns] [Once Per Turn] When a Digimon attacks, by trashing
+#     1 card in your hand, trash the bottom 2 digivolution cards of 1 of your
+#     opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Blue/BT26_021.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 && TopCard.HasTSTraits, cost 2.
+# [OP][WD] (shared, optional: false): mandatory (canNoSelect: false) pick of
+#   1 own [TS] Digimon → UntilEachTurnEnd CanNotSwitchAttackTargetEffect.
+#   → select_own_permanent + add_modifier CannotSwitchAttackTarget
+#   (end_of_turn). `CannotSwitchAttackTarget` is the engine modifier consulted
+#   by every retarget path (Block, Raid, effect redirects — combat/mod.rs).
+# [Main] (OnDeclaration, maxCountPerTurn 1, not optional at activation):
+#   use condition = a [TS] Tamer with a play cost in trash; pick canNoSelect:
+#   true over trash; play it paying cost-2 (PlayPermanentCards payCost: true +
+#   ChangeCostClass -2); RemoveUse when nothing picked.
+#   → main_on_field + once_per_turn + count_gte gate; optional select_trash
+#   (declining refunds the [Once Per Turn] via `refund_opt` on
+#   `binding_absent`); play_from_trash { cost_delta: { reduce: 2 } }.
+# Inherited (OnAllyAttack + CanTriggerOnPermanentAttack(any battle-area
+#   Digimon)): fires when ANY Digimon (either player's, including the carrier)
+#   attacks; Once Per Turn; skippable; activate condition = ≥1 hand card.
+#   Body: hand pick canNoSelect: true (the "by trashing" cost — declining
+#   refunds the use); on success, mandatory pick of 1 opponent Digimon (if
+#   any) → TrashDigivolutionCardsFromTopOrBottom(2, bottom).
+#   → when: [on_attack, on_ally_attack, on_opponent_attack] (the carrier's
+#   own attack, an ally's attack, an opponent's attack) under one clause so
+#   the [Once Per Turn] is shared; optional (accept = pay the hand-trash cost);
+#   trash_from_hand_by_index; select_opponent_permanent → trash_bottom_sources
+#   count 2.
+
+card: BT26-021
+name: Gekomon
+kind: digimon
+level: 4
+color: [blue, purple]
+cost: 4
+dp: 4000
+traits: [Amphibian, Titan, TS]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] 1 own [TS] Digimon's attack target can't
+  #     change for the turn ─────────────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your [TS] trait Digimon's attack target can't change for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: locked
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+          prompt: "1 of your [TS] trait Digimon's attack target can't change for the turn"
+      - add_modifier:
+          target: locked
+          modifier: CannotSwitchAttackTarget
+          value: 1
+          expiry: end_of_turn
+
+  # ─── [Main][Once Per Turn] may play 1 [TS] Tamer from trash, cost -2 ───────
+  - when: main_on_field
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: tamer
+          trait_has: TS
+        n: 1
+    summary: "[Main][Once Per Turn] You may play 1 [TS] trait Tamer card from your trash with the cost reduced by 2"
+    process:
+      - select_trash:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: TS
+          prompt: "You may play 1 [TS] trait Tamer card from your trash with the cost reduced by 2"
+      # DCGO `if (!isUsed) activateClass.RemoveUse()`: declining the pick does
+      # not spend the [Once Per Turn] (BT25-060 / BT25-085 idiom). Checked
+      # BEFORE the play (the play consumes the trash-index binding).
+      - if:
+          condition: { binding_absent: tamer_pick }
+          then:
+            - refund_opt: {}
+          else:
+            - play_from_trash:
+                of: you
+                hand_index: tamer_pick
+                cost_delta: { reduce: 2 }
+
+  # ─── Inherited [All Turns][Once Per Turn] When a Digimon attacks, by trashing
+  #     1 hand card, trash the bottom 2 sources of 1 opp Digimon ──────────────
+  - scope: inherited
+    when: [on_attack, on_ally_attack, on_opponent_attack]
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[Inherited][All Turns][Once Per Turn] When a Digimon attacks, by trashing 1 card in your hand, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_opponent_permanent:
+          bind_as: strip
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources:
+          target: strip
+          count: 2

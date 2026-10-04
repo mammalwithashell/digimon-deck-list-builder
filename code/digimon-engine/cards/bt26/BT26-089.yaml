@@ -1,0 +1,101 @@
+# BT26-089 Kyo Sawashiro — Tamer, Yellow, Cost 3. Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-089.md):
+#   [Start of Your Main Phase] By placing 1 [BEATBREAK] trait card from your
+#     hand face down under this Tamer, <Draw 1> and gain 1 memory.
+#   [All Turns] When your security stack is removed from, by suspending this
+#     Tamer, place the top card of your deck face down under this Tamer. After,
+#     if removed from by effects, give 1 of your opponent's Digimon
+#     <Security A. -1> until their turn ends.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_089.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional, skippable): IsOwnerTurn; CanActivate
+#   requires an EqualsTraits("BEATBREAK") hand card. canNoSelect:true hand pick
+#   → AddDigivolutionCardsBottom(face down) → Draw 1 → AddMemory 1 (only if a
+#   card was picked). → BT26-091 idiom: count_gte condition + optional
+#   select_hand + place_selected_card_under_tamer face_down + draw + memory.
+# Security loss (OnLoseSecurity, optional TRUE): CanTriggerWhenLoseSecurity
+#   (owner == this card's owner); CanActivate = can pay the suspend cost.
+#   Body: SuspendPeremanentAndProcessAccordingToResult(self) → on success
+#   AddDigivolutionCardsBottom(deck top, face down) → if IsByEffect(hashtable)
+#   and an opponent Digimon exists: mandatory (canNoSelect:false) pick →
+#   ChangeDigimonSAttack(-1, UntilOpponentTurnEnd).
+#   → on_lose_security + all_turns + optional + source_is_unsuspended;
+#   activation_cost suspend_self; place_as_bottom_source { deck_top } face
+#   down; `if event_is_effect_initiated` (the OnLoseSecurity trigger context
+#   now carries the effect-vs-security-check bit — G-ENGINE-LOSE-SECURITY-BY-
+#   EFFECT, docs/RUST_ENGINE_GAPS.md) → select_opponent_permanent →
+#   add_modifier SecurityAttackChange -1 until end of opponent's turn.
+# Security: PlaySelfTamerSecurityEffect → on_security play_from_security.
+
+card: BT26-089
+name: "Kyo Sawashiro"
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [Start of Your Main Phase] place 1 [BEATBREAK] hand card face down
+  #     under this Tamer → <Draw 1> + 1 memory ─────────────────────────────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "BEATBREAK"
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [BEATBREAK] card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: { trait_has: "BEATBREAK" }
+          prompt: "Place 1 [BEATBREAK] card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── [All Turns] When your security is removed from, by suspending this
+  #     Tamer, place the deck top face down under it; if by effects, 1 opp
+  #     Digimon gets <Security A. -1> until their turn ends ──────────────────
+  - when: on_lose_security
+    optional: true
+    active_when: { all_turns: true }
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When your security stack is removed from, by suspending this Tamer, place the top card of your deck face down under this Tamer. After, if removed from by effects, give 1 of your opponent's Digimon <Security A. -1> until their turn ends"
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+      - if:
+          condition: { event_is_effect_initiated: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: sa_target
+                filter: { kind: digimon }
+                prompt: "Give 1 of your opponent's Digimon <Security A. -1> until their turn ends"
+            - add_modifier:
+                target: sa_target
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

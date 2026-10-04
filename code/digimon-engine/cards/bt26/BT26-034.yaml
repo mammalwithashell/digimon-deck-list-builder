@@ -1,0 +1,112 @@
+# BT26-034 Palmon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation, Iliad, TS. Attribute: Data. Form: Rookie.
+# Printed digivolve box: Green Lv.2 / cost 0; [Digivolve] Lv.2 w/[TS] trait:
+#   Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-034.md):
+#   [Start of Your Main Phase] If you have 4 or less memory, this Digimon may
+#     digivolve into a Digimon card with the [Vegetation] or [TS] trait in the
+#     hand without paying the cost.
+#   Inherited: [When Attacking] [Once Per Turn] You may suspend 1 of your
+#     opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_034.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(level 2 &&
+#   TopCard.HasTSTraits, cost 0) → alt_paths digivolve { level_eq 2, TS }.
+# [Start of Your Main Phase]: StartOfYourMainPhaseClass(optional: false,
+#   isSkippable: true); activate condition = Owner.MemoryForPlayer <= 4 AND a
+#   hand Digimon card matching (Vegetation || TS); body =
+#   DigivolveIntoHandOrTrashCard(this, payCost: false, isHand: true,
+#   isOptional: true, ignoreRequirements: None) — the pick is optional and
+#   the digivolution requirements are NOT ignored (CanPlayCardTargetFrame).
+#   → active_when your_turn + memory_lte 4; condition count_gte hand
+#   candidate with `can_digivolve_from_source`; optional select_hand filtered
+#   by `can_digivolve_from_source` (BT25-005 idiom) → effect_initiated_digivolve
+#   { target: source, cost: free, ignore_requirements: false }.
+# Inherited [When Attacking] (OnAllyAttack + CanTriggerOnAttack = THIS
+#   carrier attacks): Once Per Turn (maxCountPerTurn 1); activate condition =
+#   an unsuspended opponent Digimon exists; Tap pick canNoSelect: true; the
+#   use is refunded (RemoveUse) if nothing was picked.
+#   → scope inherited, when_attacking, once_per_turn, optional (the "may" —
+#   declining does not consume the [Once Per Turn]), condition gates on an
+#   unsuspended opp Digimon; mandatory pick once accepted → suspend.
+
+card: BT26-034
+name: Palmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation, Iliad, TS]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  # ─── [Start of Your Main Phase] ≤4 memory → may free-digivolve from hand ────
+  - when: start_of_your_main_phase
+    active_when:
+      all_of:
+        - your_turn: true
+        - memory_lte: 4
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          can_digivolve_from_source: true
+          any_of:
+            - trait_has: Vegetation
+            - trait_has: TS
+        n: 1
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a [Vegetation] or [TS] trait Digimon card in the hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - trait_has: Vegetation
+                  - trait_has: TS
+          prompt: "This Digimon may digivolve into a [Vegetation] or [TS] trait Digimon card in your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: free
+          ignore_requirements: false
+
+  # ─── Inherited [When Attacking][Once Per Turn] may suspend 1 opp Digimon ────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition:
+      any_field_permanent:
+        of: opponent
+        kind: digimon
+        is_unsuspended: true
+    summary: "[Inherited][When Attacking][Once Per Turn] You may suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: tgt }

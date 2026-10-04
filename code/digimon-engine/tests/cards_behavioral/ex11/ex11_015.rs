@@ -39,8 +39,8 @@
 //!   Lv.3 yellow, plus the Lv.3 [Ice-Snow] cost-2 alt path).
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;

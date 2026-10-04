@@ -25,10 +25,8 @@
 
 use std::collections::HashMap;
 
-const OFFICIAL_JSON_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../data/card_official.json"
-);
+const OFFICIAL_JSON_PATH: &str =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/card_official.json");
 
 /// Parse every `(Rule) Trait: Has [X] ...` / `[Rule] Trait: Has [X] and [Y].`
 /// grant out of a card's joined printed text. Handles all forms observed in
@@ -54,7 +52,9 @@ fn rule_trait_grants(text: &str) -> Vec<String> {
                         // One or more `[Name]`, optionally joined by "and".
                         loop {
                             let t = s.trim_start();
-                            let Some(open) = t.strip_prefix('[') else { break };
+                            let Some(open) = t.strip_prefix('[') else {
+                                break;
+                            };
                             let Some(end) = open.find(']') else { break };
                             grants.push(open[..end].trim().to_string());
                             s = &open[end + 1..];
@@ -77,8 +77,7 @@ fn rule_trait_grants(text: &str) -> Vec<String> {
 fn official_rule_grants() -> HashMap<String, Vec<String>> {
     let raw = std::fs::read_to_string(OFFICIAL_JSON_PATH)
         .expect("read data/card_official.json from repo root");
-    let parsed: serde_json::Value =
-        serde_json::from_str(&raw).expect("card_official.json parses");
+    let parsed: serde_json::Value = serde_json::from_str(&raw).expect("card_official.json parses");
     let cards = parsed["cards"]
         .as_object()
         .expect("card_official.json has a `cards` object");

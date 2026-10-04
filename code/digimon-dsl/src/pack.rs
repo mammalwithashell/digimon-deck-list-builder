@@ -226,6 +226,17 @@ fn collect_declarative_raw_rust_fns(
         CompiledDeclarativeClause::LinkCondition { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledDeclarativeClause::UseCostIncrease { amount, .. } => {
+            collect_formula_raw_rust_fns(amount, names);
+        }
+        CompiledDeclarativeClause::Succession {
+            active_when,
+            filter,
+            ..
+        } => {
+            collect_optional_predicate_raw_rust_fns(active_when.as_ref(), names);
+            collect_predicate_raw_rust_fns(filter, names);
+        }
         CompiledDeclarativeClause::FloodGate {
             active_when,
             target,
@@ -275,6 +286,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectReveal { filter, .. }
         | CompiledStep::SelectSecurity { filter, .. }
         | CompiledStep::SelectCountCappedMulti { filter, .. }
+        | CompiledStep::SelectZoneCards { filter, .. }
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
@@ -323,7 +335,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
                 collect_step_raw_rust_fns(step, names);
             }
         }
-        CompiledStep::DeleteAllPermanents { over } => {
+        CompiledStep::DeleteAllPermanents { over, .. } => {
             collect_predicate_raw_rust_fns(over, names);
         }
         CompiledStep::PerSelected { body, .. }
@@ -418,9 +430,13 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     if let Some(distinct) = &predicate.distinct_named_count_gte {
         collect_predicate_raw_rust_fns(&distinct.filter, names);
     }
-    for aggregate in [&predicate.count_lte, &predicate.count_gte]
-        .into_iter()
-        .flatten()
+    for aggregate in [
+        &predicate.count_lte,
+        &predicate.count_gte,
+        &predicate.level_sum_gte,
+    ]
+    .into_iter()
+    .flatten()
     {
         if let CompiledDpConstraint::Formula(formula) = &aggregate.n {
             collect_formula_raw_rust_fns(formula, names);

@@ -1,0 +1,136 @@
+# BT26-100 Dark Field — Option, Purple/Black, use cost 3. Traits: Titan, TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-100.md):
+#   While you have no face-up security cards, you can ignore this card's color
+#     requirements.
+#   {Security} [All Turns] All of your [Titan] trait Digimon gain <Blocker>.
+#     While you have a Digimon with [Plutomon] or [Titamon] in its name, they
+#     also get +3000 DP.
+#   [Main] Add your bottom security card to the hand and place this card face
+#     up as the bottom security card. Then, you may play 1 level 4 or lower
+#     [Titan] trait card from your hand or trash without paying the cost.
+#   [Security] You may play 1 level 4 or lower [Titan] trait Digimon card from
+#     your hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_100.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Color ignore: IgnoreColorConditionClass while own face-up security count is
+#   0 → flood_gate IgnoreColorRequirement (BT24-094 idiom).
+# {Security} Blocker: BlockerStaticEffect over own [Titan] Digimon while
+#   IsExistInSecurity(card) (face up) → kind: aura, scope: security,
+#   grant_keyword Blocker.
+# {Security} +3000: ChangeDPStaticEffect(+3000) over own [Titan] Digimon,
+#   additionally gated on an own Digimon whose name CONTAINS Plutomon or
+#   Titamon → aura, scope: security, dp_modifier 3000 + active_when.
+# [Main] (OptionSkill): ReplaceBottomSecurityWithFaceUpOptionEffect; then over
+#   HasLevel && Level <= 4 && EqualsTraits Titan && HasPlayCost cards, a
+#   From hand / From trash / Don't play choice (only when both zones hold a
+#   candidate) → PlayByEffect free.
+#   → add_bottom_security_to_hand + place_on_security { self_option, bottom,
+#   face_up }; optional select_union_zone [hand, trash] (one prompt spanning
+#   both zones; declining = "Don't play" — BT26-073 / BT24-094 idiom) +
+#   play_union_bound_free.
+# [Security] (SecuritySkill): same hand/trash choice over IsDigimon && Level
+#   <= 4 && Titan → PlayByEffect free.
+#   → scope: inherited + when: on_security (the Option blue-[Security] idiom,
+#   BT24-094) + optional select_union_zone + play_union_bound_free.
+
+card: BT26-100
+name: "Dark Field"
+kind: option
+color: [purple, black]
+cost: 3
+traits: [Titan, TS]
+
+# The Option-use color bypass: no face-up security cards satisfies the color
+# requirement (BT24-094 idiom — `use_requirement` is what the use-legality
+# check consults; the flood_gate below mirrors DCGO's IgnoreColorConditionClass).
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # ─── Ignore color requirements while no face-up security cards ────────────
+  - kind: flood_gate
+    active_when:
+      face_up_security_count_lte: 0
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT26-100" }
+    summary: "While you have no face-up security cards, you can ignore this card's color requirements"
+
+  # ─── {Security}[All Turns] your [Titan] Digimon gain <Blocker> ───────────
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Titan
+    grant_keyword: { keyword: Blocker }
+    summary: "{Security} [All Turns] All of your [Titan] trait Digimon gain <Blocker>"
+
+  # ─── {Security}[All Turns] … with a [Plutomon]/[Titamon]-named Digimon,
+  #     they also get +3000 DP ─────────────────────────────────────────────
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_contains: "Plutomon"
+              - name_contains: "Titamon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Titan
+    dp_modifier: 3000
+    summary: "{Security} [All Turns] While you have a Digimon with [Plutomon] or [Titamon] in its name, your [Titan] Digimon get +3000 DP"
+
+  # ─── [Main] swap with the bottom security card face up; then may play 1
+  #     Lv.<=4 [Titan] card from hand or trash free ────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: titan_pick
+          optional: true
+          filter:
+            all_of:
+              - level_lte: 4
+              - trait_has: Titan
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: titan_pick }
+
+  # ─── [Security] may play 1 Lv.<=4 [Titan] Digimon from hand or trash free ─
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: Titan
+          prompt: "You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: sec_pick }

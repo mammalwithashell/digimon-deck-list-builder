@@ -1,0 +1,131 @@
+# BT26-014 Darumamon — Digimon, Lv.5, Red/Yellow, DP 7000, Cost 7. Traits:
+#   Mutant, Shambala, TB. Form Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.4 / cost 4; Yellow Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[Shambala] trait: Cost 3.
+# Special play: Assembly -2: Lv.4 or lower [TB] trait card.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-014.md):
+#   [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 7000
+#     DP or less.
+#   [On Deletion] You may return 1 [Shambala] trait card from your trash to the
+#     hand. Then, you may play 1 [TB] trait Digimon card with 6000 DP or less
+#     from your hand without paying the cost.
+#   Inherited: [On Deletion] You may play 1 [TB] trait Digimon card with 6000
+#     DP or less from your hand without paying the cost.
+#   Official Q&A: an activated effect fully resolves even if its card left the
+#     area during processing (On Deletion runs post-trash — rule 25).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_014.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 + EqualsTraits("Shambala"), cost 3.
+# Assembly: 1 element, HasLevel && Level <= 4 && EqualsTraits("TB") (any card
+#   kind), reduceCost 2. → `kind: assembly` (trash materials, stack_under;
+#   BT26-073 idiom), filter level 1..4 + trait TB.
+# Shared OP/WD (optional:false): if a candidate exists, mandatory
+#   (canNoSelect:false) Destroy pick of an opp Digimon with DP <= 7000.
+#   → select_opponent_permanent { dp_lte: 7000 } + delete_permanent.
+# On Deletion (OnDestroyedAnyone, isSkippable; CanActivate: a [Shambala] card
+#   in trash OR a playable hand card): (a) if a [Shambala] trash card exists,
+#   canNoSelect:true AddHand pick; (b) if a hand card IsDigimon && TB && DP
+#   <= 6000 exists, PlayByEffect (payCost:false, declinable).
+#   → when: on_deletion; optional select_trash + add_to_hand_from_trash; then
+#   optional select_hand { kind: digimon, TB, dp_lte 6000 } +
+#   play_from_hand_free. Darumamon itself (Shambala) is in the trash by then
+#   and is a legal (a) pick — matches DCGO (post-trash OnDestroyedAnyone).
+# Inherited On Deletion (isSkippable; CanActivate: a playable [TB] Digimon
+#   with DP <= 6000 in hand): PlayByEffect free.
+#   → scope: inherited, on_deletion, optional select_hand + play_from_hand_free.
+
+card: BT26-014
+name: "Darumamon"
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Mutant, Shambala, TB]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Shambala"
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_gte: 1
+            - level_lte: 4
+            - trait_has: "TB"
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] delete 1 opp Digimon with ≤ 7000 DP ─────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 of your opponent's Digimon with 7000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 7000
+          prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
+      - delete_permanent: { target: victim }
+
+  # ─── [On Deletion] may return 1 [Shambala] from trash to hand; then may play
+  #     1 [TB] Digimon with ≤ 6000 DP from hand free ──────────────────────────
+  - when: on_deletion
+    summary: "[On Deletion] You may return 1 [Shambala] trait card from your trash to the hand. Then, you may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter: { trait_has: "Shambala" }
+          prompt: "You may return 1 [Shambala] trait card from your trash to the hand"
+      - if:
+          condition: { binding_present: recovered }
+          then:
+            - add_to_hand_from_trash: { of: you, card: recovered }
+      - select_hand:
+          of: you
+          bind_as: tb_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "TB"
+              - dp_lte: 6000
+          prompt: "You may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tb_pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tb_pick }
+
+  # ─── Inherited [On Deletion] may play 1 [TB] Digimon ≤ 6000 DP free ──────
+  - scope: inherited
+    when: on_deletion
+    summary: "Inherited [On Deletion] You may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tb_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "TB"
+              - dp_lte: 6000
+          prompt: "You may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tb_pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tb_pick }

@@ -156,7 +156,8 @@ impl Game {
     pub fn hand_option_link_available(&self, player: PlayerId, hand_index: usize) -> bool {
         match self.hand_option_link_condition_targets(player, hand_index) {
             Some((cost, hosts)) => {
-                !hosts.is_empty() && self.can_afford_link_cost(self.effective_link_cost(player, cost))
+                !hosts.is_empty()
+                    && self.can_afford_link_cost(self.effective_link_cost(player, cost))
             }
             None => false,
         }
@@ -334,7 +335,13 @@ impl Game {
                 player: state.owner,
                 index: target_index,
             });
-        self.finish_option_hand_link(state.owner, state.hand_index, state.card, state.cost, picked);
+        self.finish_option_hand_link(
+            state.owner,
+            state.hand_index,
+            state.card,
+            state.cost,
+            picked,
+        );
     }
 
     /// §10-1-3-2 + §10-1-3-3 for a from-hand Plug-In Option link: pin the
@@ -535,11 +542,9 @@ impl Game {
                         && matches!(perm.option_state, OptionState::Standard)
                 })
                 .unwrap_or(false),
-            DigimonLinkOrigin::Hand(owner) => self
-                .player(owner)
-                .hand
-                .iter()
-                .any(|c| c.handle() == card),
+            DigimonLinkOrigin::Hand(owner) => {
+                self.player(owner).hand.iter().any(|c| c.handle() == card)
+            }
         }
     }
 
@@ -913,18 +918,26 @@ impl Game {
         let Some(pos) = perm.linked_cards.iter().position(|c| c.handle() == card) else {
             return false;
         };
+        let host_card = perm.top_card().handle();
         let removed = perm.linked_cards.remove(pos);
         let owner = removed.owner;
         self.player_mut(owner).trash.push(removed);
 
-        // Fire OnLinkedCardTrashed globally — mirrors the host-leave linked-card
-        // disposition at game.rs:3749 and place_permanent_on_security_observed.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnLinkedCardTrashed,
-                TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
+        // Fire OnLinkedCardTrashed globally (every battle area + event-gated
+        // Delays) carrying the host, the trashed card and the cause — an
+        // effect (or an effect's cost) is what trashes a link card off a host
+        // that stays. G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(host.player));
+        self.enqueue_triggered(
+            EffectTiming::OnLinkedCardTrashed,
+            TriggerSource::LinkCardTrashed {
+                player: host.player,
+                host,
+                host_card,
+                card,
+                cause,
+            },
+        );
         self.maybe_drain_effect_queue();
         true
     }

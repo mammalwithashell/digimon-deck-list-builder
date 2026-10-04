@@ -1,0 +1,122 @@
+# Exam scenario: e-Pulse (ST23-15), clause ST23-15#effect#2 --
+# "[Start of Your Main Phase] By placing this card from the battle area face
+#  down under any of your [BEATBREAK] trait Tamers, <Draw 1> and gain 1
+#  memory."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory, P0's view) -- the ST23-15-effect1 line, carried to T5:
+#   T1 P0 (0): hard-play Tomoro & Kyo (0 -> -4); place yes: stack[10] ST23-03.
+#   T2 P1 (4): pass -> P0 3.
+#   T3 P0 (3): draw stack[11]; Tamer SOMP place yes: stack[12] ST23-04. Use
+#      e-Pulse (3 -> 0); [Main] plays Armalizamon BT25-049 free; e-Pulse stays
+#      in the battle area. Pass -> P1 3.
+#   T4 P1 (3): pass -> P0 3.
+#   T5 P0 (3): draw stack[13]. SOMP: e-Pulse first -- it goes face down under
+#      the Tamer, <Draw 1> = stack[14] ST23-06, +1 memory (3 -> 4); then the
+#      Tamer's SOMP places stack[15] ST23-09.
+# WITNESS: ST23-15 among the Tamer's sources (not on the field, not in trash),
+# ST23-06 in hand, memory 4.
+#
+# PROMPT SHAPE (ST23-15.yaml DCGO crosscheck): OnStartMainPhase, CanActivate
+# gated on a BEATBREAK Tamer; SelectPermanentEffect (canNoSelect: true) ->
+# AddDigivolutionCardsBottom(isFacedown) -> Draw 1 -> AddMemory(1).
+# MultipleSkills ordering of the two SOMP triggers is answered by identity;
+# DCGO enumerates its own list (a disagreement surfaces as a divergence).
+card: ST23-15
+clause: ST23-15#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, ST23-15, BT25-049, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            ST23-03, BT25-057, ST23-04, BT25-043, ST23-06,
+            ST23-09]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, BT1-009, ST1-05, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: ST23-15, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main] (ST23-15#effect#1): trash empty -> DCGO's zone menu collapses to
+  # the hand; play Armalizamon free (its [On Play] suspend has no target).
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: SelectHandEffect }
+  # SIM-ONLY: our 9-1-5 Option-disposal order prompt (no DCGO counterpart).
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T5 SOMP: two simultaneous triggers (the Tamer's place, e-Pulse's
+  # relocate) -> MultipleSkills. e-Pulse first.
+  - actor: 0
+    do: { select: { cards: [ST23-15] } }
+    expect: { prompt: MultipleSkills, count: 2, candidates: [ST23-13, ST23-15] }
+  # THE CLAUSE: the [BEATBREAK] Tamer to go under (own.field.0 = ST23-13;
+  # DCGO SelectPermanentEffect canNoSelect:true carries the "may" -- one row
+  # each side, no separate gate).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Then the Tamer's own SOMP "You may place" Yes/No.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # T5 after both [Start of Your Main Phase] effects (before P0's pass):
+  # e-Pulse has left the battle area and sits face down under Tomoro & Kyo
+  # (with ST23-03 / ST23-04 from T1/T3 and ST23-09 from the Tamer's own SOMP
+  # that resolved second); <Draw 1> brought ST23-06; memory 3 -> 4. Nothing
+  # was trashed (the Option MOVED).
+  - at: 17
+    that:
+      turn: 5
+      p0.memory: 4
+      p0.trash: []
+      p0.hand: [BT16-082, BT25-043, BT25-043, BT25-057, ST23-06]
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-03, ST23-04, ST23-09, ST23-15]

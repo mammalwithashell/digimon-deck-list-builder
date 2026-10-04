@@ -1448,6 +1448,7 @@ fn build_exam_job(
                             action_id: None,
                             expect_prompt: Some("OptionalSkill".to_string()),
                             select_has_bool: true,
+                            select_bool: !w.cancel,
                             ..ScriptedInput::default()
                         }]
                     } else {

@@ -1,0 +1,202 @@
+# BT26-016 Chronomon: Holy Mode — Digimon, Lv.6, Red/Yellow, DP 12000,
+#   Cost 12. Traits: Shaman, Iliad, TS. Form Mega. Attribute: Vaccine.
+# Printed digivolve box: Red Lv.5 / cost 4; Yellow Lv.5 / cost 4;
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-016.md):
+#   <Piercing> <Engage> (At the end of your turn, this Digimon may attack.)
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may
+#     delete 1 of your opponent's Digimon with as much DP as this Digimon or
+#     less. Then, by returning 3 cards in trashes to the bottom of the deck,
+#     <Recovery +1>.
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area,
+#     by returning your top security card to the bottom of the deck, it
+#     doesn't leave.
+#   Official Q&A: the "by" condition needs all three cards returned — a
+#     partial return can't pay it.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_016.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 5 + HasTSTraits, cost 3.
+# Piercing (PierceSelfEffect) / Engage (EngageSelfStaticEffect) → grant_keyword.
+# Shared OP/WD/WA (optional:false, isSkippable, maxCountPerTurn 1 with ONE
+#   hash, AdditionalActivateCondition: a delete candidate exists OR both
+#   trashes hold >= 3 cards in total):
+#   (a) canNoSelect:true pick of an opp Digimon with DP <= this Digimon's DP →
+#       Destroy; (b) loop: choose "your trash" / "enemy's trash" / Cancel, then
+#       multi-pick (canEndNotMax) from that trash until 3 are chosen; only when
+#       exactly 3 were chosen → AddLibraryBottomCards (each card to its OWNER's
+#       deck) + IRecovery(1); (c) nothing deleted and nothing returned →
+#       activateClass.RemoveUse() (OPT not spent).
+#   → `when: [on_play, when_digivolving, when_attacking]` + once_per_turn.
+#   (a) optional select (`continue_on_decline` so (b) still runs) with
+#   `dp_lte: { formula: { source_dp } }`. (b) The 45-slot trash action range
+#   addresses ONE player's trash per prompt, so the zone split is exposed the
+#   same way DCGO's area choice does it: pick 0-3 from your trash
+#   (`select_count_capped_multi`, min 0), then exactly the remaining 3-k from
+#   the opponent's trash (`optional_zero` — "0 or exactly 3-k"); only a full 3
+#   returns + recovers (Q&A). Every split DCGO allows is reachable. (c)
+#   `refund_opt` when neither `effect_deleted_any_opponent_digimon` nor
+#   `effect_returned_any_card`.
+# All Turns OPT (WhenRemoveField, optional:true, CanActivate needs >= 1
+#   security card): top security → AddLibraryBottomCards → the Digimon
+#   doesn't leave.
+#   → `kind: replacement` / `when_would_leave_battle_area` (self-scoped: the
+#   lowering defaults the subject to the source permanent when active_when
+#   reads no replacement-subject leaf) + optional + once_per_turn + `security_count_gte: 1`;
+#   NEW step `return_top_security_to_deck { position: bottom }`
+#   (G-DSL-RETURN-TOP-SECURITY-TO-DECK) + cancel_replacement.
+
+card: BT26-016
+name: "Chronomon: Holy Mode"
+kind: digimon
+level: 6
+color: [red, yellow]
+cost: 12
+dp: 12000
+traits: [Shaman, Iliad, TS]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: "TS"
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage>"
+
+  # ─── [OP][WD][WA][OPT] may delete ≤ this DP; then by returning 3 cards in
+  #     trashes to the bottom of the deck, <Recovery +1> ─────────────────────
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    condition:
+      any_of:
+        - any_field_permanent:
+            of: opponent
+            kind: digimon
+            dp_lte: { formula: { source_dp: {} } }
+        - count_gte: { filter: { of: you, zone: [trash] }, n: 3 }
+        - count_gte: { filter: { of: opponent, zone: [trash] }, n: 3 }
+        - all_of:
+            - count_gte: { filter: { of: you, zone: [trash] }, n: 1 }
+            - count_gte: { filter: { of: opponent, zone: [trash] }, n: 2 }
+        - all_of:
+            - count_gte: { filter: { of: you, zone: [trash] }, n: 2 }
+            - count_gte: { filter: { of: opponent, zone: [trash] }, n: 1 }
+    summary: "[On Play][When Digivolving][When Attacking][OPT] You may delete 1 of your opponent's Digimon with as much DP as this Digimon or less. Then, by returning 3 cards in trashes to the bottom of the deck, <Recovery +1>"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "You may delete 1 of your opponent's Digimon with as much DP as this Digimon or less"
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - delete_permanent: { target: victim }
+      # "by returning 3 cards in trashes" — your share first (0-3), then the
+      # rest from the opponent's trash.
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 0
+          max: 3
+          filter: {}
+          bind_as: own_back
+          prompt: "Return cards in your trash to the bottom of the deck (3 in total across both trashes) for <Recovery +1>"
+      - if:
+          condition: { binding_count_eq: { binding: own_back, n: 3 } }
+          then:
+            - return_trash_list_to_deck_bottom: { of: you, cards: own_back }
+            - recover: { of: you, count: 1 }
+      - if:
+          condition: { binding_count_eq: { binding: own_back, n: 2 } }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                min: 1
+                max: 1
+                optional_zero: true
+                filter: {}
+                bind_as: opp_back
+                prompt: "Return 1 card in your opponent's trash to the bottom of the deck (3 in total) for <Recovery +1>"
+            - if:
+                condition: { binding_count_eq: { binding: opp_back, n: 1 } }
+                then:
+                  - return_trash_list_to_deck_bottom: { of: you, cards: own_back }
+                  - return_trash_list_to_deck_bottom: { of: opponent, cards: opp_back }
+                  - recover: { of: you, count: 1 }
+      - if:
+          condition: { binding_count_eq: { binding: own_back, n: 1 } }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                min: 2
+                max: 2
+                optional_zero: true
+                filter: {}
+                bind_as: opp_back
+                prompt: "Return 2 cards in your opponent's trash to the bottom of the deck (3 in total) for <Recovery +1>"
+            - if:
+                condition: { binding_count_eq: { binding: opp_back, n: 2 } }
+                then:
+                  - return_trash_list_to_deck_bottom: { of: you, cards: own_back }
+                  - return_trash_list_to_deck_bottom: { of: opponent, cards: opp_back }
+                  - recover: { of: you, count: 1 }
+      - if:
+          condition: { binding_count_eq: { binding: own_back, n: 0 } }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                min: 3
+                max: 3
+                optional_zero: true
+                filter: {}
+                bind_as: opp_back
+                prompt: "Return 3 cards in your opponent's trash to the bottom of the deck for <Recovery +1>"
+            - if:
+                condition: { binding_count_eq: { binding: opp_back, n: 3 } }
+                then:
+                  - return_trash_list_to_deck_bottom: { of: opponent, cards: opp_back }
+                  - recover: { of: you, count: 1 }
+      # DCGO RemoveUse: nothing deleted and nothing returned → OPT not spent.
+      - if:
+          condition:
+            all_of:
+              - effect_deleted_any_opponent_digimon: false
+              - effect_returned_any_card: false
+          then:
+            - refund_opt: {}
+
+  # ─── [All Turns][OPT] When this Digimon would leave the battle area, by
+  #     returning your top security card to the bottom of the deck, it
+  #     doesn't leave ──────────────────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    # Self-scoped: no subject-reading predicate (BT25-027's
+    # `replacement_subject_is_mine` widens the window to EVERY own permanent).
+    active_when:
+      security_count_gte: 1
+    summary: "[All Turns][OPT] When this Digimon would leave the battle area, by returning your top security card to the bottom of the deck, it doesn't leave"
+    process:
+      - return_top_security_to_deck: { of: you, position: bottom }
+      - cancel_replacement: {}
