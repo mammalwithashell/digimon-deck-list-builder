@@ -1,0 +1,65 @@
+# Exam scenario: Hiroko Sagisaka (BT26-088), clause BT26-088#effect#0 --
+# "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play Hiroko (4: 0 -> -4) -> P1 at 4.
+#   T2 (P1, 4): pass breeding; play Biyomon ST1-02 (2: 4 -> 2); pass -> P0 3.
+#   T3 (P0, 3): pass breeding. THE CLAUSE: P1 has Biyomon -> +1 memory.
+#
+# WITNESS: at 5 (breeding decision) memory 3; at 6 (main phase) memory 4.
+# The negative branch (no opponent Digimon -> no gain) is witnessed by
+# BT26-088-effect1.yaml (memory stays 3 into T3's main phase).
+#
+# PROMPT SHAPE: none -- mandatory, no target (DCGO
+# Gain1MemoryTamerOpponentDigimonEffect, not optional).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-088
+clause: BT26-088#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-088, BT26-067, BT24-102, BT25-034, BT24-031,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT25-022,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 4
+      p0.field:
+        - { card_id: BT26-088, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

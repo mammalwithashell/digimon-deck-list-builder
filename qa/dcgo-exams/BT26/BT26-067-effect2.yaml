@@ -1,0 +1,118 @@
+# Exam scenario: Wizardmon (BT26-067), clause BT26-067#effect#2 --
+# extractor text: "<Draw 1> and trash 1 card in your hand. [End of Your Turn]
+#  If you have a blue or yellow Digimon, by returning this Digimon to the
+#  bottom of the deck, you may play 1 red or blue Digimon card with the
+#  [Iliad] trait from your trash with the cost reduced by 4."
+# (The extractor folds the [End of Your Turn] effect into the <Draw 1>
+#  keyword clause. The draw/trash body is measured by BT26-067-effect1.yaml;
+#  THIS file measures the [End of Your Turn] effect -- and, incidentally, the
+#  draw/trash body again via both Wizardmons' [On Play].)
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play BT25-034 (YELLOW Lv.4, cost 5) -> P1 at 5.
+#   T2 (P1): pass, pass -> P0 at 3.
+#   T3 (P0, 3): draw stack[10] BT25-008. Play Wizardmon #1 (hand.0, cost 4:
+#      3 -> -1). Its [On Play]: draw stack[11] BT24-102, trash Wizardmon #2
+#      from hand (a red [Iliad] Digimon -> the later play target). Memory -1
+#      ends the turn. THE CLAUSE at [End of Your Turn]: BT25-034 is yellow ->
+#      condition met; accept the optional effect; Wizardmon #1 returns to the
+#      deck bottom (activation cost); pick Wizardmon #2 from trash; play it at
+#      4 - 4 = 0 (memory stays -1). Its [On Play]: draw stack[12] BT25-008,
+#      trash BT26-088.
+#   T4 (P1): trailing breeding decision.
+#
+# WITNESS: at 7 (gate) field [BT25-034, Wizardmon], trash [BT26-067]; at 8
+# (after the gate) Wizardmon gone from the field (bottom-decked -- the deck is
+# not observable; it is in neither hand nor trash); at 10 a Wizardmon is back
+# on the field from the trash (trash now only BT26-088), memory still -1 (play
+# cost 4 reduced to 0).
+#
+# PARTIAL: the condition's negative branch (no blue/yellow Digimon -> no
+# offer) is witnessed only indirectly, by BT26-067-effect1.yaml where the
+# gate is never offered with Wizardmon alone on the field.
+#
+# PROMPT SHAPE: EOT gate = ours TriggerOrder with 1 candidate -> DCGO
+# OptionalSkill (YAML DCGO notes: "OnEndTurn, optional TRUE"). Trash pick =
+# ours Trash -> DCGO SelectCardEffect (canNoSelect:true). Replayed
+# Wizardmon's trash pick = SelectHandEffect.
+# POSSIBLE ABORT: the replayed Wizardmon #2 is a new permanent that arrives
+# DURING the end-of-turn window with its own [End of Your Turn]; our engine
+# does not offer it (no gate at 10). If DCGO's EndTurnProcess re-collects
+# OnEndTurn triggers it would ask a second OptionalSkill here -- triage
+# against general_rule.pdf 6-6 before reading it as ours-wrong.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-067
+clause: BT26-067#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-034, BT26-067, BT26-067, BT24-102, BT26-088,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT25-022,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-034, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-067, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-067] } }
+    expect: { prompt: SelectHandEffect }
+  # THE CLAUSE: [End of Your Turn] optional gate -- accept.
+  - actor: 0
+    do: { select: { cards: [BT26-067] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT26-067] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT26-088] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: -1
+      p0.trash: [BT26-067]
+      p0.hand: [BT24-102, BT24-102, BT25-008, BT26-088]
+      p0.field:
+        - { card_id: BT25-034, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT26-067, dp: 4000, suspended: false, sources: [] }
+  - at: 8
+    that:
+      p0.trash: [BT26-067]
+      p0.hand: [BT24-102, BT24-102, BT25-008, BT26-088]
+      p0.field:
+        - { card_id: BT25-034, dp: 5000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -1
+      p0.trash: [BT26-088]
+      p0.hand: [BT24-102, BT24-102, BT25-008, BT25-008]
+      p0.field:
+        - { card_id: BT25-034, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT26-067, dp: 4000, suspended: false, sources: [] }

@@ -1,0 +1,81 @@
+# Exam scenario: Hiroko Sagisaka (BT26-088), clause BT26-088#effect#2 --
+# "[Security] Play this card without paying the cost."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE: Hiroko is P0's stack[9] = TOP security card.
+#   T1 (P0, 0): pass, pass -> P1 at 3.
+#   T2 (P1, 3): pass breeding; play Biyomon ST1-02 (2: 3 -> 1); pass -> P0 3.
+#   T3 (P0, 3): pass, pass -> P1 at 3.
+#   T4 (P1, 3): pass breeding; Biyomon attacks P0's security. THE CLAUSE:
+#      Hiroko flips -> played for free (P0's memory unchanged, still -3 from
+#      P0's side = P1's 3). Biyomon survives (a Tamer does not battle).
+#
+# WITNESS: at 8 (before the attack) P0 security 5, field empty; at 9 P0
+# security 4 and Hiroko on P0's field, unsuspended; memory unchanged (-3).
+#
+# PROMPT SHAPE: none -- mandatory (DCGO PlaySelfTamerSecurityEffect).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-088
+clause: BT26-088#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-067, BT24-031, BT24-102, BT25-034, BT25-022,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT26-088,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): THE CLAUSE -- Biyomon attacks; Hiroko flips from security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field: []
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.field:
+        - { card_id: BT26-088, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }

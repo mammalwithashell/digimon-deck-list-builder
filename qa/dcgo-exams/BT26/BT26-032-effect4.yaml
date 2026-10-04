@@ -1,0 +1,106 @@
+# Exam scenario: Ceresmon (BT26-032, DUAL), clause BT26-032#effect#4 --
+# DUAL Effect "<Use Req. ([TS] trait)> (Specified cards let you ignore color
+#  requirements.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE (shared by BT26-032-effect4 / -effect5):
+#   T1 (P0, 0): pass breeding; play Shota BT26-092 (BLACK [TS] Tamer, 3:
+#      0 -> -3) -> P1 at 3.
+#   T2 (P1, 3): pass breeding; play Biyomon ST1-02 (2: 3 -> 1), then ST1-10
+#      (Lv.6 12000, cost 10: 1 -> -9; legal, the cap is memory + 10) -> P0 9.
+#   T3 (P0, 9): pass breeding; Shota's [Start of Your Main Phase] hand pick
+#      declined. USE Ceresmon's Option face from hand (use cost 5: 9 -> 4).
+#      P0's only permanent is the black Shota: the Option is GREEN, so the
+#      colour requirement fails and <Use Req. ([TS] trait)> alone admits the
+#      use. [Main]: suspend Biyomon + ST1-10 (opp.field.0/1); then "3 of their
+#      Digimon or Tamers can't unsuspend" clamps to the 2 present -- both
+#      picked. No P0 Digimon -> no <Arts Digivolve> target -> the Option is
+#      trashed. Pass (P1 starts T4 at 3 by the pass rule).
+#   T4 (P1): unsuspend phase -- both stay SUSPENDED; pass breeding.
+#
+# WITNESS: the use happened at all -- at 7 (before the use) memory 9 and
+# BT26-032 in hand; at 10 memory 4 (use cost 5), BT26-032 in P0's trash and
+# both P1 Digimon suspended by its [Main]. P0's only permanent is BLACK (no
+# green source), so without the clause our mask would not offer the play
+# and lowering would refuse step 7.
+#
+# PARTIAL: the negative (no [TS] permanent and no green -> not usable) is
+# not exercised as a scenario (a refused play cannot be scripted); it is
+# visible only as an absent mask bit.
+#
+# PROMPT SHAPE: Option use from hand: `play: { card: BT26-032, from: hand }`
+# lowers as an Option USE; DCGO routes a DUAL card played with no Arts
+# target to UseOptionClass (NOTES-BT25-085.md). [Main] picks as in
+# BT26-032-effect5.yaml.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-032
+clause: BT26-032#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-092, BT26-032, BT26-009, BT25-008, BT26-011,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT24-034, BT26-011, BT26-087]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-02, ST1-10, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-092, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT26-032, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 9
+      p0.hand: [BT25-008, BT26-009, BT26-011, BT26-032, BT26-085]
+      p0.field:
+        - { card_id: BT26-092, dp: -1, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 4
+      p0.trash: [BT26-032]
+      p0.hand: [BT25-008, BT26-009, BT26-011, BT26-085]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: true, sources: [] }

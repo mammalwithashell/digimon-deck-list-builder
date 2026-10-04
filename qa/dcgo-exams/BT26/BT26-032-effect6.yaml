@@ -1,0 +1,105 @@
+# Exam scenario: Ceresmon (BT26-032, DUAL), clause BT26-032#effect#6 --
+# DUAL Rule "<Arts Digivolve> (Instead of trashing after use, your cards may
+#  digivolve into this card without paying the cost.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play BT26-015 (Red/Yellow Lv.5 [TS], 7:
+#      0 -> -7). Its [On Play] has no target -> parks nothing.
+#   T2 (P1, 7): play Biyomon ST1-02 (7 -> 5) and ST1-10 (10: 5 -> -5) -> P0 5.
+#   T3 (P0, 5): use Ceresmon's Option face (5 -> 0; the RED/yellow BT26-015
+#      is not green -> admitted by <Use Req. ([TS])>). [Main]: suspend both
+#      P1 Digimon; lock both. THE CLAUSE: instead of trashing, the Option
+#      digivolves onto BT26-015 (own.field.0; Yellow Lv.5 circle met) for
+#      FREE. Ceresmon's own [When Digivolving] then fires (activateETB): both
+#      P1 Digimon are suspended -> -5000 each (Biyomon 3000 -> 0, ST1-10
+#      12000 -> 7000); its "by suspending 1 Digimon" pick (only Ceresmon is
+#      unsuspended) is declined. Rule check deletes Biyomon. Bonus draw
+#      stack[11] BT26-060.
+#
+# WITNESS: at 9 (the Arts pick) memory 0, BT26-015 alone on P0's field,
+# trash empty; at 11 Ceresmon on the field over BT26-015, P0's trash STILL
+# empty (not trashed after use), memory STILL 0 (the cheapest paid route
+# would be 5), hand +1 (digivolve bonus), and Ceresmon's [When Digivolving]
+# visibly resolved (ST1-10 at 7000, Biyomon in P1's trash).
+#
+# PROMPT SHAPE: Arts target = ours optional OwnField pick -> DCGO
+# SelectPermanentEffect canNoSelect:true (BT26-033-effect9 idiom). No
+# cost-route prompt (free). WD suspend pick = AnyField -> DCGO
+# SelectPermanentEffect canNoSelect:true, declined. [Main] picks as in
+# BT26-032-effect5.yaml.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-032
+clause: BT26-032#effect#6
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-015, BT26-032, BT26-009, BT25-008, BT26-011,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT24-034, BT26-011, BT26-087]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-02, ST1-10, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-015, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-032, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: <Arts Digivolve> onto BT26-015 instead of trashing.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: []
+      p0.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: true, sources: [] }
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT25-008, BT26-009, BT26-011, BT26-060, BT26-085]
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: false, sources: [BT26-015] }
+      p1.trash: [ST1-02]
+      p1.field:
+        - { card_id: ST1-10, dp: 7000, suspended: true, sources: [] }

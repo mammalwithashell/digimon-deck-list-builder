@@ -1,0 +1,84 @@
+# Exam scenario: Hiroko Sagisaka (BT26-088), clause BT26-088#effect#1 --
+# "[Your Turn] When any [Boss] or [TS] trait Digimon cards would be played,
+#  by suspending this Tamer, reduce the cost by 1. If you have no Digimon,
+#  instead reduce the cost by 2."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play Hiroko (4: 0 -> -4) -> P1 at 4.
+#   T2 (P1): pass, pass -> P0 at 3.
+#   T3 (P0, 3): pass breeding (Hiroko's [Start of Your Main Phase] does NOT
+#      gain: P1 has no Digimon -- the negative branch of effect#0). Play
+#      Wizardmon BT26-067 ([TS], cost 4). THE CLAUSE: accept the optional
+#      reduction; Hiroko suspends; P0 has NO Digimon -> the "instead" branch,
+#      -2: pays 2 (3 -> 1). Wizardmon's [On Play]: draw stack[10], trash
+#      BT24-031.
+#
+# WITNESS: at 6 (the gate) memory 3, Hiroko unsuspended; at 8 memory 1
+# (3 - (4-2)), Hiroko SUSPENDED, Wizardmon on the field.
+#
+# PARTIAL: the base "-1" branch (you have a Digimon) is not witnessed -- the
+# one Tamer can pay its suspend cost once per line, and the -2 branch is the
+# one that distinguishes the "instead" wording.
+#
+# PROMPT SHAPE: ours EffectChoice "Use Cost reduction to reduce play cost?"
+# -> DCGO OptionalSkill (YAML DCGO notes: BeforePayCost, optional TRUE),
+# answered `yes: true`. Wizardmon's trash pick = SelectHandEffect.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-088
+clause: BT26-088#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-088, BT26-067, BT24-102, BT25-034, BT24-031,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT25-022,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-067, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT24-031] } }
+    expect: { prompt: SelectHandEffect }
+assert:
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+  - at: 6
+    that:
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT26-088, dp: -1, suspended: false, sources: [] }
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: [BT24-031]
+      p0.field:
+        - { card_id: BT26-067, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT26-088, dp: -1, suspended: true, sources: [] }

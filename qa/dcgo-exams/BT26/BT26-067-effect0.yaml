@@ -1,0 +1,76 @@
+# Exam scenario: Wizardmon (BT26-067), clause BT26-067#effect#0 --
+# Special Digivolution Condition "[Digivolve] Lv.3 w/[TS] trait: Cost 2".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
+# are inferred from the card YAML's DCGO crosscheck block + sibling exams.
+#
+# THE LINE:
+#   T1 (P0, 0): hatch BT25-001 (red Lv.2 [TS]); pass -> P1 at 3.
+#   T2 (P1, 3): pass breeding, pass main -> P0 at 3.
+#   T3 (P0, 3): (no breeding prompt: a Lv.2 can't move, the area is full --
+#      both engines skip the phase.) Digivolve the egg -> BT24-031 Elecmon
+#      (YELLOW Lv.3 [TS], cost 0 via Lv.2 w/[TS]) in the breeding area, then
+#      THE CLAUSE: Elecmon -> Wizardmon. Wizardmon's printed circles are
+#      Purple Lv.3 / Red Lv.3 (cost 3); a YELLOW Lv.3 meets neither, so the
+#      digivolve is admitted SOLELY by the [TS] condition, at cost 2.
+#
+# WITNESS: at 5 (before the Wizardmon digivolve) memory 3; at 6 memory 1
+# (3 - 2). Isolated from the printed circle by colour. Hand shows the two
+# digivolve-bonus draws (BT24-102, BT25-008). Wizardmon's [When Digivolving]
+# does NOT activate in the breeding area (general_rule breeding-area rule;
+# our engine parks nothing), so there is no draw/trash prompt here --
+# effect#1 is measured in its own file.
+#
+# PROMPT SHAPE: no cost-route prompt (only one route is legal; DCGO's
+# SelectCountEffect over distinct costs should not appear either).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-067
+clause: BT26-067#effect#0
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9); draws: T3 turn draw + 2 digivolve bonuses.
+    stack: [BT24-031, BT26-067, BT24-102, BT25-034, BT26-088,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT25-022,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hatch; pass -> P1 at 3.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): pass, pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): egg -> Elecmon (0), Elecmon -> Wizardmon (THE CLAUSE, 2).
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT24-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-067 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: []
+      p0.hand: [BT24-102, BT24-102, BT25-008, BT25-008, BT25-034, BT26-088]

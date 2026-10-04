@@ -1,0 +1,135 @@
+# Exam scenario: Ceresmon (BT26-032, DUAL), clause BT26-032#effect#2 --
+# "<Succession ([Ceresmon])> (This Digimon gains all effects other than
+#  <Succession> on its topmost specified digivolution card.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + VARIANT
+# `cm-chronomon-ceres2` (variants-E.json, merged into the scenario book):
+# `bt26-chronomon` -1 BT9-103 +1 BT25-059 Ceresmon (green/yellow Lv.6,
+# PLAY COST 12, [TS]) -- the only "play cost 12 [Ceresmon]" printing, absent
+# from both real Chronomon lists. Opponent `tm-quiet-red`. No DCGO checkout in
+# the authoring container: prompt shapes are inferred from the card YAML's
+# DCGO crosscheck block + sibling exams.
+#
+# THE LINE (shared by BT26-032-effect0 / -effect2):
+#   T1 (P0, 0): pass, pass (a cost-12 card is unplayable from 0: cap is +10).
+#   T2 (P1): pass, pass -> P0 at 3.
+#   T3 (P0, 3): play BT25-059 (12: 3 -> -9). Its [On Play] "you may suspend up
+#      to 2 Digimon" -- declined.
+#   T4 (P1, 9): play Biyomon ST1-02 (3000); pass -> P0 at 3.
+#   T5 (P0, 3): digivolve Ceresmon onto BT25-059. BT25-059 is Lv.6, so the
+#      printed Yellow/Green Lv.5 circles cannot apply: ONLY the
+#      "Play cost 12 [Ceresmon]: Cost 2" route admits it (3 -> 1).
+#      Two [When Digivolving] stack: Ceresmon's own (effect#3) and BT25-059's,
+#      gained via <Succession ([Ceresmon])>. Ours orders them (TriggerOrder,
+#      candidates [BT26-032, BT25-059]) -> Ceresmon's first: no suspended
+#      opponent Digimon; its "by suspending 1 Digimon" pick declined. Then
+#      BT25-059's copied "suspend up to 2" pick declined.
+#      Then (THE CLAUSE, second witness) Ceresmon attacks security
+#      (BT25-059 in play since T3). Attacking suspends it -> BT25-059's
+#      "[All Turns] [Once Per Turn] When any Digimon suspend, to 1 of your
+#      opponent's Digimon, give -3000 DP ... for each suspended Digimon",
+#      gained via Succession, fires: Biyomon (3000) -3000 -> deleted. The
+#      security check (ST1-03, 2000) loses to 13000.
+#   T6 (P1): trailing breeding decision.
+#
+# WITNESS: (a) the copied BT25-059 [When Digivolving] is offered at all
+# (step 12's candidate list carries BT25-059 and step 14 is its "suspend up
+# to 2" pick) -- a source card's effects never fire without Succession;
+# (b) at 15 Biyomon on P1's field; at 16 Ceresmon suspended (attack
+# declared) and the copied [All Turns] parks its target pick; at 17 Biyomon
+# in P1's trash (3000 - 3000 = 0), P1 security 4 after the check.
+#
+# PROMPT SHAPE: as effect0, plus the copied [All Turns] target pick = ours
+# OppField -> DCGO SelectPermanentEffect (opp.field.0). No <Alliance> prompt
+# (no other own Digimon to suspend).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-032
+clause: BT26-032#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-059, BT26-032, BT26-092, BT25-008, BT26-011,
+            BT26-009, BT26-009, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT26-015, BT24-034, BT26-011]
+    rest: cm-chronomon-ceres2
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-059, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-032] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: the Succession-gained [All Turns] -3000 per suspended Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 15
+    that:
+      p0.memory: 1
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 16
+    that:
+      p1.trash: []
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: true, sources: [BT25-059] }
+  - at: 17
+    that:
+      turn: 5
+      p1.field: []
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-03]
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: true, sources: [BT25-059] }
