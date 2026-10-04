@@ -226,6 +226,7 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),

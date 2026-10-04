@@ -387,3 +387,50 @@ fn bt25_044_all_turns_declined_play_does_not_consume_once_per_turn() {
     runner.auto_resolve().expect("settle");
     assert!(runner.game.player(0).battle_area.iter().any(|p| p.top_card().card_id(&runner.game.card_data) == "ANGEL-LOW"));
 }
+
+// ─── Section 6 — [All Turns] that cannot activate is not orderable ─────────
+//
+// DCGO `BT25_044.cs` [All Turns] `CanActivateCondition` needs a cost<=8
+// [Angel]/[Archangel]/[Iliad] card in hand OR trash, and `MultipleSkills.cs`
+// filters `skillInfos_active` by `CanActivate` (:216-220) -- with one
+// activatable effect left it short-circuits (`Count == 1`, no prompt).
+
+const LOSE_SEC_OBSERVER_YAML: &str = r#"
+card: TEST-LOSE-SEC-OBS
+name: Lose Security Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Beast]
+effects:
+  - when: on_lose_security
+    active_when: { all_turns: true }
+    summary: "[All Turns] When your security stack is removed from, gain 2 memory"
+    process:
+      - gain_memory: 2
+"#;
+
+#[test]
+fn bt25_044_all_turns_without_eligible_card_is_not_offered_in_trigger_order() {
+    let mut runner = base()
+        .from_dsl_yaml(TRASHER_YAML)
+        .expect("trasher YAML")
+        .from_dsl_yaml(LOSE_SEC_OBSERVER_YAML)
+        .expect("observer YAML")
+        // No Angel/Archangel/Iliad card in hand or trash.
+        .hand(0, &["TEST-SEC-TRASHER", "IRRELEVANT"])
+        .security(0, &["PAD"; 3])
+        .memory(0)
+        .start();
+    let _j = runner.place_on_field(0, CARD_ID, Some(0));
+    let _o = runner.place_on_field(0, "TEST-LOSE-SEC-OBS", Some(0));
+
+    runner.play(0, 0).expect("play the trasher");
+    assert!(
+        runner.pending_selection().is_none(),
+        "Junomon's [All Turns] cannot activate -> only the observer remains -> no TriggerOrder"
+    );
+    assert_eq!(runner.memory(), 2, "the observer resolved");
+}

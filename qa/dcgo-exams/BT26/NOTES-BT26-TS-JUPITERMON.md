@@ -259,6 +259,11 @@ confirm or refute.
   also has two digivolve routes at the same cost: we ask nothing, DCGO may ask.
 - **Single-candidate mandatory picks** (BT26-073 delete, BT26-081 DP pick, BT26-083
   `#effect#5` 2-of-2 delete): we always park these; DCGO may auto-resolve with no row.
+- **Trigger ordering (2026-10-04 fixes):** derived triggers now resolve in their own newer
+  batch before still-pending ones (G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST; BT26-103-effect4 asks
+  DCGO's two prompts), the TriggerOrder pick resolves the entry actually offered
+  (G-ENGINE-TRIGGER-ORDER-PICK-MAPPING; ST19-14-effect1/2), and Junomon's un-activatable
+  [All Turns] is no longer staged (BT26-029-inherited0). Older notes:
 - **Trigger ordering:** BT26-029-effect1 resolves Aegiomon's [On Play] then `<Ascension>`
   with no ordering prompt (DCGO may ask `MultipleSkills`: a decision missing on our side).
   BT26-029-inherited0 answers a Junomon-vs-inherited `MultipleSkills` by identity (DCGO may

@@ -18,8 +18,8 @@
 #            (3 -> -2). THE CLAUSE: Wrath Mode now carries BT24-101's
 #            effects, so TWO [When Digivolving] triggers stack:
 #              Wrath Mode's own WD (effect#5) and the gained BT24-101 WD.
-#   Resolution (OUR TriggerOrder prompts -- sim_only steps 13/15/16/17; DCGO's
-#   own two rows are the dcgo_only steps 12/14, see PROMPT SHAPE):
+#   Resolution (PRE-FIX trace -- since the 2026-10-04 derived-first fix ours
+#   asks two prompts, sim_only steps 13/15; DCGO's are dcgo_only 12/14):
 #     12 [BT26-103 WD, BT24-101 gWD]           -> BT26-103: trash BT25-033,
 #                                                Recovery +2 (4 -> 3 -> 5);
 #                                                triggers effect#6 + gained AT
@@ -77,6 +77,11 @@
 #          copied AT/e6 OPT-spent (copies get a stable GenerateHashString, so
 #          the OPT survives CardEffects() re-allocation).
 #     So DCGO asks 2 MultipleSkills rows to our 4 TriggerOrder rows.
+#   * FIXED 2026-10-04 (G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST): our drainer now
+#     stages derived triggers in their own newer batch, so ours also asks TWO
+#     ordering prompts ([own WD, gWD] then [gAT, e6]) and runs gAT before the
+#     still-pending gWD -- DCGO's shape. The rows stay split only because of
+#     the IDENTITY difference above. Historical note (pre-fix):
 #   * PREDICTED DIVERGENCE (prompt shape; DCGO is right): our step-13 prompt
 #     offers [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -- it MERGES the
 #     pending gWD with the two triggers derived from own WD. general_rule.pdf
@@ -155,15 +160,11 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-103], ordinal: 1, dcgo_only: true } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [BT26-103, BT26-103] }
-  # Ours 13: [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -> e6.
+  # Ours, the same nested batch (derived triggers only, §15-4-5-2/3):
+  # [BT24-101 gAT, BT26-103 e6] -> e6. The lone gAT then runs, and the
+  # still-pending gWD after it -- no further prompt on either side.
   - actor: 0
     do: { select: { cards: [BT26-103], sim_only: true } }
-  # Ours 14: [BT24-101 gWD, BT24-101 gAT] -> gWD (DCGO: no prompt).
-  - actor: 0
-    do: { select: { cards: [BT24-101], ordinal: 0, sim_only: true } }
-  # Ours 15: [BT24-101 gAT, BT24-101 gAT] -> gAT (DCGO: no prompt).
-  - actor: 0
-    do: { select: { cards: [BT24-101], ordinal: 0, sim_only: true } }
   # T6 (P1): trailing breeding decision.
   - actor: 1
     do: { pass: {} }
@@ -180,14 +181,8 @@ assert:
       p1.trash: [BT1-014, ST1-10]
       p0.field:
         - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-101] }
-  # After own WD + gained WD (our 4th TriggerOrder prompt): 4 -1 +2 -1 = 4.
-  - at: 17
-    that:
-      p0.security: 4
-      p1.security: 4
-      p0.trash: [BT24-031, BT24-034, BT25-033]
   # Final: gained [All Turns] trashed P1's top security.
-  - at: 18
+  - at: 16
     that:
       turn: 6
       p0.security: 4

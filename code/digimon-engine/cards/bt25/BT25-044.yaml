@@ -137,6 +137,22 @@ effects:
     once_per_turn: true
     active_when: { all_turns: true }
     optional: true
+    # DCGO BT25_044.cs [All Turns] CanActivateCondition: a playable cost<=8
+    # [Angel]/[Archangel]/[Iliad] card in hand OR trash -- without one the
+    # effect cannot activate (and MultipleSkills.cs:216-220 does not offer it
+    # for ordering). G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - play_cost_lte: 8
+            - any_of:
+                - trait_has: Angel
+                - trait_has: Archangel
+                - trait_has: Iliad
+        n: 1
     summary: "[All Turns][OPT] When your security stack is removed from, you may play 1 cost<=8 [Angel]/[Archangel]/[Iliad] card from hand or trash without paying the cost"
     process:
       - select_union_zone:

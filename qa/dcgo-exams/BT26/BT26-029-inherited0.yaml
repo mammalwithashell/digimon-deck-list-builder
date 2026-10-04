@@ -59,6 +59,11 @@
 #     trigger that cannot activate is a phantom choice; minor engine note.)
 #   - De-Digivolve target: the inherited clause's SelectPermanentEffect
 #     (Mode.Degenerate, mandatory) over Birdramon, 1:1.
+# FIXED 2026-10-04 (G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE): Junomon's
+# [All Turns] now carries DCGO's CanActivateCondition (a cost<=8
+# Angel/Archangel/Iliad card in hand or trash) as its clause condition, so with
+# none it is not staged and the lone clause resolves with no ordering prompt --
+# the former `sim_only` TriggerOrder row is gone (asserts shifted -1).
 # FIXED 2026-10-04 (G-CARD-BT25-044-PLACE-OTHER-DIGIMON): BT25-044.yaml now
 # gates Junomon's [On Play]/[When Digivolving] on ANY other Digimon (either
 # side, BT25_044.cs:48-57) and places into the card owner's security, so the
@@ -119,10 +124,6 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { choice: "Trash the used Option", sim_only: true } }
-  # Ours only: [BT25-044, BT26-029] -- DCGO filters the un-activatable
-  # Junomon trigger out and asks nothing.
-  - actor: 0
-    do: { select: { cards: [BT26-029], sim_only: true } }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
@@ -130,7 +131,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 15
+  - at: 14
     that:
       turn: 3
       p0.memory: 2

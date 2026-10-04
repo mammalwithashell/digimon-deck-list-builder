@@ -4750,6 +4750,50 @@ with the root cause inferred and not traced.
   `bt24_102_gate_offered_without_olympos_target_and_suspends` (all failed before). The exam scenarios'
   `dcgo_only` gate rows for these cards became shared rows.
 
+### TriggerOrder merged derived triggers with still-pending ones  [G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST] — **RESOLVED 2026-10-04**
+- §15-4-5-2/3 (digest.md "Derived triggering"): an effect triggered while a pending effect resolves activates
+  BEFORE the still-pending effects. DCGO `MultipleSkills.cs` resolves newly triggered effects in a nested
+  `TriggeredSkillProcess`. Our drainer staged one flat queue, so a derived trigger was bundled with (and could
+  be ordered after) the pending ones — BT26-103-effect4 asked 4 TriggerOrder rows to DCGO's 2.
+- Fix (`effect_queue.rs::drain_effect_queue_inner`): `QueuedEffect::trigger_batch` + `Game::trigger_batch_seq`.
+  At the top of each drain iteration every unstamped entry gets a fresh, strictly increasing batch id; only the
+  newest batch is staged (chooser = turn player first within it, 15-4-3-5; non-firing filter and bundle scoped to
+  it). Batches nest naturally and an older batch resumes when every newer one is empty. The 9-1-5 Option-trash
+  ordering pick scopes to the newest batch the same way.
+- Test: `effects -- derived_trigger_resolves_before_still_pending_sibling` (failed before). Scenario
+  `BT26-103-effect4.yaml`: ours now asks DCGO's two prompts (rows stay `sim_only`/`dcgo_only` only for the
+  `<Succession>` identity difference). Blast radius: all 69 `cards_behavioral` modules (10318 tests), lib,
+  combat, replacements, selection, phase_flow, effects, dsl, judge_quiz, archetypes, rules_faq,
+  keyword_phase_d/e/f green with no test changes; exam corpus 453/453 sim-only.
+
+### TriggerOrder pick resolved the n-th CONTROLLED entry, not the n-th OFFERED one  [G-ENGINE-TRIGGER-ORDER-PICK-MAPPING] — **RESOLVED 2026-10-04**
+- Found while fixing the entry above. The TriggerOrder callback / `run_trigger_order_selection_step` mapped
+  `action_id - HAND_EFFECT_START` to "the n-th queue entry the chooser controls", but the offered bundle skips
+  non-firing entries (failed condition / spent OPT / dead source) — so with one of those queued ahead the
+  player's pick resolved a DIFFERENT effect (ST19-14-effect1/2: answering ST19-14 resolved Shoemon's reveal
+  first — the scenario even recorded it as an unexplained "ORDERING NOTE"). Decline-all likewise dropped every
+  optional entry the chooser controlled, offered or not.
+- Fix: `TriggerOrderSelectionState::bundle` (and the closure) carry the offered queue indices; pick =
+  `bundle[pos]`, decline-all drops only the offered optional entries (`drop_declined_trigger_bundle`). Test:
+  `effects -- trigger_order_pick_resolves_the_offered_entry_past_a_non_firing_one` (failed before).
+  `ST19-14-effect1/2.yaml` re-ordered (Arisa's suspend choice now right after the ordering row).
+
+### TriggerOrder offered BT25-044 Junomon's `[All Turns]` with nothing it could play  [G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE] — **RESOLVED 2026-10-04**
+- DCGO `BT25_044.cs` `CanActivateCondition` needs a cost<=8 [Angel]/[Archangel]/[Iliad] card in hand or trash;
+  `MultipleSkills.cs:216-220` filters by `CanActivate`, so a lone remaining effect needs no ordering prompt
+  (BT26-029-inherited0). The engine side was already right: the bundle filter excludes entries whose CLAUSE
+  condition fails or whose OPT is spent (a bare "no target" activation still activates and spends its OPT,
+  §15-14-1 — deliberately NOT filtered). The YAML just lacked DCGO's activation condition. Fix: the clause now
+  carries it as `condition: count_gte {hand, trash, cost<=8, Angel/Archangel/Iliad}`. Test:
+  `cards_behavioral -- bt25_044_all_turns_without_eligible_card_is_not_offered_in_trigger_order` (failed before).
+  `BT26-029-inherited0.yaml`'s `sim_only` TriggerOrder row removed.
+
+### Two pending same-player triggers resolved without asking (BT26-083-effect4)  [G-ENGINE-TRIGGER-ORDER-UNASKED-PAIR] — **RESOLVED (before 2026-10-04, verified)**
+- Reported: Junomon's `[On Play]` vs BT26-083's `[On Deletion]` after Decode resolved with no MultipleSkills.
+  Already fixed by G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES (the carrier now leaves inside the Decode
+  processing, so both triggers are staged together): `BT26-083-effect4.yaml` carries a SHARED `MultipleSkills`
+  row and passes sim-only, before and after the derived-first change. §15-4-3-5 / rule 17 satisfied; no code change.
+
 ### Exam tooling
 - **`PlayCostBudget` always maps to `SelectPermanentEffect`** [G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE] —
   **RESOLVED 2026-10-04.** Was: wrong for a hand/trash budget pick (BT26-081 Mervamon), worked around

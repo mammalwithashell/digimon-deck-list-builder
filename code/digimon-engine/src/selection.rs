@@ -483,6 +483,14 @@ pub struct QueuedEffect {
     /// `card_id` is still the carrier's top card for labelling. Mirrors the
     /// replacement side's `CandidateKind::GrantedKeywordEffect`.
     pub keyword_effect: Option<crate::enums::Keyword>,
+    /// §15-4-5-2/3 trigger batch (0 = not stamped yet). The drainer stamps
+    /// every unstamped entry with a fresh, strictly increasing batch id at the
+    /// top of each drain iteration, so entries triggered while an earlier
+    /// entry was resolving carry a HIGHER id than the entries that were
+    /// already pending. Only the highest-id batch is staged (ordered /
+    /// resolved) — derived triggers resolve before the still-pending ones
+    /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
+    pub trigger_batch: u32,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
