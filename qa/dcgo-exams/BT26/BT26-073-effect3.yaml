@@ -1,0 +1,99 @@
+# Exam scenario: Aegiochusmon: Dark (BT26-073), clause BT26-073#effect#3 --
+# Special Play Condition "Assembly -2: Lv.4 or lower Digimon card w/[Chronomon]
+# in text or w/[TS] trait".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Asuna Shiroki BT24-088 (3: 0 -> -3). Her optional
+#       [On Play] trashes Elecmon BT24-031 (Lv.3 [TS] -- the Assembly
+#       material) from the hand and draws 2 (stack[10..11]).
+#   T2 (P1, 3): hard-play Phoenixmon ST1-10 (10: 3 -> -7) -> P0 at 7. This
+#       overspend keeps P0 above 4 memory on T3 so Asuna's [Start of Your
+#       Turn] (memory <= 4 gate) does NOT trigger -- one fewer prompt.
+#   T3 (P0, 7): THE CLAUSE -- play Dark from hand via Assembly: material pick
+#       = Elecmon from the trash; cost 8 - 2 = 6 (7 -> 1). Dark's [On Play]
+#       (effect#1) then asks its cost menu (trash now empty -> two-branch
+#       EffectChoice); declined ("Don't pay") -- Phoenixmon is Lv.6, no legal
+#       victim anyway. Pass at 1 -> P1 3.
+#
+# WITNESS: memory 7 -> 1 (6 = 8 - 2 paid, not the printed 8); Elecmon moved
+# from P0's trash to Dark's sources.
+#
+# PROMPT SHAPE / DCGO quirks to triage:
+#   - Asuna [On Play]: ours = one declinable hand pick; DCGO = OptionalSkill +
+#     SelectHandEffect (authored as optional_gate_fold, `expect: OptionalSkill`;
+#     the BT24-088-effect2.yaml shape).
+#   - Assembly: ours = CountCappedMultiSelect {min 0, max 1} over the trash
+#     (one element). DCGO = SelectCardEffect (or its Assembly UI); DCGO may
+#     additionally ask "use Assembly?" before the pick -- not modelled here.
+#   - Cost menu: sim-only choice + dcgo_only generic_int `value: 3` ("Don't
+#     use") is a GUESS (DCGO C# unreadable in the authoring container). DCGO
+#     may also skip the menu entirely when no opponent Lv.<=5 Digimon exists.
+card: BT26-073
+clause: BT26-073#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-088, BT24-031, BT26-073, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-031] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-073, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-031] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { choice: "Don't pay", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before the material pick: P0 at 7 (P1 overspent on Phoenixmon).
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 7
+      p0.trash: [BT24-031]
+  # Before the closing pass: the Assembly play cost 8 - 2 = 6 (7 -> 1), and
+  # Elecmon left the trash to sit under Dark as its digivolution source.
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: []
+      p0.field:
+        - { card_id: BT24-088, dp: -1, suspended: false, sources: [] }
+        - { card_id: BT26-073, dp: 8000, suspended: false, sources: [BT24-031] }
+      p0.hand: [BT24-034, BT24-034, BT24-101, BT25-030, BT26-090]
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }

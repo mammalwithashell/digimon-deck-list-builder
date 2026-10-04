@@ -1,0 +1,89 @@
+# Exam scenario: Aegiochusmon: Dark (BT26-073), clause BT26-073#effect#0 --
+# the special digivolution condition "[Digivolve] [Aegiomon]: Cost 3".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION. Dark is PURPLE/RED; its printed circles are Purple Lv.4 / 4 and
+# Red Lv.4 / 4. The base is Aegiomon BT25-033 (YELLOW Lv.4), so neither circle
+# applies and the T3 digivolve is legal ONLY through the [Aegiomon] name
+# condition, at cost 3. One legal route -> no cost-choice prompt.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5). Its optional
+#       [On Play] ("By adding your top security card to the hand, 1 opp
+#       Digimon -5000") is declined (OptionalSkill no).
+#   T2 (P1, 5): pass -> P0 3.
+#   T3 (P0, 3): THE CLAUSE -- digivolve Aegiomon -> Dark for 3 (3 -> 0).
+#       Dark's [When Digivolving] (effect#1) then asks its cost menu; the
+#       trash holds no [Shaman]/[TS] card, so ours offers the two-branch
+#       EffectChoice ["Delete this Digimon" | "Don't pay the cost"] and this
+#       line declines ("Don't pay"). Pass at 0 (memory stays with P0).
+#
+# WITNESS: the digivolve lowers off a yellow Aegiomon at all; Dark stands over
+# BT25-033 and P0 paid exactly 3 (memory 3 -> 0).
+#
+# PROMPT SHAPE / DCGO quirks to triage:
+#   - T1: DCGO may skip Aegiomon's optional gate when the opponent has no
+#     Digimon (ours asks; our condition is only `security_count_gte: 1`).
+#   - T3: our EffectChoice is sim-only; DCGO's SetIntSelection over the payable
+#     costs is a dcgo_only generic_int row. The value 3 ("Don't use") is a
+#     GUESS by analogy with the BT25-083 menu (Delete=1, Return=2, Don't=3) --
+#     DCGO C# was not readable in the authoring container; correct it from
+#     the oracle abort message if it differs.
+card: BT26-073
+clause: BT26-073#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, BT26-073, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1, 5): pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-073 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Don't pay", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.field:
+        - { card_id: BT26-073, dp: 8000, suspended: false, sources: [BT25-033] }
+      # the T3 draw (stack[10]) + the digivolve bonus draw (stack[11]).
+      p0.hand: [BT24-034, BT24-101, BT25-030, BT25-030, BT26-090]
+      p1.field: []
