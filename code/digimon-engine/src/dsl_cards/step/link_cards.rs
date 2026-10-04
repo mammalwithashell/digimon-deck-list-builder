@@ -231,6 +231,11 @@ pub(crate) struct LinkPickState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub outer_conts: Vec<crate::resume::OuterContinuation>,
+    /// The trigger context active when the step parked, restored for every
+    /// resumed stage so event-reading predicates (`host_filter: {
+    /// is_event_host: true }` — EX10-070 "1 of those Digimon") still see the
+    /// triggering event. G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    pub trigger_context: Option<crate::trigger_context::TriggerContext>,
 }
 
 /// Which pick stage a `LinkPickState` is paused at (data — no closures).
@@ -290,6 +295,7 @@ fn park_link_frame(
             bindings,
             runtime,
             outer_conts: Vec::new(),
+            trigger_context: ctx.game.current_trigger_context.clone(),
         })],
     });
 }
@@ -391,7 +397,10 @@ pub(crate) fn run_link_pick_step(
         bindings,
         runtime,
         outer_conts,
+        trigger_context,
     } = state;
+    let previous_trigger_context =
+        std::mem::replace(&mut game.current_trigger_context, trigger_context);
 
     // What the resolved action advances the loop to. Computed with immutable
     // reads first so the mutable EffectContext can be built afterward.
@@ -512,6 +521,7 @@ pub(crate) fn run_link_pick_step(
             Advance::Nothing => {}
         }
     }
+    game.current_trigger_context = previous_trigger_context;
 
     crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
 }

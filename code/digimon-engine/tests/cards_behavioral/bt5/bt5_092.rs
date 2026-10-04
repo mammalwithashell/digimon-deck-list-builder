@@ -87,14 +87,21 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 
-use crate::dsl_card_data::{card_data_from_compiled, compiled};
+use digimon_dsl::compiled::CompiledCard;
 
 const CARD_ID: &str = "BT5-092";
 
 // ─── Card-data factories ─────────────────────────────────────────────────────
 
-fn nokia_card_data() -> CardData {
-    card_data_from_compiled(CARD_ID)
+/// The compiled BT5-092 spec (registered through `.dsl_card`, so the scratch
+/// harness can substitute a draft YAML).
+fn compiled(card_id: &str) -> CompiledCard {
+    assert_eq!(card_id, CARD_ID);
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .start();
+    runner.compiled_card(card_id).expect("compiled").clone()
 }
 
 fn make_filler(card_id: &str) -> CardData {
@@ -184,6 +191,13 @@ fn bt5_092_has_exactly_two_triggered_clauses() {
         cost_reduction,
         "BT5-092 must have a cost_reduction declarative clause (clause 2)"
     );
+    let optional = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Declarative(
+            digimon_dsl::compiled::CompiledDeclarativeClause::CostReduction { optional, .. },
+        ) => Some(*optional),
+        _ => None,
+    });
+    assert_eq!(optional, Some(true), "DCGO BT5_092.cs isOptional: true");
 }
 
 /// Clause 1: on_play, FaceUp, optional ("you may"), not OPT.
@@ -250,7 +264,8 @@ fn bt5_092_clause_on_security_triggered_present() {
 #[test]
 fn bt5_092_clause1_on_play_offers_and_plays_agumon_free() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_agumon("AGUMON-1"))
         .add_card(make_filler("FILLER-DECK"))
         .deck(0, &["FILLER-DECK"])
@@ -319,7 +334,8 @@ fn bt5_092_clause1_on_play_offers_and_plays_agumon_free() {
 #[test]
 fn bt5_092_clause1_on_play_offers_gabumon() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_gabumon("GABU-1"))
         .add_card(make_filler("FILLER-DECK"))
         .deck(0, &["FILLER-DECK"])
@@ -366,7 +382,8 @@ fn bt5_092_clause1_on_play_offers_gabumon() {
 #[test]
 fn bt5_092_clause1_pass_leaves_hand_intact() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_agumon("AGUMON-1"))
         .add_card(make_filler("FILLER-DECK"))
         .deck(0, &["FILLER-DECK"])
@@ -402,7 +419,8 @@ fn bt5_092_clause1_pass_leaves_hand_intact() {
 #[test]
 fn bt5_092_clause1_no_prompt_when_no_matching_card_in_hand() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_other_digimon("OTHER-1", "Patamon"))
         .add_card(make_filler("FILLER-DECK"))
         .deck(0, &["FILLER-DECK"])
@@ -510,8 +528,23 @@ fn digivolve_and_measure_memory(
         runner
             .game
             .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
-    assert!(ok, "digivolve_from_hand into {target_id} must succeed");
+    if !ok {
+        // DCGO BT5_092.cs isOptional: true — the reducer parks on an
+        // accept/decline prompt; accept it.
+        assert!(
+            runner.pending_is_optional(),
+            "the only pending prompt is Nokia's optional reducer offer"
+        );
+        runner.accept_optional_trigger().expect("accept reducer");
+    }
     runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        target_id,
+        "digivolve_from_hand into {target_id} must succeed"
+    );
     memory_before - runner.game.memory
 }
 
@@ -521,7 +554,8 @@ fn digivolve_and_measure_memory(
 #[test]
 fn bt5_092_clause2_cost_reduction_fires_on_greymon_target() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("ALLY"))
         .add_card(make_lv4_target("GREYMON", "Greymon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -550,7 +584,8 @@ fn bt5_092_clause2_cost_reduction_fires_on_greymon_target() {
 #[test]
 fn bt5_092_clause2_cost_reduction_fires_on_garurumon_target() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("ALLY"))
         .add_card(make_lv4_target("GARURUMON", "WereGarurumon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -574,7 +609,8 @@ fn bt5_092_clause2_cost_reduction_fires_on_garurumon_target() {
 #[test]
 fn bt5_092_clause2_cost_reduction_fires_on_omnimon_target() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("ALLY"))
         .add_card(make_lv4_target("OMNIMON", "Omnimon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -600,7 +636,8 @@ fn bt5_092_clause2_cost_reduction_fires_on_omnimon_target() {
 #[test]
 fn bt5_092_clause2_cost_reduction_does_not_fire_on_unrelated_target() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("ALLY"))
         .add_card(make_lv4_target("PATAMON4", "Angemon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -629,7 +666,8 @@ fn bt5_092_clause2_cost_reduction_does_not_fire_on_unrelated_target() {
 #[test]
 fn bt5_092_clause2_cost_reduction_inactive_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("OPP-ALLY"))
         .add_card(make_lv4_target("GREYMON", "Greymon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -675,7 +713,8 @@ fn bt5_092_clause2_cost_reduction_inactive_on_opponents_turn() {
 #[test]
 fn bt5_092_clause2_cost_reduction_blocked_when_nokia_already_suspended() {
     let mut runner = DebugRunner::builder()
-        .add_card(nokia_card_data())
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
         .add_card(make_lv3_red("ALLY"))
         .add_card(make_lv4_target("GREYMON", "Greymon"))
         .add_card(make_filler("FILLER-DECK"))
@@ -695,6 +734,128 @@ fn bt5_092_clause2_cost_reduction_blocked_when_nokia_already_suspended() {
         spent, 3,
         "with Nokia already suspended the reducer's cost is unpayable → full cost 3"
     );
+}
+
+/// The reducer is OPTIONAL (DCGO BT5_092.cs isOptional: true): digivolving
+/// into a matching card parks on an accept/decline offer; declining pays the
+/// full printed cost and leaves Nokia unsuspended.
+/// G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE.
+#[test]
+fn bt5_092_clause2_cost_reduction_is_optional_and_decline_pays_full_cost() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_lv3_red("ALLY"))
+        .add_card(make_lv4_target("GREYMON", "Greymon"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .hand(0, &["GREYMON"])
+        .memory(10)
+        .start();
+    let nokia = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    let hand_idx = find_hand_index(&runner, 0, "GREYMON");
+    let memory_before = runner.game.memory;
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
+    assert!(!ok, "the optional reducer parks on an accept/decline offer");
+    assert!(runner.pending_is_optional(), "the offer is declinable");
+    runner.decline_optional_trigger().expect("decline");
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        memory_before - runner.game.memory,
+        3,
+        "declined → full cost 3"
+    );
+    assert!(
+        !runner.game.players[0].battle_area[nokia.index as usize].is_suspended,
+        "declined → Nokia stays unsuspended"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "GREYMON"
+    );
+}
+
+/// A suspended Nokia cannot pay the suspend cost, so no offer is made at all
+/// (DCGO CanActivateSuspendCostEffect gates CanActivate).
+#[test]
+fn bt5_092_clause2_no_offer_when_nokia_already_suspended() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_lv3_red("ALLY"))
+        .add_card(make_lv4_target("GREYMON", "Greymon"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .hand(0, &["GREYMON"])
+        .memory(10)
+        .start();
+    let nokia = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.players[0].battle_area[nokia.index as usize].is_suspended = true;
+    let hand_idx = find_hand_index(&runner, 0, "GREYMON");
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
+    assert!(ok, "no offer — the digivolve completes immediately");
+    assert!(runner.pending_selection().is_none());
+}
+
+/// DCGO HasGreymonName / HasGarurumonName exclude DoruGreymon, BurningGreymon,
+/// DexDoruGreymon and KendoGarurumon (CardSource.cs:1597-1629): digivolving
+/// into any of them gets no offer and pays the full cost.
+#[test]
+fn bt5_092_clause2_excluded_greymon_garurumon_names_pay_full_cost() {
+    for name in [
+        "DoruGreymon",
+        "BurningGreymon",
+        "DexDoruGreymon",
+        "KendoGarurumon",
+    ] {
+        let mut runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("BT5-092 in DSL pack")
+            .add_card(make_lv3_red("ALLY"))
+            .add_card(make_lv4_target("EXCLUDED", name))
+            .add_card(make_filler("FILLER-DECK"))
+            .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+            .deck(1, &["FILLER-DECK"])
+            .hand(0, &["EXCLUDED"])
+            .memory(10)
+            .start();
+        let nokia = runner.place_on_field(0, CARD_ID, Some(0));
+        let ally = runner.place_on_field(0, "ALLY", Some(0));
+        let hand_idx = find_hand_index(&runner, 0, "EXCLUDED");
+        let memory_before = runner.game.memory;
+        let ok = runner.game.digivolve_from_hand(
+            0,
+            hand_idx,
+            ally.index as usize,
+            PlaySource::ByDigivolve,
+        );
+        assert!(
+            ok,
+            "{name}: no reducer offer — digivolve completes immediately"
+        );
+        runner.game.drain_effect_queue();
+        assert_eq!(
+            memory_before - runner.game.memory,
+            3,
+            "{name} is excluded by DCGO's name helper → full cost 3"
+        );
+        assert!(
+            !runner.game.players[0].battle_area[nokia.index as usize].is_suspended,
+            "{name}: Nokia stays unsuspended"
+        );
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -726,4 +887,242 @@ fn bt5_092_clause3_on_security_structural_present() {
         on_sec.is_some(),
         "BT5-092 must compile an on_security clause for the [Security] play-self effect"
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Review additions — exact-name On Play filter + integrated [Security]
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// DCGO `CardNames.Contains("Agumon")` is an exact list match: BlackAgumon is
+/// NOT eligible for the On Play free play; a real [Agumon] alongside it is.
+#[test]
+fn bt5_092_clause1_blackagumon_not_eligible() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_other_digimon("BLACK-AGU", "BlackAgumon"))
+        .add_card(make_other_digimon("TOY-AGU", "ToyAgumon"))
+        .add_card(make_agumon("AGUMON-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .hand(0, &[CARD_ID, "BLACK-AGU", "TOY-AGU", "AGUMON-1"])
+        .memory(10)
+        .start();
+
+    runner.play(0, 0).expect("Nokia plays");
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+    let agumon_idx = find_hand_index(&runner, 0, "AGUMON-1");
+    let picks: Vec<u16> = runner
+        .pending_selection()
+        .expect("inner select_hand prompt")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(
+        picks,
+        vec![digimon_engine::action::space::PLAY_HAND_START + agumon_idx as u16],
+        "only the exact-name [Agumon] is eligible (not BlackAgumon / ToyAgumon)"
+    );
+}
+
+/// Integrated [Security]: an opponent attack checks Nokia from security and
+/// she is played into the battle area without paying her cost.
+#[test]
+fn bt5_092_security_plays_self_free() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_lv3_red("OPP-ATTACKER"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK"; 4])
+        .deck(1, &["FILLER-DECK"; 4])
+        .security(0, &[CARD_ID])
+        .memory(5)
+        .start();
+    runner.set_first_player(0);
+    let attacker = runner.place_on_field(1, "OPP-ATTACKER", Some(0));
+    let memory_before = runner.memory();
+    assert_eq!(runner.battle_area_size(0), 0);
+    runner.attack_player(attacker, 0, false);
+    let _ = runner.auto_resolve();
+    runner.game.drain_effect_queue();
+    let on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == CARD_ID);
+    assert!(on_field, "[Security] plays Nokia into P0's battle area");
+    assert!(
+        runner.game.players[0].security.is_empty(),
+        "Nokia left the security stack"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "played without paying the cost"
+    );
+}
+
+/// G-DSL-COST-TARGET-FROM-HAND: "digivolve into a Digimon card IN YOUR HAND"
+/// (DCGO `IsExistOnHand`). An effect-driven digivolve from the TRASH into a
+/// Greymon is not reduced, and Nokia is not suspended. (Card-level guard;
+/// the leaf itself is proven by the mandatory-reducer fixtures below.)
+#[test]
+fn bt5_092_clause2_no_reduction_for_digivolve_from_trash() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_lv3_red("ALLY"))
+        .add_card(make_lv4_target("GREYMON", "Greymon"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .memory(10)
+        .start();
+
+    let nokia = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    runner.inject_trash(0, "GREYMON");
+    let trash_idx = runner.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "GREYMON")
+        .expect("Greymon in trash");
+
+    let memory_before = runner.game.memory;
+    let ok = runner.game.effect_initiated_digivolve_from_source(
+        0,
+        digimon_engine::enums::CardSourceRef::Trash(0, trash_idx),
+        ally,
+        digimon_engine::enums::CostDelta::Reduce(0),
+        false,
+        PlaySource::ByEffect,
+    );
+    assert!(ok, "effect digivolve from trash resolves");
+    assert!(
+        !runner.pending_is_optional() || runner.game.pending_selection.is_none(),
+        "no reducer offer for a non-hand digivolve target"
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "GREYMON"
+    );
+    assert_eq!(
+        memory_before - runner.game.memory,
+        3,
+        "a digivolve from trash pays the full printed cost (no Nokia reduction)"
+    );
+    assert!(
+        !runner.game.players[0].battle_area[nokia.index as usize].is_suspended,
+        "Nokia is not suspended"
+    );
+}
+
+// ── G-DSL-COST-TARGET-FROM-HAND leaf (discriminating fixture) ─────────────
+//
+// BT5-092's own reducer is OPTIONAL, and the effect-initiated digivolve path
+// does not offer optional reducers, so the trash test above passes with or
+// without the leaf. These fixtures use a MANDATORY reducer to prove the leaf
+// itself: without it a trash-sourced digivolve IS reduced; with it, it isn't.
+
+fn reducer_fixture(with_leaf: bool) -> String {
+    let leaf = if with_leaf {
+        "        - cost_target_from_hand: true\n"
+    } else {
+        ""
+    };
+    format!(
+        r#"
+card: FIX-REDUCER
+name: Reducer Fixture
+kind: tamer
+color: [white]
+cost: 0
+effects:
+  - kind: cost_reduction
+    scope: face_up
+    reduction_timing: before_pay_cost
+    when_any_ally_digivolves_into:
+      all_of:
+{leaf}        - name_contains: "Greymon"
+    amount: 1
+    summary: "fixture"
+"#
+    )
+}
+
+fn trash_digivolve_spent(with_leaf: bool) -> i16 {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&reducer_fixture(with_leaf))
+        .expect("fixture")
+        .add_card(make_lv3_red("ALLY"))
+        .add_card(make_lv4_target("GREYMON", "Greymon"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "FIX-REDUCER", Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    runner.inject_trash(0, "GREYMON");
+    let trash_idx = runner.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "GREYMON")
+        .unwrap();
+    let before = runner.game.memory;
+    assert!(runner.game.effect_initiated_digivolve_from_source(
+        0,
+        digimon_engine::enums::CardSourceRef::Trash(0, trash_idx),
+        ally,
+        digimon_engine::enums::CostDelta::Reduce(0),
+        false,
+        PlaySource::ByEffect,
+    ));
+    runner.game.drain_effect_queue();
+    before - runner.game.memory
+}
+
+#[test]
+fn cost_target_from_hand_control_without_leaf_trash_digivolve_is_reduced() {
+    assert_eq!(
+        trash_digivolve_spent(false),
+        2,
+        "control: reducer applies (3 - 1)"
+    );
+}
+
+#[test]
+fn cost_target_from_hand_leaf_blocks_trash_digivolve_reduction() {
+    assert_eq!(
+        trash_digivolve_spent(true),
+        3,
+        "leaf: not from hand → full cost"
+    );
+}
+
+#[test]
+fn cost_target_from_hand_leaf_allows_hand_digivolve_reduction() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&reducer_fixture(true))
+        .expect("fixture")
+        .add_card(make_lv3_red("ALLY"))
+        .add_card(make_lv4_target("GREYMON", "Greymon"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK", "FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .hand(0, &["GREYMON"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "FIX-REDUCER", Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    let spent = digivolve_and_measure_memory(&mut runner, ally, "GREYMON");
+    assert_eq!(spent, 2, "hand target: reduced (3 - 1)");
 }

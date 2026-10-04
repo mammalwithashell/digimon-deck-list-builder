@@ -1222,6 +1222,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** Existing "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)" (this is a follow-up Option-lifecycle move on top of in-battle-area persistence); BEATBREAK / DATA SQUAD Tamer face-down stash substrate (sibling face-down placement family).
 
 ### `BeforePayCost` cost-reducer with selection-bearing `pay_cost_fn` (Parked-outcome handling)
+
+> **Status 2026-10-03:** closed in practice — ST23-03 Cougarmon, BT25-096 and now BT25-087 Thomas H. Norstein (clause 3) ship this exact shape and their behavioral tests cover the Tamer pick, the paid reduction, decline and OPT lockout. BT25-087 is IMPLEMENTED.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** ST-23 BEATBREAK (2026-05-17); BT25 thomas-data-squad slice (2026-06-06)
 - **Card(s):** ST23-03 Cougarmon ("[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2"). BT25 adds: **BT25-087 Thomas H. Norstein** clause 3 ("[Your Turn][OPT] When any of your Digimon would digivolve into a [DATA SQUAD] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 1") and **BT25-096 Mirage Beast Knight** clause 1 ("When this card would be used, by trashing the bottom face-down card from under any of your Tamers, reduce the use cost by 2"). The pay-cost is `trash_bottom_face_down_source_under_tamer`, whose Tamer-pick `select_own_permanent` always installs a `PendingSelection` (no auto-resolve even for one candidate — see `code/digimon-engine/src/dsl_cards/step/selections.rs:351-353`), so the `before_pay_cost` closure (`lower_cost_reduction.rs:193-197`, `matches!(.., RunOutcome::Synchronous)`) returns `false` and the reduction is dropped. Likely also applies to any future card whose printed text reads "When this Digimon would digivolve / when this card would be used, by trashing X (selection-bearing cost), reduce the cost by N".
@@ -1316,6 +1318,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** Existing "DSL Option Use Requirements" / `use_requirement` (sibling but distinct — Option-use color-substitute vs. inherited-block trait-gate).
 
 ### `OnAddToHand` trigger is inert — no firing site, no event-target context ("when effects add cards to your opponent's hand")
+
+> **Status 2026-10-03:** RESOLVED 2026-06-04 (see the `OnAddToHand` resolution note below). BT25-087 Thomas H. Norstein clause 2 now ships on `when: on_add_to_hand` + `event_add_to_hand_player: opponent` + `event_is_effect_initiated: true`.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** BT25 thomas-data-squad slice (2026-06-06)
 - **Card(s):** BT25-087 Thomas H. Norstein (clause 2: "[All Turns] When effects add cards to your opponent's hand, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer"); BT25-029 MirageGaogamon (clause "[All Turns][OPT] When effects add cards to your opponent's hand **or** trash cards from under your Tamers, this Digimon may unsuspend"). DCGO models both via `EffectTiming.OnAddHand` + `CardEffectCommons.CanTriggerWhenAddHand(hashtable, player => player == enemy, cardEffect => cardEffect != null)` — i.e. "the opponent's hand gained ≥1 card **by an effect** (not a draw-step / mulligan)".
@@ -1459,6 +1463,15 @@ Items where the existing primitive **likely works** but no behavioral test cover
 Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](../qa/resolved-gaps.md#rust-engine-gap-group-summaries).
 
 ## G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED — trailing `if` step not executed after a parked selection resumes (2026-06-06)
+
+**RESOLVED 2026-10-03 — misdiagnosis, no engine change.** The trailing `if` step does
+resume. BT25-050's `count_gte` filter had no `owner`, and `count_gte` defaults to
+`owner: you`; the failing test suspended the OPPONENT's Digimon, so the controller-only
+count never reached 2. The gate is board-wide (DCGO counts both players), so the YAML
+now sets `owner: any` and the formerly-ignored lock test passes. BT25-059 Ceresmon's
+cost-reduction gate had the same default bug and was fixed alongside (it also lacked
+`reduction_timing: before_pay_cost` + `when_playing_this: true`, so the reduction never
+applied — now covered by behavioral tests). See qa/resolved-gaps.md.
 
 - **Card(s):** BT25-050 Kiwimon (orphan-b slice). Printed: "[On Play][When Digivolving] You may suspend 1 Digimon. Then, **if there are 2 or more suspended Digimon**, 1 of your opponent's Digimon can't unsuspend until their turn ends."
 - **What's broken:** when a DSL clause's `process` is `[ select_* (interactive), <mutation>, if { condition } { then: [...] } ]`, the trailing `if` step is **not executed** after the interactive selection parks-and-resumes. The process completes (`pending_selection` returns to `None`) without ever evaluating/entering the conditional block that follows the selection.
@@ -4545,3 +4558,20 @@ Effect"), with `inherited_keywords` reading only true inherited text.
 - **Rule:** 6-1-4-1 — the turn ends once memory is on the opponent's side *and* all processing in the current phase has resolved. DCGO only runs `AutoProcessing.EndTurnCheck` from the turn state machine after auto-processing settles, skipping `phase.End` and an active attack.
 - **Fix:** `Game::check_turn_end` (`src/game/lifecycle.rs`) is a no-op during the End phase (`EndTurn` / `EndOfTurnAction` — `end_turn`'s own continuation decides rotation vs swing-back) and DEFERS (`Game::turn_end_check_deferred`) while an effect is still resolving: inside a drain (`effect_drain_depth > 0`), a deferred-drain scope, a `resolve_generic_selection` (callback + post-callback continuations, new `selection_resolution_depth`), or an attack in progress (`pending_attack`). The outermost `drain_effect_queue` exit and the tail of `resolve_generic_selection` re-run the deferred check. This covers every `check_turn_end` call site (Options, digivolve, link, breeding, combat terminal, decoder) at once.
 - **Tests:** `cards_behavioral` `bt24::bt24_085::bt24_085_turn_does_not_pass_mid_effect_after_used_option` (real End-phase flow via `end_turn`; failed with `turn_player() == 1` without the fix) and `bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack` (Main-phase harness; failed at the attacker prompt once `can_attack` gained the turn-player clause, without the fix).
+
+
+## Residual gaps surfaced by the BT26 meta-blockers pass (2026-10-03)
+
+### G-COST-REDUCTION-OPTIONAL-REDUCER-RESIDUAL — only the first optional digivolve reducer is offered; DNA / Blast skip optional reducers
+- **Context:** G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE (resolved, see qa/resolved-gaps.md) made the normal digivolve-from-hand path prompt an optional synchronous-pay_cost reducer (P-200 Kanan Yuki, BT5-092 Nokia).
+- **Still missing:** (1) after one optional reducer is accepted/declined the re-entry runs with `player_reducer_resolved = true`, so a SECOND qualifying optional reducer (e.g. two Kanan Yuki) is never offered; (2) DNA digivolve and Blast digivolve call only the synchronous scan, so optional reducers are skipped there; (3) optional reducers with no `pay_cost` are skipped on the digivolve path.
+- **Suggested fix:** loop the accept/decline prompt over all remaining qualifying optional reducers (tracking a per-cost-event "offered" set instead of a single flag), and route the DNA/Blast cost computation through the same prompt step.
+
+### G-DSL-EVENT-TARGET-NAME-IS — no exact-name leaf for the event target
+- **Context:** BT21-098 Ragnarok Cannon "[Your Turn] When one of your [Galacticmon] attacks, <Delay>" gates on `event_target_name_contains: Galacticmon`. Exact for the current pool (Galacticmon is the only name containing that token) but not strictly faithful if a future card name contains it.
+- **Suggested fix:** an `event_target_name_is:` predicate leaf (alias-aware, mirroring `name_is`).
+
+### Follow-ups noted (card-level, not engine)
+- **P-193** — its [Main] has no `if binding_present` guard, so declining the trash cost still draws 2 (and, since G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT, is now trashed instead of placed on decline). Needs a YAML fix + decline test.
+- **LM-054 Treadmill Training** — still uses the older shape (number-based colour bypass, no `has_digivolve_candidate` target gating, mandatory hand pick); audit against the LM-057..061 shape.
+- **EX12-070 / EX12-071** — decline paths are now faithful (explicit placement) but untested.

@@ -1,0 +1,66 @@
+# BT24-033 Salamon — Digimon, Lv.3, Yellow, Cost 3, DP 1000.
+# Traits: Mammal / Iliad / TS. Attribute: Vaccine. Form: Rookie.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-033.md):
+#   Digivolve: Yellow Lv.2 / cost 0 ; Red Lv.2 / cost 0
+#   [Digivolve] Lv.2 w/[TS] trait: Cost 0
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#     [Iliad] trait, reduce the digivolution cost by 1.
+#   Inherited: <Barrier>
+#
+# DATA NOTE: cards.json / BT24-033.json `evo_costs` carries only the Yellow
+# Lv.2 circle — the Red Lv.2 / cost 0 circle (official DB) is dropped by the
+# API ingest. Both colour circles are therefore declared explicitly below as
+# alt_paths (Neptunemon BT24-030 idiom) so the red path is not lost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Yellow/BT24_033.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(IsLevel2 && HasTSTraits, 0).
+#   - ChangeDigivolutionCostStaticEffect(-1): digivolving permanent == this
+#     card's permanent, target CardTraits.Contains("Iliad"), IsOwnerTurn.
+#     Static (not optional, not OPT).
+#     → `kind: cost_reduction` + `source_is_cost_target_permanent` +
+#     `cost_target` (BT23-037 / BT23-005 idiom).
+#   - BarrierSelfEffect(isInheritedEffect: true) → inherited grant_keyword.
+
+card: BT24-033
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Mammal, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: Iliad
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into an [Iliad] Digimon card, reduce the digivolution cost by 1"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"

@@ -282,6 +282,16 @@ pub enum Timing {
     /// board-wide `PermanentCondition` (BT21-084 / BT21-101 / P-217 / P-241).
     /// G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
     OnAnyLink,
+    /// Board-wide observer: "When effects trash any of your Digimon's link
+    /// cards" (`when:` / delay `trigger: on_link_card_trashed`). Rides
+    /// `EffectTiming::OnLinkedCardTrashed` (DCGO `OnLinkCardDiscarded`). The
+    /// effect-initiated trash path carries the host (`event_host_card` /
+    /// `event_host_permanent`), the trashed card (`event_card`) and the cause;
+    /// gate with `event_host_is_own_digimon` / `event_is_effect_initiated`,
+    /// and restrict a follow-up link to "those Digimon" with `link_cards`
+    /// `host_filter: { is_event_host: true }` (EX10-070).
+    /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+    OnLinkCardTrashed,
 }
 
 #[derive(

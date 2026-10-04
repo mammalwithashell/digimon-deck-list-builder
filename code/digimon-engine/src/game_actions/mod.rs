@@ -1047,6 +1047,11 @@ impl Game {
         if matches!(source, OptionSource::Hand(_)) {
             modes.retain(|m| !m.is_link());
         }
+        // G-ENGINE-CANNOT-USE-OPTION-CARDS: Standard / Delay / Training are
+        // all "use an Option card" (§6-5-1-3); only the Link mode survives.
+        if self.option_use_blocked(player_id) {
+            modes.retain(|m| m.is_link());
+        }
         modes
     }
 
@@ -1483,7 +1488,30 @@ impl Game {
         // The disposal subtype was fixed at play time (`play_option_core`
         // stores the resolved mode on `pending_option`) — a dual-mode
         // Plug-In Option must not be re-classified here.
-        let subtype = pending.subtype;
+        //
+        // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: a Delay Option whose
+        // [Main] body authors its OWN `place_self_as_delay_option` (flagged
+        // `explicit_self_placement` at lowering) placed itself already if it
+        // was going to — the step claims `pending_option`, so reaching here
+        // with the slot still occupied means the body ended without placing
+        // it (BT24-099 official Q&A: decline the "By trashing …" cost and
+        // nothing after "then" happens). Such a card is disposed of like a
+        // Standard Option (trash). Delay Options WITHOUT the step keep the
+        // implicit dispose-time placement below.
+        let subtype = match pending.subtype {
+            OptionSubtype::Delay(_)
+                if effects.iter().any(|e| {
+                    e.explicit_self_placement
+                        && matches!(
+                            e.timing,
+                            EffectTiming::OptionMain | EffectTiming::MainFromHand
+                        )
+                }) =>
+            {
+                OptionSubtype::Standard
+            }
+            other => other,
+        };
 
         match subtype {
             OptionSubtype::Standard => {

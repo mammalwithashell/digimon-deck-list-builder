@@ -3345,7 +3345,8 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
 - **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
 
-## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate — RESOLVED 2026-10-03
+- **RESOLVED 2026-10-03:** new predicate leaf `level_sum_gte: { filter, n }` (sums the level of matching battle-area permanents; owner defaults to `you`, use `owner: any` for both players). BT25-077 Bacchusmon's cost reduction now ships; see qa/resolved-gaps.md.
 - **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
 - **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
 - **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.
@@ -7415,7 +7416,8 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
 - **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
 
-## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate — RESOLVED 2026-10-03
+- **RESOLVED 2026-10-03:** new predicate leaf `level_sum_gte: { filter, n }` (sums the level of matching battle-area permanents; owner defaults to `you`, use `owner: any` for both players). BT25-077 Bacchusmon's cost reduction now ships; see qa/resolved-gaps.md.
 - **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
 - **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
 - **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.

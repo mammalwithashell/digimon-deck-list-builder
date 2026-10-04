@@ -409,6 +409,17 @@ pub struct Effect {
     /// Optional condition that lets this Option satisfy its play color
     /// requirement through printed `<Use Req. (...)>` text.
     pub option_color_requirement_bypass: Option<ConditionFn>,
+    /// True on an Option `[Main]` body that places the Option itself in the
+    /// battle area through an EXPLICIT `place_self_as_delay_option` step
+    /// (anywhere in its body, possibly behind a cost / condition — BT24-099,
+    /// EX12-071 "By trashing …, <Draw 2>. Then, place this card …"). For
+    /// such a card the [Main] body owns the placement: if it ends WITHOUT
+    /// claiming the in-flight Option, `dispose_option` trashes it instead of
+    /// seating it as a Delay permanent. A Delay Option without the step keeps
+    /// the implicit dispose-time placement (LM-027.., BT8-108).
+    /// Set by `.explicit_self_placement()`.
+    /// G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT.
+    pub explicit_self_placement: bool,
     /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
     pub delay_trigger: Option<DelayTrigger>,
     /// Memory cost paid to link this card to a host Digimon. Set by
@@ -886,6 +897,7 @@ impl EffectBuilder {
                 replacement_process: None,
                 option_main: false,
                 option_color_requirement_bypass: None,
+                explicit_self_placement: false,
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
@@ -1348,6 +1360,13 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.option_color_requirement_bypass = Some(Arc::new(f));
+        self
+    }
+
+    /// Mark this Option `[Main]` body as owning its own battle-area
+    /// placement (see [`Effect::explicit_self_placement`]).
+    pub fn explicit_self_placement(mut self) -> Self {
+        self.inner.explicit_self_placement = true;
         self
     }
 
