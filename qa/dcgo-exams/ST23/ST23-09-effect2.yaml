@@ -1,0 +1,116 @@
+# Exam scenario: Atratusmon (ST23-09), clause ST23-09#effect#2 --
+# "<Reboot> (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. Atratusmon is SUSPENDED by its T3 attack (assert at 11) and is
+# UNSUSPENDED at P1's T4 breeding step (assert at 12) -- i.e. it unsuspended in
+# its opponent's unsuspend phase, which only <Reboot> does.
+#
+# THE LINE is ST23-09-effect1.yaml's (memory ledger in ST23-09-effect4.yaml)
+# with the turn handed over:
+#   T1 P0 hard-plays Murasamemon BT25-041 (0 -> -7); T2 P1 plays Biyomon and
+#   Agumon (7 -> 3); T3 P0 digivolves Atratusmon (3 -> 0), its [When
+#   Digivolving] deletes Biyomon, Atratusmon attacks security (checks 2);
+#   P0 passes (P1 -> 3); T4 P1's unsuspend phase.
+#
+# PROMPT SHAPE: Reboot is a static self effect in ST23_09.cs (ST23-09.yaml
+# crosscheck) -- no prompt. The sim_only row is BT25-041's unpayable
+# inherited [End of Attack] (see ST23-09-effect1.yaml).
+card: ST23-09
+clause: ST23-09#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-041, ST23-09, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, BT25-049, BT25-049]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Biyomon and Agumon (7 -> 3), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): digivolve Atratusmon for 3 (3 -> 0) -- [When Digivolving].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST23-09 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: delete the lowest-DP opponent Digimon (Biyomon, 3000).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # THE CLAUSE: Atratusmon (in play since T1 under BT25-041, so it may attack)
+  # attacks P1's security. <Security A. +1> checks TWO cards: ST1-02 (top),
+  # then BT1-009 -- both vanilla Digimon that lose the battle to 12000 and are
+  # trashed. The [When Attacking] arm of #effect#4 is spent ([Once Per Turn],
+  # shared with the [When Digivolving] arm that fired above), so no prompt.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: BT25-041's inherited [End of Attack] "By trashing the bottom
+  # face-down card from under any of your Tamers, ... unsuspends". P0 has NO
+  # Tamer, so the cost is unpayable; our engine still offers the optional
+  # trigger (BT25-041.yaml carries no payability gate). DCGO's sibling clauses
+  # gate CanActivate on "a Tamer with a face-down source" (BT26-031.yaml
+  # crosscheck), so DCGO is expected to ask nothing -> sim_only decline.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # End T3 (P0, 0 -> P1 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): THE WITNESS. P1's unsuspend phase has run -- <Reboot> unsuspended
+  # Atratusmon in its OPPONENT's unsuspend phase.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the T3 pass: Atratusmon is suspended from its attack.
+  - at: 11
+    that:
+      turn: 3
+      p0.field:
+        - card_id: ST23-09
+          dp: 12000
+          suspended: true
+          sources: [BT25-041]
+  # At P1's T4 breeding step: unsuspended by <Reboot>.
+  - at: 12
+    that:
+      turn: 4
+      p1.memory: 3
+      p0.field:
+        - card_id: ST23-09
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+      p1.field:
+        - card_id: BT3-007
+          dp: 4000
+          suspended: false
+          sources: []

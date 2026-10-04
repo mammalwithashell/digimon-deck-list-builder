@@ -1,0 +1,95 @@
+# Exam scenario: Habakirimon / Habakiri (BT25-043), clause BT25-043#effect#5
+# -- the OPTION face's
+#   "[Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by
+#    trashing your top security card, all of your opponent's Digimon get -5000
+#    DP for the turn."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. P1 has Biyomon ST1-02 (3000) and Phoenixmon ST1-10 (12000).
+# The -8000 goes on Biyomon (deleted at 0 DP). P0 then pays its top security
+# card (ST23-04; security 5 -> 4, the card in P0's trash) and EVERY P1 Digimon
+# gets -5000: Phoenixmon -- not the first target -- reads 7000. P0 stays on
+# positive memory, so the "for the turn" DP is read inside the same turn.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hatch Kekkomon ST23-01; passes                     -> P1 3
+#   T2 P1 (3): Biyomon (2): 3 -> 1; Phoenixmon (10): 1 -> -9       -> P0 9
+#   T3 P0 (9): USE Habakiri (6): 9 -> 3 (Use Req. admits it via the green
+#              [Glowing Dawn] Kekkomon in breeding -- BT25-043-effect4.yaml).
+#
+# PROMPT SHAPE (BT25-043.yaml DCGO crosscheck, Option [Main] OptionSkill):
+#   * not optional -> no OptionalSkill; SelectPermanentEffect over opp
+#     Digimon (2 candidates) -> ChangeDigimonDP(-8000, UntilEachTurnEnd);
+#   * own security >= 1 -> a Yes/No (generic_bool) to IDestroySecurity own
+#     top -> ChangeDigimonDPPlayerEffect(-5000) over all opp Digimon. Ours a
+#     2-way EffectChoice: sim_only `choice:` + dcgo_only `yes:`.
+#   * No Arts Digivolve prompt (Kekkomon is Lv.2; nothing in the battle area).
+card: BT25-043
+clause: BT25-043#effect#5
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9) untouched; draws (10+).
+    stack: [BT25-043, BT16-082, BT16-082, ST23-15, ST23-15,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-032, BT25-032, ST23-12]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-10, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hatch Kekkomon, pass.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon (3 -> 1), then Phoenixmon (10) overshoots 1 -> -9
+  # and the turn hands over (P0 9).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 9): use Habakiri for 6 (9 -> 3) -- P0 keeps the turn, so the
+  # "for the turn" DP changes are still readable afterwards.
+  - actor: 0
+    do: { play: { card: BT25-043, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, first half: Biyomon gets -8000 DP (3000 -> 0: deleted).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Second half: trash P0's top security card -> ALL of P1's Digimon get
+  # -5000 DP for the turn (Phoenixmon 12000 -> 7000).
+  - actor: 0
+    do: { select: { choice: "Trash your top security", sim_only: true } }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # One step past the clause; P0 still holds the turn on 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT25-043, ST23-04]
+      p1.field:
+        - card_id: ST1-10
+          dp: 7000
+          suspended: false
+          sources: []
+      p1.trash: [ST1-02]
