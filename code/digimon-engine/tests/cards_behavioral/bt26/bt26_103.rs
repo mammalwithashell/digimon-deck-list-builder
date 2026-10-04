@@ -209,3 +209,67 @@ fn bt26_103_succession_gains_jupitermon_leave_protection() {
     assert_eq!(bottom.card_id(&r.game.card_data), CARD_ID);
     let _ = w;
 }
+
+// ─── [Once Per Turn] accounting for a no-target resolution ─────────────────
+// G-ENGINE-OPT-NOOP-REQUEUE. §15-14-1: `[X Per Turn]` counts each ACTIVATION.
+// A triggered effect whose (non-"if") process has no legal target still
+// activates — §15-6-3 only bars activation when an "if"/"while" processing
+// condition fails — so its OPT is spent and it may not be activated, or
+// offered as an orderable trigger, again this turn.
+
+#[test]
+fn bt26_103_all_turns_opt_spent_by_no_target_activation() {
+    let mut r = setup();
+    let j = r.place_on_field(0, CARD_ID, Some(0));
+    // No opponent Digimon: the -15000 pick has no target (no-op activation).
+    fire(&mut r, EffectTiming::OnOwnSecurityRemoved, j);
+    drain(&mut r);
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    fire(&mut r, EffectTiming::OnOpponentSecurityRemoved, j);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "OPT already spent by the no-target activation"
+    );
+    assert_eq!(r.effective_dp(opp), Some(20000));
+}
+
+#[test]
+fn bt26_103_opt_spent_entry_not_offered_in_trigger_order() {
+    use digimon_engine::selection::TriggerSource;
+    // Two queued instances of the [All Turns][OPT] clause plus another card's
+    // [When Digivolving]: once the first instance resolves (no target), the
+    // second is OPT-spent and must not stay an orderable TriggerOrder entry.
+    let mut r = setup();
+    let j = r.place_on_field(0, CARD_ID, Some(0));
+    let j2 = r.place_stack(0, &["OLY", CARD_ID]);
+    let j_card = r.top_card(j);
+    for _ in 0..2 {
+        r.game
+            .enqueue_triggered(EffectTiming::OnOwnSecurityRemoved, TriggerSource::Permanent(j));
+    }
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(j2));
+    r.game.drain_effect_queue();
+
+    let is_e6 = |c: &digimon_engine::selection::EffectChoiceEntry| {
+        c.source_card == Some(j_card) && c.timing == Some(EffectTiming::OnOwnSecurityRemoved)
+    };
+    let first = r.pending_selection().expect("trigger order menu").clone();
+    let choices = first.effect_choices.clone().expect("TriggerOrder choices");
+    assert_eq!(choices.len(), 3, "[e6, e6, WD]");
+    let e6_action = choices.iter().find(|c| is_e6(c)).expect("e6").action_id;
+    r.execute_action(0, e6_action).unwrap();
+
+    if let Some(sel) = r.pending_selection() {
+        let offered: Vec<String> = sel
+            .effect_choices
+            .iter()
+            .flatten()
+            .map(|c| format!("{:?}/{}", c.timing, c.label))
+            .collect();
+        assert!(
+            !sel.effect_choices.iter().flatten().any(|c| is_e6(c)),
+            "OPT-spent e6 offered again: {offered:?}"
+        );
+    }
+}

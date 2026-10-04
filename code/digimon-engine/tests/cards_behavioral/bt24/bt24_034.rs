@@ -219,3 +219,41 @@ fn hand_action_for_id(runner: &DebugRunner, id: &str) -> u16 {
         })
         .expect("hand card exists")
 }
+
+/// G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED: `<Barrier>` is "when THIS
+/// Digimon would be deleted". When the OPPONENT's Digimon loses a battle to
+/// the Barrier carrier, no `<Barrier>` replacement prompt may be offered to
+/// anyone (previously a phantom, outcome-free accept prompt parked for the
+/// deleted Digimon's controller).
+#[test]
+fn bt24_034_barrier_not_offered_when_opponents_digimon_is_deleted_in_battle() {
+    let mut weak = make_test_card("WEAK", "WEAK");
+    weak.card_kind = CardKind::Digimon;
+    weak.dp = Some(2000);
+    weak.level = Some(3);
+    let mut runner = aegiomon_runner()
+        .add_card(weak)
+        .add_card(filler("SEC"))
+        .security(0, &["SEC"])
+        .memory(0)
+        .start();
+    let aegio = runner.place_on_field(0, CARD_ID, Some(0));
+    let weak = runner.place_on_field(1, "WEAK", Some(0));
+
+    let _ = runner.battle_digimon(aegio, weak);
+
+    let barrier_prompt = runner
+        .pending_selection()
+        .map(|sel| format!("{sel:?}"))
+        .filter(|dbg| dbg.contains("Barrier"));
+    assert!(
+        barrier_prompt.is_none(),
+        "no <Barrier> prompt for the opponent's Digimon's deletion: {barrier_prompt:?}"
+    );
+    runner.auto_resolve().expect("settle");
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "the losing opponent Digimon is deleted"
+    );
+    assert_eq!(runner.security_count(0), 1, "Barrier did not trash security");
+}

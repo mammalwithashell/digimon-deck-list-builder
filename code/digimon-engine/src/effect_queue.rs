@@ -1354,11 +1354,14 @@ impl Game {
             // condition and fires the "1 of your Omnimon may attack a
             // player" prompt in the SAME EoT batch, matching DCGO.
             //
-            // Source-liveness and once-per-turn checks are NOT applied
-            // here: source-liveness can become false mid-drain due to a
-            // sibling trigger's body trashing the source, and the
-            // run-time check handles that case; OPT lockout is
-            // accounting-only and doesn't change user-visible choice.
+            // Source-liveness is NOT checked here: it can become false
+            // mid-drain due to a sibling trigger's body trashing the source,
+            // and the run-time check handles that case. An EXHAUSTED
+            // once-per-turn count IS excluded (it only rises within a turn):
+            // an OPT-spent entry left in the bundle forced a dead
+            // `TriggerOrder` decision whose pick resolved as a no-op
+            // (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER /
+            // G-ENGINE-OPT-NOOP-REQUEUE).
             let non_firing: Vec<usize> = self.non_firing_queued_effect_indices_for(chooser);
 
             let bundle: Vec<usize> = self
@@ -2314,10 +2317,24 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
-            // Security trigger specifically: ignore effects that don't carry
-            // the security flag. Matches Python's
-            // `if getattr(effect, 'is_security_effect', False)` filter.
-            if timing == EffectTiming::SecuritySkill && !effect.security {
+            // `SecuritySkill` / `OnLoseSecurity`: only `[Security]`-scoped
+            // effects are live on a card that is leaving / has left the
+            // security stack — it is not a battle-area permanent (§13-1-5 "in
+            // no area"; §15-14-5). In particular a removed card's own
+            // `[All Turns]` "when your security stack is removed from"
+            // observer (BT24-101, BT25-044) must not fire for its own
+            // removal; the battle-area observer scan in `enqueue_triggered`
+            // is where such observers are collected.
+            // G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH. (For `SecuritySkill` this
+            // is the long-standing Python `is_security_effect` filter.)
+            // Other timings (e.g. `OnDiscardSecurity`, BT13-106's "when this
+            // card is trashed from security") are the card's own self-
+            // referential clauses and keep firing here.
+            if matches!(
+                timing,
+                EffectTiming::SecuritySkill | EffectTiming::OnLoseSecurity
+            ) && !effect.security
+            {
                 continue;
             }
             self.effect_queue.push_back(QueuedEffect {
@@ -3104,11 +3121,44 @@ impl Game {
             if self.effect_queue[i].controller != chooser {
                 continue;
             }
-            if !self.queued_effect_condition_passes(i) {
+            if self.queued_effect_opt_exhausted(i) || !self.queued_effect_condition_passes(i) {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is a `[X Per Turn]` effect whose per-turn
+    /// count is already used up (and the entry does not bypass OPT). Such an
+    /// entry "does not activate again" (§15-14-1: `[X Per Turn]` counts each
+    /// activation), so the run-time path would skip it; it must not be an
+    /// orderable `TriggerOrder` entry either. Activation counts only rise
+    /// within a turn, so excluding it is never premature.
+    /// G-ENGINE-OPT-NOOP-REQUEUE / G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER.
+    fn queued_effect_opt_exhausted(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.bypass_once_per_turn || qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(perm_handle) = qe.source_permanent else {
+            return false;
+        };
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if effect.max_per_turn == 0 {
+            return false;
+        }
+        let opt_key = self.queued_opt_key(effect, qe);
+        matches!(
+            self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key),
+            Some(count) if count >= effect.max_per_turn
+        )
     }
 
     /// Evaluate the clause-level condition of `effect_queue[i]` against the
