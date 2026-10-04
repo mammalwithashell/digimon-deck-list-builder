@@ -1122,8 +1122,12 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // BEFORE the body runs, so the filters must gate the candidate —
         // otherwise a deletion Decoy cannot protect parked a phantom accept
         // prompt (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED class).
-        // Known residual: the printed "by an opponent's effect" cause gate
-        // (keyword-semantics.md, 16-17) is not applied here.
+        //   4. Cause gate: the deletion must be caused by an OPPONENT's
+        //      effect (rules 16-17, keyword-semantics.md; DCGO
+        //      `Decoy.cs:55-61` `IsByEffect(... EffectSourceCard.Owner ==
+        //      card.Owner.Enemy)`). The cause is subject-relative and the
+        //      subject is always the Decoy controller's, so
+        //      `ReplacementCause::OpponentEffect` is exactly that.
         //
         // Color filter (Track G close): `Keyword::Decoy(u8)` carries a
         // CardColor bitmask. `0` = no filter (un-parameterized printed form
@@ -1158,6 +1162,12 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     return false;
                 };
                 if subject == me || subject.player != me.player {
+                    return false;
+                }
+                if !matches!(
+                    ctx.replacement_cause(),
+                    Some(crate::replacement::ReplacementCause::OpponentEffect)
+                ) {
                     return false;
                 }
                 let game = ctx.game;
