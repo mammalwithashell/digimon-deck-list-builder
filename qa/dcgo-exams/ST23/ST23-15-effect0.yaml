@@ -1,0 +1,106 @@
+# Exam scenario: e-Pulse (ST23-15), clause ST23-15#effect#0 --
+# "<Use Req. ([BEATBREAK] trait)> (Specified cards let you ignore color
+#  requirements.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE COLOUR GAP: e-Pulse is WHITE. The only card P0 has in play is Tomoro
+# Tenma BT25-090 -- GREEN, with the [BEATBREAK] trait. Without the Use Req.
+# the Option is unusable (no white Digimon/Tamer); with it, the BEATBREAK
+# Tamer lets P0 ignore colour. The use itself is the witness.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): hard-play Tomoro Tenma (0 -> -4).
+#   T2 P1 (4): pass -> P0 3.
+#   T3 P0 (3): [Start of Your Turn] 3 > 2, no change; draw stack[10]. Use
+#      e-Pulse (3 -> 0). Its [Main]: play Tomoro & Kyo ST23-13 from hand for
+#      free; e-Pulse is placed in the battle area; ST23-13's [On Play] places
+#      stack[11] ST23-03 under it (P1 has no Digimon -> no memory).
+# WITNESS: the use resolved at all (Option on the field, Tamer free-played).
+#
+# PROMPT SHAPE (ST23-15.yaml DCGO crosscheck): UseRequirements(card,
+# EqualsTraits("BEATBREAK")) -- no prompt; the play is a main_phase action.
+card: ST23-15
+clause: ST23-15#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-090, ST23-15, ST23-13, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-057, ST23-03]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, BT1-009, ST1-05, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-090, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-15, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY + ENGINE FINDING: BT25-090's "[Your Turn][Once Per Turn] When you
+  # would use [Glowing Dawn] trait Option cards, by trashing the bottom
+  # face-down card from under any of your Tamers, reduce the cost by 1" is
+  # OFFERED although no Tamer holds a face-down card (the cost is unpayable;
+  # accepting it reduces nothing -- probed: memory still ends at 0). 15-7-3:
+  # an optional "by X" whose X can't be performed can't be chosen. DCGO's
+  # reducer is expected to be gated (no Tamer with a face-down source -> no
+  # prompt), so this row emits nothing to the wire.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # [Main]: the union hand-or-trash pick. P0's trash is EMPTY, so DCGO's
+  # Hand/Trash/Don't-play SetIntSelection collapses to the hand side (the
+  # EX12-074-security0 precedent) and asks SelectHandEffect (PlayForFree).
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: SelectHandEffect }
+  # SIM-ONLY: our 9-1-5 "used Option vs pending trigger" order prompt (no DCGO
+  # counterpart). The Option's disposal goes first -- here it is placed in the
+  # battle area by the "Then, place this card in the battle area" (our label
+  # still reads "Trash"); then ST23-13's [On Play] resolves.
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  # ST23-13's [On Play] internal "You may place" Yes/No.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  # T3 after the Option resolved (before P0's pass): memory 3 -> 0 paid in full
+  # for e-Pulse with NO white card on the field; the free-played Tamer and the
+  # Option both sit in the battle area; nothing trashed.
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT16-082, BT25-043, BT25-057]
+      p0.field:
+        - card_id: BT25-090
+          dp: -1
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-03]
+        - card_id: ST23-15
+          dp: -1
+          suspended: false
+          sources: []

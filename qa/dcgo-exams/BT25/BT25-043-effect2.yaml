@@ -1,0 +1,169 @@
+# Exam scenario: Habakirimon (BT25-043), clause BT25-043#effect#2 --
+# the body of "[When Digivolving] [When Attacking] [Once Per Turn]":
+#   "<Recovery +1>. Then, by trashing the top security card of 1 player with
+#    the most security cards, this Digimon unsuspends."
+# Measured through the [When Digivolving] arm, with the OPPONENT as the
+# player with the most security and the digivolved-onto Digimon SUSPENDED, so
+# every part of the body changes visible state.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS (assert 18 -> 22):
+#   * <Recovery +1>: P0 security 2 -> 3 (stack[13] ST23-13 placed on top);
+#   * "1 player with the most security": after the Recovery P1 has 4 > P0 3,
+#     so P1's top security card is trashed (P1 4 -> 3, BT1-009 in P1's trash);
+#   * "this Digimon unsuspends": Murasamemon had attacked and was suspended;
+#     Habakirimon on top of it reads unsuspended.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7           -> P1 7
+#   T2 P1 (7): Biyomon, Agumon BT3-007, Monodramon BT1-009 (2 each):
+#              7 -> 1; passes                                         -> P0 3
+#   T3 P0 (3): passes                                                 -> P1 3
+#   T4 P1 (3): three attacks on P0's security (5 -> 2); passes        -> P0 3
+#   T5 P0 (3): Murasamemon attacks (P1 5 -> 4), its own [When Attacking]
+#              declined; digivolve Habakirimon onto it, cost route 3: 3 -> 0.
+#
+# PROMPT SHAPE.
+#   * Murasamemon's <Alliance> has no other Digimon to suspend -- silent
+#     (measured). Its [WD][WA][OPT] pay-or-not menu: see the row.
+#   * Cost pick: SelectCountEffect value 3 (BT25-043-effect0.yaml).
+#   * The "most security" menu: P1 4 > P0 3, so DCGO's SetIntSelection
+#     (BT26-031.yaml / ST23-05.yaml crosscheck idiom) offers only "opponent"
+#     + "Don't trash". Ours is the 3-way EffectChoice, answered by a
+#     sim_only `choice:`. The dcgo_only VALUE 2 = "opponent" is a GUESS (see
+#     BT25-043-effect0.yaml); read the real value off an oracle abort.
+card: BT25-043
+clause: BT25-043#effect#2
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9, stack[9] top -- the three checked on T4 are
+    # stack[9], [8], [7]); stack[10] T3 draw, [11] T5 draw, [12] digivolve
+    # bonus draw, [13] the <Recovery +1> card.
+    stack: [BT25-041, BT25-043, BT25-090, ST23-15, ST23-15,
+            ST23-03, ST23-03, ST23-06, BT16-082, ST23-06,
+            BT25-049, BT25-049, ST23-12, ST23-13, BT25-032]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, BT1-009, ST1-04, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Biyomon, Agumon, Monodramon (7 -> 1), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): all three attack P0's security; each check is a weak vanilla
+  # P0 Digimon that loses (ST23-06 1000, BT16-082 2000, ST23-06 1000). P0 5 -> 2.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Murasamemon attacks P1's security (P1 5 -> 4) and is now
+  # SUSPENDED.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # BT25-041's own [When Attacking] "by adding your top security card to the
+  # hand or trashing ... you may play or use 1 [Glowing Dawn] card ... cost
+  # reduced by 3": DECLINED. Ours is one optional trigger (decline);
+  # DCGO is a 3-way SetIntSelection where value 3 = "Don't pay the cost"
+  # (BT25-041.yaml crosscheck, values documented there).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # Digivolve Habakirimon onto the SUSPENDED Murasamemon, [Glowing Dawn]
+  # route (3 -> 0). [When Digivolving]: <Recovery +1> (P0 2 -> 3).
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-043 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # THE CLAUSE's "Then": P1 (4) has MORE security than P0 (3), so the only
+  # player whose top card may be trashed is P1. Trash it (P1 4 -> 3) and
+  # Habakirimon unsuspends.
+  - actor: 0
+    do: { select: { choice: "opponent's", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 2, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # One step past the clause; P0 still holds the turn on 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before the digivolve: Murasamemon suspended from its attack; P0 2 vs P1 4.
+  - at: 18
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.security: 2
+      p1.security: 4
+      p0.field:
+        - card_id: BT25-041
+          dp: 7000
+          suspended: true
+          sources: []
+  # After: Recovery (P0 2 -> 3), P1's top card trashed (P1 4 -> 3; BT1-009 is
+  # in P1's trash beside the ST1-02 Murasamemon's attack checked), and
+  # Habakirimon -- digivolved onto a suspended Digimon -- is UNSUSPENDED.
+  - at: 22
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.security: 3
+      p1.security: 3
+      p1.trash: [BT1-009, ST1-02]
+      p0.trash: [BT16-082, ST23-06, ST23-06]
+      p0.hand: [BT25-049, BT25-049, BT25-090, ST23-12, ST23-15, ST23-15]
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]

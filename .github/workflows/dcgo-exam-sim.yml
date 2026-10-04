@@ -53,6 +53,7 @@ on:
       - 'code/digimon-engine/**'
       - 'code/digimon-dsl/**'
       - 'code/tools/dcgo-harness/**'
+      - 'code/tools/exam_sim_all.py'
       - '.github/workflows/dcgo-exam-sim.yml'
   push:
     branches: ["main"]
@@ -61,6 +62,7 @@ on:
       - 'code/digimon-engine/**'
       - 'code/digimon-dsl/**'
       - 'code/tools/dcgo-harness/**'
+      - 'code/tools/exam_sim_all.py'
       - '.github/workflows/dcgo-exam-sim.yml'
 
 jobs:
@@ -83,13 +85,18 @@ jobs:
       # Replays every committed scenario in OUR engine only and checks its
       # backfilled `assert:` block. Exits non-zero and names the scenario when
       # an assertion no longer holds.
+      # Each scenario's `rest:` decks live in a per-set book (and books reuse deck
+      # names), so a single `--decks` book cannot resolve the whole tree: the old
+      # single-book run never lowered ~70% of the scenarios. The driver picks each
+      # scenario's book (falling back to data/starter_decks.json).
+      - name: Build dcgo-harness
+        run: cargo build -p dcgo-harness --release
+
+      - name: Install driver deps
+        run: python3 -m pip install --quiet pyyaml
+
       - name: Run every exam scenario sim-only
-        run: |
-          cargo run -p dcgo-harness --release -- exam \
-            --scenario qa/dcgo-exams/ \
-            --sim-only \
-            --cards-json data/cards.json \
-            --decks qa/dcgo-exams/EX12/toho_pool.json
+        run: python3 code/tools/exam_sim_all.py --harness target/release/dcgo-harness
 
       # Lowering, the normalized projection, the differ, the verdict store and
       # the drafter are pure Rust over fixtures — the only thing that needs

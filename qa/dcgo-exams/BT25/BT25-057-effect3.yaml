@@ -1,0 +1,138 @@
+# Exam scenario: Monarchlizamon (BT25-057), clause BT25-057#effect#3 --
+# DUAL Option face "<Use Req. ([Glowing Dawn] trait)> (Specified cards let you
+# ignore color requirements.)"
+#
+# Witness: the GREEN Option "Final Judgment" is used from hand while p0
+# controls only YELLOW cards (BT26-089, Cougarmon) -- legal only through the
+# Use Req -- for its full Use 4 (memory 4 -> 0), and lands in p0's trash
+# after its [Main] (Arts Digivolve declined).
+#
+# PROVISIONAL: every assert below is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (stacked gd-bt26-1st vs tm-quiet-red). p0's board is YELLOW only:
+# BT26-089 (yellow Tamer) and Cougarmon (yellow ST23-03) -- no green card, so
+# the green Option face is usable ONLY through <Use Req. ([Glowing Dawn])>.
+#   T1 p0 (mem 0): hatch, Ukkomon (BT25-032) over Kekkomon for 0, BT26-089 for
+#      3 -> -3.
+#   T2 p1 (mem 3): Biyomon (ST1-02) for 2 -> 1, pass.
+#   T3 p0 (mem 3): move Ukkomon; BT26-089 SOMP (ST23-06 face down, Draw 1,
+#      +1) -> 4; Cougarmon over Ukkomon for 2 -> 2 (its WD adds the top
+#      security to hand + <Recovery +1>; BT26-089's security reaction is
+#      declined); pass.
+#   T4 p1 (mem 3): pass.
+#   T5 p0 (mem 3): SOMP (BT25-049 face down, +1) -> 4. USE "Final Judgment"
+#      (BT25-057's Option face, Use 4) -> 0, targeting Cougarmon: Rush,
+#      <Security A. +1>, +5000 (4000 -> 9000).
+#   Arts Digivolve declined (the Option is trashed). The rest of the line is
+#   BT25-057-effect4.yaml's.
+#
+# PROMPT SHAPE (card YAML DCGO crosscheck: Option [Main] = SelectPermanentEffect
+# over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
+# = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
+#   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
+#   * ENGINE FINDING (expected oracle divergence -- "Then, it may attack"):
+#     our DSL lowers `may_attack_now ... windowed: true` to an end-of-turn
+#     MayAttack MODIFIER instead of an attack inside the effect. So ours asks
+#     NO SelectAttackEffect during the [Main]; the Arts Digivolve prompt comes
+#     first and the attack is a later ordinary main-phase attack. DCGO asks
+#     SelectAttackEffect immediately, before the Arts/trash decision. The
+#     printed "Then, it may attack" is an attack DURING the effect.
+#   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
+#     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
+#     here; its shape on the wire is unverified.
+#   * ST23-01's inherited [When Attacking] (ours: one declinable Hand pick;
+#     DCGO OptionalSkill per its YAML) is declined.
+card: BT25-057
+clause: BT25-057#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-032, ST23-03, BT25-057, BT16-082,
+            BT25-049, ST23-06, BT25-049, ST23-06, BT16-082,
+            ST23-06, BT25-049, ST23-09, BT25-043, ST23-09,
+            BT25-043, ST23-09, BT25-041, BT25-041, BT25-041]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-05, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-08, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-06] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+  - actor: 0
+    do: { play: { card: BT25-057, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 18
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.trash: [BT25-057]
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [BT25-049, ST23-06]
+        - card_id: ST23-03
+          dp: 9000
+          suspended: false
+          sources: [BT25-032, ST23-01]

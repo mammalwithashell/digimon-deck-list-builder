@@ -1,0 +1,156 @@
+# Exam scenario: Habakirimon (BT25-043), clause BT25-043#effect#1 --
+# the timing header "[When Digivolving] [When Attacking] [Once Per Turn]" of
+#   "<Recovery +1>. Then, by trashing the top security card of 1 player with
+#    the most security cards, this Digimon unsuspends."
+# (The extractor splits the header off with empty text; the body is
+# BT25-043#effect#2.) This file witnesses the [When Attacking] arm AND the
+# [Once Per Turn] limit; the [When Digivolving] arm fires on every line that
+# digivolves Habakirimon (e.g. BT25-043-effect0.yaml, BT25-043-effect2.yaml).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. Habakirimon is digivolved on T3 (its [When Digivolving] fires
+# that turn, declined -- a different turn, so the T5 attack is the first use
+# of the [Once Per Turn] on T5). On T5 it attacks: the trigger fires (Recovery
+# 6 -> 7, own top card trashed 7 -> 6, Habakirimon unsuspends -- assert at
+# 17). It then attacks AGAIN: no trigger (security stays 6, trash unchanged)
+# and it stays suspended (assert at 19). Each attack checks 1 P1 security card
+# (5 -> 4 -> 3, vanilla Digimon that lose to 12000).
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7       -> P1 7
+#   T2 P1 (7): passes                                             -> P0 3
+#   T3 P0 (3): digivolve Habakirimon (cost route 3): 3 -> 0; [WD] Recovery
+#              5 -> 6, trash declined; passes                     -> P1 3
+#   T4 P1 (3): passes                                             -> P0 3
+#   T5 P0 (3): attack (trigger), attack again (no trigger); attacks are free.
+#
+# PROMPT SHAPE. As BT25-043-effect0.yaml for the cost pick and the [WD] menu.
+# The [WA] menu: P0 7 vs P1 5 -> only "own" and "Don't trash" are VALID on
+# DCGO's SetIntSelection (BT26-031.yaml crosscheck of the idiom); ours offers
+# all three labels. The dcgo_only VALUE 1 = "own" is a GUESS (see
+# BT25-043-effect0.yaml). The DCGO [Once Per Turn] is the shared
+# WD/WA hash, mirrored by our single once_per_turn effect with two timings.
+# The two sim_only declines are BT25-041's unpayable inherited [End of Attack]
+# (ENGINE FINDING, see ST23-09-effect3.yaml).
+card: BT25-043
+clause: BT25-043#effect#1
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9, stack[9] top); stack[10] T3 draw,
+    # stack[11] digivolve-bonus draw, stack[12] T3 <Recovery +1> card,
+    # stack[13] T5 draw, stack[14] T5 <Recovery +1> card.
+    stack: [BT25-041, BT25-043, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, ST23-12, ST23-06, ST23-13, ST23-15, BT25-032]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): digivolve Habakirimon via the [Glowing Dawn] route (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-043 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving] after <Recovery +1>: decline the security trash.
+  - actor: 0
+    do: { select: { choice: "Don't trash", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # End T3 (P1 -> 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): all-pass (P0 -> 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE, [When Attacking] arm. Habakirimon attacks P1's
+  # security; the trigger runs <Recovery +1> (P0 6 -> 7, stack[14] ST23-15 on
+  # top) and offers the "most security" trash: P0 (7) has more than P1 (5), so
+  # trashing P0's own top card (the ST23-15 just recovered) unsuspends it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Trash your own", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SIM-ONLY: BT25-041's inherited [End of Attack] (cost unpayable, no Tamer;
+  # see ST23-09-effect1.yaml) -- DCGO is expected to ask nothing.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # [Once Per Turn]: Habakirimon is unsuspended, so it attacks AGAIN -- and the
+  # [When Attacking] trigger does NOT fire a second time (no prompt, no
+  # Recovery). P1's security 4 -> 3.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: the same unpayable inherited [End of Attack], offered again (a
+  # declined optional does not spend its [Once Per Turn]).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # One step past the clause; P0 still holds the turn on 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the first attack (before the second): the trigger fired once --
+  # Recovery then the own-security trash, and Habakirimon is UNSUSPENDED.
+  - at: 17
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.security: 6
+      p0.trash: [ST23-15]
+      p1.security: 4
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+  # After the second attack: NO second Recovery / trash (security still 6,
+  # trash unchanged) and Habakirimon stays suspended -- [Once Per Turn].
+  - at: 19
+    that:
+      turn: 5
+      p0.security: 6
+      p0.trash: [ST23-15]
+      p1.security: 3
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: true
+          sources: [BT25-041]

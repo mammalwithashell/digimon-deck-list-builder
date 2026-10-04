@@ -1,0 +1,118 @@
+# Exam scenario: Atratusmon / Eclipse Impact (ST23-09), clause
+# ST23-09#effect#7 -- the DUAL rule
+#   "<Arts Digivolve> (Instead of trashing after use, your cards may digivolve
+#    into this card without paying the cost.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. Eclipse Impact is used for 5 (3 -> -2) with Murasamemon
+# BT25-041 (yellow Lv.5 [Glowing Dawn]/[BEATBREAK]) in play. After the [Main]
+# resolves, instead of trashing, the Option digivolves onto Murasamemon FOR
+# FREE: the memory stays at exactly -2 (= 3 - 5, no digivolve cost), P0's trash
+# stays EMPTY, and Atratusmon stands on the field with BT25-041 as its source.
+# The arts-digivolved Atratusmon's own [When Digivolving] (#effect#4) then
+# fires and deletes P1's remaining Digimon -- DCGO's ArtsDigivolveEffect plays
+# with activateETB: true (NOTES-BT25-085.md), so the trigger is expected on
+# both sides.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7       -> P1 7
+#   T2 P1 (7): Biyomon (2) 7 -> 5, Agumon BT3-007 (2) 5 -> 3; pass -> P0 3
+#   T3 P0 (3): USE Eclipse Impact (5): 3 -> -2. Use Req. admits it (the
+#              green Option has no green permanent; BT25-041 is [BEATBREAK]).
+#              [Main]: suspend Biyomon; bounce the highest-DP suspended
+#              (Biyomon) to the deck bottom. THE CLAUSE: Arts Digivolve onto
+#              BT25-041. [When Digivolving]: delete the lowest-DP opponent
+#              Digimon (Agumon, the only one). The turn ends (P1 2).
+#
+# PROMPT SHAPE:
+#   * [Main] -- two SelectPermanentEffect picks as ST23-09-effect5.yaml.
+#   * <Arts Digivolve> -- DCGO ArtsDigivolveEffect (ST23-09.yaml crosscheck;
+#     KeyWordEffects/ArtsDigivolve.cs per NOTES-BT25-085.md):
+#     SelectPermanentEffect("Select 1 Digimon to Arts Digivolve.",
+#     canNoSelect: true) -> PlayCardClass(payCost: false, activateETB: true).
+#     Ours: install_arts_digivolve_selection, an optional OwnField pick.
+#     ONE candidate (BT25-041), still asked on both sides.
+#   * [When Digivolving] -- mandatory SelectPermanentEffect (Mode.Destroy,
+#     IsMinDP), one candidate.
+#   * Whether an Arts digivolve draws the digivolution bonus card is read off
+#     the assert (p0.hand) -- an oracle disagreement there is a finding.
+card: ST23-09
+clause: ST23-09#effect#7
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-041, ST23-09, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, BT25-049, BT25-049]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Biyomon and Agumon (7 -> 3), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): use Eclipse Impact for 5 (3 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-09, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main]: suspend Biyomon ...
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # ... and bottom-deck the highest-DP suspended opponent Digimon (Biyomon).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # THE CLAUSE: Arts Digivolve onto Murasamemon, free.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # The arts-digivolved Atratusmon's [When Digivolving]: delete Agumon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 4
+      p1.memory: 2
+      p0.trash: []
+      # 3 left from the opening + the T3 draw + ONE digivolution-bonus draw
+      # from the Arts digivolve (stack[11]).
+      p0.hand: [BT16-082, BT16-082, BT25-049, BT25-049, BT25-090]
+      p0.field:
+        - card_id: ST23-09
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+      p1.field: []
+      p1.trash: [BT3-007]

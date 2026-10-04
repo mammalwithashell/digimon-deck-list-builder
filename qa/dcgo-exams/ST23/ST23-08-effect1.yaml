@@ -1,0 +1,111 @@
+# Exam scenario: Monarchlizamon (ST23-08), clause ST23-08#effect#1 -- <Alliance>
+# "(When this Digimon attacks, by suspending 1 of your other Digimon, this
+#  Digimon gains <Security A. +1> and the suspended Digimon's DP for the
+#  attack.)"
+#
+# PROVISIONAL: asserts are OUR engine's result, not DCGO's.
+#
+# THE LINE reuses ST23-08-effect2.yaml through T3 (BT26-089 Tamer on T1;
+# T3 hard-play Monarchlizamon, whose [On Play] plays Liollmon from hand for
+# 0). T4 p1 all-pass. T5 (3): BT26-089's [Start of Your Main Phase] hand pick
+# is DECLINED. Monarchlizamon attacks p1's security; THE CLAUSE: p0 suspends
+# Liollmon -> +2000 DP and <Security A. +1> -> TWO checks (ST1-02, BT1-009):
+# p1.security 5 -> 3, Liollmon suspended (asserted). (The +3000 from [On Play]
+# expired at the end of p1's T4, so Monarchlizamon reads 7000 afterwards.)
+#
+# SLOT SAFETY: `attack: field.1` is an index on the wire. Ours (entry order):
+# [BT26-089, Monarchlizamon, Liollmon] -> field.1 = Monarchlizamon. DCGO
+# (README "Slot safety"): Digimon first, seated centre-out (Monarchlizamon
+# frame 4, Liollmon frame 3) -> compact [Liollmon, Monarchlizamon, Tamer] ->
+# index 1 = Monarchlizamon. Same permanent on both wires.
+#
+# PROMPT SHAPE: DCGO AllianceSelfEffect (card YAML crosscheck) -- the suspend
+# pick is a SelectPermanentEffect over your other Digimon; ours an OwnField
+# pick. If DCGO gates Alliance behind an OptionalSkill first, this row needs
+# optional_gate_fold (GUESS -- C# not available in this container). The
+# earlier rows are ST23-08-effect2.yaml's (see its PROMPT SHAPE).
+card: ST23-08
+clause: ST23-08#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, ST23-08, ST23-02, BT25-035, BT26-070,
+            ST23-15, ST23-15, BT25-057, BT25-057, BT25-043,
+            ST23-06, ST23-03, ST23-04, ST23-09]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT26-070] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: ST23-08, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-08], ordinal: 0, sim_only: true } }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-02] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 17
+    that:
+      turn: 5
+      p0.memory: 3
+      p1.security: 3
+      p1.trash: [BT1-009, ST1-02]
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: []
+        - card_id: ST23-02
+          dp: 2000
+          suspended: true
+          sources: []
+        - card_id: ST23-08
+          dp: 7000
+          suspended: true
+          sources: []

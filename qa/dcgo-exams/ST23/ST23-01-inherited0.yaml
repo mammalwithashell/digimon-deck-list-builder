@@ -1,0 +1,117 @@
+# Exam scenario: Kekkomon (ST23-01), clause ST23-01#inherited#0 --
+# "[When Attacking] [Once Per Turn] By trashing the bottom face-down card from
+#  under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn]
+#  trait Digimon card in the hand with the cost reduced by 2."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# NOTE: a hatched Lv.2 cannot move out of the breeding area, so the egg is
+# digivolved in breeding on T1 and the Lv.3 moved on T3.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): hatch Kekkomon; digivolve it in breeding into Chiropmon
+#      ST23-12 ("Lv.2 w/[Glowing Dawn]: Cost 0"; draws stack[10]); hard-play
+#      Tomoro & Kyo ST23-13 (0 -> -4), "You may place" -> yes: stack[11]
+#      BT25-043 goes face down under it. Turn passes.
+#   T2 P1 (4): pass -> P0 3.
+#   T3 P0 (3): draw stack[12]; move Chiropmon to the battle area; the Tamer's
+#      [Start of Your Main Phase] -> yes: stack[13] ST23-04 goes to the bottom.
+#      Chiropmon attacks security -> Kekkomon's inherited [When Attacking]:
+#      pick Armalizamon BT25-049 from hand, trash ST23-04 (bottom face-down)
+#      from under the Tamer, digivolve for 2 - 2 = 0 (3 -> 3), draws stack[14].
+#      Armalizamon's [When Digivolving] suspend has no P1 target -> silent.
+#      The attack continues and checks P1's BT1-009.
+# WITNESS: memory unchanged at 3 through a cost-2 digivolve; ST23-04 in the
+# trash; Armalizamon on top of [ST23-01, ST23-12], suspended (the attacker).
+#
+# PROMPT SHAPE (ST23-01.yaml DCGO crosscheck of ST23_01.cs): optional
+# ActivateClass (OptionalSkill) -> Tamer pick for the cost ->
+# DigivolveIntoHandOrTrashCard(reduceCost 2, isHand) -> SelectHandEffect.
+# Our Tamer pick parks even with one candidate (OwnField); DCGO's pick for
+# the cost is assumed to ask too (SelectPermanentEffect).
+card: ST23-01
+clause: ST23-01#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, ST23-12, BT25-049, BT16-082, BT16-082,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-043, BT25-043, BT25-057, ST23-04, BT25-057]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-05, BT1-009, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE. optional_gate_fold: DCGO's optional ActivateClass asks
+  # OptionalSkill, our engine carries the "may" on the declinable hand pick.
+  # PROMPT-ORDER RISK: ours picks the hand card BEFORE paying the trash cost;
+  # DCGO pays the cost (Tamer pick) first, then DigivolveIntoHandOrTrashCard
+  # asks SelectHandEffect. If the oracle aborts here on "expected
+  # SelectPermanentEffect", that is this ordering, not the line.
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # Tomoro & Kyo's [Your Turn] trash trigger (ST23-13#effect#1, examined in
+  # its own file) -- DECLINED here. ENGINE FINDING: ours resolves it mid-way
+  # through Kekkomon's effect (before the digivolve); 15-8-3-2 makes it wait
+  # until the effect finishes, so DCGO should ask it AFTER the digivolve.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  # After the attack resolved (T3, before the trailing pass): Chiropmon
+  # digivolved into Armalizamon mid-attack for 0 (2 - 2) -- memory still 3,
+  # the stack is BT25-049 over [ST23-01, ST23-12] and suspended from the
+  # attack; the bottom face-down card (ST23-04) is the only card in the trash,
+  # BT25-043 is the one left under the Tamer; the attack still checked P1's
+  # security (BT1-009).
+  - at: 12
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-057, BT25-057]
+      p0.trash: [ST23-04]
+      p1.security: 4
+      p1.trash: [BT1-009]
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: true
+          sources: [ST23-01, ST23-12]
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [BT25-043]

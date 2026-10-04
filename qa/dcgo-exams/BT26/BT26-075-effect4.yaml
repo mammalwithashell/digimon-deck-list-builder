@@ -1,0 +1,89 @@
+# Exam scenario: ScourgeChiropmon (BT26-075), clause BT26-075#effect#4 --
+# DUAL "<Use Req. ([Glowing Dawn] trait)> (Specified cards let you ignore
+# color requirements.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hard-plays Tomoro & Kyo (ST23-13, GREEN/YELLOW, [Glowing Dawn])
+#      [0 -> -4]; its [On Play] (yes) places stack[10] ST23-06 under it.
+#   T2 p1 plays BT1-014 (Lv.4) [4 -> 1] and passes (p0 gets 3).
+#   T3 P0 draws stack[11] BT25-049; ST23-13's SoMP (yes) places stack[12]
+#      BT26-025 and, p1 having a Digimon, gains 1 [3 -> 4]. P0 USES
+#      ScourgeChiropmon's PURPLE Option face from hand [4 -> 0] with no
+#      purple card in its battle or breeding area -- legal only through this
+#      clause (a [Glowing Dawn] card, ST23-13, is in play). Its [Main]
+#      deletes BT1-014 (the only, hence lowest-level, opponent Digimon).
+#      <Arts Digivolve> has no Lv.4 to digivolve from -> the card is trashed.
+# WITNESS: the Option use lowers at all (the action mask offers it), memory
+# 4 -> 0, BT26-075 in trash, BT1-014 deleted.
+#
+# PROMPT SHAPE (BT26-075.yaml: Use Req [Glowing Dawn] + <Arts Digivolve>,
+# BT26-050 idiom; Option [Main] mandatory SelectPermanentEffect over
+# IsMinLevel opponent Digimon -- asked even with one candidate). The two
+# `yes` rows are ST23-13's "You may place".
+card: BT26-075
+clause: BT26-075#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, BT26-075, BT25-046, ST23-12, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            ST23-06, BT25-049, BT26-025, BT25-057]
+    rest: gd-bt26-4th
+  p1:
+    stack: [BT1-014, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: BT26-075, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before the Option use: no purple card anywhere on P0's side (ST23-13 is
+  # green/yellow, nothing hatched), memory 4.
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 4
+      p0.field:
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [BT26-025, ST23-06]
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: [BT26-075]
+      p0.hand: [BT25-046, BT25-049, ST23-12, ST23-15]
+      p1.trash: [BT1-014]
+      p1.field: []

@@ -1,0 +1,82 @@
+# Exam scenario: Liollmon (BT26-025), clause BT26-025#effect#2 -- "[On Play]
+# By placing your top security card face down under any of your [Glowing
+# Dawn] trait Tamers, <Recovery +1>." (The body of "[When Moving] [On Play]
+# ..."; the extractor binds the text to the [On Play] timing. effect#1
+# measures the [When Moving] arm.)
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hard-plays Tomoro & Kyo (ST23-13) [0 -> -4]; its [On Play] (yes)
+#      places stack[10] ST23-06 under it. Turn passes.
+#   T2 p1 passes both phases (p0 gets 3).
+#   T3 P0 draws stack[11] BT25-046; ST23-13's [Start of Your Main Phase]
+#      (yes) places stack[12] ST23-12. P0 plays Liollmon from hand [3 -> 0]:
+#      [On Play] -> Tamer pick ST23-13 -> top security stack[9] ST23-09 goes
+#      face down under it, then <Recovery +1> places deck top stack[13]
+#      BT25-057 as top security (count stays 5).
+# WITNESS: ST23-09 among ST23-13's sources, security still 5, memory 0.
+#
+# PROMPT SHAPE (BT26-025.yaml DCGO crosscheck: shared whenMoving/onPlay
+# ActivateClass, optional:false + skippable, canNoSelect:true Tamer pick):
+# one cancellable SelectPermanentEffect (1 candidate) <-> our optional
+# OwnField pick. The `yes` rows are ST23-13's "You may place".
+card: BT26-025
+clause: BT26-025#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, BT26-025, BT26-070, ST23-12, ST23-15,
+            ST23-15, BT25-049, BT25-090, BT26-089, ST23-09,
+            ST23-06, BT25-046, ST23-12, BT25-057]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: BT26-025, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [BT25-046, BT26-070, ST23-12, ST23-15]
+      p0.field:
+        - card_id: BT26-025
+          dp: 1000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-06, ST23-09, ST23-12]
