@@ -31,10 +31,11 @@
 # PARTIAL: witnesses the [When Digivolving] timing with an own-trash-only
 # 3-card return. Not witnessed: [On Play] / [When Attacking] timings (the
 # effect1/2/4 lines show the spent OPT suppressing [When Attacking] on the
-# same turn); a cross-trash split (own k + opponent 3-k) -- NOT AUTHORABLE
-# today: the exam's trailing PASS after the own-trash CountCappedMultiSelect
-# also declines the freshly parked opponent-trash prompt (see report); the
-# partial-return "pays nothing" Q&A branch; the RemoveUse refund.
+# same turn); a cross-trash split (own k + opponent 3-k) -- authorable since
+# main's e2a69509 (a 2+1 probe gives Recovery +1 correctly), not yet added;
+# "0 own + 3 opponent" stays unreachable (card YAML: own pick lacks
+# optional_zero, qa/dsl-vocab-gaps.md); the partial-return "pays nothing"
+# Q&A branch; the RemoveUse refund.
 #
 # PROMPT SHAPE: optional delete pick (DCGO SelectPermanentEffect,
 # canNoSelect:true); then the return. DCGO: an area choice ("your trash" /

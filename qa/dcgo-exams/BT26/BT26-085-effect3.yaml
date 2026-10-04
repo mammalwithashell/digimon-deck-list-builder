@@ -23,15 +23,16 @@
 # hard-played with no stack, and no opposing stack-trash effect is reachable
 # on a short line).
 #
-# EXPECTED DIVERGENCE / RULES QUESTION (step 10, P0's T5): our engine shows
-# Giant Slayer at 10000 once the protection lapses -- the immunity is applied
-# LAZILY in Game::effective_dp (it filters negative ChangeDp entries while an
-# ImmuneFromDPMinus entry is live), so Butenmon's -4000 ("until their turn
-# ends" = until the end of P0's T5) is still registered and resurfaces after
-# P1's turn ends. Under the printed text the -4000 was an effect that COULD
-# NOT reduce the DP when it resolved, so it should never apply (expected
-# 14000 at T5). If DCGO also reads 10000, this is shared behaviour; either way
-# it is a finding to triage.
+# RULES QUESTION (step 10, P0's T5): our engine shows Giant Slayer at 10000
+# once the protection lapses -- "can't reduce DP" is a live prohibiting effect
+# (Game::effective_dp filters negative ChangeDp while an ImmuneFromDPMinus
+# entry lives), so Butenmon's -4000 ("until their turn ends" = end of P0's T5)
+# reappears after P1's turn. Re-verified 2026-10-04: consistent with the
+# official BT19-089 Q&A (a reduction is suppressed only while the protection
+# lasts; pinned by bt19_089.rs) and BT1-054's (durations persist), so NOT
+# logged as a bug. No ruling covers this exact order; if DCGO reads 14000 the
+# install-time-refusal reading wins -- see docs/RUST_ENGINE_GAPS.md "Closed
+# during re-verification" (G-ENGINE-IMMUNE-DP-MINUS-LAZY).
 #
 # PROMPT SHAPE: Butenmon's target -> ours OppField, DCGO SelectPermanentEffect
 # (actor 1). Giant Slayer's [On Play] asks nothing on either side.

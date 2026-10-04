@@ -46,12 +46,13 @@
 # placement is ours a two-branch EffectChoice ("Place ..." / "Don't place
 # ...", yes-maps to branch 0) vs DCGO's Yes/No selection ("Will you place
 # Sirenmon under Ceresmon?") -> generic_bool.
-# EXPECTED DIVERGENCE (step 14): Ceresmon's [On Play] ("You may suspend up to
-# 2 Digimon") is NEVER offered by our engine after this end-of-turn play
-# (also not when the placement is declined) -- the turn rotates straight to
-# T4. DCGO should ask it (SelectPermanentEffect, canNoSelect:true, BT25-059
-# DCGO notes); answered here as a DCGO-only decline so the state stays
-# aligned. Reported as a suspected engine bug.
+# TOOLING WORKAROUND (step 14): Ceresmon's [On Play] ("You may suspend up to
+# 2 Digimon") IS parked by our engine after this end-of-turn play (verified
+# 2026-10-04 with gdb), but the exam lowering's trailing PASS after the
+# placement row declines it (G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-
+# MULTIPICK). DCGO asks it (SelectPermanentEffect, canNoSelect:true, BT25-059
+# DCGO notes), so it is answered here as a DCGO-only decline to keep the
+# state aligned. Once the tooling bug is fixed, make it a shared decline row.
 card: BT25-039
 clause: BT25-039#effect#1
 seed: 424242

@@ -13,9 +13,12 @@
 # stacked as P0's TOP security card (stack[9]).
 #
 # THE LINE:
-#   T1 (P0, 0): no hatch; hard-play Aegiomon (5) -> -5. Its [On Play] is
-#      gated on a [TS] Tamer in hand -- none -> silent (ours: the clause's
-#      `condition`; DCGO: assumed the same CanActivate gate, BT24-034).
+#   T1 (P0, 0): no hatch; hard-play Aegiomon (5) -> -5. Its [On Play]
+#      ("by adding your top security card to the hand, you may play 1 [TS]
+#      Tamer") is gated on security > 0 only (BT24_034.cs
+#      SharedCanActivateCondition; §15-7-5; BT24-034.yaml since bdd80afd), so
+#      BOTH engines ask its OptionalSkill -- declined (accepting would move
+#      Angemon, the top security card, to the hand and void the line).
 #   T2 (P1, 5): all-pass -> P0 3.
 #   T3 (P0, 3): draw stack[10]; Aegiomon (5000) attacks security; P1's top
 #      card is Phoenixmon ST1-10 (12000) -> Aegiomon would be deleted in
@@ -24,12 +27,15 @@
 #      hand for free (memory stays 3); decline Coronamon's own optional
 #      [On Play]. Pass.
 #
-# WITNESS: at 7 (before the pick) P0 security 4, Angemon in P0's trash,
-# Coronamon in hand, Aegiomon alive; at 9 (before T3's pass) Coronamon on the
+# WITNESS: at 8 (before the pick) P0 security 4, Angemon in P0's trash,
+# Coronamon in hand, Aegiomon alive; at 10 (before T3's pass) Coronamon on the
 # field, memory still 3 (free play).
 #
-# PROMPT SHAPE: Barrier = OptionalSkill on both sides (EX12-043-inherited0
-# idiom). The clause = ours ONE declinable Hand pick (`optional: true` +
+# PROMPT SHAPE: Aegiomon's [On Play] gate = OptionalSkill on both sides
+# (shared row, re-authored 2026-10-04 after BT24-034.yaml dropped the
+# [TS]-Tamer-in-hand condition; our prompt is a Replacement-kind optional
+# "You may activate BT24-034's triggered effect"). Barrier = OptionalSkill on
+# both sides (EX12-043-inherited0 idiom). The clause = ours ONE declinable Hand pick (`optional: true` +
 # optional select_hand -> the pick is the gate); DCGO SelectHandEffect
 # (PlayForFree, canNoSelect:true) -- if DCGO asks OptionalSkill first, add
 # an optional_gate_fold. Coronamon's [On Play] decline = SelectHandEffect.
@@ -55,6 +61,10 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # Aegiomon's [On Play] OptionalSkill (security > 0): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, memory 5): all-pass.
   - actor: 1
     do: { pass: {} }
@@ -89,11 +99,11 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 6
+  - at: 7
     that:
       p0.security: 5
       p0.trash: []
-  - at: 7
+  - at: 8
     that:
       p0.memory: 3
       p0.security: 4
@@ -101,7 +111,7 @@ assert:
       p0.hand: [BT24-041, BT25-008, BT26-081, BT8-097, BT8-097]
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
-  - at: 9
+  - at: 10
     that:
       turn: 3
       p0.memory: 3

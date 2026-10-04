@@ -29,7 +29,9 @@ BT26-088 BT25-039 BT25-020 BT25-034 BT24-040 BT24-063 BT25-001 BT24-051`): **96 
 | Scenario authored, passes `--sim-only` (and emits a DCGO job) | **93** |
 | `unreachable`: printed "ー", no inherited effect | **3** (`BT26-016#inherited#0`, `BT26-060#inherited#0`, `BT26-085#inherited#0`) |
 | of the 93, witness only part of the clause (PARTIAL, named in the table) | 38 |
-| of the 93, deliberately assert behaviour we believe is wrong (EXPECTED DIVERGENCE) | 4 (`BT24-051-effect1`, `BT25-039-effect1`, `BT26-060-effect1` (+ `effect4` inherits it), `BT26-085-effect3`) |
+| of the 93, deliberately assert behaviour we believe is wrong (EXPECTED DIVERGENCE; re-verified 2026-10-04) | 2 bugs: `BT24-051-effect1`, `BT26-060-effect1` (+ `effect4` inherits it) |
+| of the 93, open rules question for the oracle | 1: `BT26-085-effect3` |
+| of the 93, carrying a tooling workaround row | 1: `BT25-039-effect1` (Ceresmon [On Play] eaten by the lowering's trailing PASS) |
 | `confirmed` | **0**: no oracle pass has been run |
 
 **All 96 clauses are still `unmeasured` in the verdict sense.** A scenario that lowers is not a measurement:
@@ -154,7 +156,7 @@ The DCGO build must be at or after `scripted-v16`; no line here uses `dna:` or `
 | `#effect#0` | `<Collision>` | `BT26/BT26-085-effect0.yaml` | Monodramon forced to block (no decline), deleted; P1 security stays 5 |
 | `#effect#1` | `<Reboot>` | `BT26/BT26-085-effect1.yaml` | same line: suspended at 12, unsuspended at P1's breeding step |
 | `#effect#2` | `<Blocker>` | `BT26/BT26-085-effect2.yaml` | blocks Monodramon; P0 security stays 5 |
-| `#effect#3` | [On Play] opp effects can't reduce DP / trash stacked cards until opp turn ends | `BT26/BT26-085-effect3.yaml` | P1 (`bt26-chronomon` mirror) Butenmon −4000: GS still 14000 on T4. **EXPECTED DIVERGENCE**: GS reads 10000 on T5 (the blocked −4000 surfaces when the immunity lapses). PARTIAL: stack-trash half not witnessed |
+| `#effect#3` | [On Play] opp effects can't reduce DP / trash stacked cards until opp turn ends | `BT26/BT26-085-effect3.yaml` | P1 (`bt26-chronomon` mirror) Butenmon −4000: GS still 14000 on T4. **RULES QUESTION**: GS reads 10000 on T5 (the −4000 reappears when the immunity lapses; consistent with the BT19-089 Q&A, the oracle decides). PARTIAL: stack-trash half not witnessed |
 | `#effect#4` | [All Turns] would leave → digivolve into Destroy Mode from hand/trash free, doesn't leave | `BT26/BT26-085-effect4.yaml` | Gaia Force targets GS; Destroy Mode from hand, GS becomes its source, memory unchanged. PARTIAL: from-trash branch |
 | `#effect#5` | Assembly −5: 5 different-level [Chronomon]-text/[Shaman] cards | `BT26/BT26-085-effect5.yaml` | 5 trash cards Lv.3–7 declared; 3→−4 (7 paid); all 5 stacked under GS |
 | `#inherited#0` | "ー" | **unreachable** | no inherited effect printed |
@@ -195,7 +197,7 @@ The DCGO build must be at or after `scripted-v16`; no line here uses `dna:` or `
 | `#effect#2` | [Security] play free | `BT26/BT26-088-effect2.yaml` | Biyomon attacks; Hiroko flips and is played; security 5→4 |
 | **BT25-039 Sirenmon** |||
 | `#effect#0` | [Digivolve] Lv.4 w/[TS]: Cost 3 | `BT25/BT25-039-effect0.yaml` | onto purple/red Wizardmon BT26-067 (fails yellow/green circles); 3→0 (cost 3, not the circle's 4) |
-| `#effect#1` | {Security}[End of Your Turn] play [Ceresmon] at −7; may place self as its bottom source | `BT25/BT25-039-effect1.yaml` | variant `cm-ts-mervamon-ceres`. Face-up Sirenmon (via its own #3) → Ceresmon BT25-059 played for 5 (−3→−8), Sirenmon placed under it, security 6→5. **EXPECTED DIVERGENCE**: Ceresmon's [On Play] is never offered by our engine; covered by a `dcgo_only` decline |
+| `#effect#1` | {Security}[End of Your Turn] play [Ceresmon] at −7; may place self as its bottom source | `BT25/BT25-039-effect1.yaml` | variant `cm-ts-mervamon-ceres`. Face-up Sirenmon (via its own #3) → Ceresmon BT25-059 played for 5 (−3→−8), Sirenmon placed under it, security 6→5. Ceresmon's [On Play] is parked by our engine but eaten by the exam lowering's trailing PASS (tooling bug); covered by a `dcgo_only` decline |
 | `#effect#2` | [All Turns] other [Shaman]/[Iliad] would leave (not by your effects) → delete self, they don't leave | `BT25/BT25-039-effect2.yaml` | P1's security Gaia Force ST1-16 targets Coronamon; Sirenmon deleted instead, Coronamon stays |
 | `#effect#3` | [On Deletion] may place self face up as bottom security | `BT25/BT25-039-effect3.yaml` | same line accepting it: trash → security 5→6. Face-up/bottom not projectable (effect1 relies on face-up) |
 | `#inherited#0` | [Opp Turn][OPT] opp attacks → may redirect to 1 of your suspended Digimon | `BT25/BT25-039-inherited0.yaml` | Marsmon over Sirenmon (suspended); Birdramon's security attack redirected; P0 security stays 5, Birdramon deleted |
@@ -236,14 +238,20 @@ Read the printed card and `general_rule.pdf` before calling any of these an engi
 |---|---|---|---|
 | `BT24/BT24-051-effect1.yaml` | Merukimon costs 12 with 1 own + 2 opponent Digimon | "3 or more Digimon" counts both sides → 7 | `qa/dsl-vocab-gaps.md` (card filter missing `owner: any`) |
 | `BT26/BT26-060-effect1.yaml`, `-effect4.yaml` | Destroy Mode checks 3 | `<Security A. +1>` → 2 | `docs/RUST_ENGINE_GAPS.md` §G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT |
-| `BT26/BT26-085-effect3.yaml` | Giant Slayer reads 10000 on T5 | the −4000 was never applicable → 14000 | §G-ENGINE-IMMUNE-DP-MINUS-LAZY |
-| `BT25/BT25-039-effect1.yaml` | Ceresmon played at end of turn never asks its [On Play] | DCGO asks it (a `dcgo_only` decline row stands in) | §G-ENGINE-END-OF-TURN-PLAY-LOSES-ON-PLAY |
+
+**Not bugs, but still for the oracle** (re-verified 2026-10-04):
+
+| Scenario | Ours | What to look for | Tracker |
+|---|---|---|---|
+| `BT26/BT26-085-effect3.yaml` | Giant Slayer reads 10000 on T5 | Rules question: our live "can't be reduced" reading matches the BT19-089 Q&A; if DCGO reads 14000, the install-time-refusal reading wins | "Closed during re-verification" (G-ENGINE-IMMUNE-DP-MINUS-LAZY) |
+| `BT25/BT25-039-effect1.yaml` | Ceresmon's [On Play] answered by a `dcgo_only` decline | The engine parks it; the exam lowering's trailing PASS eats it sim-side. DCGO should ask `SelectPermanentEffect` there | §G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK |
 
 **Phantom decisions our engine asks that DCGO shouldn't** (authored as `sim_only` rows):
-`BT25-034-effect2` (duplicate `<Ascension>`, §G-ENGINE-DUPLICATE-ASCENSION-TRIGGER); `BT26-016-effect1/2/4`
-(an already-spent [Once Per Turn] [When Attacking] in `TriggerOrder`, §G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER);
-`BT24-051-effect2` step 15 (WD + WA entries of one OPT effect stacked, §G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING —
-likely the first abort of that line).
+`BT25-034-effect2` (duplicate `<Ascension>`, §G-ENGINE-DUPLICATE-ASCENSION-TRIGGER). The spent-OPT `TriggerOrder`
+rows that `BT26-016-effect1/2/4` carried before main's G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER fix are gone.
+`BT24-051-effect2` step 15 now declines a single folded pick; declining it still spends the [Once Per Turn], so the
+queued [When Digivolving] arm is dropped (§G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING) — likely the first abort
+of that line.
 
 **Prompt-shape guesses most likely to abort** (fix the row from DCGO's abort message, don't guess again):
 
@@ -292,9 +300,11 @@ likely the first abort of that line).
   `ATTACK_START + slot` before `ATTACK_START + player*15 + slot`, so `opp.field.0` on an AnyField prompt (or a DCGO
   selection row naming player 1) hits OUR slot 0. `BT26-032-effect3` targets `opp.field.1` to dodge it.
   §G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST.
-- **Trailing PASS eats the opponent-trash share of a `CountCappedMultiSelect`** — the cross-trash split of Holy
-  Mode's return is unscriptable. §G-TOOLING-EXAM-TRAILING-PASS-EATS-COUNT-CAPPED.
-- **`actor:` is not validated by sim-only lowering.** §G-TOOLING-EXAM-ACTOR-NOT-VALIDATED.
+- **Trailing PASS eats a fresh optional battle-area "up to N" pick** that the row's own answer caused (Ceresmon's
+  [On Play] after Sirenmon's placement). Originally logged as an engine bug; gdb showed the engine parks the prompt.
+  §G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK.
+- Fixed on main since authoring: the trailing PASS on a `CountCappedMultiSelect` (`e2a69509`; Holy Mode's
+  cross-trash split is now scriptable) and the unchecked `actor:` (`9f408863`).
 - **clause_coverage split on BT26-067** (`#effect#1` empty marker, `#effect#2` = "and trash 1" + the whole
   [End of Your Turn]) — logged in `qa/dsl-vocab-gaps.md`.
 - **CI note:** `.github/workflows/dcgo-exam-sim.yml` runs the whole `qa/dcgo-exams/` tree against only
