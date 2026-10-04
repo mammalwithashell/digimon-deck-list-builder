@@ -14,35 +14,32 @@
 #       above Asuna's "4 or less memory" [Start of Your Turn] gate on T3).
 #   T3 (P0, 7): THE CLAUSE -- play Mervamon from hand via Assembly: material
 #       pick = Minervamon from the trash; cost 13 - 5 = 8 (7 -> -1). Then
-#       Mervamon's [On Play] (effect#2): see the SUSPECTED ENGINE BUG below --
-#       ours never parks the free-play pick on this line; DCGO's decline is a
-#       dcgo_only row. The -4000 x 2 DP pick takes Phoenixmon (only target).
+#       Mervamon's [On Play] (effect#2): the optional free-play pick is
+#       DECLINED (one shared row). The -4000 x 2 DP pick takes
+#       Phoenixmon (only target).
 #       Turn passes at -1.
 #   T4 (P1, 1): the trailing step.
 #
 # WITNESS: P1 starts T4 with exactly 1 (8 paid, not the printed 13);
 # Minervamon moved from P0's trash to Mervamon's sources.
 #
-# SUSPECTED ENGINE BUG (flagged, not fixed): after the ASSEMBLY play, our
-# engine skips Mervamon's [On Play] "may play up to 8 cost of [Iliad] from
-# hand or trash" pick (PlayCostBudget) entirely, although the hand holds
-# eligible [Iliad] cards (Elecmon BT25-030 cost 3, Aegiomon BT24-034 cost 5).
-# The SAME hand + Asuna-on-field board with a HARD play (Minervamon left in
-# hand instead of trashed) parks the pick normally, as does the hard play in
-# BT26-081-effect2.yaml. A `select: {decline, sim_only}` row here fails with
-# "recorded cancel on a non-optional OppField prompt" -- the next parked
-# prompt is already the DP pick.
+# FIXED 2026-10-04 (G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK -- retracted
+# from the engine to the exam tooling): the engine always parked Mervamon's
+# [On Play] PlayCostBudget pick after the Assembly play. The 1-card Assembly
+# material row's TRAILING PASS (`runners/selection_resolve.rs::resolve_next`
+# treated any PlayCostBudget as "this row's multi-pick awaiting its stop")
+# declined that fresh `picked: 0` prompt before any row reached it. The
+# resolver now spends the trailing PASS only on a multi-pick that took a
+# pick, so the free-play decline is an explicit sim_only row again.
 #
 # PROMPT SHAPE / DCGO quirks to triage:
 #   - Asuna [On Play]: optional_gate_fold (OptionalSkill + SelectHandEffect).
 #   - Assembly: ours = CountCappedMultiSelect {0..1} over the trash; DCGO =
 #     SelectCardEffect (may also ask "use Assembly?" first).
-#   - Mervamon OP pick: dcgo_only SelectHandEffect decline, GUESSING DCGO skips
-#     its hand/trash/stop zone menu (trash empty after the Assembly). Expect
-#     a mismatch here if the engine bug above is real and later fixed (then
-#     turn the dcgo_only row into ONE shared `decline` row expecting
-#     SelectHandEffect -- since 2026-10-04 the adapter maps a hand-only
-#     PlayCostBudget pick to SelectHandEffect, G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE).
+#   - Mervamon OP pick: ONE shared decline row expecting SelectHandEffect
+#     (hand-only PlayCostBudget -> SelectHandEffect since
+#     G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE), GUESSING DCGO skips its
+#     hand/trash/stop zone menu (trash empty after the Assembly).
 #   - DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
 card: BT26-081
 clause: BT26-081#effect#4
@@ -81,8 +78,10 @@ steps:
   - actor: 0
     do: { select: { cards: [BT24-041] } }
     expect: { prompt: SelectCardEffect }
+  # Mervamon [On Play] free-play pick: declined (one shared row; ours =
+  # PlayCostBudget over hand cards -> DCGO SelectHandEffect).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }

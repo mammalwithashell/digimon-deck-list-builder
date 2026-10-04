@@ -1,5 +1,5 @@
-//! BT25-044 Junomon — Digimon, Lv.6, Yellow/White, DP 12000, Cost 12.
-//! Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine.
+//! BT25-044 Junomon — Digimon, Lv.6, Yellow/Purple, DP 12000, Cost 12.
+//! Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Virus (official Bandai DB).
 //!
 //! # Card text (card image BT25-044 — authoritative for printed text)
 //!
@@ -177,4 +177,65 @@ fn bt25_044_on_play_no_prompt_without_other_digimon() {
         runner.pending_selection().is_none(),
         "no other Digimon -> place-security clause is a no-op"
     );
+}
+
+// ─── Section 3 — printed digivolve circles (G-DATA-BT25-044-COLOR-ATTRIBUTE) ─
+//
+// Official Bandai DB (data/card_bundles/BT25-044.md): Yellow/Purple, Virus,
+// standard circles Yellow Lv.5 / cost 4 AND Purple Lv.5 / cost 4.
+
+fn make_lv5_base(id: &str, color: digimon_engine::enums::CardColor) -> CardData {
+    let mut c = make_digimon(id, 5, 7000, &["Beast"]);
+    c.colors = vec![color];
+    c
+}
+
+/// Digivolve Junomon from hand over `base_card`; returns (proceeded, memory delta).
+fn try_digivolve_over(base_card: CardData) -> (bool, i16) {
+    use digimon_engine::enums::{GamePhase, PlaySource};
+    let base_id = base_card.card_id.clone();
+    let mut r = base()
+        .add_card(base_card)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    r.place_on_field(0, &base_id, Some(0));
+    let mem_before = r.game.memory;
+    let proceeded = r.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    r.game.drain_effect_queue();
+    (proceeded, r.game.memory - mem_before)
+}
+
+#[test]
+fn bt25_044_digivolves_from_purple_lv5_for_4() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, delta) = try_digivolve_over(make_lv5_base("PURPLE-LV5", CardColor::Purple));
+    assert!(proceeded, "printed Purple Lv.5 / cost 4 circle must allow the digivolve");
+    assert_eq!(delta, -4, "Purple Lv.5 circle costs 4");
+}
+
+#[test]
+fn bt25_044_digivolves_from_yellow_lv5_for_4() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, delta) = try_digivolve_over(make_lv5_base("YELLOW-LV5", CardColor::Yellow));
+    assert!(proceeded, "printed Yellow Lv.5 / cost 4 circle");
+    assert_eq!(delta, -4);
+}
+
+#[test]
+fn bt25_044_no_white_lv5_circle() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, _) = try_digivolve_over(make_lv5_base("WHITE-LV5", CardColor::White));
+    assert!(!proceeded, "Junomon prints no White circle");
+}
+
+#[test]
+fn bt25_044_compiled_colors_are_yellow_purple_virus() {
+    use digimon_dsl::compiled::CompiledColor;
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    assert_eq!(card.color, vec![CompiledColor::Yellow, CompiledColor::Purple]);
+    assert_eq!(card.attribute.as_deref(), Some("Virus"));
 }

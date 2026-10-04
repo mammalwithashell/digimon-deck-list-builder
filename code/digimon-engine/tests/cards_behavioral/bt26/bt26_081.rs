@@ -157,6 +157,55 @@ fn bt26_081_all_turns_aura_buffs_own_iliad_digimon() {
     assert_eq!(r.effective_dp(plain).unwrap(), 3000);
 }
 
+/// G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK — engine-side witness (the exam
+/// line's board: Asuna on field, Minervamon in the trash, [Iliad] Aegiomon /
+/// Elecmon in hand, memory 7). An [Assembly] play is a play: Mervamon's
+/// [On Play] parks its optional 8-cost free-play pick right after the
+/// material pick. The engine always did this; the exam "skip" was the
+/// selection resolver's trailing PASS declining the fresh prompt (fixed in
+/// `runners/selection_resolve.rs`).
+#[test]
+fn bt26_081_assembly_play_parks_on_play_free_play_pick() {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let mut b = DebugRunner::builder();
+    for id in [
+        CARD_ID, "BT25-030", "BT24-034", "BT24-041", "BT24-101", "BT26-090", "BT24-088",
+    ] {
+        b = b.dsl_card(id).expect(id);
+    }
+    let mut r = b
+        .add_card(filler("FILLER"))
+        .add_card(digimon("OPP", "Opp", CardColor::Red, 6, 10, &[]))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(7)
+        .start();
+    r.set_first_player(0);
+    r.skip_mulligan();
+    r.game.players[0].hand.clear();
+    r.place_on_field(0, "BT24-088", Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    for id in ["BT24-034", "BT24-034", "BT24-101", "BT25-030", "BT26-090", CARD_ID] {
+        push_hand(&mut r, 0, id);
+    }
+    push_trash(&mut r, 0, "BT24-041");
+    r.game.memory = 7;
+    let idx = r.game.players[0].hand.len() - 1;
+    r.game.decode_action(PLAY_HAND_START + idx as u16, 0);
+    let v = r.pending_selection_view().expect("assembly material pick");
+    assert!(v.prompt.contains("Assembly"), "{}", v.prompt);
+    r.game.decode_action(trash_action(&r, "BT24-041"), 0);
+    assert_eq!(
+        field_ids(&r, 0),
+        vec!["BT24-088".to_string(), CARD_ID.to_string()],
+        "Mervamon entered via Assembly"
+    );
+    assert_eq!(budget_remaining(&r), Some(8), "[On Play] budget pick parks");
+    let v = r.pending_selection_view().unwrap();
+    assert!(v.is_optional);
+    assert!(v.valid_action_ids.contains(&hand_action(&r, "BT25-030")));
+}
+
 #[test]
 fn bt26_081_alt_paths_and_assembly() {
     let r = setup();

@@ -202,6 +202,61 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
     );
 }
 
+/// G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING: a single printed
+/// `[On Play] [When Digivolving]` effect (BT24-101's shape) is ONE effect, so
+/// Homeros's "activate 1 [On Play] or [When Digivolving] effect" must not
+/// offer it twice. With only that one effect on the target, no EffectChoice
+/// surfaces and the effect resolves exactly once.
+#[test]
+fn bt24_102_refire_combined_on_play_when_digivolving_is_one_choice() {
+    const TARGET_YAML: &str = r#"
+card: TEST-OLY-COMBINED
+name: Combined Olympos
+kind: digimon
+level: 6
+color: [yellow]
+cost: 10
+dp: 12000
+traits: [Olympos XII, TS]
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play] [When Digivolving] Gain 2 memory"
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-102 YAML parses")
+        .from_dsl_yaml(TARGET_YAML)
+        .expect("target YAML parses")
+        .add_card(make_filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+
+    let homeros = runner.place_on_field(0, "BT24-102", Some(0));
+    let _target = runner.place_on_field(0, "TEST-OLY-COMBINED", Some(0));
+    enqueue_homeros_eot(&mut runner, homeros);
+
+    let pending = runner.pending_selection().expect("target selection");
+    assert_eq!(pending.kind, SelectionKind::OwnField);
+    let target_action = pending.valid_action_ids[0];
+    runner
+        .execute_action(0, target_action)
+        .expect("choose Olympos XII target");
+
+    if let Some(p) = runner.pending_selection() {
+        assert_ne!(
+            p.kind,
+            SelectionKind::EffectChoice,
+            "a combined [On Play][When Digivolving] effect is ONE effect, not two choices ({} offered)",
+            p.valid_action_ids.len()
+        );
+    }
+    assert_eq!(runner.memory(), 2, "the combined effect resolves exactly once");
+}
+
 /// Regression: Homeros's `[All Turns] +1000 DP to your TS Digimon` filter
 /// aura must install on the SAME `LiveGame::play()` call that lands
 /// Homeros. Before the `live_game.rs` tick-discipline fix, the aura was

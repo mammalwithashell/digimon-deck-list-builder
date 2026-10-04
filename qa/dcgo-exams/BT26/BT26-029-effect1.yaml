@@ -16,9 +16,10 @@
 #   T4 (P1, 3): Gaia Force ST1-16 (3 -> -5) "Delete 1 of your opponent's
 #        Digimon" -> target BT26-029. A deletion by effect is a leave "other
 #        than in battle": THE CLAUSE -- accept the Decode gate, pick the
-#        Aegiomon source -> it is played free. Its own [On Play] then triggers
-#        (decline), and BT26-029, deleted, raises <Ascension> (decline via our
-#        "No" branch). Turn passes; P0's T5 breeding pass closes the line.
+#        Aegiomon source -> it is played free. Its own [On Play] and
+#        BT26-029's <Ascension> (BT26-029 deleted) then wait together:
+#        order them (<Ascension> first), decline <Ascension> via our "No"
+#        <Ascension> via our "No" branch. Turn passes; P0's T5 breeding pass closes the line.
 #
 # WITNESS: P0's field holds a fresh Aegiomon BT25-033 with NO sources (it came
 # out of BT26-029's stack, unpaid -- P0 memory untouched by the play); BT26-029
@@ -30,11 +31,13 @@
 #     source pick. DCGO asks the gate and then a skippable source pick
 #     (DCGO_EXAM.md "Rows where one side looks rules-wrong" / <Decode>); with
 #     one Aegiomon source the two shapes should line up 1:1.
-#   - ORDER of the two follow-on triggers: we resolve the freshly played
-#     Aegiomon's [On Play] FIRST and <Ascension> second, with NO ordering
-#     prompt. DCGO may batch both (same check timing, both P0's) into a
-#     `MultipleSkills` row -- if so, that is a missing-decision finding on our
-#     side (§15-8-5-3 analogue), not a mapping error.
+#   - ORDER of the two follow-on triggers: since the 2026-10-04 fix for
+#     G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES the played Aegiomon's
+#     [On Play] waits until BT26-029 has actually left, so it and <Ascension>
+#     wait together and we ask a `MultipleSkills` ordering row (answered
+#     <Ascension> first). (Before the fix the [On Play] resolved mid-Decode with
+#     no ordering prompt.) If DCGO resolves them without asking, triage as a
+#     prompt-presence surface difference.
 #   - <Ascension>: ours is an EffectChoice Yes/No answered sim-only by
 #     `choice: "No"`; DCGO raises `generic_bool` via SetBoolSelection
 #     (EX12-047 precedent) -> paired `dcgo_only` decline row.
@@ -101,19 +104,27 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-033] } }
     expect: { prompt: SelectCardEffect }
+  # BT26-029 has now left (Decode processing complete), so the played
+  # Aegiomon's [On Play] and BT26-029's <Ascension> wait together: order
+  # them -- <Ascension> (BT26-029) first. (Picking an optional entry from
+  # our TriggerOrder activates it, so the [On Play] is ordered second to keep
+  # its own decline gate.)
   - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    do: { select: { cards: [BT26-029] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { choice: "No", sim_only: true } }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: generic_bool }
   - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 19
+  - at: 20
     that:
       turn: 5
       p1.memory: -5

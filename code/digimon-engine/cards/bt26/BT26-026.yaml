@@ -123,10 +123,10 @@ effects:
                     - kind: option
                     - trait_has: "Glowing Dawn"
                 prompt: "You may use 1 [Glowing Dawn] Option card from your hand with the cost reduced by 2"
-            - play_or_use_from_hand:
-                of: you
-                hand_index: opt_sec
-                cost_delta: { reduce: 2 }
+            # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
+            - use_option_bound:
+                binding: opt_sec
+                cost: { reduce: 2 }
       # Face-down branch (last: its declinable Tamer pick ends the body).
       - if:
           condition:
@@ -144,10 +144,9 @@ effects:
                     - kind: option
                     - trait_has: "Glowing Dawn"
                 prompt: "You may use 1 [Glowing Dawn] Option card from your hand with the cost reduced by 2"
-            - play_or_use_from_hand:
-                of: you
-                hand_index: opt_fd
-                cost_delta: { reduce: 2 }
+            - use_option_bound:
+                binding: opt_fd
+                cost: { reduce: 2 }
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
   - kind: grant_keyword

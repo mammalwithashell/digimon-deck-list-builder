@@ -2530,6 +2530,15 @@ Reproducer not yet written.
 
 ## `PermanentHandle.index` goes stale across a battle-area removal, and it blocks the 15-8-5-4 ordering fix  [G-PERMANENT-HANDLE-POSITIONAL-STALENESS]
 
+**Chain completed 2026-10-04.** Part 1 had landed (`shift_effect_queue_after_battle_area_remove`);
+part 2 (the 15-8-5-4 ordering flip) landed with G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES; part 3
+(staging-time liveness: `queued_effect_index_is_live` in `non_firing_queued_effect_indices_for`) landed
+with it. Both `#[ignore]`d reproducers in `ex12_036.rs` are un-ignored and green, the positive control
+stays green; `EX12-036-effect2.yaml` drops its MultipleSkills + Ryugumon-lock rows (matches DCGO), and
+`EX12-031-inherited0.yaml` gains one sim_only ordering row for the target-starved Shellmon `[On Play]`
+(DCGO's oracle stack omits it; our Shellmon clause has no activation condition). Both EX12 scenarios
+need an oracle re-run.
+
 **Found 2026-08-26.** Root blocker under `EX12-036#effect#2`, one of the last two
 unconfirmed clauses in the Toho core. The dependency order below matters more
 than either symptom.
@@ -4641,19 +4650,47 @@ with the root cause inferred and not traced.
   BT26-083 lines by trashing Junomon from hand. Likely one root cause: the removal observer scan
   includes the card that was removed.
 
-### Decode-played Digimon's `[On Play]` opens while the Decode carrier is still on the field  [G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES] — observed
+### Decode-played Digimon's `[On Play]` opens while the Decode carrier is still on the field  [G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES] — RESOLVED 2026-10-04
+- **RESOLVED 2026-10-04:** `resolve_generic_selection` (`effect_queue.rs`) flushed the deferred trigger
+  queue BEFORE committing a parked replacement, so a replacement process whose last nested pick played a
+  Digimon (Decode's source pick) resolved that Digimon's `[On Play]` before the carrier's leave committed.
+  The parked-replacement drain now runs INSIDE the deferred-drain scope, so triggers raised by the process
+  wait until the original event (the carrier leaving) completes (§16-35 immediate effect; queued handles
+  shift via `shift_effect_queue_after_battle_area_remove`). The played Digimon's `[On Play]` and the
+  carrier's `[On Deletion]`/`<Ascension>` now wait together (TriggerOrder). Test:
+  `bt26_083_decode_played_on_play_waits_until_carrier_has_left`; scenarios `BT26-083-effect4`,
+  `BT26-029-effect1`, `EX12-031-inherited0` updated (new MultipleSkills ordering row; EX12-031-inherited0
+  holds a confirmed verdict and needs an oracle re-run).
 - BT26-083 `<Decode>` plays BT25-044 Junomon from its sources; Junomon's `[On Play]` "other Digimon"
   pick opens with BT26-083 still offered (`own.field.0`). Picking it moved BT26-083 to security, then
   the pending `<Execute>` deletion hit Junomon instead — a likely slot/handle mix-up as well as a
   timing error (the triggered effect should wait until the carrier has left, §16-35). Declined in
   `qa/dcgo-exams/BT26/BT26-083-effect4.yaml`, so the scenario does not depend on it.
 
-### BT25-044 Junomon card data wrong  [G-DATA-BT25-044-COLOR-ATTRIBUTE] — confirmed against the official bundle
+### BT25-044 Junomon card data wrong  [G-DATA-BT25-044-COLOR-ATTRIBUTE] — RESOLVED 2026-10-04
+- **RESOLVED 2026-10-04:** YAML now `color: [yellow, purple]`, `attribute: Virus`, plus the Purple Lv.5 /
+  cost 4 `alt_paths` circle (DebugRunner builds evo costs from `alt_paths`); `data/card_overrides.json`
+  gains `attribute_eng: ["Virus"]` (cards.json had Vaccine; colours/evo costs there were already right).
+  Tests: `bt25_044_digivolves_from_purple_lv5_for_4`, `bt25_044_compiled_colors_are_yellow_purple_virus`.
+- **Follow-up (not fixed, needs a call):** the `[On Play][When Digivolving]` gate `any_permanent` defaults
+  to `of: you` while its `select_any_permanent` offers either side's Digimon (text: "1 other Digimon", no
+  "your"); and `place_on_security { of: you }` would put an OPPONENT's Digimon in P0's security, whereas
+  DCGO `PlacePermanentInSecurity` uses the permanent owner's stack. Widening the gate changes
+  `BT26-029-inherited0` / `P-213-inherited0` (a new placement prompt), so it was left for review.
 - `code/digimon-engine/cards/bt25/BT25-044.yaml`: `color: [yellow, white]`, `attribute: Vaccine`, no
   Purple Lv.5 circle. `data/card_bundles/BT25-044.md` (official Bandai DB): Yellow/Purple, Virus, with
   `Purple Lv.5 / cost 4`. Affects colour-requirement checks (e.g. Option use) and purple digivolve lines.
 
-### Mervamon's `[On Play]` free-play pick is skipped after an `[Assembly]` play  [G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK] — observed
+### Mervamon's `[On Play]` free-play pick is skipped after an `[Assembly]` play  [G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK] — RESOLVED 2026-10-04 (retracted: exam tooling, not engine)
+- **RESOLVED 2026-10-04:** the engine always parked the pick (`bt26_081_assembly_play_parks_on_play_free_play_pick`,
+  the exam board with real cards). The 1-card Assembly material row's trailing PASS in
+  `runners/selection_resolve.rs::resolve_next` treated ANY `PlayCostBudget` / `DpBudget` /
+  `CountCappedMultiSelect` as the row's own multi-pick awaiting its stop and declined the freshly parked
+  `picked: 0` prompt (same family as G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT). Those kinds now take
+  the trailing PASS only when `picked > 0`. Tests:
+  `trailing_pass_does_not_decline_a_freshly_parked_budget_or_count_pick`,
+  `trailing_pass_still_stops_a_budget_or_count_pick_that_took_a_pick` (lib); scenario `BT26-081-effect4`
+  gains a sim_only decline row.
 - BT26-081: after the Assembly material pick, the "play up to 8 play cost's total of [Iliad] cards from
   hand or trash" pick is never parked although the hand holds eligible cards; the next prompt is the DP
   pick. A hard play from the same board parks it. Not covered by `bt26_081.rs` (no On-Play-after-Assembly test).
@@ -4670,7 +4707,12 @@ with the root cause inferred and not traced.
   (three times in `BT26-103-effect4.yaml`). Likely the same family as
   G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER; adds TriggerOrder rows DCGO will not have.
 
-### `refire_effect` offers a combined `[On Play][When Digivolving]` effect as two choices  [G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING] — observed, low
+### `refire_effect` offers a combined `[On Play][When Digivolving]` effect as two choices  [G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING] — RESOLVED 2026-10-04
+- **RESOLVED 2026-10-04:** multi-timing DSL clauses now tag every lowered `Effect` with
+  `Effect::clause_group` (`lower_triggered.rs`); `refire_target_effect_inner` /
+  `activate_foreign_card_effect` (`effect_context/action/refire.rs`) collapse a group to its first entry, so
+  one printed effect is one choice. Test: `bt24_102_refire_combined_on_play_when_digivolving_is_one_choice`;
+  scenario `BT24-102-effect1` drops its sim_only `choice:` row.
 - BT24-102 Homeros `[End of Your Turn]` "activate 1 [On Play] or [When Digivolving] effect" lists
   BT24-101's single dual-timing effect as two branches — a decision the rules do not grant.
   Answered `sim_only` in `qa/dcgo-exams/BT24/BT24-102-effect1.yaml`.

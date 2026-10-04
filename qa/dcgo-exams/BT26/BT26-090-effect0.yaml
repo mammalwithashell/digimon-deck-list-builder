@@ -39,12 +39,13 @@
 # match. End-of-turn window: ours EndOfTurnAction vs DCGO Main (the
 # documented end-of-turn pair). The SoMP half is mandatory with no prompt.
 #
-# SUSPECTED ENGINE/DSL BUG (flagged, not fixed): after the hand pick our
-# engine parks an EffectChoice "Play as Digimon or use as Option" for the DUAL
-# card (BT26-090.yaml's `play_or_use_from_hand`). Kanan prints "you may USE 1
-# Option card", so the Digimon face should not be offered; the branch is
-# answered "Use as Option" as a sim_only row. DCGO (PlayOptionCards) should
-# ask nothing there.
+# FIXED 2026-10-04 (G-DSL-USE-OPTION-ONLY): our engine used to park an
+# EffectChoice "Play as Digimon or use as Option" for the DUAL card after the
+# hand pick (BT26-090.yaml's `play_or_use_from_hand`). Kanan prints "you may
+# USE 1 Option card", so BT26-090.yaml now uses the use-only
+# `use_option_bound` over the `select_hand` binding: the DUAL card goes
+# straight to its Option face and no face choice is asked -- matching DCGO's
+# PlayOptionCards, so the former sim_only `choice:` row is gone.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -75,11 +76,6 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-033] } }
     expect: { prompt: SelectHandEffect }
-  # SIM-ONLY: our engine then asks "Play as Digimon or use as Option" for the
-  # DUAL card. Kanan's text says "use 1 Option card", so only the Option face
-  # is legal -- see the SUSPECTED ENGINE/DSL BUG note in the header.
-  - actor: 0
-    do: { select: { choice: "Option", sim_only: true } }
   # T2 (P1, memory 7)
   - actor: 1
     do: { pass: {} }
@@ -99,7 +95,7 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
 assert:
-  - at: 5
+  - at: 4
     that:
       turn: 2
       p0.memory: -7
@@ -107,7 +103,7 @@ assert:
       p0.trash: [BT26-033]
       p0.field:
         - { card_id: BT26-090, dp: -1, suspended: true, sources: [] }
-  - at: 8
+  - at: 7
     that:
       turn: 3
       p0.memory: 4

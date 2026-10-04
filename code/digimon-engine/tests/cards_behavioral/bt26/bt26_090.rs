@@ -87,6 +87,46 @@ fn bt26_090_end_of_turn_suspend_to_use_ts_option_reduced_by_opponent_memory() {
     assert_eq!(p0_mem, -2 - 3, "use cost 5 reduced by 2");
 }
 
+/// G-DSL-USE-OPTION-ONLY: Kanan prints "you may USE 1 Option card", so a DUAL
+/// card (BT26-033 Jupitermon, [TS] on its Option face) may only be USED — the
+/// engine must not offer "Play as Digimon" and must never put it on the field.
+#[test]
+fn bt26_090_dual_card_is_used_as_option_never_played() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-090")
+        .dsl_card("BT26-033")
+        .expect("BT26-033")
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(-3)
+        .start();
+    r.set_first_player(0);
+    let t = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "BT26-033");
+    fire(&mut r, EffectTiming::EndOfYourTurn, t);
+    r.accept_optional_trigger().expect("accept");
+    pick_hand(&mut r, 0, "BT26-033");
+    // No "Play as Digimon / Use as Option" face choice may surface.
+    if let Some(v) = r.pending_selection_view() {
+        assert!(
+            !v.prompt.contains("Play as Digimon"),
+            "use-only effect offered the Digimon face: {}",
+            v.prompt
+        );
+    }
+    let _ = r.auto_resolve();
+    assert!(
+        !field_ids(&r, 0).contains(&"BT26-033".to_string()),
+        "the DUAL card must not enter the battle area"
+    );
+    assert!(
+        !hand_ids(&r, 0).contains(&"BT26-033".to_string()),
+        "the DUAL card was used"
+    );
+}
+
 #[test]
 fn bt26_090_end_of_turn_is_optional() {
     let mut r = setup(-2);

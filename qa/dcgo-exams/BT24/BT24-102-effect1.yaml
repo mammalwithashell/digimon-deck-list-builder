@@ -35,11 +35,13 @@
 #     with `expect: {prompt: OptionalSkill}` -> optional_gate_fold, i.e. we
 #     ANTICIPATE DCGO asks OptionalSkill(yes) then SelectPermanentEffect. If
 #     DCGO auto-picks the lone Olympos XII Digimon or asks no gate, triage here.
-#   * Ours then asks an EffectChoice between "BT24-101 on_play" and "BT24-101
+#   * FIXED 2026-10-04 (G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING): ours used to
+#     ask an EffectChoice between "BT24-101 on_play" and "BT24-101
 #     when_digivolving" -- two labels for ONE printed effect ([On Play][When
-#     Digivolving] is a single effect on BT24-101). Authored `sim_only` via
-#     `choice:`; DCGO is expected to ask nothing here (phantom choice on our
-#     side -- see report).
+#     Digivolving] is a single effect on BT24-101). The refire enumeration now
+#     collapses a multi-timing clause to one choice, so with one eligible
+#     effect it resolves directly -- as DCGO is expected to -- and the former
+#     sim_only `choice:` row is gone.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -83,9 +85,6 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: OptionalSkill }
-  # SIM-ONLY: our on_play / when_digivolving split of the one printed effect.
-  - actor: 0
-    do: { select: { choice: "on_play", sim_only: true } }
   # T4 (P1): trailing breeding decision.
   - actor: 1
     do: { pass: {} }
@@ -101,7 +100,7 @@ assert:
       p0.field:
         - { card_id: BT24-101, dp: 14000, suspended: false, sources: [] }
         - { card_id: BT24-102, dp: -1, suspended: false, sources: [] }
-  - at: 8
+  - at: 7
     that:
       turn: 4
       p0.security: 3

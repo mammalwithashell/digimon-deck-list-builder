@@ -8797,7 +8797,14 @@ pins that the turn scan does not trash such a marker.
   `qa/dcgo-exams/BT26/BT26-103-effect3.yaml` / `-effect5.yaml` (the [When Digivolving] arm only).
   See also `docs/RUST_ENGINE_GAPS.md` §G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK.
 
-### "Use 1 Option card" offers the Digimon face of a DUAL card  [G-DSL-USE-OPTION-ONLY]
+### "Use 1 Option card" offers the Digimon face of a DUAL card  [G-DSL-USE-OPTION-ONLY] — RESOLVED 2026-10-04
+- **RESOLVED 2026-10-04:** `use_option_bound` now also accepts a `select_hand` binding (hand index) as
+  the USE-ONLY sibling of `play_or_use_from_hand`: an Option or DUAL card goes straight to the Option-use
+  path (no "Play as Digimon" face choice); a Digimon/Tamer bound there is a no-op
+  (`dsl_cards/step/play_digivolve.rs`, doc on `UseOptionBoundArgs`). Switched every "use 1 ... Option
+  card from your hand" card that used `play_or_use_from_hand`: BT26-090, BT26-026 (x2), EX12-066,
+  EX13-072. Test: `bt26_090_dual_card_is_used_as_option_never_played`; scenario `BT26-090-effect0` drops
+  its sim_only `choice:` row.
 - **Card:** BT26-090 Kanan Yuki `[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand…`.
 - **Symptom:** the YAML uses `play_or_use_from_hand`, which for a DUAL card (BT26-033) asks "Play as
   Digimon / Use as Option"; the Digimon branch really puts Jupitermon on the field. The printed text

@@ -3121,7 +3121,10 @@ impl Game {
             if self.effect_queue[i].controller != chooser {
                 continue;
             }
-            if self.queued_effect_opt_exhausted(i) || !self.queued_effect_condition_passes(i) {
+            if self.queued_effect_opt_exhausted(i)
+                || !self.queued_effect_condition_passes(i)
+                || !self.queued_effect_index_is_live(i)
+            {
                 to_skip.push(i);
             }
         }
@@ -3159,6 +3162,29 @@ impl Game {
             self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key),
             Some(count) if count >= effect.max_per_turn
         )
+    }
+
+    /// Staging-time liveness (G-PERMANENT-HANDLE-POSITIONAL-STALENESS part 3,
+    /// DCGO's `CanActivate` re-filter in MultipleSkills): an entry whose source
+    /// has left (15-4-4-3 — it became a new card) can never resolve, so it must
+    /// not be offered as a `TriggerOrder` branch. Live once a parked
+    /// replacement's leave commits before its triggers are staged
+    /// (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES). Granted bodies and
+    /// entries whose effect can't be looked up stay (the run-time path decides).
+    fn queued_effect_index_is_live(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            return true;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return true;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return true;
+        };
+        self.queued_effect_source_is_live(qe, effect)
     }
 
     /// Evaluate the clause-level condition of `effect_queue[i]` against the
@@ -4828,6 +4854,18 @@ impl Game {
             }
         } else {
             (sel.callback)(self, action_id);
+        }
+        // G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: when this selection
+        // was the last nested pick of a replacement process (e.g. <Decode>'s
+        // source pick, which PLAYS a Digimon), the parked replacement's commit
+        // — the original event completing, e.g. the carrier leaving — is
+        // still part of the same immediate-effect processing (§16-35; an
+        // immediate effect's processing completes before waiting triggered
+        // effects resolve). Commit it INSIDE the deferred-drain scope so
+        // triggers the process raised (the played Digimon's [On Play]) wait
+        // until the carrier has actually left.
+        if self.pending_selection.is_none() && !self.parked_replacement.is_empty() {
+            crate::replacement::try_drain_parked_replacement_with_guard(self);
         }
         self.exit_deferred_drain_and_flush();
 
