@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/ST16/ST16-14-effect1.yaml",
       "recorded_at": "2026-08-23T22:14:54.560364700+00:00"
     },
-    "ST16-14#effect#2": {
-      "clause_id": "ST16-14#effect#2",
+    "ST16-14#security#0": {
+      "clause_id": "ST16-14#security#0",
       "card_id": "ST16-14",
       "verdict": "confirmed",
       "label": "Security Effect",

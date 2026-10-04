@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/EX7/EX7-070-effect1.yaml",
       "recorded_at": "2026-09-18T07:55:18.050037+00:00"
     },
-    "EX7-070#effect#2": {
-      "clause_id": "EX7-070#effect#2",
+    "EX7-070#security#0": {
+      "clause_id": "EX7-070#security#0",
       "card_id": "EX7-070",
       "verdict": "confirmed",
       "label": "Security Effect",

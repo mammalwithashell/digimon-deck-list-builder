@@ -1,4 +1,4 @@
-# Exam scenario: Breath of the Gods (BT3-105), clause BT3-105#effect#1 --
+# Exam scenario: Breath of the Gods (BT3-105), clause BT3-105#security#0 --
 # "[Security] Your opponent's Digimon can't attack players for the turn."
 #
 # DECK NOTE. `tm-breath-black` (qa/dcgo-exams/BT3/tm_bt3_105_pool.json): see
@@ -54,7 +54,7 @@
 # T6 Biyomon (3 -> 1), pass -> P0 3; T7 attack, pass -> P1 3; T8 two attacks,
 # pass -> P0 3.
 card: BT3-105
-clause: BT3-105#effect#1
+clause: BT3-105#security#0
 seed: 424242
 decks:
   p0:

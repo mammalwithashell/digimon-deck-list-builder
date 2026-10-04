@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-09-13T07:58:14.783202+00:00",
-  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13)",
+  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03)",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -131,9 +131,9 @@
       "image_path": null
     },
     {
-      "id": "BT11-089#effect#2",
+      "id": "BT11-089#security#0",
       "card_id": "BT11-089",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -171,9 +171,9 @@
       "image_path": null
     },
     {
-      "id": "BT8-097#effect#2",
+      "id": "BT8-097#security#0",
       "card_id": "BT8-097",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -213,9 +213,9 @@
       "image_path": null
     },
     {
-      "id": "EX1-066#effect#2",
+      "id": "EX1-066#security#0",
       "card_id": "EX1-066",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -1722,9 +1722,9 @@
       "image_path": null
     },
     {
-      "id": "P-130#effect#2",
+      "id": "P-130#security#0",
       "card_id": "P-130",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -1764,9 +1764,9 @@
       "image_path": null
     },
     {
-      "id": "ST1-12#effect#1",
+      "id": "ST1-12#security#0",
       "card_id": "ST1-12",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -1792,9 +1792,9 @@
       "image_path": null
     },
     {
-      "id": "ST1-15#effect#1",
+      "id": "ST1-15#security#0",
       "card_id": "ST1-15",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -1834,9 +1834,9 @@
       "image_path": null
     },
     {
-      "id": "ST16-14#effect#2",
+      "id": "ST16-14#security#0",
       "card_id": "ST16-14",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -1876,9 +1876,9 @@
       "image_path": null
     },
     {
-      "id": "ST19-14#effect#2",
+      "id": "ST19-14#security#0",
       "card_id": "ST19-14",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -2225,9 +2225,9 @@
       "image_path": null
     },
     {
-      "id": "BT18-093#effect#2",
+      "id": "BT18-093#security#0",
       "card_id": "BT18-093",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -2776,9 +2776,9 @@
       "image_path": null
     },
     {
-      "id": "BT24-088#effect#2",
+      "id": "BT24-088#security#0",
       "card_id": "BT24-088",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3446,9 +3446,9 @@
       "image_path": null
     },
     {
-      "id": "BT25-091#effect#3",
+      "id": "BT25-091#security#0",
       "card_id": "BT25-091",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3488,9 +3488,9 @@
       "image_path": null
     },
     {
-      "id": "BT25-092#effect#2",
+      "id": "BT25-092#security#0",
       "card_id": "BT25-092",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3699,9 +3699,9 @@
       "image_path": null
     },
     {
-      "id": "BT3-096#effect#1",
+      "id": "BT3-096#security#0",
       "card_id": "BT3-096",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3727,9 +3727,9 @@
       "image_path": null
     },
     {
-      "id": "BT3-105#effect#1",
+      "id": "BT3-105#security#0",
       "card_id": "BT3-105",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3795,9 +3795,9 @@
       "image_path": null
     },
     {
-      "id": "BT6-105#effect#2",
+      "id": "BT6-105#security#0",
       "card_id": "BT6-105",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -3960,9 +3960,9 @@
       "image_path": null
     },
     {
-      "id": "BT8-094#effect#2",
+      "id": "BT8-094#security#0",
       "card_id": "BT8-094",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4529,9 +4529,9 @@
       "image_path": null
     },
     {
-      "id": "EX7-066#effect#2",
+      "id": "EX7-066#security#0",
       "card_id": "EX7-066",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4569,9 +4569,9 @@
       "image_path": null
     },
     {
-      "id": "EX7-070#effect#2",
+      "id": "EX7-070#security#0",
       "card_id": "EX7-070",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4609,9 +4609,9 @@
       "image_path": null
     },
     {
-      "id": "EX7-071#effect#2",
+      "id": "EX7-071#security#0",
       "card_id": "EX7-071",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4694,9 +4694,9 @@
       "image_path": null
     },
     {
-      "id": "LM-032#effect#2",
+      "id": "LM-032#security#0",
       "card_id": "LM-032",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4749,9 +4749,9 @@
       "image_path": null
     },
     {
-      "id": "LM-056#effect#3",
+      "id": "LM-056#security#0",
       "card_id": "LM-056",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4792,9 +4792,9 @@
       "image_path": null
     },
     {
-      "id": "P-108#effect#2",
+      "id": "P-108#security#0",
       "card_id": "P-108",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -4908,9 +4908,9 @@
       "image_path": null
     },
     {
-      "id": "P-180#effect#2",
+      "id": "P-180#security#0",
       "card_id": "P-180",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -5017,9 +5017,9 @@
       "image_path": null
     },
     {
-      "id": "P-212#effect#3",
+      "id": "P-212#security#0",
       "card_id": "P-212",
-      "zone": "effect",
+      "zone": "security",
       "label": "Security Effect",
       "kind": "timing",
       "timings": [
@@ -5049,9 +5049,9 @@
     "total_clauses": 361,
     "total_cards": 98,
     "by_zone": {
-      "effect": 314,
+      "effect": 290,
       "inherited": 43,
-      "security": 4
+      "security": 28
     },
     "by_source": {
       "bundle": 259,

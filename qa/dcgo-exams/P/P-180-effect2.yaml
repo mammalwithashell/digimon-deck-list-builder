@@ -1,4 +1,4 @@
-# Exam scenario: Bind Red Trigger (P-180), clause P-180#effect#2 --
+# Exam scenario: Bind Red Trigger (P-180), clause P-180#security#0 --
 # "[Security] Delete 1 of your opponent's Digimon with the highest DP."
 #
 # P-180 is pinned as P0's TOP security card (stack[9]). P1 fields Biyomon
@@ -31,7 +31,7 @@
 # SelectPermanentEffect(Destroy, canNoSelect: false) over IsMaxDP for
 # card.Owner = P0.
 card: P-180
-clause: P-180#effect#2
+clause: P-180#security#0
 seed: 424242
 decks:
   p0:

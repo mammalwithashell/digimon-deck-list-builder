@@ -1,4 +1,4 @@
-# Exam scenario: Image Training (LM-056), clause LM-056#effect#3 --
+# Exam scenario: Image Training (LM-056), clause LM-056#security#0 --
 # "[Security] Reveal the top 2 cards of your deck. Add 1 purple or blue card
 #  among them to the hand. Return the rest to the bottom of the deck. Then,
 #  place this card in the battle area."
@@ -19,7 +19,7 @@
 #
 # Book: qa/dcgo-exams/LM/tm_lm_056_pool.json (--decks).
 card: LM-056
-clause: LM-056#effect#3
+clause: LM-056#security#0
 seed: 424242
 decks:
   p0:

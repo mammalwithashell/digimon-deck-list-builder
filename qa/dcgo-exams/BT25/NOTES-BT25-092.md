@@ -6,7 +6,7 @@ Denominator: **3 clauses** (`PYTHONPATH=code python -m tools.clause_coverage.ext
 |---|---|---|
 | `BT25-092#effect#0` | `BT25-092-effect0.yaml` | authored, lowers sim-only |
 | `BT25-092#effect#1` | `BT25-092-effect1.yaml` (book `tm_bt25_092_pool.json`, deck `tm-asuna-demidevimon`) | authored 2026-09-18, lowers sim-only, asserts pass (see "`effect#1` — authored" below) |
-| `BT25-092#effect#2` | `BT25-092-effect2.yaml` | authored, lowers sim-only |
+| `BT25-092#security#0` | `BT25-092-effect2.yaml` | authored, lowers sim-only |
 
 ## `effect#1` — authored (2026-09-18)
 

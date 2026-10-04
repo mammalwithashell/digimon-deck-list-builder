@@ -1,4 +1,4 @@
-# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#effect#2 --
+# Exam scenario: Hurricane Screw Shot (EX7-071), clause EX7-071#security#0 --
 # "[Security] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their
 #  level 5 Digimon."
 #
@@ -36,7 +36,7 @@
 #
 # P0 stays idle throughout -- no hatch, so nothing on P0's side can ever trigger.
 card: EX7-071
-clause: EX7-071#effect#2
+clause: EX7-071#security#0
 seed: 424242
 decks:
   p0:

@@ -162,7 +162,7 @@ def test_bundle_with_no_security_section_is_confirmed_absent_not_image_required(
         "X-008": {
             "text_sections": [
                 {"label": "Effect", "text": "[On Play] Draw 1."},
-                # No "Security" section at all.
+                # No "Security Effect" section at all.
             ]
         }
     }
@@ -189,6 +189,28 @@ def test_bundle_security_section_is_used_when_present():
     assert len(security) == 1
     assert security[0].source == "bundle"
     assert security[0].timings == ["Security"]
+
+
+def test_official_security_effect_label_is_the_security_zone():
+    """`build_card_bundles.py` records the official DB's own label for the
+    security box, "Security Effect" (817 sections on 2026-10-03, never a bare
+    "Security"). It must land in the security zone, not take an effect index."""
+    official_index = {
+        "X-016": {
+            "text_sections": [
+                {"label": "Effect", "text": "[Main] Draw 1."},
+                {"label": "Security Effect", "text": "[Security] Activate this card's [Main] effect."},
+            ]
+        }
+    }
+    clauses = extract_card_clauses(
+        "X-016", cards_index={}, overrides_index={}, official_index=official_index, dcgo_root=None
+    )
+    assert [(c.id, c.label) for c in clauses] == [
+        ("X-016#effect#0", "Effect"),
+        ("X-016#security#0", "Security Effect"),
+    ]
+    assert clauses[1].timings == ["Security"]
 
 
 def test_clause_ids_are_stable_across_repeated_extraction():

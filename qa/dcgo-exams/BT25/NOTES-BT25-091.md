@@ -13,7 +13,7 @@ Book: `tm_bt25_091_pool.json` (decks `tm-monica`, `quiet-opponent`).
 | `BT25-091#effect#0` `[Start of Your Turn] If you have 2 or less memory, set it to 3.` | `BT25-091-effect0.yaml` | lowers, asserts pass (audited, unchanged) |
 | `BT25-091#effect#1` `[On Play]` return a [TS] Option, else `<Draw 1>` | `BT25-091-effect1.yaml` | oracle CONFIRMED 2026-09-19 after YAML fix (see below) |
 | `BT25-091#effect#2` `[Your Turn] When you use [TS] trait Option cards, by suspending this Tamer …` | `BT25-091-effect2.yaml` | **new** — lowers, asserts pass |
-| `BT25-091#effect#3` `[Security] Play this card without paying the cost.` | `BT25-091-effect3.yaml` | lowers, asserts pass (audited, unchanged) |
+| `BT25-091#security#0` `[Security] Play this card without paying the cost.` | `BT25-091-effect3.yaml` | lowers, asserts pass (audited, unchanged) |
 
 ## Prompt shapes read off `BT25_091.cs`
 - `effect#1`: `SetUpActivateClass(…, -1, FALSE, …)` — no OptionalSkill; the
