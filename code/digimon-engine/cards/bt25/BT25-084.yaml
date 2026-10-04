@@ -47,7 +47,7 @@ card: BT25-084
 name: Titamon
 kind: digimon
 level: 6
-color: [purple, black]
+color: [purple, red, green]
 dp: 13000
 cost: 13
 traits: [Shaman, Titan, TS]

@@ -27,7 +27,7 @@
     "Data"
   ],
   "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower [Puppet] or [Shambala] trait card from your trash without paying the cost.\r\n[All Turns] All of your [Puppet] or [TB] trait Digimon gain ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.) \r\n[On Deletion] Return 1 of your opponent's lowest level Digimon to the bottom of the deck.",
-  "inherited_effect_description_eng": "|applinkdp =",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {

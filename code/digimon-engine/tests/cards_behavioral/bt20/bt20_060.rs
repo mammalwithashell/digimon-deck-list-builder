@@ -39,13 +39,15 @@ fn bt20_060_has_printed_metadata_ace_overflow_and_routes() {
     assert_eq!(card.name, "Alphamon: Ouryuken");
     assert_eq!(card.kind, CompiledCardKind::Digimon);
     assert_eq!(card.level, Some(7));
-    assert_eq!(card.cost, Some(6));
+    // Play cost 9 (the 6 is the Lv.6 digivolve circle), name bar black|yellow|red:
+    // card image, official DB and DCGO agree.
+    assert_eq!(card.cost, Some(9));
     assert_eq!(card.dp, Some(16000));
     assert_eq!(
         card.color,
         vec![
             CompiledColor::Black,
-            CompiledColor::Purple,
+            CompiledColor::Yellow,
             CompiledColor::Red
         ]
     );

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-01",
+  "last_updated": "2026-10-03",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -8318,11 +8318,12 @@
       "card_name": "DemiDevimon",
       "validated_date": "2026-06-03",
       "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
-      "status": "IMPLEMENTED",
+      "status": "PARTIAL",
       "gap_kind": null,
       "archetype": "rules-FAQ no-DP vehicle",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
-      "test_path": "code/digimon-engine/tests/rules_faq/no_level_no_value.rs"
+      "test_path": null,
+      "audit_note": "2026-10-03: authored 2026-06-03 as a vanilla no-DP vehicle for FAQ NV-1 from a pre-release cards.json stub. The card prints 1000 DP (now in the YAML), [On Play] reveal 3 (add 1 [Evil]/[Fallen Angel] and 1 [Seven Great Demon Lords] trait card, rest to the bottom, then trash 1 card in hand) and an inherited [When Attacking] [Once Per Turn] trash of the top card of both players' decks; neither effect is implemented. NV-1 now uses a Digi-Egg as its vehicle."
     },
     "EX3-014": {
       "card_name": "Dorbickmon",

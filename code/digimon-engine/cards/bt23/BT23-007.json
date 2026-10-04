@@ -7,7 +7,7 @@
   "card_name_jpn": "",
   "card_effect_class_name": "BT23_007",
   "play_cost": 3,
-  "dp": 2000,
+  "dp": 1000,
   "level": 3,
   "card_kind": 0,
   "rarity": 0,
@@ -15,16 +15,18 @@
     0
   ],
   "type_eng": [
-    "Muscle Training (App Name)"
+    "Muscle Training (App Name)",
+    "Muscle Training"
   ],
   "form_eng": [
-    "Stnd."
+    "Stnd.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Life"
   ],
   "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "＜Piercing＞",
   "security_effect_description_eng": "",
   "evo_costs": [
     {

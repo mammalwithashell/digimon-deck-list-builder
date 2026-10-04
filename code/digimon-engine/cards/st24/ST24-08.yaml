@@ -32,7 +32,7 @@ kind: digimon
 level: 3
 color: [green]
 cost: 3
-dp: 1000
+dp: 2000
 traits: [Vegetation, DATA SQUAD]
 
 # Alt-digivolve: Lv.2 with the [DATA SQUAD] trait / cost 0.

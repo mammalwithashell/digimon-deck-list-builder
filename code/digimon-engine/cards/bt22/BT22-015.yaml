@@ -149,7 +149,7 @@ card: BT22-015
 name: Omnimon
 kind: digimon
 level: 7
-color: [red, white]
+color: [red, white, blue]
 cost: 15
 dp: 15000
 traits: [Holy Warrior, Royal Knight, CS]

@@ -6,8 +6,8 @@
   "card_name_eng": "DemiDevimon",
   "card_name_jpn": "",
   "card_effect_class_name": "BT24_068",
-  "play_cost": 0,
-  "dp": null,
+  "play_cost": 3,
+  "dp": 1000,
   "level": 3,
   "card_kind": 0,
   "rarity": 0,
@@ -21,9 +21,15 @@
   "attribute_eng": [
     "Virus"
   ],
-  "effect_description_eng": "",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among them to the hand. Return the rest to the bottom of the deck. Then, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the top card of both players' decks.",
   "security_effect_description_eng": "",
-  "evo_costs": [],
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
   "xros_req": ""
 }

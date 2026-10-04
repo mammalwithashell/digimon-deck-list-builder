@@ -1,4 +1,6 @@
 {
+  "index": 3184,
+  "norm_id": 0.1592,
   "card_id": "EX8-064",
   "card_index": 64,
   "card_name_eng": "Boltboutamon",
@@ -11,7 +13,8 @@
   "rarity": 3,
   "card_colors": [
     6,
-    5
+    5,
+    2
   ],
   "type_eng": [
     "Wizard",
@@ -29,11 +32,19 @@
       "card_color": 6,
       "level": 6,
       "memory_cost": 5
+    },
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 5
     }
   ],
   "xros_req": "[DNA Digivolve] Purple/Black Lv.6 + Yellow/Green Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\n[DNA Digivolve] [Piedmon] + [Myotismon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
-  "index": 3184,
-  "norm_id": 0.1592,
   "dna_costs": [
     {
       "requirement1": {

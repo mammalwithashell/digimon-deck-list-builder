@@ -46,7 +46,7 @@ card: BT25-059
 name: Ceresmon
 kind: digimon
 level: 6
-color: [green, blue]
+color: [green, yellow]
 dp: 12000
 cost: 12
 traits: [Shaman, Olympos XII, Iliad, TS, Vegetation]

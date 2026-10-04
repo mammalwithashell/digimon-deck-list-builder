@@ -1,4 +1,6 @@
 {
+  "index": 3193,
+  "norm_id": 0.15965,
   "card_id": "EX8-073",
   "card_index": 73,
   "card_name_eng": "Gallantmon (X Antibody)",
@@ -11,7 +13,8 @@
   "rarity": 4,
   "card_colors": [
     0,
-    1
+    1,
+    2
   ],
   "type_eng": [
     "Holy Warrior",
@@ -30,9 +33,17 @@
       "card_color": 0,
       "level": 5,
       "memory_cost": 4
+    },
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
     }
   ],
-  "xros_req": "[Digivolve] [Gallantmon]: Cost 1",
-  "index": 3193,
-  "norm_id": 0.15965
+  "xros_req": "[Digivolve] [Gallantmon]: Cost 1"
 }

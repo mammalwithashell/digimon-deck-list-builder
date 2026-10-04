@@ -1,4 +1,6 @@
 {
+  "index": 3149,
+  "norm_id": 0.15745,
   "card_id": "EX8-029",
   "card_index": 29,
   "card_name_eng": "Aegisdramon",
@@ -11,7 +13,8 @@
   "rarity": 3,
   "card_colors": [
     1,
-    5
+    5,
+    2
   ],
   "type_eng": [
     "Cyborg",
@@ -30,11 +33,19 @@
       "card_color": 1,
       "level": 6,
       "memory_cost": 5
+    },
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 5
     }
   ],
   "xros_req": "[DNA Digivolve] Blue/Purple Lv.6 + Black/Yellow Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
-  "index": 3149,
-  "norm_id": 0.15745,
   "dna_costs": [
     {
       "requirement1": {
