@@ -34,7 +34,7 @@
 #   (UserSelectionManager.cs SetBoolSelection -> harness kind `generic_bool`),
 #   then adds `SecurityCards[0]` directly with no card widget. So the gate-only
 #   OptionalSkill fold (`expect: {prompt: OptionalSkill}` over the forced
-#   Security pick, G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD) is REFUTED for this
+#   Security pick, G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD, now retired) is REFUTED for this
 #   card: it would emit expect_prompt=OptionalSkill against DCGO's
 #   generic_bool and abort ("expected prompt 'OptionalSkill'"). Re-authored as
 #   a sim_only pick (our prompt, zero wire rows) + a dcgo_only

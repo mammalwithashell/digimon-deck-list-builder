@@ -114,18 +114,6 @@ pub struct SelectWire {
     /// pick row (payload picks = accept), or emits ONLY OptionalSkill(no)
     /// for a `decline:` payload (the pick never opens DCGO-side).
     pub optional_gate_fold: bool,
-    /// G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD: a fold whose pick DCGO never
-    /// opens even after "yes", so the accept side is ONE row --
-    /// OptionalSkill(yes) -- not gate + pick. Set only over a declinable
-    /// `Security` pick with exactly ONE candidate (e.g. BT24-031's inherited
-    /// "you may add your top security card to the hand"): our engine parks
-    /// that forced card as a declinable pick, while DCGO's effect is an
-    /// `isOptional` activation whose body moves the top card with no
-    /// selection widget, because there is nothing to choose. ASSUMPTION
-    /// (unverified against the oracle): no `SelectCardEffect` row follows the
-    /// yes. If the oracle shows one, drop this flag and let the normal
-    /// two-row fold emit the pick.
-    pub fold_gate_only: bool,
 }
 
 /// The target of an end-of-turn-gate attack, carried symbolically for the
@@ -255,9 +243,7 @@ impl LoweredStep {
             // A folded DECLINE is one row (DCGO never opens the pick after a
             // declined gate); a folded PICK is the gate row plus the pick row.
             LoweredStep::Select(w) if w.optional_gate_fold => {
-                // A gate-only fold (a forced one-candidate Security pick)
-                // is the gate row alone on BOTH answers.
-                if w.cancel || w.fold_gate_only {
+                if w.cancel {
                     1
                 } else {
                     2
@@ -1253,28 +1239,6 @@ fn kind_is_pick_shaped(kind: &SelectionKind) -> bool {
     )
 }
 
-/// True when our live prompt is a declinable `Security` pick with exactly ONE
-/// candidate -- the forced-card "you may add your top security card" shape
-/// (BT24-031's inherited `[When Attacking]`). DCGO asks that as a bare
-/// `OptionalSkill` and opens no card widget, since there is nothing to pick,
-/// so it takes the gate-only fold (`SelectWire::fold_gate_only`).
-/// G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD.
-///
-/// A Security pick with 2+ candidates (a real choice among security cards,
-/// e.g. `Root.Security` `SelectCardEffect`s like BT1_087.cs:76) is NOT folded:
-/// there DCGO genuinely opens the card widget, and that is the 1:1 mapping.
-fn is_forced_security_pick(pending: &digimon_engine::selection::PendingSelection) -> bool {
-    use digimon_engine::action::space::PASS;
-    matches!(pending.kind, SelectionKind::Security)
-        && pending.is_optional
-        && pending
-            .valid_action_ids
-            .iter()
-            .filter(|&&id| id != PASS)
-            .count()
-            == 1
-}
-
 /// Sim-side `expect.prompt` on a select step: assert loosely against the
 /// parked prompt's kind where the kind->DCGO mapping is unambiguous, and say
 /// so out loud where it is not.
@@ -1304,13 +1268,6 @@ fn check_select_expectations(
             "  note: step {i} folds DCGO's OptionalSkill gate into our live {:?} pick \
              (the emitter splits the wire rows)",
             pending.kind
-        );
-        return Ok(());
-    }
-    if want == "OptionalSkill" && is_forced_security_pick(pending) {
-        println!(
-            "  note: step {i} folds DCGO's OptionalSkill gate into our live one-candidate \
-             Security pick (gate-only: DCGO opens no card widget for a forced card)"
         );
         return Ok(());
     }
@@ -1868,9 +1825,6 @@ fn build_selection_row(
         if let Some(pending) = game.pending_selection.as_ref() {
             if kind_is_pick_shaped(&pending.kind) {
                 wire.optional_gate_fold = true;
-            } else if is_forced_security_pick(pending) {
-                wire.optional_gate_fold = true;
-                wire.fold_gate_only = true;
             }
         }
     }
@@ -3003,7 +2957,6 @@ steps:
             bool_answer: Some(true),
             cancel: false,
             optional_gate_fold: false,
-            fold_gate_only: false,
         };
         let lowered = vec![
             LoweredStep::Action(62),

@@ -252,9 +252,10 @@ confirm or refute.
 - **Mervamon's free-play pick (BT26-081):** one shared row asserting `SelectHandEffect`
   (`G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`, resolved 2026-10-04; was a `sim_only` + `dcgo_only`
   pair). DCGO may still loop a hand/trash/stop zone menu.
-- **BT24-031-inherited0:** "you may add your top security card" is our Security pick,
-  authored as the gate-only OptionalSkill fold (`G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD`,
-  resolved 2026-10-04): the wire carries OptionalSkill(yes) alone. Aegiomon over the yellow [TS] Elecmon
+- **BT24-031-inherited0:** "you may add your top security card" is our Security pick;
+  DCGO asks a `generic_bool` (BT24_031.cs `SetBoolSelection`, isOptional false), so the
+  line carries a `sim_only` pick + a `dcgo_only` `generic_bool` row
+  (`G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD` superseded 2026-10-04; the gate-only fold was retired). Aegiomon over the yellow [TS] Elecmon
   also has two digivolve routes at the same cost: we ask nothing, DCGO may ask.
 - **Single-candidate mandatory picks** (BT26-073 delete, BT26-081 DP pick, BT26-083
   `#effect#5` 2-of-2 delete): we always park these; DCGO may auto-resolve with no row.

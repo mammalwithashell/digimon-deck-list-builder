@@ -1441,11 +1441,8 @@ fn build_exam_job(
                 //   picks   -> OptionalSkill(yes) + the pick row
                 //   decline -> OptionalSkill(no) only (DCGO never opens the
                 //              pick after a declined gate).
-                //   gate-only (`fold_gate_only`, a forced one-candidate
-                //   Security pick) -> OptionalSkill(yes|no) only: DCGO opens
-                //   no card widget when there is nothing to choose.
                 LoweredStep::Select(w) if w.optional_gate_fold => {
-                    if w.cancel || w.fold_gate_only {
+                    if w.cancel {
                         vec![ScriptedInput {
                             actor: step.actor,
                             action_id: None,
@@ -2097,13 +2094,6 @@ steps:
                 optional_gate_fold: true,
                 ..SelectWire::default()
             }),
-            // Gate-only fold (forced one-candidate Security pick).
-            LoweredStep::Select(SelectWire {
-                card_ids: vec!["ST1-03".to_string()],
-                optional_gate_fold: true,
-                fold_gate_only: true,
-                ..SelectWire::default()
-            }),
             LoweredStep::EndOfTurnGate {
                 action_id: 62,
                 attack: None,
@@ -2167,40 +2157,6 @@ steps:
         assert_eq!(v["inputs"][2]["select_has_bool"], true);
         assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
         assert!(v["inputs"][2].get("select_cancel").is_none());
-    }
-
-    /// G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD: a gate-only fold (our forced
-    /// one-candidate Security pick) emits ONLY OptionalSkill(yes) on accept --
-    /// DCGO opens no card widget for a card it does not let you choose -- and
-    /// only OptionalSkill(no) on decline.
-    #[test]
-    fn gate_only_fold_emits_the_gate_row_alone() {
-        let s = select_line("{ cards: [ST1-07] }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["ST1-07".to_string()],
-            optional_gate_fold: true,
-            fold_gate_only: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 3, "accept -> one gate row");
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert_eq!(v["inputs"][2]["select_has_bool"], true);
-        assert_eq!(v["inputs"][2]["select_bool"], true);
-        assert!(v["inputs"][2].get("select_card_ids").is_none());
-
-        let s = select_line("{ decline: true }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            cancel: true,
-            optional_gate_fold: true,
-            fold_gate_only: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 3, "decline -> one gate row");
-        assert!(v["inputs"][2].get("select_bool").is_none());
     }
 }
 
