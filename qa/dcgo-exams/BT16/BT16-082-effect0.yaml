@@ -1,0 +1,116 @@
+# Exam scenario: Ukkomon (BT16-082, white Lv.3, cost 3), clause
+# BT16-082#effect#0 -- "[Your Turn] [Once Per Turn] When any of your Digimon
+# move from the breeding area to the battle area, reveal the top 3 cards of
+# your deck. Add 1 Digimon card or Tamer card among them to the hand. Return
+# the rest to the bottom of the deck. Then, you may hatch in your breeding
+# area."
+#
+# Ukkomon itself is the mover (card Q&A: "Yes, it activates." -- our engine
+# agrees: the moving Ukkomon's own trigger fires).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P0 perspective):
+#   T1 (0): hatch Kekkomon ST23-01; pass main -> P1 gets 3.
+#   T2: P1 passes -> P0 at 3.
+#   T3 (3): draw stack[10] ST23-03. No breeding question (a Lv.2 cannot
+#       move and the area is occupied, so our engine skips the phase).
+#       Digivolve Kekkomon -> Ukkomon in the breeding area via the rainbow
+#       "Lv.2: cost 1" circle (3 -> 2), digivolve draw stack[11] ST23-09.
+#       Pass -> P1 3.
+#   T4: P1 passes -> P0 at 3.
+#   T5 (3): draw stack[12] BT25-043. Breeding: move Ukkomon to the battle
+#       area. THE CLAUSE: reveal stack[13..15] = BT25-090 (Tamer), ST23-12,
+#       BT25-057 (Digimon); add BT25-090; ST23-12 + BT25-057 to the deck
+#       bottom; accept "you may hatch" -> a fresh Kekkomon in breeding.
+#       Pass main.
+#   T6: P1 passes.
+#   T7 (3): HATCH WITNESS -- the breeding area is occupied by a Lv.2 again,
+#       so our engine skips the breeding phase and T7 opens in Main (an
+#       empty breeding area would park a breeding_action first).
+#   Witness (at 12): memory 3, BT25-090 in hand, Ukkomon (2000, source
+#   ST23-01) on the battle field. Witness (at 15): turn 7, phase Main.
+#
+# PROMPT SHAPE (cards/bt16/BT16-082.yaml; DCGO BT16_082.cs per its
+# CanUseCondition / PermanentCondition notes): reveal pick -> SelectCardEffect
+# (mandatory); 2 leftovers -> DCGO's single deck-bottom ordering prompt = our
+# OrderedPermutation{remaining:2}, one row with both identities; "you may
+# hatch" -> ours a 2-label EffectChoice answered yes (unasserted sim-side;
+# DCGO likely OptionalSkill / generic_bool). DCGO-side risk: if DCGO parks a
+# breeding_action on T3/T7 where ours skips the phase, the line misaligns
+# there (no breeding row is authored for T3/T7).
+card: BT16-082
+clause: BT16-082#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT16-082, ST23-13, ST23-09, ST23-06, ST23-15,
+            ST23-03, ST23-04, ST23-06, ST23-15, ST23-13,
+            ST23-03, ST23-09, BT25-043, BT25-090, ST23-12,
+            BT25-057, ST23-04]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT16-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT25-090] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-12, BT25-057] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT25-043, BT25-090, ST23-03, ST23-06, ST23-09, ST23-09, ST23-13, ST23-15]
+      p0.trash: []
+      p0.field:
+        - { card_id: BT16-082, dp: 2000, suspended: false, sources: [ST23-01] }
+  - at: 15
+    that:
+      turn: 7
+      phase: Main
