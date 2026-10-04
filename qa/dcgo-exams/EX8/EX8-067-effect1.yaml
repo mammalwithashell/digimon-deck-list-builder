@@ -1,0 +1,149 @@
+# Exam scenario: Close (EX8-067), clause EX8-067#effect#1 --
+# "[Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait
+#  Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or
+#  [Rock] trait from your trash as that Digimon's bottom digivolution cards."
+#
+# THE LINE (trash-fill shape of EX10-025-effect0.yaml): nothing legal puts cards in
+# the trash from game start except an effect, so EX11-038 Sunarizamon is played
+# twice (T1, T3), each time trashing one Mineral/Rock HAND card [EX8-047, BT21-055].
+#   T1 (P0, mem 0): EX11-038 #1 (-> -3), trash EX8-047; draws EX8-048 Landramon.
+#   T2 (P1): nothing.            P0 holds 3.
+#   T3 (P0, mem 3): EX11-038 #2 (-> 0), trash BT21-055; then Close (cost 4 -> -4).
+#   T4 (P1, mem 4): nothing.     P0 holds 3 (pass resets).
+#   T5 (P0, mem 3): digivolve EX11-038 #1 (field.0, Lv3 Mineral) into EX8-048
+#       Landramon (cost 2 -> 1). THE CLAUSE: Close triggers (the digivolving
+#       Digimon is a [Mineral] Digimon), suspend Close, and place the two trash
+#       cards (exactly the "up to 2" maximum) as Landramon's bottom sources.
+# No [Close] is left in hand when Landramon digivolves, so Landramon's own
+# [When Digivolving] ("play 1 [Close] from your hand") has nothing to do.
+card: EX8-067
+clause: EX8-067#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX11-038
+      - EX11-038
+      - EX8-047
+      - BT21-055
+      - EX8-067
+      # security (5-9): never checked
+      - EX10-033
+      - EX10-033
+      - EX10-033
+      - EX10-036
+      - EX10-036
+      # (10) T1 draw by EX11-038 #1, (11) T3 turn draw, (12) T3 draw by EX11-038 #2,
+      # (13) T5 turn draw
+      - EX8-048
+      - EX10-036
+      - EX10-032
+      - EX10-032
+    rest: rocks-exam
+  p1:
+    stack:
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      - EX10-032
+      - EX10-033
+      - EX10-033
+      - EX10-033
+      - EX10-036
+      - EX10-036
+      - EX10-036
+    rest: rocks-exam
+steps:
+  # T1 (P0): play EX11-038 #1 (cost 3 -> memory -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX11-038, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # EX11-038 [On Play] cost: DCGO opens a zone menu first (0 = "From hand"); our
+  # single prompt folds it.
+  - actor: 0
+    do: { select: { value: 0, dcgo_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX8-047] } }
+    expect: { prompt: SelectHandEffect }
+  # T2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): EX11-038 #2 (-> 0), trashing BT21-055; then Close (-> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX11-038, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 0, dcgo_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-055] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: EX8-067, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 4): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): digivolve field.0 into Landramon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX8-048 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: a MultipleSkills trigger-order prompt. The digivolve triggers TWO
+  # effects at once on DCGO's side -- Close's [Your Turn] observer and Landramon
+  # (EX8-048)'s [When Digivolving] ("If you have 1 or fewer Tamers, you may play 1
+  # [Close] from your hand"), whose CanActivateCondition checks only the Tamer
+  # count (EX8_048.cs:46), NOT that a [Close] is in hand. Our engine never queues
+  # the Landramon effect when no [Close] is in hand. The row picks Close so both
+  # engines resolve the clause under exam first.
+  - actor: 0
+    do: { select: { cards: [EX8-067], dcgo_only: true } }
+    expect: { prompt: MultipleSkills }
+  # THE CLAUSE. DCGO: OptionalSkill yes/no, then ONE SelectCardEffect (maxCount 2,
+  # trash). Ours: the optional gate doubles as a Close pick (OwnField), then the
+  # trash picks.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # KNOWN TOOLING BLOCKER -- this line does NOT measure the clause (verdict:
+  # unmeasured). The gate row below (`targets: [own.field.2]`) is followed by
+  # resolve_next's trailing PASS the instant the NEXT prompt is our
+  # CountCappedMultiSelect with PASS legal (selection_resolve.rs:546-552), which
+  # silently declines the "up to 2" trash pick: our side places 0 cards and the
+  # oracle diff reports `p0.field[1].sources ours=[EX11-038]
+  # dcgo=[BT21-055,EX11-038,EX8-047]`. That is the tool eating the prompt, NOT our
+  # engine (the sim reports "our engine auto-resolved" only because the PASS already
+  # ran). `cards: [EX8-067, ...]` cannot name the gate (card picks do not resolve
+  # against OwnField prompts) and a bool/targets/decline payload all hit the same
+  # trailing PASS, so no row shape reaches the pick.
+  - actor: 0
+    do: { select: { targets: [own.field.2], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX8-047, BT21-055] } }
+    expect: { prompt: SelectCardEffect }
+  # DCGO-ONLY: Landramon's own [When Digivolving] resolves next as an OptionalSkill
+  # (isOptional true) even though no [Close] is in hand; decline it.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # One step past the clause: Landramon is on the field, memory 1, still P0's Main.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }

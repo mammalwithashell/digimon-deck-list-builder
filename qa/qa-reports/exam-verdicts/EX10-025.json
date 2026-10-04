@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-04T13:20:18.238684600+00:00",
+  "clauses": {
+    "EX10-025#effect#0": {
+      "clause_id": "EX10-025#effect#0",
+      "card_id": "EX10-025",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4dc197b6cf5dee467dddb1c49beb15b0fc88c2cdc909d6233ee1f584bd6bdd1e",
+      "scenario_path": "qa/dcgo-exams/EX10/EX10-025-effect0.yaml",
+      "recorded_at": "2026-10-04T13:20:17.588946900+00:00"
+    },
+    "EX10-025#inherited#0": {
+      "clause_id": "EX10-025#inherited#0",
+      "card_id": "EX10-025",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "e13e6f8d4f0eba53ac204e66f741c4c64fcf53fb7fc5ebba6ef52fbb0bf169b3",
+      "scenario_path": "qa/dcgo-exams/EX10/EX10-025-inherited0.yaml",
+      "reason": "DIVERGED at step 16 (compared 14 of 19 ours / 17 dcgo steps (5 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-04T13:20:18.238684600+00:00"
+    }
+  }
+}
