@@ -157313,7 +157313,41 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] [Aegiomon]: Cost 3"
+    "xros_req": "[Digivolve] [Aegiomon]: Cost 3\r\nAssembly Requirements [Assembly -2] Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": 4,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null,
+            "any_of": [
+              {
+                "text_any": [
+                  "Chronomon"
+                ]
+              },
+              {
+                "trait_match": "TS",
+                "trait_alternatives": []
+              }
+            ]
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "BT26-074": {
     "index": 4294,
@@ -157904,21 +157938,31 @@
       {
         "elements": [
           {
-            "name_contains": "Chronomon",
+            "name_contains": "",
             "trait_match": "",
-            "trait_alternatives": [
-              "Shaman"
-            ],
+            "trait_alternatives": [],
             "level_max": null,
-            "count": 1,
+            "count": 5,
             "is_digimon_only": false,
-            "color": null
+            "color": null,
+            "any_of": [
+              {
+                "text_any": [
+                  "Chronomon"
+                ]
+              },
+              {
+                "trait_match": "Shaman",
+                "trait_alternatives": []
+              }
+            ]
           }
         ],
         "reduce_cost_per_card": 5,
-        "max_materials": 1,
+        "max_materials": 5,
         "different_card_numbers": false,
         "different_names": false,
+        "different_levels": true,
         "has_text": "",
         "source_zones": [
           "trash"

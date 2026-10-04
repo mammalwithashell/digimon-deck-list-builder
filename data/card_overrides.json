@@ -16498,6 +16498,7 @@
     ],
     "inherited_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level."
   },
+  "_note_BT26-073": "BT26-073 Aegiochusmon: Dark prints a Special Play Condition, \"Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\" (official Bandai DB, data/card_official.json), which the digimoncard.io API drops from xros_req (still missing on 2026-10-03). Restored in the API's own Assembly line format after the [Digivolve] line the API does carry; apply_overrides re-derives digixros_costs from it.",
   "BT26-073": {
     "type_eng": [
       "Shaman",
@@ -16516,7 +16517,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "xros_req": "[Digivolve] [Aegiomon]: Cost 3\r\nAssembly Requirements [Assembly -2] Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
   },
   "BT26-082": {
     "type_eng": [

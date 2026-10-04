@@ -231,6 +231,7 @@ def _digixros_element_to_json(el):
         **({"name_any": list(el.name_any)} if el.name_any else {}),
         **({"text_any": list(el.text_any)} if el.text_any else {}),
         **({"keyword": el.keyword} if el.keyword else {}),
+        **({"any_of": [dict(q) for q in el.any_of]} if el.any_of else {}),
     }
 
 
@@ -242,6 +243,7 @@ def _digixros_cost_to_json(dxc):
         "different_card_numbers": bool(dxc.different_card_numbers),
         "different_names": bool(dxc.different_names),
         **({"different_colors": True} if dxc.different_colors else {}),
+        **({"different_levels": True} if dxc.different_levels else {}),
         "has_text": dxc.has_text,
         "source_zones": list(dxc.source_zones),
     }
