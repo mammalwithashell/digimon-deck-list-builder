@@ -46,13 +46,13 @@
 # placement is ours a two-branch EffectChoice ("Place ..." / "Don't place
 # ...", yes-maps to branch 0) vs DCGO's Yes/No selection ("Will you place
 # Sirenmon under Ceresmon?") -> generic_bool.
-# TOOLING WORKAROUND (step 14): Ceresmon's [On Play] ("You may suspend up to
-# 2 Digimon") IS parked by our engine after this end-of-turn play (verified
-# 2026-10-04 with gdb), but the exam lowering's trailing PASS after the
-# placement row declines it (G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-
-# MULTIPICK). DCGO asks it (SelectPermanentEffect, canNoSelect:true, BT25-059
-# DCGO notes), so it is answered here as a DCGO-only decline to keep the
-# state aligned. Once the tooling bug is fixed, make it a shared decline row.
+# CERESMON'S [On Play] (step 14): the end-of-turn play fires Ceresmon's own
+# [On Play] ("You may suspend up to 2 Digimon"), ours an AnyField up-to-2 pick
+# vs DCGO SelectPermanentEffect (canNoSelect:true, BT25-059 DCGO notes); both
+# engines ask it and the line declines it. (Until 2026-10-04 this row was
+# `dcgo_only`: the exam lowering's trailing PASS after the placement row
+# silently declined the freshly parked prompt sim-side --
+# G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK, now resolved.)
 card: BT25-039
 clause: BT25-039#effect#1
 seed: 424242
@@ -119,9 +119,9 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: generic_bool }
-  # DCGO-ONLY: Ceresmon's [On Play] suspend-up-to-2 pick (see header).
+  # Ceresmon's [On Play] suspend-up-to-2 pick: decline (see header).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectPermanentEffect }
   # T4 (P1): one step past the clause.
   - actor: 1

@@ -38,11 +38,10 @@
 #
 # PROMPT SHAPE: suspend pick = ours AnyField -> DCGO SelectPermanentEffect
 # canNoSelect:true; hand pick = ours Hand -> DCGO SelectHandEffect
-# canNoSelect:true. Target is opp.field.1, NOT opp.field.0, to dodge a
-# harness resolver bug (AnyField: `selection_resolve::resolve_next` tries the
-# side-implicit id 100+slot before the absolute 100+player*15+slot, so
-# `opp.field.0` resolves to OUR slot 0 -- it suspended Ceresmon while the
-# wire said ST1-02).
+# canNoSelect:true. Target opp.field.1 = Monodramon. (An AnyField pick now
+# resolves only the absolute id 100+player*15+slot; before 2026-10-04
+# `opp.field.0` resolved to OUR slot 0 -- it suspended Ceresmon while the wire
+# said ST1-02 -- G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST, now resolved.)
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
 card: BT26-032
 clause: BT26-032#effect#3
