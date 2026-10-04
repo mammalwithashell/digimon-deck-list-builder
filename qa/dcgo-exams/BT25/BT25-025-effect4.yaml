@@ -12,7 +12,7 @@
 #
 # THE LINE.
 #   T1 (P0, 0): hard-play Aegiomon BT24-034 (5): 0 -> -5 (no [TS] Tamer in
-#       hand -> silent).
+#       hand -> silent on OUR side; DCGO asks it -> dcgo_only decline row).
 #   T2 (P1, 5): Biyomon ST1-02 (2) + Agumon ST1-03 (3): 5 -> 0; pass -> P0 3.
 #   T3 (P0, 3): all-pass -> P1 3.
 #   T4 (P1, 3): Biyomon and Agumon each attack P0's security. Both checks flip
@@ -36,7 +36,15 @@
 # real 2-candidate pick -- `opp.field.0` is resolved to a card id (identity),
 # both P1 Digimon are bare Lv.3s so either answer leaves the same state; if
 # DCGO's centre-out frame order makes opp.field.0 name the other Digimon, the
-# state is unchanged.
+# state is unchanged. VERIFIED (DCGO C#, 2026-10-04): BT25_025.cs -- the
+# de-digivolve is Mode.Degenerate canNoSelect false; at SecurityCards.Count
+# <= 3 a second SelectPermanentEffect Mode.UnTap canNoSelect false over own
+# Digimon (no suspended filter -- Aegiochusmon is the one candidate).
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
 card: BT25-025
 clause: BT25-025#effect#4
 seed: 424242
@@ -59,6 +67,11 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
+  # Aegiomon BT24-034's [On Play] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 5): Biyomon + Agumon (5 -> 0), pass.
   - actor: 1
     do: { pass: {} }
@@ -112,12 +125,12 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 14
+  - at: 15
     that:
       p0.security: 3
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
-  - at: 17
+  - at: 18
     that:
       turn: 5
       p0.memory: 0

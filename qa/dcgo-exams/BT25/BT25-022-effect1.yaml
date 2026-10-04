@@ -24,9 +24,14 @@
 #
 # PROMPT SHAPE: ours = RevealBucket, re-parked per PICK (2 picks) + one
 # OrderedPermutation N=1 for the single leftover (sim_only row). DCGO
-# (SimplifiedRevealDeckTopCardsAndSelect, 2 conditions) = one SelectCardEffect
-# per bucket, possibly a leading generic_bool gate, and NO prompt for a 1-card
-# bottom order. Expect the documented RevealBucket per-bucket add-timing quirk
+# (SimplifiedRevealDeckTopCardsAndSelect, 2 conditions, mutualConditions:
+# true) = one SelectCardEffect per bucket and NO prompt for a 1-card bottom
+# order. VERIFIED (DCGO C#, 2026-10-04): NO leading generic_bool -- the
+# "Select cards / Not select" SetBoolSelection in RevealLibrary.cs
+# RevealDeckTopCardsAndSelect needs `canNoAction`, which the Simplified
+# wrapper never passes; `mutualConditions` only relaxes the 2nd bucket's
+# canNoSelect; ReturnRevealedCardsToLibraryBottom bottoms a single card with
+# no prompt. Expect the documented RevealBucket per-bucket add-timing quirk
 # (one-field p0.hand diff on the 2nd pick row) at the oracle.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --

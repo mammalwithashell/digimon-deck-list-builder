@@ -25,7 +25,7 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
 
-use super::helpers::{assert_outer_accept_dialog_shape, drain_outer_accept_dialog};
+use super::helpers::assert_outer_accept_dialog_shape;
 
 const FRAGMENT_N: u8 = 2;
 
@@ -284,14 +284,11 @@ fn fragment_2_with_only_one_source_does_not_park() {
 /// must NOT mutate any state — the carrier and its sources stay intact and
 /// the neighbor is deleted normally.
 ///
-/// **Substrate note**: Phase C's dispatcher pushes a candidate from every
-/// battle-area permanent's effects whose timing matches, so the Fragment
-/// carrier's optional outer-accept dialog MAY be installed when a neighbor
-/// is being deleted. We drain any installed dialog by accepting; the body's
-/// `if Some(subject) != me_perm` guard then returns early without setting
-/// any outcome or installing a nested source-pick, so the original neighbor
-/// deletion proceeds. (A future dispatcher-level self-scope filter would
-/// suppress the dialog entirely; tracked separately.)
+/// **Self-scope at candidate collection** (2026-10-04,
+/// G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED sibling audit): Fragment's
+/// `replacement_condition` drops the candidate when the deletion subject is
+/// not the carrier, so no outer accept dialog is parked for a neighbor's
+/// deletion at all (previously a phantom, outcome-free prompt).
 #[test]
 fn fragment_does_not_fire_on_neighbor_deletion() {
     let mut r = DebugRunner::builder()
@@ -325,15 +322,7 @@ fn fragment_does_not_fire_on_neighbor_deletion() {
     // Delete the neighbor.
     r.game.delete_permanent_with_effects(neighbor);
 
-    // Fragment is OPTIONAL → the candidate-walk MAY install an outer accept
-    // dialog for the carrier even when the subject is the neighbor. Drain it
-    // by accepting; the body's self-scope guard then no-ops and the original
-    // neighbor deletion proceeds. (`drain_outer_accept_dialog` asserts the
-    // dialog's valid_action_ids are exactly {REPLACEMENT_ACCEPT, PASS}.)
-    drain_outer_accept_dialog(&mut r, REPLACEMENT_ACCEPT);
-
-    // After draining: no further selection should be pending. The body's
-    // self-scope guard MUST have prevented any nested source-pick selection.
+    // No outer accept dialog and no nested source-pick selection.
     assert!(
         r.game.pending_selection.is_none(),
         "Fragment closure must self-scope-no-op for a neighbor's deletion (no \

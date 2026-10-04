@@ -28,9 +28,13 @@
 # at 27 BT4-014 AND the checked security card BT3-007 are both in P1's trash
 # and P1 security is 2 -- an attack on a Digimon that removed a security card.
 #
-# PROMPT SHAPE. As effect1 for steps 0..16. The Piercing check itself is
-# mandatory and opens no prompt on either side. `attack: field.0 -> field.0`:
-# each seat has exactly one Digimon, so both indices are slot-safe.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)): steps 0..16 as BT26-083-effect1.yaml (incl. the
+# Asuna OptionalSkill fold FIXED 2026-10-04). <Piercing> is a mandatory
+# OnDetermineDoSecurityCheck static -- no prompt. BT26-083 ends every P0 turn
+# here suspended -> no <Execute> gate. No security card on this line has a
+# [Security] effect (BT24-031's are On Play / When Attacking only; the
+# tm-quiet-red ones are vanilla). `attack: field.0 -> field.0`: each seat has
+# exactly one Digimon, so both indices are slot-safe.
 card: BT26-083
 clause: BT26-083#effect#2
 seed: 424242
@@ -55,7 +59,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [BT25-044] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }

@@ -29,17 +29,45 @@
 #     P0's trash holds BOTH trashed security cards (stack[9] BT24-031, then
 #     stack[8] BT25-033).
 #
-# PROMPT SHAPE:
-#   * Ours: ONE declinable OwnField pick ("Choose 1 of your Olympos XII
-#     Digimon") that is both the "you may" gate and the target pick. Authored
-#     with `expect: {prompt: OptionalSkill}` -> optional_gate_fold, i.e. we
-#     ANTICIPATE DCGO asks OptionalSkill(yes) then SelectPermanentEffect. If
-#     DCGO auto-picks the lone Olympos XII Digimon or asks no gate, triage here.
-#   * Ours then asks an EffectChoice between "BT24-101 on_play" and "BT24-101
-#     when_digivolving" -- two labels for ONE printed effect ([On Play][When
-#     Digivolving] is a single effect on BT24-101). Authored `sim_only` via
-#     `choice:`; DCGO is expected to ask nothing here (phantom choice on our
-#     side -- see report).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   * DCGO's [End of Your Turn] is `SetUpActivateClass(..., isOptional: true)`
+#     (BT24/White/BT24_102.cs, OnEndTurn region) -> OptionalSkill(yes)
+#     (ICardEffect.cs Activate_Optional_Effect_Execute -> OptionalSkill.cs
+#     SelectOptional). The body then suspends Homeros and opens a
+#     SelectPermanentEffect (maxCount min(1, n), canNoSelect true) over the
+#     [Olympos XII] Digimon -- SelectPermanentEffect.active() only skips on 0
+#     candidates, so the lone Jupitermon is still ASKED (no auto-pick). Ours is
+#     the same two prompts since 2026-10-04 (gate, suspend, then the
+#     declinable OwnField pick) -> two shared rows.
+#   * DCGO THEN ASKS A THIRD ROW: BT24-101 carries [On Play] and [When
+#     Digivolving] as TWO separate ActivateClass objects (BT24/Yellow/
+#     BT24_101.cs "On Play" / "When Digivolving" regions), and Homeros'
+#     CanBeEffectCandidate accepts both (IsOnPlay / IsWhenDigivolving are
+#     description-prefix + synthetic-hashtable checks, ICardEffect.cs ~797/826),
+#     so candidateEffects.Count == 2 -> a SelectCardEffect "Select 1 effect to
+#     activate." over customRootCardList [BT24-101, BT24-101] (canNoSelect
+#     false). Ours collapses the multi-timing clause to one choice
+#     (G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING fix) and asks nothing -> a
+#     `dcgo_only` row answers it by identity.
+#   * PREDICTED DIVERGENCE (DCGO harness/AI quirk -- OURS is right): Homeros
+#     reads the picked effect back ONLY through SetUpAfterSelectIndexCoroutine
+#     (selectedIndexes.Count == 1). The harness hook
+#     (SelectCardEffect.cs SetTargetCardAndIndicies) and DCGO's own AI
+#     AutoSelect both pass `Indicies = null`, so _slectedInexesInList stays
+#     empty (SelectCardEffect.cs ~706-718, ~881), selectedEffect stays null and
+#     NOTHING is re-activated. Expect DCGO at step 10: p0.security 4 (not 3),
+#     p0.trash [BT24-031] (no BT25-033). Card text + rules (the effect
+#     activates) side with our engine; only DCGO's human-UI path (which passes
+#     indices, ~601-610) would refire. Triage the diff as this quirk, not as a
+#     Homeros finding.
+#   * The re-activated [On Play] (were it to run) asks nothing on either side:
+#     its -13000 SelectPermanentEffect has maxCount 0 (P1's field empty ->
+#     active() false) and 3 security > 1 -> no Recovery; BT24-101's
+#     OnLoseSecurity OPT ("BT24_101_AT_Trash_sec", maxCount 1) is spent.
+#
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): Homeros' gate opens
+# whenever it can suspend (T1's end now carries a shared decline row) and
+# pays the suspend BEFORE the pick, so THE CLAUSE is two shared rows.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -65,6 +93,11 @@ steps:
   - actor: 0
     do: { play: { card: BT24-102, from: hand } }
     expect: { prompt: main_phase }
+  # T1's end (memory -5): Homeros' [End of Your Turn] gate opens with no
+  # [Olympos XII] Digimon (BT24_102.cs:121-135, §15-7-5) -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 5): pass.
   - actor: 1
     do: { pass: {} }
@@ -79,20 +112,27 @@ steps:
   - actor: 0
     do: { play: { card: BT24-101, from: hand } }
     expect: { prompt: main_phase }
-  # THE CLAUSE ([End of Your Turn]): yes + pick Jupitermon (own.field.1).
+  # THE CLAUSE ([End of Your Turn]): the OptionalSkill gate (yes; Homeros
+  # suspends) ...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ... then the declinable [Olympos XII] pick: Jupitermon (own.field.1).
   - actor: 0
     do: { select: { targets: [own.field.1] } }
-    expect: { prompt: OptionalSkill }
-  # SIM-ONLY: our on_play / when_digivolving split of the one printed effect.
+    expect: { prompt: SelectPermanentEffect }
+  # DCGO-only: Homeros' "Select 1 effect to activate." over BT24-101's two
+  # separate [On Play] / [When Digivolving] ActivateClasses (see header).
   - actor: 0
-    do: { select: { choice: "on_play", sim_only: true } }
+    do: { select: { cards: [BT24-101], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
   # T4 (P1): trailing breeding decision.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
   # At the end-of-turn pick: aura already visible, one security trashed each.
-  - at: 6
+  - at: 7
     that:
       turn: 3
       p0.memory: -8
@@ -101,7 +141,7 @@ assert:
       p0.field:
         - { card_id: BT24-101, dp: 14000, suspended: false, sources: [] }
         - { card_id: BT24-102, dp: -1, suspended: false, sources: [] }
-  - at: 8
+  - at: 10
     that:
       turn: 4
       p0.security: 3

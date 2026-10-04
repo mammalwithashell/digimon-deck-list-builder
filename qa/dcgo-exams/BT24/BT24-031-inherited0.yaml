@@ -24,16 +24,33 @@
 # card), p0.security is 4, and the attack resolved normally (P1 4 security,
 # Monodramon in P1's trash, Aegiomon suspended over Elecmon).
 #
-# PROMPT SHAPE: ours = ONE declinable `Security`-kind pick of the top card
-# (gate and pick at once), which maps to DCGO SelectCardEffect (the harness
-# refuses an OptionalSkill fold on a Security-kind prompt). DCGO most likely
-# renders "you may add your top security card" as an OptionalSkill yes/no with
-# NO card pick (the top card is forced) -- expect a prompt-class mismatch on
-# this row at the oracle; triage as a surface mismatch, not a rules finding. Aegiomon's [When
-# Digivolving] decline: our engine asks even with no P1 Digimon; DCGO may skip.
-# Aegiomon over a YELLOW Lv.3 [TS] Elecmon has TWO routes at the same cost 2
-# (Yellow Lv.3 circle, "[Digivolve] Lv.3 w/[TS]: Cost 2"); our engine asked no
-# route prompt -- DCGO may ask one (SelectCountEffect / generic_int).
+# PROMPT SHAPE (VERIFIED against DCGO C#, 2026-10-04):
+#   THE CLAUSE -- ours = ONE declinable `Security`-kind pick of the top card
+#   (gate and pick at once). DCGO = ONE `generic_bool` row and NOTHING else:
+#   BT24_031.cs (inherited [When Attacking] region) registers the effect with
+#   `SetUpActivateClass(..., 1, false, ...)` -- isOptional FALSE, so there is
+#   NO OptionalSkill gate -- and inside ActivateCoroutine asks
+#   `userSelectionManager.SetBoolSelection("Add to hand"/"Not add to hand")`
+#   (UserSelectionManager.cs SetBoolSelection -> harness kind `generic_bool`),
+#   then adds `SecurityCards[0]` directly with no card widget. So the gate-only
+#   OptionalSkill fold (`expect: {prompt: OptionalSkill}` over the forced
+#   Security pick, G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD, now retired) is REFUTED for this
+#   card: it would emit expect_prompt=OptionalSkill against DCGO's
+#   generic_bool and abort ("expected prompt 'OptionalSkill'"). Re-authored as
+#   a sim_only pick (our prompt, zero wire rows) + a dcgo_only
+#   `{yes: true}` row asserting `generic_bool` (select_has_bool/select_bool,
+#   the UserSelectionManager.cs SetBoolForPlayer harness contract).
+#   No MultipleSkills: Elecmon's inherited is the only [When Attacking] on
+#   the stack (Aegiomon BT25-033 prints none).
+#   Aegiomon's [When Digivolving]: optional (ActivateClassesForSharedEffects
+#   optional: true, BT25_033.cs) and its CanActivate is only
+#   `SecurityCards.Any()` -- DCGO asks the OptionalSkill even with no P1
+#   Digimon, exactly like ours. Declined (shared row).
+#   Aegiomon over a YELLOW Lv.3 [TS] Elecmon has TWO routes at cost 2 (Yellow
+#   Lv.3 circle + "Lv.3 w/[TS]: Cost 2"); DCGO de-duplicates the cost list
+#   (CardController.cs PlayCardClass SelectCost: `CostList.Distinct()`, a
+#   SelectCountEffect only when >= 2 DISTINCT costs) -> no route prompt,
+#   matching ours.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -89,14 +106,19 @@ steps:
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # THE CLAUSE: yes -- add the top security card (Shota Kuroi) to the hand.
+  # SIM-ONLY: our one-candidate declinable Security pick (gate + pick).
   - actor: 0
-    do: { select: { cards: [BT26-092] } }
-    expect: { prompt: SelectCardEffect }
+    do: { select: { cards: [BT26-092], sim_only: true } }
+  # DCGO-ONLY: BT24_031.cs asks SetBoolSelection ("Add to hand") -- a
+  # generic_bool, no OptionalSkill gate, no card widget.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 12
+  - at: 13
     that:
       turn: 3
       p0.memory: 1

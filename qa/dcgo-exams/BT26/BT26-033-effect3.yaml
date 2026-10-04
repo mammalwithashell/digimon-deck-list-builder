@@ -2,11 +2,9 @@
 # "<Engage> (At the end of your turn, this Digimon may attack.)"
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
-# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
-# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
-#
-# *** THIS LINE ENCODES A SUSPECTED ENGINE BUG AND IS EXPECTED TO ABORT AT
-# *** THE ORACLE (prompt mismatch at step 13). That abort IS the finding.
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
 #
 # THE LINE: T1 P-213 (0 -> -7); T2 P1 passes; T3 Jupitermon onto P-213 (cost
 # 4, 3 -> -1); T4 P1 passes; T5 (P0, memory 3) P0 passes breeding AND the
@@ -14,33 +12,29 @@
 # legally at this exact point in BT26-033-effect1/-effect2) and P1's board
 # empty -- the textbook <Engage> window.
 #
-# WHAT SHOULD HAPPEN (printed text; general_rule.pdf <Engage>): at the end of
-# P0's turn Jupitermon may attack. DCGO: EndTurnProcess asks the <Engage>
-# OptionalSkill gate (then SelectAttackEffect on yes).
+# WHAT SHOULD HAPPEN (printed text; general_rule.pdf <Engage> 16-44): at the
+# end of P0's turn Jupitermon may attack. DCGO: EndTurnProcess asks the
+# <Engage> OptionalSkill gate (then SelectAttackEffect on yes). Ours parks
+# EndOfTurnAction (attack bits + PASS); the `attack:` row below folds to
+# OptionalSkill "yes" + the SelectAttackEffect answer (docs/DCGO_EXAM.md,
+# "End-of-turn attack gate").
+# VERIFIED vs DCGO C#: Engage.cs (factory) :37 isOptional true -> OptionalSkill;
+# EngageProcess (CardEffectCommons Engage.cs:16-29) then opens
+# SelectAttackEffect (canAttackPlayerCondition true). <Raid> / <Alliance>
+# trigger on the Engage attack but neither can activate (no P1 Digimon, no
+# second P0 Digimon), so no further rows.
 #
-# WHAT OUR ENGINE DOES (measured): NOTHING. No EndOfTurnAction park; the turn
-# rotates straight to P1 (at 14: turn 6, Breeding). Cause, read from source:
-# `Game::has_end_of_turn_keywords` (code/digimon-engine/src/game_phases.rs
-# ~596) does `if !perm.top_card().is_digimon(&self.card_data) { continue; }`,
-# and `CardSource::is_digimon` is `card_kind == CardKind::Digimon` -- false for
-# a board-resident DUAL card (CardKind::Dual). The mask (mask.rs ~590) and
-# decode (decode.rs ~331) DO accept Engage; only the park gate excludes it, so
-# the window never opens. `is_digimon_for_rules` (permanent.rs ~380, which
-# includes Dual) is the predicate the gate should use. Same gap silently
-# drops Vortex / Overclock / MayAttack end-of-turn attacks on any DUAL top
-# card. The keyword's end_of_your_turn auto-effect DOES fire (it shows up as a
-# TriggerOrder candidate beside other end-of-turn triggers), it just grants a
-# MayAttack window that is never parked.
+# FIXED 2026-10-04 (G-ENGINE-DUAL-END-OF-TURN-WINDOW): this file used to
+# assert that NO window opened -- `Game::has_end_of_turn_keywords`
+# (game_phases.rs) gated on `CardSource::is_digimon` (card_kind == Digimon),
+# false for a board-resident DUAL card (CardKind::Dual), so the turn rotated
+# straight to P1. The gate now uses `Permanent::is_digimon` (Digimon | Dual)
+# and the line is re-authored with the end-of-turn attack: Jupitermon (13000)
+# attacks P1's security; the checked card is Biyomon ST1-02 (3000, no
+# [Security] effect), which loses. Witness: p1.security 5 -> 4.
 #
-# The ideal step 13 is `attack: { attacker: field.0, target: security }` in
-# the end-of-turn window (witness p1.security 5 -> 4, cf.
-# EX12/EX12-019-effect5.yaml); it cannot lower against our engine today. This
-# file therefore asserts what our engine does and leaves the DCGO gate
-# UNANSWERED at T5's end, so the oracle pass aborts there instead of
-# laundering the gap. Re-author with the attack row once the gate is fixed.
-#
-# T3's end also carries the shared dcgo_only <Engage> decline row (the same
-# bug at a memory-overflow turn end).
+# T3's end also carries the shared <Engage> decline row (the same window at
+# a memory-overflow turn end).
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
 # DCGO -- unconfirmed until the oracle pass.
 card: BT26-033
@@ -80,6 +74,9 @@ steps:
   # printed Red Lv.5 circle (5) and the [Digivolve] Lv.5 w/[TS] circle (4)
   # are open, so both engines ask which cost to pay (ours EffectChoice, DCGO
   # SelectCountEffect over the distinct cost list) -- answered by VALUE 4.
+  # Verified: CardController.cs PlayCardClass.SelectCost (~:620-740) builds
+  # CostList.Distinct() = [5, 4] and, at Count >= 2, opens SelectCountEffect
+  # "Which digivolution cost do you pay?" (CanNoSelect false).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -92,20 +89,31 @@ steps:
   # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
   # top security -> hand (mandatory), then the optional "play or use 1
   # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  # Verified (BT26_033.cs:56-135): SetUpActivateClass(..., isOptional false)
+  # -> no OptionalSkill; one SelectHandEffect (canNoSelect true, maxCount 1),
+  # opened only if a hand card passes CanPlayOrUse at max(0, cost - 5) --
+  # Inori / Aegiomon / Shota do here (MaxMemoryCost = |10 - memory| = 11).
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
-  # T3's end (memory -1 -> the turn ends). DCGO-ONLY ROW: Jupitermon (on
-  # P-213, in play since T1, unsuspended) has <Engage>, so DCGO's
-  # EndTurnProcess asks the <Engage> OptionalSkill gate. Our engine NEVER
-  # parks it for a DUAL top card (suspected engine bug -- see
-  # BT26-033-effect3.yaml): `Game::has_end_of_turn_keywords`
-  # (game_phases.rs ~596) skips any permanent whose top card fails
-  # `CardSource::is_digimon` (card_kind == Digimon), and a board-resident DUAL
-  # card is CardKind::Dual. Declined on the DCGO side only; this row's
-  # EXISTENCE is the measurement of that gap.
+  # T3's end (memory -1 -> the turn ends): Jupitermon (on P-213, in play
+  # since T1, unsuspended) has <Engage>, so the end-of-turn attack window
+  # opens in BOTH engines -- ours parks EndOfTurnAction, DCGO's EndTurnProcess
+  # asks the <Engage> OptionalSkill gate. Declined (a `pass` at the park folds
+  # to OptionalSkill "no"). This row was dcgo_only until
+  # G-ENGINE-DUAL-END-OF-TURN-WINDOW was fixed (2026-10-04): our engine used
+  # to skip the park for a DUAL top card (CardKind::Dual).
+  # Verified, including on this NEGATIVE-memory turn end:
+  # AutoProcessing.cs EndTurnCheck (:635) runs EndTurnProcess as soon as the
+  # non-turn player has >= 1 memory, and EndTurnProcess (:679) stacks
+  # EffectTiming.OnEndTurn BEFORE moving to phase.End -- the same path as a
+  # pass. <Engage> is CardEffectFactory EngageEffect (Engage.cs:37,
+  # isOptional true -> OptionalSkill as the lone stacked effect), CanUse =
+  # owner's turn + IsPermanentExistsOnBattleAreaDigimon (Permanent.IsDigimon
+  # is true for the DUAL top card: CardSource.IsDigimon = cardKind contains
+  # Digimon), CanActivate = CanActivateEngage (CanAttack && !IsAttacking).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # T4 (P1, memory 1): all-pass -> P0 at 3.
   - actor: 1
@@ -115,22 +123,31 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
   # T5 (P0, memory 3): pass breeding, pass the main phase -> the <Engage>
-  # window (DCGO asks here; ours rotates -- see header).
+  # end-of-turn window.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T6 (P1): our engine is already here.
+  # THE CLAUSE: attack P1's security in the end-of-turn window.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: OptionalSkill }
+  # Leave our EndOfTurnAction park (no gate left: emits nothing DCGO-side,
+  # docs/DCGO_EXAM.md "End-of-turn attack gate").
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1).
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 13
+  - at: 15
     that:
       turn: 6
       phase: Breeding
-      p1.security: 5
+      p1.security: 4
       p0.field:
-        - { card_id: BT26-033, dp: 13000, suspended: false, sources: [P-213] }
+        - { card_id: BT26-033, dp: 13000, suspended: true, sources: [P-213] }

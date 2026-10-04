@@ -41,9 +41,15 @@
 # PROMPT SHAPE: ours = ONE optional OwnField pick (the effect's optionality
 # folds into the declinable pick), preceded by a sim-only TriggerOrder between
 # Blinding Ray's trash disposal and the trigger. DCGO (BT25-025.yaml
-# crosscheck): canNoSelect: true SelectPermanentEffect. If DCGO also raises an
-# OptionalSkill gate in front of the pick, the oracle aborts at the pick row
-# and it needs an `optional_gate_fold` / dcgo_only yes row.
+# crosscheck): canNoSelect: true SelectPermanentEffect. VERIFIED (DCGO C#,
+# 2026-10-04): NO OptionalSkill gate -- BT25_025.cs's inherited [All Turns]
+# is SetUpActivateClass(..., 1, false, ...) (isOptional false); the "may"
+# is the SelectPermanentEffect's canNoSelect: true (Mode.UnTap). Minervamon's
+# cost choice: CostList {4 (Black Lv.5 circle), 3 ([TS] alt route)} ->
+# SelectCountEffect, value 3. Its WD: no qualifying hand card ->
+# SelectHandEffect.active() false (maxCount 0) -> no hand row; one
+# SelectPermanentEffect. Blinding Ray BT4_104.cs: IDestroySecurity + 2
+# memory, no prompt.
 card: BT25-025
 clause: BT25-025#inherited#0
 seed: 424242

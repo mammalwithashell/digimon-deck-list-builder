@@ -20,9 +20,9 @@
 #       to the bottom (OrderedPermutation N=1, sim-only row).
 #   T2 (P1, 3): pass -> P0 3.
 #   T3 (P0, 3): THE CLAUSE -- digivolve Aegiomon BT24-034 onto Lunamon for 2:
-#       3 -> 1. Aegiomon's own [When Digivolving] (#effect#2) is gated on a
-#       [TS] Tamer in hand; P0's hand holds none, so it is silent on both
-#       sides (ours: effect `condition` false; DCGO: CanActivate).
+#       3 -> 1. Aegiomon's own [When Digivolving] (#effect#2): ours is gated
+#       on a [TS] Tamer in hand (none) and stays silent; DCGO asks it anyway
+#       (see PREDICTED DIVERGENCE) -> a dcgo_only decline row.
 #   Trailing pass -> P1.
 #
 # WITNESS: p0.memory 3 -> 1 (the alt cost is exactly 2) and Aegiomon on the
@@ -31,7 +31,30 @@
 # PROMPT SHAPE: two SelectCardEffect bucket picks for Lunamon's reveal
 # (RevealBucket; DCGO adds per bucket -- a one-field p0.hand diff on the 2nd
 # pick row is the documented DCGO quirk), one sim-only bottom row; the
-# digivolve itself asks nothing.
+# digivolve itself asks nothing. VERIFIED (DCGO C#, 2026-10-04): Lunamon
+# BT25_022.cs = SimplifiedRevealDeckTopCardsAndSelect, 2 conditions, no
+# canNoAction -> no leading generic_bool, one SelectCardEffect per bucket, a
+# 1-card remainder is bottomed with no prompt (RevealLibrary.cs). Single cost
+# route (BT24_034.cs alt condition, cost 2; Blue Lunamon fails the Yellow
+# circle) -> no SelectCountEffect (CardController.cs SelectCost).
+#
+# PREDICTED DIVERGENCE (prompt only on this line; DCGO C# read 2026-10-04):
+# BT24_034.cs gates Aegiomon's [When Moving]/[On Play]/[When Digivolving] on
+# `IsExistOnBattleAreaDigimon && SecurityCards.Count() > 0` ONLY, asks it as
+# an OptionalSkill (isOptional true), pays the cost (top security -> hand)
+# and only THEN looks for a [TS] Tamer in hand (`HandCards.Count(ValidTamer)
+# >= 1` -> SelectHandEffect, canNoSelect true). Our BT24-034.yaml requires a
+# [TS] Tamer in hand BEFORE the cost (`condition: count_gte ... kind: tamer`)
+# and is silent otherwise. Rules side with DCGO: digest.md 15-7 ("By X, Y" --
+# the player may choose X even if the result can't be executed, 15-7-5), and
+# a [TS] Tamer that arrives FROM the security card is playable in DCGO but
+# not in ours. The DCGO gate is carried as a `dcgo_only` decline row; the
+# end state is unchanged (declined).
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
 card: BT24-034
 clause: BT24-034#effect#0
 seed: 424242
@@ -75,11 +98,16 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT24-034 } }
     expect: { prompt: main_phase }
+  # Aegiomon BT24-034's [When Digivolving] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 9
+  - at: 10
     that:
       turn: 3
       p0.memory: 1

@@ -21,15 +21,30 @@
 # The (Rule) [Wizard] grant has no observable consumer in this deck; it rides
 # along as part of the clause text only.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Cost menu (sim-only choice + dcgo_only generic_int value 1): value is a
-#     GUESS (DCGO C# unreadable in the authoring container).
-#   - [On Deletion]: DCGO = OptionalSkill (yes, dcgo_only) then a zone menu
-#     {From hand | From trash | Don't play} -- expected to be SKIPPED because
-#     only the hand holds a qualifying card (trash: Dark itself, cost 8) --
-#     then SelectHandEffect. Ours = one UnionZone pick over hand+trash. If
-#     DCGO asks the zone menu anyway, add a dcgo_only `value: 1` row before
-#     the pick.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     This line answers value 1.
+#   - The victim pick is SelectPermanentEffect maxCount 1, canNoSelect false
+#     (BT26_073.cs:190-200). Under the harness the forced-single-candidate
+#     auto-pick does NOT happen -- it lives only in the human-UI branch
+#     (SelectPermanentEffect.cs ~376-407, `isYou && !DrivesLocalSeat`); the
+#     AI branch always raises SetTargetFrames, so the row is asked (count 1).
+#   - [On Deletion] is optional (SetUpActivateClass(..., true), BT26_073.cs:226)
+#     -> OptionalSkill. With only the HAND holding a qualifying card the zone
+#     menu is skipped via userSelectionManager.SetInt(1) (BT26_073.cs:278),
+#     which records NO row (SetInt bypasses SetIntForPlayer,
+#     UserSelectionManager.cs:70); PlayByEffect(Root.Hand) then opens
+#     SelectHandEffect canNoSelect:true (PlayEffects.cs:36-56).
+#     Trash at that point holds only Dark (cost 8) -> hand-only -> no zone
+#     menu row; the dcgo_only OptionalSkill(yes) + SelectHandEffect rows are
+#     exactly DCGO's sequence.
 card: BT26-073
 clause: BT26-073#effect#2
 seed: 424242

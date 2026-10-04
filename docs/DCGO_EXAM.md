@@ -102,7 +102,7 @@ cost is a known risk — see "Known gaps".
 | `seed` | Passed through to the job. The whole run is seed-deterministic on both sides (`docs/DCGO_HARNESS.md`, "Determinism"). |
 | `decks.<seat>.stack` | Prefix of the draw order. See below. |
 | `decks.<seat>.rest` | Named deck the remainder is seeded-shuffled from. |
-| `steps[].actor` | `0` or `1`. Both seats are scripted. |
+| `steps[].actor` | `0` or `1`. Both seats are scripted. Checked on every step our engine answers: a `select:` must belong to the parked prompt's `selecting_player`, and an action verb (`pass`, `hatch`, `move`, `play`, `digivolve`, `dna`, `attack`, `main`, …) to the player the engine is waiting on (`policies::current_decision_player`). A wrong seat refuses to lower; `dcgo_only` rows are not checked (our engine has no decision there). |
 | `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `link`, `select`. |
 | `steps[].expect` | The prompt this step expects to be answering. Optional per step, asserted **before** answering. |
 | `assert` | `at: <step index>` + `that: {path: value}`. Backfilled from the oracle — see "Assertion backfill". |
@@ -600,11 +600,11 @@ as a note; the strict check is DCGO's).
 | `Trash` | `SelectCardEffect` | 1:1 | yes | `zone` is NOT a discriminator: DCGO writes `zone = _root.ToString()`, which collapses to `"Custom"` for any derived or foreign list (an opponent-trash pick is `Root.Custom` over `Owner.Enemy.TrashCards`). Assert the class, match cards by identity. |
 | `Reveal` | `SelectCardEffect` | 1:1 | yes | Indistinguishable from `Trash` and `OrderedPermutation` at the class level, and only sometimes separable by `zone`. |
 | `RevealBucket` | `SelectCardEffect` | N:1 per bucket | yes | We re-park per PICK; DCGO logs one row per BUCKET carrying every id it took. A ≥2-bucket reveal also gets a leading `generic_bool` gate with no sim counterpart. |
-| `Security` | `SelectCardEffect` | 1:1 | yes | One of the few kinds where `zone` really is reliable (`Root.Security` is derived, not `Custom`). Note both sides carry card identities for a face-down stack — fine for a scripted line, not a model for the RL surface. |
+| `Security` | `SelectCardEffect` | 1:1 | yes | One of the few kinds where `zone` really is reliable (`Root.Security` is derived, not `Custom`). Note both sides carry card identities for a face-down stack — fine for a scripted line, not a model for the RL surface. Exception: a declinable ONE-candidate pick ("you may add your top security card to the hand", BT24-031 inherited) is a forced card DCGO asks as a bare `OptionalSkill` — author it `expect: {prompt: OptionalSkill}` for the gate-only fold below. |
 | `OrderedPermutation` | `SelectCardEffect` | N:1, and 1:0 at N=1 | yes | DCGO asks ONE multi-pick prompt whose click order *is* the permutation; we ask once per position. At N=1 DCGO asks nothing and we still park — see the findings below. |
 | `Replacement` | `OptionalSkill` | 1:1 | yes | DCGO's gate is unconditional whenever `IsOptional`; ours is installed only when the body's first step is mandatory. When the body opens with a declinable pick, our ONE prompt is gate *and* pick — that branch is what `optional_gate_fold` compensates for. |
 | `DpBudget` | `SelectPermanentEffect` | N:1 | yes | Ours is a per-pick trampoline (+ a terminating PASS); DCGO is one prompt with `maxCount` + `canTargetCondition_ByPreSelecetedList` + `canEndSelectCondition`. Answer form is `targets:`, not `cards:`. |
-| `PlayCostBudget` | `SelectPermanentEffect` | N:1 | yes | Identical in shape to `DpBudget`, summing printed play cost instead of DP. |
+| `PlayCostBudget` | follows the candidate zone: `SelectPermanentEffect` (permanents) / `SelectHandEffect` (hand cards) / `SelectCardEffect` (trash cards); none for a hand+trash mix | N:1 | live | The kind is parked by two pickers: the opponent-permanent budget (EX4-073 "play cost <= 6", identical in shape to `DpBudget`) and the zone-card picker (BT26-081 Mervamon "play up to 8 play cost's total worth of [Iliad] cards from your hand or trash"). The class is decided from the live candidates' action-id ranges (`play_cost_budget_prompt_name`). A candidate set spanning hand AND trash stays unasserted: DCGO asks that as a `generic_int` zone menu then the zone's widget (the `UnionZone` shape). Unverified assumption: with only one zone populated DCGO opens that zone's widget directly. (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE, resolved 2026-10-04.) |
 | `Material` | `SelectCardEffect` **only** as a digivolution-source pick; otherwise `SelectPermanentEffect` (DNA, Blast DNA) or `SelectDigiXrosClass` + a zone widget (DigiXros) | 1:1 / 1:2 by use | live | Four uses, three incompatible action-id encodings. Decided from the engine's own `ResumeSelectKind::Material` frame; every other use stays unasserted. DigiXros is 1-of-ours-to-2-of-theirs *per material*, plus a terminal `4=End` row. |
 | `TriggerOrder` | `MultipleSkills` (2+ candidates) / `OptionalSkill` (1 declinable candidate) | 1:1 / 1:0 | live | The index bases are NOT interchangeable — each side indexes its own candidate list, and the two demonstrably order a same-card stack differently. That is what `trigger:` exists for. At bundle length 1 DCGO short-circuits and logs no `MultipleSkills` row; the lone effect's optionality is asked as `OptionalSkill` instead. |
 | `Target` | none — ambiguous | — | no | Overloaded on OUR side: attack target (`SelectAttackEffect`), App Fuse host permanent (`SelectPermanentEffect`), App Fuse result card (`SelectCardEffect`). The host pick reuses the attack encoding, so even the action-id range cannot separate them. Splitting the App Fuse uses off `Target` would make this decidable. |
@@ -628,7 +628,7 @@ against this list before an eighth mechanism is invented.
 | `ordinal:` | `TriggerOrder` ↔ `MultipleSkills` | A 0-based position among the candidates sharing one card id. The FALLBACK: an ordinal is a position in a list each engine builds for itself, so it cannot name a branch portably where the two enumerate a stack in opposite order. |
 | `trigger:` | `TriggerOrder` ↔ `MultipleSkills` | Names the branch by its KEYWORD, normalized identically on both sides. The portable form, and preferred over `ordinal:` wherever it applies. |
 | `trigger_not:` | `TriggerOrder` ↔ `MultipleSkills` | The complement, for the branch in a same-id stack that carries no keyword of its own (a plain `[On Deletion]` beside an `<Ascension>`). Mutually exclusive with `trigger:`. |
-| `optional_gate_fold` | `Replacement` (and the pick-shaped kinds) | DCGO splits some optional windows into an `OptionalSkill` yes/no FOLLOWED by the pick; our single declinable pick is both. One sim prompt → two wire rows. |
+| `optional_gate_fold` | `Replacement` (and the pick-shaped kinds) | DCGO splits some optional windows into an `OptionalSkill` yes/no FOLLOWED by the pick; our single declinable pick is both. One sim prompt → two wire rows. A declinable one-candidate `Security` pick is NOT folded: for that shape (BT24-031's inherited "you may add your top security card") DCGO asks a `generic_bool` (`SetBoolSelection`, no OptionalSkill, no card widget) — author a `sim_only` pick + a `dcgo_only` `generic_bool` row (the earlier gate-only fold was retired 2026-10-04). |
 | `SimOnlySelect` | `Material` (multi-pick declarations) | The 2nd..Nth pick of a `materials:` declaration: contributes a comparable state row on our side and ZERO wire rows, keeping the traces aligned across the cardinality gap. |
 | `DcgoOnlySelect` | `TriggerOrder` ↔ `MultipleSkills`, from the other side | A prompt DCGO asks that we never park — DCGO batches a same-timing trigger into `MultipleSkills` where we model it as a combat-state window. Emitted to the wire, consumed by nothing sim-side. |
 | `materials:` | `Material` (`[Assembly]` / `[DigiXros]`) | One authored step answering N successive sim prompts against a single DCGO row. The mirror of `optional_gate_fold`. Exact only for a ONE-ELEMENT recipe — see the scope note on `SelectPayload::Materials`. |
@@ -789,6 +789,7 @@ thing that writes them, so it is what the pairing is derived from
 | `Action` | 1 |
 | `Select` (plain, or a folded `decline:`) | 1 |
 | `Select` (folded pick: `OptionalSkill(yes)` + the pick) | 2 |
+| `Select` (gate-only fold over a forced one-candidate Security pick, either answer) | 1 |
 | `EndOfTurnGate { attack: None }` | 1 |
 | `EndOfTurnGate { attack: Some(_) }` | 2 |
 | `SimOnlyAction` | 0 |
@@ -1091,7 +1092,9 @@ evidence supports.
      surfaces one declinable pick. A select row authored with
      `expect: {prompt: OptionalSkill}` over the live pick is the fold marker:
      picks emit OptionalSkill(yes) + the pick row, `decline:` emits only
-     OptionalSkill(no).
+     OptionalSkill(no). Over a declinable ONE-candidate `Security` pick (a
+     forced top-security-card add) the fold is gate-only: the accept emits
+     OptionalSkill(yes) alone, since DCGO has no card to ask for.
   The DCGO-side decline bridge (a `select_cancel` answer to an OptionalSkill
   prompt means "no" — `OptionalSkill.cs`) is landed in the base-repo mod.
 

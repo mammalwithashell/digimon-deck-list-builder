@@ -24,13 +24,23 @@
 # <Reboot> are not separately observed on this line (Alliance needs a second
 # attacker on P0's turn; Reboot would need P1's NEXT unsuspend phase).
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Mervamon OP pick decline: sim_only decline + dcgo_only SelectHandEffect
-#     decline, GUESSING DCGO skips its hand/trash/stop zone menu (trash empty).
-#     If DCGO asks the menu, swap in its "stop" generic_int value.
-#   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
-#   - Blocker window: SelectPermanentEffect on both sides (EX12-026-effect0
-#     shape).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is DCGO's.
+#   - DP pick: SelectPermanentEffect maxCount 1, canNoSelect false; asked even
+#     with one candidate under the harness (SelectPermanentEffect.cs ~376-407).
+#   - Blocker window: AttackProcess.cs:333-365 -- SelectPermanentEffect for the
+#     defending player (canNoSelect unless Collision); Mervamon has <Blocker>
+#     via its own BlockerStaticEffect grant to [Iliad] (BT26_081.cs).
 card: BT26-081
 clause: BT26-081#effect#3
 seed: 424242
@@ -63,9 +73,7 @@ steps:
     do: { play: { card: BT26-081, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
@@ -87,7 +95,7 @@ steps:
 assert:
   # Before P1's attack: Mervamon at 15000 (13000 + the clause's +2000 on
   # itself), Phoenixmon at 8000 (12000 - 4000 x 1 from effect#2).
-  - at: 10
+  - at: 9
     that:
       turn: 4
       p0.field:
@@ -96,7 +104,7 @@ assert:
         - { card_id: ST1-10, dp: 8000, suspended: false, sources: [] }
   # After the block: P0's security untouched, Phoenixmon (8000) lost to the
   # 15000 blocker, Mervamon suspended from blocking.
-  - at: 12
+  - at: 11
     that:
       turn: 4
       p0.security: 5

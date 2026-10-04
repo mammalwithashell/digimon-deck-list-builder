@@ -19,10 +19,14 @@
 # BT26-083-effect2.yaml the SAME BT4-014 attacks P0's security on T8 with no
 # [On Deletion] in play and takes P0 from 3 to 2 (its at 21 -> at 24).
 #
-# PROMPT SHAPE. [On Deletion] is mandatory and targetless on both sides (DCGO
-# ChangeDigimonSAttackPlayerEffect(-1) over the opponent's battle area, per
-# our YAML crosscheck). A 0-check attack: DCGO should simply skip the check --
-# watch for a divergence in how a <Security A.> total of 0 is handled.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Prefix as BT26-083-effect3.yaml (Asuna OptionalSkill fold FIXED).
+#   - [On Deletion] is mandatory and targetless (BT26_083.cs:120-145,
+#     ChangeDigimonSAttackPlayerEffect(-1, UntilOpponentTurnEnd)).
+#   - A <Security A.> total of 0: Permanent.Strike clamps Strike_AllowMinus at
+#     0 (Permanent.cs ~1991-2003) and the check loop runs 0 times; the
+#     "no security -> win" branch only fires for Strike >= 1
+#     (AttackProcess.cs:420). Same as ours: P0 security stays 3.
 card: BT26-083
 clause: BT26-083#effect#6
 seed: 424242
@@ -47,7 +51,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [BT25-044] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }

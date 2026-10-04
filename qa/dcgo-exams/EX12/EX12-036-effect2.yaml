@@ -53,7 +53,16 @@
 # MarineBullmon's own [On Play] is safe to script: p1's hand holds exactly one
 # qualifying Digimon, Gasamon.
 #
-# THE STACKED TRIGGER AT STEP 13 IS REAL, NOT NOISE: Decode plays Karakurumon
+# UPDATED 2026-10-04 (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES +
+# G-PERMANENT-HANDLE-POSITIONAL-STALENESS): the paragraph below describes the
+# OLD behaviour and is kept for history. A parked replacement's leave now
+# commits before its triggers are staged and the TriggerOrder bundle drops
+# dead sources, so Ryugumon (already in the hand) wakes nothing: step 13 is
+# Karakurumon's own target pick, which is what DCGO asked (see
+# ex12_036_decode_play_offers_only_the_played_cards_own_trigger). The
+# MultipleSkills row and Ryugumon's clause-#4 lock row were removed.
+#
+# (HISTORICAL) THE STACKED TRIGGER AT STEP 13 IS REAL, NOT NOISE: Decode plays Karakurumon
 # while Ryugumon is still in the battle area (the leave has not completed --
 # that is what a "would leave" window means), so p0 gets TWO simultaneous
 # triggers -- Karakurumon's [On Play] suspend/lock, and Ryugumon's own clause
@@ -212,20 +221,13 @@ steps:
   - actor: 0
     do: { select: { cards: [EX12-063] } }
     expect: { prompt: SelectCardEffect }
-  # Karakurumon's arrival stacks two of p0's triggers (see header); take its
-  # own [On Play] first, by identity.
-  - actor: 0
-    do: { select: { cards: [EX12-063] } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-063, EX12-036] }
   # Karakurumon [On Play]: suspend p1's MarineBullmon, then lock it from
-  # unsuspending.
+  # unsuspending. (Since 2026-10-04 Ryugumon has LEFT before this triggers
+  # stage, so its clause #4 observer is dead -- no ordering row, no second
+  # lock; see the header note.)
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
-  # Ryugumon clause #4's lock, on the same lone target.
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
@@ -239,7 +241,7 @@ assert:
   # would otherwise have sent it to (both trashes are empty) -- while Ryugumon
   # itself continued to p0's hand. p1's MarineBullmon stands suspended with
   # its tucked Gasamon.
-  - at: 17
+  - at: 15
     that:
       p0.field:
         - { card_id: EX12-063, dp: 7000, suspended: false, sources: [] }

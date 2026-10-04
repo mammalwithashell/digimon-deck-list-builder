@@ -625,6 +625,32 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         );
                     }
                 }
+            } else if let Some(ResolvedBinding::HandIndex(owner, i)) = resolve_binding_ref(
+                &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
+                ctx,
+                bindings,
+            ) {
+                // G-DSL-USE-OPTION-ONLY: a `select_hand`-bound card is USED,
+                // never played. "Use 1 Option card" (BT26-090 Kanan Yuki)
+                // must not offer a DUAL card's Digimon face, so — unlike
+                // `play_or_use_from_hand` — there is no face choice: an
+                // Option or DUAL card goes straight to the Option-use path; a
+                // Digimon/Tamer bound here is a no-op (the printed text only
+                // permits using an Option).
+                let usable = ctx
+                    .game
+                    .player(owner)
+                    .hand
+                    .get(i as usize)
+                    .is_some_and(|c| {
+                        matches!(
+                            c.card_kind(&ctx.game.card_data),
+                            crate::enums::CardKind::Option | crate::enums::CardKind::Dual
+                        )
+                    });
+                if usable {
+                    let _ = ctx.use_option_from_hand_with_cost(owner, i as usize, delta);
+                }
             }
             true
         }

@@ -17,7 +17,11 @@
 # WITNESS: Wrath Mode suspended at P0's T5 pass; unsuspended at P1's T6
 # breeding decision (without Reboot it would stay suspended until P0's T7).
 #
-# PROMPT SHAPE: Reboot asks nothing. Other rows as in BT26-103-effect1.yaml.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): rows as in
+# BT26-103-effect1.yaml (Minervamon pick, block decline, VALUE 5, effect#6
+# pick). The T5 security attack opens no P1 Counter/Block prompt, the checked
+# BT1-014 has no DCGO script, and effect#6's OPT is spent. <Reboot> is a
+# static (RebootSelfStaticEffect) -> asks nothing.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

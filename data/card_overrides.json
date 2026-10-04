@@ -835,6 +835,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "BT25-051": {

@@ -90,10 +90,10 @@ effects:
                               - in_text_contains: Gammamon
                               - trait_has: VB
                       prompt: "Use 1 [Gammamon]-text or [VB] Option card from your hand with the cost reduced by 2"
-                  - play_or_use_from_hand:
-                      of: you
-                      hand_index: option_pick
-                      cost_delta: { reduce: 2 }
+                  # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
+                  - use_option_bound:
+                      binding: option_pick
+                      cost: { reduce: 2 }
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

@@ -209,3 +209,141 @@ fn bt26_103_succession_gains_jupitermon_leave_protection() {
     assert_eq!(bottom.card_id(&r.game.card_data), CARD_ID);
     let _ = w;
 }
+
+// ─── [Once Per Turn] accounting for a no-target resolution ─────────────────
+// G-ENGINE-OPT-NOOP-REQUEUE. §15-14-1: `[X Per Turn]` counts each ACTIVATION.
+// A triggered effect whose (non-"if") process has no legal target still
+// activates — §15-6-3 only bars activation when an "if"/"while" processing
+// condition fails — so its OPT is spent and it may not be activated, or
+// offered as an orderable trigger, again this turn.
+
+#[test]
+fn bt26_103_all_turns_opt_spent_by_no_target_activation() {
+    let mut r = setup();
+    let j = r.place_on_field(0, CARD_ID, Some(0));
+    // No opponent Digimon: the -15000 pick has no target (no-op activation).
+    fire(&mut r, EffectTiming::OnOwnSecurityRemoved, j);
+    drain(&mut r);
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    fire(&mut r, EffectTiming::OnOpponentSecurityRemoved, j);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "OPT already spent by the no-target activation"
+    );
+    assert_eq!(r.effective_dp(opp), Some(20000));
+}
+
+#[test]
+fn bt26_103_opt_spent_entry_not_offered_in_trigger_order() {
+    use digimon_engine::selection::TriggerSource;
+    // Two queued instances of the [All Turns][OPT] clause plus another card's
+    // [When Digivolving]: once the first instance resolves (no target), the
+    // second is OPT-spent and must not stay an orderable TriggerOrder entry.
+    let mut r = setup();
+    let j = r.place_on_field(0, CARD_ID, Some(0));
+    let j2 = r.place_stack(0, &["OLY", CARD_ID]);
+    let j_card = r.top_card(j);
+    for _ in 0..2 {
+        r.game
+            .enqueue_triggered(EffectTiming::OnOwnSecurityRemoved, TriggerSource::Permanent(j));
+    }
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(j2));
+    r.game.drain_effect_queue();
+
+    let is_e6 = |c: &digimon_engine::selection::EffectChoiceEntry| {
+        c.source_card == Some(j_card) && c.timing == Some(EffectTiming::OnOwnSecurityRemoved)
+    };
+    let first = r.pending_selection().expect("trigger order menu").clone();
+    let choices = first.effect_choices.clone().expect("TriggerOrder choices");
+    assert_eq!(choices.len(), 3, "[e6, e6, WD]");
+    let e6_action = choices.iter().find(|c| is_e6(c)).expect("e6").action_id;
+    r.execute_action(0, e6_action).unwrap();
+
+    if let Some(sel) = r.pending_selection() {
+        let offered: Vec<String> = sel
+            .effect_choices
+            .iter()
+            .flatten()
+            .map(|c| format!("{:?}/{}", c.timing, c.label))
+            .collect();
+        assert!(
+            !sel.effect_choices.iter().flatten().any(|c| is_e6(c)),
+            "OPT-spent e6 offered again: {offered:?}"
+        );
+    }
+}
+
+/// G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG: the `[Counter]` arm of the
+/// `when: [when_digivolving, counter]` clause must be offered as a field
+/// Counter ability in REAL combat (not only when CounterEffect is fired
+/// directly). Digimon-target attack on the suspended Wrath Mode.
+#[test]
+fn bt26_103_counter_arm_offered_in_real_combat_digimon_target() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+    r.game.players[1].battle_area[wrath.index as usize].is_suspended = true;
+
+    r.attack_digimon(atk, wrath, false);
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "Wrath Mode's [Counter] arm must open the Counter window"
+    );
+    let v = r.pending_selection_view().expect("counter prompt");
+    assert_eq!(v.selecting_player, 1);
+    let field_counter = encode_attack(0, wrath.index as u16);
+    assert!(v.valid_action_ids.contains(&field_counter));
+    assert!(v.is_optional, "Counter is optional (PASS declines)");
+
+    r.execute_action(1, field_counter).unwrap();
+    assert_eq!(r.security_count(1), 4, "3 - 1 trashed + <Recovery +2>");
+}
+
+/// G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK: general_rule 11-1-3 puts
+/// Counter timing in EVERY attack, including one that targets the player.
+#[test]
+fn bt26_103_counter_arm_offered_when_the_player_is_attacked() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+
+    r.attack_player(atk, 1, false);
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "a player-target attack must still open the Counter window"
+    );
+    let field_counter = encode_attack(0, wrath.index as u16);
+    r.execute_action(1, field_counter).unwrap();
+    assert_eq!(r.security_count(1), 4, "3 - 1 trashed + <Recovery +2>");
+}
+
+/// The field Counter candidate respects [Once Per Turn]: after the shared
+/// WD/Counter OPT is spent this turn, no Counter window opens for it.
+#[test]
+fn bt26_103_counter_arm_not_offered_once_opt_is_spent() {
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+    fire(&mut r, EffectTiming::CounterEffect, wrath);
+    drain(&mut r);
+    assert_eq!(r.security_count(1), 4);
+    r.game.players[1].battle_area[wrath.index as usize].is_suspended = true;
+
+    r.attack_digimon(atk, wrath, false);
+    assert_ne!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "spent [Once Per Turn] Counter must not be offered"
+    );
+}

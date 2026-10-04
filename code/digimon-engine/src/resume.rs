@@ -835,6 +835,13 @@ pub struct OuterOptionalTriggerState {
 pub struct TriggerOrderSelectionState {
     pub(crate) chooser: PlayerId,
     pub(crate) allow_decline_all: bool,
+    /// The `effect_queue` indices the prompt offered, in action-id order
+    /// (the queue does not move while the prompt is parked). The pick maps
+    /// `action_id - HAND_EFFECT_START` through this list, and decline-all
+    /// drops only these entries -- NOT every entry the chooser controls,
+    /// which may include non-firing entries or entries of an older
+    /// §15-4-5 trigger batch that were never offered.
+    pub(crate) bundle: Vec<usize>,
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 

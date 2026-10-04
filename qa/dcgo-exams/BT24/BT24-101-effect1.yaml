@@ -34,16 +34,31 @@
 # PROMPT SHAPE: our engine asks an EffectChoice "Choose which digivolution
 # cost to pay" between the two applicable special conditions (4 vs 5),
 # answered by VALUE 4 against DCGO's SelectCountEffect (the documented
-# digivolution-cost route mapping, as EX12-076-effect5.yaml). If DCGO
-# auto-takes the cheapest route the row has no counterpart -- triage as a
-# prompt-count mismatch. The T4 block
-# decline: our OwnField block window (SelectPermanentEffect) vs DCGO's
-# blocker prompt. After the WD: our TriggerOrder over [BT24-101, BT25-025]
-# (effect#3 + BT25-025's now-inherited "[All Turns][OPT] ... 1 [Shaman]
-# Digimon may unsuspend") -> DCGO MultipleSkills, answered by identity
-# BT24-101; DCGO may enumerate the pair differently. The inherited unsuspend
-# is declined (Jupitermon is already unsuspended); DCGO may render it as an
-# OptionalSkill or skip it with no suspended target.
+# digivolution-cost route mapping, as EX12-076-effect5.yaml).
+#
+# VERIFIED against DCGO C# (2026-10-04):
+#   * Cost route: CardController.cs PlayCardClass SelectCost -> CostList
+#     {5 ([TS] route), 4 (Aegiochusmon route, CostEquation =
+#     SecurityCards.Count)}, Distinct -> 2 entries -> SelectCountEffect
+#     ("Which digivolution cost do you pay?"), still raised under the harness;
+#     SelectCountEffect.SetCount's hook takes select_value as the cost VALUE.
+#     DCGO does NOT auto-take the cheapest route.
+#   * T4 block decline: AttackProcess.cs BlockTiming -> SelectPermanentEffect
+#     (canNoSelect true) -> select_cancel. BT25-025's "[All Turns] ... may
+#     unsuspend" is INHERITED (SetIsInheritedEffect(true)) and dead while it is
+#     the top card, so the T4 security loss stacks nothing.
+#   * WD order: BT24_101.cs trashes the top security FIRST (IDestroySecurity),
+#     then the -13000 SelectPermanentEffect (canNoSelect false), then the
+#     Recovery check -- same order as ours.
+#   * The trash stacks TWO OnLoseSecurity triggers (BT24-101 effect#3 and the
+#     now-inherited BT25-025 one) -> MultipleSkills (2 active, not the
+#     hand/optional "blast" shape) with candidates [BT24-101, BT25-025]
+#     (EffectSourceCard ids; order is DCGO's) -- answered by identity.
+#   * The inherited unsuspend is NON-optional (SetUpActivateClass(..., 1,
+#     false, ...)): no OptionalSkill. Its CanActivate only needs an own
+#     [Shaman] Digimon (Jupitermon qualifies while unsuspended), so DCGO
+#     opens a SelectPermanentEffect (Mode.UnTap, canNoSelect TRUE) -> the
+#     decline row; a declined pick calls RemoveUse().
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

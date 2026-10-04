@@ -16,28 +16,36 @@
 #   T4 (P1, 3): Gaia Force ST1-16 (3 -> -5) "Delete 1 of your opponent's
 #        Digimon" -> target BT26-029. A deletion by effect is a leave "other
 #        than in battle": THE CLAUSE -- accept the Decode gate, pick the
-#        Aegiomon source -> it is played free. Its own [On Play] then triggers
-#        (decline), and BT26-029, deleted, raises <Ascension> (decline via our
-#        "No" branch). Turn passes; P0's T5 breeding pass closes the line.
+#        Aegiomon source -> it is played free. Its own [On Play] and
+#        BT26-029's <Ascension> (BT26-029 deleted) then wait together:
+#        order them (<Ascension> first), decline <Ascension> via our "No"
+#        <Ascension> via our "No" branch. Turn passes; P0's T5 breeding pass closes the line.
 #
 # WITNESS: P0's field holds a fresh Aegiomon BT25-033 with NO sources (it came
 # out of BT26-029's stack, unpaid -- P0 memory untouched by the play); BT26-029
 # alone is in P0's trash; security still 5 (Ascension declined, Aegiomon's
 # "by adding your top security card" declined).
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - Decode: our `Replacement` gate (OptionalSkill) then a `SelectCardEffect`
-#     source pick. DCGO asks the gate and then a skippable source pick
-#     (DCGO_EXAM.md "Rows where one side looks rules-wrong" / <Decode>); with
-#     one Aegiomon source the two shapes should line up 1:1.
-#   - ORDER of the two follow-on triggers: we resolve the freshly played
-#     Aegiomon's [On Play] FIRST and <Ascension> second, with NO ordering
-#     prompt. DCGO may batch both (same check timing, both P0's) into a
-#     `MultipleSkills` row -- if so, that is a missing-decision finding on our
-#     side (§15-8-5-3 analogue), not a mapping error.
-#   - <Ascension>: ours is an EffectChoice Yes/No answered sim-only by
-#     `choice: "No"`; DCGO raises `generic_bool` via SetBoolSelection
-#     (EX12-047 precedent) -> paired `dcgo_only` decline row.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Gaia Force ST1-16: mandatory SelectPermanentEffect (Mode.Destroy).
+#   - Decode: DecodeSelfEffect (CardEffectFactory/KeyWordEffects/Decode.cs)
+#     is an optional ActivateClass on the CUT-IN stack (CardController.cs
+#     WhenRemoveField -> autoProcessing_CutIn) -> OptionalSkill(yes), then
+#     DecodeProcess's SelectCardEffect over DigivolutionCards (canNoSelect
+#     true; one candidate is still asked) -> 1:1 with our gate + pick.
+#   - The played Aegiomon's [On Play] is stacked on the MAIN autoProcessing
+#     (PlayCardClass, CardController.cs ~1925), NOT resolved inside the cut-in
+#     batch, so it waits until Gaia Force finishes; BT26-029's <Ascension>
+#     (OnDestroyedAnyone) joins it there -> one MultipleSkills over
+#     [BT25-033 On Play, BT26-029 Ascension] (On Play stacked first). Our
+#     identity answer BT26-029 resolves on both sides. This matches our
+#     post-G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES ordering.
+#   - <Ascension>: AscensionEffect is MANDATORY (isOptional false, no
+#     OptionalSkill) and asks Yes/No through userSelectionManager
+#     .SetBoolSelection (CardEffectCommons/KeyWordEffects/Ascension.cs
+#     AscensionProcess) -> `generic_bool`; ours is an EffectChoice answered
+#     sim-only by `choice: "No"` + the paired `dcgo_only` decline.
+#   - Then the lone Aegiomon [On Play] (optional) -> OptionalSkill (decline).
 card: BT26-029
 clause: BT26-029#effect#1
 seed: 424242
@@ -101,19 +109,27 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-033] } }
     expect: { prompt: SelectCardEffect }
+  # BT26-029 has now left (Decode processing complete), so the played
+  # Aegiomon's [On Play] and BT26-029's <Ascension> wait together: order
+  # them -- <Ascension> (BT26-029) first. (Picking an optional entry from
+  # our TriggerOrder activates it, so the [On Play] is ordered second to keep
+  # its own decline gate.)
   - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    do: { select: { cards: [BT26-029] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { choice: "No", sim_only: true } }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: generic_bool }
   - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 19
+  - at: 20
     that:
       turn: 5
       p1.memory: -5

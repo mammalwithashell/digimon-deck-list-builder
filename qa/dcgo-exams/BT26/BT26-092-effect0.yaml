@@ -18,11 +18,15 @@
 # clause's draw).
 #
 # PROMPT SHAPE: ours = one declinable Hand pick (the cost is optional: "By
-# trashing ..."). DCGO (per the YAML's crosscheck of BT26_092.cs): the
+# trashing ..."). DCGO -- VERIFIED 2026-10-04 against BT26_092.cs:14-85: the
 # trigger is NOT optional but its hand pick is canNoSelect:true ->
 # a single SelectHandEffect, no OptionalSkill gate -- 1:1 with ours.
 # Note: our condition gate (needs a [TS] card in hand) mirrors DCGO's
 # CanActivate.
+# Citations: SetUpActivateClass(..., false) (:18) -> no OptionalSkill;
+# SetIsSkippable(true) (:19) only matters to a MultipleSkills ordering prompt
+# (MultipleSkills.cs:17/:393), and this is the lone trigger; CanActivate
+# (:32-34) needs a [TS] card in hand; then SelectHandEffect canNoSelect true.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

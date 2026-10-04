@@ -18,12 +18,17 @@
 # WITNESS: P0 opened T3 at 3 memory and stands at 0 with P-213 on its Aegiomon
 # source (DP 7000 -- no +3000, 5 security). P1 security untouched (no attack).
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - No cost prompt on either side (single route).
-#   - WD "may attack": ours is a declinable `Target` prompt (decline);
-#     DCGO's P_213.cs runs `SelectAttackEffect` behind `CanAttack` -- its
-#     decline is a "no attack" answer inside that widget. If DCGO instead
-#     gates with an OptionalSkill first, expect a 1-vs-2 row mismatch here.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - No cost prompt: CardController.cs SelectCost asks SelectCountEffect only
+#     when the DISTINCT cost list has 2+ entries; Aegiomon is yellow, so only
+#     the [Aegiomon] cost-3 route applies.
+#   - T1 Aegiomon [On Play]: BT25/Yellow/BT25_033.cs shared OP/WD is
+#     optional: true -> OptionalSkill (decline).
+#   - WD "may attack": P_213.cs runs SelectAttackEffect directly behind CanAttack -- NO OptionalSkill gate
+#     (P/Red/P_213.cs "When Digivolving" region); the decline is that widget's
+#     cancel (SelectAttackEffect.cs SetAttackTarget harness hook, -2).
+#     Shared `decline:` row, 1:1. The WD itself is mandatory (isOptional
+#     false) and the Rush/+3000 branch is skipped at 5 security.
 card: P-213
 clause: P-213#effect#0
 seed: 424242

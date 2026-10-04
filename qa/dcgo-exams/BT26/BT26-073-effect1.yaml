@@ -21,15 +21,30 @@
 # WITNESS: both fields empty; Dark in P0's trash (the paid cost), Agumon in
 # P1's trash (the clause's delete); P1 received 5 memory (3 - 8).
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Cost menu: our EffectChoice row is sim-only; DCGO's SetIntSelection is a
-#     dcgo_only generic_int. value 1 ("Delete this Digimon") is a GUESS by
-#     analogy with the BT25-083 menu -- DCGO C# was not readable in the
-#     authoring container; correct from the oracle abort if it differs.
-#   - The victim pick: one candidate, mandatory. DCGO may auto-resolve a
-#     single-candidate canNoSelect:false pick (ours parks it) -- check count.
-#   - [On Deletion] decline: ours is one declinable UnionZone pick; DCGO is an
-#     OptionalSkill (fold: `decline:` emits OptionalSkill "no" only).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     This line answers value 1 (Delete this Digimon).
+#   - The victim pick is SelectPermanentEffect maxCount 1, canNoSelect false
+#     (BT26_073.cs:190-200). Under the harness the forced-single-candidate
+#     auto-pick does NOT happen -- it lives only in the human-UI branch
+#     (SelectPermanentEffect.cs ~376-407, `isYou && !DrivesLocalSeat`); the
+#     AI branch always raises SetTargetFrames, so the row is asked (count 1).
+#   - [On Deletion] is optional (SetUpActivateClass(..., true), BT26_073.cs:226)
+#     -> OptionalSkill. With only the HAND holding a qualifying card the zone
+#     menu is skipped via userSelectionManager.SetInt(1) (BT26_073.cs:278),
+#     which records NO row (SetInt bypasses SetIntForPlayer,
+#     UserSelectionManager.cs:70); PlayByEffect(Root.Hand) then opens
+#     SelectHandEffect canNoSelect:true (PlayEffects.cs:36-56).
+#     Here it is DECLINED: the `decline:` row emits select_cancel to the
+#     OptionalSkill (the DCGO decline bridge). Our prompt is a UnionZone,
+#     not a pick-shaped kind, so this is a plain cancel, not a fold.
 card: BT26-073
 clause: BT26-073#effect#1
 seed: 424242

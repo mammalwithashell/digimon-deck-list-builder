@@ -25,15 +25,27 @@
 # sources [BT25-044] and P0 memory is 0 -- i.e. 14 - 4 was paid, and the
 # Junomon left the trash. (A printed-cost play of 14 is impossible from 10.)
 #
-# PROMPT SHAPE. Asuna [On Play]: ours = one declinable SelectHandEffect (gate
-# and pick folded); DCGO may ask an OptionalSkill first (optional_gate_fold
-# candidate). Assembly: ours = CountCappedMultiSelect over trash (declinable
-# element 0); DCGO = SelectAssemblyClass -> one SelectCardEffect (root Trash)
-# -- the BT24-081-effect5 shape, one element here. [On Play] delete pick: ours =
-# a CountCapped multi pick with min = max = 2 over 2 candidates; DCGO = one
-# SelectPermanentEffect (maxCount 2, canNoSelect false) -- DCGO may AUTO-pick
-# when candidates == maxCount (watch for a missing row). <Execute> gate: DCGO
-# OptionalSkill at end of turn, ours EndOfTurnAction park.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Asuna [On Play] is optional (BT24_088.cs:112) -> OptionalSkill, then
+#     SelectHandEffect canNoSelect (BT24_088.cs:143): authored as the
+#     optional_gate_fold (`expect: OptionalSkill` over our Hand pick).
+#     FIXED 2026-10-04: was a bare `expect: SelectHandEffect` row.
+#   - Asuna [Start of Your Turn] at 10 memory: not activatable -> no prompt.
+#   - Assembly is ONE SelectCardEffect over the trash (root Trash,
+#     canNoSelect true, maxCount = elementCount 1) from
+#     SelectAssemblyClass.SelectTrashCard, called from the play flow
+#     (CardController.cs:928-932). There is NO separate "use Assembly?"
+#     gate: if the trash can fulfil the element the pick just opens.
+#   - The delete pick is ONE SelectPermanentEffect maxCount = min(trashed,
+#     opp Digimon), canNoSelect false (BT26_083.cs:85-99); asked even when
+#     candidates == maxCount (the forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407). 0 candidates -> no prompt
+#     (`if (deleteCount >= 1)`). The OP/WD is optional:false
+#     (BT26_083.cs:115): no OptionalSkill.
+#   - <Execute> (KeyWordEffects/Execute.cs) is an optional OnEndTurn
+#     ActivateClass gated on CanActivateExecute == CanAttack -> OptionalSkill,
+#     then SelectAttackEffect on yes (CardEffectCommons Execute.cs:18-70):
+#     the documented end-of-turn fold. Declined here.
 card: BT26-083
 clause: BT26-083#effect#7
 seed: 424242
@@ -60,7 +72,7 @@ steps:
   # Asuna [On Play]: trash Junomon from hand (Draw 2: stack[10], stack[11]).
   - actor: 0
     do: { select: { cards: [BT25-044] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   # T2 (P1, 3): donate 13 memory.
   - actor: 1
     do: { pass: {} }

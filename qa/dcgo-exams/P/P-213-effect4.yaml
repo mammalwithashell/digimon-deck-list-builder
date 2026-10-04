@@ -27,12 +27,23 @@
 # WITNESS: at step 6 P-213 is alone in P0's trash; at step 9 it is in P0's
 # hand and the trash is empty -- the Dragonkin-only filter accepted it.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - BT21-007's optional clause + optional trash pick surface as ONE
-#     declinable pick on our side (SelectCardEffect, by identity). If DCGO
-#     gates it with an OptionalSkill yes/no before the SelectCardEffect, this
-#     row needs the `optional_gate_fold` marker (`expect: OptionalSkill`) --
-#     a 1-vs-2 row cardinality mismatch, not a rules finding.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - T2 Gaia Force on P-213: its own <Decode> (DecodeSelfEffect, cut-in
+#     stack) is stacked but CanActivateDecode fails with no [Aegiomon] source,
+#     so MultipleSkills' CanActivate filter drops it -> no prompt on DCGO
+#     either.
+#   - BT21-007's [On Play] is `SetUpActivateClass(..., -1, true, ...)`
+#     (BT21/Red/BT21_007.cs) -> OptionalSkill(yes) FIRST, then the body's
+#     SelectCardEffect (Root.Trash, canNoSelect true, Mode.AddHand). Ours is
+#     ONE declinable trash pick -> authored as the optional_gate_fold marker
+#     (`expect: {prompt: OptionalSkill}`): OptionalSkill(yes) + the pick.
+#   - RISK (data, not prompt shape): DCGO's trait filter is
+#     `cardSource.CardTraits.Find(x => x.Equals("Dragonkin"))` -- the raw
+#     trait list of DCGO's card data. P-213's Dragonkin is a "(Rule) Trait:
+#     Has [Dragonkin] Type" grant; if DCGO's entity data omits it,
+#     HasMatchConditionOwnersCardInTrash is false, DCGO asks OptionalSkill
+#     and NO SelectCardEffect, and the oracle aborts on the pick row. That
+#     would be a DCGO data gap (official DB grants the trait), not our bug.
 card: P-213
 clause: P-213#effect#4
 seed: 424242
@@ -74,7 +85,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [P-213] } }
-    expect: { prompt: SelectCardEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }

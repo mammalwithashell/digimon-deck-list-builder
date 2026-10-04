@@ -17,12 +17,12 @@
 # Ray, the non-[TS] card, is not addable; neither leftover reached hand or
 # trash). Memory -3: the turn passed.
 #
-# PROMPT SHAPE. Ours: RevealBucket (one bucket, min 1 max 1) -> one
-# SelectCardEffect row; then OrderedPermutation over the 2 leftovers, which
-# DCGO asks as ONE multi-pick SelectCardEffect whose click order is the
-# permutation -> authored as one `cards: [a, b]` row (EX12-009-effect0
-# shape). Mandatory trigger: no OptionalSkill. Single bucket -> no leading
-# generic_bool.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)): mandatory trigger (BT24_083.cs:107), no
+# OptionalSkill. One [TS] bucket -> one SelectCardEffect (no leading
+# generic_bool: that gate needs >= 2 conditions AND canNoAction,
+# RevealLibrary.cs ~262-280). Leftovers: ONE multi-pick SelectCardEffect
+# (maxCount 2) whose click order is the bottom order (RevealLibrary.cs:469-515)
+# -> the one `cards: [a, b]` row.
 card: BT24-083
 clause: BT24-083#effect#1
 seed: 424242

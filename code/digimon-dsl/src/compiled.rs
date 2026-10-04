@@ -2158,6 +2158,10 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         position: CompiledStackPosition,
         face_up: bool,
+        /// Place into the placed card's OWNER's security (ignores `of`).
+        to_owner: bool,
+        /// Bind the placed card under this name on a successful placement.
+        bind_placed_as: Option<String>,
     },
     PlacePermanentOnSecurityAndHandleReplacement {
         of: CompiledPlayerRef,

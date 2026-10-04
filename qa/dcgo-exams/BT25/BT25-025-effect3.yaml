@@ -26,6 +26,9 @@
 # PROMPT SHAPE: ONE mandatory SelectPermanentEffect (DCGO Mode Degenerate,
 # canNoSelect false per BT25-025.yaml crosscheck; ours select_opponent_
 # permanent); no OptionalSkill (the body is mandatory); unsuspend gated off.
+# VERIFIED (DCGO C#, 2026-10-04): BT25_025.cs ActivateClassesForSharedEffects
+# optional: false; Mode.Degenerate, canNoSelect false; unsuspend half needs
+# SecurityCards.Count <= 3.
 card: BT25-025
 clause: BT25-025#effect#3
 seed: 424242

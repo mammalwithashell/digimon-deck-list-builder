@@ -14,25 +14,44 @@
 #        decline "may attack". Digivolve P-213 -> Junomon BT25-044 (P-213 is
 #        RED, so only Junomon's "Lv.5 w/[Angel]/[Archangel]/[TS]" cost-3 route
 #        opens: no cost prompt; 0 -> -3, turn ends). Junomon's WD ("By placing
-#        1 other Digimon as the top security card") has no other Digimon ->
-#        no prompt. Stack now Junomon / P-213 / Aegiomon.
+#        1 other Digimon as the top security card"): ours has no OWN other
+#        Digimon -> no prompt; DCGO offers P1's Biyomon -> declined.
+#        Stack now Junomon / P-213 / Aegiomon.
 #   T4 (P1, 3): Gaia Force ST1-16 (3 -> -5) deletes Junomon. THE CLAUSE: the
 #        inherited Decode on P-213 (now a source) fires for the TOP permanent's
 #        non-battle leave: accept, pick the Aegiomon source -> played free;
 #        its [On Play] triggers (decline). P0's T5 breeding pass closes.
 #
-# WITNESS: at step 10 Junomon stands on [Aegiomon, P-213]; after Gaia Force a
+# WITNESS: at step 11 Junomon stands on [Aegiomon, P-213]; after Gaia Force a
 # source-less Aegiomon BT25-033 is on P0's field and Junomon + P-213 are in
 # P0's trash. Junomon prints no Decode of its own, so the play can only come
 # from P-213's inherited text.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - Decode (inherited): Replacement gate (OptionalSkill yes) +
-#     SelectCardEffect source pick over the leaving permanent's sources
-#     (DCGO DecodeSelfEffect, isInheritedEffect true); DCGO's pick is
-#     skippable -- same row count since we pick.
-#   - WD "may attack" decline: ours `Target` decline vs DCGO
-#     SelectAttackEffect "no attack" (see P-213-effect0 note).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - T3 WD "may attack": P_213.cs runs `SelectAttackEffect` directly behind
+#     CanAttack (no OptionalSkill gate); declining is that widget's cancel
+#     (SelectAttackEffect.cs SetAttackTarget harness hook: select_cancel = -2).
+#     Shared `decline:` row, 1:1.
+#   - Junomon's [When Digivolving] (BT25/Yellow/BT25_044.cs): DCGO's
+#     OtherDigimon filter is ANY player's battle-area Digimon, so P1's Biyomon
+#     opens a SelectPermanentEffect (canNoSelect true; WD optional false -> no
+#     OptionalSkill). Ours gates on `any_permanent` (DSL default `of: you`) and
+#     asks nothing -> `dcgo_only` decline row. Same Junomon note as
+#     BT26-029-inherited0.yaml (predicted divergence only if accepted).
+#   - Decode (inherited): P_213.cs "Decode - ESS" = DecodeSelfEffect(
+#     isInheritedEffect: true) -> optional ActivateClass (OptionalSkill yes),
+#     then DecodeProcess's SelectCardEffect over the leaving permanent's
+#     DigivolutionCards (canNoSelect true; still asked with one candidate).
+#     Only the SOURCE's inherited copy fires (Permanent.EffectList_ForCard
+#     adds inherited effects only for non-top cards; Junomon prints none).
+#   - The played Aegiomon's [On Play] is stacked on the MAIN autoProcessing
+#     (CardController.cs ~1925) while Decode runs on the cut-in stack, so it
+#     resolves after Gaia Force finishes, alone -> OptionalSkill (decline).
+# FIXED 2026-10-04 (G-CARD-BT25-044-PLACE-OTHER-DIGIMON): BT25-044.yaml now
+# gates Junomon's [On Play]/[When Digivolving] on ANY other Digimon (either
+# side, BT25_044.cs:48-57) and places into the card owner's security, so the
+# former `dcgo_only` Junomon pick row is a shared row. (Header text below
+# predates the fix.)
 card: P-213
 clause: P-213#inherited#0
 seed: 424242
@@ -78,6 +97,11 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-044 } }
     expect: { prompt: main_phase }
+  # Junomon's WD "place 1 other Digimon" pick offers P1's Biyomon (either-
+  # side gate, shared since the 2026-10-04 fix); decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -100,13 +124,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 10
+  - at: 11
     that:
       turn: 4
       p1.memory: 3
       p0.field:
         - { card_id: BT25-044, dp: 12000, suspended: false, sources: [BT25-033, P-213] }
-  - at: 16
+  - at: 17
     that:
       turn: 5
       p1.memory: -5

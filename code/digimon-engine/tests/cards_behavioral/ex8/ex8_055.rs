@@ -682,10 +682,14 @@ fn ex8_055_clause_b_eot_prompts_replacement_then_select_trash() {
     // itself a declinable (PASS-able) selection — so no outer Replacement prompt
     // is installed (G-OUTER-OPTIONAL-NOT-INSTALLED). The engine goes directly to
     // the SelectTrash prompt; the player's PASS on that prompt is the decline path.
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Trash),
-        "Clause B [EOT][OPT] must install a SelectTrash prompt directly (no outer Replacement); got {:?}",
+    // "up to 3" is ONE count-capped multi-pick (DCGO SelectCardEffect
+    // maxCount 3, canEndNotMax), not three sequential trash picks.
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { min: 0, max: 3, picked: 0, .. })
+        ),
+        "Clause B [EOT][OPT] must install the up-to-3 trash multi-pick directly (no outer Replacement); got {:?}",
         runner.pending_kind()
     );
     assert!(
@@ -957,9 +961,79 @@ fn ex8_055_clause_b_once_per_turn_lockout() {
 
     // After turn rotation OPT resets. No outer Replacement prompt — body starts
     // with optional select_trash directly (G-OUTER-OPTIONAL-NOT-INSTALLED pattern).
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Trash),
-        "after turn rotation, Clause B OPT must reset — SelectTrash must be installed directly"
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { max: 3, picked: 0, .. })
+        ),
+        "after turn rotation, Clause B OPT must reset — the trash multi-pick must be installed directly"
     );
+}
+
+/// Regression (invariant_fuzz seed 20260708003 step 47): PASS after the first
+/// pick ENDS the "up to 3" selection — no further pick is offered — and the
+/// one picked card is placed. The former three sequential optional
+/// `select_trash` steps re-asked pick 3 after a PASS on pick 2 (a phantom
+/// decision, rule 17). DCGO: one SelectCardEffect (maxCount 3, canEndNotMax)
+/// + one AddDigivolutionCardsBottom.
+#[test]
+fn ex8_055_clause_b_pass_after_one_pick_ends_the_selection() {
+    let tc1 = make_mineral_source("STOP-TC1");
+    let tc2 = make_mineral_source("STOP-TC2");
+    let tc3 = make_rock_source("STOP-TC3");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-055")
+        .expect("EX8-055 YAML parses and compiles")
+        .add_card(tc1)
+        .add_card(tc2)
+        .add_card(tc3)
+        .memory(10)
+        .start();
+
+    let pyra = runner.place_on_field(0, "EX8-055", None);
+    push_to_trash(&mut runner, 0, "STOP-TC1");
+    push_to_trash(&mut runner, 0, "STOP-TC2");
+    push_to_trash(&mut runner, 0, "STOP-TC3");
+    let sources_before = runner.game.players[0].battle_area[pyra.index as usize]
+        .card_sources
+        .len();
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(pyra));
+    runner.game.drain_effect_queue();
+
+    let first = runner
+        .pending_selection()
+        .expect("multi-pick pending")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("a trash card is offered");
+    runner.execute_action(0, first).expect("pick 1");
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { picked: 1, .. })
+        ),
+        "the multi-pick keeps accumulating after one pick; got {:?}",
+        runner.pending_kind()
+    );
+    runner.execute_action(0, PASS).expect("stop after 1");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "PASS ends the up-to-3 selection — no further pick is offered; got {:?}",
+        runner.pending_kind()
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[pyra.index as usize]
+            .card_sources
+            .len(),
+        sources_before + 1,
+        "exactly the one picked card is placed"
+    );
+    assert_eq!(runner.trash_size(0), 2, "the two unpicked cards stay in trash");
 }

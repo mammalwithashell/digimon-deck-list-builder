@@ -26,7 +26,14 @@
 # WITNESS: after the digivolve, P0 is still in main at memory 0 holding the
 # pinned stack[10] draw; on T3 the battle area holds Elecmon over Pagumon.
 #
-# PROMPT SHAPE: no selection on our side; none expected from DCGO.
+# PROMPT SHAPE: no selection on our side. VERIFIED (DCGO C#, 2026-10-04): none
+# on DCGO's either -- BT24_031.cs's alt condition is a plain
+# AddSelfDigivolutionRequirementStaticEffect (Lv.2 + [TS], cost 0); a BLACK
+# Pagumon fails the Yellow circle so CostList has ONE entry and
+# CardController.cs PlayCardClass SelectCost takes it without a
+# SelectCountEffect. Elecmon's [On Play] needs CanTriggerOnPlay (not a
+# digivolve); Pagumon BT25-005's only trigger is OnAddDigivolutionCards for
+# [Three Musketeers] cards -- inert.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

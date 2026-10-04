@@ -25,14 +25,20 @@
 #
 # PROMPT SHAPE: ours = an optional trigger whose first body step is a
 # declinable OwnField pick of the [TS] Tamer (one prompt = gate + pick), then
-# a second declinable OwnField pick of the new defender. DCGO (YAML crosscheck
-# of BT26_092.cs): OnAllyAttack optional -> OptionalSkill, then a
+# a second declinable OwnField pick of the new defender. DCGO -- VERIFIED
+# 2026-10-04 against BT26_092.cs:89-199: OnAllyAttack optional -> OptionalSkill, then a
 # canNoSelect SelectPermanentEffect for the Tamer, DeckBounce, then a
 # canNoSelect SelectPermanentEffect for the [TS] Digimon -> SwitchDefender.
 # The Tamer pick is therefore authored with the optional_gate_fold
 # (`expect: {prompt: OptionalSkill}` -> OptionalSkill(yes) + the pick on the
 # wire). The T3 Shota start-of-main decline: DCGO's trigger is not optional
 # but its hand pick is canNoSelect -> one SelectHandEffect, 1:1.
+# Citations: :93 SetUpActivateClass(..., true) -> OptionalSkill (lone trigger:
+# Elecmon's inherited OnAllyAttack needs ITS carrier to be the attacker);
+# Tamer pick :124-135 canNoSelect true (so no forced auto-pick over the one
+# candidate, SelectPermanentEffect.cs:370); DeckBounce; defender pick
+# :164-175 canNoSelect true -> SwitchDefender. Note DCGO's CanActivate (:115)
+# does not require a [TS] Tamer or a [TS] Digimon to exist -- moot here.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

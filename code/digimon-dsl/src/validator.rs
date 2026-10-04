@@ -1924,6 +1924,12 @@ fn validate_step_binding_scope(
         StepSpec::PlaceAsBottomSource(args) => {
             declare_optional_binding(scope, &args.bind_placed_as);
         }
+        // Same success-only optional binding for a permanent placed into
+        // security (BT25-044 "By placing 1 other Digimon as the top security
+        // card, ..." -- G-DSL-PLACE-ON-SECURITY-OWNER-AND-SUCCESS).
+        StepSpec::PlaceOnSecurity(args) => {
+            declare_optional_binding(scope, &args.bind_placed_as);
+        }
         StepSpec::PlayFromMaterials(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }

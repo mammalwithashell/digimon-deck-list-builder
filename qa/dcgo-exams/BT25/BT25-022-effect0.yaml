@@ -23,8 +23,11 @@
 # holds the pinned stack[10] draw; on T3 the moved stack is Lunamon over
 # Tsunomon.
 #
-# PROMPT SHAPE: no selection at all on our side. DCGO: none expected (single
-# route; a cost-route SelectCountEffect would be a finding).
+# PROMPT SHAPE: no selection at all on our side. VERIFIED none on DCGO's
+# (2026-10-04): BT25_022.cs alt condition = AddSelfDigivolutionRequirement
+# StaticEffect([TS], cost 0, level: 2); the yellow egg fails both printed
+# circles -> one CostList entry -> CardController.cs SelectCost takes it
+# without a SelectCountEffect.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

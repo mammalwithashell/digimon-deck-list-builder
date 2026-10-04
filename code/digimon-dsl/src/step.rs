@@ -2258,6 +2258,22 @@ pub struct PlaceOnSecurityArgs {
     pub disposition: SecurityReplacementDisposition,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
+    /// `source: permanent`, `disposition: none` only: place the card into its
+    /// OWNER's security stack instead of `of`'s (DCGO
+    /// `CardObjectController.AddSecurityCard` adds to
+    /// `cardSource.Owner.SecurityCards`). For printed text with no "your"
+    /// whose target may be either player's Digimon — BT25-044 Junomon "By
+    /// placing 1 other Digimon as the top security card".
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub to_owner: bool,
+    /// `source: permanent`, `disposition: none` only: on a SUCCESSFUL
+    /// placement bind the placed card under this name, so a "By placing X,
+    /// do Y" tail can gate on `binding_present` (DCGO
+    /// `PlacePermanentInSecurityAndProcessAccordingToResult` runs its
+    /// success process only when the placement happened). Unbound when the
+    /// placement fails or is replaced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_placed_as: Option<String>,
 }
 
 /// What `place_on_security` puts onto the security stack.
@@ -2707,10 +2723,17 @@ pub struct UseOptionFromSourcesArgs {
 /// from its true origin zone, with `cost` applied to its printed use cost
 /// (omitted = free). Driver BT21-062 "use 1 [Ragnarok Cannon] from your hand or
 /// trash without paying the cost". `G-DSL-USE-OPTION-FROM-SOURCES`.
+///
+/// The binding may also name a `select_hand` `bind_as` (a hand index): the
+/// card is then USED from hand — the USE-ONLY sibling of
+/// `play_or_use_from_hand`. A DUAL card goes straight to its Option face (no
+/// "Play as Digimon" choice); a non-Option/non-DUAL card is a no-op. Driver
+/// BT26-090 Kanan Yuki "you may use 1 Option card with the [TS] trait from
+/// your hand". `G-DSL-USE-OPTION-ONLY`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UseOptionBoundArgs {
-    /// The `select_union_zone` `bind_as` naming the picked Option.
+    /// The `select_union_zone` (or `select_hand`) `bind_as` naming the picked Option.
     pub binding: String,
     /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
     /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.

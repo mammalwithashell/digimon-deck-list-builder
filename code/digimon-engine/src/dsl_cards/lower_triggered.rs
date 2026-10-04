@@ -214,6 +214,12 @@ pub fn lower_for_kind_with_clause_index(
         if let Some(group) = shared_opt_group {
             builder = builder.shared_opt_group(group);
         }
+        // One printed clause spanning several timings is ONE effect for
+        // "activate 1 ... effect" enumerations
+        // (G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING).
+        if real_timing_count > 1 {
+            builder = builder.clause_group(clause_index as u32);
+        }
         if optional {
             builder = builder.optional();
             // G-OUTER-OPTIONAL-NOT-INSTALLED: a "you may" clause whose body's
@@ -757,7 +763,7 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         // window (`try_enter_counter`), the hand-Option scan and the mask all
         // require `Effect.counter` alongside the `CounterEffect` timing.
         // Without the flag no DSL field [Counter] ability was ever offered.
-        // G-ENGINE-DSL-FIELD-COUNTER-WINDOW.
+        // G-ENGINE-DSL-FIELD-COUNTER-WINDOW (= G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG).
         EffectTiming::CounterEffect => {
             EffectBuilder::new(card, EffectTiming::CounterEffect).counter()
         }

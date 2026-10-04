@@ -538,3 +538,157 @@ fn queued_non_inherited_top_card_effect_does_not_fire_after_moving_below_top() {
         "non-inherited queued effects must not resolve after their source card moves below top"
     );
 }
+
+// ─── §15-4-5-2/3: derived triggers resolve before still-pending ones ────────
+//
+// digest.md §15-4-3 / 15-4-5-2/3: an effect that triggers WHILE a pending
+// effect resolves is activated before the effects that were already pending.
+// DCGO `MultipleSkills.cs` (ActivateMultipleSkills_OnePlayer, "If there are
+// any newly triggered effects, resolve those first" ->
+// `_autoProcessing.TriggeredSkillProcess`) resolves them in a nested batch.
+
+const DERIVED_SOURCE_YAML: &str = r#"
+card: TEST-DERIVED-SRC
+name: Derived Source
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 1000
+traits: [Beast]
+effects:
+  - when: on_play
+    summary: "[On Play] Trash your top security card"
+    process:
+      - trash_top_security: { of: you }
+  - when: on_play
+    summary: "[On Play] Gain 1 memory"
+    process:
+      - gain_memory: 1
+"#;
+
+const DERIVED_OBSERVER_YAML: &str = r#"
+card: TEST-DERIVED-OBS
+name: Derived Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Beast]
+effects:
+  - when: on_lose_security
+    active_when: { all_turns: true }
+    summary: "[All Turns] When your security stack is removed from, gain 2 memory"
+    process:
+      - gain_memory: 2
+"#;
+
+#[test]
+fn derived_trigger_resolves_before_still_pending_sibling() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(DERIVED_SOURCE_YAML)
+        .expect("source yaml")
+        .from_dsl_yaml(DERIVED_OBSERVER_YAML)
+        .expect("observer yaml")
+        .add_card(make_test_card("PAD", "Pad"))
+        .hand(0, &["TEST-DERIVED-SRC"])
+        .security(0, &["PAD", "PAD", "PAD"])
+        .memory(0)
+        .start();
+    r.place_on_field(0, "TEST-DERIVED-OBS", Some(0));
+
+    r.play(0, 0).expect("play the source");
+    // Both [On Play] clauses are pending together -> TriggerOrder.
+    let first_trash = {
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("two simultaneous [On Play] -> TriggerOrder");
+        assert_eq!(sel.kind, SelectionKind::TriggerOrder);
+        assert_eq!(sel.valid_action_ids.len(), 2);
+        let choices = sel.effect_choices.as_ref().unwrap();
+        choices
+            .iter()
+            .find(|c| c.label.contains("slot 0"))
+            .map(|c| c.action_id)
+            .expect("the trash clause is offered")
+    };
+    r.game.resolve_selection(0, first_trash).expect("resolve the trash clause first");
+
+    // The observer's trigger was DERIVED from that resolution: it resolves
+    // before the still-pending "gain 1" clause, on its own (a lone derived
+    // trigger needs no ordering prompt), and then the pending clause runs.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the derived trigger must not be bundled with the still-pending clause"
+    );
+    assert!(r.game.effect_queue.is_empty());
+    assert_eq!(r.memory(), 3, "+2 (derived) +1 (pending)");
+}
+
+// ─── TriggerOrder pick maps to the OFFERED entry ───────────────────────────
+//
+// The bundle excludes non-firing entries (failed clause condition / spent
+// OPT / dead source). The pick must resolve the n-th OFFERED entry, not the
+// n-th queued entry the chooser controls -- with a non-firing entry ahead of
+// the offered ones those differ. G-ENGINE-TRIGGER-ORDER-PICK-MAPPING
+// (observed as ST19-14-effect1/2: answering ST19-14 resolved Shoemon first).
+
+const NEVER_FIRES_EOT_YAML: &str = r#"
+card: TEST-NEVER-EOT
+name: Never Fires
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Beast]
+effects:
+  - when: end_of_your_turn
+    condition: { memory_gte: 99 }
+    summary: "[End of Your Turn] (never) gain 1 memory"
+    process:
+      - gain_memory: 1
+"#;
+
+#[test]
+fn trigger_order_pick_resolves_the_offered_entry_past_a_non_firing_one() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(NEVER_FIRES_EOT_YAML)
+        .expect("never-fires yaml")
+        .add_card(make_test_card("TEST-006", "TestSix"))
+        .add_card(make_test_card("TEST-008", "TestEight"))
+        .memory(0)
+        .start();
+    // The non-firing entry is queued FIRST (battle-area order).
+    r.place_on_field(0, "TEST-NEVER-EOT", Some(0));
+    r.place_on_field(0, "TEST-006", Some(0));
+    r.place_on_field(0, "TEST-008", Some(0));
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+    let pick_006 = {
+        let sel = r.game.pending_selection.as_ref().expect("TriggerOrder");
+        assert_eq!(sel.kind, SelectionKind::TriggerOrder);
+        assert_eq!(sel.valid_action_ids.len(), 2, "the non-firing entry is not offered");
+        sel.effect_choices
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.label.starts_with("TEST-006"))
+            .map(|c| c.action_id)
+            .expect("TEST-006 offered")
+    };
+    r.game.resolve_selection(0, pick_006).expect("pick TEST-006");
+    // TEST-006 (+5) resolved as picked; the lone TEST-008 (-3) auto-fires.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the pick resolved TEST-006, not the non-firing entry -- no re-prompt"
+    );
+    assert_eq!(r.memory(), 2);
+}

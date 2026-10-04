@@ -24,18 +24,25 @@
 # (free play); Phoenixmon (12000) deleted by exactly -12000 (3 counted
 # permanents) -- with only 2 counted it would survive at 4000.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - The free-play pick: ours parks a PlayCostBudget per-pick trampoline (the
-#     adapter maps the kind to SelectPermanentEffect, wrong for this card), so
-#     our picks are a sim_only row. DCGO (per the YAML crosscheck) loops a
-#     hand/trash/stop zone menu, then multi-picks from the zone widget, then
-#     plays all picks at once. Authored as ONE dcgo_only SelectHandEffect
-#     row picking both Elecmons, GUESSING DCGO skips the zone menu because
-#     only the hand qualifies (trash empty) and that one hand pick may take
-#     both under the running cap. If DCGO asks the menu (and/or re-loops to
-#     it after the pick, offering "stop"), add those generic_int rows from
-#     the oracle abort message.
-#   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: ONE SelectHandEffect row takes both Elecmons (3+3, budget 8 -> 2);
+#     the loop then re-evaluates, finds no [Iliad] card costing <= 2 in hand
+#     or trash, and breaks WITHOUT a second prompt -- so no trailing decline
+#     row is needed on the wire.
+#   - DP pick: SelectPermanentEffect maxCount 1, canNoSelect false
+#     (BT26_081.cs:205-225), x3 counted (Mervamon + 2 Elecmon). Asked under
+#     the harness even with one candidate (forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407).
 card: BT26-081
 clause: BT26-081#effect#2
 seed: 424242
@@ -68,9 +75,7 @@ steps:
     do: { play: { card: BT26-081, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [BT25-030, BT25-030], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [BT25-030, BT25-030], dcgo_only: true } }
+    do: { select: { cards: [BT25-030, BT25-030] } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
@@ -90,7 +95,7 @@ assert:
   # exactly 6 = Mervamon's 13 only), each at 2000 + Mervamon's +2000 aura;
   # Phoenixmon took -4000 x 3 (Mervamon + 2 Elecmon, all [Iliad]/[TS]) =
   # -12000 -> 0 DP -> deleted.
-  - at: 9
+  - at: 8
     that:
       turn: 4
       p1.memory: 6
