@@ -14,13 +14,14 @@
 # self-delete at the end of that attack is a non-battle leave, so:
 #   THE CLAUSE: the Decode window opens -> YES -> pick BT25-044 from
 #   BT26-083's sources -> Junomon BT25-044 is played free; BT26-083 goes to
-#   the trash; [On Deletion] (effect#6) resolves silently.
+#   the trash. Its [On Deletion] (effect#6) and Junomon's [On Play] then
+#   wait together -> MultipleSkills ordering row (Junomon first).
 #   Junomon's own [On Play] ("by placing 1 other Digimon as the top security
-#   card, trash both players' top security cards") then offers its optional
+#   card, trash both players' top security cards") offers its optional
 #   pick -- DECLINED, so the board reads the Decode result alone.
 #
 # WITNESS: at 22 BT26-083 (sources [BT25-044]) is on the field, P0 memory -3
-# (end of T7); at 26 Junomon BT25-044 is on P0's field unsuspended with no
+# (end of T7); at 27 Junomon BT25-044 is on P0's field unsuspended with no
 # sources, BT26-083 is in P0's trash WITHOUT BT25-044, and P0 memory is still
 # -3 (the play was free).
 #
@@ -31,13 +32,16 @@
 # one declinable AnyField pick; DCGO may ask OptionalSkill first
 # (optional_gate_fold candidate) or SelectPermanentEffect canNoSelect.
 #
-# ENGINE FINDING (see report): our Junomon [On Play] pick is offered WHILE
-# BT26-083 is still on the field (at 24 both are on P0's field) and BT26-083
-# is a legal "other Digimon" candidate (AnyField ids [100, 115] = own slot 0 +
-# opp slot 0). Rules order the triggered [On Play] after the leave completes;
-# DCGO should offer only BT4-014. Picking BT26-083 there also makes the
-# pending <Execute> deletion land on JUNOMON (measured 2026-10-04 on a scratch
-# copy, not committed). This scenario declines, so it does not depend on it.
+# FIXED 2026-10-04 (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES): our
+# Junomon [On Play] pick used to open WHILE BT26-083 was still on the field
+# and offered it as an "other Digimon" (AnyField [100, 115]); picking it made
+# the pending <Execute> deletion land on JUNOMON. A parked replacement's
+# commit (the carrier leaving) now completes inside the same processing as
+# the Decode play (§16-35 immediate effect), so the triggered [On Play] waits
+# until BT26-083 has left and offers only BT4-014. The new MultipleSkills row
+# is the turn player ordering the two waiting triggers; if DCGO resolves the
+# mandatory [On Deletion] silently first, that row is a prompt-presence
+# surface difference to triage.
 card: BT26-083
 clause: BT26-083#effect#4
 seed: 424242
@@ -130,6 +134,12 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-044] } }
     expect: { prompt: SelectCardEffect }
+  # BT26-083 has now LEFT (the Decode processing completed), so its
+  # [On Deletion] and Junomon's [On Play] wait together: order them --
+  # Junomon's [On Play] first.
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: MultipleSkills }
   # Junomon BT25-044 [On Play] optional placement pick: decline.
   - actor: 0
     do: { select: { decline: true } }
@@ -147,7 +157,7 @@ assert:
       p0.field:
         - { card_id: BT26-083, dp: 14000, suspended: true, sources: [BT25-044] }
       p1.security: 3
-  - at: 26
+  - at: 27
     that:
       p0.memory: -3
       p0.field:
