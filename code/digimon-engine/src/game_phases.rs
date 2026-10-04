@@ -119,6 +119,13 @@ impl Game {
         // prompting observer parks the turn machine (resume kind
         // `UnsuspendPhase`).
         self.set_turn_phase(GamePhase::Unsuspend);
+        // G-ENGINE-AURA-REBOOT-NOT-APPLIED (2026-10-04): the turn player just
+        // changed, so turn-gated declarative auras (`[Opponent's Turn]` /
+        // `[Your Turn]` grants such as BT24-041's "[Opponent's Turn] … gain
+        // <Reboot>") must be re-materialized BEFORE the <Reboot> scan below
+        // reads `has_keyword` — otherwise the granted half still reflects the
+        // previous turn and the aura-granted Reboot is missed.
+        self.tick_declarative_effects();
         let mut unsuspended_batch: Vec<PermanentHandle> = Vec::new();
         {
             let n = self.player(tp).battle_area.len();
@@ -593,7 +600,10 @@ impl Game {
             return true;
         }
         for (i, perm) in me.battle_area.iter().enumerate() {
-            if !perm.top_card().is_digimon(&self.card_data) {
+            // `Permanent::is_digimon` (Digimon | Dual), not the card-source
+            // `CardSource::is_digimon` (Digimon only): a board-resident DUAL
+            // card is a Digimon (G-ENGINE-DUAL-END-OF-TURN-WINDOW).
+            if !perm.is_digimon(&self.card_data) {
                 continue;
             }
             let handle = PermanentHandle {
@@ -810,7 +820,7 @@ impl Game {
         if !self.has_keyword(overclock_handle, Keyword::Overclock) {
             return Err(OverclockError::NotOverclock);
         }
-        if !overclock_perm.top_card().is_digimon(&self.card_data) {
+        if !overclock_perm.is_digimon(&self.card_data) {
             return Err(OverclockError::NotOverclock);
         }
         if !self.has_overclock_sacrifice(player, overclock_index) {

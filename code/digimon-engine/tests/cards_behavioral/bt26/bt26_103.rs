@@ -209,3 +209,77 @@ fn bt26_103_succession_gains_jupitermon_leave_protection() {
     assert_eq!(bottom.card_id(&r.game.card_data), CARD_ID);
     let _ = w;
 }
+
+/// G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG: the `[Counter]` arm of the
+/// `when: [when_digivolving, counter]` clause must be offered as a field
+/// Counter ability in REAL combat (not only when CounterEffect is fired
+/// directly). Digimon-target attack on the suspended Wrath Mode.
+#[test]
+fn bt26_103_counter_arm_offered_in_real_combat_digimon_target() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+    r.game.players[1].battle_area[wrath.index as usize].is_suspended = true;
+
+    r.attack_digimon(atk, wrath, false);
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "Wrath Mode's [Counter] arm must open the Counter window"
+    );
+    let v = r.pending_selection_view().expect("counter prompt");
+    assert_eq!(v.selecting_player, 1);
+    let field_counter = encode_attack(0, wrath.index as u16);
+    assert!(v.valid_action_ids.contains(&field_counter));
+    assert!(v.is_optional, "Counter is optional (PASS declines)");
+
+    r.execute_action(1, field_counter).unwrap();
+    assert_eq!(r.security_count(1), 4, "3 - 1 trashed + <Recovery +2>");
+}
+
+/// G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK: general_rule 11-1-3 puts
+/// Counter timing in EVERY attack, including one that targets the player.
+#[test]
+fn bt26_103_counter_arm_offered_when_the_player_is_attacked() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+
+    r.attack_player(atk, 1, false);
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "a player-target attack must still open the Counter window"
+    );
+    let field_counter = encode_attack(0, wrath.index as u16);
+    r.execute_action(1, field_counter).unwrap();
+    assert_eq!(r.security_count(1), 4, "3 - 1 trashed + <Recovery +2>");
+}
+
+/// The field Counter candidate respects [Once Per Turn]: after the shared
+/// WD/Counter OPT is spent this turn, no Counter window opens for it.
+#[test]
+fn bt26_103_counter_arm_not_offered_once_opt_is_spent() {
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let atk = r.place_on_field(0, "OPP", Some(0));
+    let wrath = r.place_on_field(1, CARD_ID, Some(0));
+    fire(&mut r, EffectTiming::CounterEffect, wrath);
+    drain(&mut r);
+    assert_eq!(r.security_count(1), 4);
+    r.game.players[1].battle_area[wrath.index as usize].is_suspended = true;
+
+    r.attack_digimon(atk, wrath, false);
+    assert_ne!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "spent [Once Per Turn] Counter must not be offered"
+    );
+}
