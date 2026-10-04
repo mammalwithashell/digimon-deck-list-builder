@@ -1,0 +1,74 @@
+# Exam scenario: Liollmon (BT25-032), clause BT25-032#effect#0 -- the Special
+# Digivolution Condition "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0".
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01) -- GREEN Lv.2 [Glowing Dawn]. THE
+#       CLAUSE: digivolve it in the breeding area into Liollmon for cost 0 [0],
+#       draw stack[10]. Liollmon's printed circle is YELLOW Lv.2, which green
+#       Kekkomon cannot satisfy, so the "Lv.2 w/[Glowing Dawn]" alt is the only
+#       legal route (no variant deck needed, unlike the green Gekkomons).
+#       Breeding-area Digimon activate nothing, and this is a digivolve, so
+#       Liollmon's [On Play] is not involved. Pass (memory still 0).
+#   T2 P1 [3]: all-pass.
+#   T3 P0 [3]: draw stack[11]; move Liollmon to the battle area (no [When
+#       Moving] on BT25-032) so the projection shows the stack; pass.
+#   Witness: memory 0 / turn 1 after the digivolve, the digivolution draw in
+#   hand, and the battle-area Liollmon over [ST23-01].
+#
+# PROMPT SHAPE (BT25-032.yaml DCGO crosscheck): AddSelfDigivolutionRequirement
+# StaticEffect(level 2, TopCard EqualsTraits("Glowing Dawn"), cost 0) --
+# static, no prompt; one cost on offer -> no cost choice on either side.
+card: BT25-032
+clause: BT25-032#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-032, ST23-15, ST23-15, ST23-13, BT26-089,
+            ST23-12, ST23-04, BT26-089, BT26-089, BT26-089,
+            BT16-082, BT16-082, BT16-082]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT16-082, BT26-089, ST23-13, ST23-15, ST23-15]
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - card_id: BT25-032
+          dp: 2000
+          suspended: false
+          sources: [ST23-01]

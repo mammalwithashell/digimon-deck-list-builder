@@ -1,0 +1,76 @@
+# Exam scenario: NightChiropmon (BT26-070), clause BT26-070#effect#0 --
+# Special Digivolution Condition "[Digivolve] Lv.3 w/[Glowing Dawn] trait:
+# Cost 2".
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hatches Kekkomon, digivolves it in breeding into Liollmon
+#      [0 -> 0] (draw stack[10] BT26-089). Pass.
+#   T2 p1 passes (p0 gets 3).
+#   T3 P0 draws stack[11] ST23-06, moves Liollmon (silent [When Moving]: no
+#      Tamer), digivolves it into NightChiropmon. Liollmon is YELLOW, so
+#      NightChiropmon's printed PURPLE Lv.3 / 2 circle misses and the ONLY
+#      route is this clause's [Glowing Dawn] path -> one cost, no cost
+#      EffectChoice [3 -> 1]. Digivolve draw stack[12] BT25-046; its [When
+#      Digivolving] <Draw 1> (stack[13] BT25-057) + mandatory trash pick
+#      (BT25-090).
+# WITNESS: memory 1 (cost 2 paid), NightChiropmon over Liollmon/Kekkomon.
+#
+# PROMPT SHAPE (BT26-070.yaml DCGO crosscheck: AddSelfDigivolution
+# Requirement level 3 + TopCard EqualsTraits "Glowing Dawn", cost 2): no
+# prompt for the digivolve itself. The discard is DCGO's mandatory
+# (canNoSelect:false) SelectHandEffect <-> our Hand pick.
+card: BT26-070
+clause: BT26-070#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT26-070, ST23-15, ST23-12, BT25-090,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-057, ST23-12]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-070 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-090] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: [BT25-090]
+      p0.hand: [BT25-046, BT25-057, BT26-089, ST23-06, ST23-12, ST23-15]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: [BT26-025, ST23-01]

@@ -1,0 +1,86 @@
+# Exam scenario: Liollmon (BT25-032), clause BT25-032#inherited#0 --
+# INHERITED "<Barrier> (When this Digimon would be deleted in battle, by
+#  trashing your top security card, it isn't deleted.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon (ST23-01); digivolve in the breeding area into
+#       Liollmon BT25-032 (alt, cost 0) [0] and on into Cougarmon BT25-035
+#       (alt "Lv.3 w/[Glowing Dawn]", cost 2) [-2]; two digivolution draws.
+#       Breeding-area Digimon activate nothing (no [When Digivolving]).
+#   T2 P1 [2]: all-pass.
+#   T3 P0 [3]: move Cougarmon to the battle area (no [When Moving]); it
+#       attacks P1's security. P1's top security card (stack[9]) is
+#       Vermilimon BT4-014, 8000 DP > Cougarmon's 6000: Cougarmon would be
+#       deleted in battle.
+#   THE CLAUSE: Cougarmon BT25-035's own <Barrier> is a TOP card's inherited
+#       effect and does not apply; the only <Barrier> in play is inherited
+#       from Liollmon in its sources (Kekkomon's inherited is a [When
+#       Attacking] Tamer-cost digivolve with no Tamer -> silent). Accept ->
+#       P0's top security card (stack[9], ST23-12) is trashed and Cougarmon
+#       survives, suspended. Trailing pass.
+#   Witness: P0 security 5 -> 4 with ST23-12 in P0's trash, Cougarmon still
+#   on the field (suspended), P1's checked Vermilimon in P1's trash.
+#
+# PROMPT SHAPE (BT25-032.yaml DCGO crosscheck): BarrierSelfEffect(
+# isInheritedEffect: true) on WhenPermanentWouldBeDeleted -> DCGO asks the
+# optional cost as OptionalSkill; ours is a Replacement accept (1:1, sim-side
+# expect asserted).
+card: BT25-032
+clause: BT25-032#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-032, BT25-035, ST23-15, ST23-15, ST23-13,
+            BT26-089, BT26-089, BT16-082, BT16-082, ST23-12,
+            BT16-082, BT16-082, BT26-089, BT26-089]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-035 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.security: 4
+      p1.security: 4
+      p0.trash: [ST23-12]
+      p1.trash: [BT4-014]
+      p0.field:
+        - card_id: BT25-035
+          dp: 6000
+          suspended: true
+          sources: [BT25-032, ST23-01]

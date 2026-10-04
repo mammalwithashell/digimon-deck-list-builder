@@ -1,0 +1,56 @@
+# Exam scenario: Cougarmon (ST23-03), clause ST23-03#effect#1 --
+# "[On Play] [When Digivolving] Add your top security card to the hand. Then,
+#  <Recovery +1>. (Place the top card of your deck as your top security card.)"
+# (Measured through the [On Play] arm.)
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hard-play Cougarmon from hand (cost 4) [-4]. THE CLAUSE: the
+#       top security card -- stack[9], ST23-12 -- goes to the hand, then
+#       <Recovery +1> puts the deck top -- stack[10], ST23-04 -- on top of the
+#       security stack. The overshoot ends the turn; P1's breeding pass is the
+#       trailing step (asserted before it).
+#   Witness: ST23-12 (never drawable on T1 otherwise: P0 takes no T1 draw) is
+#   in hand, security is back at 5, nothing trashed.
+#
+# PROMPT SHAPE (ST23-03.yaml DCGO crosscheck): shared OP/WD ActivateClass,
+# optional: false -- IReduceSecurity to hand + IRecovery(1); no prompt on
+# either side.
+card: ST23-03
+clause: ST23-03#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-03, ST23-15, ST23-15, ST23-13, BT26-089,
+            BT26-089, BT26-089, BT16-082, BT16-082, ST23-12,
+            ST23-04, BT16-082]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 2
+    that:
+      turn: 2
+      p1.memory: 4
+      p0.security: 5
+      p0.hand: [BT26-089, ST23-12, ST23-13, ST23-15, ST23-15]
+      p0.trash: []
+      p0.field:
+        - card_id: ST23-03
+          dp: 4000
+          suspended: false
+          sources: []

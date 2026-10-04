@@ -1,0 +1,63 @@
+# Exam scenario: Gekkomon (ST23-06), clause ST23-06#effect#0 -- the Special
+# Digivolution Condition "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0".
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# WHY A VARIANT DECK (gd-bt26-4th-frimon-eggs, in qa/dcgo-exams/ST23/glowing_dawn_pool.json):
+# every real Glowing Dawn list runs 4x Kekkomon ST23-01, a GREEN Lv.2 -- which
+# also satisfies Gekkomon's printed green Lv.2 / cost 0 circle, so a digivolve
+# off Kekkomon cannot tell the alt condition from the circle. The variant is
+# gd-bt26-4th's 50-card main deck verbatim with the egg deck swapped to 4x
+# Frimon BT25-003 (YELLOW Lv.2, [Glowing Dawn]). All four eggs must be the
+# same card because `stack:` does not reach the egg deck (DCGO shuffles it),
+# so a 1-for-1 egg swap would make the hatched egg seed-dependent.
+# Off a yellow Lv.2 the green circle cannot match: the "Lv.2 w/[Glowing Dawn]"
+# alt is the ONLY legal route, so the digivolve lowering at all is the clause.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Frimon; digivolve it in the breeding area into Gekkomon
+#       for the alt cost 0 [0] (breeding-area Digimon activate nothing, so
+#       no [On Play]/[When Moving] is involved), digivolution draw stack[10]
+#       (BT25-049). Pass. Asserted before the pass: memory still 0 and still
+#       P0's turn, ST23-06 left the hand and the draw arrived. (Breeding-area
+#       permanents are not in the p0.field projection.)
+#
+# PROMPT SHAPE (ST23-06.yaml DCGO crosscheck): AddSelfDigivolutionRequirement
+# StaticEffect(level 2, TopCard EqualsTraits("Glowing Dawn"), cost 0) -- a
+# static requirement, no prompt; one digivolution cost on offer -> no
+# SelectCountEffect cost choice on either side.
+card: ST23-06
+clause: ST23-06#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, BT26-089, ST23-15, ST23-15, ST23-13,
+            ST23-12, ST23-12, ST23-09, ST23-09, ST23-09,
+            BT25-049]
+    rest: gd-bt26-4th-frimon-eggs
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: 0
+      p0.hand: [BT25-049, BT26-089, ST23-13, ST23-15, ST23-15]
+      p0.trash: []
+      p0.field: []
