@@ -24,6 +24,8 @@ impl CardEffect for LoseSecurityGainTwo {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_lose_security(card)
             .name("gain 2 on lose security")
+            // `[Security]`-scoped: only those are live on a removed security card.
+            .security_zone()
             .process(|ctx| ctx.gain_memory(2))
             .build()]
     }

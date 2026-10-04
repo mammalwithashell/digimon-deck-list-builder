@@ -4489,6 +4489,11 @@ Effect"), with `inherited_keywords` reading only true inherited text.
 
 ## OPT-spent trigger still offered in the TriggerOrder menu  [G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER] (found 2026-10-01, low severity)
 
+- **Status:** RESOLVED 2026-10-04 (via G-ENGINE-OPT-NOOP-REQUEUE). `non_firing_queued_effect_indices_for` now also
+  excludes entries whose `[X Per Turn]` count is exhausted (no `bypass_once_per_turn`; new
+  `Game::queued_effect_opt_exhausted`), per the fix sketch below. Test:
+  `cards_behavioral -- bt26_103_opt_spent_entry_not_offered_in_trigger_order`.
+
 - **Found by:** `/archetype-interaction-test-author`, EX13 Richard Sampson / DATA SQUAD slice, combo C3 —
   `code/digimon-engine/tests/archetypes/richard_sampson_data_squad_ex13.rs::c3_reppamon_opt_spent_on_digivolve_but_kudamon_inherited_fires_on_attack`.
 - **Behaviour:** EX13-030 Reppamon's `[On Play][When Digivolving][When Attacking][Once Per Turn]` clause is paid on
@@ -4568,6 +4573,13 @@ with the root cause inferred and not traced.
   expected to abort on DCGO's unanswered end-of-turn OptionalSkill — that abort is the finding).
 
 ### `<Barrier>` replacement offered for a deletion that is not the carrier's  [G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED] — reported twice, consistent
+- **Status:** RESOLVED 2026-10-04. `Keyword::Barrier`'s `replacement_condition` now requires the subject to be the
+  carrier (as Evade / Armor Purge already did). Sibling audit: `Keyword::Fragment` had the same omission (fixed the
+  same way); `Keyword::Decoy`'s self / same-controller / Digimon / colour filters were body-only and now also gate
+  candidate collection. Armor Purge, Evade, Scapegoat, Partition, Guard were already candidate-scoped. Residual (not
+  changed): Decoy's printed "by an opponent's effect" cause gate is not applied. Test:
+  `cards_behavioral -- bt24_034_barrier_not_offered_when_opponents_digimon_is_deleted_in_battle`. Scenario rows
+  removed from `P-213-effect1.yaml` and `BT24-041-effect3.yaml`.
 - **Symptom:** P0's Digimon carries `<Barrier>` (printed BT24-034, or inherited via P-213 / Aegiomon).
   When the OPPONENT's Digimon is deleted in battle against it, the opponent (player 1) is parked on
   "May accept replacement: <Barrier>". Yes and No leave identical state.
@@ -4596,6 +4608,14 @@ with the root cause inferred and not traced.
 - **Pinned by:** `qa/dcgo-exams/BT24/BT24-041-effect3.yaml` (step-16 assert `suspended: true`; DCGO expected `false`).
 
 ### A security card's own `[All Turns]` "security removed" trigger fires as it leaves security  [G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH] — observed on two cards
+- **Status:** RESOLVED 2026-10-04. Root cause: `Game::enqueue_from_security_card` (`effect_queue.rs`), reached via
+  `TriggerSource::SecurityRevealed` from both the security-check `OnLoseSecurityDrain` and
+  `fire_effect_security_removal`, enqueued EVERY `OnLoseSecurity` effect of the removed card. It now enqueues only
+  `[Security]`-scoped (`effect.security`) effects for `OnLoseSecurity` (as it already did for `SecuritySkill`);
+  battle-area observers come from the separate battle-area scan. Other timings (e.g. BT13-106's `OnDiscardSecurity`
+  self-clause) are untouched. Synthetic engine tests that probed a removed card's own reaction now mark it
+  `.security_zone()`. Tests: `cards_behavioral -- bt24_101_all_turns_does_not_fire_when_it_is_the_removed_security_card`
+  and `bt24_101_all_turns_does_not_fire_when_flipped_by_security_check`.
 - When BT24-101 is itself the security card trashed (Barrier cost, Blinding Ray), its
   `[All Turns][OPT] When your security stack is removed from, trash your opponent's top security card`
   still fires (no prompt via the Barrier cost; offered as a TriggerOrder candidate beside Blinding Ray).
@@ -4627,6 +4647,11 @@ with the root cause inferred and not traced.
 - **Pinned by:** `qa/dcgo-exams/BT26/BT26-081-effect4.yaml`.
 
 ### `[Once Per Turn]` trigger re-queued after resolving with no target  [G-ENGINE-OPT-NOOP-REQUEUE] — observed, low
+- **Status:** RESOLVED 2026-10-04. Not an accounting bug: the no-target resolution DOES consume the OPT (correct —
+  §15-14-1 counts each activation; §15-6-3 only bars activation when an "if"/"while" processing condition fails, and
+  a bare "1 of your opponent's Digimon" pick is not one) — pinned by `bt26_103_all_turns_opt_spent_by_no_target_activation`
+  (passed before and after). The defect was G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER: the OPT-spent re-queued entry
+  stayed orderable. Fixed there (entry above). Test: `bt26_103_opt_spent_entry_not_offered_in_trigger_order`.
 - BT26-103 `#effect#6` ("When security stacks are removed from, 1 of your opponent's Digimon gets
   -15000 DP") resolved as a no-op is re-queued on each further security removal in the same turn
   (three times in `BT26-103-effect4.yaml`). Likely the same family as
