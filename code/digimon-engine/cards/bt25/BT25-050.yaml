@@ -1,24 +1,21 @@
-# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4. Traits: Vegetation, Iliad, TS.
+# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4.
+# Traits (official DB): Ancient Bird / Iliad / TS + (Rule) Trait: Has [Vegetation] Type.
 # Printed: [On Play][When Digivolving] You may suspend 1 Digimon. Then, if there are 2 or
 #   more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends.
 # Inherited: [Your Turn] All of your Digimon get +1000 DP.
-# Digivolve box: Lv.3 w/[TS] / cost 2 (cards.json evo_costs empty).
+# Digivolve (official DB): standard circle Green Lv.3 / cost 2; alt Lv.3 w/[TS] / cost 2
+# (cards.json evo_costs empty; card_overrides carries the green circle).
 # DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_050.cs
 #   Shared OP/WD: Step1 optional suspend ANY battle-area Digimon (canNoSelect true).
 #   Step2 gate SuspendedDigimon>=2 (both players) AND opp Digimon exists -> MANDATORY
 #   pick 1 opp Digimon -> GainCanNotUnsuspend(UntilOpponentTurnEnd).
 #   ESS inherited: ChangeDPStaticEffect(+1000) over owner Digimon, owner-turn.
 #
-# KNOWN ENGINE GAP (G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED): the count-gated lock
-# `if` step below DOES NOT FIRE at runtime. When the process resumes after the
-# interactive `select_any_permanent` (suspend) resolves, the engine does not execute
-# the trailing conditional (`if`) step — so the "Then, if 2+ suspended..." consequence
-# is silently skipped. Proven in tests/cards_behavioral/bt25/bt25_050.rs: an
-# UNCONDITIONAL lock after the suspend fires correctly; the same lock wrapped in
-# `if { count_gte ... }` never installs. The clause is authored faithfully (the
-# count gate is REQUIRED — locking unconditionally would lock even with <2 suspended,
-# which is unfaithful), and held BLOCKED until the gap closes rather than shipping the
-# unconditional (wrong) lock. Gap logged to docs/RUST_ENGINE_GAPS.md.
+# The count gate is board-wide ("2 or more suspended Digimon" — DCGO counts both
+# players), so its `count_gte` filter carries `owner: any` (count_gte defaults to
+# `owner: you`). The earlier "G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED" BLOCKED
+# diagnosis was a misread of exactly this default: the trailing `if` step did run,
+# but counted only the controller's suspended Digimon. Fixed 2026-10-03.
 card: BT25-050
 name: Kiwimon
 kind: digimon
@@ -26,8 +23,11 @@ level: 4
 color: [green]
 cost: 4
 dp: 4000
-traits: [Vegetation, Iliad, TS]
+traits: [Ancient Bird, Iliad, TS, Vegetation]
 alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }
     cost: 2
@@ -38,6 +38,8 @@ effects:
       - select_any_permanent:
           bind_as: suspend_target
           optional: true
+          # DCGO canNoSelect: a PASS continues to the "2+ suspended" check.
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
@@ -48,10 +50,10 @@ effects:
           condition:
             count_gte:
               filter:
-                all_of:
-                  - zone: [battle_area]
-                  - kind: digimon
-                  - is_suspended: true
+                owner: any
+                zone: [battle_area]
+                kind: digimon
+                is_suspended: true
               n: 2
           then:
             - select_opponent_permanent:

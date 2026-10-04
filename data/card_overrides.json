@@ -18154,5 +18154,51 @@
     "type_eng": [
       "Machine"
     ]
+  },
+  "P-240": {
+    "card_colors": [
+      6,
+      5
+    ],
+    "play_cost": 13,
+    "dp": 13000,
+    "level": 6,
+    "type_eng": [
+      "Dragonkin",
+      "VB"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and your opponent blocks if possible.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (At blocker timing, by suspending this Digimon, the opponent's attacking Digimon attacks it instead.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. Then, by placing 2 cards with [Gammamon] in their texts or the [VB] trait from your trash as this Digimon's bottom digivolution cards, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends.\r\n[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost.",
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
+    "xros_req": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 4\r\n[Assembly -6] Lv.5 × Lv.4 × Lv.3, all w/[Gammamon] in text or w/[VB] trait"
+  },
+  "P-244": {
+    "card_colors": [
+      5
+    ],
+    "play_cost": 3,
+    "type_eng": [
+      "LIBERATOR"
+    ],
+    "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the digivolution cost reduced by 3.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
   }
 }

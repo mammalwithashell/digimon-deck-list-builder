@@ -1,0 +1,56 @@
+# P-210 Hiroko Sagisaka — Tamer, Red, Cost 3. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/P-210.md):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [On Play] You may return 1 Digimon card with the [TS] trait from your
+#     trash to the hand.
+#   Security: [Security] Play this card without paying the cost.
+#
+# (Distinct from BT24-083 / BT26-088 Hiroko Sagisaka — different text.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Red/P_210.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP: CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect — owner turn,
+#   opponent has >= 1 battle-area Digimon → AddMemory 1 (BT26-088 idiom).
+# On Play: ActivateClass isOptional FALSE; SelectCardEffect over trash
+#   (IsDigimon && HasTSTraits), canNoSelect: true, max 1, Mode.AddHand.
+#   → mandatory trigger; `select_trash optional: true` → add_to_hand_from_trash.
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: P-210
+name: "Hiroko Sagisaka"
+kind: tamer
+color: [red]
+cost: 3
+traits: [TS]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  - when: on_play
+    summary: "[On Play] You may return 1 Digimon card with the [TS] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: ts_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "TS"
+          prompt: "You may return 1 Digimon card with the [TS] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: ts_pick }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

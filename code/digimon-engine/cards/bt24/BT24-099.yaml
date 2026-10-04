@@ -1,0 +1,118 @@
+# BT24-099 Super Hacking — Option, Purple, Cost 3, Traits: Appmon.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT24-099.md):
+#   "While you have an [Appmon] trait Digimon or Tamer on the field, you can
+#   ignore this card's color requirements.
+#   [Main] By trashing 1 [Appmon] trait card from your hand, <Draw 2>. Then,
+#   place this card in the battle area.
+#   [All Turns] When Digimon are deleted, <Delay>.
+#   ・You may link 1 [Appmon] trait Digimon card from your trash to 1 of your
+#   Digimon without paying the cost."
+#   Security: "[Security] Place this card in the battle area."
+#
+# Official Q&A (data/card_bundles/BT24-099.md): "If you don't trash 1 [Appmon]
+# trait card from your hand, you can't process the part after 'then' in this
+# card's [Main] effect." → declining (or being unable to pay) the trash cost
+# skips BOTH the draw AND the placement; the Option is then disposed of
+# normally (trashed).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_099.cs
+#   - IgnoreColorConditionClass gated on own Appmon Digimon/Tamer.
+#   - OptionSkill: SelectHandEffect (HasAppmonTraits, canNoSelect: true,
+#     Discard) → if discarded, Draw 2; then PlaceDelayOptionCards
+#     UNCONDITIONALLY. DIVERGENCE: DCGO places the card even when the cost is
+#     declined, contradicting the official Q&A above. The official Q&A ruling
+#     outranks DCGO for printed-card rulings (CLAUDE.md source priority), so
+#     the placement lives inside the cost-paid branch. Because this [Main]
+#     body authors its own place_self_as_delay_option, lowering flags it
+#     `explicit_self_placement`, so dispose_option TRASHES the card when the
+#     body ends unplaced (G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT).
+#   - OnDestroyedAnyone (permanent.IsDigimon, any owner, any cause), optional
+#     (isOptional: true), CanDeclareOptionDelayEffect (not the placing turn) →
+#     trash self; on success SelectCardEffect from trash (IsDigimon &&
+#     HasAppmonTraits && CanLink, canNoSelect: true) then SelectPermanentEffect
+#     (own Digimon the card can link to, canNoSelect: true) → AddLinkCard.
+#   - SecuritySkill: PlaceDelayOptionCards.
+
+card: BT24-099
+name: Super Hacking
+kind: option
+color: [purple]
+cost: 3
+traits: [Appmon]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: Appmon
+      - all_of:
+          - kind: tamer
+          - trait_has: Appmon
+
+effects:
+  # Clause 1 — field-side color bypass (BT24-097 / BT21-097 idiom).
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          - all_of:
+              - kind: tamer
+              - trait_has: Appmon
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-099" }
+    summary: "While you have an [Appmon] Digimon or Tamer, ignore this card's color requirements"
+
+  # Clause 2 — [Main] cost-gated Draw 2, then place self (EX12-071 idiom).
+  - when: main_from_hand
+    summary: "[Main] By trashing 1 [Appmon] card from hand, <Draw 2>. Then, place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: Appmon }
+          prompt: "Trash 1 [Appmon] trait card from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}
+
+  # Clause 3 — [All Turns] When Digimon are deleted, <Delay>: may link 1
+  # [Appmon] Digimon card from trash to 1 of your Digimon free.
+  - kind: delay
+    trigger: on_any_deletion
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+    summary: "[All Turns] When Digimon are deleted, <Delay>: you may link 1 [Appmon] Digimon card from your trash to 1 of your Digimon free"
+    process:
+      - link_cards:
+          from: [trash]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
+          prompt: "Link 1 [Appmon] trait Digimon card from your trash to 1 of your Digimon without paying the cost"
+
+  # Clause 4 — [Security] Place this card in the battle area.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

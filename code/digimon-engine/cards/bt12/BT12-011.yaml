@@ -1,0 +1,163 @@
+# BT12-011 Shoutmon (King Version) — Digimon, Lv.4, Red, DP 4000, Cost 5.
+# Traits: Mini Dragon, Xros Heart. Attribute: Data.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT12-011.md):
+#   Digivolve: Red Lv.3 / Cost 2.
+#   [Digivolve] 2 from Lv.3 w/＜Save＞ in text.
+#   [On Play][When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano], or
+#     [Tagiru Akashi] from your hand without paying the cost.
+#   [On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its
+#     text from your trash under 1 of your Tamers.
+#   Special Play Condition: DigiXros -2: 1 Digimon card w/＜Save＞ in text.
+#   Inherited Effect:
+#   [When Attacking][Once Per Turn] If this Digimon has ＜Save＞ in its text,
+#     delete 1 of your opponent's Digimon with 4000 DP or less.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Red/BT12_011.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Alt-digivolve (AddSelfDigivolutionRequirementStaticEffect): base TopCard
+#   HasSaveText && Level == 3, cost 2. → alt_path from { level_eq: 3,
+#   effect_text_contains: "＜Save＞" }. The full-width ＜Save＞ token (the
+#   printed keyword bracket, as ingested in cards.json) is the needle so
+#   "Material Save" / "Deep Savers" text never false-matches.
+# DigiXros -2 (AddDigiXrosConditionClass): one element "Digimon card with
+#   <Save> in text", owner == card.Owner, reduce 2. → digixros alt_path,
+#   1 material, hand/battle area, cost_delta -2.
+# [On Play] / [When Digivolving] (two OnEnterFieldAnyone effects, identical
+#   bodies): SelectHandEffect canNoSelect:true over CardNames ∋ Taiki Kudo /
+#   Yuu Amano / Tagiru Akashi that can be played free → PlayPermanentCards
+#   (payCost:false). → one `when: [on_play, when_digivolving]` clause,
+#   optional select_hand + play_from_hand_free.
+# [On Deletion] (OnDestroyedAnyone, NOT optional at the outer level):
+#   CanActivateCondition = CanActivateSave (an own non-token Tamer exists).
+#   SaveProcess (the <Save> keyword's own optional Tamer pick, which tucks
+#   the deleted card under it), THEN SelectCardEffect from trash
+#   canNoSelect:false over own Digimon cards with HasSaveText, then
+#   SelectPermanentEffect canNoSelect:false over own Tamers →
+#   AddDigivolutionCardsBottom. The second step runs whether or not the
+#   Save was taken (if Save was declined, the deleted card itself — which
+#   has <Save> in its text — is a legal trash pick).
+#   → ONE on_deletion clause: optional Tamer pick + place event_card (the
+#   EX10-044 Save idiom), then mandatory select_trash → mandatory Tamer pick
+#   → place_as_bottom_source. Authored as one clause (not `grant_keyword:
+#   Save` + a second on_deletion clause) so the "Then," ordering is fixed
+#   and the trash pick cannot precede the Save.
+# Inherited [When Attacking][OPT] (OnAllyAttack, maxCount 1, inherited):
+#   CanActivateCondition = carrier TopCard.HasSaveText → condition
+#   `rules_text_contains: "＜Save＞"` (carrier top card's printed text).
+#   Mandatory SelectPermanentEffect (canNoSelect:false) over opponent
+#   Digimon with DP <= 4000 → Destroy.
+
+card: BT12-011
+name: "Shoutmon (King Version)"
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 4000
+traits: [Mini Dragon, Xros Heart]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  # "[Digivolve] 2 from Lv.3 w/＜Save＞ in text"
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - effect_text_contains: "＜Save＞"
+    cost: 2
+  # "DigiXros -2: 1 Digimon card w/＜Save＞ in text"
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - effect_text_contains: "＜Save＞"
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 5
+
+effects:
+  # ─── [On Play][When Digivolving] may free-play Taiki / Yuu / Tagiru ───────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano], or [Tagiru Akashi] from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Taiki Kudo"
+              - name_is: "Yuu Amano"
+              - name_is: "Tagiru Akashi"
+          prompt: "You may play 1 [Taiki Kudo], [Yuu Amano], or [Tagiru Akashi] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tamer_pick
+
+  # ─── [On Deletion] <Save>. Then, place a <Save>-text Digimon from trash ───
+  - when: on_deletion
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    summary: "[On Deletion] <Save>. Then, place 1 Digimon card with <Save> in its text from your trash under 1 of your Tamers"
+    process:
+      # <Save>: you may place this card under one of your Tamers.
+      # `continue_on_decline`: declining the Save must NOT drop the "Then"
+      # step (DCGO runs the trash placement after SaveProcess regardless).
+      - select_own_permanent:
+          bind_as: save_tamer
+          optional: true
+          continue_on_decline: true
+          filter: { kind: tamer }
+          prompt: "<Save>: you may place this card under one of your Tamers"
+      - if:
+          condition: { binding_present: save_tamer }
+          then:
+            - place_as_bottom_source:
+                source: event_card
+                target: save_tamer
+      # Then, place 1 Digimon card with <Save> in its text from your trash
+      # under 1 of your Tamers (mandatory — DCGO canNoSelect:false).
+      - select_trash:
+          of: you
+          bind_as: save_text_card
+          filter:
+            all_of:
+              - kind: digimon
+              - effect_text_contains: "＜Save＞"
+          prompt: "Place 1 Digimon card with <Save> in its text from your trash under 1 of your Tamers"
+      - if:
+          condition: { binding_present: save_text_card }
+          then:
+            - select_own_permanent:
+                bind_as: dest_tamer
+                filter: { kind: tamer }
+                prompt: "Choose 1 of your Tamers to place it under"
+            - place_as_bottom_source:
+                source: save_text_card
+                target: dest_tamer
+
+  # ─── Inherited [When Attacking][OPT] if <Save> in text, delete ≤4000 ─────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      rules_text_contains: "＜Save＞"
+    summary: "Inherited [When Attacking][Once Per Turn] If this Digimon has <Save> in its text, delete 1 of your opponent's Digimon with 4000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: del_target }
