@@ -40,7 +40,9 @@
 #   - Mervamon OP pick: dcgo_only SelectHandEffect decline, GUESSING DCGO skips
 #     its hand/trash/stop zone menu (trash empty after the Assembly). Expect
 #     a mismatch here if the engine bug above is real and later fixed (then
-#     add the sim_only decline row back).
+#     turn the dcgo_only row into ONE shared `decline` row expecting
+#     SelectHandEffect -- since 2026-10-04 the adapter maps a hand-only
+#     PlayCostBudget pick to SelectHandEffect, G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE).
 #   - DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
 card: BT26-081
 clause: BT26-081#effect#4

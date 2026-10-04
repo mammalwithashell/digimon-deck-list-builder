@@ -20,6 +20,14 @@
 # DCGO wire ("select answered no live prompt" note is EXPECTED); DCGO asserts
 # the OptionalSkill prompt strictly. If DCGO prompts here, the sim side's
 # missing window is the divergence to triage, not the scenario.
+# FIXED 2026-10-04 (G-TOOLING-EXAM-ACTOR-UNCHECKED): the ENGINE-GAP NOTE
+# above is stale -- our engine now parks the granted <Execute> end-of-turn
+# window -- and the old line carried a WRONG-SEAT step: the window already
+# opened at the end of T3 (the moved carrier can attack), so P1's T4 breeding
+# `pass` silently declined P0's window and every later step ran one decision
+# early (the T5 decline answered no live prompt). The harness now refuses a
+# wrong-seat step; the line declines the window at T3 AND T5 with `pass`.
+# PROVISIONAL: still unconfirmed against the oracle.
 # REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
 # the `decline:` payload serializes as select_cancel, but DCGO's
 # OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
@@ -61,14 +69,19 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Turn 3 (P0): move the stack to battle. Moved-this-turn means no attack,
-  # so this turn's end opens no <Execute> window on either side.
+  # Turn 3 (P0): move the stack to battle. A Digimon moved out of the
+  # breeding area was not PLAYED this turn (7-1-2-1 bars only the turn it was
+  # played), so it can attack -- and ending this main phase already opens the
+  # granted <Execute> end-of-turn window. Decline it here too.
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   # Turn 4 (P1): nothing.
   - actor: 1
     do: { pass: {} }
@@ -85,10 +98,10 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
   # Decline the optional <Execute> attack: no attack, no self-delete, the
-  # carrier stays. (Sim-side this row answers no live prompt -- engine gap
-  # above -- and rides the wire for DCGO's OptionalSkill.)
+  # carrier stays. Our end-of-turn gate is declined with `pass` (lowered to
+  # DCGO's OptionalSkill(no) -- see docs/DCGO_EXAM.md, end-of-turn gate).
   - actor: 0
-    do: { select: { decline: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # Trailing pass: P1's next breeding decision.
   - actor: 1
@@ -99,7 +112,7 @@ assert:
   # Onibimon still under it (pre-step state of the trailing pass, P1's turn:
   # Wankomon reads its printed 2000 DP -- its own inherited is [Your Turn]
   # and it is not P0's turn anymore).
-  - at: 12
+  - at: 13
     that:
       p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]
       p1.field: []

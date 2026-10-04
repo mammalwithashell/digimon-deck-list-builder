@@ -249,11 +249,12 @@ confirm or refute.
   reveal-carrying lines): a one-field `p0.hand` diff on the second pick row is the
   documented DCGO per-bucket add, a DCGO quirk. Also expect a possible leading
   `generic_bool`, and the OrderedPermutation N=1 leftover row is `sim_only`.
-- **Mervamon's free-play pick (BT26-081):** a `sim_only` + `dcgo_only SelectHandEffect`
-  pair (`G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`). DCGO may loop a hand/trash/stop zone menu.
-- **BT24-031-inherited0:** "you may add your top security card" is our Security pick.
-  The harness refuses an OptionalSkill fold on that kind, so expect a prompt-class
-  mismatch (`G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD`). Aegiomon over the yellow [TS] Elecmon
+- **Mervamon's free-play pick (BT26-081):** one shared row asserting `SelectHandEffect`
+  (`G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`, resolved 2026-10-04; was a `sim_only` + `dcgo_only`
+  pair). DCGO may still loop a hand/trash/stop zone menu.
+- **BT24-031-inherited0:** "you may add your top security card" is our Security pick,
+  authored as the gate-only OptionalSkill fold (`G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD`,
+  resolved 2026-10-04): the wire carries OptionalSkill(yes) alone. Aegiomon over the yellow [TS] Elecmon
   also has two digivolve routes at the same cost: we ask nothing, DCGO may ask.
 - **Single-candidate mandatory picks** (BT26-073 delete, BT26-081 DP pick, BT26-083
   `#effect#5` 2-of-2 delete): we always park these; DCGO may auto-resolve with no row.
@@ -290,9 +291,9 @@ All of these are in `docs/RUST_ENGINE_GAPS.md` § "TS Jupitermon exam-authoring 
 
 - A card costing more than 10 cannot be hard-played from 0 memory (−10 is the floor), so
   Lv.6/7 lines play on T3 or later.
-- `actor:` is not checked on `pass` steps (`G-TOOLING-EXAM-ACTOR-UNCHECKED`). The agents
-  checked `turn`/`phase` with asserts at key points to make sure no step lands on the
-  wrong seat.
+- `actor:` is now checked on every action step (`G-TOOLING-EXAM-ACTOR-UNCHECKED`,
+  resolved 2026-10-04): a wrong-seat step refuses to lower. No TS Jupitermon scenario
+  had one.
 - A security card's own `[All Turns]` trigger fires as it leaves security
   (`G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH`), so lines that remove security keep BT24-101
   and BT25-044 off the top of the stack.

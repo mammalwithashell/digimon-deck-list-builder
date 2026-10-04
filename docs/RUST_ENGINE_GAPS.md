@@ -4639,12 +4639,25 @@ with the root cause inferred and not traced.
 
 ### Exam tooling
 - **`PlayCostBudget` always maps to `SelectPermanentEffect`** [G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE] —
-  wrong for a hand/trash budget pick (BT26-081 Mervamon), where DCGO uses a zone menu then the zone's
-  widget. Worked around with a `sim_only` + `dcgo_only` row pair in the BT26-081 scenarios.
-- **`actor:` not validated on `pass` / main-phase steps** [G-TOOLING-EXAM-ACTOR-UNCHECKED] — a `pass`
-  written for actor 0 lowered and applied during P1's breeding phase with no error, so a wrong-seat
-  step can hide in a sim-only run.
-- **No OptionalSkill fold on a `Security`-kind pick** [G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD] — BT24-031's
-  inherited "you may add your top security card to the hand" is our Security pick; DCGO most likely asks
-  a bare OptionalSkill. The harness refuses `expect: OptionalSkill` on that kind, so
-  `BT24-031-inherited0.yaml` is expected to show a prompt-class mismatch at the oracle.
+  **RESOLVED 2026-10-04.** Was: wrong for a hand/trash budget pick (BT26-081 Mervamon), worked around
+  with a `sim_only` + `dcgo_only` row pair. Fix: `exam/adapter.rs::play_cost_budget_prompt_name` reads
+  the LIVE prompt's candidate action-id ranges — permanents → `SelectPermanentEffect`, hand →
+  `SelectHandEffect`, trash → `SelectCardEffect`, a hand+trash mix → unasserted (DCGO's zone menu, the
+  `UnionZone` shape). Test `a_play_cost_budget_maps_by_its_candidate_zone`; BT26-081-effect0..3 now use
+  one shared row asserting `SelectHandEffect` (the old binary refuses that row: "maps to DCGO
+  'SelectPermanentEffect'"). Single-zone-opens-the-widget-directly is an unverified assumption.
+- **`actor:` not validated on `pass` / main-phase steps** [G-TOOLING-EXAM-ACTOR-UNCHECKED] —
+  **RESOLVED 2026-10-04.** Was: a `pass` written for actor 0 lowered and applied during P1's breeding
+  phase. Fix: `exam/adapter.rs::check_actor_is_decider` refuses every action verb (incl. `dna:`) whose
+  actor is not `policies::current_decision_player` (`select:` already had the check). Tests
+  `a_wrong_seat_pass_refuses_to_lower`, `a_wrong_seat_hatch_refuses_to_lower`. Whole corpus sim-only
+  before/after: 456/456 → 455/456; the one wrong-seat line was `EX12/EX12-004-effect1.yaml` (the
+  granted `<Execute>` window already opens at the end of T3, so P1's T4 `pass` was silently declining
+  P0's window and the rest of the line ran one decision early). Fixed by declining the T3 window too.
+- **No OptionalSkill fold on a `Security`-kind pick** [G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD] —
+  **RESOLVED 2026-10-04.** Fix: `expect: {prompt: OptionalSkill}` over a declinable ONE-candidate
+  `Security` pick is now a gate-only fold (`SelectWire::fold_gate_only`): the wire carries
+  OptionalSkill(yes) alone on accept (OptionalSkill(no) on decline), with no pick row, on the
+  assumption that DCGO opens no card widget for a forced card. Multi-candidate Security picks keep the
+  1:1 `SelectCardEffect` mapping. Test `gate_only_fold_emits_the_gate_row_alone` (+ the wire-row-count
+  pin); `BT24-031-inherited0.yaml` uses the fold.

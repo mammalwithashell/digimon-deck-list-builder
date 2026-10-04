@@ -25,16 +25,16 @@
 # permanents) -- with only 2 counted it would survive at 4000.
 #
 # PROMPT SHAPE / DCGO quirks to triage:
-#   - The free-play pick: ours parks a PlayCostBudget per-pick trampoline (the
-#     adapter maps the kind to SelectPermanentEffect, wrong for this card), so
-#     our picks are a sim_only row. DCGO (per the YAML crosscheck) loops a
-#     hand/trash/stop zone menu, then multi-picks from the zone widget, then
-#     plays all picks at once. Authored as ONE dcgo_only SelectHandEffect
-#     row picking both Elecmons, GUESSING DCGO skips the zone menu because
-#     only the hand qualifies (trash empty) and that one hand pick may take
-#     both under the running cap. If DCGO asks the menu (and/or re-loops to
-#     it after the pick, offering "stop"), add those generic_int rows from
-#     the oracle abort message.
+#   - The free-play pick: ours parks a PlayCostBudget per-pick trampoline over HAND
+#     cards only (trash empty). FIXED 2026-10-04
+#     (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE): the adapter now maps a budget pick
+#     by its candidates' zone, so this is ONE shared row asserting
+#     SelectHandEffect (was a sim_only + dcgo_only pair). Still a GUESS that
+#     DCGO skips its hand/trash/stop zone menu when only the hand qualifies;
+#     if DCGO asks the menu, add its "stop"/zone generic_int value as a
+#     dcgo_only row from the oracle abort message.
+#     DCGO likely takes both Elecmons in one multi-pick row under the
+#     running cap; ours answers the two picks from the same row.
 #   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
 card: BT26-081
 clause: BT26-081#effect#2
@@ -68,9 +68,7 @@ steps:
     do: { play: { card: BT26-081, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [BT25-030, BT25-030], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [BT25-030, BT25-030], dcgo_only: true } }
+    do: { select: { cards: [BT25-030, BT25-030] } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
@@ -90,7 +88,7 @@ assert:
   # exactly 6 = Mervamon's 13 only), each at 2000 + Mervamon's +2000 aura;
   # Phoenixmon took -4000 x 3 (Mervamon + 2 Elecmon, all [Iliad]/[TS]) =
   # -12000 -> 0 DP -> deleted.
-  - at: 9
+  - at: 8
     that:
       turn: 4
       p1.memory: 6

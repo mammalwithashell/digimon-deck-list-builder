@@ -25,11 +25,13 @@
 # Monodramon in P1's trash, Aegiomon suspended over Elecmon).
 #
 # PROMPT SHAPE: ours = ONE declinable `Security`-kind pick of the top card
-# (gate and pick at once), which maps to DCGO SelectCardEffect (the harness
-# refuses an OptionalSkill fold on a Security-kind prompt). DCGO most likely
-# renders "you may add your top security card" as an OptionalSkill yes/no with
-# NO card pick (the top card is forced) -- expect a prompt-class mismatch on
-# this row at the oracle; triage as a surface mismatch, not a rules finding. Aegiomon's [When
+# (gate and pick at once). DCGO most likely renders "you may add your top
+# security card" as an OptionalSkill yes/no with NO card pick (the top card is
+# forced). FIXED 2026-10-04 (G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD): the row is
+# authored `expect: {prompt: OptionalSkill}`, the gate-only fold -- the wire
+# carries OptionalSkill(yes) alone, no SelectCardEffect row. If the oracle
+# shows a SelectCardEffect after the yes, that assumption is wrong (see
+# `SelectWire::fold_gate_only`). Aegiomon's [When
 # Digivolving] decline: our engine asks even with no P1 Digimon; DCGO may skip.
 # Aegiomon over a YELLOW Lv.3 [TS] Elecmon has TWO routes at the same cost 2
 # (Yellow Lv.3 circle, "[Digivolve] Lv.3 w/[TS]: Cost 2"); our engine asked no
@@ -89,9 +91,11 @@ steps:
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # THE CLAUSE: yes -- add the top security card (Shota Kuroi) to the hand.
+  # Gate-only OptionalSkill fold: our one-candidate declinable Security pick
+  # emits ONLY OptionalSkill(yes) on the DCGO wire.
   - actor: 0
     do: { select: { cards: [BT26-092] } }
-    expect: { prompt: SelectCardEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }

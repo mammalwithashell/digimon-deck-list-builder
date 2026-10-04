@@ -25,9 +25,14 @@
 # attacker on P0's turn; Reboot would need P1's NEXT unsuspend phase).
 #
 # PROMPT SHAPE / DCGO quirks to triage:
-#   - Mervamon OP pick decline: sim_only decline + dcgo_only SelectHandEffect
-#     decline, GUESSING DCGO skips its hand/trash/stop zone menu (trash empty).
-#     If DCGO asks the menu, swap in its "stop" generic_int value.
+#   - Mervamon OP pick decline: ours parks a PlayCostBudget per-pick trampoline over HAND
+#     cards only (trash empty). FIXED 2026-10-04
+#     (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE): the adapter now maps a budget pick
+#     by its candidates' zone, so this is ONE shared row asserting
+#     SelectHandEffect (was a sim_only + dcgo_only pair). Still a GUESS that
+#     DCGO skips its hand/trash/stop zone menu when only the hand qualifies;
+#     if DCGO asks the menu, add its "stop"/zone generic_int value as a
+#     dcgo_only row from the oracle abort message.
 #   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
 #   - Blocker window: SelectPermanentEffect on both sides (EX12-026-effect0
 #     shape).
@@ -63,9 +68,7 @@ steps:
     do: { play: { card: BT26-081, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
@@ -87,7 +90,7 @@ steps:
 assert:
   # Before P1's attack: Mervamon at 15000 (13000 + the clause's +2000 on
   # itself), Phoenixmon at 8000 (12000 - 4000 x 1 from effect#2).
-  - at: 10
+  - at: 9
     that:
       turn: 4
       p0.field:
@@ -96,7 +99,7 @@ assert:
         - { card_id: ST1-10, dp: 8000, suspended: false, sources: [] }
   # After the block: P0's security untouched, Phoenixmon (8000) lost to the
   # 15000 blocker, Mervamon suspended from blocking.
-  - at: 12
+  - at: 11
     that:
       turn: 4
       p0.security: 5

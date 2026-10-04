@@ -29,13 +29,14 @@
 #   - Minervamon [On Play]: ours = one declinable hand pick; authored as the
 #     OptionalSkill fold. If DCGO's effect is non-optional, change to
 #     SelectHandEffect.
-#   - Mervamon WD pick: ours parks a PlayCostBudget trampoline (adapter maps it
-#     to SelectPermanentEffect, which is wrong for this card -- DCGO loops a
-#     zone menu hand/trash/stop then picks from the zone widget). Authored as
-#     a sim_only decline + a dcgo_only SelectHandEffect decline, GUESSING that
-#     DCGO skips the zone menu when only the hand qualifies (trash empty). If
-#     DCGO asks the menu, replace the dcgo_only row with its "stop" generic_int
-#     value from the oracle abort message.
+#   - Mervamon WD pick: ours parks a PlayCostBudget per-pick trampoline over HAND
+#     cards only (trash empty). FIXED 2026-10-04
+#     (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE): the adapter now maps a budget pick
+#     by its candidates' zone, so this is ONE shared row asserting
+#     SelectHandEffect (was a sim_only + dcgo_only pair). Still a GUESS that
+#     DCGO skips its hand/trash/stop zone menu when only the hand qualifies;
+#     if DCGO asks the menu, add its "stop"/zone generic_int value as a
+#     dcgo_only row from the oracle abort message.
 card: BT26-081
 clause: BT26-081#effect#0
 seed: 424242
@@ -83,15 +84,13 @@ steps:
     do: { digivolve: { from: field.0, using: BT26-081 } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 13
+  - at: 12
     that:
       turn: 5
       p0.memory: 1
