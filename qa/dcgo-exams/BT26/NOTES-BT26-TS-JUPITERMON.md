@@ -101,7 +101,7 @@ confirm or refute.
 | `#effect#0` | [Digivolve] Lv.5 w/[TS]: Cost 4 | `BT26-033-effect0.yaml` | onto P-213, memory 3→−1 |
 | `#effect#1` | `<Raid>` | `BT26-033-effect1.yaml` | redirect to Biyomon; P1 security stays 5 |
 | `#effect#2` | `<Alliance>` | `BT26-033-effect2.yaml` | one attack checks 2 (5→3) |
-| `#effect#3` | `<Engage>` | `BT26-033-effect3.yaml` | **asserts NO end-of-turn window: engine bug, expected oracle abort** |
+| `#effect#3` | `<Engage>` | `BT26-033-effect3.yaml` | end-of-turn attack on security (re-authored after the DUAL end-of-turn fix, 2026-10-04) |
 | `#effect#4` | [WD] top security → hand, play [Iliad]/[TS] at −5 | `BT26-033-effect4.yaml` | security 5→4; Inori played for 0 |
 | `#effect#5` | [All Turns] protect [TS] by placing top card as bottom security | `BT26-033-effect5.yaml` | Elecmon survives Gaia Force; security 4→5 |
 | `#effect#6` | DUAL: +1 use cost per security card | `BT26-033-effect6.yaml` | memory 0→−7 (2+5) |
@@ -134,7 +134,7 @@ confirm or refute.
 | `#effect#2` | `<Reboot>` | `BT26-103-effect2.yaml` | unsuspends at P1's turn |
 | `#effect#3` | `<Blocker>` | `BT26-103-effect3.yaml` | blocks Biyomon; see the [Counter] note |
 | `#effect#4` | `<Succession ([Jupitermon])>` | `BT26-103-effect4.yaml` | copied WD and [All Turns] both observed |
-| `#effect#5` | [WD][Counter][OPT] trash top security, Recovery +2 | `BT26-103-effect5.yaml` | partial: [When Digivolving] arm only; the [Counter] arm cannot fire (DSL bug) |
+| `#effect#5` | [WD][Counter][OPT] trash top security, Recovery +2 | `BT26-103-effect5.yaml` | partial: [When Digivolving] arm only; the [Counter] arm now fires in combat (DSL bug fixed 2026-10-04) but has no scenario yet |
 | `#effect#6` | [All Turns][OPT] security removed → −15000 | `BT26-103-effect6.yaml` | the chosen Phoenixmon is deleted |
 | `#inherited#0` | "ー" | **unreachable** | no inherited effect; Lv.7, so nothing can digivolve onto it either |
 | **BT26-083 Junomon: Hysteric Mode** |||
@@ -181,7 +181,7 @@ confirm or refute.
 | `#effect#0` | [Digivolve] Lv.5 [Beastkin]/[Dark Dragon]/[TS]: Cost 3 | `BT24-041-effect0.yaml` | onto red P-213 |
 | `#effect#1` | play cost −5 with an [Iliad] Digimon/Tamer | `BT24-041-effect1.yaml` | 3→−4 |
 | `#effect#2` | OP/WD/OnDel: play an [Iliad] ≤5 free; `<De-Digivolve 1>` per own Digimon | `BT24-041-effect2.yaml` | strips 2 |
-| `#effect#3` | [Opp Turn] [Iliad] gain `<Reboot>`, `<Blocker>` | `BT24-041-effect3.yaml` | **the Reboot half asserts our engine's wrong result (expected divergence)** |
+| `#effect#3` | [Opp Turn] [Iliad] gain `<Reboot>`, `<Blocker>` | `BT24-041-effect3.yaml` | both halves (Reboot fixed 2026-10-04) |
 | **BT25-022 Lunamon** |||
 | `#effect#0` | [Digivolve] Lv.2 w/[TS]: Cost 0 | `BT25-022-effect0.yaml` | |
 | `#effect#1` | [On Play] reveal 3, add [Iliad] + [TS] | `BT25-022-effect1.yaml` | |
@@ -206,17 +206,17 @@ confirm or refute.
 `diverged` is not proof we are wrong. `general_rule.pdf` outranks DCGO.
 
 **Deliberate. Each pins an engine bug we already logged.**
-- `BT26-033-effect3`: our engine never opens `<Engage>` on a DUAL card
-  (`G-ENGINE-DUAL-END-OF-TURN-WINDOW`). DCGO's end-of-turn OptionalSkill is left
-  unanswered, so the oracle aborts there. That abort is the finding. Separately,
-  `BT26-033-effect0/1/2/4/5/9` each carry `dcgo_only` decline rows for DCGO's Engage
-  gate. If DCGO does not ask that gate when the turn ended on negative memory, those
-  lines abort on that row.
-- `BT24-041-effect3`: aura-granted `<Reboot>` does not unsuspend in our engine
-  (`G-ENGINE-AURA-REBOOT-NOT-APPLIED`). The step-16 assert says `suspended: true`; DCGO
-  should say `false`.
-- `BT26-103-effect3`: DCGO will likely run Wrath Mode's [Counter] arm and then `#effect#6`'s
-  pick before the block prompt. Ours runs neither (`G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG`).
+- FIXED 2026-10-04 -- `BT26-033-effect3`: `G-ENGINE-DUAL-END-OF-TURN-WINDOW`. The line now
+  attacks in the `<Engage>` end-of-turn window; `BT26-033-effect0/1/2/4/5/9`'s former
+  `dcgo_only` Engage decline rows are shared `pass` rows answering our end-of-turn park.
+  If DCGO does not ask that gate when the turn ended on negative memory, those lines
+  abort on that row.
+- FIXED 2026-10-04 -- `BT24-041-effect3`: `G-ENGINE-AURA-REBOOT-NOT-APPLIED`; the step-16
+  assert now says `suspended: false`.
+- FIXED 2026-10-04 -- `BT26-103-effect3`: `G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG` +
+  `G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK`. Our engine now opens the Counter window
+  before the block and offers Wrath Mode's [Counter] arm; the line declines it (OptionalSkill
+  fold). If DCGO auto-runs the arm instead, that is a Counter-shape divergence.
 - `BT26-081-effect4`: our engine skips Mervamon's [On Play] pick after an Assembly play
   (`G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK`). DCGO will ask it.
 - `P-213-effect1`, `BT24-041-effect3`: a `sim_only` row answers our phantom `<Barrier>`

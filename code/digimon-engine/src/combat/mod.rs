@@ -1479,8 +1479,12 @@ impl Game {
     ///   - Field Counter abilities — defender's battle-area Digimon with
     ///     a `.counter()` + `CounterEffect`-timing triggered ability.
     ///
-    /// Scope: **Digimon-target attacks only**. Player-target attacks
-    /// skip Counter to match Python (`combat.py:139`).
+    /// Scope: **every attack** — Digimon-target AND player-target.
+    /// `general_rule.pdf` 11-1-3 lists Counter timing as a step of every
+    /// attack (declaration -> Counter -> Block -> confirming success). The
+    /// former "Digimon-target only" scope mirrored the retired Python engine
+    /// (`combat.py:139`) and had no rules basis
+    /// (G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK, 2026-10-04).
     ///
     /// Depth guard: if `pa.counter_depth >= MAX_COUNTER_DEPTH`, the scan
     /// returns `false` immediately — a counter body that launches a
@@ -1496,7 +1500,7 @@ impl Game {
 
         let defender_player = match pa.effective_target {
             AttackTarget::Digimon(h) => h.player,
-            AttackTarget::Player(_) => return false,
+            AttackTarget::Player(pid) => pid,
         };
         let attacker = pa.attacker;
 
@@ -1620,9 +1624,31 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
-            let has_field_counter = effects
-                .iter()
-                .any(|e| e.counter && e.timing == EffectTiming::CounterEffect);
+            // A spent [Once Per Turn] / max-per-turn Counter ability, or one
+            // whose activation condition fails, would resolve to nothing (the
+            // effect queue suppresses it) — so it is not a real candidate and
+            // offering it would be a phantom choice (rule 17).
+            let has_field_counter = effects.iter().enumerate().any(|(slot, e)| {
+                if !(e.counter && e.timing == EffectTiming::CounterEffect) {
+                    return false;
+                }
+                if e.max_per_turn > 0 {
+                    let opt_key = e.shared_opt_group.unwrap_or(slot as u8);
+                    if perm.activation_count(source_card, opt_key) >= e.max_per_turn {
+                        return false;
+                    }
+                }
+                e.condition.as_ref().is_none_or(|cond| {
+                    let ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                        self,
+                        source_card,
+                        Some(handle),
+                        crate::enums::EffectSourceKind::Digimon,
+                        defender_player,
+                    );
+                    cond(&ctx)
+                })
+            });
             if has_field_counter {
                 candidates.push(CounterCandidate::FieldAbility {
                     perm_index: f_idx as u8,

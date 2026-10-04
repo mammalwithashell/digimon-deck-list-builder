@@ -29,17 +29,14 @@
 # (T5) Aegiomon suspended after its attack; (T6) Aegiomon's suspended flag at
 # P1's breeding decision.
 #
-# !! FLAGGED -- SUSPECTED ENGINE BUG, asserted AS OUR ENGINE BEHAVES !!
-# The step-15 assert records Aegiomon STILL SUSPENDED: our engine does NOT
-# apply the aura-granted <Reboot> in P1's unsuspend phase (measured while
-# authoring: it is still suspended in P1's T6 main phase too, and only
-# unsuspends in P0's own T7 unsuspend phase). The printed text + rules 16-10
-# say it unsuspends at T6, so the step-15 row is EXPECTED to diverge at the
-# oracle, with DCGO showing `suspended: false`. Likely cause: the
-# [Opponent's Turn]-gated declarative aura is not re-materialized before the
-# Reboot scan in `game_phases.rs` (the scan reads `has_keyword`, whose
-# granted half is the materialized `permanent_keywords` map). The <Blocker>
-# half of the clause works (T4).
+# FIXED 2026-10-04 (G-ENGINE-AURA-REBOOT-NOT-APPLIED): the step-15 assert
+# used to record Aegiomon STILL SUSPENDED -- the [Opponent's Turn]-gated
+# declarative aura was not re-materialized after the turn-player change, so
+# the Reboot scan in `game_phases.rs` (which reads `has_keyword`, whose
+# granted half is the materialized keyword map) missed the granted <Reboot>.
+# The unsuspend phase now ticks declarative effects before the scan, and the
+# step-15 assert records `suspended: false` (printed text + rules 16-10).
+# The <Blocker> half of the clause always worked (T4).
 #
 # PROMPT SHAPE: the blocker window is SelectPermanentEffect on DCGO / our
 # blocker prompt, answered by identity (Aegiomon). Reboot asks nothing.
@@ -132,10 +129,10 @@ assert:
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
-  # OUR ENGINE'S RESULT (see FLAGGED above): rules say suspended: false.
+  # Aegiomon unsuspended by the aura-granted <Reboot> in P1's unsuspend phase.
   - at: 15
     that:
       turn: 6
       p0.field:
-        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+        - { card_id: BT24-034, dp: 5000, suspended: false, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }

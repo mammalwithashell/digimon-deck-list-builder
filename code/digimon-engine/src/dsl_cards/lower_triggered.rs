@@ -184,6 +184,13 @@ pub fn lower_for_kind_with_clause_index(
         let raw_for_process = raw.clone();
 
         let mut builder = new_builder(card, engine_timing);
+        // G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG (2026-10-04): a `counter`
+        // timing is a `[Counter]` effect. `try_enter_counter` / the Counter
+        // mask only offer effects carrying `Effect::counter`, so without the
+        // flag a DSL `[Counter]` arm never opens a Counter window in combat.
+        if engine_timing == EffectTiming::CounterEffect {
+            builder = builder.counter();
+        }
         if matches!(scope, CompiledScope::Inherited) {
             builder = builder.inherited();
         }

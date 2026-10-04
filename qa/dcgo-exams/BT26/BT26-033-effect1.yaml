@@ -75,17 +75,15 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
-  # T3's end (memory -1 -> the turn ends). DCGO-ONLY ROW: Jupitermon (on
-  # P-213, in play since T1, unsuspended) has <Engage>, so DCGO's
-  # EndTurnProcess asks the <Engage> OptionalSkill gate. Our engine NEVER
-  # parks it for a DUAL top card (suspected engine bug -- see
-  # BT26-033-effect3.yaml): `Game::has_end_of_turn_keywords`
-  # (game_phases.rs ~596) skips any permanent whose top card fails
-  # `CardSource::is_digimon` (card_kind == Digimon), and a board-resident DUAL
-  # card is CardKind::Dual. Declined on the DCGO side only; this row's
-  # EXISTENCE is the measurement of that gap.
+  # T3's end (memory -1 -> the turn ends): Jupitermon (on P-213, in play
+  # since T1, unsuspended) has <Engage>, so the end-of-turn attack window
+  # opens in BOTH engines -- ours parks EndOfTurnAction, DCGO's EndTurnProcess
+  # asks the <Engage> OptionalSkill gate. Declined (a `pass` at the park folds
+  # to OptionalSkill "no"). This row was dcgo_only until
+  # G-ENGINE-DUAL-END-OF-TURN-WINDOW was fixed (2026-10-04): our engine used
+  # to skip the park for a DUAL top card (CardKind::Dual).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # T4 (P1, memory 1): Biyomon (2): 1 -> -1 -> P0 at 1.
   - actor: 1
