@@ -54,7 +54,7 @@ Card-faithfulness findings from authoring 113 `--sim-only` exam scenarios for th
 - BT26-025 Liollmon: its optional "place under a [Glowing Dawn] Tamer" pick auto-resolves with a single Tamer behind a yes/no gate; DCGO asks the pick (authored `sim_only` gate + `dcgo_only` pick).
 - P-236: `<Use Req. ([Glowing Dawn])>` is read as checking P-236 itself (always met); the printed text needs a [Glowing Dawn] card in play. Untested on an empty board.
 - BT25-090: DCGO offers a "suspend only" branch (pay the suspend, decline placing cards) for its suspend trigger; ours folds it into "no".
-- ST23-09 `[WD][WA][Once Per Turn]` may be re-offered on its attack after resolving on digivolve the same turn (uncertain; not visible in the lines).
+- ~~ST23-09 `[WD][WA][Once Per Turn]` may be re-offered on its attack after resolving on digivolve the same turn~~ — RESOLVED 2026-10-04 by #708 (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER); `BT25-041-inherited0` / `ST23-04-inherited0` dropped the row.
 - `ST23-13.yaml` header comment quotes "[All Turns]" where the official card prints "[Your Turn]" (comment only; the clause is authored correctly).
 
 ## Open gaps — judge-quiz faithfulness suite discovery wave (2026-05-29)
