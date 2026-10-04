@@ -30,11 +30,11 @@
 # P1's breeding decision.
 #
 # !! FLAGGED -- SUSPECTED ENGINE BUG, asserted AS OUR ENGINE BEHAVES !!
-# The step-16 assert records Aegiomon STILL SUSPENDED: our engine does NOT
+# The step-15 assert records Aegiomon STILL SUSPENDED: our engine does NOT
 # apply the aura-granted <Reboot> in P1's unsuspend phase (measured while
 # authoring: it is still suspended in P1's T6 main phase too, and only
 # unsuspends in P0's own T7 unsuspend phase). The printed text + rules 16-10
-# say it unsuspends at T6, so the step-16 row is EXPECTED to diverge at the
+# say it unsuspends at T6, so the step-15 row is EXPECTED to diverge at the
 # oracle, with DCGO showing `suspended: false`. Likely cause: the
 # [Opponent's Turn]-gated declarative aura is not re-materialized before the
 # Reboot scan in `game_phases.rs` (the scan reads `has_keyword`, whose
@@ -42,9 +42,11 @@
 # half of the clause works (T4).
 #
 # PROMPT SHAPE: the blocker window is SelectPermanentEffect on DCGO / our
-# blocker prompt, answered by identity (Aegiomon). Then one SIM-ONLY row for a
-# phantom <Barrier> accept our engine offers P1 (see the step comment). Reboot
-# asks nothing.
+# blocker prompt, answered by identity (Aegiomon). Reboot asks nothing.
+# (FIXED 2026-10-04: an earlier draft carried a SIM-ONLY decline row for a
+# phantom <Barrier> accept our engine offered P1 when P1's Agumon would be
+# deleted in battle -- G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED. The row
+# is gone; assert indices shifted down by one.)
 card: BT24-041
 clause: BT24-041#effect#3
 seed: 424242
@@ -97,14 +99,6 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY: a PHANTOM prompt. Our engine offers P1 "May accept replacement:
-  # <Barrier>" when P1's Agumon would be deleted in battle -- the <Barrier> is
-  # AEGIOMON's (P0's), its body self-scopes and no-ops for another subject,
-  # but the accept gate is collected without that subject check (suspected
-  # engine bug; measured: accept and decline leave identical state). DCGO
-  # asks nothing here, so the row is sim-only.
-  - actor: 1
-    do: { select: { decline: true, sim_only: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -123,7 +117,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 12
+  - at: 11
     that:
       turn: 4
       p0.security: 5
@@ -132,14 +126,14 @@ assert:
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
-  - at: 15
+  - at: 14
     that:
       p1.security: 4
       p0.field:
         - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
         - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
   # OUR ENGINE'S RESULT (see FLAGGED above): rules say suspended: false.
-  - at: 16
+  - at: 15
     that:
       turn: 6
       p0.field:

@@ -27,14 +27,12 @@
 #     then the pick; the emitter splits the row). EX12-076-effect1 precedent.
 #   - WD "may attack" decline: ours `Target` decline vs DCGO SelectAttackEffect
 #     "no attack" (see P-213-effect0 note).
-#   - SIM-ONLY row (actor 1): a phantom `<Barrier>` Replacement prompt our
-#     engine parks for P1 when P1's Agumon "would be deleted in battle". The
-#     Barrier is P0's -- P-213's inherited <Barrier> from the Aegiomon source
-#     -- and its body self-scopes only inside replacement_process, not at
-#     candidate collection (keyword_effects.rs Keyword::Barrier; compare the
-#     Evade arm, which self-scopes at candidate collection). Measured: yes or
-#     no makes no difference (Agumon is deleted, P1 security stays 5). DCGO
-#     asks nothing here. SUSPECTED ENGINE BUG, reported, not fixed.
+#   - (FIXED 2026-10-04) An earlier draft carried a SIM-ONLY decline row for
+#     actor 1: our engine parked a phantom `<Barrier>` Replacement prompt for
+#     P1 when P1's Agumon "would be deleted in battle" (P0's inherited
+#     <Barrier> was not self-scoped at candidate collection).
+#     G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED is fixed; the row is gone,
+#     matching DCGO (which asks nothing here).
 card: P-213
 clause: P-213#effect#1
 seed: 424242
@@ -86,13 +84,11 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: OptionalSkill }
-  - actor: 1
-    do: { select: { decline: true, sim_only: true } }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 13
+  - at: 12
     that:
       turn: 3
       p0.memory: 0
