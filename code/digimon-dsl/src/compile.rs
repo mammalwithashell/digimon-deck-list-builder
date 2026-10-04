@@ -1291,6 +1291,7 @@ fn compile_predicate(
         event_target_dp_gte,
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_in_text_contains: p.event_target_in_text_contains.clone(),
+        event_target_has_inherited: p.event_target_has_inherited,
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
         event_target_was_self: p.event_target_was_self,

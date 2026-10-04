@@ -1813,6 +1813,18 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_target_has_inherited {
+        // G-DSL-EVENT-TARGET-HAS-INHERITED — DCGO `TopCard.HasInheritedEffect`.
+        let Some(card) = event_target_card(rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data.inherited_text.trim().is_empty() == want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_target_owner {
         let Some(owner) = event_target_owner(rctx) else {
             return false;
