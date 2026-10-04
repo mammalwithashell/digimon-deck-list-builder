@@ -1,0 +1,81 @@
+# Exam scenario: Toya Kuga (BT26-087), clause BT26-087#effect#1 --
+# "[On Play] By trashing 1 [TS] trait card from your hand, <Draw 2>."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE (prefix of BT26-087-effect0.yaml):
+#   T1 (P0, 0): play BT25-008 (3: 0 -> -3); its [On Play] trashes BT26-085 and
+#      BT26-009 from hand -> <Draw 1> x2 (BT26-060, BT26-078).
+#   T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): draw BT26-016; THE CLAUSE: play Toya Kuga (3: 3 -> 0); its
+#      [On Play] trashes Shota Kuroi BT26-092 ([TS] Tamer card) from hand ->
+#      <Draw 2> (BT26-016, BT26-015). Pass -> P1 3.
+#
+# WITNESS: at 7 (On Play prompt open) hand [BT26-016, BT26-060, BT26-078,
+# BT26-092], trash [BT26-009, BT26-085]; at 8 hand loses BT26-092 and gains
+# BT26-015 + BT26-016 (net +1), trash gains BT26-092.
+#
+# PROMPT SHAPE: one declinable hand pick (DCGO SelectHandEffect,
+# canNoSelect:true; the effect itself is not optional -> no OptionalSkill).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-087
+clause: BT26-087#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT26-087, BT26-085, BT26-009, BT26-092,
+            BT26-009, BT26-009, BT26-011, BT26-011, BT26-073,
+            BT26-060, BT26-078, BT26-016, BT26-016, BT26-015, BT26-015]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-085, BT26-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-087, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-092] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: [BT26-009, BT26-085]
+      p0.hand: [BT26-016, BT26-060, BT26-078, BT26-092]
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: [BT26-009, BT26-085, BT26-092]
+      p0.hand: [BT26-015, BT26-016, BT26-016, BT26-060, BT26-078]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT26-087, dp: -1, suspended: false, sources: [] }

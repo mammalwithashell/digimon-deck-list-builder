@@ -1,0 +1,129 @@
+# Exam scenario: Butenmon (BT26-015), clause BT26-015#effect#2 --
+# "[Your Turn] [Once Per Turn] When your effects add to decks, 1 of your
+#  Digimon may get +3000 DP until your opponent's turn ends and attack."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE (same highway as BT26-015-effect1.yaml):
+#   T1 (P0, 0): hard-play the Lv.4 BT26-011 (5: 0 -> -5); its [On Play]
+#      trashes BT24-034 ([Shaman]) from hand -> <Draw 2> (BT26-060, BT26-085).
+#   T2 (P1, 5): play Birdramon ST1-05 (4: 5 -> 1), pass -> P0 3.
+#   T3 (P0, 3): draw BT26-078; pass.
+#   T4 (P1, 3): play Biyomon ST1-02 (2: 3 -> 1), pass -> P0 3.
+#   T5 (P0, 3): draw BT26-078; digivolve Butenmon onto BT26-011 (red Lv.4
+#      [TS]: both the Red circle (4) and the [TS] condition (3) apply -> cost
+#      choice, value 3; 3 -> 0). Bonus draw BT26-060. [When Digivolving]
+#      (#effect#1): -4000 on Biyomon (3000 -> -1000, dies to the 0-DP rule),
+#      bottom-deck BT24-034 from trash, delete Birdramon (5000 <= 5000).
+#      THE CLAUSE: that bottom-deck is "your effects add to decks" on your turn
+#      -> pick Butenmon (+3000 -> 10000) -> it MUST attack: P1's board is empty,
+#      so the only target is the player (inherited <Raid> from BT26-011 has no
+#      unsuspended Digimon to switch to). Security check: Dracomon ST1-04
+#      (4000) loses the security battle.
+#
+# WITNESS: at 18 (after the +3000 pick, before the attack target) Butenmon dp
+# 10000 (7000 + 3000) unsuspended; at 19 Butenmon suspended (the effect
+# attack) and p1.security 5 -> 4.
+#
+# PROMPT SHAPE: step 17 = the own-Digimon pick (DCGO SelectPermanentEffect,
+# canNoSelect:true); step 18 = DCGO SelectAttackEffect with
+# SetCanNotSelectNotAttack (ours: Target prompt, single accept id = player,
+# answered `yes`). If DCGO wants the player sentinel as `value: -1`, split
+# step 18 into a sim_only yes + dcgo_only value:-1 pair (BT16-077-effect3
+# convention).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-015
+clause: BT26-015#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-011, BT26-015, BT24-034, BT26-092, BT26-087,
+            BT26-009, BT26-009, BT25-008, BT25-008, BT26-073,
+            BT26-060, BT26-085, BT26-078, BT26-078, BT26-060]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-05, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 18
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.trash: []
+      p1.security: 5
+      p1.field: []
+      p0.field:
+        - { card_id: BT26-015, dp: 10000, suspended: false, sources: [BT26-011] }
+  - at: 19
+    that:
+      turn: 5
+      p0.memory: 0
+      p1.security: 4
+      p1.trash: [ST1-02, ST1-04, ST1-05]
+      p0.field:
+        - { card_id: BT26-015, dp: 10000, suspended: true, sources: [BT26-011] }

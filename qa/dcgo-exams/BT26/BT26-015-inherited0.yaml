@@ -1,0 +1,142 @@
+# Exam scenario: Butenmon (BT26-015), clause BT26-015#inherited#0 --
+# "[All Turns] [Once Per Turn] When your effects add to decks, this Digimon
+#  with [Chronomon] in its text may unsuspend."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). P1 never plays a Digimon (keeps every Holy Mode / Butenmon
+# activation condition false so the only add-to-deck is the one under exam).
+#
+# THE LINE (stack: Hyokomon -> BT26-011 -> Butenmon -> Holy Mode):
+#   T1 (P0, 0): play Hyokomon BT26-009 (3: 0 -> -3).
+#   T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): Hyokomon's [Start of Your Main Phase] hand pick DECLINED;
+#      digivolve BT26-011 onto it (Red Lv.3 circle and [TS] condition both cost
+#      2 -> no choice; 3 -> 1); its [When Digivolving] hand pick DECLINED;
+#      digivolve Butenmon (cost choice, value 3: 1 -> -2). Butenmon's [When
+#      Digivolving] is silent (no opp Digimon, empty trash). Turn ends.
+#   T4 (P1, 2): pass -> P0 3.
+#   T5 (P0, 3): digivolve Holy Mode onto Butenmon (cost choice, value 3: 3 ->
+#      0); its [When Digivolving] does not activate (no opp Digimon, both
+#      trashes empty). Holy Mode attacks security (suspends). Hyokomon's
+#      inherited [When Attacking] <Draw 1>, hand is now 7 >= 6 -> return Shota
+#      Kuroi BT26-092 from hand to the deck bottom: "your effects add to
+#      decks". THE CLAUSE: Butenmon's inherited (Holy Mode has [Chronomon] in
+#      its name) -> yes -> Holy Mode unsuspends. The attack resolves:
+#      Vermilimon BT4-014 (security, 8000) loses to 12000.
+#   End of T5: <Engage> gate (Holy Mode is unsuspended again) -- declined.
+#
+# WITNESS: at 17 (unsuspend prompt open) Holy Mode suspended, BT26-092 left
+# the hand; at 18 Holy Mode UNSUSPENDED with p1.security 5 -> 4 (it did
+# attack). The <Engage> gate at the end of T5 also only exists because it is
+# unsuspended.
+#
+# PROMPT SHAPE: Hyokomon's return pick (ours UnionZone over hand -> DCGO
+# SelectHandEffect); Butenmon inherited optional:true -> DCGO OptionalSkill
+# (ours: optional prompt, answered yes).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-015
+clause: BT26-015#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-011, BT26-015, BT26-016, BT26-092,
+            BT26-011, BT26-011, BT25-008, BT25-008, BT26-073,
+            BT26-060, BT26-078, BT26-078, BT26-060, BT24-034, BT24-034, BT26-085, BT26-085]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-04, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            BT1-014, ST1-03, ST1-05, ST1-05]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-016 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-092] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+assert:
+  - at: 15
+    that:
+      turn: 5
+      p0.memory: 0
+      p1.security: 5
+      p0.hand: [BT24-034, BT26-060, BT26-060, BT26-078, BT26-078, BT26-092]
+      p0.field:
+        - { card_id: BT26-016, dp: 12000, suspended: false, sources: [BT26-009, BT26-011, BT26-015] }
+  - at: 17
+    that:
+      turn: 5
+      p0.hand: [BT24-034, BT24-034, BT26-060, BT26-060, BT26-078, BT26-078]
+      p0.field:
+        - { card_id: BT26-016, dp: 12000, suspended: true, sources: [BT26-009, BT26-011, BT26-015] }
+  - at: 18
+    that:
+      turn: 5
+      p0.memory: 0
+      p1.security: 4
+      p1.trash: [BT4-014]
+      p0.trash: []
+      p0.hand: [BT24-034, BT24-034, BT26-060, BT26-060, BT26-078, BT26-078]
+      p0.field:
+        - { card_id: BT26-016, dp: 12000, suspended: false, sources: [BT26-009, BT26-011, BT26-015] }

@@ -1,0 +1,144 @@
+# Exam scenario: Chronomon: Holy Mode (BT26-016), clause BT26-016#effect#3 --
+# "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may
+#  delete 1 of your opponent's Digimon with as much DP as this Digimon or less.
+#  Then, by returning 3 cards in trashes to the bottom of the deck,
+#  <Recovery +1>."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + the group-B variant
+# `cm-chronomon-offcolor` (bt26-chronomon with 1x BT26-090 -> BT24-059 and
+# 1x BT25-100 -> BT26-021) vs `tm-quiet-red`. Merge the variant from
+# variants-B.json into the book before running.
+#
+# THE LINE:
+#   T1 (P0, 0): play BT25-008 (3: 0 -> -3); its [On Play] trashes BT26-092 and
+#      BT26-087 ([TS]) -> <Draw 1> x2.
+#   T2 (P1, 3): play Dracomon ST1-04 (3: 3 -> 0), pass -> P0 3.
+#   T3 (P0, 3): play BT24-059 (Black/Blue Lv.5 [TS], 7: 3 -> -4); its [On Play]
+#      <De-Digivolve 1> picks Dracomon (no sources -> no change).
+#   T4 (P1, 4): play Biyomon ST1-02 (2: 4 -> 2); Dracomon attacks security:
+#      P0's top security Hyokomon BT26-009 (2000) loses the battle -> P0 trash
+#      (3 cards now); pass -> P0 3.
+#   T5 (P0, 3): draw; digivolve Holy Mode onto BT24-059 (off-colour base: only
+#      the [TS] condition, cost 3: 3 -> 0; bonus draw BT24-034). THE CLAUSE
+#      ([When Digivolving]): delete Dracomon (4000 <= 12000), then return all
+#      3 cards of P0's trash to the deck bottom -> <Recovery +1> (top deck card
+#      BT24-034 onto security).
+#
+# WITNESS: at 14 security 4, P0 trash [BT26-009, BT26-087, BT26-092], Dracomon
+# on P1's field; at 17 Dracomon in P1's trash (the delete), P0 trash empty
+# (the 3-card return) and security 4 -> 5 (Recovery +1).
+#
+# PARTIAL: witnesses the [When Digivolving] timing with an own-trash-only
+# 3-card return. Not witnessed: [On Play] / [When Attacking] timings (the
+# effect1/2/4 lines show the spent OPT suppressing [When Attacking] on the
+# same turn); a cross-trash split (own k + opponent 3-k) -- NOT AUTHORABLE
+# today: the exam's trailing PASS after the own-trash CountCappedMultiSelect
+# also declines the freshly parked opponent-trash prompt (see report); the
+# partial-return "pays nothing" Q&A branch; the RemoveUse refund.
+#
+# PROMPT SHAPE: optional delete pick (DCGO SelectPermanentEffect,
+# canNoSelect:true); then the return. DCGO: an area choice ("your trash" /
+# "enemy's trash" / Cancel -- generic_int or SelectCountEffect, unverified)
+# followed by a canEndNotMax SelectCardEffect multi-pick; ours: one
+# CountCappedMultiSelect over own trash (3 picks, auto-commit at max). The
+# oracle pass will likely need a dcgo_only area-choice row before step 16.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-016
+clause: BT26-016#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT24-059, BT26-016, BT26-092, BT26-087,
+            BT26-011, BT26-011, BT26-015, BT26-015, BT26-009,
+            BT26-060, BT26-078, BT26-078, BT26-060, BT24-034, BT24-034]
+    rest: cm-chronomon-offcolor
+  p1:
+    stack: [ST1-04, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            BT1-014, ST1-03, ST1-05, ST1-05]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-092, BT26-087] } }
+    expect: { prompt: SelectHandEffect }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-059, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT26-016 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT26-092, BT26-087, BT26-009] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT26-009, BT26-087, BT26-092]
+      p1.trash: []
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-04, dp: 4000, suspended: true, sources: [] }
+  - at: 17
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p1.trash: [ST1-04]
+      p0.hand: [BT24-034, BT26-060, BT26-060, BT26-078, BT26-078]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT26-016, dp: 12000, suspended: false, sources: [BT24-059] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
