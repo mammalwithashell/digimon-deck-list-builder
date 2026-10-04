@@ -1,0 +1,103 @@
+# Exam scenario: Atratusmon / Eclipse Impact (ST23-09), clause
+# ST23-09#effect#5 -- the OPTION face's
+#   "<Use Req. ([BEATBREAK] trait)> (Specified cards let you ignore color
+#    requirements.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# WHY THIS LINE MEASURES THE CLAUSE. Eclipse Impact is a GREEN Option. When it
+# is used, P0's only permanent is Liollmon ST23-02 -- a YELLOW Lv.3 with the
+# [BEATBREAK] trait (P0's breeding area is empty: no hatch). So the ordinary
+# colour requirement FAILS and the use is admitted solely by <Use Req.>
+# (an OR beside the colour check on both engines -- NOTES-BT25-085.md).
+# The witness is that the use happened at all: memory 3 -> -2 (Use 5), the
+# [Main] resolved (Biyomon left the field and is NOT in the trash -- it went to
+# the deck bottom), and the Option sits in P0's trash.
+#
+# NO Arts Digivolve prompt: <Arts Digivolve> needs an own Digimon that can
+# digivolve into Atratusmon (Lv.5) and Liollmon is Lv.3, so the Option is
+# disposed the ordinary way (that is what `p0.trash: [ST23-09]` reads).
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Liollmon ST23-02 (3): 0 -> -3   -> P1 3
+#   T2 P1 (3): Biyomon ST1-02 (2): 3 -> 1; passes         -> P0 3
+#   T3 P0 (3): USE Eclipse Impact (5): 3 -> -2. THE CLAUSE. The turn ends.
+#
+# PROMPT SHAPE (ST23-09.yaml DCGO crosscheck, Option [Main] OptionSkill):
+#   * UseRequirements([BEATBREAK]) -- no prompt; no face-selection prompt on
+#     either side (a dual card used with no target permanent routes to
+#     UseOptionClass -- NOTES-BT25-085.md).
+#   * [Main] is not optional -> no OptionalSkill. SelectPermanentEffect
+#     (Mode.Tap) over opponent Digimon -- one candidate, still asked. Then
+#     SelectPermanentEffect (Mode.PutLibraryBottom, IsMaxDP over IsSuspended)
+#     -- one candidate (Biyomon). Ours: two select_opponent_permanent picks,
+#     both measured parking.
+#   * Liollmon's own "[Your Turn] when this Digimon would digivolve into a
+#     [Glowing Dawn] Digimon, reduce the cost by 1" is not reached.
+card: ST23-09
+clause: ST23-09#effect#5
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-02, ST23-09, ST23-06, ST23-06, ST23-13,
+            ST23-03, ST23-03, ST23-03, ST23-03, ST23-04,
+            ST23-07, ST23-07, ST23-12]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Liollmon for 3 (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon (3 -> 1), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- use the green Option with only a yellow
+  # [BEATBREAK] Digimon in play (3 -> -2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-09, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main]: suspend Biyomon ...
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # ... then return the highest-DP suspended opponent Digimon (Biyomon) to the
+  # bottom of the deck.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # T4 (P1): one step past the clause; P0's -2 handed the turn over (P1 2).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 4
+      p1.memory: 2
+      p0.trash: [ST23-09]
+      p0.field:
+        - card_id: ST23-02
+          dp: 2000
+          suspended: false
+          sources: []
+      p1.field: []
+      p1.trash: []

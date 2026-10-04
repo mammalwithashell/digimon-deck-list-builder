@@ -1,0 +1,142 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#9 --
+# DUAL Rule "<Arts Digivolve> (Instead of trashing after use, your cards may
+#  digivolve into this card without paying the cost.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
+#
+# THE LINE: identical to BT26-033-effect8.yaml up to the end of the [Main]
+# (T3: use the Option face, 3 -> -4; both 3000s deleted; Recovery +1 ->
+# security 6). Then, instead of being trashed, the Option DIGIVOLVES onto
+# P-213 (Lv.5 [TS] -- satisfies both the Red Lv.5 and the [TS] Lv.5 routes)
+# for free. activateETB is true on DCGO's side, so Jupitermon's own [When
+# Digivolving] fires: top security -> hand (6 -> 5), then the optional hand
+# pick (declined). A digivolve also draws its bonus card (stack[12]).
+#
+# WITNESS (at 11): Jupitermon on the field over P-213; p0.trash EMPTY (not
+# trashed); p0.memory still -4 -- the digivolve cost NOTHING (the cheapest
+# paid route would be 4); p0.security 5 (the WD took one after Recovery
+# made 6); hand +2 (the recovered-then-taken BT24-034 and the bonus draw
+# BT25-033).
+#
+# PROMPT SHAPE: Arts target = SelectPermanentEffect (ours optional OwnField
+# pick), answered own.field.0. NO cost-route prompt is expected (free play;
+# DCGO PlayCardClass payCost:false) -- ours parks none. WD hand pick declined
+# (SelectHandEffect). T3's end: shared <Engage> end-of-turn decline
+# (DUAL end-of-turn bug fixed 2026-10-04) (Jupitermon is
+# over P-213, in play since T1).
+# VERIFIED vs DCGO C#: Arts = ArtsDigivolve.cs ResolutionCoroutine ->
+# SelectPermanentEffect (canNoSelect true, no OptionalSkill; resolved directly
+# as the lone OptionResolutionClass, CardController.cs ~:2075-2087) -> new
+# PlayCardClass(payCost: false, activateETB: true). PlayCardClass.SelectCost
+# is wrapped in `if (PayCost)` (CardController.cs ~:628), so NO SelectCountEffect
+# cost-route row. The WD's hand pick then sees MaxMemoryCost = |10 - (-4)| = 14.
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#9
+seed: 424242
+decks:
+  p0:
+    # hand (0-4): P-213 Aegiochusmon (red Lv.5 [TS], the digivolve base),
+    # Jupitermon, Inori Misono (the cost-reduced play), two quiet TS cards.
+    # security (5-9), stack[9] = TOP = the card the [When Digivolving] takes.
+    # draws (10..): T3 turn draw, the digivolve-bonus draw, T5 turn draw.
+    stack: [P-213, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, BT1-009, BT3-007, ST1-04, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play P-213 Aegiochusmon
+  # (cost 7: 0 -> -7). It has no [On Play]; its [When Digivolving] never
+  # fires (it is played, not digivolved). -> P1 at 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): Biyomon ST1-02 (3000), Monodramon BT1-009 (3000),
+  # Agumon BT3-007 (4000) -- all vanilla (7 -> 1); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): use the Option face (2 + 5 security = 7: 3 -> -4).
+  # P0's only permanent is the RED P-213, so the Yellow half of the colour
+  # requirement fails and <Use Req. ([TS])> admits the use.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-033, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: <Arts Digivolve> onto P-213 (slot 0).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
+  # top security -> hand (mandatory), then the optional "play or use 1
+  # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  # Verified (BT26_033.cs:56-135): SetUpActivateClass(..., isOptional false)
+  # -> no OptionalSkill; one SelectHandEffect (canNoSelect true, maxCount 1),
+  # opened only if a hand card passes CanPlayOrUse at max(0, cost - 5) --
+  # Inori / Aegiomon / Shota do here (MaxMemoryCost = |10 - (-4)| = 14).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T3's end (memory -1 -> the turn ends): Jupitermon (on P-213, in play
+  # since T1, unsuspended) has <Engage>, so the end-of-turn attack window
+  # opens in BOTH engines -- ours parks EndOfTurnAction, DCGO's EndTurnProcess
+  # asks the <Engage> OptionalSkill gate. Declined (a `pass` at the park folds
+  # to OptionalSkill "no"). This row was dcgo_only until
+  # G-ENGINE-DUAL-END-OF-TURN-WINDOW was fixed (2026-10-04): our engine used
+  # to skip the park for a DUAL top card (CardKind::Dual).
+  # Verified, including on this NEGATIVE-memory turn end:
+  # AutoProcessing.cs EndTurnCheck (:635) runs EndTurnProcess as soon as the
+  # non-turn player has >= 1 memory, and EndTurnProcess (:679) stacks
+  # EffectTiming.OnEndTurn BEFORE moving to phase.End -- the same path as a
+  # pass. <Engage> is CardEffectFactory EngageEffect (Engage.cs:37,
+  # isOptional true -> OptionalSkill as the lone stacked effect), CanUse =
+  # owner's turn + IsPermanentExistsOnBattleAreaDigimon (Permanent.IsDigimon
+  # is true for the DUAL top card: CardSource.IsDigimon = cardKind contains
+  # Digimon), CanActivate = CanActivateEngage (CanAttack && !IsAttacking).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      p0.security: 6
+      p0.hand: [BT24-084, BT25-022, BT25-033, BT26-092]
+  - at: 11
+    that:
+      p0.memory: -4
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [BT24-034, BT24-084, BT25-022, BT25-033, BT25-033, BT26-092]
+      p1.trash: [BT1-009, ST1-02]
+      p0.field:
+        - { card_id: BT26-033, dp: 13000, suspended: false, sources: [P-213] }
+  - at: 13
+    that:
+      turn: 4

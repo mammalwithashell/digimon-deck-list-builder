@@ -1,0 +1,131 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#6 --
+# "[All Turns] [Once Per Turn] When security stacks are removed from, 1 of
+#  your opponent's Digimon gets -15000 DP until their turn ends."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE: the T1-T5 prefix of BT26-103-effect1.yaml, which leaves P1 with
+# THREE Digimon so the pick is a real choice:
+#   T2: P1 Biyomon ST1-02 + Phoenixmon ST1-10 (slot 1); T3: P0 Minervamon
+#   (De-Digivolve pick on Phoenixmon slot 1, no-op); T4: Biyomon attacks
+#   security (block declined; Elecmon security trashed) and P1 plays a second
+#   Phoenixmon (slot 2); T5: P0 digivolves Minervamon -> Wrath Mode (cost 5,
+#   7 -> 2). Wrath Mode's [When Digivolving] trashes P0's top security
+#   (BT25-033) and Recovers +2.
+#   THE CLAUSE: that removal from P0's own security stack triggers the
+#   [All Turns] clause -> P0 picks the T4 Phoenixmon (opp.field.2, 12000) ->
+#   -15000 -> 0 DP -> deleted. Biyomon and the T2 Phoenixmon are untouched.
+#   P0 passes (the OPT is now spent for T5).
+#
+# WITNESS: P1 field goes from [Biyomon, Phoenixmon, Phoenixmon] to [Biyomon,
+# Phoenixmon]; P1's trash gains exactly one ST1-10.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): rows as in
+# BT26-103-effect1.yaml up to the clause. The clause is BT26_103.cs "All
+# Turns" region: `SetUpActivateClass(..., 1, false, ...)` (mandatory, no
+# OptionalSkill), body a SelectPermanentEffect (maxCount 1, canNoSelect false)
+# over P1's 3 Digimon; a lone trigger (Minervamon base: <Succession> copies
+# nothing) -> no MultipleSkills.
+# NOTE: the two Phoenixmon share id ST1-10, and DCGO matches the wire's
+# card ids in occurrence order (SelectionAnswer.MatchCardIds), so DCGO deletes
+# the FIRST ST1-10 (the T2 one) where we delete opp.field.2. Indistinguishable
+# in the projection (both unsuspended, 12000, no sources) -> not a divergence.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#6
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-103, BT24-101, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT26-081, BT25-025, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-10, ST1-10, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT1-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-103 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  # THE CLAUSE: Wrath Mode's WD removed P0's top security -> pick 1 of P1's
+  # three Digimon -> the T4 Phoenixmon (opp.field.2).
+  - actor: 0
+    do: { select: { targets: [opp.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the digivolve: P1 has three Digimon, nothing in trash.
+  - at: 13
+    that:
+      turn: 5
+      p1.trash: []
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  # After the pick (P0's next main-phase decision): one Phoenixmon deleted.
+  - at: 16
+    that:
+      turn: 5
+      p0.security: 5
+      p1.trash: [ST1-10]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }

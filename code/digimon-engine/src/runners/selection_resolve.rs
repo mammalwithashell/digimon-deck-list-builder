@@ -543,10 +543,20 @@ pub fn resolve_next(
                 // printed cost before its own row was reached.
                 // `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`.
                 SelectionKind::SourceMulti { picked, .. } => picked > 0,
-                SelectionKind::CountCappedMultiSelect { .. }
-                | SelectionKind::RevealBucket { .. }
-                | SelectionKind::DpBudget { .. }
-                | SelectionKind::PlayCostBudget { .. } => true,
+                // Same rule for every multi-pick kind that counts its own
+                // picks: one with ZERO picks is a FRESH prompt the row's last
+                // pick caused (it cannot be this row's prompt, which just took
+                // `picks_done > 0` picks). Driver: BT26-081 Mervamon played via
+                // [Assembly] — the 1-card material pick completes the play, the
+                // played Digimon's [On Play] parks its optional
+                // `PlayCostBudget { picked: 0 }` free-play pick, and the
+                // trailing PASS declined it, reading as "the engine skipped
+                // the pick" (G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK —
+                // retracted to this resolver).
+                SelectionKind::CountCappedMultiSelect { picked, .. }
+                | SelectionKind::DpBudget { picked, .. }
+                | SelectionKind::PlayCostBudget { picked, .. } => picked > 0,
+                SelectionKind::RevealBucket { .. } => true,
                 _ => false,
             };
         let pass_legal = pending.is_optional;
@@ -1486,6 +1496,91 @@ mod tests {
             resolve_next(&runner.game, &card_row("SRC-A"), 1),
             Ok(Some(PASS))
         );
+    }
+
+    /// Park an optional budgeted / count-capped multi-pick with `picked`
+    /// picks already taken and no resume frame (a zone-card pick's frame is
+    /// not one the `open_field_multi_pick` probe recognises).
+    fn park_multi_kind(game: &mut Game, kind: SelectionKind) {
+        game.pending_selection = Some(PendingSelection {
+            kind,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![crate::action::space::PLAY_HAND_START, PASS],
+            is_optional: true,
+            prompt: "You may play up to 8 play cost's total worth".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+        game.pending_selection_resume = None;
+    }
+
+    /// G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK (retracted to this resolver):
+    /// the Assembly material row's single pick completed BT26-081's play and
+    /// its [On Play] parked a FRESH `PlayCostBudget { picked: 0 }`. The
+    /// trailing PASS must not decline it; the same holds for a fresh
+    /// `DpBudget` / `CountCappedMultiSelect`.
+    #[test]
+    fn trailing_pass_does_not_decline_a_freshly_parked_budget_or_count_pick() {
+        let mut runner = runner_with_cards(&["SRC-A"]);
+        for kind in [
+            SelectionKind::PlayCostBudget {
+                remaining_play_cost: 8,
+                picked: 0,
+            },
+            SelectionKind::DpBudget {
+                remaining_dp: 8000,
+                picked: 0,
+            },
+            SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 3,
+                picked: 0,
+                distinct: false,
+            },
+        ] {
+            park_multi_kind(&mut runner.game, kind);
+            assert_eq!(
+                resolve_next(&runner.game, &card_row("SRC-A"), 1),
+                Ok(None),
+                "{kind:?}"
+            );
+        }
+    }
+
+    /// Once the multi-pick has taken a pick it is the row's own prompt still
+    /// awaiting its stop, so the trailing PASS is still spent.
+    #[test]
+    fn trailing_pass_still_stops_a_budget_or_count_pick_that_took_a_pick() {
+        let mut runner = runner_with_cards(&["SRC-A"]);
+        for kind in [
+            SelectionKind::PlayCostBudget {
+                remaining_play_cost: 5,
+                picked: 1,
+            },
+            SelectionKind::DpBudget {
+                remaining_dp: 3000,
+                picked: 1,
+            },
+            SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 3,
+                picked: 1,
+                distinct: false,
+            },
+        ] {
+            park_multi_kind(&mut runner.game, kind);
+            assert_eq!(
+                resolve_next(&runner.game, &card_row("SRC-A"), 1),
+                Ok(Some(PASS)),
+                "{kind:?}"
+            );
+        }
     }
 
     #[test]

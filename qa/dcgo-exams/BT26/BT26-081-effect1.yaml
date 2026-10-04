@@ -1,0 +1,89 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#1 -- the special
+# digivolution condition "[Digivolve] Lv.5 w/[TS] trait: Cost 4".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION. The base is Aegiochusmon P-213: RED, Lv.5, [Shaman/Iliad/TS].
+# Mervamon's printed circles are Purple / Yellow / Black Lv.5 (cost 5) and
+# its other special condition names [Minervamon], so neither applies; the T3
+# digivolve is legal ONLY through "Lv.5 w/[TS]", at cost 4. (Dark BT26-073
+# was NOT used: it is purple, so the purple circle would compete.)
+# P-213's printed triggers are [When Digivolving] / <Decode> / <Raid> only --
+# its T1 hard play is silent.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play P-213 (7: 0 -> -7) -> P1 7.
+#   T2 (P1, 7): pass -> P0 3.
+#   T3 (P0, 3): THE CLAUSE -- digivolve P-213 -> Mervamon for 4 (3 -> -1).
+#       Mervamon's [When Digivolving] (effect#2): the "up to 8 cost of [Iliad]
+#       from hand or trash" pick is DECLINED; the -4000 DP half has no
+#       opponent Digimon (skipped). The turn passes at -1 -> P1 1.
+#   T4 (P1, 1): the trailing step.
+#
+# WITNESS: Mervamon stands over P-213; P0 paid exactly 4 (3 -> -1, i.e. P1
+# starts T4 with 1 memory -- the purple/yellow/black cost-5 circle would
+# have given P1 2).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is the
+#     whole DCGO sequence. The -4000 half is skipped (no opponent Digimon).
+#   - P-213 has no [On Play] (its OnEnterField effect is When Digivolving,
+#     P_213.cs:57-75), so the T1 hard play is silent.
+card: BT26-081
+clause: BT26-081#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [P-213, BT26-081, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-081 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 4
+      p1.memory: 1
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [P-213] }
+      p0.hand: [BT24-034, BT24-101, BT25-030, BT25-030, BT26-090]
+      p1.field: []

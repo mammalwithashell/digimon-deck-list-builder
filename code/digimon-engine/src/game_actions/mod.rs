@@ -1450,6 +1450,17 @@ impl Game {
                 Some(crate::trigger_context::EventCause::Rule);
             self.delete_permanent_with_effects(handle);
             self.current_deletion_event_cause_override = previous;
+            // An optional replacement window (e.g. <Decode>) parked a
+            // selection: this deletion is not finished. Stop here — the drain
+            // that resumes after the selection re-runs this check, and the
+            // remaining ≤0-DP Digimon are still at ≤0 DP then. Deleting them
+            // now would re-enter the replacement dispatcher at depth 0 and wipe
+            // the parked event's `(timing, subject)` record, so declining the
+            // window re-offered it (invariant_fuzz seed 20260708005: EX12-036's
+            // <Decode> asked twice). G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION.
+            if self.pending_selection.is_some() {
+                break;
+            }
         }
         true
     }

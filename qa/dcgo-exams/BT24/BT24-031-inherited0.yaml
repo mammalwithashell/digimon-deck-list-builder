@@ -1,0 +1,130 @@
+# Exam scenario: Elecmon (BT24-031), clause BT24-031#inherited#0 -- inherited
+# "[When Attacking] [Once Per Turn] You may add your top security card to the
+#  hand. Then, if you have 0 security cards, <Recovery +1 <Deck>>."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, memory 0): hard-play Elecmon BT24-031 (0 -> -3). Its [On Play]
+#      reveal (BT24-031#effect#1, exactly as BT24-031-effect1.yaml) adds
+#      Aegiomon BT25-033 + Inori BT24-084; Blinding Ray to the bottom. -> P1 3.
+#   T2 (P1): all-pass -> P0 3.
+#   T3 (P0, memory 3): digivolve Aegiomon BT25-033 over Elecmon (Yellow Lv.3 /
+#      2; 3 -> 1; digivolve draw). Aegiomon's own optional [When Digivolving]
+#      is declined. Then attack P1's security with Aegiomon: THE CLAUSE fires
+#      from Elecmon's inherited box -- P0 adds its top security card (stack[9]
+#      = BT26-092 Shota Kuroi) to the hand. 5 -> 4 security, so the
+#      "if you have 0 security cards, Recovery +1" branch does NOT fire (not
+#      reachable on a short line: it needs P0 at exactly 1 security when the
+#      attack is declared). P1's top security is pinned to stack[9] = BT1-009
+#      Monodramon (3000 DP, vanilla), which Aegiomon's 5000 beats.
+#
+# WITNESS: one step later P0's hand holds Shota Kuroi (the old top security
+# card), p0.security is 4, and the attack resolved normally (P1 4 security,
+# Monodramon in P1's trash, Aegiomon suspended over Elecmon).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C#, 2026-10-04):
+#   THE CLAUSE -- ours = ONE declinable `Security`-kind pick of the top card
+#   (gate and pick at once). DCGO = ONE `generic_bool` row and NOTHING else:
+#   BT24_031.cs (inherited [When Attacking] region) registers the effect with
+#   `SetUpActivateClass(..., 1, false, ...)` -- isOptional FALSE, so there is
+#   NO OptionalSkill gate -- and inside ActivateCoroutine asks
+#   `userSelectionManager.SetBoolSelection("Add to hand"/"Not add to hand")`
+#   (UserSelectionManager.cs SetBoolSelection -> harness kind `generic_bool`),
+#   then adds `SecurityCards[0]` directly with no card widget. So the gate-only
+#   OptionalSkill fold (`expect: {prompt: OptionalSkill}` over the forced
+#   Security pick, G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD, now retired) is REFUTED for this
+#   card: it would emit expect_prompt=OptionalSkill against DCGO's
+#   generic_bool and abort ("expected prompt 'OptionalSkill'"). Re-authored as
+#   a sim_only pick (our prompt, zero wire rows) + a dcgo_only
+#   `{yes: true}` row asserting `generic_bool` (select_has_bool/select_bool,
+#   the UserSelectionManager.cs SetBoolForPlayer harness contract).
+#   No MultipleSkills: Elecmon's inherited is the only [When Attacking] on
+#   the stack (Aegiomon BT25-033 prints none).
+#   Aegiomon's [When Digivolving]: optional (ActivateClassesForSharedEffects
+#   optional: true, BT25_033.cs) and its CanActivate is only
+#   `SecurityCards.Any()` -- DCGO asks the OptionalSkill even with no P1
+#   Digimon, exactly like ours. Declined (shared row).
+#   Aegiomon over a YELLOW Lv.3 [TS] Elecmon has TWO routes at cost 2 (Yellow
+#   Lv.3 circle + "Lv.3 w/[TS]: Cost 2"); DCGO de-duplicates the cost list
+#   (CardController.cs PlayCardClass SelectCost: `CostList.Distinct()`, a
+#   SelectCountEffect only when >= 2 DISTINCT costs) -> no route prompt,
+#   matching ours.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT24-031
+clause: BT24-031#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-031, BT24-034, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT25-033, BT24-084, BT4-104, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT4-014, BT1-009,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-031, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-084] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT4-104], sim_only: true } }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-033 } }
+    expect: { prompt: main_phase }
+  # Aegiomon's own optional [When Digivolving] -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: yes -- add the top security card (Shota Kuroi) to the hand.
+  # SIM-ONLY: our one-candidate declinable Security pick (gate + pick).
+  - actor: 0
+    do: { select: { cards: [BT26-092], sim_only: true } }
+  # DCGO-ONLY: BT24_031.cs asks SetBoolSelection ("Add to hand") -- a
+  # generic_bool, no OptionalSkill gate, no card widget.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.security: 4
+      p0.hand: [BT24-034, BT25-030, BT24-101, BT26-090, BT24-084, BT25-030, BT24-034, BT26-092]
+      p0.field:
+        - { card_id: BT25-033, dp: 5000, suspended: true, sources: [BT24-031] }
+      p1.security: 4
+      p1.trash: [BT1-009]

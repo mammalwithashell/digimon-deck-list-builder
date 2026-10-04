@@ -371,15 +371,17 @@ fn save_does_not_offer_opponent_tamers() {
 
 /// Regression for the I-2 follow-up at `replacement.rs::commit_permanent_
 /// deletion_no_replace`: a card hosting BOTH an optional `WhenWouldBeDeleted`
-/// replacement (`<Decoy>`) AND `<Save>` on the same carrier exercises the
-/// deferred-decline path. Without the `pending_selection.is_some()` guard,
+/// replacement (`<Evade>`) AND `<Save>` on the same carrier exercises the
+/// deferred-decline path. (Was `<Decoy>` until 2026-10-04: Decoy cannot
+/// protect its own carrier — keyword-semantics 16-17 — and its self-dialog
+/// was a phantom prompt, now suppressed at candidate collection.) Without the `pending_selection.is_some()` guard,
 /// `Player::delete_permanent` would shift the Tamer's index synchronously
 /// while Save's parked Tamer-pick still references the old index, corrupting
 /// the selection's `valid_action_ids`.
 ///
 /// Sequence:
-///   1. Carrier (Decoy + Save) and Tamer on field; carrier is deleted.
-///   2. The optional Decoy dialog is parked at candidate-collection time.
+///   1. Carrier (Evade + Save) and Tamer on field; carrier is deleted.
+///   2. The optional Evade dialog is parked at candidate-collection time.
 ///   3. The user PASSes — decline routes through `commit_deferred_outcome`
 ///      `(Zone::Trash, ReplacementOutcome::None)` → `commit_permanent_
 ///      deletion_no_replace`.
@@ -390,8 +392,8 @@ fn save_does_not_offer_opponent_tamers() {
 ///      under the Tamer; the resume hook then runs
 ///      `finalize_permanent_deletion` to remove the now-empty carrier.
 #[test]
-fn save_under_decoy_decline_defers_via_no_replace_path() {
-    fn decoy_save_carrier(id: &str) -> CardData {
+fn save_under_evade_decline_defers_via_no_replace_path() {
+    fn evade_save_carrier(id: &str) -> CardData {
         CardData {
             card_id: id.to_string(),
             card_name: id.to_string(),
@@ -406,7 +408,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
             effect_text: String::new(),
             inherited_text: String::new(),
             security_text: String::new(),
-            keywords: vec![Keyword::Decoy(0), Keyword::Save],
+            keywords: vec![Keyword::Evade, Keyword::Save],
             dual: None,
             effect_class_name: id.replace('-', "_"),
             index: 0,
@@ -418,7 +420,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
     }
 
     let mut r = DebugRunner::builder()
-        .add_card(decoy_save_carrier("DECOY-SAVE"))
+        .add_card(evade_save_carrier("DECOY-SAVE"))
         .add_card(tamer_card("TAMER"))
         .start();
 
@@ -431,16 +433,16 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
 
     r.game.delete_permanent_with_effects(carrier);
 
-    // (2) The Decoy optional dialog is parked. PASS to decline.
+    // (2) The Evade optional dialog is parked. PASS to decline.
     let pending = r
         .game
         .pending_selection
         .as_ref()
-        .expect("Decoy optional dialog must be parked");
-    assert!(pending.is_optional, "Decoy is optional");
-    r.game.resolve_selection(0, PASS).expect("decline Decoy");
+        .expect("Evade optional dialog must be parked");
+    assert!(pending.is_optional, "Evade is optional");
+    r.game.resolve_selection(0, PASS).expect("decline Evade");
 
-    // (4) Under the batched flow (2026-05-23): after declining Decoy,
+    // (4) Under the batched flow (2026-05-23): after declining Evade,
     // the no-replace post-replacement commit ran — the carrier has
     // already been trashed by `commit_post_replacement_single`. OnDeletion
     // then fired and Save parked a Tamer-pick using the snapshot's

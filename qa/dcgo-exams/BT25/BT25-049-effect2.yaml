@@ -1,0 +1,155 @@
+# Exam scenario: Armalizamon (BT25-049), clause BT25-049#effect#2 --
+# "[Your Turn] [Once Per Turn] When you would use an Option card with the
+#  [Glowing Dawn] trait, by trashing the bottom face-down card under any of
+#  your Tamers, reduce the cost by 3."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# DECK: gd-bt26-8th -- the only Option cards in the 1st list are e-Pulse
+# (whose "play from hand OR trash" is a UnionZone prompt DCGO splits into an
+# unscripted generic_int zone menu) and the DUAL Monarchlizamon; the 8th list
+# carries P-236 "Glowing Dawn" (cost 3, [Main] reveal-3-add-1), whose prompt
+# shapes are already known.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon; digivolve it in the breeding area into Gekkomon
+#       ST23-06 (cost 0) [0], draw stack[10]. Hard-play Tomoro & Kyo ST23-13
+#       (cost 4) [-4]; its [On Play] places stack[11] (ST23-03) under it.
+#   T2 P1 [4]: all-pass.
+#   T3 P0 [3]: draw stack[12]. Move Gekkomon: its [When Moving] reveals
+#       stack[13..15], adds ST23-09, places ST23-04 under the Tamer, bottoms
+#       ST23-12. Tamer's [Start of Your Main Phase] places stack[16]
+#       (BT25-043) under it -- the Tamer now holds 3 face-down cards and
+#       BT25-043 is the BOTTOM one (placements go to the bottom, ST23-13 Q&A).
+#       Digivolve Gekkomon into Armalizamon (cost 2) [1], draw stack[17]; its
+#       [When Digivolving] suspend has no target (P1's board is empty).
+#   THE CLAUSE: use P-236 (cost 3) from hand. Armalizamon's reducer is
+#       offered: accept, trash the Tamer's bottom face-down card (BT25-043)
+#       -> cost 3 - 3 = 0 [1]. (Without it: 1 - 3 = -2 and the turn would
+#       end.) ST23-13's "when effects trash cards from under this Tamer, by
+#       suspending this Tamer, 1 [Glowing Dawn] Digimon gets +3000" fires off
+#       that trash -> yes, Armalizamon 7000. P-236 then resolves (reveal
+#       stack[18..20], add ST23-08) and is placed in the battle area.
+#   Witness (asserted before the trailing pass): memory still 1 and still
+#   T3, BT25-043 in the trash, the Tamer suspended with 2 sources left.
+#
+# PROMPT SHAPE (BT25-049.yaml DCGO crosscheck): DCGO ActivateClass on
+# CanTriggerWhenPermanentWouldPlay (HasUseCost && [Glowing Dawn]), gated on a
+# Tamer with a face-down source, SetIsSkippable(true), and the Tamer pick
+# canNoSelect: CanNoSelect(...) -> the decline is IN the SelectPermanentEffect.
+# Ours: an EffectChoice accept gate ("Use Cost reduction to reduce Option-use
+# cost?") + an OwnField Tamer pick -> the gate is a sim_only row, the pick is
+# the shared SelectPermanentEffect row (P-170-effect1 convention). If DCGO
+# instead asks an OptionalSkill for the skippable class, this row is the
+# first divergence to look at.
+card: BT25-049
+clause: BT25-049#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, ST23-13, BT25-049, P-236, ST23-14,
+            ST23-15, ST23-15, ST23-14, BT9-103, ST23-15,
+            ST23-11, ST23-03, BT25-090, ST23-09, ST23-04,
+            ST23-12, BT25-043, BT25-043, ST23-10, ST23-08,
+            BT25-032]
+    rest: gd-bt26-8th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  # ST23-13 [On Play] "You may place the top card ..." -> yes (stack[11]).
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Gekkomon's [When Moving] (GD Tamer present: two buckets + Tamer pick).
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-04] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-12], sim_only: true } }
+  # ST23-13 [Start of Your Main Phase] place -> yes (stack[16]).
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: P-236, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE, part 1. SIM-ONLY: our accept/decline gate on the optional
+  # reducer; DCGO's decline lives in the Tamer pick itself (canNoSelect).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # THE CLAUSE, part 2: the Tamer whose bottom face-down card is trashed.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
+  # suspending this Tamer, ..." -> yes; +3000 to Armalizamon.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # P-236 [Main]: reveal 3, add 1 [Glowing Dawn]; the other two to the bottom
+  # (ours one position at a time, DCGO one row).
+  - actor: 0
+    do: { select: { cards: [ST23-08] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-10], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-032], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [ST23-10, BT25-032], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 22
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: [BT25-043]
+      p0.hand: [BT25-043, BT25-090, ST23-08, ST23-09, ST23-11, ST23-14]
+      p0.field:
+        - card_id: BT25-049
+          dp: 7000
+          suspended: false
+          sources: [ST23-01, ST23-06]
+        - card_id: P-236
+          dp: -1
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: true
+          sources: [ST23-03, ST23-04]

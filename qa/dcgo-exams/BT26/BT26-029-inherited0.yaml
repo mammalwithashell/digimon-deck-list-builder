@@ -1,0 +1,144 @@
+# Exam scenario: Aegiochusmon: Holy (BT26-029), clause BT26-029#inherited#0
+# -- "[All Turns] [Once Per Turn] When your security stack is removed from,
+#  <De-Digivolve 1> 1 of your opponent's Digimon." (inherited)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play BT26-029 (0 -> -8); decline its [On Play].
+#   T2 (P1, 8): Biyomon ST1-02 (8 -> 6); digivolve Birdramon ST1-05 on it
+#        (Red Lv.3 / 2: 6 -> 4, +1 draw); pass -> P0 3.
+#   T3 (P0, 3): digivolve BT26-029 -> Junomon BT25-044 (Yellow Lv.5 cost 4 vs
+#        "Lv.5 w/[Angel]/[Archangel]/[TS]" cost 3 -> cost choice, value 3;
+#        3 -> 0). Junomon's WD ("By placing 1 other Digimon as the top security
+#        card"): ours has no OWN other Digimon -> no prompt; DCGO offers P1's
+#        Birdramon -> declined (dcgo_only row). Blinding Ray
+#        BT4-104 (0; Junomon is yellow): trash top security (stack[9] = Kanan
+#        Yuki BT26-090), gain 2 (0 -> 2). Two P0 triggers fire on the removal:
+#        Junomon's own [All Turns][OPT] (may play a cost<=8 Angel/Archangel/
+#        Iliad card from hand) and THE CLAUSE (BT26-029, now a source).
+#        Resolve THE CLAUSE first: De-Digivolve 1 on Birdramon. Junomon's
+#        trigger then has no legal card (P0's hand is TS-only Tamers: Hiroko
+#        x2, Inori, Shota -- deliberately stacked, no Iliad) -> no prompt.
+#        Trailing pass.
+#
+# WITNESS: P1's Birdramon loses its top card -- P1's field is a bare Biyomon
+# ST1-02 and Birdramon ST1-05 sits in P1's trash.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Cost route: our EffectChoice vs DCGO SelectCountEffect over the distinct
+#     cost list (CardController.cs SelectCost ~720), by VALUE 3.
+#   - Junomon's [When Digivolving] (BT25/Yellow/BT25_044.cs "Shared OP / WD"):
+#     DCGO's OtherDigimon filter is `permanent != this &&
+#     IsPermanentExistsOnBattleAreaDigimon(permanent)` -- ANY player's battle
+#     area Digimon -- so P1's Birdramon makes AdditionalActivateCondition true
+#     and DCGO opens a SelectPermanentEffect (canNoSelect true, no OptionalSkill:
+#     optional false) offering Birdramon. Ours gates on `any_permanent` (DSL
+#     default `of: you`, BT25-044.yaml) and asks nothing -> a `dcgo_only`
+#     decline row (answered "place nothing").
+#     PREDICTED DIVERGENCE only if accepted (not on this line): the printed
+#     "By placing 1 other Digimon as the top security card" carries no "your",
+#     and an unqualified "Digimon" conventionally means any Digimon -- DCGO's
+#     reading is the literal one; ours restricts the cost to your own Digimon
+#     in the condition while its select_any_permanent filter is side-agnostic.
+#     Needs a ruling / engine follow-up; the line declines so state agrees.
+#   - SIM-ONLY row: 9-1-5 used-Option-disposal order. DCGO trashes the used
+#     Option inside UseOptionClass (CardController.cs, AddTrashCard after the
+#     OptionSkill effect) BEFORE the main stack's triggers resolve -- it asks
+#     nothing; we answer "Trash the used Option" to take DCGO's order.
+#   - NO MultipleSkills on DCGO's side: Junomon's [All Turns] trigger is stacked
+#     (CanUseCondition does not look at cards) but MultipleSkills filters
+#     skillInfos_active by CanActivate, and Junomon's CanActivateCondition needs
+#     a cost<=8 [Angel]/[Archangel]/[Iliad] card in hand OR trash -- hand is
+#     TS-only Tamers, trash is Kanan Yuki BT26-090 (ADAMAS/TS) + Blinding Ray.
+#     With one active skill DCGO short-circuits (MultipleSkills.cs
+#     `Count == 1`). Our TriggerOrder still offers the un-activatable Junomon
+#     trigger beside the clause -> our row is now `sim_only`. (Ours offering a
+#     trigger that cannot activate is a phantom choice; minor engine note.)
+#   - De-Digivolve target: the inherited clause's SelectPermanentEffect
+#     (Mode.Degenerate, mandatory) over Birdramon, 1:1.
+# FIXED 2026-10-04 (G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE): Junomon's
+# [All Turns] now carries DCGO's CanActivateCondition (a cost<=8
+# Angel/Archangel/Iliad card in hand or trash) as its clause condition, so with
+# none it is not staged and the lone clause resolves with no ordering prompt --
+# the former `sim_only` TriggerOrder row is gone (asserts shifted -1).
+# FIXED 2026-10-04 (G-CARD-BT25-044-PLACE-OTHER-DIGIMON): BT25-044.yaml now
+# gates Junomon's [On Play]/[When Digivolving] on ANY other Digimon (either
+# side, BT25_044.cs:48-57) and places into the card owner's security, so the
+# former `dcgo_only` Junomon pick row is a shared row. (Header text below
+# predates the fix.)
+card: BT26-029
+clause: BT26-029#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-029, BT25-044, BT4-104, BT24-083, BT24-084,
+            BT24-102, BT25-030, BT25-022, BT24-034, BT26-090,
+            BT26-092, BT24-083, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-05, BT1-009, ST1-03, ST1-04,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-029, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-044 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # Junomon's WD "place 1 other Digimon" pick offers P1's Birdramon (either-
+  # side gate, shared since the 2026-10-04 fix); decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { play: { card: BT4-104, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.security: 4
+      p0.trash: [BT26-090, BT4-104]
+      p0.field:
+        - { card_id: BT25-044, dp: 12000, suspended: false, sources: [BT26-029] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [ST1-05]

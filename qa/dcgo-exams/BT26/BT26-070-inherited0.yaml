@@ -1,0 +1,142 @@
+# Exam scenario: NightChiropmon (BT26-070), clause BT26-070#inherited#0 --
+# "<Retaliation> (When only this Digimon is deleted in battle, delete the
+# Digimon it battled.)" (inherited).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hatches Kekkomon, digivolves it in breeding into Liollmon
+#      [0 -> 0] (draw stack[10]). Pass (p1 +3).
+#   T2 p1 hard-plays Phoenixmon (ST1-10, 12000 DP, no effects in our pool)
+#      [3 -> -7] -> p0 gets 7.
+#   T3 P0 moves Liollmon (silent), digivolves into NightChiropmon ([Glowing
+#      Dawn] route, cost 2) [7 -> 5] (its [When Digivolving] draw + trash
+#      BT25-090), then into Monarchlizamon (BT25-057; printed green/black
+#      Lv.4 circles miss the purple NightChiropmon -> alt cost 3) [5 -> 2].
+#      NightChiropmon is now a digivolution card, so its inherited
+#      <Retaliation> is live on Monarchlizamon. Monarchlizamon attacks
+#      security (to become suspended); p1's top security ST1-02 (3000) loses.
+#   T4 p1's Phoenixmon attacks the suspended Monarchlizamon: 12000 vs 8000,
+#      only Monarchlizamon is deleted in battle -> <Retaliation> deletes
+#      Phoenixmon.
+# WITNESS: p1.trash gains ST1-10 and p1's field is empty after a battle
+# Phoenixmon won.
+#
+# ENGINE FINDING (not measured by this file; repro at
+# qa/archetype-qa/glowing-dawn-repros/repro-retaliation-effect-battle.yaml): the shorter line --
+# accept Monarchlizamon's "[When Digivolving] This Digimon may battle 1 of
+# your opponent's Digimon" against Phoenixmon -- deletes Monarchlizamon, our
+# engine OFFERS <Retaliation> (cause gate = Battle passes) but it resolves to
+# NOTHING: Phoenixmon survives. keyword_effects.rs Retaliation resolves its
+# target via `ctx.battle_opponent_of`, which reads `Game.pending_attack`; an
+# effect-initiated battle (DSL `battle:`) has no pending attack by the time
+# the trigger resolves. general_rule.pdf 16-12 says "deleted in battle", not
+# "in an attack" -> expected oracle divergence on that line.
+#
+# PROMPT SHAPE: the [When Digivolving] TriggerOrder picks `ordinal: 0`
+# between two same-id BT25-057 triggers -- an ours-only ordering; DCGO may
+# not stage the unpayable De-Digivolve branch at all (BT25-057.yaml DCGO
+# note: "RemoveUse if no cost paid" -- i.e. DCGO lets it activate and
+# refunds), so this row may need a dcgo_only/sim_only rework after the
+# oracle pass. Retaliation itself (BT26-070.yaml: RetaliationSelfEffect
+# (isInherited)) is mandatory and alone at T4 -> no prompt either side.
+card: BT26-070
+clause: BT26-070#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT26-070, BT25-057, ST23-12, BT25-090,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-049, ST23-12,
+            BT26-026]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-10, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-070 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-090] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-057 } }
+    expect: { prompt: main_phase }
+  # Monarchlizamon's two [When Digivolving] triggers stack (same card id).
+  # Branch 0 (ours) = the [WD][WA][OPT] "by trashing the bottom face-down
+  # card under a Tamer, <De-Digivolve 1>": no Tamer, cost unpayable, resolves
+  # to nothing. The remaining "may battle" is then offered alone as an
+  # optional Replacement gate -> declined (the effect battle does NOT carry
+  # the Retaliation target in our engine; see header).
+  - actor: 0
+    do: { select: { cards: [BT25-057], ordinal: 0 } }
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # [When Attacking]: Monarchlizamon's [WD][WA][OPT] again (unpayable,
+  # nothing) and Liollmon's inherited "may add top security" (yes).
+  - actor: 0
+    do: { select: { cards: [BT25-057] } }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T4: Phoenixmon (12000) attacks the suspended Monarchlizamon (8000).
+  # Only Monarchlizamon is deleted in battle -> NightChiropmon's inherited
+  # <Retaliation> deletes Phoenixmon. Single mandatory trigger: no prompt.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 3
+      p0.memory: 2
+      p0.security: 4
+      p1.trash: [ST1-02]
+      p0.field:
+        - card_id: BT25-057
+          dp: 8000
+          suspended: true
+          sources: [BT26-025, BT26-070, ST23-01]
+      p1.field:
+        - card_id: ST1-10
+          dp: 12000
+          suspended: false
+          sources: []
+  - at: 17
+    that:
+      turn: 4
+      p0.trash: [BT25-057, BT25-090, BT26-025, BT26-070, ST23-01]
+      p1.trash: [ST1-02, ST1-10]
+      p0.field: []
+      p1.field: []

@@ -1,0 +1,82 @@
+# Exam scenario: Aegiomon (BT24-034), clause BT24-034#effect#2 --
+# "[When Moving] [On Play] [When Digivolving] By adding your top security card
+#  to the hand, you may play 1 [TS] trait Tamer card from your hand without
+#  paying the cost. This effect can't play cards with the same name as any of
+#  your Tamers."  (the [On Play] arm)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE. T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5. P0's opening hand
+# holds Inori Misono BT24-084 (a [TS] Tamer) and no Tamer is on the field, so
+# the effect is live. P0 accepts: the top security card (stack[9] = BT24-101
+# Jupitermon, a Digimon with no [Security] text) goes to the hand, and Inori
+# is played for free. Then the turn hands over (memory -5 -> P1 5).
+#
+# WITNESS (state before P1's T2 breeding decision): p0.security 5 -> 4,
+# BT24-101 in the hand, Inori on the field, memory still -5 (the Tamer was
+# free -- a paid Inori would have left -8). Inori's own "[All Turns] When your
+# security stack is removed from" cannot fire: she reaches the field AFTER the
+# security card moved.
+#
+# PROMPT SHAPE.
+#   DCGO -- VERIFIED against BT24_034.cs (2026-10-04): the [On Play]
+#   ActivateClass is SetUpActivateClass(SharedCanActivateCondition, ..., -1,
+#   true, ...) -> an OptionalSkill yes/no; the body then adds SecurityCards[0]
+#   to the hand + IReduceSecurity, and, since the hand holds a ValidTamer
+#   ([TS] Tamer, name not on a field Tamer, CanPlayAsNewPermanent), opens ONE
+#   SelectHandEffect (maxCount 1, canNoSelect true) -> the Inori row;
+#   PlayPermanentCards(payCost: false, activateETB: true). Inori BT24-084 has
+#   no [On Play]; her [All Turns] OnLoseSecurity is NOT on the stack -- DCGO
+#   stacks OnLoseSecurity skill infos at the removal (CardController.cs
+#   StackSkillInfos(..., OnLoseSecurity)), while she is still in the hand.
+#   Ours: the same OptionalSkill-shaped outer gate + a declinable Hand pick ->
+#   both rows shared.
+#
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): ours used to gate on a
+# [TS] Tamer in hand BEFORE the cost, behind a 2-branch EffectChoice, and
+# forced the Tamer pick (a `sim_only` choice row + a `dcgo_only` yes row).
+# BT24-034.yaml now mirrors DCGO (optional gate on security > 0, cost first,
+# declinable pick; §15-7-5), so the gate is one shared OptionalSkill row.
+
+card: BT24-034
+clause: BT24-034#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT24-084, BT25-030, BT24-031, BT26-029,
+            BT25-030, BT24-031, BT25-044, BT26-081, BT24-101,
+            BT25-033, BT25-030, BT4-104, BT24-031, BT26-073]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # The "By adding your top security card" OptionalSkill gate: accept.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: play Inori Misono from hand for free.
+  - actor: 0
+    do: { select: { cards: [BT24-084] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -5
+      p0.security: 4
+      p0.hand: [BT25-030, BT24-031, BT26-029, BT24-101]
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT24-084, dp: -1, suspended: false, sources: [] }

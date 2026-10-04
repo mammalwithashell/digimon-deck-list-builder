@@ -1,0 +1,116 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#8 --
+# DUAL Effect "[Main] Delete all of your opponent's Digimon with the lowest
+#  DP. Then, <Recovery +1>."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
+#
+# THE LINE: T1 P-213 (0 -> -7); T2 P1 fields Biyomon (3000), Monodramon
+# (3000) and Agumon BT3-007 (4000); T3 (P0, 3) uses Jupitermon's Option face
+# (3 -> -4). The board makes "ALL ... with the lowest DP" discriminate: TWO
+# Digimon tie at the lowest 3000, one stands above it.
+#
+# WITNESS (at 10): both 3000s deleted (p1.trash [BT1-009, ST1-02]) and the
+# 4000 Agumon STILL standing; <Recovery +1> takes p0.security 5 -> 6. The
+# Option ends in p0.trash because <Arts Digivolve> onto P-213 is DECLINED.
+#
+# PROMPT SHAPE: no target pick on either side (delete-all over the lowest-DP
+# group; DCGO is expected to destroy the whole group without a
+# SelectPermanentEffect -- if DCGO asks a pick here, that is the finding).
+# Recovery: no prompt. Arts: declined SelectPermanentEffect.
+#
+# Option use from hand: `play: { card: BT26-033, from: hand }` lowers as an
+# Option USE (card_kind 4 + dual block in cards.json); DCGO routes a dual
+# card played with no target permanent to UseOptionClass (NOTES-BT25-085.md),
+# no face-selection prompt on either side. [Main] is mandatory (no
+# OptionalSkill). <Arts Digivolve> is offered on EVERY use with a legal
+# target (ours optional OwnField pick; DCGO SelectPermanentEffect
+# canNoSelect:true).
+# VERIFIED vs DCGO C#: the [Main] is SetUpActivateClass(..., false) +
+# SetIsOptionEffect (BT26_033.cs:343) -> no OptionalSkill; it deletes the
+# whole CardEffectCommons.IsMinDP group with no pick, then IRecovery (no
+# prompt). The +1-per-security use cost is a ChangeCostClass with
+# isChangePayingCost false (BT26_033.cs:288), i.e. it changes the card's OWN
+# cost (CardSource.cs ~:800-860), so it IS paid. <Arts Digivolve> is an
+# OptionResolutionClass (ArtsDigivolve.cs): CardController.cs PlayOptionCards
+# (~:2027-2130) resolves a lone resolution directly (no MultipleSkills / no
+# OptionalSkill), opening SelectPermanentEffect canNoSelect true over own
+# Digimon Jupitermon can be played onto (Root.Execution, payCost false).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#8
+seed: 424242
+decks:
+  p0:
+    # hand (0-4): P-213 Aegiochusmon (red Lv.5 [TS], the digivolve base),
+    # Jupitermon, Inori Misono (the cost-reduced play), two quiet TS cards.
+    # security (5-9), stack[9] = TOP = the card the [When Digivolving] takes.
+    # draws (10..): T3 turn draw, the digivolve-bonus draw, T5 turn draw.
+    stack: [P-213, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, BT1-009, BT3-007, ST1-04, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): decline breeding; hard-play P-213 Aegiochusmon
+  # (cost 7: 0 -> -7). It has no [On Play]; its [When Digivolving] never
+  # fires (it is played, not digivolved). -> P1 at 7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-213, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7): Biyomon ST1-02 (3000), Monodramon BT1-009 (3000),
+  # Agumon BT3-007 (4000) -- all vanilla (7 -> 1); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): use the Option face (2 + 5 security = 7: 3 -> -4).
+  # P0's only permanent is the RED P-213, so the Yellow half of the colour
+  # requirement fails and <Use Req. ([TS])> admits the use.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-033, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main] resolved (both 3000s deleted, Recovery +1); <Arts Digivolve>
+  # onto P-213 is offered -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      p0.memory: -4
+      p0.security: 6
+      p1.trash: [BT1-009, ST1-02]
+      p1.field:
+        - { card_id: BT3-007, dp: 4000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 4
+      p0.trash: [BT26-033]
+      p0.field:
+        - { card_id: P-213, dp: 7000, suspended: false, sources: [] }

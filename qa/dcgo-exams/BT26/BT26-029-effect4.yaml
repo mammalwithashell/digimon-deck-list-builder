@@ -1,0 +1,95 @@
+# Exam scenario: Aegiochusmon: Holy (BT26-029), clause BT26-029#effect#4 --
+# "[All Turns] [Once Per Turn] When your security stack is removed from, 3 of
+#  your opponent's Digimon get -5000 DP for the turn." (The extractor folds the
+#  trailing "(Rule) Trait: Has [Angel] Type." into this clause's text; the
+#  Angel grant is not what this line witnesses.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play BT26-029 (0 -> -8); decline its [On Play] (so the
+#        security removal comes from a clean, separate source).
+#   T2 (P1, 8): Vermilimon BT4-014 (8 -> 3), Biyomon ST1-02 (3 -> 1),
+#        Monodramon BT1-009 (1 -> -1) -> P0 1.
+#   T3 (P0, 1): Blinding Ray BT4-104 (cost 0; yellow, BT26-029 is yellow):
+#        trash top security (stack[9] = Kanan Yuki BT26-090), gain 2 (1 -> 3).
+#        THE CLAUSE fires off the security removal: pick all three P1
+#        Digimon -> -5000 each. Trailing pass.
+#
+# WITNESS: Biyomon (3000) and Monodramon (3000) are deleted to P1's trash;
+# Vermilimon (8000) survives at 3000 DP -- the -5000 read directly.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - T1 [On Play] decline: optional -> OptionalSkill(no).
+#   - SIM-ONLY row: our 9-1-5 TriggerOrder between the used Option's disposal
+#     and BT26-029's trigger (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER). DCGO
+#     trashes the used Option inside UseOptionClass (CardController.cs,
+#     AddTrashCard right after the OptionSkill ActivateEffectProcess) before
+#     the main stack's triggers run, and asks nothing -> we answer "Trash the
+#     used Option" to take DCGO's order (BT3-096-effect0 precedent).
+#   - The 3-target pick: DCGO asks ONE SelectPermanentEffect with maxCount
+#     min(3, 3) = 3, canNoSelect false (BT26_029.cs All Turns region); ours a
+#     count-capped multi-select answered in one `targets:` row -> 1:1. A lone
+#     mandatory trigger -> no MultipleSkills, no OptionalSkill.
+card: BT26-029
+clause: BT26-029#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-029, BT4-104, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [BT4-014, ST1-02, BT1-009, ST1-03, ST1-04,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-029, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT4-104, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1, opp.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT26-090, BT4-104]
+      p1.field:
+        - { card_id: BT4-014, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [BT1-009, ST1-02]

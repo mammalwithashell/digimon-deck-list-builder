@@ -1,0 +1,102 @@
+# Exam scenario: Kyo Sawashiro (BT25-088, yellow Tamer, cost 4), clause
+# BT25-088#effect#3 -- "[Security] Play this card without paying the cost."
+#
+# BT25-088 is pinned as P0's TOP security card (stack[9]) and flipped by a P1
+# Agumon (ST1-03) security attack. Witness: BT25-088 lands on P0's field
+# instead of the trash, and P1's memory is untouched (no cost paid by P0;
+# memory stays 3 on P1's side).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P1 perspective):
+#   T1 (P0, 0): pass breeding, pass main -> P1 gets 3.
+#   T2 (P1, 3): play Agumon ST1-03 (3 -> 0); pass -> P0 gets 3.
+#   T3 (P0, 3): draw; pass breeding, pass main -> P1 gets 3.
+#   T4 (P1, 3): Agumon attacks security. THE CLAUSE: the check flips
+#       BT25-088 -> played to P0's field for free. Tamer: no security
+#       battle. P1 answers one more main_phase pass.
+#   ENGINE FINDING (expected oracle divergence): after the [Security] play,
+#   OUR engine fires BT25-088's own "[All Turns] When your security stack is
+#   removed from" trigger for the removal of BT25-088 ITSELF, and offers it
+#   TWICE: one 2-candidate TriggerOrder [BT25-088, BT25-088] (-> MultipleSkills) followed by a 1-pending TriggerOrder. Accepting resolves the
+#   effect once (probe: yes/yes -> Tamer suspended + face-down source(s)),
+#   the duplicate then fizzles. Cause (read, not fixed): combat/mod.rs
+#   SecurityPhase::OnLoseSecurityDrain enqueues OnLoseSecurity AFTER the
+#   [Security] effect has already played the Tamer, with TriggerSource::
+#   SecurityRevealed {card} -- the revealed card and the new battle-area
+#   permanent are apparently both scanned. Rules: the trigger condition was
+#   met at the check (13-1-5: the card is then in no area), and 15-8-3-8
+#   says removal triggers reference the state at trigger time, so the
+#   Tamer arguably should not trigger at all; it certainly should not
+#   trigger twice. This line answers the duplicate layer sim_only and
+#   DECLINES the remaining OptionalSkill, so the end state equals "no
+#   trigger". If DCGO's OnLoseSecurity CanUse does not see the freshly
+#   played Tamer, the decline row is itself a DCGO-never-asked divergence.
+#
+# PROMPT SHAPE (cards/bt25/BT25-088.yaml DCGO crosscheck):
+#   PlaySelfTamerSecurityEffect -- no selection prompt on either side.
+card: BT25-088
+clause: BT25-088#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-03, ST23-09, ST23-12, ST23-06, ST23-08,
+            ST23-03, ST23-04, ST23-06, ST23-07, BT25-088,
+            ST23-13]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Our engine now parks the Tamer's OWN [All Turns] security-loss trigger
+  # for the removal of the Tamer itself, and parks it TWICE (see the ENGINE
+  # FINDING in the header). The first row answers the duplicate layer
+  # (sim_only: one card has one such trigger, DCGO can at most ask once);
+  # the second declines the trigger's optional gate.
+  - actor: 0
+    do: { select: { cards: [BT25-088], ordinal: 0, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-088, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }

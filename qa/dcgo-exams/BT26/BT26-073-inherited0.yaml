@@ -1,0 +1,99 @@
+# Exam scenario: Aegiochusmon: Dark (BT26-073), clause BT26-073#inherited#0 --
+# "<Security A. +1> (This Digimon checks 1 additional security card.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Dark (8: 0 -> -8). Its [On Play] (effect#1) cost
+#       menu: trash empty -> two-branch EffectChoice, declined ("Don't pay").
+#   T2 (P1, 8): pass -> P0 3.
+#   T3 (P0, 3): digivolve Dark -> Minervamon BT24-041 via "[Digivolve] Lv.5
+#       w/[TS] trait: Cost 3" (Dark is purple/red; Minervamon's circles are
+#       yellow/black, so this is the only route) 3 -> 0. Minervamon's [When
+#       Digivolving]: optional hand play of a cost<=5 [Iliad] card DECLINED;
+#       its De-Digivolve half has no opponent Digimon (skipped). THE CLAUSE:
+#       Minervamon (Dark underneath) attacks P1's security -> checks TWO cards
+#       (ST1-02 Biyomon 3000 and BT1-009 Monodramon 3000, both vanilla, both
+#       lose to 12000). Pass at 0.
+#
+# WITNESS: p1.security 5 -> 3 from ONE attack; both checked Digimon in P1's
+# trash. Minervamon itself prints no <Security A.>; the +1 comes only from
+# Dark's inherited effect.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T1: Dark's cost menu is UserSelectionManager.SetIntSelection (BT26_073.cs:116-118)
+#     -> one generic_int row whose wire value is the element's VALUE, not its
+#     index: Delete=1 / Return=2 / Don't use=3 (values are fixed even when
+#     the Return element is omitted for an empty trash). The menu is gated
+#     only on `!CanDeleteSelf() && !CanReturnFromTrash()` (BT26_073.cs:109):
+#     it IS asked even when the opponent has no Lv.<=5 Digimon. The On Play/
+#     WD is optional:false (BT26_073.cs:215; isSkippable only affects
+#     MultipleSkills), so no OptionalSkill precedes the menu.
+#     This line answers value 3.
+#   - T3 Minervamon WD -- FIXED 2026-10-04 (was an OptionalSkill fold):
+#     Minervamon BT24-041 OP/WD is NOT optional (SetUpActivateClass(..., false),
+#     BT24_041.cs:149/167): DCGO opens SelectHandEffect directly
+#     (maxCount = min(1, candidates), canNoSelect true, BT24_041.cs:79-93),
+#     so the decline is a select_cancel on SelectHandEffect -- NOT an
+#     OptionalSkill fold. Its De-Digivolve half is skipped when the
+#     opponent has no Digimon (HasMatchConditionPermanent guard).
+card: BT26-073
+clause: BT26-073#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-073, BT24-041, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-073, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Don't pay", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-041 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p1.security: 5
+  - at: 10
+    that:
+      turn: 3
+      p1.security: 3
+      p1.trash: [ST1-02, BT1-009]
+      p0.field:
+        - { card_id: BT24-041, dp: 12000, suspended: true, sources: [BT26-073] }

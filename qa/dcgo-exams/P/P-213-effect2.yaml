@@ -1,0 +1,113 @@
+# Exam scenario: Aegiochusmon (P-213), clause P-213#effect#2 -- "<Decode
+# ([Aegiomon])>" (own scope: When this Digimon would leave the battle area
+# other than in battle, you may play 1 [Aegiomon] from its digivolution cards
+# without paying the cost.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); decline its [On Play].
+#   T2 (P1, 5): Biyomon ST1-02 (5 -> 3; red, so Gaia Force can be used);
+#        pass -> P0 3.
+#   T3 (P0, 3): digivolve Aegiomon -> P-213 ([Aegiomon] route, 3 -> 0); WD:
+#        no buff (5 security), decline "may attack"; pass -> P1 3.
+#   T4 (P1, 3): Gaia Force ST1-16 (3 -> -5) deletes P-213 (a non-battle
+#        leave). THE CLAUSE: accept the Decode gate, pick the Aegiomon source
+#        -> played free; its [On Play] triggers (decline). P-213 has no
+#        <Ascension>, so nothing else asks. P0's T5 breeding pass closes.
+#
+# WITNESS: a source-less Aegiomon BT25-033 on P0's field (played out of
+# P-213's stack), P-213 alone in P0's trash, P0 security still 5.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Decode: P_213.cs "Decode <[Aegiomon]>" = DecodeSelfEffect (optional
+#     ActivateClass -> OptionalSkill yes), then CardEffectCommons
+#     KeyWordEffects/Decode.cs DecodeProcess's SelectCardEffect over the
+#     DigivolutionCards (canNoSelect true) -- 1:1 with our gate + pick. Only
+#     the top card's non-inherited copy fires (the "- ESS" copy is inherited
+#     and Permanent.EffectList_ForCard skips inherited effects on the top card).
+#   - The played Aegiomon's [On Play] is stacked on the MAIN autoProcessing
+#     (CardController.cs ~1925) while Decode runs on the cut-in stack
+#     (CardController.cs WhenRemoveField -> autoProcessing_CutIn), so it
+#     resolves after Gaia Force completes, alone -> OptionalSkill (decline).
+#   - WD "may attack" decline: P_213.cs runs SelectAttackEffect directly behind CanAttack -- NO OptionalSkill gate
+#     (P/Red/P_213.cs "When Digivolving" region); the decline is that widget's
+#     cancel (SelectAttackEffect.cs SetAttackTarget harness hook, -2).
+card: P-213
+clause: P-213#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, P-213, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-16, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-213 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 16
+    that:
+      turn: 5
+      p1.memory: -5
+      p0.field:
+        - { card_id: BT25-033, dp: 5000, suspended: false, sources: [] }
+      p0.trash: [P-213]
+      p0.security: 5
+      p1.trash: [ST1-16]

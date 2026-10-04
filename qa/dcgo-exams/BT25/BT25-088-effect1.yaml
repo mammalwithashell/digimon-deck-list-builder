@@ -1,0 +1,89 @@
+# Exam scenario: Kyo Sawashiro (BT25-088, yellow Tamer, cost 4), clause
+# BT25-088#effect#1 -- "[All Turns] When your security stack is removed from,
+# by suspending this Tamer, you may place the top 2 cards of your deck face
+# down under this Tamer."
+#
+# Measured on the OPPONENT's turn (the [All Turns] half): P1's Agumon checks
+# P0's top security card, P0 accepts, BT25-088 suspends and takes the top 2
+# deck cards as face-down sources.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P0 perspective):
+#   T1 (0): pass breeding; hard-play BT25-088 (4, corrected cost) -> -4.
+#   T2 (P1, 4): play Agumon ST1-03 (3) -> 1; pass -> P0 at 3.
+#   T3 (P0, 3): [Start of Your Turn] is a no-op at 3; draw stack[10]
+#       ST23-13; pass breeding, pass main -> P1 at 3.
+#   T4 (P1): Agumon attacks security; the check flips stack[9] ST23-06
+#       (Gekkomon, 1000 DP, no [Security] effect) -- security 5 -> 4.
+#       THE CLAUSE: P0 accepts; BT25-088 suspends and the deck top
+#       stack[11] ST23-15 + stack[12] ST23-02 go face down under it.
+#       Gekkomon loses the security battle (1000 vs 2000) and is trashed.
+#   Witness: BT25-088 suspended with sources {ST23-15, ST23-02}, security 4,
+#   trash [ST23-06], Agumon suspended.
+#
+# PROMPT SHAPE (cards/bt25/BT25-088.yaml DCGO crosscheck of BT25_088.cs):
+#   OURS: one TriggerOrder (1 declinable candidate -> OptionalSkill), then
+#   the suspend + two place_as_bottom_source steps with no further prompt.
+#   DCGO: the crosscheck records a 3-WAY menu (place 2 / suspend only / no).
+#   If that menu is a generic_int rather than OptionalSkill, this row is a
+#   PROMPT-SHAPE mismatch (expected divergence class: cardinality/overload),
+#   not a rules finding -- the printed text grants only the may/may-not.
+card: BT25-088
+clause: BT25-088#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-088, ST23-03, ST23-09, ST23-12, ST23-07,
+            ST23-03, ST23-04, ST23-09, ST23-08, ST23-06,
+            ST23-13, ST23-15, ST23-02]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [ST23-06]
+      p0.field:
+        - { card_id: BT25-088, dp: -1, suspended: true, sources: [ST23-02, ST23-15] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }

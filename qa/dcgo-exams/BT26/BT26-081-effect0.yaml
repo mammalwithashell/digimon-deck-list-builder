@@ -1,0 +1,108 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#0 -- the special
+# digivolution condition "[Digivolve] [Minervamon]: Cost 2".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION. Minervamon BT24-041 is a Lv.6; Mervamon's printed circles and its
+# other special condition ("Lv.5 w/[TS]: Cost 4") all require a Lv.5 base, so
+# the T5 digivolve is legal ONLY through the [Minervamon] name condition.
+#
+# THE LINE:
+#   T1 (P0, 0): pass -> P1 3.      T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): hard-play Minervamon (12; no [Iliad] on board, so no -5
+#       reduction): 3 -> -9. Its [On Play] optional hand play of a cost<=5
+#       [Iliad] card is DECLINED (De-Digivolve half: no opponent Digimon).
+#   T4 (P1, 9): pass -> P0 3.
+#   T5 (P0, 3): THE CLAUSE -- digivolve Minervamon -> Mervamon for 2 (3 -> 1).
+#       Mervamon's [When Digivolving] (effect#2): the "up to 8 cost of [Iliad]
+#       from hand or trash" pick is DECLINED; the -4000 DP half has no
+#       opponent Digimon (skipped). Pass at 1.
+#
+# WITNESS: the digivolve lowers off a Lv.6 at all; Mervamon stands over
+# Minervamon (dp 15000 = 13000 + its own [All Turns] +2000 to [Iliad]); P0
+# paid exactly 2 (memory 3 -> 1); hand = 5 opening - 2 played + T3/T5 draws +
+# digivolve bonus draw.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T3 Minervamon [On Play] -- FIXED 2026-10-04 (was an OptionalSkill fold):
+#     Minervamon BT24-041 OP/WD is NOT optional (SetUpActivateClass(..., false),
+#     BT24_041.cs:149/167): DCGO opens SelectHandEffect directly
+#     (maxCount = min(1, candidates), canNoSelect true, BT24_041.cs:79-93),
+#     so the decline is a select_cancel on SelectHandEffect -- NOT an
+#     OptionalSkill fold. Its De-Digivolve half is skipped when the
+#     opponent has no Digimon (HasMatchConditionPermanent guard).
+#   - T5 Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is the
+#     whole DCGO sequence. The -4000 half is skipped (no opponent Digimon).
+card: BT26-081
+clause: BT26-081#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-081, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-081 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [BT24-041] }
+      p0.hand: [BT24-034, BT24-034, BT24-101, BT25-030, BT25-030, BT26-090]
+      p1.field: []

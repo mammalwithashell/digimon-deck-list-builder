@@ -1,0 +1,94 @@
+# Exam scenario: ScourgeChiropmon (BT26-075), clause BT26-075#effect#0 --
+# Special Digivolution Condition "[Digivolve] Lv.4 w/[Glowing Dawn] trait:
+# Cost 3".
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets) -- all digivolves in the BREEDING
+# area, where no Digimon effect can activate (general_rule.pdf 6-4), so the
+# line carries no effect prompts at all:
+#   T1 P0 hatches Kekkomon, digivolves into Liollmon [0 -> 0] (draw
+#      stack[10] BT26-089). Pass.
+#   T2 p1 passes (p0 gets 3).
+#   T3 P0 draws stack[11] ST23-06; breeding Liollmon -> Armalizamon (BT25-049,
+#      green Lv.4, via its "Lv.3 w/[Glowing Dawn]: Cost 2") [3 -> 1], draw
+#      stack[12] BT25-046; Armalizamon -> ScourgeChiropmon. Scourge's printed
+#      circles are PURPLE Lv.4 / 4 and YELLOW Lv.4 / 4, which the green
+#      Armalizamon misses, so the ONLY route is this clause's trait path ->
+#      one cost (3), no cost EffectChoice [1 -> -2]; draw stack[13] BT25-057.
+#      The overspend ends the turn.
+#   T4 p1 passes (p0 gets 3). T5 P0 draws stack[14] ST23-12, moves the
+#      stack: the field shows Scourge over Armalizamon / Liollmon / Kekkomon.
+# WITNESS: memory 1 -> -2 (= cost 3, not 4), the moved stack.
+# The line ENDS on the move (the final assert reads the state after the last
+# step), so T5's end of turn -- where DCGO would open Scourge's <Execute>
+# OptionalSkill and our engine opens nothing (BT26-075-effect1.yaml ENGINE
+# FINDING) -- is never reached.
+#
+# PROMPT SHAPE (BT26-075.yaml DCGO crosscheck: AddSelfDigivolution
+# Requirement level 4 + TopCard EqualsTraits "Glowing Dawn", cost 3): no
+# prompts on either side.
+card: BT26-075
+clause: BT26-075#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT25-049, BT26-075, ST23-12, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-057, ST23-12,
+            BT26-026, BT25-090]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-075 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.hand: [BT25-046, BT25-057, BT26-089, ST23-06, ST23-12, ST23-15]
+      p0.field: []
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.field:
+        - card_id: BT26-075
+          dp: 8000
+          suspended: false
+          sources: [BT25-049, BT26-025, ST23-01]

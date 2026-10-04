@@ -77,7 +77,39 @@ impl<'a> EffectContext<'a> {
             .iter()
             .flat_map(|timing_key| enumerate_refireable_effects(self.game, target, timing_key))
             .collect();
+        let effects = self.collapse_combined_timing_clauses(effects);
         self.dispatch_refireable_effects(effects, selecting_player, bypass_once_per_turn, optional)
+    }
+
+    /// A printed `[On Play] [When Digivolving]` effect is ONE effect even
+    /// though it lowers to one engine `Effect` per timing. Under an `Either`
+    /// filter both timings enumerate it, so keep only the first entry of each
+    /// `Effect::clause_group` — the rules grant no choice between two copies
+    /// of the same effect. `G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`.
+    fn collapse_combined_timing_clauses(
+        &self,
+        effects: Vec<ReFireableEffect>,
+    ) -> Vec<ReFireableEffect> {
+        let mut seen: Vec<(String, CardHandle, u32)> = Vec::new();
+        effects
+            .into_iter()
+            .filter(|e| {
+                let group = self
+                    .game
+                    .effects_for_card(&e.card_id, e.source_card)
+                    .and_then(|list| list.get(e.effect_id as usize).and_then(|x| x.clause_group));
+                let Some(group) = group else {
+                    return true;
+                };
+                let key = (e.card_id.clone(), e.source_card, group);
+                if seen.contains(&key) {
+                    false
+                } else {
+                    seen.push(key);
+                    true
+                }
+            })
+            .collect()
     }
 
     /// Activate one timing-filtered effect printed on a FOREIGN CARD OBJECT
@@ -109,6 +141,7 @@ impl<'a> EffectContext<'a> {
                 )
             })
             .collect();
+        let effects = self.collapse_combined_timing_clauses(effects);
         // Once-per-turn accounting is BYPASSED for the foreign card: OPT
         // counts key `(source_card, slot)` on the carrier permanent, and the
         // foreign entries reuse the CARRIER's card handle — consulting or

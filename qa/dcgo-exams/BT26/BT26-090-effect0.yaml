@@ -1,0 +1,123 @@
+# Exam scenario: Kanan Yuki (BT26-090), clause BT26-090#effect#0.
+#
+# CLAUSE TEXT NOTE: the extractor emits ONE effect clause for the whole printed
+# effect box (its text field runs both timings together):
+#   "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.
+#    [End of Your Turn] By suspending this Tamer, you may use 1 Option card
+#    with the [TS] trait from your hand. For each memory your opponent has,
+#    reduce this effect's paid cost by 1."
+# so this ONE line witnesses BOTH halves.
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, memory 0): hard-play Kanan Yuki (cost 3: 0 -> -3). The turn ends
+#      with P1 at 3, so the [End of Your Turn] half fires: Kanan is suspended
+#      to use Jupitermon BT26-033 -- a DUAL card whose Option face carries
+#      [TS], printed Option use cost 2, "For each of your security cards, add
+#      1 to this card's use cost" (5 security -> 2 + 5 = 7) and <Use Req.
+#      ([TS] trait)> (Kanan supplies it). The paid cost is reduced by P1's
+#      memory (3): 7 - 3 = 4, so memory goes -3 -> -7. Its [Main] ("Delete all of your opponent's Digimon with the
+#      lowest DP. Then, <Recovery +1>") deletes nothing (P1 has no Digimon) and
+#      recovers 1: P0 security 5 -> 6 (stack[10] goes under). No Lv.5 [TS]
+#      Digimon exists, so <Arts Digivolve> cannot apply and the card is
+#      trashed.
+#   T2 (P1, memory 7): all-pass -> P0 3.
+#   T3 (P0, memory 3): Kanan unsuspends; turn draw stack[11]. THE [Start of
+#      Your Main Phase] half: 3 <= 4, gain 1 -> memory 4. Pass.
+#
+# WITNESS: end of T1 -> p0.memory -7 (paid exactly 4 = 7 - 3), p0.security 6,
+# BT26-033 in P0's trash, Kanan suspended. T3 main -> memory 4.
+#
+# PROMPT SHAPE (end-of-turn half): ours = see the steps (an optional window,
+# then the [TS] Option hand pick). DCGO -- VERIFIED 2026-10-04 against
+# BT26_090.cs at the pinned submodule (b9a0638cd):
+# OnEndTurn optional -> OptionalSkill; SuspendPermanent; canNoSelect hand pick
+# (SelectHandEffect) over affordable [TS] Options at cost - opponent memory;
+# PlayOptionCards(payCost: true). The DUAL card's use-cost formula and the
+# <Use Req.> colour waiver both have to agree across engines for the cost to
+# match. End-of-turn window: ours EndOfTurnAction vs DCGO Main (the
+# documented end-of-turn pair). The SoMP half is mandatory with no prompt.
+# Citations: BT26_090.cs:48 SetUpActivateClass(..., true) -> OptionalSkill;
+# CanActivate (:68-70) = on field + CanActivateSuspendCostEffect only (no
+# hand-candidate check, so the T3 gate is asked with no [TS] Option in hand,
+# as ours does); SuccessProcess (:80-145) opens SelectHandEffect (canNoSelect
+# true) only if a hand card passes IsOption && HasTSTraits && affordable at
+# cost - opponent memory (reduceCost read at selection time = 3), then a
+# paying-cost ChangeCostClass -3 + PlayOptionCards(payCost true). The DUAL
+# card's +5 is a card-cost ChangeCostClass (BT26_033.cs:288), so 2 + 5 - 3 =
+# 4. Arts: no own Digimon -> ArtsDigivolve CanResolve false -> trashed, no
+# prompt. Both gates fire on memory-overflow / pass turn ends alike
+# (AutoProcessing.cs EndTurnCheck :635 -> EndTurnProcess :679). SoMP
+# (:17-37) isOptional false. Kanan is the only [TS] Tamer, so <Use Req.>
+# holds (CardEffectFactory.UseRequirements, CardEffectFactory.cs:706).
+#
+# FIXED 2026-10-04 (G-DSL-USE-OPTION-ONLY): our engine used to park an
+# EffectChoice "Play as Digimon or use as Option" for the DUAL card after the
+# hand pick (BT26-090.yaml's `play_or_use_from_hand`). Kanan prints "you may
+# USE 1 Option card", so BT26-090.yaml now uses the use-only
+# `use_option_bound` over the `select_hand` binding: the DUAL card goes
+# straight to its Option face and no face choice is asked -- matching DCGO's
+# PlayOptionCards, so the former sim_only `choice:` row is gone.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-090
+clause: BT26-090#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-090, BT26-033, BT24-034, BT25-030, BT24-101,
+            BT25-022, BT24-031, BT26-029, BT24-102, BT24-083,
+            BT25-033, BT24-031, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-090, from: hand } }
+    expect: { prompt: main_phase }
+  # [End of Your Turn] half: suspend Kanan, use BT26-033 for (2 + 5) - 3 = 4.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT26-033] } }
+    expect: { prompt: SelectHandEffect }
+  # T2 (P1, memory 7)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): [Start of Your Main Phase] half -> memory 4.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3's own [End of Your Turn] window (Kanan unsuspended again) -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+assert:
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -7
+      p0.security: 6
+      p0.trash: [BT26-033]
+      p0.field:
+        - { card_id: BT26-090, dp: -1, suspended: true, sources: [] }
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 4

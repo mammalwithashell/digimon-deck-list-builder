@@ -1,0 +1,165 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#1 --
+# "<Piercing>" (When this Digimon attacks and deletes the opponent's Digimon
+# in battle, it checks security before the attack ends.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE (Wrath Mode arrives by digivolution so it can attack the turn it
+# appears, and P1's attacker is ALREADY suspended from its own attack before
+# Wrath Mode exists -- so no P1 attack ever happens while Wrath Mode is on the
+# field, keeping the line clear of its [Counter] arm):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): Biyomon ST1-02 (2) + Phoenixmon ST1-10 (10): 3 -> -9 -> P0 9.
+#   T3 (P0, 9): hard-play Minervamon BT24-041 (12): 9 -> -3. [On Play]: the
+#            cost<=5 [Iliad] hand pick has no candidate (hand is all big
+#            cards); <De-Digivolve 1> pick -> Phoenixmon (no sources, no-op).
+#   T4 (P1, 3): Biyomon attacks security. Minervamon's [Opponent's Turn]
+#            <Blocker> offers a block -> declined. Security check: Elecmon
+#            BT24-031 (1000) loses to Biyomon (3000) -> P0 trash; P0 sec 4.
+#            Second Phoenixmon (hand.0, 10): 3 -> -7 -> P0 7.
+#   T5 (P0, 7): digivolve Minervamon -> Wrath Mode by the cost-5 trait route
+#            (7 -> 2). [When Digivolving] (effect#5): trash top security
+#            BT25-033, <Recovery +2> -> sec 5; that removal fires effect#6 ->
+#            pick Phoenixmon (opp.field.1) -> -15000 -> deleted.
+#            THE CLAUSE: Wrath Mode attacks suspended Biyomon (3000) -> deleted
+#            in battle -> <Piercing> checks P1's top security (Kokatorimon
+#            BT1-014, 4000 < 16000 -> trashed). effect#6's OPT is spent this
+#            turn, so P1's security removal fires nothing.
+#
+# WITNESS: before the attack p1.security 5 and Biyomon suspended on P1's
+# field; after it, p1.security 4 and P1's trash holds Biyomon AND the checked
+# security card BT1-014.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   * T3 Minervamon [On Play] (BT24/Yellow/BT24_041.cs shared OP/WD/OD,
+#     optional false): its "may play" SelectHandEffect has maxCount 0 (no
+#     cost<=5 [Iliad] card in hand) -> SelectHandEffect.active() returns false
+#     (`_maxCount <= 0`), NO prompt and no OptionalSkill; then the mandatory
+#     De-Digivolve SelectPermanentEffect (HasMatchConditionPermanent true) ->
+#     1:1 with our pick.
+#   * T4 block offer: Minervamon's [Opponent's Turn] grants [Iliad] Digimon
+#     <Blocker>; AttackProcess.cs BlockTiming opens SelectPermanentEffect
+#     (canNoSelect = !Collision) -> plain `decline:` (select_cancel). The
+#     Counter window before it (CounterTiming) stacks nothing: no
+#     OnCounterTiming effect is on P0's side yet.
+#   * T5 cost route: CardController.cs SelectCost asks SelectCountEffect
+#     over the DISTINCT cost list [6 (Yellow Lv.6 circle), 5 (Olympos XII
+#     route)] (~720) -> answered by VALUE 5; ours is an EffectChoice.
+#   * Wrath Mode's WD (BT26_103.cs ActivateClassesForSharedEffects, optional:
+#     false, OPT hash "BT26_103_WD_Counter") is the lone WD trigger
+#     (<Succession> copies nothing off a non-[Jupitermon] source) -> no
+#     MultipleSkills, no OptionalSkill. Its IDestroySecurity queues effect#6
+#     ([All Turns][OPT], fires on EITHER player's removal), which resolves
+#     after the WD: mandatory SelectPermanentEffect (maxCount 1, canNoSelect
+#     false; a sole candidate is still asked). Two P1 candidates here; we pick the T2 Phoenixmon
+#     (opp.field.1).
+#   * Piercing: PierceEffect (CardEffectFactory/KeyWordEffects/Pierce.cs) is
+#     `SetUpActivateClass(..., false, ...)` -> no OptionalSkill, no prompt.
+#     P1's security removal re-fires nothing (effect#6 OPT "BT26_103_AT"
+#     spent).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-041, BT26-103, BT24-101, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT26-081, BT25-025, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-10, ST1-10, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT1-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-103 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: attack suspended Biyomon (P1 slot 0).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # T5, just before the attack.
+  - at: 16
+    that:
+      turn: 5
+      p0.memory: 2
+      p0.security: 5
+      p1.security: 5
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-041] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      p1.trash: [ST1-10]
+  # After the attack: Biyomon deleted AND P1's security checked.
+  - at: 17
+    that:
+      turn: 5
+      p1.security: 4
+      p1.trash: [BT1-014, ST1-02, ST1-10]
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: true, sources: [BT24-041] }

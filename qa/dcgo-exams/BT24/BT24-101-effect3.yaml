@@ -1,0 +1,124 @@
+# Exam scenario: Jupitermon (BT24-101), clause BT24-101#effect#3 --
+# "[All Turns] [Once Per Turn] When your security stack is removed from, trash
+#  your opponent's top security card."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE (the clause fires TWICE, on two different turns, from two different
+# removal sources -- the second one is the isolated witness):
+#   T1 (P0, memory 0): pass -> P1 3.  T2 (P1): all-pass -> P0 3.
+#      (A T1 hard-play is illegal: 0 - 12 would pass -10, and our engine
+#      refuses it.)
+#   T3 (P0, memory 3): hard-play Jupitermon (cost 12: 3 -> -9). Its [On Play]
+#      (effect#2) trashes P0's top security (stack[9] = BT26-090; 5 -> 4) --
+#      P1 has no Digimon, so the -13000 has no target. That removal fires THE
+#      CLAUSE (turn-3 use): P1's top security (stack[9] = BT4-014) is trashed,
+#      5 -> 4.
+#   T4 (P1, memory 9): play Biyomon ST1-02 (vanilla 3000, cost 2); pass ->
+#      P0 3. (Biyomon arrives only AFTER Jupitermon's [On Play], so the
+#      mandatory -13000 had no target and the attacker survives.)
+#   T5 (P0, memory 3): pass everything -> P1 3.
+#   T6 (P1, memory 3): Biyomon attacks P0's security (Jupitermon is
+#      unsuspended and has no <Blocker>, so no block window). The check flips
+#      P0's new top card (stack[8] = BT25-030 Elecmon, 2000 DP, no [Security]
+#      effect) -- it loses the security battle to Biyomon and is trashed.
+#      The security removal (4 -> 3) fires THE CLAUSE again on the OPPONENT'S
+#      turn ([All Turns]; Once Per Turn is fresh on turn 6): P1's top security
+#      (stack[8] = BT1-009) is trashed, 4 -> 3.
+#
+# WITNESS: after T3, p1.security 4 / p1.trash [BT4-014]; after the T6 attack,
+# p1.security 3 / p1.trash [BT4-014, BT1-009] while p0.security is 3.
+#
+# PROMPT SHAPE: mandatory trigger, no selection on either side. The T6 check
+# also runs the security battle. No MultipleSkills expected (one trigger).
+# VERIFIED (DCGO C#, 2026-10-04): BT24_101.cs effect#3 is OnLoseSecurity,
+# SetUpActivateClass(..., 1, false, ...) (once per turn, not optional), body
+# IDestroySecurity on the enemy -- no prompt. The [On Play] -13000 pick is
+# skipped with no P1 Digimon (SelectPermanentEffect.active() false).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT24-101
+clause: BT24-101#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-101, BT4-104, BT24-083, BT25-022, BT24-034,
+            BT24-031, BT25-022, BT24-102, BT25-030, BT26-090,
+            BT24-084, BT24-031]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Jupitermon; its [On Play] removal fires THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-101, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 9): the attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the attack whose security check fires THE CLAUSE.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 6
+    that:
+      turn: 4
+      p0.memory: -9
+      p0.security: 4
+      p0.trash: [BT26-090]
+      p1.security: 4
+      p1.trash: [BT4-014]
+  - at: 13
+    that:
+      turn: 6
+      p0.security: 3
+      p0.trash: [BT26-090, BT25-030]
+      p1.security: 3
+      p1.trash: [BT4-014, BT1-009]
+      p0.field:
+        - { card_id: BT24-101, dp: 13000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }

@@ -835,6 +835,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "BT25-051": {
@@ -18200,5 +18203,12 @@
     "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the digivolution cost reduced by 3.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
+  },
+  "ST23-06": {
+    "play_cost": 3,
+    "dp": 1000
+  },
+  "BT25-088": {
+    "play_cost": 4
   }
 }

@@ -1,0 +1,108 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#2 --
+# "[On Play] [When Digivolving] You may play up to 8 play cost's total worth of
+#  [Iliad] trait cards from your hand or trash without paying the costs. Then,
+#  to 1 of your opponent's Digimon, give -4000 DP until their turn ends for
+#  each of your [Iliad] or [TS] trait Digimon or Tamers."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (the [On Play] arm):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): hard-play Phoenixmon ST1-10 (10: 3 -> -7) -> P0 7.
+#   T3 (P0, 7): hard-play Mervamon (13: 7 -> -6; no [Minervamon] in trash, so
+#       no Assembly offer). THE CLAUSE: free-play 2x Elecmon BT25-030 ([Iliad],
+#       cost 3 + 3 = 6 <= 8; no [On Play], so silent) from the hand; then
+#       -4000 x 3 to Phoenixmon (the only opponent Digimon) -> 0 DP -> deleted.
+#       Turn passes at -6.
+#   T4 (P1, 6): the trailing step.
+#   (Homeros BT24-102 was tried first as the 5-cost pick; its [End of Your
+#   Turn] Olympos-XII re-activation then fired and muddied the line.)
+#
+# WITNESS: two Elecmons on P0's field with P1 receiving exactly 6 memory
+# (free play); Phoenixmon (12000) deleted by exactly -12000 (3 counted
+# permanents) -- with only 2 counted it would survive at 4000.
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: ONE SelectHandEffect row takes both Elecmons (3+3, budget 8 -> 2);
+#     the loop then re-evaluates, finds no [Iliad] card costing <= 2 in hand
+#     or trash, and breaks WITHOUT a second prompt -- so no trailing decline
+#     row is needed on the wire.
+#   - DP pick: SelectPermanentEffect maxCount 1, canNoSelect false
+#     (BT26_081.cs:205-225), x3 counted (Mervamon + 2 Elecmon). Asked under
+#     the harness even with one candidate (forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407).
+card: BT26-081
+clause: BT26-081#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-081, BT25-030, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-081, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-030, BT25-030] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the free-play pick: Mervamon paid in full (7 -> -6), Phoenixmon up.
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: -6
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  # P1's T4 breeding decision: both Elecmons on the field for free (P1 got
+  # exactly 6 = Mervamon's 13 only), each at 2000 + Mervamon's +2000 aura;
+  # Phoenixmon took -4000 x 3 (Mervamon + 2 Elecmon, all [Iliad]/[TS]) =
+  # -12000 -> 0 DP -> deleted.
+  - at: 8
+    that:
+      turn: 4
+      p1.memory: 6
+      p0.field:
+        - { card_id: BT25-030, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT25-030, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [] }
+      p0.hand: [BT24-034, BT24-101, BT26-090]
+      p1.field: []
+      p1.trash: [ST1-10]

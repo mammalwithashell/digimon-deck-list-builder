@@ -1,0 +1,130 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#3 --
+# "<Blocker>" (When an opponent's Digimon attacks, you may suspend this
+# Digimon to force the opponent to attack it instead.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): Biyomon ST1-02 (2) + Phoenixmon ST1-10 (10): 3 -> -9 -> P0 9.
+#   T3 (P0, 9): hard-play Wrath Mode (16): 9 -> -7 -> P1 7.
+#   T4 (P1, 7): Biyomon attacks P0's security. THE CLAUSE: P0 blocks with
+#            Wrath Mode -> the attack is redirected; Biyomon (3000) loses to
+#            Wrath Mode (16000) and is deleted; no security is checked.
+#            P1 passes.
+#
+# WITNESS: after the block, Wrath Mode is suspended, Biyomon is in P1's trash
+# and p0.security is still 5 (the attack never reached security).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   * COUNTER WINDOW ON A PLAYER ATTACK -- DCGO opens it for EVERY attack:
+#     AttackProcess.cs moves to AttackState.Counter (~242) whether the target
+#     is a Digimon or the player, and CounterTiming (~255) stacks
+#     OnCounterTiming effects in two passes (non-[Counter], then [Counter]
+#     with the "one [Counter] per attack" skip, HasCounterEffect) on the
+#     cut-in processor, BEFORE BlockTiming (~322). (Matches our 2026-10-04
+#     fix G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK.)
+#   * HOW THE FIELD [Counter] IS ASKED: Wrath Mode's arm comes from
+#     ActivateClassesForSharedEffects(counter: true) -> CardEffectFactory
+#     .CounterClass, which hard-codes `optional: true` (CardEffectFactory.cs
+#     CounterClass -> ActivateClass(..., true, ...)) and SetIsCounterEffect;
+#     its CanUseCondition is CanTriggerOnPermanentAttack(opponent permanent),
+#     target-agnostic. With Wrath Mode the only Counter candidate (no hand
+#     Counter/Blast cards in P0's hand; P1 has none) MultipleSkills
+#     short-circuits (`Count == 1`) and Activate_Optional_Effect_Execute asks
+#     OptionalSkill (OptionalSkill.cs SelectOptional), actor P0. So our
+#     `decline:` row with `expect: {prompt: OptionalSkill}` emits exactly
+#     DCGO's OptionalSkill(no) -- 1:1.
+#   * THE BLOCK: BlockTiming's SelectPermanentEffect (selectPlayer = the
+#     defender P0, canNoSelect = !attacker.HasCollision -> true) over P0's
+#     <Blocker> Digimon (Wrath Mode's BlockerSelfStaticEffect) -> answered
+#     with Wrath Mode; 1:1 with our declinable OwnField pick.
+#   * Wrath Mode was hard-played (no WD), so the shared OPT
+#     "BT26_103_WD_Counter" is unspent on T4 anyway.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-103, BT24-041, BT24-101, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT24-031, BT24-031, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-10, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon, Phoenixmon -> -9.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 9): Wrath Mode -> -7.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-103, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): Biyomon attacks security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Counter window (P0 is the defender): decline Wrath Mode's [Counter] arm.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: block with Wrath Mode.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): trailing breeding decision.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the block prompt: Biyomon attacking (suspended), Wrath Mode untapped.
+  - at: 10
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  # After the block resolves (P1's pass): Biyomon deleted, security intact.
+  - at: 11
+    that:
+      turn: 4
+      p0.security: 5
+      p0.trash: []
+      p1.trash: [ST1-02]
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: true, sources: [] }
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }

@@ -1,0 +1,62 @@
+# Exam scenario: Tomoro Tenma (BT25-090), clause BT25-090#effect#0 --
+# "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): hard-play Tomoro Tenma (0 -> -4); the turn passes.
+#   T2 P1 (4): play Agumon ST1-03 (4 -> 1), then Monodramon BT1-009 (cost 2,
+#      1 -> -1): P1 overspends and hands P0 exactly 1 memory.
+#   T3 P0: [Start of Your Turn] -- 1 <= 2, so memory is SET to 3.
+# WITNESS: P0 opens T3 on 3, not the 1 P1 left it.
+#
+# PROMPT SHAPE (BT25-090.yaml DCGO crosscheck): SetMemoryTo3TamerEffect,
+# mandatory -> no prompt on either side.
+card: BT25-090
+clause: BT25-090#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-090, BT25-049, BT16-082, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            BT25-057]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, BT1-009, ST1-05, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-090, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Ledger check: before Monodramon, P1 holds 1 (4 - 3).
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -1
+  # T3 P0's breeding decision: Start of Your Turn has already run.
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3

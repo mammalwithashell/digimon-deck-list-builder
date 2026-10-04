@@ -1,0 +1,115 @@
+# Exam scenario: Junomon: Hysteric Mode (BT26-083), clause BT26-083#effect#5 --
+# "[On Play] [When Digivolving] Trash all of your security cards. For each card
+#  this effect trashed, delete 1 of your opponent's Digimon. Then,
+#  <Recovery +3>."  (the [On Play] arm; the [When Digivolving] arm fires in
+#  BT26-083-effect0.yaml, where P1's board is empty.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (a printed-cost hard play; no Assembly -- P0's trash is empty, so
+# no Assembly prompt opens):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): Biyomon ST1-02 (3 -> 1), Phoenixmon ST1-10 (1 -> -9) -> P0 9.
+#            Both vanilla.
+#   T3 (P0, 9): draw BT24-031 (stack[10]). THE CLAUSE: hard-play BT26-083
+#            (14): 9 -> -5. [On Play]: trash all 5 security (stack[5..9], all
+#            vanilla-for-this-purpose TS Digimon), then delete exactly
+#            min(5, 2) = 2 -> both P1 Digimon; then Recovery +3 from the deck
+#            top (stack[11..13]). Turn ends on negative memory; the <Execute>
+#            end-of-turn gate (BT26-083 is unsuspended and has <Rush>) opens and
+#            is declined.
+#
+# WITNESS: at 6 P0 has 5 security, P1 has Biyomon + Phoenixmon. At 8 (after
+# the delete pick) P0's trash holds exactly the 5 former security cards, both
+# P1 Digimon are in P1's trash, and P0 security is 3 (0 + Recovery 3).
+#
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - P0's trash is empty -> SelectAssemblyClass.CanFulfillConditions is false
+#     -> no Assembly prompt.
+#   - The delete pick is ONE SelectPermanentEffect maxCount = min(trashed,
+#     opp Digimon), canNoSelect false (BT26_083.cs:85-99); asked even when
+#     candidates == maxCount (the forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407). 0 candidates -> no prompt
+#     (`if (deleteCount >= 1)`). The OP/WD is optional:false
+#     (BT26_083.cs:115): no OptionalSkill.
+#     The "possible DCGO auto-select when candidates == maxCount" is REFUTED
+#     for the harness: the row is asked.
+#   - <Execute> (KeyWordEffects/Execute.cs) is an optional OnEndTurn
+#     ActivateClass gated on CanActivateExecute == CanAttack -> OptionalSkill,
+#     then SelectAttackEffect on yes (CardEffectCommons Execute.cs:18-70):
+#     the documented end-of-turn fold. Declined here.
+card: BT26-083
+clause: BT26-083#effect#5
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (all trashed by the clause);
+    # [10] T3 draw; [11..13] the Recovery +3 cards.
+    stack: [BT26-083, BT24-034, BT24-034, BT24-101, BT26-090,
+            BT24-031, BT24-031, BT25-030, BT25-030, BT25-033,
+            BT24-031, BT25-033, BT24-034, BT25-030, BT24-101]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-10, BT1-009, BT3-007, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): donate 12.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 9): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-083, from: hand } }
+    expect: { prompt: main_phase }
+  # "For each card this effect trashed (5), delete 1" -> both P1 Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # <Execute> end-of-turn gate: decline.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
+  # T4 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      p0.memory: 9
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  - at: 8
+    that:
+      p0.memory: -5
+      p0.security: 3
+      p0.trash: [BT24-031, BT24-031, BT25-030, BT25-030, BT25-033]
+      p0.hand: [BT24-031, BT24-034, BT24-034, BT24-101, BT26-090]
+      p0.field:
+        - { card_id: BT26-083, dp: 14000, suspended: false, sources: [] }
+      p1.field: []
+      p1.trash: [ST1-02, ST1-10]
+      p1.security: 5

@@ -69,6 +69,44 @@ fn verification_digest_includes_pending_selection_kind() {
     );
 }
 
+/// invariant_fuzz seed 20260708002 step 92: ST23-09's "Suspend 1 of your
+/// opponent's Digimon" then "Return 1 … suspended … highest DP" agreed on
+/// kind / chooser / candidates / source with one opponent Digimon, and the
+/// suspend was a no-op on an already-suspended target — so resolving the first
+/// prompt read as "no progress". The prompt and the parked continuation are
+/// state and must be hashed.
+#[test]
+fn verification_digest_includes_pending_selection_prompt_and_resume() {
+    let mut first = runner();
+    let mut second = runner();
+
+    let mut a = selection(SelectionKind::OppField);
+    a.prompt = "Suspend 1 of your opponent's Digimon".to_string();
+    let mut b = selection(SelectionKind::OppField);
+    b.prompt = "Return 1 of your opponent's suspended Digimon".to_string();
+    first.game.pending_selection = Some(a);
+    second.game.pending_selection = Some(b);
+    assert_ne!(
+        first.game.verification_digest(),
+        second.game.verification_digest(),
+        "two prompts differing only in text are different states"
+    );
+
+    let mut b = selection(SelectionKind::OppField);
+    b.prompt = "Suspend 1 of your opponent's Digimon".to_string();
+    second.game.pending_selection = Some(b);
+    assert_eq!(
+        first.game.verification_digest(),
+        second.game.verification_digest()
+    );
+    second.game.pending_selection_resume = Some(digimon_engine::resume::ResumeStack::default());
+    assert_ne!(
+        first.game.verification_digest(),
+        second.game.verification_digest(),
+        "the parked resume continuation is state"
+    );
+}
+
 #[test]
 fn verification_digest_sorts_modifier_summary_by_handle_not_hashmap_order() {
     let mut a = runner();

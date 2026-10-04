@@ -1,0 +1,135 @@
+# Exam scenario: Cougarmon (ST23-03), clause ST23-03#effect#2 --
+# "[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] trait
+#  Digimon card, by trashing the bottom face-down card from under any of your
+#  Tamers, reduce the cost by 2."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass (NOTES-GLOWING-DAWN.md).
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 [0]: hatch Kekkomon; digivolve it in the breeding area into Gekkomon
+#       ST23-06 (cost 0) [0], draw stack[10]. Hard-play Tomoro & Kyo ST23-13
+#       (cost 4) [-4]; its [On Play] places stack[11] (ST23-03) under it.
+#   T2 P1 [4]: all-pass.
+#   T3 P0 [3]: draw stack[12]. Move Gekkomon: [When Moving] reveals
+#       stack[13..15], adds ST23-09, places ST23-04 under the Tamer, bottoms
+#       ST23-12. The Tamer's [Start of Your Main Phase] places stack[16]
+#       (BT25-043) under it -- now the BOTTOM face-down card.
+#       Digivolve Gekkomon into Cougarmon ST23-03 (alt, cost 2) [1], draw
+#       stack[17]; its [When Digivolving] adds the top security card
+#       (stack[9], BT26-089) to the hand and <Recovery +1> refills it.
+#   THE CLAUSE: digivolve Cougarmon into Murasamemon BT25-041 (cost 3). The
+#       reducer is offered: accept, trash the Tamer's bottom face-down card
+#       (BT25-043) -> cost 3 - 2 = 1 [0]. (Without it: 1 - 3 = -2, turn over.)
+#       ST23-13's trash trigger -> yes, +3000 (Murasamemon 7000 -> 10000).
+#       BT25-041's own optional [When Digivolving] is declined.
+#   Witness (asserted before the trailing pass): memory 0 and still T3,
+#   BT25-043 in the trash, the Tamer suspended with 2 sources left,
+#   Murasamemon over [Cougarmon, Gekkomon, Kekkomon].
+#
+# PROMPT SHAPE (ST23-03.yaml DCGO crosscheck): ActivateClass keyed on
+# CanTriggerWhenPermanentWouldDigivolve(this, [Glowing Dawn] Digimon), gated
+# on a Tamer carrying a face-down source; the Tamer pick is canNoSelect: true
+# -> DCGO's decline is IN the SelectPermanentEffect. Ours: EffectChoice
+# accept gate ("Use Cost reduction to reduce digivolution cost?") + OwnField
+# Tamer pick -> gate sim_only, pick shared (P-170-effect1 convention).
+card: ST23-03
+clause: ST23-03#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-06, ST23-13, ST23-03, BT25-041, BT16-082,
+            ST23-15, ST23-15, BT16-082, BT26-089, BT26-089,
+            BT26-089, ST23-03, BT25-090, ST23-09, ST23-04,
+            ST23-12, BT25-043, BT25-043, BT26-089, BT16-082]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-06 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  # ST23-13 [On Play] "You may place the top card ..." -> yes (stack[11]).
+  # ST23-13 [On Play] place -> yes (stack[11]).
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # Gekkomon's [When Moving] (GD Tamer present: two buckets + Tamer pick).
+  # Gekkomon's [When Moving] (GD Tamer present).
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-04] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-12], sim_only: true } }
+  # ST23-13 [Start of Your Main Phase] place -> yes (stack[16]).
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: Cougarmon (ST23-03, top) digivolves into a [Glowing Dawn]
+  # Digimon -- Murasamemon BT25-041 (yellow Lv.4 circle and GD alt both 3).
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-041 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our accept gate on the optional reducer (DCGO: the decline is
+  # the Tamer pick's canNoSelect).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # ST23-13's trash-from-under trigger -> yes, +3000 to the digivolver.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # BT25-041 [When Digivolving] optional play/use -> decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 19
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: [BT25-043]
+      p0.hand: [BT16-082, BT16-082, BT25-043, BT25-090, BT26-089, BT26-089, ST23-09]
+      p0.field:
+        - card_id: BT25-041
+          dp: 10000
+          suspended: false
+          sources: [ST23-01, ST23-03, ST23-06]
+        - card_id: ST23-13
+          dp: -1
+          suspended: true
+          sources: [ST23-03, ST23-04]

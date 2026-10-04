@@ -1,0 +1,105 @@
+# Exam scenario: Minervamon (BT24-041), clause BT24-041#effect#1 --
+# "When this card would be played, if you have an [Iliad] trait Digimon or
+#  Tamer, reduce the play cost by 5."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE WITNESS is the memory delta of a HARD-PLAY: Minervamon prints play cost
+# 12; with P0's Aegiomon BT24-034 ([Iliad] Digimon) on the field it costs 7,
+# and P0's 3 memory goes to -4 (12 would have been -9). Both sides apply the
+# reduction with no prompt.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (no [TS] Tamer in hand -> its
+#       [On Play] is silent on OUR side; DCGO asks it anyway -- BT24_034.cs
+#       gates only on security > 0 -> dcgo_only decline row; predicted
+#       divergence recorded in BT24-034-effect2.yaml).
+#   T2 (P1, 5): Biyomon ST1-02 (2): 5 -> 3; pass -> P0 3.
+#   T3 (P0, 3): THE CLAUSE -- hard-play Minervamon for 12 - 5 = 7: 3 -> -4.
+#       Its [On Play] (#effect#2): no play-cost <=5 [Iliad] card in hand
+#       (stacked), so the optional free play has no candidate; <De-Digivolve
+#       1> x 2 (two own Digimon) on Biyomon -- ONE mandatory pick, nothing
+#       trashed (bare Lv.3). -> P1 4.
+#   Trailing P1 breeding pass.
+#
+# WITNESS: p0.memory -4 / p1.memory 4 at P1's T4 breeding decision.
+# PROMPT SHAPE -- VERIFIED against DCGO C# (2026-10-04): the reduction is
+# CardEffectFactory.MandatorySelfPlayCostReduction(5, ...) -> no prompt.
+# [On Play]: BT24_041.cs registers [On Play]/[When
+# Digivolving]/[On Deletion] with SetUpActivateClass(..., -1, false, ...) --
+# NOT optional, so no OptionalSkill; the "you may" lives in the
+# SelectHandEffect (canNoSelect true) whose maxCount is
+# min(1, HandCards.Count(play cost <= 5 [Iliad] & CanPlayAsNewPermanent)),
+# and SelectHandEffect.active() returns false at maxCount <= 0 -> NO hand
+# row when nothing qualifies. Then, if the opponent has a Digimon, ONE
+# SelectPermanentEffect (maxCount 1, canNoSelect false) whose callback runs
+# IDegeneration(permanent, 1) once per own battle-area Digimon (count taken
+# AFTER the free play).
+# -> ONE SelectPermanentEffect, matching ours.
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): BT24-034.yaml now gates
+# Aegiomon's [When Moving]/[On Play]/[When Digivolving] on security > 0 only
+# (BT24_034.cs SharedCanActivateCondition; §15-7-5), so our engine asks the
+# same OptionalSkill as DCGO: the former `dcgo_only` decline row(s) for that
+# gate are shared rows now. (Header text below predates the fix.)
+card: BT24-041
+clause: BT24-041#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT24-041, BT26-029, BT25-044, BT26-081,
+            BT25-030, BT24-031, BT26-073, BT26-081, BT24-101,
+            BT26-103, BT26-083, BT24-031, BT25-033, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, ST1-02, BT1-009,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # Aegiomon BT24-034's [On Play] OptionalSkill (shared since the
+  # 2026-10-04 fix: both engines gate on security > 0 only), declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: Minervamon for 7.
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      p0.memory: 3
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -4
+      p1.memory: 4
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }

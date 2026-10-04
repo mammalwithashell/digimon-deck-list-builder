@@ -299,9 +299,11 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
         "Link Option installs a host-select PendingSelection"
     );
     assert!(r.game.pending_selection.is_some(), "host selection live");
+    // §10-1-3-1: the host is chosen before the Option lifecycle starts, so
+    // no `pending_option` exists yet (`9af21698c`).
     assert!(
-        r.game.pending_option.is_some(),
-        "pending_option carries through LinkSelectHost"
+        r.game.pending_option.is_none(),
+        "host pick precedes the Option lifecycle"
     );
     // Resolve the host selection — Task 8 charter forbids auto-selection,
     // so we explicitly consume one of the valid action ids.

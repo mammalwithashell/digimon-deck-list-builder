@@ -1,0 +1,110 @@
+# Exam scenario: Liollmon (ST23-02), clause ST23-02#inherited#0 -- <Barrier>
+# "(When this Digimon would be deleted in battle, by trashing your top security
+#  card, it isn't deleted.)"
+#
+# PROVISIONAL: asserts are OUR engine's result, not DCGO's.
+#
+# THE LINE: T1 hatch + Liollmon (alt, 0). T2 p1 plays Agumon BT3-007 (4000,
+# cost 2; 3 -> 1). T3 p0 moves Liollmon out and digivolves ST23-03
+# (yellow Lv.4, 4000) on it for 1 (2 - Liollmon's own -1; 3 -> 2); ST23-03's
+# [When Digivolving] adds the top security (BT25-043) to hand and <Recovery
+# +1>s ST23-07 from the deck top (security stays 5). ST23-03 attacks p1's
+# security (ST1-02 checked) and is left suspended. T4 p1's Agumon attacks the
+# suspended ST23-03: 4000 vs 4000, BOTH would be deleted (rule: equal DP
+# deletes both). Liollmon's inherited <Barrier> parks for p0; p0 accepts, the
+# top security card (ST23-07) is trashed and ST23-03 stays (security 5 -> 4).
+#
+# ENGINE FINDING (expected oracle divergence): after the Barrier is accepted,
+# OUR engine ALSO SPARES p1's Agumon -- it stays on p1's field (suspended,
+# 4000 DP) instead of being deleted. Declining the Barrier on the same line
+# deletes both (probed). <Barrier> (16-24) only prevents THIS Digimon's
+# deletion; the opponent's Digimon that lost/tied the battle must still be
+# deleted. The asserts pin OUR current behaviour (p1.field keeps BT3-007,
+# p1.trash only the T3 security card) so the oracle diff surfaces it; the
+# printed-text expectation is p1.field: [] and p1.trash: [BT3-007, ST1-02].
+# Suspected site: the parked-replacement path of the batched deletion
+# (code/digimon-engine/src/combat/deletion.rs, pending_deletion_batch_rest).
+#
+# PROMPT SHAPE: DCGO BarrierSelfEffect(isInheritedEffect) (card YAML
+# crosscheck) -- an optional "by trashing" -> OptionalSkill; ours a Replacement
+# accept prompt (maps to OptionalSkill).
+card: ST23-02
+clause: ST23-02#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-02, ST23-03, BT25-041, BT25-035, BT26-070,
+            ST23-15, ST23-15, BT25-057, BT25-057, BT25-043,
+            ST23-09, ST23-06, ST23-04, ST23-07]
+    rest: gd-bt26-7th
+  p1:
+    stack: [BT3-007, ST1-04, BT1-009, ST1-03, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST23-02 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [BT25-035, BT25-041, BT25-043, BT26-070, ST23-04, ST23-06, ST23-09]
+  - at: 13
+    that:
+      turn: 4
+      p0.security: 4
+      p0.trash: [ST23-07]
+      p0.field:
+        - card_id: ST23-03
+          dp: 4000
+          suspended: true
+          sources: [ST23-01, ST23-02]
+      p1.field:
+        - card_id: BT3-007
+          dp: 4000
+          suspended: true
+          sources: []
+      p1.trash: [ST1-02]

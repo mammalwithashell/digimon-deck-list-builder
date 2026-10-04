@@ -1,0 +1,80 @@
+# Exam scenario: NightChiropmon (BT26-070), clause BT26-070#effect#2 --
+# "and trash 1 card in your hand." -- the tail of "[On Play] [When
+# Digivolving] <Draw 1> and trash 1 card in your hand." (the extractor
+# splits it from the header, effect#1). Measured through the [When
+# Digivolving] arm.
+#
+# (A breeding-area digivolve does NOT reach this clause: probed and our
+# engine fires nothing there, which is what the rules say -- breeding-area
+# Digimon can't activate effects (general_rule.pdf 6-4 / glossary; see
+# docs/digimon-rules/digest.md). So the digivolve happens after the move.)
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hatches Kekkomon, digivolves it in breeding into Liollmon
+#      [0 -> 0] (draw stack[10] BT26-089). Pass.
+#   T2 p1 passes (p0 gets 3).
+#   T3 P0 draws stack[11] ST23-06, moves Liollmon (silent [When Moving]: no
+#      Tamer), digivolves it into NightChiropmon (only the [Glowing Dawn]
+#      route matches the yellow Liollmon) [3 -> 1]; digivolve draw stack[12]
+#      BT25-046. [When Digivolving]: <Draw 1> stack[13] BT25-057, then the
+#      mandatory trash pick discards ST23-15 (an opening-hand card).
+# WITNESS: p0.trash == [ST23-15]; hand = opening minus the two digivolved
+# cards minus ST23-15, plus the three draws.
+#
+# PROMPT SHAPE (BT26-070.yaml DCGO crosscheck): mandatory canNoSelect:false
+# SelectHandEffect <-> our Hand pick, 1:1.
+card: BT26-070
+clause: BT26-070#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT26-070, ST23-15, ST23-12, BT25-090,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-057, ST23-12]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-070 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.trash: [ST23-15]
+      p0.hand: [BT25-046, BT25-057, BT25-090, BT26-089, ST23-06, ST23-12]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: [BT26-025, ST23-01]
