@@ -2768,21 +2768,18 @@ pub(crate) fn source_multi_candidates_data(
         {
             continue;
         }
-        let passes = if state.eval_on_card {
-            eval_predicate_with_bindings(
-                &state.filter,
-                &read,
-                PredicateSubject::Card(source.card),
-                Some(&state.filter_bindings),
-            )
-        } else {
-            eval_predicate_with_bindings(
-                &state.filter,
-                &read,
-                PredicateSubject::Source(source),
-                Some(&state.filter_bindings),
-            )
-        };
+        // Always evaluate on the Source subject: it degrades to the card for
+        // every card-identity leaf, and additionally makes the host-aware
+        // leaves (`host_kind_is`, `is_face_down`, `is_bottom_source`) work
+        // for OPPONENT stacks too (`eval_on_card` is kept only for frame
+        // compatibility). G-ENGINE-OPP-SOURCES-HOST-KIND.
+        let _ = state.eval_on_card;
+        let passes = eval_predicate_with_bindings(
+            &state.filter,
+            &read,
+            PredicateSubject::Source(source),
+            Some(&state.filter_bindings),
+        );
         if !passes {
             continue;
         }
@@ -4736,11 +4733,18 @@ fn count_opponent_source_candidates(
             .card_sources
             .iter()
             .take(perm.card_sources.len().saturating_sub(1))
-            .filter(|card| {
+            .enumerate()
+            .filter(|(source_index, card)| {
+                let source = crate::selection::SourceSelectionRef {
+                    permanent: handle,
+                    field_index: index as u8,
+                    source_index: *source_index as u8,
+                    card: card.handle(),
+                };
                 eval_predicate_with_bindings(
                     filter,
                     &read,
-                    PredicateSubject::Card(card.handle()),
+                    PredicateSubject::Source(source),
                     Some(bindings),
                 )
             })
@@ -5156,6 +5160,11 @@ fn install_use_option_from_hand(
             if !matches!(kind, CardKind::Option | CardKind::Dual) {
                 return false;
             }
+            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
+            // user can't use Option cards (the use would be `Invalid`).
+            if game.option_use_blocked(target_player) {
+                return false;
+            }
             if use_cost_lte_opponent_memory {
                 let opponent = game.next_clockwise(player);
                 let ceiling = player_visible_memory(game, opponent);
@@ -5310,6 +5319,11 @@ fn install_use_option_from_trash(
             };
             let kind = card.card_kind(&game.card_data);
             if !matches!(kind, CardKind::Option | CardKind::Dual) {
+                return false;
+            }
+            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
+            // user can't use Option cards (the use would be `Invalid`).
+            if game.option_use_blocked(target_player) {
                 return false;
             }
             let read_ctx = EffectReadContext::new_with_source_kind(
@@ -8491,10 +8505,12 @@ fn install_select_opponent_sources(
                 source_kind,
                 player,
             );
+            // Source subject (not Card) so `host_kind_is` / face-down leaves
+            // work on opponent stacks. G-ENGINE-OPP-SOURCES-HOST-KIND.
             eval_predicate_with_bindings(
                 &filter,
                 &read,
-                PredicateSubject::Card(source.card),
+                PredicateSubject::Source(source),
                 Some(&filter_bindings),
             )
         },

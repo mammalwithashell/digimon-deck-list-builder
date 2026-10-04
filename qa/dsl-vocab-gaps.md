@@ -3345,7 +3345,8 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
 - **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
 
-## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate — RESOLVED 2026-10-03
+- **RESOLVED 2026-10-03:** new predicate leaf `level_sum_gte: { filter, n }` (sums the level of matching battle-area permanents; owner defaults to `you`, use `owner: any` for both players). BT25-077 Bacchusmon's cost reduction now ships; see qa/resolved-gaps.md.
 - **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
 - **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
 - **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.
@@ -7415,7 +7416,8 @@ controlling engine gap for the cost-reduction clauses is
 - **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
 - **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
 
-## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate — RESOLVED 2026-10-03
+- **RESOLVED 2026-10-03:** new predicate leaf `level_sum_gte: { filter, n }` (sums the level of matching battle-area permanents; owner defaults to `you`, use `owner: any` for both players). BT25-077 Bacchusmon's cost reduction now ships; see qa/resolved-gaps.md.
 - **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
 - **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
 - **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.
@@ -8791,12 +8793,13 @@ pins that the turn scan does not trash such a marker.
   `cards_behavioral -- bt25_044_on_play_offers_opponent_digimon_and_places_it_in_opponents_security`.
 
 ### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG] — **RESOLVED 2026-10-04**
-- **RESOLVED (2026-10-04):** `lower_triggered` sets `Effect::counter` for every `counter` timing; the field-Counter
-  candidate scan also skips a spent [Once Per Turn] ability or one whose activation `condition` fails (no phantom
-  offer; e.g. BT25-085 with no Option in any own stack). Also enables the `[Counter]` arms of
-  EX12-017/-057/-077, BT25-085, BT26-055, EX13-015/-016/-036 in real combat. Tests:
+- **RESOLVED — the flag half is main's G-ENGINE-DSL-FIELD-COUNTER-WINDOW (2026-10-03, root cause (1); see
+  `qa/resolved-gaps.md`):** `lower_triggered::new_builder` lowers `CounterEffect` with `.counter()` (this branch's
+  duplicate setter was dropped at the merge). **Additive here:** the field-Counter candidate scan in
+  `try_enter_counter` skips a spent [Once Per Turn] / max-per-turn ability or one whose activation `condition`
+  fails (no phantom offer; e.g. BT25-085 with no Option in any own stack). Tests:
   `cards_behavioral::bt26::bt26_103::bt26_103_counter_arm_offered_in_real_combat_digimon_target`,
-  `...::bt26_103_counter_arm_not_offered_once_opt_is_spent`.
+  `...::bt26_103_counter_arm_not_offered_once_opt_is_spent`,
   `cards_behavioral::bt25::bt25_085::bt25_085_counter_window_respects_activation_condition`.
 - **Card:** BT26-103 Jupitermon: Wrath Mode `[When Digivolving] [Counter] [Once Per Turn] Trash your top security card and <Recovery +2>`.
 - **Symptom:** `when: [when_digivolving, counter]` lowers to the counter timing but nothing under

@@ -771,6 +771,15 @@ pub enum ModifierType {
     DrawBlock,
     MemoryBlock,
     CannotPlayFromHand,
+    /// Player-scoped: the affected player can't USE Option cards (rule
+    /// §6-5-1-3 "use an Option card" — Standard / Delay / Training `[Main]`
+    /// uses from hand, effect-driven `use_option_*` uses from any zone, and
+    /// hand Counter-timing Options). Does NOT block linking a Plug-In from
+    /// hand (§6-5-1-4 is a separate action) nor an Option's `[Security]`
+    /// effect (official EX1-072 Q&A: a security effect is not a use).
+    /// DCGO `CanNotPlayClass(cardSource.IsOption)` (EX1_072.cs, BT8_057.cs).
+    /// G-ENGINE-CANNOT-USE-OPTION-CARDS.
+    CannotUseOptionCards,
 
     // ── Phase 6 flood gates (player-scoped) ──────────────────────────────
     // Enforcement wires up in Tasks 3-4; for now these are pure data.

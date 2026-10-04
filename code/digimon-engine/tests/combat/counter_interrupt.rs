@@ -414,9 +414,50 @@ fn counter_then_block_sequence() {
 
 #[test]
 fn player_target_attack_opens_counter() {
-    // general_rule.pdf 11-1-3: Counter timing is a step of EVERY attack,
-    // including one that targets the player. (Formerly skipped for Python
-    // parity; G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK, 2026-10-04.)
+    let mut r = DebugRunner::builder()
+        .add_card(blast_card("TEST-013", 4, 3, 0))
+        .add_card(dgmn("ATK", 4, 9000))
+        .add_card(dgmn("BASE", 3, 3000))
+        .add_card(dgmn("SEC", 4, 1))
+        .hand(1, &["TEST-013"])
+        .security(1, &["SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _base = r.place_on_field(1, "BASE", Some(0));
+
+    // Counter timing is part of EVERY attack (rule 11-1-3), including an
+    // attack on the player: DCGO `AttackProcess.CounterTiming` has no target
+    // check and `CounterClass` fires whenever an opponent's permanent
+    // attacks. (The retired Python engine skipped it for player targets.)
+    r.attack_player(atk, 1, false);
+
+    assert_eq!(
+        r.current_phase(),
+        GamePhase::CounterTiming,
+        "player-target attacks open the Counter window"
+    );
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Counter selection installed");
+    assert_eq!(sel.selecting_player, 1, "the attacked player chooses");
+
+    // Declining the Counter lets the attack proceed normally.
+    r.game.resolve_selection(1, PASS).expect("decline counter");
+    let _ = r.auto_resolve();
+    assert!(
+        r.game.pending_attack.is_none(),
+        "attack completes after decline"
+    );
+}
+
+#[test]
+fn player_target_attack_counter_accepts_blast_digivolve() {
+    // Accepting a Counter on a player-target attack: the offered Blast
+    // digivolve resolves and the attack continues on the player
+    // (G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK; see also
+    // `player_target_attack_opens_counter` for the decline path).
     let mut r = DebugRunner::builder()
         .add_card(blast_card("TEST-013", 4, 3, 0))
         .add_card(dgmn("ATK", 4, 9000))
@@ -429,19 +470,12 @@ fn player_target_attack_opens_counter() {
     let base = r.place_on_field(1, "BASE", Some(0));
 
     r.attack_player(atk, 1, false);
-
-    assert_eq!(
-        r.current_phase(),
-        GamePhase::CounterTiming,
-        "Player-target attacks open the Counter window too"
-    );
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
     let sel = r.game.pending_selection.as_ref().expect("counter prompt");
-    assert_eq!(sel.selecting_player, 1);
     let blast = encode_digivolve(0, base.index as u16);
     assert!(sel.valid_action_ids.contains(&blast));
     assert!(sel.is_optional);
 
-    // Blast-digivolve into TEST-013, then the attack continues on the player.
     r.game.resolve_selection(1, blast).expect("blast");
     assert_eq!(
         r.game.players[1].battle_area[base.index as usize]

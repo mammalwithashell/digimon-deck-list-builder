@@ -935,6 +935,15 @@ impl Game {
     }
 
     fn attack_state_allows_effect_cancel(state: AttackState, counter_depth: u8) -> bool {
+        // A [Counter] body may end the attack it is countering ("Then, you
+        // may end this attack" — BT25-103). DCGO `AttackProcess.CounterTiming`
+        // re-checks `IsEndAttack` right after the [Counter] effects resolve, so
+        // the cancel is honoured while the attack sits in `CounterOpen` (its
+        // `counter_depth` was bumped to 1 when the window opened). A nested
+        // attack launched by a Counter body is a fresh `pending_attack`.
+        if state == AttackState::CounterOpen && counter_depth <= MAX_COUNTER_DEPTH {
+            return true;
+        }
         counter_depth == 0
             && matches!(
                 state,
@@ -1498,9 +1507,13 @@ impl Game {
             return false;
         };
 
+        // Counter timing opens on EVERY attack (rule 11-1-3: declaration →
+        // Counter → Block → …), including attacks on the player — DCGO
+        // `AttackProcess.CounterTiming` has no target check, and its
+        // `CounterClass` fires whenever an opponent's permanent attacks.
         let defender_player = match pa.effective_target {
             AttackTarget::Digimon(h) => h.player,
-            AttackTarget::Player(pid) => pid,
+            AttackTarget::Player(p) => p,
         };
         let attacker = pa.attacker;
 
@@ -1586,7 +1599,7 @@ impl Game {
                 let has_counter_option = effects.iter().any(|e| {
                     e.counter && !e.blast_digivolve && e.timing == EffectTiming::CounterEffect
                 });
-                if has_counter_option {
+                if has_counter_option && !self.option_use_blocked(defender_player) {
                     // Legality parity with Phase 8 Option play: the
                     // candidate surface must match `play_option_from_hand`.
                     let card = &self.player(defender_player).hand[h_idx];

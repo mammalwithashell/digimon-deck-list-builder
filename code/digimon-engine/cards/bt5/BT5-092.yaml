@@ -52,6 +52,8 @@ effects:
   # SetUpActivateClass(..., isOptional: true, ...) and SelectHandEffect.SetUp
   # (canNoSelect: true, maxCount: 1). Filter: cardSource.CardNames.Contains
   # ("Agumon") || cardSource.CardNames.Contains("Gabumon"). Played via
+  # `CardNames.Contains` is List.Contains — an EXACT name match → `name_is`
+  # (BlackAgumon / ToyAgumon are not eligible).
   # CardEffectCommons.PlayPermanentCards(payCost: false).
   #
   # The "you may" wording maps to the CLAUSE-LEVEL `optional: true`.
@@ -75,8 +77,8 @@ effects:
           optional: false
           filter:
             any_of:
-              - name_contains: "Agumon"
-              - name_contains: "Gabumon"
+              - name_is: "Agumon"
+              - name_is: "Gabumon"
           prompt: "Play 1 [Agumon] or [Gabumon] from hand for free"
       - play_from_hand_free: { of: you, hand_index: pick }
 
@@ -100,16 +102,38 @@ effects:
   #     Tamer" cost — recognised as the suspend-self idiom; it FAILS (and so
   #     cancels the reduction) when Nokia is already suspended.
   #   - `active_when: { your_turn: true }` enforces the printed [Your Turn].
-  #   - Not optional: the reduction applies whenever the cost is payable.
+  #   - OPTIONAL: DCGO BT5_092.cs:112 SetUpActivateClass(..., isOptional:
+  #     true, ...) — the player chooses whether to suspend Nokia. Previously
+  #     authored mandatory because the digivolve cost path skipped optional
+  #     synchronous-pay_cost reducers; closed by
+  #     G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE (the digivolve path
+  #     now offers an accept/decline prompt, only when Nokia is unsuspended).
   - kind: cost_reduction
     scope: face_up
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
+    optional: true
+    # DCGO filter: HasGreymonName || ContainsCardName("Omnimon") ||
+    # HasGarurumonName, on a Digimon card. HasGreymonName excludes
+    # DoruGreymon / BurningGreymon / DexDoruGreymon; HasGarurumonName excludes
+    # KendoGarurumon (CardSource.cs:1597-1629).
+    # DCGO also requires the target card IsExistOnHand ("a Digimon card in
+    # your hand") — the subject-free `cost_target_from_hand: true` leaf
+    # (G-DSL-COST-TARGET-FROM-HAND) keeps an effect-driven digivolve from
+    # trash / sources / security from qualifying.
     when_any_ally_digivolves_into:
-      any_of:
-        - name_contains: "Greymon"
-        - name_contains: "Garurumon"
-        - name_contains: "Omnimon"
+      all_of:
+        - cost_target_from_hand: true
+        - kind: digimon
+        - any_of:
+            - name_contains: "Greymon"
+            - name_contains: "Garurumon"
+            - name_contains: "Omnimon"
+        - none_of:
+            - name_is: "DoruGreymon"
+            - name_is: "BurningGreymon"
+            - name_is: "DexDoruGreymon"
+            - name_is: "KendoGarurumon"
     pay_cost:
       - suspend: { target: source }
     amount: 1

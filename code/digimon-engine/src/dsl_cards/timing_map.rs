@@ -99,6 +99,9 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         // with NO forced self/host filter — scope is gated entirely by
         // `active_when:` predicates (G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED).
         CompiledTiming::OnAnyLink => EffectTiming::OnLink,
+        // "When effects trash any of your Digimon's link cards" — board-wide
+        // observer on the link-card trash dispatch (G-DSL-ON-LINK-CARD-TRASHED-DELAY).
+        CompiledTiming::OnLinkCardTrashed => EffectTiming::OnLinkedCardTrashed,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
     })

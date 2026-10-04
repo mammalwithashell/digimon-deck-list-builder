@@ -1890,20 +1890,20 @@
       "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT5-092": {
-      "card_name": "Nokia Shiramine",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
+      "card_name": "Nokia Shibuya",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt5/BT5-092.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs",
-      "test_count": 15,
+      "test_count": 24,
       "patterns": [
         "B2",
         "D2"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "Digivolve reducer is optional (DCGO isOptional) via G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE; [On Play] exact names; DoruGreymon/BurningGreymon/DexDoruGreymon/KendoGarurumon excluded; target must come from hand (cost_target_from_hand)."
     },
     "BT5-093": {
       "card_name": "Tai Kamiya & Matt Ishida",
@@ -6558,19 +6558,21 @@
     },
     "BT25-087": {
       "card_name": "Thomas H. Norstein",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-10-03",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "thomas-data-squad",
-      "notes": "BLOCKED: clause 2 needs OnAddToHand trigger (engine timing inert \u2014 never enqueued, no event-target context); clause 3 (digivolve-into-DATA-SQUAD cost -1 by trashing FD) hits the BeforePayCost selection-bearing pay_cost Parked-drop gap. SoT set-memory-to-3 and Security play-self are expressible but the card is BLOCKED on the two engine gaps. See docs/RUST_ENGINE_GAPS.md.",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_087.rs",
+      "test_count": 21,
       "patterns": [
         "set-memory",
         "tamer-facedown-stash",
-        "cost-reduction-digivolve-into",
-        "OnAddToHand-BLOCKED",
-        "BeforePayCost-Parked-BLOCKED"
-      ]
+        "on_add_to_hand-observer",
+        "cost-reduction-digivolve-into"
+      ],
+      "notes": "Both former blockers (OnAddToHand trigger, selection-bearing BeforePayCost pay_cost) were already resolved; YAML narrowed to DATA SQUAD Digimon targets. Covers set-memory, effect-only opponent-hand-gain observer with suspend cost, any-Tamer face-down trash reducer with OPT lockout/reset and [Your Turn] gate, security play."
     },
     "BT25-096": {
       "card_name": "Mirage Beast Knight",
@@ -6964,18 +6966,19 @@
     },
     "BT25-050": {
       "card_name": "Kiwimon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-10-03",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BT25 orphan-b (Iliad/TS rookie-to-champ + Appmon)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_050.rs",
+      "test_count": 13,
       "patterns": [
         "F7",
         "D4"
       ],
-      "notes": "BLOCKED G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED: count-gated lock if-step after the suspend selection never runs. Suspend + inherited +1000 aura work. YAML faithful; lock test ignored."
+      "notes": "G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED was a misdiagnosis: count_gte defaults to owner: you; gate is board-wide (owner: any). Review fixes: Ancient Bird trait, Green Lv.3 circle, continue_on_decline on the suspend pick."
     },
     "BT25-036": {
       "card_name": "Craftmon",
@@ -7057,19 +7060,23 @@
     },
     "BT25-103": {
       "card_name": "GraceNovamon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-10-03",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "aegiomon-3",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_103.rs",
+      "test_count": 23,
       "patterns": [
-        "E",
-        "F"
+        "H",
+        "C",
+        "F3",
+        "opt-refund",
+        "end_attack",
+        "counter"
       ],
-      "notes": "Clauses 1-6 expressible (alt-digivolve, DNA via alt_paths, Security A.+1, Iceclad printed-keyword, Partition Apollomon&Dianamon, source_material_count bounce-to-deck-bottom). BLOCKED on the [When Attacking][Counter][OPT] clause: \"For each of this Digimon digivolution cards, you may trash any 1 digivolution card from your opponent Digimon. Then, you may end this attack.\" No DSL step exposes a player-choice trash of a DYNAMIC count (= source_material_count) of digivolution source cards CROSS-PERMANENT (any opp Digimon, isFromOnly1Permanent:false). select_opponent_sources has a u8-literal max (not a formula) and a single-permanent target. G-DSL-SELECT-OPP-SOURCES-DYNAMIC-CROSS-PERMANENT."
+      "notes": "Closed G-ENGINE-DSL-FIELD-COUNTER-WINDOW (DSL [Counter] lowers with Effect.counter; Counter window on every attack incl. player; Counter bodies may end the attack) and G-ENGINE-OPP-SOURCES-HOST-KIND (host_kind_is on opponent source picks). Shared WA/Counter OPT with refund."
     },
     "BT25-033": {
       "card_name": "Aegiomon",
@@ -7208,32 +7215,35 @@
     },
     "BT25-059": {
       "card_name": "Ceresmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-10-03",
       "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Slice \u2014 aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-059.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_059.rs",
+      "test_count": 16,
       "patterns": [
         "D2",
         "F6"
       ],
-      "notes": "Cost-reduce (>=2 suspended), suspend up-to-2 (any) + effect-immunity own suspended Veg/TS, on_suspend -3000*suspended DP debuff. Immunity modelled as for_each snapshot. 7 tests."
+      "notes": "Fixes: colors Green/Yellow + Yellow Lv.5 route; self cost reduction now actually applies (before_pay_cost + when_playing_this) and counts both players' suspended Digimon; on_suspend gated to Digimon; OPT spent even with no opp Digimon; protection is the continuous grant_effect_immunity (was a snapshot)."
     },
     "BT25-077": {
       "card_name": "Bacchusmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-10-03",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Slice \u2014 aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-077.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_077.rs",
+      "test_count": 19,
       "patterns": [
-        "C1"
+        "C1",
+        "cost-reduction-level-sum"
       ],
-      "notes": "Play TS<=6000 free + OPT observer suspend + effect-gated delete-opp-lowest IMPLEMENTED. Cost-reduction (board level-sum >=12) omitted \u2014 G-DSL-BOARD-LEVEL-SUM. 7 tests."
+      "notes": "Cost -5 via new level_sum_gte (G-DSL-BOARD-LEVEL-SUM resolved); Green Lv.5 circle added. Review fixes: [All Turns] clause no longer skippable as a whole (only the suspend is 'you may'), refund_opt when not by-effect and nothing suspended (DCGO RemoveUse), continue_on_decline on the suspend pick."
     },
     "BT25-084": {
       "card_name": "Titamon",
@@ -13503,13 +13513,19 @@
     "P-209": {
       "card_name": "Titamon",
       "validated_date": "2026-10-03",
-      "report": "titans-plutomon-support-package",
+      "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Titans / Plutomon",
+      "archetype": "BT26 meta blockers (2026-10-03)",
       "yaml_path": "code/digimon-engine/cards/p/P-209.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_209.rs",
-      "notes": "Alliance; OP/WD trash-1 -> suspend opp Digimon/Tamer, then 1 can't unsuspend until their turn ends; [All Turns][OPT] hand trashed -> may play Lv.4- Demon/Titan Digimon from trash free; Rule trait Demon."
+      "test_count": 14,
+      "patterns": [
+        "alliance",
+        "cost-gated-suspend-lock",
+        "on_discard_hand"
+      ],
+      "notes": "Promo printing (not a reprint of BT25-084). Alliance; trash-cost suspend + CannotUnsuspend; OPT play Lv<=4 [Demon]/[Titan] from trash on hand trash."
     },
     "BT4-086": {
       "card_name": "Cerberusmon: Werewolf Mode",
@@ -13525,13 +13541,355 @@
     "BT4-111": {
       "card_name": "Jack Raid",
       "validated_date": "2026-10-03",
-      "report": "titans-plutomon-support-package",
+      "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Titans / Plutomon",
+      "archetype": "BT26 meta blockers (2026-10-03)",
       "yaml_path": "code/digimon-engine/cards/bt4/BT4-111.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_111.rs",
-      "notes": "[Main] gain 1 memory per 10 cards in own trash (Option not counted, per Q&A); [Security] gain 2 memory."
+      "test_count": 8,
+      "patterns": [
+        "gain-memory-formula"
+      ],
+      "notes": "Gain 1 memory per 10 trash cards; [Security] gain 2."
+    },
+    "EX10-070": {
+      "card_name": "God Grade Unleashed",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_070.rs",
+      "test_count": 11,
+      "patterns": [
+        "D3",
+        "delay-on-link-card-trashed"
+      ],
+      "notes": "Color bypass, [Main] draw+place, [Security] place, and the link-card-trashed <Delay> (G-DSL-ON-LINK-CARD-TRASHED-DELAY)."
+    },
+    "BT24-099": {
+      "card_name": "Super Hacking",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-099.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_099.rs",
+      "test_count": 15,
+      "patterns": [
+        "D3",
+        "delay-on-any-deletion"
+      ],
+      "notes": "Cost-gated placement: official Q&A (no trash -> no draw, no placement, card trashed) via G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT. Delay links an [Appmon] Digimon from trash free."
+    },
+    "EX1-072": {
+      "card_name": "Emergency Program Shutdown!",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/ex1/EX1-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_072.rs",
+      "test_count": 11,
+      "patterns": [
+        "player-modifier"
+      ],
+      "notes": "New ModifierType::CannotUseOptionCards (G-ENGINE-CANNOT-USE-OPTION-CARDS): [Main] until end of opponent's next turn, [Security] this turn, then add to hand."
+    },
+    "BT2-041": {
+      "card_name": "ShineGreymon",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_041.rs",
+      "test_count": 12,
+      "patterns": [
+        "WD-mass-suspend",
+        "repeat-per-suspended",
+        "D-aura-count"
+      ],
+      "notes": "Suspend all own yellow Tamers, then repeat once per Tamer actually suspended (new per: effect_suspended_count); [Your Turn] +1000 per Tamer."
+    },
+    "BT8-108": {
+      "card_name": "Mist Memory Boost!",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-108.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_108.rs",
+      "test_count": 7,
+      "patterns": [
+        "delay-main"
+      ],
+      "notes": "Trash 2 + Draw 1 then place (implicit); Delay gain 2; [Security] place."
+    },
+    "P-200": {
+      "card_name": "Kanan Yuki",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/p/P-200.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_200.rs",
+      "test_count": 10,
+      "patterns": [
+        "SOMP-memory-gate",
+        "cost-reduction-suspend-self-optional"
+      ],
+      "notes": "Not a reprint of BT26-090. Optional suspend-self TS digivolve reducer via G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE."
+    },
+    "P-210": {
+      "card_name": "Hiroko Sagisaka",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/p/P-210.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_210.rs",
+      "test_count": 7,
+      "patterns": [
+        "SOMP-gain-memory",
+        "trash-recovery"
+      ],
+      "notes": "Not a reprint of BT24-083/BT26-088."
+    },
+    "BT24-033": {
+      "card_name": "Salamon",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_033.rs",
+      "test_count": 12,
+      "patterns": [
+        "alt-paths",
+        "cost-reduction-self-into-trait",
+        "inherited-barrier"
+      ],
+      "notes": "Red Lv.2 circle restored (ingest dropped it)."
+    },
+    "BT8-095": {
+      "card_name": "Fire Rocket",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_095.rs",
+      "test_count": 8,
+      "patterns": [
+        "use_requirement-bypass",
+        "security-attack-grant",
+        "security-delete-blocker"
+      ],
+      "notes": ""
+    },
+    "P-240": {
+      "card_name": "Arcturusmon",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/p/P-240.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_240.rs",
+      "test_count": 14,
+      "patterns": [
+        "assembly",
+        "keywords",
+        "de-digivolve",
+        "grant-forced-attack",
+        "inherited-redirect"
+      ],
+      "notes": "Printed data corrected in cards.json/card_overrides.json (ingest had cost 0, no DP/text)."
+    },
+    "P-244": {
+      "card_name": "Unique Emblem: Ragnarok Attainer",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/p/P-244.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_244.rs",
+      "test_count": 12,
+      "patterns": [
+        "union-play",
+        "event-delay",
+        "hand-or-trash-digivolve"
+      ],
+      "notes": "Delay on effect-placed [Vemmon] fixed via G-ENGINE-EVENT-DELAY-ON-ADD-DIGIVOLUTION-CARDS. [Your Turn] per card image + DCGO. Printed data corrected."
+    },
+    "EX11-066": {
+      "card_name": "Xeno",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_066.rs",
+      "test_count": 15,
+      "patterns": [
+        "also-treated-as",
+        "cost-gated-draw",
+        "reveal-place-sources"
+      ],
+      "notes": "also_treated_as Zenith (Rule) in YAML."
+    },
+    "BT21-098": {
+      "card_name": "Ragnarok Cannon",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_098.rs",
+      "test_count": 11,
+      "patterns": [
+        "delete-lowest-cost",
+        "event-delay",
+        "security-union-play"
+      ],
+      "notes": "Galacticmon attack gate uses event_target_name_contains (exact for current pool; G-DSL-EVENT-TARGET-NAME-IS logged)."
+    },
+    "BT19-001": {
+      "card_name": "Pickmons",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_001.rs",
+      "test_count": 10,
+      "patterns": [
+        "inherited-WA-OPT",
+        "place-under-tamer"
+      ],
+      "notes": "Declining the optional hand pick refunds the OPT (DCGO optional activation)."
+    },
+    "BT12-011": {
+      "card_name": "Shoutmon (King Version)",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_011.rs",
+      "test_count": 21,
+      "patterns": [
+        "save-sequenced",
+        "digixros",
+        "inherited-text-gated"
+      ],
+      "notes": "Closed G-ENGINE-INNATE-SAVE-SEQUENCED-DUPLICATE and G-ENGINE-DIGIXROS-SLOT-PREDICATE."
+    },
+    "LM-057": {
+      "card_name": "Wall Training",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_057.rs",
+      "test_count": 20,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (red/blue). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+    },
+    "LM-058": {
+      "card_name": "Parkour Training",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-058.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_058.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (blue/green). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+    },
+    "LM-059": {
+      "card_name": "Heat Training",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_059.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (yellow/red). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+    },
+    "LM-060": {
+      "card_name": "Shadow Training",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_060.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (green/purple). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+    },
+    "LM-061": {
+      "card_name": "Punching Training",
+      "validated_date": "2026-10-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BT26 meta blockers (2026-10-03)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_061.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (black/red). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
     }
   }
 }

@@ -918,18 +918,26 @@ impl Game {
         let Some(pos) = perm.linked_cards.iter().position(|c| c.handle() == card) else {
             return false;
         };
+        let host_card = perm.top_card().handle();
         let removed = perm.linked_cards.remove(pos);
         let owner = removed.owner;
         self.player_mut(owner).trash.push(removed);
 
-        // Fire OnLinkedCardTrashed globally — mirrors the host-leave linked-card
-        // disposition at game.rs:3749 and place_permanent_on_security_observed.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnLinkedCardTrashed,
-                TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
+        // Fire OnLinkedCardTrashed globally (every battle area + event-gated
+        // Delays) carrying the host, the trashed card and the cause — an
+        // effect (or an effect's cost) is what trashes a link card off a host
+        // that stays. G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(host.player));
+        self.enqueue_triggered(
+            EffectTiming::OnLinkedCardTrashed,
+            TriggerSource::LinkCardTrashed {
+                player: host.player,
+                host,
+                host_card,
+                card,
+                cause,
+            },
+        );
         self.maybe_drain_effect_queue();
         true
     }

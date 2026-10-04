@@ -65,6 +65,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "DrawBlock" => ModifierType::DrawBlock,
         "MemoryBlock" => ModifierType::MemoryBlock,
         "CannotPlayFromHand" => ModifierType::CannotPlayFromHand,
+        "CannotUseOptionCards" => ModifierType::CannotUseOptionCards,
         "CannotActivateSecurityEffects" => ModifierType::CannotActivateSecurityEffects,
         "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
         "CannotPlayTamerByEffect" => ModifierType::CannotPlayTamerByEffect,
@@ -182,6 +183,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::DrawBlock
         | ModifierType::MemoryBlock
         | ModifierType::CannotPlayFromHand
+        | ModifierType::CannotUseOptionCards
         | ModifierType::CannotPlayDigimonByEffect
         | ModifierType::CannotPlayTamerByEffect
         | ModifierType::CannotGainMemoryByEffect
@@ -299,6 +301,7 @@ mod tests {
             ModifierType::DrawBlock,
             ModifierType::MemoryBlock,
             ModifierType::CannotPlayFromHand,
+            ModifierType::CannotUseOptionCards,
             ModifierType::CannotPlayDigimonByEffect,
             ModifierType::CannotPlayTamerByEffect,
             ModifierType::CannotGainMemoryByEffect,

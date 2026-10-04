@@ -600,6 +600,25 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::LinkCardTrashed { .. } => {
+                // Board-wide observer scan (same shape as the PlayerBattleArea
+                // fan-out this dispatch replaced) with the host / trashed-card
+                // context attached. The trashed link card itself is in the
+                // trash; event-gated Delays are fanned out below.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::SourceReturnedToDeckBottom { .. } => {
                 // Sibling of SourceTrashedFromStack, but the card moved to the
                 // DECK (not trash), so there is no trashed-source zone to scan —
@@ -759,6 +778,15 @@ impl Game {
                 | TriggerSource::AttackTargetChanged { .. }
                 | TriggerSource::BlockDeclared { .. }
                 | TriggerSource::EnteredField { .. }
+                // P-244's `<Delay>` is keyed to
+                // `OnEvent(OnAddDigivolutionCards)` ("When effects place
+                // [Vemmon] as any of your Digimon's digivolution cards").
+                // G-ENGINE-EVENT-DELAY-ON-ADD-DIGIVOLUTION-CARDS.
+                | TriggerSource::SourcesAddedToStack { .. }
+                // EX10-070's `<Delay>` is keyed to `OnEvent(OnLinkedCardTrashed)`
+                // ("When effects trash any of your Digimon's link cards").
+                // G-DSL-ON-LINK-CARD-TRASHED-DELAY.
+                | TriggerSource::LinkCardTrashed { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
@@ -1945,6 +1973,37 @@ impl Game {
                 affected_player: Some(player),
                 source_player: Some(player),
                 cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::LinkCardTrashed {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::BattleArea,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                effect_initiated: !matches!(
+                    cause,
+                    crate::trigger_context::EventCause::Rule
+                        | crate::trigger_context::EventCause::BattleDeletion
+                ),
                 moved_card_sets: vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),

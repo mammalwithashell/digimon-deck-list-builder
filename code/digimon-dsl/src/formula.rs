@@ -221,6 +221,13 @@ pub enum PerSelector {
     /// return-to-deck step in the same process. YAML form:
     /// `per: returned_card_color_count`.
     ReturnedCardColorCount,
+    /// Number of permanents THIS effect has suspended so far (reads the
+    /// effect result log, like `returned_card_color_count`). YAML form:
+    /// `per: effect_suspended_count`. Drives BT2-041 ShineGreymon's "Suspend
+    /// all of your yellow Tamers. For each yellow Tamer you suspend by this
+    /// effect, …" — counting the Tamers actually suspended, not the ones that
+    /// were eligible. G-DSL-FORMULA-EFFECT-SUSPENDED-COUNT.
+    EffectSuspendedCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -328,6 +335,7 @@ impl Serialize for PerSelector {
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
             Self::SourceColorCount => serializer.serialize_str("source_color_count"),
             Self::ReturnedCardColorCount => serializer.serialize_str("returned_card_color_count"),
+            Self::EffectSuspendedCount => serializer.serialize_str("effect_suspended_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")
             }

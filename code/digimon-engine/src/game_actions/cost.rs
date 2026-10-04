@@ -405,10 +405,30 @@ impl Game {
             &[],
             CostReductionKind::Digivolve,
         );
-        let Some(candidate) = candidates
-            .into_iter()
-            .find(|c| c.pay_cost_interactive && c.has_pay_cost)
-        else {
+        // Two reducer classes are routed through this prompt:
+        //  (a) an INTERACTIVE pay_cost (parks on a selection) — mandatory or
+        //      optional (`G-COST-REDUCTION-INTERACTIVE-PAY-COST`);
+        //  (b) an OPTIONAL reducer whose pay_cost is SYNCHRONOUS (P-200 Kanan
+        //      Yuki's "by suspending this Tamer" — DCGO isOptional true). The
+        //      synchronous scan below skips every `optional` candidate, so
+        //      without this the reducer was silently never offered on the
+        //      digivolve path. It is offered only when it actually reduces
+        //      this digivolution (`amount > 0` — a play-only reducer such as
+        //      BT26-088's surfaces here with amount 0) and its cost is
+        //      payable (the suspend-self data twin, `activation_cost_kind`).
+        //      The accept branch runs the pay_cost synchronously and credits
+        //      `pending_interactive_digivolve_reduction`; the re-entry's scan
+        //      still skips the optional candidate, so no double-apply.
+        //  `G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE`.
+        let Some(candidate) = candidates.into_iter().find(|c| {
+            if !c.has_pay_cost {
+                return false;
+            }
+            if c.pay_cost_interactive {
+                return true;
+            }
+            c.optional && c.amount > 0 && self.cost_reducer_pay_cost_payable(&c.key)
+        }) else {
             return false;
         };
 
@@ -511,6 +531,24 @@ impl Game {
             field_index,
             source,
         )
+    }
+
+    /// Read-only payability probe for a field-hosted reducer's pay_cost, via
+    /// its `activation_cost_kind` data twin (set by the DSL lowering for the
+    /// suspend-self idiom). A reducer without a declared cost shape is assumed
+    /// payable (its pay_cost reports failure at resolution instead).
+    /// `G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE`.
+    fn cost_reducer_pay_cost_payable(&self, key: &CostReductionKey) -> bool {
+        let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+            return false;
+        };
+        let Some(effect) = effects.get(key.effect_slot as usize) else {
+            return false;
+        };
+        match effect.activation_cost_kind {
+            Some(kind) => kind.is_payable(self, key.source_permanent),
+            None => true,
+        }
     }
 
     pub(crate) fn run_interactive_digivolve_cost_reduction_prompt_step(

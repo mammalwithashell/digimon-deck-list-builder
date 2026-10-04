@@ -3130,9 +3130,11 @@ pub fn redirect_attack(&mut self, new_target: AttackTarget) -> Result<(), Attack
 /// state advance loop short-circuits to `Cleanup` on its next tick.
 ///
 /// Only callable during an active attack (`AttackError::NoActiveAttack` otherwise).
-/// Legal before the Counter window opens: declaration/target-lock and Blocker-
-/// adjacent interrupt phases. Once the Counter window has opened, cancellation
-/// returns `AttackError::InvalidPhase` and the attack continues normally.
+/// Legal during declaration/target-lock, the Counter window (a [Counter] body
+/// may "end this attack" — DCGO `AttackProcess.CounterTiming` re-checks
+/// `IsEndAttack` after [Counter] effects), and Blocker-adjacent interrupt
+/// phases. After the battle has started, cancellation returns
+/// `AttackError::InvalidPhase` and the attack continues normally.
 pub fn cancel_attack(&mut self) -> Result<(), AttackError>;
 
 /// Publish the active attack's Counter window immediately, using the same
@@ -3194,7 +3196,7 @@ DSL process steps can also open, redirect, or cancel attack flows:
 | `may_attack_now` | `ctx.may_attack_now_optional_with_upgrade(...)` | Optional or mandatory effect-created attack prompt for the chosen attacker. `without_suspending: true` skips the suspend cost for that attack only. Optional `cost_upgrade: { dp, security_attack }` applies temporary attack-only modifiers after any authored cost steps have resolved. |
 | `force_attack` | `ctx.force_opponent_attack_with_upgrade(...)` | Mandatory effect-created attack prompt where the attacking permanent's controller chooses the target. Supports the same optional `cost_upgrade` payload. |
 | `redirect_attack_target` | `ctx.redirect_attack(...)` / `ctx.select_redirect_attack_target(...)` | Use `{ new_target: <binding> }` for a selected Digimon/permanent binding, `{ player: opponent }` for a fixed player target, or omit both and pass `targets: any | player | digimon` to open a pending retarget prompt. Prompted redirects exclude the current target, can include the defending player, expose PASS when `optional: true`, and inherit active-attack phase restrictions, modifier validation, and `OnAttackTargetChange` payload dispatch. |
-| `cancel_attack` | `ctx.cancel_pending_attack()` | Ends the active attack during legal pre-Counter windows; late cancellation is rejected by the engine helper. |
+| `cancel_attack` | `ctx.cancel_pending_attack()` | Ends the active attack during the legal pre-battle windows (declaration, Counter, Block); cancellation once the battle has started is rejected by the engine helper. |
 | `open_counter_window` | `ctx.open_counter_window()` | Reuses the normal Counter candidate scan and pending-selection surface for an active attack. This is primarily a DSL bridge for Track D's named verb; ordinary attacks still open Counter through `AttackState::CounterOpen`. |
 
 For result-bound card text, predicates can inspect named bindings created by
