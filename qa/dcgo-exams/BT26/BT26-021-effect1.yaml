@@ -1,0 +1,117 @@
+# Exam scenario: Gekomon (BT26-021), clause BT26-021#effect#1 --
+# "[On Play] [When Digivolving] 1 of your [TS] trait Digimon's attack target
+#  can't change for the turn."
+#
+# Book: chronomon_mervamon_pool.json + this pass's variants (`bt26-chronomon-b`
+# vs VARIANT `cm-opp-blocker` = `tm-quiet-red` with ONE swap: 1x BT4-014
+# Vermilimon -> 1x BT14-011 Monochromon, a vanilla red <Blocker> (4 / 5000)).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO
+# -- unconfirmed until the oracle pass.
+#
+# HOW THE LOCK IS MADE OBSERVABLE: a block switches the attack target to the
+# blocker, so a locked attacker cannot be blocked. Counterfactual checked
+# sim-side (same line, Hyokomon attacking UNLOCKED): our engine parks a
+# player-1 OwnField block pick. Locked, the attack goes straight to the
+# security check with no P1 decision at all.
+#
+# WHY GEKOMON LOCKS ITSELF (the [When Digivolving] branch): a two-Digimon P0
+# board would make `attack: field.N` address the OTHER Digimon on DCGO
+# (centre-out frames; ../BT25/NOTES-BT25-083.md "never address a slot on a
+# TWO-Digimon board"), so the attacker is P0's ONLY Digimon.
+#
+# THE LINE:
+#   T1 (P0, 0): play Hyokomon BT26-009 (3) -> -3.
+#   T2 (P1, 3): play Monochromon (4) -> -1 -> P0 at 1.
+#   T3 (P0, 1): draw stack[10] BT26-088. Hyokomon [Start of Your Main Phase]:
+#      trash Chronomon: Holy Mode BT26-016, <Draw 1> (BT24-058), +1 -> 2.
+#      Digivolve Hyokomon -> Gekomon via Lv.3 w/[TS] (2) -> 0, draw P-198.
+#      THE CLAUSE: lock Gekomon. Gekomon (Hyokomon has been in play since T1)
+#      attacks security: Hyokomon's inherited [When Attacking] draws
+#      (BT26-092) and, the hand being 6, returns Toya BT26-087 to the deck
+#      bottom. No block window. Security ST1-02 Biyomon (3000) loses to 4000.
+#
+# WITNESS: at 8 (before the attack) p1.security 5, Monochromon unsuspended;
+# at 10 (next main-phase row, NO P1 row in between) p1.security 4, Gekomon
+# suspended, Monochromon still unsuspended on P1's field.
+#
+# PARTIAL: the [On Play] branch is not exercised (shared body). <Raid> /
+# effect redirects are not probed (the Raid probe needs a 2-Digimon board, see
+# above).
+#
+# PROMPT SHAPE: the lock pick -- DCGO SelectPermanentEffect (mandatory,
+# canNoSelect: false; BT26-021.yaml DCGO notes) -> ours OwnField (1:1). The
+# Hyokomon return: ours a hand-only UnionZone (sim-side unasserted), DCGO
+# expected SelectHandEffect. If DCGO still opens P1's blocker timing despite
+# CanNotSwitchAttackTargetEffect, the line aborts on the step after the
+# attack -- that abort is the finding.
+card: BT26-021
+clause: BT26-021#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-021, BT26-016, BT26-092, BT26-087,
+            P-198, BT26-073, BT26-073, BT26-016, BT26-016,
+            BT26-088, BT24-058, P-198, BT26-092]
+    rest: bt26-chronomon-b
+  p1:
+    stack: [BT14-011, ST1-03, BT1-009, BT3-007, ST1-04,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014]
+    rest: cm-opp-blocker
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT14-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT26-016] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-021 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE ([When Digivolving]): lock Gekomon itself (the only [TS] Digimon).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Locked Gekomon attacks security: P1's Monochromon is NOT offered a block.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Hyokomon's inherited [When Attacking]: <Draw 1>, hand is 6 -> return 1.
+  - actor: 0
+    do: { select: { cards: [BT26-087] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 0
+      p1.security: 5
+      p0.field:
+        - { card_id: BT26-021, dp: 4000, suspended: false, sources: [BT26-009] }
+      p1.field:
+        - { card_id: BT14-011, dp: 5000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 0
+      p1.security: 4
+      p0.hand: [BT24-058, BT26-088, BT26-092, BT26-092, P-198]
+      p0.field:
+        - { card_id: BT26-021, dp: 4000, suspended: true, sources: [BT26-009] }
+      p1.field:
+        - { card_id: BT14-011, dp: 5000, suspended: false, sources: [] }

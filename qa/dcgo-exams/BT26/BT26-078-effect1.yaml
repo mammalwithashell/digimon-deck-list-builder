@@ -1,0 +1,102 @@
+# Exam scenario: Cherubimon (BT26-078), clause BT26-078#effect#1 -- the
+# "{Trash}" zone marker that scopes effect#2 ("[Trash] [Your Turn] When any of
+# your [Chronomon] text or [Titan] trait Digimon are played, if your opponent
+# has 5 or more memory, by returning this card to the bottom of the deck, 1 of
+# them gains <Rush> and <Execute> for the turn.").
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# WHAT THIS MEASURES: the marker has no body of its own; its meaning is "this
+# clause works ONLY while the card is in the trash". This is the CONTRAST
+# line to BT26-078-effect2.yaml: the identical memory line (Buraimon played
+# at 0 -> -5, opponent at 5, P0's turn), but Cherubimon sits in the HAND, not
+# the trash. Every other condition of effect#2 is met, so the only thing that
+# keeps it silent is the zone.
+#
+# THE LINE:
+#   T1 (P0, 0): play Hyokomon BT26-009 (3) -> -3.
+#   T2 (P1, 3): play Agumon ST1-03 (3) -> 0, Biyomon ST1-02 (2) -> -2.
+#   T3 (P0, 2): draw stack[10] Hyokomon #2. Hyokomon [Start of Your Main
+#      Phase]: trash Chronomon: Holy Mode BT26-016 (NOT Cherubimon), <Draw 1>
+#      (stack[11] BT25-092), +1 -> 3. Hyokomon #2 (3) -> 0. Buraimon (5) ->
+#      -5. Buraimon's own [On Play] now has a candidate (Cherubimon in hand
+#      has [Chronomon] in its text) -> declined. Cherubimon (in hand) does NOT
+#      trigger: no gate, no <Execute> window, the turn passes straight to P1.
+#
+# WITNESS: at 10 (T4, before P1's breeding pass): Cherubimon still in p0.hand,
+# Buraimon still on the field (no <Execute> deletion), p1.security still 5,
+# p0.trash only [BT26-016].
+#
+# PROMPT SHAPE: Buraimon [On Play] -- DCGO optional:false + SelectHandEffect
+# canNoSelect:true (BT26-011.yaml DCGO notes); ours a declinable Hand pick ->
+# 1:1 `decline:`. No OptionalSkill for Cherubimon on either side is the
+# assertion that matters (a DCGO OptionalSkill row here would abort the line
+# on prompt sequence -- that abort IS the finding).
+card: BT26-078
+clause: BT26-078#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-016, BT26-011, BT26-078, BT26-092,
+            BT26-087, BT26-087, BT25-008, BT25-008, BT25-008,
+            BT26-009, BT25-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 2): Hyokomon [Start of Your Main Phase] trashes Holy Mode.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT26-016] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  # Buraimon to -5: every effect#2 condition but the zone is met.
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand } }
+    expect: { prompt: main_phase }
+  # Buraimon [On Play] hand-trash cost: declined. Nothing else asks.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # One step past: P1's T4 breeding prompt (no end-of-turn window opened).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that: { turn: 3, p0.memory: -5, p0.trash: [BT26-016] }
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -5
+      p1.security: 5
+      p0.trash: [BT26-016]
+      p0.hand: [BT25-092, BT26-078, BT26-092]
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-011, dp: 5000, suspended: false, sources: [] }

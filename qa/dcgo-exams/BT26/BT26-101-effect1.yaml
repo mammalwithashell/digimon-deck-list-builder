@@ -1,0 +1,157 @@
+# Exam scenario: Cross Arts (BT26-101), clause BT26-101#effect#1 --
+# "[Main] If you have a Tamer with [Dan Yuki] or [Kanan Yuki] in its name, all
+#  of your [TS] trait Digimon gain <Blocker> and +3000 DP until your
+#  opponent's turn ends. Then, activate 1 of the effects below:
+#  - Delete 1 of your opponent's Digimon with as much DP as 1 of your [TS]
+#    trait Digimon or less.
+#  - 1 of your [TS] trait Digimon unsuspends."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): play Hyokomon BT26-009 (3) -> -3.
+#   T2 (P1, 3): play Dracomon ST1-04 (3, 4000) -> 0, Garudamon ST1-08 (6,
+#      7000) -> -6 -> P0 at 6.
+#   T3 (P0, 6): draw; no Hyokomon [Start of Your Main Phase] prompt (no
+#      [Chronomon]/[Shaman] card in hand). Play Kanan Yuki BT26-090 (3) -> 3.
+#      THE CLAUSE: Cross Arts (4) -> -1. Kanan is in play -> Hyokomon gets
+#      +3000 (2000 -> 5000) and <Blocker>. Branch "Delete": compare Hyokomon
+#      (5000) -> delete Dracomon (4000): only legal BECAUSE of the +3000
+#      (base 2000 < 4000); Garudamon (7000) is out of range. End of turn:
+#      Kanan's [End of Your Turn] gate, declined.
+#   T4 (P1, 1): Garudamon attacks security -> P0's blocker timing: Hyokomon
+#      (still 5000 -- "until your opponent's turn ends") blocks and loses.
+#
+# WITNESS: at 7 (before the use) Hyokomon 2000, Dracomon + Garudamon on P1's
+# field; at 12 Hyokomon 5000, Dracomon in p1.trash, Cross Arts in p0.trash,
+# memory -1; at 15 (P1's T4, after the attack row) Hyokomon STILL 5000 and a
+# block was offered (the select row exists); at 16 Hyokomon in p0.trash
+# (blocked and lost), p0.security still 5.
+#
+# PARTIAL: the [Dan Yuki] name branch, the "Digimon played later in the
+# window" re-evaluation (DCGO player effects), and the unsuspend branch (walked
+# in BT26-101-effect0.yaml, without the Tamer) are not in this file.
+#
+# PROMPT SHAPE: use = PlayCardAction. Branch choice: ours EffectChoice
+# (sim_only `choice:`), DCGO generic_int (dcgo_only `value: 0`, guessed).
+# Compare + victim picks: DCGO mandatory SelectPermanentEffect x2 -> ours
+# OwnField + OppField (1:1 each). Kanan end-of-turn: DCGO OptionalSkill ->
+# ours a 1-candidate TriggerOrder (maps to OptionalSkill), `decline:`.
+# Block: ours a P0 OwnField 'Declare a blocker' pick; the DCGO widget for the
+# blocker choice is NOT verified (expected SelectPermanentEffect) -- if the
+# oracle aborts at that row, re-author the expect from the abort message.
+card: BT26-101
+clause: BT26-101#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-090, BT26-101, BT26-092, BT26-087,
+            BT26-087, BT25-008, BT26-016, BT26-016, BT26-016,
+            BT25-008, BT25-008]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-04, ST1-08, BT1-009, BT3-007, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            BT4-010, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T3 (P0, 6): Kanan Yuki (3) -> 3, then THE CLAUSE: Cross Arts (4) -> -1.
+  - actor: 0
+    do: { play: { card: BT26-090, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-101, from: hand } }
+    expect: { prompt: main_phase }
+  # Branch choice: "Delete ...". SIM-ONLY our EffectChoice; DCGO-ONLY its
+  # SetIntSelection generic_int -- VALUE 0 IS A GUESS (no DCGO source here).
+  - actor: 0
+    do: { select: { choice: "Delete", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 0, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # The [TS] Digimon to compare: Hyokomon (now 5000).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Delete Dracomon ST1-04 (4000 <= 5000; it would NOT qualify vs 2000).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Memory -1 -> end of turn: Kanan's [End of Your Turn] (optional; offered
+  # even with no [TS] Option in hand on both sides -- DCGO CanActivate only
+  # needs the Tamer suspendable). Declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T4 (P1): Garudamon attacks P0's security.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Blocker timing: Hyokomon has <Blocker> from Cross Arts -> block.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-090, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-04, dp: 4000, suspended: false, sources: [] }
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      turn: 3
+      p0.memory: -1
+      p0.trash: [BT26-101]
+      p1.trash: [ST1-04]
+      p0.field:
+        - { card_id: BT26-009, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT26-090, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-08, dp: 7000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field:
+        - { card_id: BT26-009, dp: 5000, suspended: false, sources: [] }
+        - { card_id: BT26-090, dp: -1, suspended: false, sources: [] }
+  - at: 16
+    that:
+      turn: 4
+      p0.security: 5
+      p0.trash: [BT26-009, BT26-101]
+      p0.field:
+        - { card_id: BT26-090, dp: -1, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-08, dp: 7000, suspended: true, sources: [] }
