@@ -97,6 +97,15 @@ RARITY_MAP = {
     "C": 0, "U": 1, "R": 2, "SR": 3, "SEC": 4, "P": 5,
 }
 
+# Ids the digimoncard.io API serves that are not cards. A set re-ingest replaces
+# every card with the set's prefix by the API's response, so these must be
+# dropped at fetch time or they come back.
+#   RB1-10: a stale duplicate of RB1-010 Siriusmon -- two-digit number in a
+#   three-digit set, rarity "Unknown", no set name, and an older wording
+#   ("unsuspend this Digimon" for the card's "you may unsuspend"). The official
+#   Bandai DB has no RB1-10. Removed from cards.json on 2026-10-03.
+API_PHANTOM_IDS = frozenset({"RB1-10"})
+
 # Known set names for convenience (used by legacy positional args mode)
 SET_NAMES = {
     "BT14": "Booster Blast Ace",
@@ -493,7 +502,7 @@ def fetch_set_by_card_prefix(set_id):
     seen = {}
     for card in api_data:
         cid = card["id"]
-        if not cid.startswith(api_prefix + "-"):
+        if not cid.startswith(api_prefix + "-") or cid in API_PHANTOM_IDS:
             continue
         if cid not in seen:
             seen[cid] = card
@@ -741,7 +750,7 @@ def main():
     seen = {}
     for card in api_data:
         cid = card["id"]
-        if cid not in seen:
+        if cid not in seen and cid not in API_PHANTOM_IDS:
             seen[cid] = card
     print(f"Unique cards: {len(seen)}")
 
