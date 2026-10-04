@@ -4846,3 +4846,59 @@ with the root cause inferred and not traced.
 - **P-193** — its [Main] has no `if binding_present` guard, so declining the trash cost still draws 2 (and, since G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT, is now trashed instead of placed on decline). Needs a YAML fix + decline test.
 - **LM-054 Treadmill Training** — still uses the older shape (number-based colour bypass, no `has_digivolve_candidate` target gating, mandatory hand pick); audit against the LM-057..061 shape.
 - **EX12-070 / EX12-071** — decline paths are now faithful (explicit placement) but untested.
+
+## Pre-existing integration-test failures fixed after the main merge (2026-10-04)
+
+### `option_flow` link tests encoded the pre-`9af21698c` link order / a dropped predicate key  [G-TEST-OPTION-FLOW-STALE-LINK-ORDER] — **RESOLVED 2026-10-04 (tests were stale)**
+- **Symptom:** 4 failures right after `declare_from_hand` — `link_flow::link_installs_host_selection`,
+  `link_flow::dsl_link_requirement_pays_nonzero_link_cost_before_host_selection`,
+  `behavioral_end_to_end::multi_turn_standard_then_delay_then_link_flow_end_to_end` ("pending_option carries
+  through LinkSelectHost" / "Link requirement cost is paid": memory 3, expected 1), and
+  `link_flow::gap1_filter_target_link_max_aura_grants_nonzero_delta` (YAML schema error: unknown predicate key
+  `controller`).
+- **Root cause — the engine was deliberately changed, the tests were not** (`option_flow` is not in CI, rule 33):
+  `9af21698c` (G-ENGINE-OPTION-HAND-LINK-COST-TIMING) made a from-hand Plug-In Option link ask the host FIRST
+  and pay AFTER (`general_rule.pdf` §10-1-3-1 → -2 → -3; DCGO `LinkEffect.ActivateCoroutine`): the host pick is
+  the clone-safe `OptionHandLinkHostSelection` resume frame, the card stays in hand (§9-1-8), and no
+  `pending_option` exists until the pick. `5138087f3` made unknown DSL keys a hard error; `controller: you` was
+  never a predicate key (it was silently dropped, so the aura targeted every [TS] Digimon).
+- **Fix (tests only):** the three link tests now assert the §10-1-3 order (host pick parked on the resume frame,
+  card in hand, nothing paid; cost paid after the pick — the second test is renamed
+  `…_pays_nonzero_link_cost_after_host_selection`); the aura test uses `target: { of: you, kind: digimon,
+  trait_has: TS }` (BT25-075's shape). 140/140 pass.
+
+### `invariant_fuzz` "legal action made no digest progress"  [G-ENGINE-INVARIANT-FUZZ-NO-PROGRESS] — **RESOLVED 2026-10-04**
+The failing seed moved with the implemented-deck pool (decks are drawn from fully implemented
+`deck_library` lists), so three distinct root causes surfaced; each was minimized to the exact step.
+1. **Phantom re-ask after PASS — EX8-055 / EX10-033 (pre-merge head, seed 20260708003 step 47).** "Place up to 3
+   [Mineral]/[Rock] cards from your trash" was three sequential optional `select_trash` steps; PASS on pick 2
+   advanced to pick 3 offering the same card — a phantom decision (rule 17) that changed nothing but the
+   prompt. DCGO `EX8_055.cs` / `EX10_033.cs`: ONE `SelectCardEffect` (maxCount 3, canEndNotMax, canNoSelect) +
+   one `AddDigivolutionCardsBottom`. **Fix (cards):** `select_count_capped_multi { zone: trash, max: 3,
+   optional_zero }` + one `place_cards_as_bottom_sources` (the EX8-067 idiom). Regression:
+   `cards_behavioral::ex8::ex8_055::ex8_055_clause_b_pass_after_one_pick_ends_the_selection`; the pre-merge
+   fuzz passes with only this change.
+2. **Digest blind to the prompt / resume continuation (merged head, seed 20260708002 step 92).** ST23-09's
+   "Suspend 1 of your opponent's Digimon" picked an already-suspended Digimon (legal — DCGO
+   `CanSelectSuspendPermamentCondition` has no `IsSuspended` check), so the suspend was a no-op and the next
+   prompt ("Return 1 … suspended … highest DP") agreed with the first on every hashed field (kind, chooser,
+   candidates, source). The engine was right; `Game::verification_digest` omitted `PendingSelection::prompt`
+   and `Game::pending_selection_resume`. **Fix:** hash the prompt and a stable resume fingerprint (per frame:
+   variant name; `RunTail`: `bind_as`, tail lengths — not the full `Debug`, since `Bindings` holds a
+   `HashMap`); digest tag bumped to `v2`. Test:
+   `infra::verification_digest::verification_digest_includes_pending_selection_prompt_and_resume`.
+   (`qa/replay-goldens` already diverged at step 1 on this branch AND main before this change; they need a
+   `replay_corpus bless`.)
+3. **Rules check kept deleting past a parked deletion — EX12-036 `<Decode>` asked twice (seed 20260708005
+   step 100, found by a 24-game sweep).** [G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION]
+   `run_state_based_rules_check` deletes the ≤0-DP Digimon one by one; when Ryugumon's deletion parked its
+   optional `<Decode>` window, the loop went on to delete the next Digimon, re-entering `try_replace` at depth 0
+   with no commit in flight — which clears `replacement_fired`, erasing the parked event's
+   `(WhenWouldLeaveBattleArea, Ryugumon)` record. Declining then took the "not every stage offered" branch of
+   `commit_deferred_outcome` and re-offered the same window (15-8-5-4: a declined effect is not offered again
+   for the same cause). It also deleted a lower-index Digimon under a parked frame that holds a positional
+   handle. **Fix (engine):** stop the rules-check pass as soon as a deletion parks a selection; the drain that
+   resumes after the selection re-runs the check and the remaining ≤0-DP Digimon are deleted then (still before
+   any trigger activates — `drain_effect_queue` runs the check first). Test (red before):
+   `cards_behavioral::ex12::ex12_036::ex12_036_decode_declined_once_on_a_simultaneous_zero_dp_deletion`.
+- After all three: the default 4-game fuzz and a 40-game sweep (`INVARIANT_FUZZ_GAMES=40`, 4394 steps) pass.

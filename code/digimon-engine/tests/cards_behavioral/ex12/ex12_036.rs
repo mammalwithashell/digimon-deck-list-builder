@@ -460,3 +460,49 @@ fn ex12_036_decode_play_offers_only_the_played_cards_own_trigger() {
         "the lone surviving trigger is the played card's own [On Play]"
     );
 }
+
+/// Regression — invariant_fuzz seed 20260708005: two Digimon reach ≤0 DP
+/// together and the rules check (general_rule.pdf §17-1-3-1) deletes them.
+/// Ryugumon (the higher index, processed first) opens its <Decode> window
+/// (16-35-1: a rule deletion is a leave "other than by a battle"); the check
+/// used to keep deleting the OTHER Digimon while that window was parked,
+/// which re-entered the replacement dispatcher at depth 0 and wiped the parked
+/// event's record — so declining <Decode> asked the same question again.
+/// G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION.
+#[test]
+fn ex12_036_decode_declined_once_on_a_simultaneous_zero_dp_deletion() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-036 YAML loads")
+        .add_card(tb_digimon("TB-SRC", CardColor::Blue, 4, 5000))
+        .add_card(plain_digimon("OTHER-TOP", CardColor::Blue, 5, 7000))
+        .memory(10)
+        .start();
+    let other = runner.place_on_field(1, "OTHER-TOP", None);
+    let ryugumon = runner.place_stack(1, &["TB-SRC", CARD_ID]);
+    assert!(other.index < ryugumon.index);
+    // Suspended: <Evade> (WhenWouldBeDeleted, needs unsuspended) stays inert,
+    // so the only window is <Decode>.
+    runner.game.players[1].battle_area[ryugumon.index as usize].is_suspended = true;
+    runner.force_base_dp("OTHER-TOP", 0);
+    runner.force_base_dp(CARD_ID, 0);
+    runner.game.drain_effect_queue();
+
+    let mut prompts = Vec::new();
+    while let Some(v) = runner.pending_selection_view() {
+        prompts.push(v.prompt.clone());
+        assert!(prompts.len() <= 4, "runaway prompts: {prompts:?}");
+        runner
+            .execute_action(v.selecting_player, digimon_engine::action::space::PASS)
+            .expect("decline");
+    }
+    assert_eq!(
+        prompts.iter().filter(|p| p.contains("when_would_leave_battle_area")).count(),
+        1,
+        "the declined <Decode> window is offered exactly once: {prompts:?}"
+    );
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "both ≤0-DP Digimon are deleted"
+    );
+}
