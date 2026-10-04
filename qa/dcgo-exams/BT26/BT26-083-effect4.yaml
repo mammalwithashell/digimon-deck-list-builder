@@ -1,0 +1,159 @@
+# Exam scenario: Junomon: Hysteric Mode (BT26-083), clause BT26-083#effect#4 --
+# "<Decode ([Junomon]/Lv.5 or lower w/[Iliad] trait)> (When this Digimon would
+#  leave the battle area other than in battle, you may play 1 specified
+#  Digimon card from its digivolution cards without paying the cost.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE. Steps 0..21 are BT26-083-effect3.yaml verbatim: BT26-083 is
+# Assembly-played on T5 (so its ONE digivolution card is the [Junomon]
+# BT25-044 Assembly material), P1 plays BT4-014 on T6, and at the end of T7
+# BT26-083 spends its <Execute> window on P1's security. <Execute>'s
+# self-delete at the end of that attack is a non-battle leave, so:
+#   THE CLAUSE: the Decode window opens -> YES -> pick BT25-044 from
+#   BT26-083's sources -> Junomon BT25-044 is played free; BT26-083 goes to
+#   the trash; [On Deletion] (effect#6) resolves silently.
+#   Junomon's own [On Play] ("by placing 1 other Digimon as the top security
+#   card, trash both players' top security cards") then offers its optional
+#   pick -- DECLINED, so the board reads the Decode result alone.
+#
+# WITNESS: at 22 BT26-083 (sources [BT25-044]) is on the field, P0 memory -3
+# (end of T7); at 26 Junomon BT25-044 is on P0's field unsuspended with no
+# sources, BT26-083 is in P0's trash WITHOUT BT25-044, and P0 memory is still
+# -3 (the play was free).
+#
+# PROMPT SHAPE. Decode: ours = Replacement gate (OptionalSkill) then a
+# Material pick over BT26-083's sources (SelectCardEffect); DCGO = OptionalSkill
+# then SelectCardEffect over DigivolutionCards (canNoSelect true) -- 1:1:1:1
+# per docs/DCGO_EXAM.md "Replacement on <Decode>". Junomon [On Play]: ours =
+# one declinable AnyField pick; DCGO may ask OptionalSkill first
+# (optional_gate_fold candidate) or SelectPermanentEffect canNoSelect.
+#
+# ENGINE FINDING (see report): our Junomon [On Play] pick is offered WHILE
+# BT26-083 is still on the field (at 24 both are on P0's field) and BT26-083
+# is a legal "other Digimon" candidate (AnyField ids [100, 115] = own slot 0 +
+# opp slot 0). Rules order the triggered [On Play] after the leave completes;
+# DCGO should offer only BT4-014. Picking BT26-083 there also makes the
+# pending <Execute> deletion land on JUNOMON (measured 2026-10-04 on a scratch
+# copy, not committed). This scenario declines, so it does not depend on it.
+card: BT26-083
+clause: BT26-083#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-083, BT24-088, BT25-044, BT24-101, BT26-090,
+            BT24-031, BT25-030, BT25-033, BT24-031, BT25-030,
+            BT24-034, BT24-034, BT24-031, BT25-033, BT25-030,
+            BT24-034, BT24-031, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014, BT4-010, ST1-05, BT3-007, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: Decode window (the <Execute> self-delete) -> accept.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T7: spend the <Execute> window on P1's security.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: Decode window (the <Execute> self-delete) -> accept.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Decode source pick: [Junomon] BT25-044 from BT26-083's sources.
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: SelectCardEffect }
+  # Junomon BT25-044 [On Play] optional placement pick: decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Sim-only phase exit (no expect; emits nothing on the wire).
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 22
+    that:
+      p0.memory: -3
+      p0.field:
+        - { card_id: BT26-083, dp: 14000, suspended: true, sources: [BT25-044] }
+      p1.security: 3
+  - at: 26
+    that:
+      p0.memory: -3
+      p0.field:
+        - { card_id: BT25-044, dp: 12000, suspended: false, sources: [] }
+      p0.trash: [BT24-031, BT24-031, BT25-030, BT25-030, BT25-033, BT26-083]
+      p0.security: 3
+      p1.security: 3
+      p1.field:
+        - { card_id: BT4-014, dp: 8000, suspended: false, sources: [] }

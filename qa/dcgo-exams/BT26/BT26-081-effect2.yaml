@@ -1,0 +1,103 @@
+# Exam scenario: Mervamon (BT26-081), clause BT26-081#effect#2 --
+# "[On Play] [When Digivolving] You may play up to 8 play cost's total worth of
+#  [Iliad] trait cards from your hand or trash without paying the costs. Then,
+#  to 1 of your opponent's Digimon, give -4000 DP until their turn ends for
+#  each of your [Iliad] or [TS] trait Digimon or Tamers."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (the [On Play] arm):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): hard-play Phoenixmon ST1-10 (10: 3 -> -7) -> P0 7.
+#   T3 (P0, 7): hard-play Mervamon (13: 7 -> -6; no [Minervamon] in trash, so
+#       no Assembly offer). THE CLAUSE: free-play 2x Elecmon BT25-030 ([Iliad],
+#       cost 3 + 3 = 6 <= 8; no [On Play], so silent) from the hand; then
+#       -4000 x 3 to Phoenixmon (the only opponent Digimon) -> 0 DP -> deleted.
+#       Turn passes at -6.
+#   T4 (P1, 6): the trailing step.
+#   (Homeros BT24-102 was tried first as the 5-cost pick; its [End of Your
+#   Turn] Olympos-XII re-activation then fired and muddied the line.)
+#
+# WITNESS: two Elecmons on P0's field with P1 receiving exactly 6 memory
+# (free play); Phoenixmon (12000) deleted by exactly -12000 (3 counted
+# permanents) -- with only 2 counted it would survive at 4000.
+#
+# PROMPT SHAPE / DCGO quirks to triage:
+#   - The free-play pick: ours parks a PlayCostBudget per-pick trampoline (the
+#     adapter maps the kind to SelectPermanentEffect, wrong for this card), so
+#     our picks are a sim_only row. DCGO (per the YAML crosscheck) loops a
+#     hand/trash/stop zone menu, then multi-picks from the zone widget, then
+#     plays all picks at once. Authored as ONE dcgo_only SelectHandEffect
+#     row picking both Elecmons, GUESSING DCGO skips the zone menu because
+#     only the hand qualifies (trash empty) and that one hand pick may take
+#     both under the running cap. If DCGO asks the menu (and/or re-loops to
+#     it after the pick, offering "stop"), add those generic_int rows from
+#     the oracle abort message.
+#   - The DP pick: one candidate, mandatory -- DCGO may auto-resolve it.
+card: BT26-081
+clause: BT26-081#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-081, BT25-030, BT25-030, BT24-101, BT26-090,
+            BT25-022, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-034, BT25-030, BT24-034, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-081, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-030, BT25-030], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-030, BT25-030], dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Before the free-play pick: Mervamon paid in full (7 -> -6), Phoenixmon up.
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: -6
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  # P1's T4 breeding decision: both Elecmons on the field for free (P1 got
+  # exactly 6 = Mervamon's 13 only), each at 2000 + Mervamon's +2000 aura;
+  # Phoenixmon took -4000 x 3 (Mervamon + 2 Elecmon, all [Iliad]/[TS]) =
+  # -12000 -> 0 DP -> deleted.
+  - at: 9
+    that:
+      turn: 4
+      p1.memory: 6
+      p0.field:
+        - { card_id: BT25-030, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT25-030, dp: 4000, suspended: false, sources: [] }
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [] }
+      p0.hand: [BT24-034, BT24-101, BT26-090]
+      p1.field: []
+      p1.trash: [ST1-10]

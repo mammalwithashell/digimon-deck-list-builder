@@ -1,0 +1,87 @@
+# Exam scenario: Aegiomon (BT24-034), clause BT24-034#effect#0 --
+# the special digivolution condition "[Digivolve] [Elecmon]/Lv.3 w/[TS]
+# trait: Cost 2".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# WHY LUNAMON. Aegiomon's printed circle is Yellow Lv.3 / cost 2 -- the same
+# cost as the alt condition -- so digivolving onto a yellow Elecmon cannot
+# attribute the cost to the alt path. Lunamon BT25-022 is a BLUE Lv.3 with the
+# [TS] trait: the printed yellow circle does not accept it, so the ONLY route
+# that makes the digivolve legal is "Lv.3 w/[TS] trait: Cost 2". One route,
+# one cost -> no cost-choice prompt on either side.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Lunamon (3): 0 -> -3. Its [On Play] reveals
+#       stack[10..12] = BT25-033 Aegiomon / BT25-030 Elecmon / BT4-104 Blinding
+#       Ray: [Iliad] bucket -> BT25-033, [TS] bucket -> BT25-030, Blinding Ray
+#       to the bottom (OrderedPermutation N=1, sim-only row).
+#   T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): THE CLAUSE -- digivolve Aegiomon BT24-034 onto Lunamon for 2:
+#       3 -> 1. Aegiomon's own [When Digivolving] (#effect#2) is gated on a
+#       [TS] Tamer in hand; P0's hand holds none, so it is silent on both
+#       sides (ours: effect `condition` false; DCGO: CanActivate).
+#   Trailing pass -> P1.
+#
+# WITNESS: p0.memory 3 -> 1 (the alt cost is exactly 2) and Aegiomon on the
+# field with Lunamon as its only source.
+#
+# PROMPT SHAPE: two SelectCardEffect bucket picks for Lunamon's reveal
+# (RevealBucket; DCGO adds per bucket -- a one-field p0.hand diff on the 2nd
+# pick row is the documented DCGO quirk), one sim-only bottom row; the
+# digivolve itself asks nothing.
+card: BT24-034
+clause: BT24-034#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-022, BT24-034, BT25-030, BT24-031, BT26-029,
+            BT25-030, BT24-031, BT25-044, BT26-081, BT24-101,
+            BT25-033, BT25-030, BT4-104, BT24-031, BT26-073]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): decline breeding; hard-play Lunamon (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-022, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-030] } }
+    expect: { prompt: SelectCardEffect }
+  # SIM-ONLY: the single leftover to the deck bottom (OrderedPermutation N=1).
+  - actor: 0
+    do: { select: { cards: [BT4-104], sim_only: true } }
+  # T2 (P1, 3): pass -> P0 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE -- Aegiomon onto blue Lunamon via the [TS] path.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-034 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: false, sources: [BT25-022] }
