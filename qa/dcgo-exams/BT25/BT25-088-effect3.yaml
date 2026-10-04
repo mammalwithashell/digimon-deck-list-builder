@@ -16,23 +16,28 @@
 #   T4 (P1, 3): Agumon attacks security. THE CLAUSE: the check flips
 #       BT25-088 -> played to P0's field for free. Tamer: no security
 #       battle. P1 answers one more main_phase pass.
-#   ENGINE FINDING (expected oracle divergence): after the [Security] play,
+#   ENGINE FINDING (expected oracle divergence, still open as
+#   G-ENGINE-SECURITY-PLAYED-TAMER-SELF-TRIGGER): after the [Security] play,
 #   OUR engine fires BT25-088's own "[All Turns] When your security stack is
-#   removed from" trigger for the removal of BT25-088 ITSELF, and offers it
-#   TWICE: one 2-candidate TriggerOrder [BT25-088, BT25-088] (-> MultipleSkills) followed by a 1-pending TriggerOrder. Accepting resolves the
-#   effect once (probe: yes/yes -> Tamer suspended + face-down source(s)),
-#   the duplicate then fizzles. Cause (read, not fixed): combat/mod.rs
-#   SecurityPhase::OnLoseSecurityDrain enqueues OnLoseSecurity AFTER the
-#   [Security] effect has already played the Tamer, with TriggerSource::
-#   SecurityRevealed {card} -- the revealed card and the new battle-area
-#   permanent are apparently both scanned. Rules: the trigger condition was
-#   met at the check (13-1-5: the card is then in no area), and 15-8-3-8
-#   says removal triggers reference the state at trigger time, so the
-#   Tamer arguably should not trigger at all; it certainly should not
-#   trigger twice. This line answers the duplicate layer sim_only and
-#   DECLINES the remaining OptionalSkill, so the end state equals "no
-#   trigger". If DCGO's OnLoseSecurity CanUse does not see the freshly
-#   played Tamer, the decline row is itself a DCGO-never-asked divergence.
+#   removed from" trigger for the removal of BT25-088 ITSELF. Cause:
+#   combat/mod.rs SecurityPhase::OnLoseSecurityDrain scans the battle area
+#   for OnLoseSecurity observers AFTER the [Security] effect has already
+#   played the Tamer, so the new permanent sees its own removal.
+#   UPDATED 2026-10-04 (post-#708): it used to be offered TWICE; #708's
+#   G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH fix stopped the removed card's own
+#   (non-[Security]) effects being enqueued from the revealed card, so only
+#   the battle-area copy remains -- ONE optional 1-pending TriggerOrder. The
+#   line used to answer the duplicate sim_only and then decline an
+#   OptionalSkill on the wire; with one prompt left the old `sim_only` row
+#   accepted it (Tamer suspended + face-down deck cards), so the line now
+#   declines that single prompt sim_only.
+#   DCGO (read 2026-10-04): ISecurityCheck collects OnLoseSecurity skill
+#   infos in IReduceSecurity.ReduceSecurity (CardController.cs, `refSkillInfos`)
+#   BEFORE resolving the [Security] effect, and BT25_088.cs's CanUse needs
+#   IsExistOnBattleArea(card) -- the Tamer is still in the executing area
+#   then, so DCGO never asks. Rules agree: 13-1-5 (a checked card is in no
+#   area) and 15-8-3-8 (removal triggers read the state at trigger time).
+#   So the decline is sim_only and DCGO's wire carries no row for it.
 #
 # PROMPT SHAPE (cards/bt25/BT25-088.yaml DCGO crosscheck):
 #   PlaySelfTamerSecurityEffect -- no selection prompt on either side.
@@ -76,21 +81,18 @@ steps:
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # Our engine now parks the Tamer's OWN [All Turns] security-loss trigger
-  # for the removal of the Tamer itself, and parks it TWICE (see the ENGINE
-  # FINDING in the header). The first row answers the duplicate layer
-  # (sim_only: one card has one such trigger, DCGO can at most ask once);
-  # the second declines the trigger's optional gate.
+  # Our engine still parks the freshly played Tamer's OWN [All Turns]
+  # security-loss trigger ONCE (a 1-pending optional TriggerOrder) -- see the
+  # ENGINE FINDING in the header. DCGO collects the OnLoseSecurity triggers in
+  # IReduceSecurity BEFORE the [Security] play, when the Tamer is not on the
+  # battle area, so it never asks: decline it sim_only.
   - actor: 0
-    do: { select: { cards: [BT25-088], ordinal: 0, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    do: { select: { decline: true, sim_only: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 11
+  - at: 10
     that:
       turn: 4
       p0.memory: -3
