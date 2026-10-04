@@ -1,0 +1,206 @@
+# P-240 Arcturusmon — Digimon, Lv.6, Purple/Black, Cost 13, DP 13000.
+# Form: Mega. Attribute: Virus. Traits: Dragonkin / VB.
+#
+# Printed card text (card image + fandom wiki + DCGO; the official bundle and
+# cards.json are EMPTY / wrong for this card — see "Data issues" in the worker
+# report):
+#   Digivolve: Lv.5 (two circles — purple / black per fandom colour2): Cost 5
+#   Digivolve [Lv.5 w/[Gammamon] in text or w/[VB] trait]: Cost 4
+#   <Collision> <Piercing> <Reboot> <Blocker>
+#   [On Play] [When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon.
+#     Then, by placing 2 cards with [Gammamon] in their texts or the [VB] trait
+#     from your trash as this Digimon's bottom digivolution cards, give 1 of
+#     your opponent's Digimon "[Start of Your Main Phase] This Digimon attacks."
+#     until their turn ends.
+#   [On Deletion] You may play 1 [Proximamon] from your hand or trash without
+#     paying the cost.
+#   <Assembly -6> [Lv.5 × Lv.4 × Lv.3, all w/[Gammamon] in text or w/[VB] trait]
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your opponent's
+#     Digimon attacks, you may change the attack target to this Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_240.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Alt digivolve: AddSelfDigivolutionRequirementStaticEffect(TopCard.HasText
+#   ("Gammamon") || EqualsTraits("VB"), cost 4, level 5) → alt_path
+#   `from: level_eq 5 + (in_text_contains Gammamon | trait_has VB)`, cost 4.
+#   The printed colour circles are not in DCGO's script (they live in its card
+#   data); encoded as two Lv.5 colour alt_paths (EX12-017 convention).
+# Keywords: Collision / Piercing / Reboot / Blocker self statics → grant_keyword.
+# Shared [OP]/[WD] (optional: false): SelectPermanent opponent Digimon
+#   (canNoSelect: false, Degenerate 3) → `de_digivolve { amount 3,
+#   stop_at_level 3 }`. Then IF trash has >= 2 (HasText Gammamon || VB) cards:
+#   SelectCardEffect from trash, maxCount 2, canNoSelect: true, canEndNotMax:
+#   false (exactly 2 or none) → AddDigivolutionCardsBottom; only if added:
+#   SelectPermanent opponent Digimon (mandatory) → UntilOwnerTurnEndEffects
+#   "[Start of Your Main Phase] This Digimon attacks" (SelectAttack, cannot
+#   decline). → `select_zone_cards { zones: [trash], min 2, max 2,
+#   optional_zero }` (BT26-102 all-or-nothing cost) + `place_cards_as_bottom_
+#   sources` + `select_opponent_permanent` + `grant_triggered_effect
+#   { start_of_your_main_phase, expiry end_of_opponents_turn, force_attack }`
+#   (EX12-016 shape). The trash cards are ANY card (not Digimon-only).
+# [On Deletion] (optional per printed "may"; DCGO offers hand/trash/"Don't
+#   play"): EqualsCardName("Proximamon") && CanPlayAsNewPermanent(free) →
+#   `select_union_zone` (optional) + `play_union_bound_free` (P-170 shape).
+# Assembly: 3 elements Lv5 / Lv4 / Lv3, each (HasText Gammamon || VB), owner's
+#   card, reduceCost 6 → `kind: assembly`, three trash materials, stack_under
+#   (EX12-017 shape).
+# Inherited (OnAllyAttack timing in DCGO = any attack; CanUseCondition:
+#   IsOpponentTurn + attacker is opponent's permanent; optional; maxCount 1 /
+#   turn): → `scope: inherited`, `when: on_opponent_attack`, `once_per_turn`,
+#   `optional`, `active_when: opponents_turn`, `redirect_attack_target
+#   { new_target: source }` (EX12-056 shape).
+
+card: P-240
+name: Arcturusmon
+kind: digimon
+level: 6
+color: [purple, black]
+cost: 13
+dp: 13000
+traits: [Dragonkin, VB]
+attribute: Virus
+form: Mega
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - in_text_contains: Gammamon
+            - trait_has: VB
+    cost: 4
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - any_of:
+                - in_text_contains: Gammamon
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - any_of:
+                - in_text_contains: Gammamon
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - any_of:
+                - in_text_contains: Gammamon
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+    cost: 6
+
+effects:
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <De-Digivolve 3> 1 opponent Digimon; then by placing 2 [Gammamon]-text/[VB] cards from trash as bottom sources, give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: degen_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: degen_target
+          amount: 3
+          stop_at_level: 3
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [trash]
+                any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+              n: 2
+          then:
+            - select_zone_cards:
+                zones: [trash]
+                filter:
+                  any_of:
+                    - in_text_contains: Gammamon
+                    - trait_has: VB
+                min: 2
+                max: 2
+                optional_zero: true
+                bind_as: placed
+                prompt: "You may place 2 cards with [Gammamon] in their texts or the [VB] trait from your trash as this Digimon's bottom digivolution cards"
+            - if:
+                condition: { binding_present: placed }
+                then:
+                  - place_cards_as_bottom_sources: { cards: placed, target: source }
+                  - select_opponent_permanent:
+                      bind_as: forced_target
+                      filter: { kind: digimon }
+                      prompt: "Give 1 of your opponent's Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
+                  - grant_triggered_effect:
+                      target: forced_target
+                      timing: start_of_your_main_phase
+                      expiry: end_of_opponents_turn
+                      body:
+                        - force_attack:
+                            attacker: carrier
+                            targets: any
+                            prompt: "This Digimon attacks"
+
+  - when: on_deletion
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          zone: [hand, trash]
+          owner: you
+          name_is: Proximamon
+        n: 1
+    summary: "[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: proxima
+          optional: true
+          filter: { name_is: Proximamon }
+          prompt: "You may play 1 [Proximamon] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: proxima }
+
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: source }

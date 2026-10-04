@@ -412,7 +412,7 @@ fn counter_then_block_sequence() {
 }
 
 #[test]
-fn player_target_attack_skips_counter() {
+fn player_target_attack_opens_counter() {
     let mut r = DebugRunner::builder()
         .add_card(blast_card("TEST-013", 4, 3, 0))
         .add_card(dgmn("ATK", 4, 9000))
@@ -424,19 +424,30 @@ fn player_target_attack_skips_counter() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let _base = r.place_on_field(1, "BASE", Some(0));
 
-    // Player-target attack — Counter should be skipped (Python parity).
+    // Counter timing is part of EVERY attack (rule 11-1-3), including an
+    // attack on the player: DCGO `AttackProcess.CounterTiming` has no target
+    // check and `CounterClass` fires whenever an opponent's permanent
+    // attacks. (The retired Python engine skipped it for player targets.)
     r.attack_player(atk, 1, false);
 
-    // Either synchronously completed (no blockers either) or parked on
-    // BlockOpen. Either way the current phase is NOT CounterTiming.
-    assert_ne!(
+    assert_eq!(
         r.current_phase(),
         GamePhase::CounterTiming,
-        "Player-target attacks skip Counter"
+        "player-target attacks open the Counter window"
     );
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Counter selection installed");
+    assert_eq!(sel.selecting_player, 1, "the attacked player chooses");
+
+    // Declining the Counter lets the attack proceed normally.
+    r.game.resolve_selection(1, PASS).expect("decline counter");
+    let _ = r.auto_resolve();
     assert!(
-        r.game.pending_attack.is_none() || r.current_phase() == GamePhase::BlockTiming,
-        "expected attack to be done or parked on Block"
+        r.game.pending_attack.is_none(),
+        "attack completes after decline"
     );
 }
 

@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-09-21
+Last updated: 2026-10-03
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,63 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## DSL field [Counter] abilities were never offered; Counter timing skipped attacks on the player; a [Counter] body could not end the attack (G-ENGINE-DSL-FIELD-COUNTER-WINDOW) — RESOLVED 2026-10-03
+- **Discovered in:** BT25-103 GraceNovamon ("[When Attacking] [Counter] [Once Per Turn] … Then, you may end this attack.").
+- **Root causes (three):** (1) `lower_triggered::new_builder` lowered `CompiledTiming::Counter` without `.counter()`, and `combat::try_enter_counter` / the mask only offer effects with `Effect.counter` — so no DSL field [Counter] ability was ever offered (EX12-017, EX12-057, EX12-077, EX13-015, EX13-016, BT26-103, BT25-085, EX13-036, BT26-055 were latently affected; their tests enqueued `CounterEffect` by hand). (2) `try_enter_counter` returned early for `AttackTarget::Player` (a retired-Python parity choice); rule 11-1-3 and DCGO `AttackProcess.CounterTiming` open Counter timing on every attack, and DCGO `CounterClass` fires whenever an opponent's permanent attacks. (3) `attack_state_allows_effect_cancel` rejected cancels once the Counter window opened; DCGO re-checks `IsEndAttack` right after the [Counter] effects.
+- **Resolution:** `EffectTiming::CounterEffect => …counter()` in `new_builder`; the Counter window's defender is the attacked player for player-target attacks; an effect cancel is honoured while the attack is in `CounterOpen`. `tests/combat/counter_interrupt.rs::player_target_attack_opens_counter` and `tests/combat/redirect_and_cancel.rs::ctx_cancel_attack_accepted_in_counter_window` replace the old opposite assertions.
+- **Coverage:** `tests/cards_behavioral/bt25/bt25_103.rs::bt25_103_counter_on_opponent_attack_can_end_it`.
+
+## `select_opponent_sources` could not exclude cards under opponent Tamers (G-ENGINE-OPP-SOURCES-HOST-KIND) — RESOLVED 2026-10-03
+- **Discovered in:** BT25-103 GraceNovamon ("trash any 1 digivolution card from your opponent's **Digimon**"; DCGO `IsEnemyDigimon`).
+- **Root cause:** the installer, `count_opponent_source_candidates` and the `SourceMultiStep` resume frame evaluated the filter on `PredicateSubject::Card`, so source-subject leaves (`host_kind_is`, `is_face_down`, `is_bottom_source`) always failed.
+- **Resolution:** all three evaluate on `PredicateSubject::Source` (which degrades to the card for every card leaf). BT25-103 uses `filter: { host_kind_is: digimon }`. Coverage: `bt25_103_cards_under_opponent_tamers_are_not_candidates`. EX13-024 Slayerdramon can adopt the same filter.
+
+## `has_digivolve_candidate` ignored combinator filters (G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER) — RESOLVED 2026-10-03
+- **Discovered in:** LM-057..061 Training Options ("1 of your Digimon may digivolve into a red or blue Digimon card in your hand").
+- **Root cause:** `permanent_has_digivolve_candidate` evaluated its nested filter with the bare `eval_card_fields` leaf path, ignoring `all_of`/`any_of`/`none_of`/`not` — a Digimon whose only candidate was off-colour was still offered (a dead choice in the RL action space). BT25-092, BT26-091, BT26-035, BT26-038, BT26-066 use composite filters too.
+- **Resolution:** full `eval_predicate_with_bindings(PredicateSubject::Card)`, as the `source_count` leaf already does. Coverage: `lm_057::lm_057_delay_target_excludes_digimon_with_only_off_color_candidate` (+ the LM-058..061 equivalents).
+
+## No "permanents this effect suspended" formula (G-DSL-FORMULA-EFFECT-SUSPENDED-COUNT) — RESOLVED 2026-10-03
+- **Discovered in:** BT2-041 ShineGreymon ("Suspend all of your yellow Tamers. For each yellow Tamer you suspend by this effect, …").
+- **Resolution:** `per: effect_suspended_count` reads `bindings.result_log().suspended`. BT2-041 suspends first, then `repeat_effect_choice` runs once per Tamer actually suspended.
+
+## `<Save>. Then, …` was parsed as an innate Save (G-ENGINE-INNATE-SAVE-SEQUENCED-DUPLICATE) — RESOLVED 2026-10-03
+- **Discovered in:** BT12-011 Shoutmon (King Version) ("[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.").
+- **Root cause:** `parse_printed_keywords` treated the timing-attached token as innate, so `effects_for_card` auto-installed a second Save trigger beside the authored clause (TriggerOrder prompt + two Save attempts). DCGO registers one OnDestroyedAnyone effect.
+- **Resolution:** a timing-attached keyword token that the text continues with `Then` is a step of that body, not innate (`keyword_token_continues_into_then`). Unit test `card_data::tests::sequenced_then_keyword_is_not_innate`; also BT12-051 / BT11-031 / BT12-037 / BT12-063 / BT12-064 / BT12-077 text.
+
+## DigiXros recipe slots ignored non name/trait material filters (G-ENGINE-DIGIXROS-SLOT-PREDICATE) — RESOLVED 2026-10-03
+- **Discovered in:** BT12-011 Shoutmon (King Version) ("DigiXros -2: 1 Digimon card w/<Save> in text").
+- **Root cause:** `DigiXrosRecipeSlot` / `slot_accepts_card` matched only names and traits; the slot builder silently dropped `kind`, `level_*`, `effect_text_contains`, … so any card was accepted as a material.
+- **Resolution:** slots carry the residual predicate (everything the name/trait fast path doesn't cover), evaluated with the full predicate evaluator into per-slot `eligible_cards`; `resolve_material_origin` and the MaterialSave path both enforce it. Now enforced for BT18-065, BT10-111, P-094, EX10-056, EX12-015/029/056, BT19-065/070, EX3-014.
+
+## Event-gated Delay options did not observe added digivolution cards (G-ENGINE-EVENT-DELAY-ON-ADD-DIGIVOLUTION-CARDS) — RESOLVED 2026-10-03
+- **Discovered in:** P-244 Unique Emblem: Ragnarok Attainer ("When effects place [Vemmon] as any of your Digimon's digivolution cards, <Delay> …").
+- **Resolution:** `enqueue_triggered`'s event-gated Delay fan-out now includes `TriggerSource::SourcesAddedToStack`. Coverage: `p_244::delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3`, `p_244::delay_decline_keeps_option_parked`.
+
+## Optional digivolve reducers with a synchronous pay_cost were skipped (G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE) — RESOLVED 2026-10-03
+- **Discovered in:** P-200 Kanan Yuki ("When any of your Digimon would digivolve into a [TS] Digimon card, by suspending this Tamer, reduce the digivolution cost by 1"); DCGO isOptional true. Also BT5-092 Nokia (DCGO isOptional true; previously authored mandatory and auto-suspended).
+- **Resolution:** `try_prompt_interactive_digivolve_cost_reducer` also offers an optional reducer with a synchronous pay_cost when its amount > 0 and the cost is payable (`activation_cost_kind` `is_payable`); suspend-self reducers now set `activation_cost_kind: SuspendSelf`. Credited once.
+- **Residual (open, see docs/RUST_ENGINE_GAPS.md):** only the first qualifying optional reducer is offered per digivolve; DNA and Blast digivolve still use only the synchronous scan.
+
+## No player-scoped "can't use Option cards" restriction (G-ENGINE-CANNOT-USE-OPTION-CARDS) — RESOLVED 2026-10-03
+- **Discovered in:** EX1-072 Emergency Program Shutdown! ("Your opponent can't use Option cards until the end of their next turn." / [Security] "… this turn.").
+- **Resolution:** `ModifierType::CannotUseOptionCards` (DSL modifier key), checked by the hand-play mask / legal play modes (Plug-In link stays legal, §6-5-1-4), the Counter-window hand-Option scan, and `play_option_core` (so every `use_option_*` effect path). [Security] effects are not a use (official Q&A). Also unblocks BT19-034, BT8-057, EX8-031, P-223, ST22-01, ST22-06.
+
+## A cost-gated "Then, place this card" Delay option was always placed (G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT) — RESOLVED 2026-10-03
+- **Discovered in:** BT24-099 Super Hacking ("[Main] By trashing 1 [Appmon] card from your hand, <Draw 2>. Then, place this card in the battle area." — official Q&A: without the trash nothing after "then" happens).
+- **Resolution:** `Effect.explicit_self_placement` is set when an Option [Main] body contains `place_self_as_delay_option`; `dispose_option` trashes such a card (Standard disposal) when the body ended without placing it. The 31 implicit-placement Delay options are unchanged. Behaviour change: P-193 now trashes on a declined [Main] (consistent with the ruling).
+
+## No board-wide level-sum predicate (G-DSL-BOARD-LEVEL-SUM) — RESOLVED 2026-10-03
+- **Discovered in:** BT25-077 Bacchusmon — "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5." DCGO `BT25_077.cs` sums `permanent.Level` over every battle-area Digimon of BOTH players.
+- **Resolution:** predicate leaf `level_sum_gte: { filter, n }` (`PredicateSpec` / `CompiledPredicate`, compiled + validated like `count_gte`). The engine (`dsl_cards/predicate.rs::level_sum_matching`) sums `Permanent::level` over battle-area permanents matching `filter` (owner defaults to `you`; `owner: any` for both players; level-less permanents contribute 0). Subject-independent, so it works in `cost_reduction` `condition:` (subject `None`). BT25-077 also gained its second standard digivolve circle (Green Lv.5 / 4, official DB).
+- **Coverage:** `tests/cards_behavioral/bt25/bt25_077.rs` (`*_cost_reduced_with_twelve_levels_across_both_players`, `*_cost_not_reduced_below_twelve_levels`, `*_cost_reduced_by_opponent_levels_alone`).
+
+## Trailing `if` after a parked selection "not resumed" (G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED) — RESOLVED 2026-10-03 (misdiagnosis)
+- **Discovered in:** BT25-050 Kiwimon ("You may suspend 1 Digimon. Then, if there are 2 or more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends.").
+- **Root cause:** not an engine bug. `count_gte` defaults its filter owner to `you`; the card's gate is board-wide (DCGO counts both players) and the test suspended the opponent's Digimon, so the controller-only count stayed below 2 and the `if` correctly skipped.
+- **Resolution:** BT25-050's gate filter sets `owner: any`; the formerly-ignored lock test passes un-ignored. The same default bit BT25-059 Ceresmon's "2 or more suspended Digimon" cost reduction, which additionally lacked `reduction_timing: before_pay_cost` + `when_playing_this: true` (so it never applied); both fixed with new behavioral tests (`bt25_059_cost_reduced_with_two_suspended_opponent_digimon`, `bt25_059_cost_not_reduced_with_one_suspended_digimon`).
 
 ## `select_effect_choice` had no per-branch legality — a branch that could do nothing was still offered, and a one-legal-branch choice still prompted (G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY) — RESOLVED 2026-10-01
 - **Discovered in:** BT13-112 Omnimon ("You may delete 1 of your opponent's Digimon, or play … from the digivolution cards of your Digimon in the breeding area"). DCGO `BT13_112.cs` computes `canSelectDelete` / `canSelectPlay`, prompts only when both hold, and otherwise `SetBool(onlyLegalBranch)` — no prompt.

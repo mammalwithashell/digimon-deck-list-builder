@@ -1,0 +1,133 @@
+# BT24-023 Calmaramon — Digimon, Lv.4, Blue, DP 7000, Cost 6.
+# Traits: Aquatic, Titan, TS. Form: Hybrid. Attribute: Variable.
+# Printed digivolve box (official Bandai DB — data/card_bundles/BT24-023.md):
+#   Blue Lv.3 / cost 3;
+#   [Digivolve] [Lanamon]: Cost 1 / Lv.3 w/[TS] trait: Cost 3.
+#
+# Printed card text (official Bandai DB):
+#   <Blocker> <Decode ([Lanamon])> [On Play] [When Digivolving] Return 1 of
+#     your opponent's level 4 or lower Digimon to the bottom of the deck.
+#     Then, if played by effects, 1 of their Digimon or Tamers can't suspend
+#     until their turn ends.
+#   Inherited: <Jamming> (This Digimon can't be deleted in battles against
+#     Security Digimon.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Blue/BT24_023.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve ×2: TopCard.EqualsCardName("Lanamon") cost 1; TopCard.IsLevel3
+#   && HasTSTraits cost 3 (both ignoreDigivolutionRequirement false).
+# <Blocker>: BlockerSelfStaticEffect(isInheritedEffect false).
+# <Decode ([Lanamon])>: DecodeSelfEffect(own, source EqualsCardName Lanamon)
+#   → the house `kind: replacement` when_would_leave_battle_area (not in
+#   battle), optional, select_material name_is Lanamon → play_from_materials
+#   free (BT24-014 idiom).
+# [On Play] / [When Digivolving] (shared body, maxPerTurn -1): mandatory
+#   (canNoSelect false) PutLibraryBottom pick of 1 opponent Digimon with
+#   level <= 4; then `IsByEffect(hashtable) && CanTriggerOnPlay` — i.e. only
+#   the [On Play] firing of an effect-driven play — a mandatory pick of 1
+#   opponent Digimon or Tamer that gains CanNotSuspend until its owner's
+#   (= the opponent's) turn ends.
+#   → when: [on_play, when_digivolving]; select_opponent_permanent (level_lte
+#   4 Digimon) → return_to_deck bottom; `if: played_by_effect` (true only on
+#   the OnPlay firing of a PlaySource::ByEffect play — never on When
+#   Digivolving, which is not a play) → select_opponent_permanent (Digimon or
+#   Tamer) → add_modifier CannotSuspend expiry end_of_opponents_turn
+#   (EX12-032 idiom).
+#   DELIBERATE DIVERGENCE: DCGO registers both triggers with isOptional:
+#   true (a yes/no activation prompt). The printed text has no "you may", so
+#   per the official text (and rules — effects without "you may" are
+#   mandatory) the clause is authored MANDATORY.
+# Inherited <Jamming>: JammingSelfStaticEffect(isInheritedEffect true).
+
+card: BT24-023
+name: Calmaramon
+kind: digimon
+level: 4
+color: [blue]
+cost: 6
+dp: 7000
+traits: [Aquatic, Titan, TS]
+form: Hybrid
+attribute: Variable
+
+alt_paths:
+  # Standard Blue Lv.3 / cost 3 circle (also in cards.json evo_costs; authored
+  # explicitly so the compiled card carries it).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  # [Digivolve] [Lanamon]: Cost 1.
+  - kind: digivolve
+    from: { name_is: "Lanamon" }
+    cost: 1
+  # [Digivolve] Lv.3 w/[TS] trait: Cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── <Blocker> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── <Decode ([Lanamon])> ────────────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Lanamon])> When this Digimon would leave the battle area other than in battle, you may play 1 [Lanamon] from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Lanamon"
+          prompt: "Decode: play 1 [Lanamon] from this Digimon's digivolution cards"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [On Play][When Digivolving] bottom-deck 1 opp Lv.4- Digimon; then, if
+  #     played by effects, 1 opp Digimon/Tamer can't suspend ─────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck. Then, if played by effects, 1 of their Digimon or Tamers can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: bottom_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck"
+      - return_to_deck: { target: bottom_target, position: bottom }
+      - if:
+          condition: { played_by_effect: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: lock_target
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+            - add_modifier:
+                target: lock_target
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── Inherited <Jamming> ─────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "Inherited <Jamming>"

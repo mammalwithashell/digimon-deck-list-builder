@@ -349,6 +349,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
         S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
         S::OnAnyLink => CompiledTiming::OnAnyLink,
+        S::OnLinkCardTrashed => CompiledTiming::OnLinkCardTrashed,
     }
 }
 
@@ -421,6 +422,7 @@ fn compile_per_selector(
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SourceColorCount => CompiledPerSelector::SourceColorCount,
         S::ReturnedCardColorCount => CompiledPerSelector::ReturnedCardColorCount,
+        S::EffectSuspendedCount => CompiledPerSelector::EffectSuspendedCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
         S::CardCountInZone(spec) => {
@@ -1073,6 +1075,7 @@ fn compile_predicate(
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
+        self_color_count_lte: p.self_color_count_lte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
         distinct_named_count_gte: p.distinct_named_count_gte.as_ref().map(|d| {
@@ -1316,6 +1319,15 @@ fn compile_predicate(
                 errors,
             ))
         }),
+        event_discarded_card_any: p.event_discarded_card_any.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_discarded_card_any"),
+                card_id,
+                errors,
+            ))
+        }),
+        in_event_discarded_cards: p.in_event_discarded_cards,
         played_by_effect: p.played_by_effect,
         event_target_color_any_of: p
             .event_target_color_any_of
@@ -1325,6 +1337,8 @@ fn compile_predicate(
         source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
         event_host_is_own_tamer: p.event_host_is_own_tamer,
+        event_host_is_own_digimon: p.event_host_is_own_digimon,
+        is_event_host: p.is_event_host,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1422,6 +1436,15 @@ fn compile_predicate(
             )),
             n: compile_dp_constraint(&c.n, &format!("{prefix}.count_gte.n"), card_id, errors),
         }),
+        level_sum_gte: p.level_sum_gte.as_ref().map(|c| CompiledCountAggregate {
+            filter: Box::new(compile_predicate(
+                &c.filter,
+                &format!("{prefix}.level_sum_gte.filter"),
+                card_id,
+                errors,
+            )),
+            n: compile_dp_constraint(&c.n, &format!("{prefix}.level_sum_gte.n"), card_id, errors),
+        }),
         any_permanent: p.any_permanent.as_ref().map(|e| {
             Box::new(CompiledExistential {
                 of: compile_player_ref(e.of),
@@ -1508,6 +1531,7 @@ fn compile_predicate(
             ))
         }),
         source_is_cost_target_permanent: p.source_is_cost_target_permanent,
+        cost_target_from_hand: p.cost_target_from_hand,
     }
 }
 

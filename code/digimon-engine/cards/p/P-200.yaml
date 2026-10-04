@@ -1,0 +1,76 @@
+# P-200 Kanan Yuki — Tamer, Green, Cost 3. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/P-200.md):
+#   [Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your
+#     opponent's Digimon.
+#   [Your Turn] When any of your Digimon would digivolve into a Digimon card
+#     with the [TS] trait, by suspending this Tamer, reduce the digivolution
+#     cost by 1.
+#   Security: [Security] Play this card without paying the cost.
+#
+# (Distinct from BT26-090 Kanan Yuki — different text.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Green/P_200.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, mandatory): CanActivate = owner turn + opponent has
+#   a battle-area Digimon + MemoryForPlayer <= 4 → SelectPermanentEffect
+#   (canNoSelect: false, max 1, Mode.Tap) over opponent Digimon.
+#   → start_of_your_main_phase + `memory_lte: 4` + mandatory
+#   select_opponent_permanent (Digimon) → suspend.
+# Your Turn (BeforePayCost, isOptional TRUE): CanTriggerWhenPermanentWouldDigivolve
+#   (own battle-area Digimon → card with HasTSTraits), owner turn; CanActivate =
+#   CanActivateSuspendCostEffect (Tamer unsuspended). Body: suspend self →
+#   ChangeCost -1.
+#   → `kind: cost_reduction` + `when_any_ally_digivolves_into` (BT5-092 /
+#   BT25-087 idiom) + suspend-self pay_cost (BT26-088 idiom), optional.
+#   G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE (closed): the digivolve
+#   path now offers an optional synchronous-pay_cost reducer through the
+#   accept/decline prompt (only when payable — an already-suspended Tamer is
+#   not offered).
+# Security: PlaySelfTamerSecurityEffect → play_from_security.
+
+card: P-200
+name: "Kanan Yuki"
+kind: tamer
+color: [green]
+cost: 3
+traits: [TS]
+
+effects:
+  # ─── [Start of Your Main Phase] memory <= 4 → suspend 1 opponent Digimon ──
+  - when: start_of_your_main_phase
+    condition:
+      all_of:
+        - memory_lte: 4
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: suspend_target }
+
+  # ─── [Your Turn] ally digivolves into a [TS] Digimon card: by suspending
+  #     this Tamer, reduce the digivolution cost by 1 ───────────────────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_digivolves_into:
+      all_of:
+        - kind: digimon
+        - trait_has: "TS"
+    optional: true
+    pay_cost:
+      - suspend: { target: source }
+    amount: 1
+    summary: "[Your Turn] When any of your Digimon would digivolve into a [TS] Digimon card, by suspending this Tamer, reduce the digivolution cost by 1"
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,131 @@
+# BT25-080 Witchmon — Digimon, Lv.4, Purple, DP 6000, Cost 5.
+# Traits: Wizard, Titan, TS. Form: Champion. Attribute: Data.
+# Printed digivolve box: Purple Lv.3 / cost 2; [Digivolve] Lv.3 w/[TS] trait:
+#   Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT25-080.md):
+#   [On Play] [When Attacking] [Once Per Turn] By trashing 1 card in your hand,
+#     you may return 1 [Titan] trait card from your trash to the hand. After,
+#     if played by an effect, delete 1 of your opponent's level 5 or lower
+#     Digimon.
+#   Inherited: [All Turns] [Once Per Turn] When your hand is trashed from, if
+#     this Digimon has the [Titan] trait, delete 1 of your opponent's level 4
+#     or lower Digimon.
+#
+# Official Q&A: if you don't trash 1 card in your hand, the part after "After"
+#   is not processed either. → the hand trash is a COST: declining it ends the
+#   whole clause (no return, no delete).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_080.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(level 3 &&
+#   TopCard.HasTSTraits, cost 2) → alt_paths level_eq 3 + trait_has TS.
+# Shared [OP][WA] (maxCountPerTurn 1, one hash → ONE shared OPT, optional
+#   false, isSkippable): SelectHand Discard (canNoSelect:true). If a card was
+#   discarded: optional (canNoSelect:true) trash pick of 1 EqualsTraits("Titan")
+#   card (any kind) → AddHand; then if IsByEffect && CanTriggerOnPlay (the
+#   [On Play] firing of an effect-play) → MANDATORY (canNoSelect:false) Destroy
+#   pick of 1 opp level <= 5 Digimon. If NOTHING was discarded →
+#   activateClass.RemoveUse() (the OPT is refunded).
+#   → `when: [on_play, when_attacking]` + `once_per_turn` (shared counter);
+#   condition hand >= 1 (no card ⇒ no payable cost, DCGO refunds anyway);
+#   optional select_hand; `if binding_present` → trash + optional
+#   select_trash Titan → add_to_hand_from_trash → `if event_is_effect_initiated`
+#   → select_opponent_permanent level_lte 5 → delete; else → refund_opt.
+#   `event_is_effect_initiated` is only true for an effect-initiated PLAY
+#   event; a [When Attacking] firing is never "played by an effect", matching
+#   DCGO's CanTriggerOnPlay guard.
+# Inherited (OnDiscardHand, maxCount 1, SetIsInheritedEffect,
+#   CanTriggerOnTrashHand(owner == card.Owner), not optional): inside the
+#   coroutine, only if an opp level <= 4 Digimon exists AND
+#   PermanentOfThisCard().TopCard.EqualsTraits("Titan") → mandatory Destroy pick.
+#   → scope inherited, on_discard_hand, active_when all_turns +
+#   event_discard_player you, once_per_turn, condition
+#   source_permanent_trait_has Titan (printed "if" = intervening-if; checked
+#   at trigger time as printed rather than DCGO's in-coroutine check, so a
+#   non-[Titan] host does not burn the OPT — DCGO would burn it; printed text
+#   governs), mandatory select_opponent_permanent level_lte 4 → delete.
+
+card: BT25-080
+name: Witchmon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 6000
+traits: [Wizard, Titan, TS]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── [On Play][When Attacking][OPT] by trashing 1 hand card, may return 1
+  #     [Titan] card from trash; after, if played by an effect, delete 1 opp
+  #     level 5 or lower Digimon ─────────────────────────────────────────────
+  - when: [on_play, when_attacking]
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[On Play][When Attacking][Once Per Turn] By trashing 1 card in your hand, you may return 1 [Titan] trait card from your trash to the hand. After, if played by an effect, delete 1 of your opponent's level 5 or lower Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, you may return 1 [Titan] card from your trash to the hand"
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+            - select_trash:
+                of: you
+                bind_as: titan_back
+                optional: true
+                filter: { trait_has: Titan }
+                prompt: "You may return 1 [Titan] trait card from your trash to the hand"
+            - add_to_hand_from_trash: { of: you, card: titan_back }
+            - if:
+                condition: { event_is_effect_initiated: true }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 5
+                      prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+                  - delete_permanent: { target: victim }
+          else:
+            - refund_opt: {}
+
+  # ─── Inherited [All Turns][OPT] your hand is trashed from, if this Digimon
+  #     has [Titan] → delete 1 opp level 4 or lower Digimon ─────────────────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_discard_player: you
+    condition: { source_permanent_trait_has: Titan }
+    summary: "[Inherited][All Turns][Once Per Turn] When your hand is trashed from, if this Digimon has the [Titan] trait, delete 1 of your opponent's level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+      - delete_permanent: { target: victim }

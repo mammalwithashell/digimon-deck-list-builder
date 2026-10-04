@@ -1,0 +1,132 @@
+# BT24-098 Invasion of the Titans — Option, Purple, Cost 3.
+# Traits: Titan, TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-098.md):
+#   [Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in
+#     the battle area.
+#   [Your Turn] When any of your [Titan] trait Digimon are played, <Delay>.
+#     ・If your opponent has 5 or more memory, you may play 1 level 5 or lower
+#     Digimon card with the [Titan] trait from your trash without paying the
+#     cost.
+#   [Security] You may play 1 level 4 or lower [Titan] trait Digimon card from
+#     your hand or trash without paying the cost. Then, add this card to the
+#     hand.
+#
+# Official Q&A: "opponent has 5 or more memory" = the memory gauge is at 5 or
+#   further on the OPPONENT's side → controller-perspective gauge <= -5 →
+#   `own_memory_lte: -5`.
+#
+# Play requirement: standard Option colour requirement only (a purple Digimon
+#   or Tamer on your field) — no extra printed use condition.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_098.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# [Main] (OptionSkill, optional:false): Draw 2; if hand >= 1, ONE SelectHand
+#   Discard of min(2, hand) cards (canNoSelect:false); PlaceDelayOptionCards.
+#   → draw 2; two sequential MANDATORY select_hand + trash_from_hand_by_index
+#   steps (P-205 / BT21-071 idiom; each no-ops when the hand is empty, matching
+#   min(2, hand)); place_self_as_delay_option.
+#   NOTE: DCGO discards both cards in ONE SelectHandEffect (one OnDiscardHand
+#   event); the two sequential DSL steps raise one hand-trash event per card.
+#   [Once Per Turn] "when your hand is trashed from" observers see no
+#   difference; a non-OPT observer would fire twice — there is no multi-card
+#   hand-trash DSL verb today (see report).
+# <Delay> (OnEnterFieldAnyone, optional:true, IsOwnerTurn +
+#   CanDeclareOptionDelayEffect + CanTriggerOnPermanentPlay(own battle-area
+#   Digimon whose TopCard EqualsTraits Titan)): trash this card; if that
+#   succeeded and Owner.MemoryForPlayer <= -5 → optional (canNoSelect:true)
+#   trash pick of IsDigimon && Level <= 5 && Titan → PlayPermanentCards
+#   (payCost:false, activateETB).
+#   → `kind: delay, trigger: on_ally_played` (event-gated Delay; the engine
+#   handles the after-placing-turn window, the optional activation and the
+#   self-trash cost — P-228 precedent) with active_when your_turn +
+#   event_target_owner you + event_target_kind digimon + event_card_trait_has
+#   Titan; body `if own_memory_lte: -5` → optional select_trash →
+#   play_from_trash_free.
+# [Security] (SecuritySkill, optional:false): if a level <= 4 Titan Digimon
+#   exists in hand or trash → choose the zone (hand / trash / don't play) then
+#   pick (canNoSelect:true) → PlayPermanentCards(payCost:false); then
+#   AddThisCardToHand (always).
+#   → inherited on_security: optional select_union_zone [hand, trash] (one
+#   choice over both zones = DCGO's zone-then-card two-step) →
+#   play_union_bound_free; add_this_option_to_hand (unconditional).
+
+card: BT24-098
+name: "Invasion of the Titans"
+kind: option
+color: [purple]
+cost: 3
+traits: [Titan, TS]
+
+effects:
+  # ─── [Main] <Draw 2>, trash 2 hand cards, place this card ────────────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+      - place_self_as_delay_option: {}
+
+  # ─── [Your Turn] own [Titan] Digimon played → <Delay>: if opp has 5+
+  #     memory, may play 1 level 5 or lower [Titan] Digimon from trash free ─
+  - kind: delay
+    trigger: on_ally_played
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_trait_has: Titan
+    summary: "[Your Turn] When any of your [Titan] Digimon are played, <Delay>: if your opponent has 5 or more memory, you may play 1 level 5 or lower [Titan] Digimon card from your trash without paying the cost"
+    process:
+      - if:
+          condition: { own_memory_lte: -5 }
+          then:
+            - select_trash:
+                of: you
+                bind_as: revive
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - trait_has: Titan
+                prompt: "You may play 1 level 5 or lower [Titan] Digimon card from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: revive }
+
+  # ─── [Security] may play 1 level 4 or lower [Titan] Digimon from hand or
+  #     trash free; then add this card to the hand ──────────────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 level 4 or lower [Titan] Digimon card from your hand or trash without paying the cost. Then, add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: titan_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: Titan
+          prompt: "You may play 1 level 4 or lower [Titan] Digimon card from your hand or trash without paying the cost"
+      - if:
+          condition: { binding_present: titan_pick }
+          then:
+            - play_union_bound_free: { binding: titan_pick }
+      - add_this_option_to_hand: {}

@@ -464,6 +464,9 @@ fn evaluate_per(
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
             .unwrap_or(0),
+        CompiledPerSelector::EffectSuspendedCount => bindings
+            .map(|bindings| bindings.result_log().suspended.len() as i32)
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
             .unwrap_or(0),
@@ -599,6 +602,9 @@ fn evaluate_per_read(
             .map(|bindings| {
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
+            .unwrap_or(0),
+        CompiledPerSelector::EffectSuspendedCount => bindings
+            .map(|bindings| bindings.result_log().suspended.len() as i32)
             .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))

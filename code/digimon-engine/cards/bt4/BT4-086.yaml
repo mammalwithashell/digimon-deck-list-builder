@@ -1,0 +1,74 @@
+# BT4-086 Cerberusmon: Werewolf Mode — Digimon, Lv.5, Purple, DP 9000, Cost 9.
+# Traits: Wizard. Form: Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.4 / cost 3 (cards.json evo_costs).
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT4-086.md):
+#   <Rush> (This Digimon can attack the turn it comes into play.)
+#   [On Play] You may delete 1 of your [Cerberusmon] to gain 9 memory.
+#
+# Official Q&A: the [On Play] deletes [Cerberusmon] — a DIFFERENT card name
+#   from [Cerberusmon: Werewolf Mode] — so it can't delete this card itself.
+#   → `name_is: "Cerberusmon"` (exact name, not `name_contains`).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT4/Purple/BT4_086.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Rush: RushSelfStaticEffect → `kind: grant_keyword, keyword: Rush`.
+# [On Play] (OnEnterFieldAnyone, CanTriggerOnPlay, optional:true):
+#   CanActivate = an own battle-area Digimon whose TopCard.CardNames contains
+#   "Cerberusmon" (exact name-list match) and that can be destroyed.
+#   SelectPermanentEffect(canNoSelect:true, max 1) → DeletePermanentAndProcess
+#   AccordingToResult → on success AddMemory(9).
+#   → condition any own Digimon name_is Cerberusmon; optional
+#   select_own_permanent; delete_permanent; `if effect_deleted_any_own_digimon`
+#   → gain_memory 9 (memory only when the deletion actually happened — "to
+#   gain" makes the deletion the cost; a deletion that is prevented gains
+#   nothing, matching DCGO's successProcess).
+
+card: BT4-086
+name: "Cerberusmon: Werewolf Mode"
+kind: digimon
+level: 5
+color: [purple]
+cost: 9
+dp: 9000
+traits: [Wizard]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  # ─── [On Play] you may delete 1 of your [Cerberusmon] to gain 9 memory ────
+  - when: on_play
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        name_is: "Cerberusmon"
+    summary: "[On Play] You may delete 1 of your [Cerberusmon] to gain 9 memory"
+    process:
+      - select_own_permanent:
+          bind_as: cerb
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Cerberusmon"
+          prompt: "You may delete 1 of your [Cerberusmon] to gain 9 memory"
+      - if:
+          condition: { binding_present: cerb }
+          then:
+            - delete_permanent: { target: cerb }
+            - if:
+                condition: { effect_deleted_any_own_digimon: true }
+                then:
+                  - gain_memory: 9

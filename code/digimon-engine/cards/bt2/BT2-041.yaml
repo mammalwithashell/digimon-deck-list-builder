@@ -1,0 +1,90 @@
+# BT2-041 ShineGreymon — Digimon, Lv.6, Yellow, Cost 12, DP 11000,
+# Light Dragon / Vaccine. Digivolve: Yellow Lv.5, cost 4 (per-card JSON).
+#
+# Printed text (official Bandai DB, data/card_bundles/BT2-041.md):
+#   [When Digivolving] Suspend all of your yellow Tamers. For each Tamer you
+#   suspend this way, activate the following effect:
+#   ・1 of your opponent's Digimon gets -4000 DP for the turn.
+#   [Your Turn] This Digimon gets +1000 DP for each Tamer you have in play.
+#
+# Official Q&A: the effect activates separately for each yellow Tamer you
+# suspend, and you choose the target for each activation.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT2/Yellow/BT2_041.cs
+#   - CanActivate: an own UNSUSPENDED yellow Tamer exists.
+#   - Collect own unsuspended yellow Tamers → suspend them all at once →
+#     actionCount = how many of them are now suspended → loop actionCount
+#     times: mandatory (canNoSelect false) pick of 1 opponent Digimon,
+#     -4000 DP UntilEachTurnEnd. Each loop iteration is an independent pick
+#     (the same Digimon may be picked again).
+#   - Static ChangeSelfDPStaticEffect: +1000 × (ALL own Tamers, any colour,
+#     suspended or not), IsOwnerTurn.
+#
+# Authoring notes:
+#   A `for_each` suspends every own unsuspended yellow Tamer first (DCGO: all
+#   suspended before any pick); `repeat_effect_choice` then runs once per Tamer
+#   THIS effect actually suspended — `per: effect_suspended_count` reads the
+#   effect result log (G-DSL-FORMULA-EFFECT-SUSPENDED-COUNT), so an
+#   already-suspended or un-suspendable Tamer never adds an activation. The
+#   single-label `repeat_effect_choice` collapses its choice (no prompt), so
+#   each iteration surfaces only the mandatory opponent-Digimon pick.
+
+card: BT2-041
+name: ShineGreymon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 11000
+traits: [Light Dragon]
+form: Mega
+attribute: Vaccine
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Suspend all of your yellow Tamers; for each suspended, 1 opponent Digimon gets -4000 DP for the turn"
+    process:
+      # Suspend every unsuspended yellow Tamer first (DCGO suspends all before
+      # any pick), then activate the debuff once per Tamer THIS effect actually
+      # suspended (`effect_suspended_count` reads the effect result log).
+      - for_each:
+          over:
+            all_of:
+              - of: you
+              - zone: [battle_area]
+              - kind: tamer
+              - color_is: yellow
+              - is_unsuspended: true
+          bind_as: yellow_tamer
+          body:
+            - suspend: { target: yellow_tamer }
+      - repeat_effect_choice:
+          count:
+            base: 0
+            per: effect_suspended_count
+            delta: 1
+          labels:
+            - "1 of your opponent's Digimon gets -4000 DP for the turn"
+          prompt: "Activate: 1 of your opponent's Digimon gets -4000 DP"
+          body:
+            - select_opponent_permanent:
+                bind_as: debuffed
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to get -4000 DP for the turn"
+            - add_dp_modifier:
+                target: debuffed
+                value: -4000
+                expiry: end_of_turn
+
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: battle_area
+          filter: { kind: tamer }
+      delta: 1000
+    summary: "[Your Turn] This Digimon gets +1000 DP for each Tamer you have in play"

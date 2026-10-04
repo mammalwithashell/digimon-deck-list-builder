@@ -544,6 +544,13 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-DSL-COST-TARGET-FROM-HAND: subject-free cost-calc gate — the card
+    // whose cost is being computed comes from the hand (DCGO IsExistOnHand).
+    if let Some(want) = pred.cost_target_from_hand {
+        if rctx.cost_target_from_hand != want {
+            return false;
+        }
+    }
     if !eval_event_fields(pred, rctx, subject) {
         return false;
     }
@@ -859,6 +866,12 @@ pub fn eval_predicate_with_bindings(
     if let Some(agg) = &pred.count_gte {
         let floor = eval_int_constraint_read(&agg.n, rctx, None, bindings).max(0) as u32;
         if count_matching(agg, rctx, bindings) < floor {
+            return false;
+        }
+    }
+    if let Some(agg) = &pred.level_sum_gte {
+        let floor = eval_int_constraint_read(&agg.n, rctx, None, bindings).max(0) as u32;
+        if level_sum_matching(agg, rctx, bindings) < floor {
             return false;
         }
     }
@@ -1241,6 +1254,46 @@ fn face_up_security_count(rctx: &EffectReadContext<'_>, player_id: PlayerId) -> 
         .count()
 }
 
+/// Summed level of every battle-area permanent matching `aggregate.filter`
+/// (owner defaults to `you`, like `count_matching`). Level-less permanents
+/// (Tamers, field Options) contribute 0. Only the battle area holds "Digimon
+/// on the field", so a non-battle-area `zone` contributes nothing. Backs the
+/// `level_sum_gte` predicate (BT25-077 Bacchusmon). G-DSL-BOARD-LEVEL-SUM.
+fn level_sum_matching(
+    aggregate: &CompiledCountAggregate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> u32 {
+    let filter = aggregate.filter.as_ref();
+    if !filter.zone.is_empty() && !filter.zone.contains(&CompiledZone::BattleArea) {
+        return 0;
+    }
+    let owners = existential_players(filter.owner.unwrap_or(CompiledPlayerRef::You), rctx);
+    let mut subject_filter = filter.clone();
+    subject_filter.zone.clear();
+    subject_filter.owner = None;
+
+    let mut sum = 0u32;
+    for owner in owners {
+        let player = rctx.game.player(owner);
+        for (index, perm) in player.battle_area.iter().enumerate() {
+            let handle = PermanentHandle {
+                player: owner,
+                index: index as u8,
+            };
+            if eval_predicate_with_bindings(
+                &subject_filter,
+                rctx,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
+                sum += perm.level(rctx.card_data()).map(u32::from).unwrap_or(0);
+            }
+        }
+    }
+    sum
+}
+
 fn count_matching(
     aggregate: &CompiledCountAggregate,
     rctx: &EffectReadContext<'_>,
@@ -1412,6 +1465,8 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.play_cost_eq_binding.is_none()
         && pred.play_or_use_cost_lte.is_none()
         && pred.self_color_count_gte.is_none()
+        && pred.self_color_count_lte.is_none()
+        && pred.in_event_discarded_cards.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
         && pred.dp_gte.is_none()
@@ -1904,6 +1959,24 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(inner) = &pred.event_discarded_card_any {
+        // on_discard_hand: ANY card of the just-trashed hand batch matches the
+        // inner card predicate (DCGO `CanTriggerOnTrashHand(…, cardCondition)`
+        // over `DiscardedCards`). Outside that timing the batch is empty and
+        // the gate fails. G-ENGINE-DISCARDED-HAND-CARDS.
+        let discarded: Vec<CardHandle> = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.discarded_hand_cards().to_vec())
+            .unwrap_or_default();
+        let any_match = discarded.iter().any(|card| {
+            eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(*card), None)
+        });
+        if !any_match {
+            return false;
+        }
+    }
     if let Some(want) = pred.played_by_effect {
         // BT25-080 main clause tail: the OnPlay firing forwards whether the
         // play was effect-driven into `effect_initiated`. G-ENGINE-ON-DISCARD-HAND.
@@ -2036,6 +2109,56 @@ fn eval_event_fields(
             .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
             .unwrap_or(false);
         if is_own_tamer != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_host_is_own_digimon {
+        // G-DSL-ON-LINK-CARD-TRASHED-DELAY: the trash event's host is a
+        // Digimon owned by the observer that still stands in the battle area.
+        // Located by the host's TOP CARD (`event_host_card`), not its index:
+        // the battle area compacts when a <Delay> carrier trashes itself.
+        let host_card = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_card);
+        let is_own_digimon = host_card
+            .and_then(|card| {
+                rctx.game
+                    .player(rctx.player)
+                    .battle_area
+                    .iter()
+                    .position(|perm| perm.top_card().handle() == card)
+            })
+            .map(|index| {
+                rctx.game.permanent_is_digimon_for_rules(crate::permanent::PermanentHandle {
+                    player: rctx.player,
+                    index: index as u8,
+                })
+            })
+            .unwrap_or(false);
+        if is_own_digimon != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.is_event_host {
+        // Subject permanent IS the event host ("1 of those Digimon").
+        let host_card = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_card);
+        let actual = match (subject, host_card) {
+            (PredicateSubject::Permanent(handle), Some(card)) => rctx
+                .game
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|perm| perm.top_card().handle() == card)
+                .unwrap_or(false),
+            _ => false,
+        };
+        if actual != want {
             return false;
         }
     }
@@ -2800,6 +2923,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(cap) = pred.self_color_count_lte {
+        if distinct_color_count(&data.colors) > usize::from(cap) {
+            return false;
+        }
+    }
     if pred.form_is.is_some() {
         // CardData has no `form` field yet; engine doesn't track form.
         // Phase 1c: treat as always-false when set (mirrors "no card matches").
@@ -3033,6 +3161,20 @@ fn eval_card_fields(
             return false;
         }
     }
+    // `in_event_discarded_cards`: the candidate is one of the cards the
+    // triggering effect just trashed from the hand ("play 1 of THEM" —
+    // BT24-007 Tsunomon; DCGO `GetDiscardedCardsFromHashtable`).
+    // G-ENGINE-DISCARDED-HAND-CARDS.
+    if let Some(want) = pred.in_event_discarded_cards {
+        let is_discarded = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.discarded_hand_cards().contains(&card));
+        if is_discarded != want {
+            return false;
+        }
+    }
     // `can_digivolve_onto: <binding>` — the binding-targeted sibling of
     // `can_digivolve_from_source`: the candidate has ≥1 normal-digivolve
     // route onto the permanent bound under `binding` (DCGO
@@ -3175,8 +3317,17 @@ fn permanent_has_digivolve_candidate(
             };
             for card in cards {
                 let h = card.handle();
+                // Full predicate eval (not the bare `eval_card_fields` leaf
+                // path) so combinator filters — e.g. "a red OR blue Digimon
+                // card" (`all_of` + `any_of`) — are honoured. Same fix as the
+                // `source_count` leaf. G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER.
                 if let Some(filter) = &spec.filter {
-                    if !eval_card_fields(filter, rctx, h, false, None, bindings) {
+                    if !eval_predicate_with_bindings(
+                        filter,
+                        rctx,
+                        PredicateSubject::Card(h),
+                        bindings,
+                    ) {
                         continue;
                     }
                 }
@@ -3575,7 +3726,8 @@ fn eval_permanent_fields(
     // `TopCard.CardColors.Count` after ChangeCardColorClass). Strip it from the
     // delegated predicate; the synth check is the sole authority.
     // G-DSL-OWN-STACK-COLOR-COUNT-GTE.
-    let has_self_color_count_constraint = pred.self_color_count_gte.is_some();
+    let has_self_color_count_constraint =
+        pred.self_color_count_gte.is_some() || pred.self_color_count_lte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_kind_constraint
         || level_eq_dna_match
@@ -3625,6 +3777,7 @@ fn eval_permanent_fields(
         }
         if has_self_color_count_constraint {
             p.self_color_count_gte = None;
+            p.self_color_count_lte = None;
         }
         if has_dp_constraint {
             p.dp_eq = None;
@@ -3742,6 +3895,11 @@ fn eval_permanent_fields(
     }
     if let Some(floor) = pred.self_color_count_gte {
         if distinct_color_count(&synth_identity.colors) < usize::from(floor) {
+            return false;
+        }
+    }
+    if let Some(cap) = pred.self_color_count_lte {
+        if distinct_color_count(&synth_identity.colors) > usize::from(cap) {
             return false;
         }
     }

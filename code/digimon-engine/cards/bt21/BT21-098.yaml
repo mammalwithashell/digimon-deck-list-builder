@@ -1,0 +1,114 @@
+# BT21-098 Ragnarok Cannon — Option, Black, Cost 6. Traits: [LIBERATOR]
+#
+# Printed card text (official Bandai DB bundle data/card_bundles/BT21-098.md —
+# authoritative; matches the card image):
+#   [Main] Delete 1 of your opponent's Digimon with the lowest play cost.
+#     Then, place this card in the battle area.
+#   [Your Turn] When one of your [Galacticmon] attacks, <Delay>.
+#     ・Delete 1 of your opponent's Digimon with the lowest play cost. If this
+#     effect didn't delete, trash the top cards of your opponent's security
+#     stack so that it has 1 card left.
+#   [Security] You may play 1 card with [Vemmon] in its text and a play cost of
+#     6 or less from your hand or trash without paying the cost. Then, add this
+#     card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_098.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# [Main] (OptionSkill, not optional): SelectPermanentEffect over opponent
+#   Digimon with `IsMinCost(permanent, Enemy, true)`, canNoSelect: false, Mode
+#   Destroy; skipped silently when none exist. Then PlaceDelayOptionCards.
+#   → `select_opponent_permanent` filtered by `play_cost_lte: { aggregate:
+#   lowest_play_cost, scope: opponent }` (BT23-058 aggregate) + `delete_permanent`
+#   + `place_self_as_delay_option`. Ties are a player choice.
+# <Delay> (OnAllyAttack, isOptional: true): CanUseCondition = on field +
+#   attacker is own permanent whose TopCard.EqualsCardName("Galacticmon") +
+#   CanDeclareOptionDelayEffect (placing turn passed). Body: trash self (cost);
+#   on success select 1 lowest-cost opponent Digimon (mandatory) and delete it;
+#   `failedToDelete` (no target, or the deletion was prevented) → IDestroySecurity
+#   (Enemy.SecurityCards.Count - 1, fromTop). → `kind: delay`,
+#   `trigger: on_ally_attack` (event-gated, optional accept/decline per 16-16-2,
+#   placing-turn gate engine-side), `active_when: your_turn + event_target_owner
+#   you + event_target_name_contains Galacticmon`; body `if
+#   effect_deleted_any_opponent_digimon: false` → `trash_top_security { leave: 1 }`.
+#   DCGO's "[Your Turn]" is `IsOwnerTurn` implied by OnAllyAttack on own attack.
+#   NOTE: the attacker gate uses `event_target_name_contains` (no exact-name
+#   event-target leaf exists); "Galacticmon" is the only card name in the pool
+#   containing that token, so this is exact for the current pool.
+# [Security] (SecuritySkill, not optional outer): if any eligible card exists
+#   in hand or trash, pick hand/trash then a card (canNoSelect: true) with
+#   HasText("Vemmon") && HasPlayCost && cost <= 6 && !IsDigiEgg, play free;
+#   then AddThisCardToHand unconditionally. → `scope: inherited`,
+#   `when: on_security`, `select_union_zone` (optional) + `play_union_bound_free`
+#   + `add_this_option_to_hand` (BT25-096 shape).
+
+card: BT21-098
+name: "Ragnarok Cannon"
+kind: option
+color: [black]
+cost: 6
+traits: [LIBERATOR]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent Digimon with the lowest play cost; then place this card in the battle area"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte:
+                  aggregate:
+                    selector: lowest_play_cost
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+      - delete_permanent: { target: victim }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_ally_attack
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_name_contains: "Galacticmon"
+    summary: "[Your Turn] When your [Galacticmon] attacks, <Delay>: delete 1 lowest-play-cost opponent Digimon; if none deleted, trash opponent security down to 1"
+    process:
+      - select_opponent_permanent:
+          bind_as: delay_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte:
+                  aggregate:
+                    selector: lowest_play_cost
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+      - delete_permanent: { target: delay_victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_top_security:
+                of: opponent
+                leave: 1
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 [Vemmon]-text card with play cost 6 or less from hand or trash free; then add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: vemmon_pick
+          optional: true
+          filter:
+            all_of:
+              - in_text_contains: "Vemmon"
+              - play_cost_lte: 6
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: vemmon_pick }
+      - add_this_option_to_hand: {}
