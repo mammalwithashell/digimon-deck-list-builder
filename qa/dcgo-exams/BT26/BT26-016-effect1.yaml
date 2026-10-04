@@ -13,18 +13,21 @@
 #   T1 BT25-008 (trash 2, draw 2); T2 P1 Dracomon; T3 BT24-059; T4 P1 Biyomon,
 #   Dracomon attacks (suspended); T5 Holy Mode onto BT24-059 (cost 3); [When
 #   Digivolving] deletes Biyomon, returns 3 -> <Recovery +1> (OPT spent).
-#   THE CLAUSE: Holy Mode (12000) attacks the suspended Dracomon (4000). Our
-#   engine's TriggerOrder over Holy Mode's spent-OPT [When Attacking] and
-#   BT24-059's inherited optional unsuspend is a `sim_only` row (see
-#   BT26-016-effect2.yaml); the inherited is DECLINED. Dracomon is deleted in
-#   battle -> <Piercing> security check: Vermilimon BT4-014 (8000) loses.
+#   THE CLAUSE: Holy Mode (12000) attacks the suspended Dracomon (4000). Holy
+#   Mode's own [When Attacking] is not offered (its [Once Per Turn] was spent
+#   by the [When Digivolving]), so the only prompt is BT24-059's inherited
+#   optional unsuspend (DECLINED). Dracomon is deleted in battle -> <Piercing>
+#   security check: Vermilimon BT4-014 (8000) loses.
 #
-# WITNESS: at 17 Dracomon on P1's field suspended, p1.security 5; at 20
+# WITNESS: at 17 Dracomon on P1's field suspended, p1.security 5; at 19
 # Dracomon in P1's trash AND p1.security 4 -- a Digimon-targeted attack
 # removed a security card, which only <Piercing> does.
 #
 # PROMPT SHAPE: no keyword prompt (Piercing is mandatory); BT24-059 inherited
-# OptionalSkill declined.
+# OptionalSkill declined (ours: a Replacement-kind gate "You may activate
+# BT24-059's triggered effect"). The former `sim_only` TriggerOrder row for
+# the spent-OPT [When Attacking] is gone: G-ENGINE-OPT-SPENT-TRIGGER-IN-
+# TRIGGER-ORDER is resolved on main (repaired 2026-10-04).
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
 card: BT26-016
@@ -102,8 +105,6 @@ steps:
     do: { attack: { attacker: field.1, target: field.0 } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [BT26-016], sim_only: true } }
-  - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
@@ -117,7 +118,7 @@ assert:
       p1.security: 5
       p1.field:
         - { card_id: ST1-04, dp: 4000, suspended: true, sources: [] }
-  - at: 20
+  - at: 19
     that:
       turn: 5
       p0.memory: 0

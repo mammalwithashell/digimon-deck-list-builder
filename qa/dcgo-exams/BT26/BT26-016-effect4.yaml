@@ -13,8 +13,9 @@
 # security card under it is Hyokomon BT26-009):
 #   T5: Holy Mode's [When Digivolving] deletes Biyomon and returns 3 ->
 #   <Recovery +1> puts BT26-092 on top of P0's security (5). Holy Mode attacks
-#   security (TriggerOrder `sim_only`, BT24-059 inherited declined as in
-#   effect1/effect2). Security battle 12000 vs Phoenixmon 12000 -> both would
+#   security (BT24-059 inherited declined as in effect1/effect2; the spent-OPT
+#   [When Attacking] is no longer offered -- its former `sim_only`
+#   TriggerOrder row was removed 2026-10-04). Security battle 12000 vs Phoenixmon 12000 -> both would
 #   be deleted. THE CLAUSE: Holy Mode would leave the battle area -> yes ->
 #   P0's top security (BT26-092) goes to the bottom of the DECK and Holy Mode
 #   stays. P0 passes; Holy Mode is suspended so no <Engage> window.
@@ -23,8 +24,8 @@
 #   NOT Shota Kuroi -- the [Security]-play Tamer that was on top before the
 #   replacement.
 #
-# WITNESS: at 20 (replacement prompt open) p0.security 5; at 21 Holy Mode still
-# on field, p0.security 5 -> 4 (the cost), Phoenixmon in P1's trash; at 24
+# WITNESS: at 19 (replacement prompt open) p0.security 5; at 20 Holy Mode still
+# on field, p0.security 5 -> 4 (the cost), Phoenixmon in P1's trash; at 23
 # BT26-009 in P0's trash and no BT26-092 on P0's field (the top security card
 # really left: it was BT26-092 that moved, not some other card).
 #
@@ -108,8 +109,6 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [BT26-016], sim_only: true } }
-  - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
@@ -129,14 +128,14 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 20
+  - at: 19
     that:
       turn: 5
       p0.security: 5
       p0.field:
         - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
         - { card_id: BT26-016, dp: 12000, suspended: true, sources: [BT24-059] }
-  - at: 21
+  - at: 20
     that:
       turn: 5
       p0.memory: 0
@@ -147,7 +146,7 @@ assert:
       p0.field:
         - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
         - { card_id: BT26-016, dp: 12000, suspended: true, sources: [BT24-059] }
-  - at: 24
+  - at: 23
     that:
       turn: 6
       p0.security: 3

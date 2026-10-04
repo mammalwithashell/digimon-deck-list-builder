@@ -14,16 +14,18 @@
 #   <Recovery +1> (this spends the shared [Once Per Turn]).
 #   THE CLAUSE: P0 passes the main phase with Holy Mode unsuspended -> the
 #   end-of-turn <Engage> window -> Holy Mode attacks P1's security.
-#   On that attack our engine bundles TWO [When Attacking] triggers into a
-#   TriggerOrder: Holy Mode's own #effect#3 (OPT already spent -> resolves as a
-#   no-op) and BT24-059's inherited "by placing 1 of your other Digimon as this
-#   Digimon's bottom digivolution card, it unsuspends" (optional -> DECLINED).
-#   DCGO should not offer the spent-OPT body (maxCountPerTurn), so it asks only
-#   the inherited's OptionalSkill: the TriggerOrder row is `sim_only`.
+#   On that attack only BT24-059's inherited [When Attacking] "by placing 1 of
+#   your other Digimon as this Digimon's bottom digivolution card, it
+#   unsuspends" is offered (optional -> DECLINED); Holy Mode's own #effect#3
+#   is not, its [Once Per Turn] being spent (DCGO maxCountPerTurn; ours since
+#   G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER was resolved on main -- the
+#   former `sim_only` TriggerOrder row was removed 2026-10-04). After the
+#   attack our EndOfTurnAction park lingers with PASS only; P0's phase-exit
+#   `pass` (step 20) emits nothing on the wire.
 #   Security check: Vermilimon BT4-014 (8000) loses to 12000.
 #
 # WITNESS: at 17 (main phase, before the pass) Holy Mode unsuspended and
-# p1.security 5; at 21 Holy Mode suspended and p1.security 4 -- an attack
+# p1.security 5; at 20 Holy Mode suspended and p1.security 4 -- an attack
 # declared only after the main phase was passed (step 18 lowers to
 # EndOfTurnGate { attack: Some(..) }, not a Main-phase action).
 #
@@ -110,10 +112,12 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: OptionalSkill }
   - actor: 0
-    do: { select: { cards: [BT26-016], sim_only: true } }
-  - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
+  # Post-attack phase exit: our EndOfTurnAction park lingers (PASS only, no
+  # gate left); the emitter sends nothing on the wire for this pass.
+  - actor: 0
+    do: { pass: {} }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -126,7 +130,7 @@ assert:
       p0.field:
         - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
         - { card_id: BT26-016, dp: 12000, suspended: false, sources: [BT24-059] }
-  - at: 21
+  - at: 20
     that:
       p1.security: 4
       p1.trash: [BT4-014, ST1-04]
