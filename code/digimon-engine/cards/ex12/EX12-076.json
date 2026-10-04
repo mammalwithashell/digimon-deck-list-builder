@@ -1,4 +1,6 @@
 {
+  "index": 4477,
+  "norm_id": 0.22385,
   "card_id": "EX12-076",
   "card_index": 76,
   "card_name_eng": "Susanoomon",
@@ -17,7 +19,9 @@
     "Shaman",
     "Shambala",
     "SW",
-    "TB"
+    "TB",
+    "Hybrid",
+    "TS"
   ],
   "form_eng": [],
   "attribute_eng": [

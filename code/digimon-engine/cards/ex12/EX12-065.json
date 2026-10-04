@@ -1,4 +1,6 @@
 {
+  "index": 4466,
+  "norm_id": 0.2233,
   "card_id": "EX12-065",
   "card_index": 65,
   "card_name_eng": "Kaguyamon",
@@ -17,7 +19,8 @@
     "Puppet",
     "Sanmyojin",
     "Tentei Hachibushu",
-    "Shambala"
+    "Shambala",
+    "TB"
   ],
   "form_eng": [],
   "attribute_eng": [

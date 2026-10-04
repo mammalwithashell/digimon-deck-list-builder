@@ -1,4 +1,6 @@
 {
+  "index": 4474,
+  "norm_id": 0.2237,
   "card_id": "EX12-073",
   "card_index": 73,
   "card_name_eng": "Giant Meat",
@@ -16,7 +18,9 @@
     "NSp",
     "DS",
     "NSo",
-    "WG"
+    "WG",
+    "ME",
+    "VB"
   ],
   "form_eng": [],
   "attribute_eng": [],

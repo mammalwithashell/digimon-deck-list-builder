@@ -11,6 +11,11 @@ wrong entry there is wrong in every real game whatever the card's YAML says.
    compared rather than strings because cards.json keeps the API's keyword reminder
    text; tokens still catch a wrong timing ([All Turns] for [Your Turn]) or a dropped
    name/trait reference.
+3. Every card has a unique registry index, with norm_id = index / capacity. The
+   engine's CardRegistry maps a card without one to PADDING_ID, so the RL observation
+   cannot tell it from an empty slot. All 77 EX12 cards sat there from their
+   2026-07-05 ingest until 2026-10-03; the Rust twin of this check
+   (tests/mask_and_tensor/card_registry_parity.rs) runs in no CI workflow.
 """
 import json
 import os
@@ -109,6 +114,24 @@ def stats_violations(cards, official, ids):
     return out
 
 
+def registry_violations(cards):
+    """Cards without a usable, unique registry index, or with a norm_id that disagrees."""
+    from tools.build_registry import REGISTRY_CAPACITY
+
+    out, owner = [], {}
+    for cid, card in cards.items():
+        idx = card.get("index")
+        if not isinstance(idx, int) or idx <= 0:
+            out.append(f"{cid}: no registry index (the engine maps it to PADDING_ID)")
+            continue
+        if idx in owner:
+            out.append(f"{cid}: index {idx} already belongs to {owner[idx]}")
+        owner[idx] = cid
+        if card.get("norm_id") != idx / REGISTRY_CAPACITY:
+            out.append(f"{cid}: norm_id {card.get('norm_id')!r} != {idx} / {REGISTRY_CAPACITY}")
+    return out
+
+
 def _repo_inputs():
     cards = _load_json(os.path.join(_ROOT, "data", "cards.json"))
     official = _load_json(os.path.join(_ROOT, "data", "card_official.json"))["cards"]
@@ -119,6 +142,12 @@ def test_no_two_cards_share_a_set_and_number():
     cards, _ = _repo_inputs()
     collisions = id_collisions(cards)
     assert not collisions, f"card ids naming the same card: {collisions}"
+
+
+def test_every_card_has_a_unique_registry_index():
+    cards, _ = _repo_inputs()
+    violations = registry_violations(cards)
+    assert not violations, f"{len(violations)} registry problems (first 10):\n  " + "\n  ".join(violations[:10])
 
 
 def test_reviewed_cards_match_the_official_printed_data():

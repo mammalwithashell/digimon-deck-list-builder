@@ -541,8 +541,8 @@ def merge_set_into_cards(existing, new_cards, set_id):
 
     Preserves ``index`` and ``norm_id`` from the old entry when a card is
     being re-fetched (so that stable tensor encoding is not corrupted).
-    Genuinely new cards will lack these fields until ``build_registry.py``
-    is run to assign indices.
+    Genuinely new cards will lack these fields until
+    ``build_registry.py --offline`` assigns the next free indices.
     """
     prefix = set_id + "-"
     # Save old entries so we can carry over index/norm_id
@@ -639,7 +639,8 @@ def bulk_ingest():
     missing_indices = sum(1 for v in existing.values() if "index" not in v)
     if missing_indices:
         print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-        print("Run `python tools/build_registry.py` to assign stable indices.")
+        print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+        print("without --offline it rebuilds every entry from the API).")
 
 
 def backfill_xros_costs(cards_path=None):
@@ -716,7 +717,8 @@ def main():
         missing_indices = sum(1 for v in existing.values() if "index" not in v)
         if missing_indices:
             print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-            print("Run `python tools/build_registry.py` to assign stable indices.")
+            print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+            print("without --offline it rebuilds every entry from the API).")
         return
 
     # Legacy positional args mode: SET_ID SET_NAME
@@ -770,7 +772,8 @@ def main():
     missing_indices = sum(1 for v in merged.values() if "index" not in v)
     if missing_indices:
         print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-        print("Run `python tools/build_registry.py` to assign stable indices.")
+        print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+        print("without --offline it rebuilds every entry from the API).")
 
 
 if __name__ == "__main__":

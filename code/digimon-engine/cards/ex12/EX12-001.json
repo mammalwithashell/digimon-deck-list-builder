@@ -1,4 +1,6 @@
 {
+  "index": 4402,
+  "norm_id": 0.2201,
   "card_id": "EX12-001",
   "card_index": 1,
   "card_name_eng": "Nyaromon",
@@ -18,8 +20,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
-  "inherited_effect_description_eng": "This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""
