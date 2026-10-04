@@ -1,0 +1,108 @@
+# Exam scenario: Merukimon (BT24-051), clause BT24-051#effect#1 --
+# "When this card would be played, if there are 3 or more Digimon, reduce the
+#  play cost by 5."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No variant.
+#
+# EXPECTED DIVERGENCE. "there are 3 or more Digimon" counts BOTH players'
+# Digimon (no "of yours"; cf. the BT25-059 Ceresmon spec, which writes
+# `owner: any` for the same wording). BT24-051.yaml's condition is
+# `count_gte { filter: { zone: [battle_area], kind: digimon }, n: 3 }` with
+# NO owner, and `count_matching` (dsl_cards/predicate.rs) defaults the owner
+# to `You` -- so our engine counts only P0's own Digimon. This line has ONE
+# own Digimon + TWO opponent Digimon = 3: printed text (and DCGO, expected)
+# reduce to 7; OUR engine charges the full 12. (Probe, not committed: with 3
+# OWN Digimon our engine does reduce to 7 -- the reduction machinery works,
+# only the owner scope is wrong.)
+#
+# THE LINE:
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): Agumon ST1-03 (3) -> 0; Phoenixmon ST1-10 (10) -> -10 -> P0 10.
+#   T3 (P0, 10): Coronamon BT25-008 (3) -> 7 (its [On Play] declined). Board:
+#       3 Digimon (1 own, 2 opponent). THE CLAUSE: hard-play Merukimon.
+#       OURS: 12 -> memory -5 (turn ends after the [On Play]). PRINTED/DCGO:
+#       7 -> memory 0 (turn continues).
+#       [On Play] (#effect#2): suspend both opponent Digimon (two picks);
+#       the optional "+5000 DP and attack" pick is declined.
+#
+# WITNESS: at 8 memory 7 with 3 Digimon on the board; at 12 (P1's T4
+# breeding on ours) memory -5 = a 12-cost play (reduction NOT applied).
+# Expected DCGO: memory 0 at the same row and still P0's turn -- the oracle
+# will diverge at step 12.
+#
+# PROMPT SHAPE: the reduction itself asks nothing on either side. The suspend
+# is ours = two single OppField picks (SelectPermanentEffect); DCGO likely
+# ONE maxCount-2 SelectPermanentEffect (cardinality risk). The optional
+# attacker pick: SelectPermanentEffect canNoSelect -> decline.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT24-051
+clause: BT24-051#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-051, BT25-008, BT25-022, BT25-022, BT24-034,
+            BT25-022, BT24-031, BT25-034, BT26-067, BT25-022,
+            BT24-102, BT24-102, BT24-102]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT24-051, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 7
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      turn: 4
+      p0.memory: -5
+      p0.field:
+        - { card_id: BT24-051, dp: 12000, suspended: false, sources: [] }
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }

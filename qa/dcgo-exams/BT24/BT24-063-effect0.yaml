@@ -1,0 +1,102 @@
+# Exam scenario: Locomon (BT24-063), clause BT24-063#effect#0 -- the special
+# digivolution condition "[Digivolve] Lv.4 w/[TS] trait: Cost 3".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No variant.
+#
+# ISOLATION. Locomon's printed circle is Black Lv.4 / 3. The base is Wizardmon
+# BT26-067 -- a PURPLE/RED Lv.4 [TS] -- so the circle does not accept it: the
+# digivolve lowers only through the trait condition. PARTIAL: the condition's
+# cost (3) equals the circle's, so the memory delta (3 -> 0) confirms the cost
+# but cannot separate the two routes by cost -- isolation is by colour only.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Wizardmon BT26-067 (4): 0 -> -4. Its [On Play]
+#       <Draw 1> (stack[10]) and trashes 1 hand card (Homeros BT24-102).
+#   T2 (P1, 4): Agumon ST1-03 (3) -> 1; pass -> P0 3.
+#   T3 (P0, 3): digivolve Locomon onto Wizardmon (cost 3): 3 -> 0 (+1
+#       digivolve draw). Locomon's [When Digivolving] (#effect#2) reveals
+#       Minervamon / Mervamon / Marsmon (all cost 12+, nothing eligible: no
+#       pick on ours) and sends them to the BOTTOM.
+#       Pass -> P1 3.
+#
+# WITNESS: at 7 (P0's T3 breeding) memory 3, Wizardmon bare; at 15 (P1's T4
+# breeding) memory -3 (0 after the digivolve, then the pass) and Locomon
+# over Wizardmon.
+#
+# PROMPT SHAPE: the digivolve asks nothing (one legal route). Reveal
+# remainder: sim_only choice + dcgo_only generic_bool false + our 3
+# OrderedPermutation picks (sim_only) vs DCGO's one ordering SelectCardEffect
+# (dcgo_only) -- the EX7-044 idiom. DCGO may also open an empty reveal pick.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT24-063
+clause: BT24-063#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-067, BT24-063, BT25-022, BT25-022, BT24-034,
+            BT25-022, BT24-031, BT25-034, BT26-067, BT25-022,
+            BT24-102, BT24-102, BT24-102, BT24-041, BT26-081, BT25-020, BT24-102]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-067, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-102] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT24-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { select: { cards: [BT24-041], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT26-081], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-020], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT24-041, BT26-081, BT25-020], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT26-067, dp: 4000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.field:
+        - { card_id: BT24-063, dp: 7000, suspended: false, sources: [BT26-067] }
