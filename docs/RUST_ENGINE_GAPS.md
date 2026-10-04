@@ -2530,6 +2530,15 @@ Reproducer not yet written.
 
 ## `PermanentHandle.index` goes stale across a battle-area removal, and it blocks the 15-8-5-4 ordering fix  [G-PERMANENT-HANDLE-POSITIONAL-STALENESS]
 
+**Chain completed 2026-10-04.** Part 1 had landed (`shift_effect_queue_after_battle_area_remove`);
+part 2 (the 15-8-5-4 ordering flip) landed with G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES; part 3
+(staging-time liveness: `queued_effect_index_is_live` in `non_firing_queued_effect_indices_for`) landed
+with it. Both `#[ignore]`d reproducers in `ex12_036.rs` are un-ignored and green, the positive control
+stays green; `EX12-036-effect2.yaml` drops its MultipleSkills + Ryugumon-lock rows (matches DCGO), and
+`EX12-031-inherited0.yaml` gains one sim_only ordering row for the target-starved Shellmon `[On Play]`
+(DCGO's oracle stack omits it; our Shellmon clause has no activation condition). Both EX12 scenarios
+need an oracle re-run.
+
 **Found 2026-08-26.** Root blocker under `EX12-036#effect#2`, one of the last two
 unconfirmed clauses in the Toho core. The dependency order below matters more
 than either symptom.

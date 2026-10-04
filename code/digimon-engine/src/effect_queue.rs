@@ -3104,11 +3104,34 @@ impl Game {
             if self.effect_queue[i].controller != chooser {
                 continue;
             }
-            if !self.queued_effect_condition_passes(i) {
+            if !self.queued_effect_condition_passes(i) || !self.queued_effect_index_is_live(i) {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// Staging-time liveness (G-PERMANENT-HANDLE-POSITIONAL-STALENESS part 3,
+    /// DCGO's `CanActivate` re-filter in MultipleSkills): an entry whose source
+    /// has left (15-4-4-3 — it became a new card) can never resolve, so it must
+    /// not be offered as a `TriggerOrder` branch. Live once a parked
+    /// replacement's leave commits before its triggers are staged
+    /// (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES). Granted bodies and
+    /// entries whose effect can't be looked up stay (the run-time path decides).
+    fn queued_effect_index_is_live(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            return true;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return true;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return true;
+        };
+        self.queued_effect_source_is_live(qe, effect)
     }
 
     /// Evaluate the clause-level condition of `effect_queue[i]` against the

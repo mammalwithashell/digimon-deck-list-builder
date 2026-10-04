@@ -310,8 +310,14 @@ fn ex12_036_decode_does_not_trigger_on_a_battle_leave() {
 /// The witness that this is a REAL play and not a whiffed Decode is the source
 /// arriving on the field; the sibling test below adds a live Ryugumon that
 /// DOES lock, so an all-quiet engine cannot pass both.
+///
+/// UN-IGNORED 2026-10-04: queued handles are now re-keyed on removal
+/// (`shift_effect_queue_after_battle_area_remove`), the parked replacement
+/// commits before its triggers are staged
+/// (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES), and the TriggerOrder
+/// bundle filters dead sources. EX12-031-inherited0's only new prompt is the
+/// target-starved Shellmon [On Play] ordering, answered there as sim_only.
 #[test]
-#[ignore = "CONFIRMED ENGINE DEFECT, not yet fixed -- see the doc comment. \nReproduces qa/dcgo-exams/EX12/EX12-036-effect2.yaml step 13. A candidate fix \n(defer the post-replacement drain past the commit + filter the TriggerOrder \nbundle on source-liveness + re-key effect_queue handles across a battle-area \nremove) turns this green and keeps cards_behavioral at its 2 known failures, \nbut introduces a phantom 2-branch TriggerOrder in EX12-031-inherited0, so it \nis NOT applied. Un-ignore with the fix."]
 fn ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -416,7 +422,6 @@ fn ex12_036_decode_play_still_wakes_a_ryugumon_that_stays_on_the_field() {
 /// exactly why `ex12_065_mass_granted_retaliation_respects_the_battle_cause_gate`
 /// did not catch the `<Retaliation>` phantom fixed in e3363579e.
 #[test]
-#[ignore = "CONFIRMED ENGINE DEFECT, not yet fixed -- see the doc comment. \nThis is exam step 13 verbatim: we park TriggerOrder over [EX12-063, EX12-036], \nDCGO asked SelectPermanentEffect. Same blocked fix as the sibling test."]
 fn ex12_036_decode_play_offers_only_the_played_cards_own_trigger() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
