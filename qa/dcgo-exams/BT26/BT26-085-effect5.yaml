@@ -1,0 +1,121 @@
+# Exam scenario: Giant Slayer (BT26-085), clause BT26-085#effect#5 --
+# "Special Play Condition: Assembly -5: 5 different-level cards w/[Chronomon]
+#  in text or w/[Shaman] trait".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs `tm-quiet-red`;
+# no variant). Every card the line names is stacked.
+#
+# THE LINE (getting one qualifying card of each level 3..7 into the trash):
+#   T1 (P0, 0): play Coronamon BT25-008 (3: 0 -> -3). [On Play]: trash up to 2
+#      [Iliad]/[TS] cards -> Hyokomon BT26-009 (Lv.3, [Chronomon] in text) and
+#      Aegiomon BT24-034 (Lv.4, [Shaman]); <Draw 1> x2.
+#   T2 (P1, 3): pass.
+#   T3 (P0, 3): play Coronamon #2 (3: 3 -> 0) -> trash Butenmon BT26-015
+#      (Lv.5, [Shaman]) and Chronomon: Holy Mode BT26-016 (Lv.6); draw 2.
+#      Digivolve Coronamon -> Buraimon BT26-011 (2: 0 -> -2; draw 1); its
+#      [When Digivolving] trashes Chronomon: Destroy Mode BT26-060 (Lv.7) to
+#      <Draw 2>.
+#   T4 (P1, 2): pass.
+#   T5 (P0, 3): THE CLAUSE -- play Giant Slayer BT26-085 from hand, declaring
+#      the five trash cards (levels 3/4/5/6/7) as Assembly materials: cost
+#      12 - 5 = 7 (3 -> -4), the five go UNDER Giant Slayer. Its [On Play]
+#      asks nothing.
+#   T6 (P1): breeding pass (one step past the clause).
+#
+# WITNESS: at 13 P0 has 3 memory, Giant Slayer in hand and the five materials
+# in the trash; at 15 Giant Slayer is on the field with sources [BT24-034,
+# BT26-009, BT26-015, BT26-016, BT26-060], the trash is EMPTY and memory is -4
+# (7 paid: the Assembly -5 applied to the printed 12).
+# PARTIAL: the "different-level" restriction is only crossed positively (five
+# distinct levels); the rejection of a same-level pair is covered by our
+# per-card test.
+#
+# SLOT NOTE: the T3 `digivolve from: field.0` addresses one of TWO identical
+# Coronamon, so whichever one DCGO's compact index names, the resulting board
+# is the same multiset.
+#
+# PROMPT SHAPE: Assembly -> ours ONE CountCappedMultiSelect {min 0, max 5}
+# over the trash (one-element recipe, repeat 5), answered with the five ids in
+# one `cards:` row; DCGO SelectAssemblyClass opens ONE SelectCardEffect (root
+# Trash, maxCount = 5) for the single element (NOTES-BT24-081.md "Assembly").
+# Not the `materials:` form (EX12-076-effect0.yaml: it stops after one pick
+# on a repeat-N element). Coronamon / Buraimon costs: our declinable Hand
+# picks; DCGO SelectHandEffect (Coronamon "up to 2": maxCount 2).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-085
+clause: BT26-085#effect#5
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT25-008, BT26-011, BT26-009, BT24-034,
+            BT26-078, BT26-078, BT26-078, BT26-073, BT26-073,
+            BT26-015, BT26-016, BT26-060, BT26-085, BT26-092, BT26-092, BT26-087, BT26-090, BT26-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-009, BT24-034] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-015, BT26-016] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-060] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-085, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-009, BT24-034, BT26-015, BT26-016, BT26-060] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      p0.memory: 3
+      p0.hand: [BT26-085, BT26-087, BT26-090, BT26-092, BT26-092, BT26-092]
+      p0.trash: [BT24-034, BT26-009, BT26-015, BT26-016, BT26-060]
+  - at: 15
+    that:
+      turn: 6
+      p0.memory: -4
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT26-011, dp: 5000, suspended: false, sources: [BT25-008] }
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [BT24-034, BT26-009, BT26-015, BT26-016, BT26-060] }

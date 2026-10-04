@@ -1,0 +1,106 @@
+# Exam scenario: Giant Slayer (BT26-085), clause BT26-085#effect#3 --
+# "[On Play] Until your opponent's turn ends, your opponent's effects can't
+#  reduce this Digimon's DP or trash its stacked cards."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs `bt26-chronomon`
+# -- the mirror: P1 needs an opposing DP-reduction effect and the quiet red deck
+# has none; no variant). Every card the line names is stacked.
+#
+# THE LINE:
+#   T1 (P0, 0): pass.   T2 (P1, 3): pass.
+#   T3 (P0, 3): hard-play Giant Slayer BT26-085 (12: 3 -> -9). THE CLAUSE:
+#      its [On Play] grants opponent-scoped DP-minus immunity + stack-trash
+#      immunity until the end of P1's turn (no prompt).
+#   T4 (P1, 9): play Butenmon BT26-015 (7: 9 -> 2). Its [On Play]: "1 of your
+#      opponent's Digimon gets -4000 DP until their turn ends" -> Giant Slayer
+#      (only target). "Then, by returning 1 card in your trash ..." -- P1's
+#      trash is empty, nothing asked. P1 passes (P0 gets 3).
+#   T5 (P0): the trailing state.
+#
+# WITNESS: at 8 (Butenmon's target pick pending) Giant Slayer reads 14000; at
+# 9 (after the -4000 resolved, still P1's turn) it STILL reads 14000.
+# PARTIAL: "or trash its stacked cards" is not witnessed (Giant Slayer is
+# hard-played with no stack, and no opposing stack-trash effect is reachable
+# on a short line).
+#
+# EXPECTED DIVERGENCE / RULES QUESTION (step 10, P0's T5): our engine shows
+# Giant Slayer at 10000 once the protection lapses -- the immunity is applied
+# LAZILY in Game::effective_dp (it filters negative ChangeDp entries while an
+# ImmuneFromDPMinus entry is live), so Butenmon's -4000 ("until their turn
+# ends" = until the end of P0's T5) is still registered and resurfaces after
+# P1's turn ends. Under the printed text the -4000 was an effect that COULD
+# NOT reduce the DP when it resolved, so it should never apply (expected
+# 14000 at T5). If DCGO also reads 10000, this is shared behaviour; either way
+# it is a finding to triage.
+#
+# PROMPT SHAPE: Butenmon's target -> ours OppField, DCGO SelectPermanentEffect
+# (actor 1). Giant Slayer's [On Play] asks nothing on either side.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-085
+clause: BT26-085#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-085, BT26-060, BT26-011, BT26-015, BT25-008,
+            BT26-078, BT26-078, BT26-078, BT26-073, BT26-073,
+            BT26-011, BT26-015, BT25-008, BT26-009, BT26-009]
+    rest: bt26-chronomon
+  p1:
+    stack: [BT26-015, BT26-011, BT26-009, BT25-008, BT26-092,
+            BT26-078, BT26-078, BT26-078, BT26-073, BT26-073,
+            BT26-011, BT26-009]
+    rest: bt26-chronomon
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-085, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT26-015, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }
+  - at: 9
+    that:
+      turn: 4
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 5
+      p0.field:
+        - { card_id: BT26-085, dp: 10000, suspended: false, sources: [] }
+      p1.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }
