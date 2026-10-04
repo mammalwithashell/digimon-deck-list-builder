@@ -1,0 +1,130 @@
+# Exam scenario: Sirenmon (BT25-039), clause BT25-039#inherited#0 --
+# "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
+#  attacks, you may change the attack target to 1 of your suspended Digimon."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Sirenmon (6) -> -6.
+#   T2 (P1, 6): play Birdramon ST1-05 (4) -> 2, pass -> P0 3.
+#   T3 (P0, 3): draw stack[10]; Sirenmon attacks security (P1's top BT1-009,
+#      3000, is deleted) -> Sirenmon SUSPENDED. Digivolve it into Marsmon
+#      BT25-020 (cost route 3, 3 -> 0; it stays suspended), digivolve-draw
+#      stack[11]. Marsmon's [When Digivolving]: +3000 to itself, decline the
+#      optional effect battle. Pass.
+#   T4 (P1, 3): Birdramon attacks P0's SECURITY. THE CLAUSE: P0 redirects
+#      the attack to Marsmon (P0's only suspended Digimon, carrying Sirenmon
+#      as its source). Marsmon 12000 vs Birdramon 5000 -> Birdramon deleted;
+#      Marsmon's [All Turns][OPT] (#effect#3) trashes P1's top security
+#      (ST1-04).
+#
+# WITNESS: at 14 (before the redirect answer) P0 security 5, Birdramon on the
+# field suspended; at 15 P0 security STILL 5 (the security attack never
+# checked), Birdramon in P1's trash, P1 security 3 (4 after T3, -1 from
+# Marsmon's battle-win trash).
+#
+# PROMPT SHAPE: ours = ONE declinable OwnField pick (the clause's
+# `select_own_permanent` optional; the `redirect_attack_target` step parks
+# nothing). DCGO = SelectPermanentEffect(canNoSelect:true) over own suspended
+# Digimon (BT25-039 DCGO notes); if DCGO's inherited ActivateClass is
+# isOptional and asks OptionalSkill first, add an optional_gate_fold.
+card: BT25-039
+clause: BT25-039#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-039, BT25-020, BT8-097, BT24-083, BT26-088,   # hand
+            BT24-102, BT24-102, BT24-102, BT24-102, BT8-097,
+            BT26-092, BT26-092]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-05, ST1-03, ST1-04, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-02, ST1-04]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Sirenmon (0 -> -6).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-039, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 6): Birdramon (6 -> 2), keep the turn, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Sirenmon attacks (suspends); P1's BT1-009 (3000) is
+  # deleted in the security battle.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Digivolve the (suspended) Sirenmon into Marsmon.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-020 } }
+    expect: { prompt: main_phase }
+  # Cost route: Sirenmon is GREEN (Marsmon's Green Lv.5 / 4 circle) AND
+  # [TS] (Lv.5 w/[TS] / 3) -> ours EffectChoice, DCGO SelectCountEffect over
+  # the distinct costs; take 3 (3 -> 0). Digivolve-draw stack[11].
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # Marsmon [When Digivolving]: +3000 to Marsmon (mandatory), then decline
+  # the optional "may battle" attacker pick (Birdramon must survive to attack).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): Birdramon attacks P0's security.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE (inherited from Sirenmon under Marsmon, [Opponent's Turn]
+  # [OPT]): change the attack target to Marsmon (suspended). Marsmon 12000
+  # beats Birdramon 5000; Marsmon's #effect#3 then trashes P1's top
+  # security (no prompt).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-020, dp: 12000, suspended: true, sources: [BT25-039] }
+      p1.field:
+        - { card_id: ST1-05, dp: 5000, suspended: true, sources: [] }
+      p1.security: 4
+  - at: 15
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-020, dp: 12000, suspended: true, sources: [BT25-039] }
+      p1.field: []
+      p1.security: 3
+      p1.trash: [BT1-009, ST1-04, ST1-05]

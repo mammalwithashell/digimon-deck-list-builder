@@ -1,0 +1,96 @@
+# Exam scenario: Angemon (BT25-034), clause BT25-034#effect#2 --
+# "<Ascension> (When this Digimon is deleted, you may place this card as the
+#  top security card.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE:
+#   T1 (P0, 0): no hatch; hard-play Angemon (5) -> -5.
+#   T2 (P1, 5): all-pass -> P0 3.
+#   T3 (P0, 3): draw stack[10]; Angemon (5000) attacks security; P1's top
+#      card is Phoenixmon ST1-10 (12000) -> Angemon is deleted in battle (its
+#      own <Barrier> is INHERITED-only, so nothing prevents it). THE CLAUSE:
+#      accept <Ascension> -> Angemon goes from the trash to the TOP of P0's
+#      security (5 -> 6). Pass.
+#
+# WITNESS: at 7 (before the Ascension answer) Angemon in P0's trash, security
+# 5, field empty; at 8 (before T3's pass) trash empty, security 6.
+#
+# PROMPT SHAPE: DCGO = ONE generic_bool (CardEffectCommons.AscensionProcess ->
+# SetBoolSelection, see EX12-047-effect4.yaml). Ours = a two-branch
+# EffectChoice (yes -> branch 0).
+# EXPECTED DIVERGENCE (step 6, sim-only row): our engine stacks <Ascension>
+# TWICE for BT25-034 -- a TriggerOrder over [BT25-034 <Ascension>, BT25-034
+# <Ascension>] -- before the yes/no. Accepting the first makes the second
+# fizzle silently (the card is no longer in the trash), so the end state is
+# right, but the extra decision is phantom; DCGO has one Ascension and no
+# MultipleSkills row. Reported as a suspected engine bug (duplicate keyword
+# registration).
+card: BT25-034
+clause: BT25-034#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-034, BT8-097, BT24-083, BT26-088, BT26-081,   # hand
+            BT24-102, BT24-102, BT24-102, BT24-102, BT8-097,   # security (never flipped)
+            BT26-092]                                          # T3 draw
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,          # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-10,        # security; [9] = Phoenixmon 12000 (top)
+            ST1-02, ST1-04]                                    # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Angemon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-034, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Angemon attacks into Phoenixmon and is deleted.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our duplicate <Ascension> TriggerOrder (see header).
+  - actor: 0
+    do: { select: { cards: [BT25-034], ordinal: 0, sim_only: true } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-034, BT25-034] }
+  # THE CLAUSE: place Angemon as the top security card.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      p0.security: 5
+      p0.trash: [BT25-034]
+      p0.field: []
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.security: 6
+      p0.trash: []
+      p0.field: []
+      p1.security: 4
+      p1.trash: [ST1-10]
