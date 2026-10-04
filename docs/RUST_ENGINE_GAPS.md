@@ -4575,3 +4575,62 @@ Effect"), with `inherited_keywords` reading only true inherited text.
 - **P-193** — its [Main] has no `if binding_present` guard, so declining the trash cost still draws 2 (and, since G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT, is now trashed instead of placed on decline). Needs a YAML fix + decline test.
 - **LM-054 Treadmill Training** — still uses the older shape (number-based colour bypass, no `has_digivolve_candidate` target gating, mandatory hand pick); audit against the LM-057..061 shape.
 - **EX12-070 / EX12-071** — decline paths are now faithful (explicit placement) but untested.
+
+## Gaps surfaced by the Chronomon / TS Mervamon exam-authoring pass (2026-10-04)
+
+Found while authoring `--sim-only` exam scenarios (`qa/dcgo-exams/BT26/NOTES-BT26-CHRONOMON-MERVAMON.md`).
+No engine code was edited. "Verified in code" means the cause was read at the cited site; the rest are observed
+behaviour in a scenario or probe with the cause suspected. Every affected scenario asserts OUR current behaviour
+and names the gap in its header, so a fix will show up as a `--sim-only` assertion failure to re-pin.
+
+### G-ENGINE-SECURITY-SCOPED-CLAUSE-FIRES-FROM-BATTLE-AREA — OPEN (verified in code)
+- **Symptom:** BT25-039 Sirenmon's `{Security} [End of Your Turn]` clause (play a [Ceresmon] at −7) fires while Sirenmon is on the **battle area**: hard-play Sirenmon on T1 with a [Ceresmon] in hand, pass → a hand prompt "You may play 1 [Ceresmon]…" opens at the end of T1.
+- **Cause:** `enqueue_from_permanent` (`code/digimon-engine/src/effect_queue.rs` ~L2590–2615) skips `effect.trash_zone` and `effect.inherited` clauses on the top-card scan but not `effect.security` (set by `EffectBuilder::security_zone`). `[Security]`-timed effects are unaffected (their `SecuritySkill` timing never matches here); only `{Security}`-scoped clauses with an ordinary timing leak.
+- **Fix sketch:** `if effect.security { continue; }` beside the `trash_zone` gate (and the same in the breeding scan), then re-run the security-effect suites.
+- **Scenario:** `qa/dcgo-exams/BT25/BT25-039-effect1.yaml` avoids it by drawing Ceresmon on T3.
+
+### G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT — OPEN (observed; code path read)
+- **Symptom:** BT26-060 Chronomon: Destroy Mode checks **3** security cards per attack; the printed `<Security A. +1>` means 2.
+- **Cause:** the card YAML declares the keyword as `kind: aura, target: {}, security_attack: 1` (a `SecurityAttackChange` modifier), while `Game::security_attack_keyword_bonus` (`src/game/queries.rs` ~L302) ALSO parses the printed `<Security A. +1>` off the face text; `raw_security_strike` (`src/combat/mod.rs` ~L3058) sums both.
+- **Blast radius (unverified):** the same self-aura pattern on BT10-013, BT24-014, BT25-103, BT26-080, EX7-023, all of which print `<Security A. +1>`.
+- **Fix:** card side — drop the self-aura (the printed keyword is already counted) or switch to `grant_keyword`; engine side — optionally refuse a self `security_attack` aura on a card whose face prints the keyword.
+- **Scenarios:** `BT26-060-effect1.yaml`, `BT26-060-effect4.yaml` (EXPECTED DIVERGENCE: DCGO should leave security at 3, we leave 2).
+
+### G-ENGINE-IMMUNE-DP-MINUS-LAZY — OPEN (observed)
+- **Symptom:** BT26-085 Giant Slayer's [On Play] "your opponent's effects can't reduce this Digimon's DP … until your opponent's turn ends". P1's Butenmon gives it −4000 while protected: it reads 14000 on P1's turn (correct), then **10000 on P0's next turn** — the blocked reduction ("until their turn ends") was still registered and surfaces once the immunity lapses.
+- **Cause (suspected):** `Game::effective_dp` filters negative `ChangeDp` entries only while an `ImmuneFromDPMinus` entry is live, instead of refusing to apply them at install time.
+- **Scenario:** `qa/dcgo-exams/BT26/BT26-085-effect3.yaml` (EXPECTED DIVERGENCE at the T5 assert).
+
+### G-ENGINE-END-OF-TURN-PLAY-LOSES-ON-PLAY — OPEN (observed)
+- **Symptom:** a Digimon played by an `[End of Your Turn]` effect never offers its own [On Play]. BT25-039 Sirenmon plays BT25-059 Ceresmon at end of turn; Ceresmon's [On Play] "you may suspend up to 2 Digimon" is never asked (with or without the Sirenmon placement) and the turn rotates straight to P1.
+- **Cause (suspected):** `resume_pending_end_turn` (`src/game_phases.rs` ~L560) continues the turn end without draining the newly queued trigger.
+- **Scenario:** `qa/dcgo-exams/BT25/BT25-039-effect1.yaml` (a `dcgo_only` decline row stands in for the prompt DCGO should ask).
+
+### G-ENGINE-DUPLICATE-ASCENSION-TRIGGER — OPEN (observed)
+- **Symptom:** when BT25-034 Angemon is deleted our engine opens a `TriggerOrder` over `[BT25-034 <Ascension>, BT25-034 <Ascension>]`; the second copy fizzles after the first resolves. End state correct, but a phantom RL decision (DCGO asks one `generic_bool`).
+- **Cause (suspected):** the YAML `grant_keyword: Ascension` plus a second registration from the printed keyword. Check BT25-040, BT26-029, BT26-075 (same grant).
+- **Scenario:** `qa/dcgo-exams/BT25/BT25-034-effect2.yaml` (the extra row is `sim_only`).
+
+### G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION — OPEN (observed)
+- **Symptom:** "When this card would be played, if X, reduce the play cost by 5" reductions are applied at payment but the play mask judges affordability on the printed cost. At 3 security and 0 memory BT24-040 Venusmon (effective 7, legal) is not offered while 8-cost cards are; same for BT24-051 with 3 own Digimon. Memory may go negative on a play, so the mask should be checking the reduced cost against the turn-ending rule, not refusing the play.
+- **Blast radius:** every `when_playing_this` reduction (Minervamon, Dianamon, Marsmon, Venusmon, Merukimon, …). No scenario depends on it.
+
+### G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING — OPEN (observed, low)
+- **Symptom:** BT24-051 Merukimon's `[When Digivolving][When Attacking][Once Per Turn]` unsuspend: when it attacks inside its own [When Digivolving] effect, the WD and WA entries stack in one `TriggerOrder`; declining the first silently consumes the second (it resolves with no prompt although a suspended Digimon exists). A declined optional effect should not spend the once-per-turn.
+- Related: G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER (also re-observed this pass: BT26-016 Holy Mode's [When Attacking] after its [When Digivolving] used the OPT, authored `sim_only` in `BT26-016-effect1/2/4.yaml`), G-ENGINE-OPT-NOOP-REQUEUE.
+- **Scenario:** `qa/dcgo-exams/BT24/BT24-051-effect2.yaml`.
+
+### G-ENGINE-BT26-016-SPLIT-RETURN-NO-RECOVERY — SUSPECTED (probe only)
+- In a probe of BT26-016 Chronomon: Holy Mode's "by returning 3 cards in trashes to the bottom of the deck, `<Recovery +1>`", a payable split (2 own + 1 opponent trash card) auto-resolved the opponent pick and **no Recovery happened**. Not reproduced in a committed scenario (the tooling gap below blocks scripting the split). Confirm with a `cards_behavioral` test before acting.
+
+### G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST — OPEN (verified in code)
+- **Symptom:** a `targets: [opp.field.0]` answer on an `AnyField` prompt resolves to OUR slot 0 whenever that is a valid candidate. Seen on BT26-032 Ceresmon's "by suspending 1 Digimon": the wire said ST1-02, our engine suspended Ceresmon.
+- **Cause:** `selection_resolve::resolve_next` (`code/digimon-engine/src/runners/selection_resolve.rs` ~L614–643) tries the side-implicit id `ATTACK_START + slot` before the absolute `ATTACK_START + player*15 + slot`. On an `AnyField` prompt both are valid ids, so player-1 frames collide with player-0 slots. This affects exam lowering AND `dcgo-replay` of any AnyField DCGO selection row naming player 1.
+- **Fix sketch:** for `SelectionKind::AnyField` try `absolute` first (or only); keep side-implicit for `OwnField`/`OppField`.
+- **Scenario:** `BT26-032-effect3.yaml` targets `opp.field.1` to dodge it.
+
+### G-TOOLING-EXAM-TRAILING-PASS-EATS-COUNT-CAPPED — OPEN (observed)
+- Same family as the resolved G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT (SourceMulti), for `CountCappedMultiSelect`: after a `cards:` payload commits the own-trash share of BT26-016's return, the trailing PASS lands on the freshly parked (optional, 0-picked) opponent-trash prompt and declines it. The cross-trash split is unscriptable. Fix: the same `picked > 0` guard.
+
+### G-TOOLING-EXAM-ACTOR-NOT-VALIDATED — OPEN (low)
+- Sim-only lowering does not check a step's `actor` against the player our engine is asking; a mistyped `actor: 1` mid-P0 main phase lowered and ran. DCGO would abort on it; lowering should fail first.
