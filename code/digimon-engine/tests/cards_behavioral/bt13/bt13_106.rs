@@ -197,7 +197,7 @@ fn bt13_106_has_main_from_hand_clause() {
 }
 
 #[test]
-fn bt13_106_has_inherited_on_security_clause_activating_main() {
+fn bt13_106_has_on_security_clause_activating_main() {
     let runner = odins_breath_runner().start();
     let compiled = runner
         .compiled_card(CARD_ID)
@@ -208,14 +208,14 @@ fn bt13_106_has_inherited_on_security_clause_activating_main() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when == vec![CompiledTiming::OnSecurity] =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("BT13-106 must have an inherited on_security clause");
+        .expect("BT13-106 must have a face-up on_security clause");
 
     assert!(clause
         .process

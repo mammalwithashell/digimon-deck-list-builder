@@ -185,7 +185,7 @@ fn bt9_108_main_clause_is_face_up_main_from_hand() {
 }
 
 #[test]
-fn bt9_108_security_clause_is_inherited_on_security() {
+fn bt9_108_security_clause_is_face_up_on_security() {
     let runner = gorgon_runner();
     let compiled = runner
         .compiled_card("BT9-108")
@@ -203,8 +203,8 @@ fn bt9_108_security_clause_is_inherited_on_security() {
 
     assert_eq!(
         security.scope,
-        CompiledScope::Inherited,
-        "the [Security] mirror rides on the option's inherited surface"
+        CompiledScope::FaceUp,
+        "the [Security] mirror fires from the security check (default FaceUp scope)"
     );
 }
 

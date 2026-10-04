@@ -220,11 +220,11 @@ fn p_180_has_trigger_flood_gate_main_and_security_clauses() {
         "[Main] clause present"
     );
 
-    // Clause 3: inherited [Security] clause present.
+    // Clause 3: [Security] clause present.
     assert!(
-        triggered.iter().any(|t| t.scope == CompiledScope::Inherited
+        triggered.iter().any(|t| t.scope == CompiledScope::FaceUp
             && t.when.iter().any(|w| *w == CompiledTiming::OnSecurity)),
-        "[Security] (inherited) clause present"
+        "[Security] clause present"
     );
 
     // Clause 1: flood_gate declarative present.

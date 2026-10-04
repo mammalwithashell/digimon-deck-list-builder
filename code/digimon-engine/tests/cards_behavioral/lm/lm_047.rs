@@ -224,7 +224,7 @@ fn lm_047_action_mask_allows_use_with_native_yellow_no_extra_permanent() {
 }
 
 #[test]
-fn lm_047_has_main_delay_and_inherited_security_clauses() {
+fn lm_047_has_main_delay_and_security_clauses() {
     let runner = lm_047_runner();
     let compiled = runner
         .compiled_card("LM-047")
@@ -263,14 +263,14 @@ fn lm_047_has_main_delay_and_inherited_security_clauses() {
     match &compiled.effects[2] {
         CompiledClause::Triggered(t) => {
             assert!(t.when.contains(&CompiledTiming::OnSecurity));
-            assert_eq!(t.scope, CompiledScope::Inherited);
+            assert_eq!(t.scope, CompiledScope::FaceUp);
             assert_eq!(
                 t.process,
                 vec![CompiledStep::PlaceSelfAsDelayOption],
-                "inherited Security placement must use the native delay-option placement step"
+                "Security placement must use the native delay-option placement step"
             );
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 

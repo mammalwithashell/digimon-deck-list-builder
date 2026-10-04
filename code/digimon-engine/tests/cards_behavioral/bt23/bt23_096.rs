@@ -176,7 +176,7 @@ fn bt23_096_is_option_cost_5_with_cs_trait() {
 ///   [0] flood_gate (declarative, IgnoreColorRequirement)
 ///   [1] main_from_hand (triggered)
 ///   [2] event-gated Delay on CS ally attack
-///   [3] inherited on_security (triggered, scope: Inherited)
+///   [3] on_security (triggered, default face-up scope)
 #[test]
 fn bt23_096_has_four_clauses_in_expected_order() {
     let runner = DebugRunner::builder()
@@ -387,11 +387,11 @@ fn bt23_096_clause_2_is_on_ally_attack_delay() {
     }
 }
 
-/// Clause 3 (inherited on_security): inherited scope, OnSecurity timing,
+/// Clause 3 (on_security): face-up scope, OnSecurity timing,
 /// process contains the same de_digivolve + place_self body. Mandatory
 /// (DCGO has no canNoSelect on PlaceDelayOptionCards security path).
 #[test]
-fn bt23_096_clause_3_inherited_security_dedigivolve_and_place_self() {
+fn bt23_096_clause_3_security_dedigivolve_and_place_self() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -408,8 +408,8 @@ fn bt23_096_clause_3_inherited_security_dedigivolve_and_place_self() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 3 must have Inherited scope"
+                CompiledScope::FaceUp,
+                "clause 3 must have the default FaceUp scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),

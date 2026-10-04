@@ -291,7 +291,7 @@ fn bt24_093_has_main_clause_that_adds_top_security_recovers_and_places_self() {
 }
 
 #[test]
-fn bt24_093_has_inherited_security_clause_with_union_zone_free_play() {
+fn bt24_093_has_security_clause_with_union_zone_free_play() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
 
@@ -302,10 +302,8 @@ fn bt24_093_has_inherited_security_clause_with_union_zone_free_play() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
-        })
-        .expect("inherited [Security] clause present");
+        .find(|t| t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity))
+        .expect("[Security] clause present");
 
     assert!(
         security

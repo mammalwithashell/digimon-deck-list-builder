@@ -141,7 +141,7 @@ fn p_035_is_option_cost_3() {
 /// P-035 must have exactly 3 compiled clauses:
 ///   [0] main_from_hand (triggered)
 ///   [1] delay (declarative, trigger: end_of_your_next_turn)
-///   [2] inherited on_security (triggered, scope: Inherited)
+///   [2] on_security (triggered, default face-up scope)
 #[test]
 fn p_035_has_three_clauses() {
     let runner = DebugRunner::builder()
@@ -280,9 +280,9 @@ fn p_035_delay_clause_process_has_gain_memory_2() {
     }
 }
 
-/// Clause 2: inherited scope, SecuritySkill timing, process places self.
+/// Clause 2: face-up scope, SecuritySkill timing, process places self.
 #[test]
-fn p_035_clause_2_is_inherited_security_skill() {
+fn p_035_clause_2_is_security_skill() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -297,8 +297,8 @@ fn p_035_clause_2_is_inherited_security_skill() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 2 must have Inherited scope"
+                CompiledScope::FaceUp,
+                "clause 2 must have the default FaceUp scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),
@@ -758,9 +758,9 @@ fn p_035_main_deck_size_unchanged_when_no_card_added() {
 // SECTION 5 — Inherited security clause
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// The inherited security clause (clause 2) has Inherited scope.
+/// The security clause (clause 2) has the default FaceUp scope.
 #[test]
-fn p_035_inherited_security_has_inherited_scope() {
+fn p_035_security_clause_has_face_up_scope() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -780,8 +780,8 @@ fn p_035_inherited_security_has_inherited_scope() {
     };
     assert_eq!(
         scope,
-        CompiledScope::Inherited,
-        "clause 2 must have Inherited scope"
+        CompiledScope::FaceUp,
+        "clause 2 must have the default FaceUp scope"
     );
 }
 

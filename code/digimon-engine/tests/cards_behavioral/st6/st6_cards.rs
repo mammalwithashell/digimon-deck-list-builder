@@ -356,7 +356,7 @@ fn st6_tamer_and_option_security_shapes_are_authored() {
     let security = triggered(&death_claw, CompiledTiming::OnSecurity)
         .pop()
         .expect("ST6-15 Security clause");
-    assert_eq!(security.scope, CompiledScope::Inherited);
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert!(any_step(&security.process, &|step| matches!(
         step,
         CompiledStep::SelectOpponentPermanent {

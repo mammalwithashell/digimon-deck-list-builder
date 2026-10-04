@@ -125,7 +125,7 @@ fn lm_029_is_yellow_option_cost_2() {
 }
 
 /// LM-029 ships three clauses: Main (main_from_hand), Delay
-/// (start_of_your_turn), and Security (on_security inherited).
+/// (start_of_your_turn), and Security (on_security).
 #[test]
 fn lm_029_has_main_delay_and_security_clauses_without_raw_rust() {
     let runner = lm_029_runner();
@@ -187,7 +187,7 @@ fn lm_029_has_main_delay_and_security_clauses_without_raw_rust() {
             _ => None,
         })
         .expect("Security clause must exist");
-    assert_eq!(security.scope, CompiledScope::Inherited);
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert!(
         security.optional,
         "printed Security text says 'you may' — the clause is optional"

@@ -96,7 +96,7 @@ fn p_037_is_yellow_option_cost_3() {
 }
 
 #[test]
-fn p_037_has_main_delay_and_inherited_security_clauses() {
+fn p_037_has_main_delay_and_security_clauses() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -127,10 +127,10 @@ fn p_037_has_main_delay_and_inherited_security_clauses() {
 
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 
@@ -268,7 +268,7 @@ fn p_037_delay_clause_gains_two_memory() {
 }
 
 #[test]
-fn p_037_inherited_security_places_self_as_delay_option_structurally() {
+fn p_037_security_places_self_as_delay_option_structurally() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -281,7 +281,7 @@ fn p_037_inherited_security_places_self_as_delay_option_structurally() {
     let compiled = runner.compiled_card("P-037").expect("P-037 compiled");
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
             assert_eq!(
                 triggered.process,
@@ -289,7 +289,7 @@ fn p_037_inherited_security_places_self_as_delay_option_structurally() {
                 "security placement must use the audited DSL placement primitive"
             );
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 

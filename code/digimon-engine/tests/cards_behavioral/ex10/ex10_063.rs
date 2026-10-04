@@ -164,7 +164,7 @@ fn ex10_063_yaml_compiles_without_error() {
 /// EX10-063 must have exactly 3 triggered clauses:
 ///   1. start_of_your_main_phase
 ///   2. on_digivolution_card_trashed
-///   3. on_security (inherited)
+///   3. on_security (face-up)
 #[test]
 fn ex10_063_has_exactly_three_triggered_clauses() {
     let runner = close_runner();
@@ -253,10 +253,10 @@ fn ex10_063_clause2_on_digivolution_card_trashed_face_up_not_opt() {
     );
 }
 
-/// Clause 3: on_security, Inherited scope, not optional (security effects are
+/// Clause 3: on_security, FaceUp scope, not optional (security effects are
 /// mandatory per RULES_CONTEXT.md §16), not OPT.
 #[test]
-fn ex10_063_clause3_on_security_inherited_mandatory() {
+fn ex10_063_clause3_on_security_face_up_mandatory() {
     let runner = close_runner();
     let card = runner
         .compiled_card("EX10-063")
@@ -274,8 +274,8 @@ fn ex10_063_clause3_on_security_inherited_mandatory() {
 
     assert_eq!(
         clause.scope,
-        CompiledScope::Inherited,
-        "Clause 3 [Security] must be Inherited scope — it is a security effect"
+        CompiledScope::FaceUp,
+        "Clause 3 [Security] must be the default FaceUp scope — it fires from the security check"
     );
     assert!(
         !clause.optional,
@@ -812,10 +812,10 @@ fn ex10_063_clause1_no_close_in_hand_cost_still_paid() {
 // timing = OnSecurity). This follows the pattern of bt22_089 and bt21_081.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Structural: the on_security clause must be Inherited scope and mandatory.
+/// Structural: the on_security clause must be the default FaceUp scope and mandatory.
 /// (Full behavioral path is covered by the shared play_from_security substrate.)
 #[test]
-fn ex10_063_clause3_security_clause_is_inherited_and_mandatory() {
+fn ex10_063_clause3_security_clause_is_face_up_and_mandatory() {
     let runner = close_runner();
     let card = runner
         .compiled_card("EX10-063")
@@ -833,8 +833,8 @@ fn ex10_063_clause3_security_clause_is_inherited_and_mandatory() {
 
     assert_eq!(
         security.scope,
-        CompiledScope::Inherited,
-        "[Security] clause must be Inherited scope"
+        CompiledScope::FaceUp,
+        "[Security] clause must be the default FaceUp scope"
     );
     assert!(
         !security.optional,

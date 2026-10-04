@@ -206,52 +206,49 @@ fn ad1_018_when_digivolving_fires_immunity_clause() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 3 — Inherited [Security]: De-Digivolve 1 + delete cost-≤3 (behavioral)
+// Section 3 — [Security]: De-Digivolve 1 + delete cost-≤3 (behavioral)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// The inherited [Security] clause De-Digivolves 1 opponent Digimon (pops its
-/// top source), then deletes 1 opponent Digimon with play cost <= 3.
+/// The [Security] clause De-Digivolves 1 opponent Digimon (pops its top
+/// source), then deletes 1 opponent Digimon with play cost <= 3. Driven through
+/// the real security check: AD1-018 is P1's top security card and P0 attacks.
 #[test]
-fn ad1_018_inherited_security_de_digivolves_then_deletes_cost_le_3() {
-    let mut host_top = make_test_card_with_level("LK-HOST", "Host carrier", 6);
-    host_top.card_kind = CardKind::Digimon;
-    host_top.dp = Some(11000);
+fn ad1_018_security_de_digivolves_then_deletes_cost_le_3() {
+    let mut attacker_card = make_test_card_with_level("LK-ATK", "Attacker", 6);
+    attacker_card.card_kind = CardKind::Digimon;
+    attacker_card.dp = Some(20000);
+    attacker_card.play_cost = 8;
 
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
-        .add_card(host_top)
+        .add_card(attacker_card)
         .add_card(opp_digimon("OPP-STACK", 5))
         .add_card(opp_digimon("OPP-BASE", 5))
         .add_card(opp_digimon("OPP-CHEAP", 3))
+        .security(1, &["AD1-018"])
         .memory(15)
         .start();
 
-    // Security owner p0 carries AD1-018 as a buried source so the INHERITED
-    // [Security] clause fires.
-    let host = runner.place_on_field(0, "LK-HOST", Some(0));
-    runner.push_source(host, "AD1-018");
-
-    // Opponent (p1) Digimon: a stacked one to De-Digivolve, plus a cost-3 one
-    // (deletable) and a cost-5 one (not deletable by the cost-≤3 step).
-    let stack = runner.place_on_field(1, "OPP-STACK", None);
+    // The security owner (P1)'s opponent is P0: the attacker, a stacked
+    // Digimon to De-Digivolve, plus a cost-3 one (deletable by the cost-≤3 step).
+    let attacker = runner.place_on_field(0, "LK-ATK", Some(0));
+    let stack = runner.place_on_field(0, "OPP-STACK", None);
     runner.push_source(stack, "OPP-BASE"); // give it a digivolution source to pop
-    let cheap = runner.place_on_field(1, "OPP-CHEAP", None);
-    let stack_sources_before = runner.game.players[1].battle_area[stack.index as usize]
+    let cheap = runner.place_on_field(0, "OPP-CHEAP", None);
+    let stack_sources_before = runner.game.players[0].battle_area[stack.index as usize]
         .card_sources
         .len();
-    let opp_before = runner.battle_area_size(1);
+    let opp_before = runner.battle_area_size(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(host));
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     // First prompt: De-Digivolve target (OppField, mandatory).
     let v1 = runner
         .pending_selection_view()
         .expect("De-Digivolve target prompt must install");
     assert_eq!(v1.kind, SelectionKind::OppField);
+    assert_eq!(v1.selecting_player, 1, "the security owner chooses");
     let pick_stack = encode_attack(0, stack.index as u16);
     runner
         .execute_action(v1.selecting_player, pick_stack)
@@ -274,25 +271,26 @@ fn ad1_018_inherited_security_de_digivolves_then_deletes_cost_le_3() {
     runner.game.drain_effect_queue();
 
     // The stacked Digimon lost a source (De-Digivolve 1), and the cheap one
-    // was deleted.
+    // was deleted (the 20000-DP attacker survives the security battle).
     assert_eq!(
-        runner.game.players[1].battle_area[stack.index as usize]
+        runner.game.players[0].battle_area[stack.index as usize]
             .card_sources
             .len(),
         stack_sources_before - 1,
         "De-Digivolve 1 must pop the top source of the chosen opponent Digimon"
     );
     assert_eq!(
-        runner.battle_area_size(1),
+        runner.battle_area_size(0),
         opp_before - 1,
         "the cost-≤3 opponent Digimon must be deleted"
     );
 }
 
-/// Structural: the inherited [Security] clause must contain a de_digivolve step
-/// (amount 1) and a delete_permanent step gated to play_cost <= 3.
+/// Structural: the [Security] clause (default face-up scope) must contain a
+/// de_digivolve step (amount 1) and a delete_permanent step gated to
+/// play_cost <= 3.
 #[test]
-fn ad1_018_inherited_security_clause_shape() {
+fn ad1_018_security_clause_shape() {
     let runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
@@ -306,10 +304,13 @@ fn ad1_018_inherited_security_clause_shape() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
-        })
-        .expect("AD1-018 must carry an inherited [Security] clause");
+        .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
+        .expect("AD1-018 must carry a [Security] clause");
+    assert_eq!(
+        clause.scope,
+        CompiledScope::FaceUp,
+        "[Security] clause must use the default face-up scope"
+    );
 
     assert!(
         clause.process.iter().any(|s| matches!(
@@ -319,7 +320,7 @@ fn ad1_018_inherited_security_clause_shape() {
                 ..
             }
         )),
-        "inherited [Security] must De-Digivolve 1; got {:?}",
+        "[Security] must De-Digivolve 1; got {:?}",
         clause.process
     );
     assert!(
@@ -327,7 +328,7 @@ fn ad1_018_inherited_security_clause_shape() {
             .process
             .iter()
             .any(|s| matches!(s, CompiledStep::DeletePermanent { .. })),
-        "inherited [Security] must delete a permanent; got {:?}",
+        "[Security] must delete a permanent; got {:?}",
         clause.process
     );
 }

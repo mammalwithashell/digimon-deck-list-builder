@@ -290,7 +290,7 @@ fn bt21_097_security_places_self_in_battle_area() {
         })
         .expect("[Security] clause");
 
-    assert_eq!(security.scope, CompiledScope::Inherited);
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert!(security
         .process
         .iter()

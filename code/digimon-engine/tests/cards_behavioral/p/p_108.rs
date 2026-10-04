@@ -208,7 +208,7 @@ fn p_108_metadata_and_clause_shapes() {
             _ => None,
         })
         .expect("[Security] clause");
-    assert_eq!(sec.scope, CompiledScope::Inherited);
+    assert_eq!(sec.scope, CompiledScope::FaceUp);
     assert!(sec
         .process
         .iter()

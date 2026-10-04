@@ -75,11 +75,11 @@ fn bt25_100_structure_use_req_main_security_piercing_and_link_requirement() {
         }
     )));
 
-    // [Security] activates the same [Main] effects (inherited scope).
+    // [Security] activates the same [Main] effects (default face-up scope).
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited && t.when == vec![CompiledTiming::OnSecurity]
+            if t.scope == CompiledScope::FaceUp && t.when == vec![CompiledTiming::OnSecurity]
     )));
 
     // Inherited link requirement.

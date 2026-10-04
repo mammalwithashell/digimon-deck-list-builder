@@ -248,7 +248,7 @@ fn p_106_is_option_cost_2() {
 /// P-106 must have exactly 3 clauses:
 ///   Clause 0: main_from_hand (triggered, mandatory)
 ///   Clause 1: delay (declarative)
-///   Clause 2: on_security (triggered, inherited scope)
+///   Clause 2: on_security (triggered, default face-up scope)
 #[test]
 fn p_106_has_three_clauses() {
     let runner = DebugRunner::builder()
@@ -358,9 +358,9 @@ fn p_106_clause1_is_delay_declarative() {
     assert!(has_delay, "Clause 1 must be a declarative Delay clause");
 }
 
-/// Clause 2 fires at on_security with Inherited scope.
+/// Clause 2 fires at on_security with the default FaceUp scope.
 #[test]
-fn p_106_clause2_is_on_security_inherited_scope() {
+fn p_106_clause2_is_on_security_face_up_scope() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -383,8 +383,8 @@ fn p_106_clause2_is_on_security_inherited_scope() {
 
     assert_eq!(
         security_clause.scope,
-        CompiledScope::Inherited,
-        "Security clause must have Inherited scope (it is in inherited_effect_description_eng)"
+        CompiledScope::FaceUp,
+        "Security clause must have the default FaceUp scope (it fires from the security check, not from a digivolution source)"
     );
 }
 
@@ -1009,10 +1009,11 @@ fn p_106_delay_activation_digivolves_via_main_phase_action() {
 
 // ─── §5 Security clause — structural + behavioral ────────────────────────────
 
-/// The on_security clause is present with inherited scope (it is in
-/// inherited_effect_description_eng per cards.json).
+/// The on_security clause is present with the default FaceUp scope (a
+/// [Security] effect fires from the security check, even though cards.json
+/// files its text under inherited_effect_description_eng).
 #[test]
-fn p_106_security_clause_is_inherited_scope() {
+fn p_106_security_clause_is_face_up_scope() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -1038,8 +1039,8 @@ fn p_106_security_clause_is_inherited_scope() {
     );
     assert_eq!(
         security_clause.unwrap().scope,
-        CompiledScope::Inherited,
-        "Security clause must be inherited scope"
+        CompiledScope::FaceUp,
+        "Security clause must be the default FaceUp scope"
     );
 }
 

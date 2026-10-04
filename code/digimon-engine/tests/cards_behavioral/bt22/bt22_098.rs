@@ -299,9 +299,9 @@ fn bt22_098_security_mirrors_supported_main_hand_slice() {
             }
             _ => None,
         })
-        .expect("inherited security clause");
+        .expect("security clause");
 
-    assert_eq!(security.scope, CompiledScope::Inherited);
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert!(
         !security.optional,
         "Security activates the Main slice; the target play inside remains optional"

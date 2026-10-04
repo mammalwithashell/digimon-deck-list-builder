@@ -231,7 +231,7 @@ fn bt24_089_is_option_cost_3() {
 /// BT24-089 must have exactly 3 clauses:
 ///   Clause 0: main_from_hand (triggered)
 ///   Clause 1: kind: delay — event-gated Delay on Owen Dreadnought suspend
-///   Clause 2: on_security (triggered, inherited)
+///   Clause 2: on_security (triggered, face-up)
 #[test]
 fn bt24_089_has_three_clauses() {
     let runner = DebugRunner::builder()
@@ -481,10 +481,10 @@ fn bt24_089_delay_body_selects_reptile_dragonkin_then_digivolves_cost_minus_3() 
     );
 }
 
-/// Clause 2 fires at on_security, is an inherited security effect, and is not
+/// Clause 2 fires at on_security, uses the default face-up scope, and is not
 /// optional (the security trigger always activates the Main effects).
 #[test]
-fn bt24_089_clause2_is_on_security_inherited() {
+fn bt24_089_clause2_is_on_security_face_up() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -511,9 +511,9 @@ fn bt24_089_clause2_is_on_security_inherited() {
     );
     assert_eq!(
         security_clause.scope,
-        CompiledScope::Inherited,
-        "BT24-089's [Security] text is the inherited security effect — same shape \
-         as BT22-098 / P-035 / P-103 which all use scope: inherited"
+        CompiledScope::FaceUp,
+        "BT24-089's [Security] effect fires from the security check, so it uses the \
+         default face-up scope — same shape as BT22-098 / P-035 / P-103"
     );
 }
 

@@ -103,14 +103,14 @@ fn p_107_is_black_option_cost_2() {
 }
 
 #[test]
-fn p_107_has_main_delay_and_inherited_security_clauses() {
+fn p_107_has_main_delay_and_security_clauses() {
     let runner = p_107_runner();
     let compiled = runner.compiled_card("P-107").expect("P-107 compiled");
 
     assert_eq!(
         compiled.effects.len(),
         3,
-        "P-107 has printed Main, Delay, and inherited Security placement text"
+        "P-107 has printed Main, Delay, and Security placement text"
     );
 
     match &compiled.effects[0] {
@@ -132,7 +132,7 @@ fn p_107_has_main_delay_and_inherited_security_clauses() {
 
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
             assert_eq!(
                 triggered.process,
@@ -140,7 +140,7 @@ fn p_107_has_main_delay_and_inherited_security_clauses() {
                 "Security placement must use the audited delayed-option placement primitive"
             );
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 

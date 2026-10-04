@@ -132,7 +132,7 @@ fn p_151_is_option_cost_3() {
 /// P-151 must have exactly 3 compiled clauses:
 ///   [0] flood_gate declarative (color bypass, G-IGNORE-COLOR-MASK)
 ///   [1] main_from_hand triggered (reveal + add + optional free-play)
-///   [2] inherited on_security triggered (activate Main effects)
+///   [2] on_security triggered (activate Main effects)
 #[test]
 fn p_151_has_three_clauses() {
     let runner = DebugRunner::builder()
@@ -212,7 +212,7 @@ fn p_151_clause_1_is_main_from_hand() {
 
 /// Clause 2 is an inherited security clause.
 #[test]
-fn p_151_clause_2_is_inherited_on_security() {
+fn p_151_clause_2_is_on_security() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -226,16 +226,16 @@ fn p_151_clause_2_is_inherited_on_security() {
         .compiled_card("P-151")
         .expect("P-151 must be compiled");
 
-    let has_inherited_security = compiled.effects.iter().any(|c| match c {
+    let has_security_clause = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity)
         }
         _ => false,
     });
 
     assert!(
-        has_inherited_security,
-        "P-151 must have an inherited clause with timing OnSecurity"
+        has_security_clause,
+        "P-151 must have a face-up clause with timing OnSecurity"
     );
 }
 
@@ -576,7 +576,7 @@ fn p_151_full_main_flow_no_panic() {
 /// Full behavioral test requires the security-resolution harness; structural
 /// presence is sufficient to verify the clause was not dropped.
 #[test]
-fn p_151_security_clause_compiles_as_inherited_on_security() {
+fn p_151_security_clause_compiles_as_face_up_on_security() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -592,14 +592,14 @@ fn p_151_security_clause_compiles_as_inherited_on_security() {
 
     let has_security_clause = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity)
         }
         _ => false,
     });
 
     assert!(
         has_security_clause,
-        "P-151 must have an inherited OnSecurity clause for 'Activate Main effects'"
+        "P-151 must have a face-up OnSecurity clause for 'Activate Main effects'"
     );
 }
 

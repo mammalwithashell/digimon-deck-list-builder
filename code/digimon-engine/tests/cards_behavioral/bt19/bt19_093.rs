@@ -140,7 +140,7 @@ fn bt19_093_is_option_cost_3_with_device_trait() {
 }
 
 /// Three authored clauses: [0] flood_gate (color bypass), [1] main_from_hand
-/// (debuff), [2] inherited on_security (Security A. -2 + add self).
+/// (debuff), [2] on_security (Security A. -2 + add self).
 /// (The "when trashed from battle area" clause is stubbed on a real gap; see
 /// the `#[ignore]` tests below.)
 #[test]
@@ -260,7 +260,7 @@ fn bt19_093_clause_1_main_from_hand_mandatory() {
 }
 
 #[test]
-fn bt19_093_clause_2_is_inherited_on_security_mandatory() {
+fn bt19_093_clause_2_is_on_security_mandatory() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -277,8 +277,8 @@ fn bt19_093_clause_2_is_inherited_on_security_mandatory() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 2 must have Inherited scope"
+                CompiledScope::FaceUp,
+                "clause 2 must have the default FaceUp scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),

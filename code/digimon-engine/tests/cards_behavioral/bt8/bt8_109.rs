@@ -122,7 +122,7 @@ fn bt8_109_has_main_and_security_mirror_clauses() {
         .iter()
         .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
         .expect("[Security] clause");
-    assert_eq!(sec.scope, CompiledScope::Inherited);
+    assert_eq!(sec.scope, CompiledScope::FaceUp);
 }
 
 // ─── Section 2 — [Main] -6000 DP ────────────────────────────────────────────

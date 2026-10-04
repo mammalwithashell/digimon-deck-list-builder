@@ -301,8 +301,8 @@ fn p_229_has_main_security_and_event_gated_delay_clauses() {
             CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
-        .expect("an inherited OnSecurity clause must exist");
-    assert_eq!(security.scope, CompiledScope::Inherited);
+        .expect("a face-up OnSecurity clause must exist");
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert!(!security.optional);
 
     assert!(

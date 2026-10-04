@@ -85,7 +85,7 @@ fn p_039_is_black_option_cost_3() {
 }
 
 #[test]
-fn p_039_has_three_clauses_main_delay_inherited_security() {
+fn p_039_has_three_clauses_main_delay_security() {
     let runner = DebugRunner::builder()
         .dsl_card("P-039")
         .expect("parses")
@@ -112,20 +112,20 @@ fn p_039_has_three_clauses_main_delay_inherited_security() {
         other => panic!("clause 1 must be Delay; got {other:?}"),
     }
 
-    // Clause 2: inherited on_security
+    // Clause 2: face-up on_security
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 
 /// TDD: this test FAILS until the security `process:` body is authored.
 /// The security clause must contain exactly `place_self_as_delay_option`.
 #[test]
-fn p_039_inherited_security_clause_places_self_as_delay_option_structurally() {
+fn p_039_security_clause_places_self_as_delay_option_structurally() {
     let runner = DebugRunner::builder()
         .dsl_card("P-039")
         .expect("parses")
@@ -133,7 +133,7 @@ fn p_039_inherited_security_clause_places_self_as_delay_option_structurally() {
     let compiled = runner.compiled_card("P-039").expect("P-039 compiled");
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
             assert_eq!(
                 triggered.process,
@@ -142,7 +142,7 @@ fn p_039_inherited_security_clause_places_self_as_delay_option_structurally() {
                 triggered.process
             );
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 

@@ -191,7 +191,7 @@ fn bt22_099_is_option_cost_3_with_cs_trait() {
 ///   [0] flood_gate (declarative, IgnoreColorRequirement)
 ///   [1] main_from_hand (triggered)
 ///   [2] delay (declarative, end_of_your_next_turn)
-///   [3] inherited on_security (triggered, scope: Inherited)
+///   [3] on_security (triggered, default face-up scope)
 #[test]
 fn bt22_099_has_four_clauses_in_expected_order() {
     let runner = DebugRunner::builder()
@@ -348,10 +348,10 @@ fn bt22_099_delay_process_has_gain_memory_2() {
     }
 }
 
-/// Clause 3: inherited scope, OnSecurity timing, process contains the
+/// Clause 3: face-up scope, OnSecurity timing, process contains the
 /// place_self_as_delay_option step (DCGO PlaceSelfDelayOptionSecurityEffect).
 #[test]
-fn bt22_099_clause_3_inherited_security_places_self_as_delay() {
+fn bt22_099_clause_3_security_places_self_as_delay() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -367,8 +367,8 @@ fn bt22_099_clause_3_inherited_security_places_self_as_delay() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 3 must have Inherited scope"
+                CompiledScope::FaceUp,
+                "clause 3 must have the default FaceUp scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),

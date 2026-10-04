@@ -195,7 +195,7 @@ fn ex7_074_yaml_parses_without_error() {
 /// EX7-074 must have exactly three clauses:
 ///   0: flood_gate declarative (IgnoreColorRequirement, conditional on LIBERATOR Digimon/Tamer)
 ///   1: main_from_hand triggered (reveal-3 + add-LIBERATOR + digivolve cost -4)
-///   2: on_security inherited triggered (optional play LIBERATOR ≤4 from hand or trash)
+///   2: on_security face-up triggered (optional play LIBERATOR ≤4 from hand or trash)
 #[test]
 fn ex7_074_has_three_clauses() {
     let runner = ex7_074_runner();
@@ -264,11 +264,11 @@ fn ex7_074_clause_1_is_main_from_hand_triggered() {
     }
 }
 
-/// Clause 2 is the inherited Security triggered clause (on_security timing).
+/// Clause 2 is the Security triggered clause (on_security timing).
 /// "You may" → optional: true.
 /// DCGO: EffectTiming.SecuritySkill, activateClass.SetIsSecurityEffect(true).
 #[test]
-fn ex7_074_clause_2_is_inherited_security_optional() {
+fn ex7_074_clause_2_is_security_optional() {
     let runner = ex7_074_runner();
     let compiled = runner
         .compiled_card("EX7-074")
@@ -287,8 +287,8 @@ fn ex7_074_clause_2_is_inherited_security_optional() {
         );
         assert_eq!(
             t.scope,
-            CompiledScope::Inherited,
-            "Clause 2 must have Inherited scope (security effect)"
+            CompiledScope::FaceUp,
+            "Clause 2 must have the default FaceUp scope (security effect)"
         );
         assert!(
             t.optional,

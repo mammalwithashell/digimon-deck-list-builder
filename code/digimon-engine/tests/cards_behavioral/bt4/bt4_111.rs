@@ -92,7 +92,7 @@ fn bt4_111_structure_main_and_security() {
             _ => None,
         })
         .expect("[Security] clause");
-    assert_eq!(sec.scope, CompiledScope::Inherited);
+    assert_eq!(sec.scope, CompiledScope::FaceUp);
     assert!(!sec.optional);
 }
 

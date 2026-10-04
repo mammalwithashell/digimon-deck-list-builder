@@ -194,7 +194,7 @@ fn p_206_is_option_cost_4_color_white() {
 ///   [0] main_from_hand (triggered, FaceUp) — reveal top 3, add Digimon + Tamer
 ///   [1] delay (declarative) — play Tamer with same color as field Digimon, -4 cost
 ///   [2] ignore-color flood_gate (declarative, FaceUp) — unconditional IgnoreColorRequirement
-///   [3] inherited on_security (triggered or raw_rust, Inherited scope)
+///   [3] on_security (triggered or raw_rust, Inherited scope)
 ///
 /// NOTE: clause ordering in the YAML may differ; we assert by type/scope/timing
 /// rather than by fixed index where possible.
@@ -309,7 +309,7 @@ fn p_206_clause_2_is_flood_gate_ignore_color() {
 
 /// Clause 3: inherited scope, SecuritySkill timing.
 #[test]
-fn p_206_clause_3_is_inherited_security_skill() {
+fn p_206_clause_3_is_security_skill() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -320,18 +320,18 @@ fn p_206_clause_3_is_inherited_security_skill() {
         .start();
 
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
-    let has_inherited_security = compiled.effects.iter().any(|c| match c {
+    let has_security_clause = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity)
         }
         CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
             scope, triggers, ..
-        }) => *scope == CompiledScope::Inherited && triggers.contains(&CompiledTiming::OnSecurity),
+        }) => *scope == CompiledScope::FaceUp && triggers.contains(&CompiledTiming::OnSecurity),
         _ => false,
     });
     assert!(
-        has_inherited_security,
-        "P-206 must have an Inherited on_security clause (clause 3)"
+        has_security_clause,
+        "P-206 must have a face-up on_security clause (clause 3)"
     );
 }
 
@@ -357,8 +357,7 @@ fn p_206_inherited_security_outer_clause_is_mandatory() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     let sec_clause = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity) =>
+            if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity) =>
         {
             Some(t)
         }
@@ -892,10 +891,11 @@ fn p_206_ignore_color_flood_gate_is_unconditional() {
 // SECTION 3 — Behavioral: Inherited security clause
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Inherited security clause structural: FaceUp scope is WRONG for inherited;
-/// must be Inherited scope. Validates the scope annotation is correct.
+/// Security clause structural: a [Security] effect fires from the security
+/// check (not from a digivolution source), so it must use the default FaceUp
+/// scope. Validates the scope annotation is correct.
 #[test]
-fn p_206_inherited_security_has_inherited_scope() {
+fn p_206_security_clause_has_face_up_scope() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -906,31 +906,28 @@ fn p_206_inherited_security_has_inherited_scope() {
         .start();
 
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
-    let inherited_sec = compiled.effects.iter().find_map(|c| match c {
+    let security_sec = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity) =>
+            if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity) =>
         {
-            Some(CompiledScope::Inherited)
+            Some(CompiledScope::FaceUp)
         }
         CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
             scope, triggers, ..
-        }) if *scope == CompiledScope::Inherited
-            && triggers.contains(&CompiledTiming::OnSecurity) =>
-        {
+        }) if *scope == CompiledScope::FaceUp && triggers.contains(&CompiledTiming::OnSecurity) => {
             Some(*scope)
         }
         _ => None,
     });
 
     assert!(
-        inherited_sec.is_some(),
-        "Inherited security clause must exist with Inherited scope"
+        security_sec.is_some(),
+        "Security clause must exist with the default FaceUp scope"
     );
     assert_eq!(
-        inherited_sec.unwrap(),
-        CompiledScope::Inherited,
-        "Scope must be Inherited (not FaceUp)"
+        security_sec.unwrap(),
+        CompiledScope::FaceUp,
+        "Scope must be the default FaceUp (not Inherited)"
     );
 }
 
@@ -943,7 +940,7 @@ fn p_206_inherited_security_has_inherited_scope() {
 /// structural + steady-state approach; behavioral activation via the full
 /// path deferred.
 #[test]
-fn p_206_inherited_security_process_is_non_empty() {
+fn p_206_security_clause_process_is_non_empty() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -957,8 +954,7 @@ fn p_206_inherited_security_process_is_non_empty() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     let sec_process_non_empty = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity) =>
+            if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity) =>
         {
             !t.process.is_empty()
         }
@@ -976,7 +972,7 @@ fn p_206_inherited_security_process_is_non_empty() {
 
     assert!(
         sec_process_non_empty || has_raw_rust_stub,
-        "Inherited security clause must have a non-empty process or be a raw_rust stub"
+        "Security clause must have a non-empty process or be a raw_rust stub"
     );
 }
 
@@ -998,8 +994,7 @@ fn p_206_inherited_security_outer_clause_not_optional_structural() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     let sec_opt = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity) =>
+            if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity) =>
         {
             Some(t.optional)
         }

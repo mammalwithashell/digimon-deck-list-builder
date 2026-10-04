@@ -191,7 +191,7 @@ fn bt3_103_compiles_as_option_card() {
 }
 
 /// BT3-103 has exactly 2 clauses: the [Main] cost-reduction clause and the
-/// inherited [Security] clause.
+/// [Security] clause.
 #[test]
 fn bt3_103_has_main_and_inherited_security_clause() {
     let r = runner();
@@ -221,10 +221,10 @@ fn bt3_103_has_main_and_inherited_security_clause() {
     );
 }
 
-/// The single clause must be the inherited security clause with
+/// The single clause must be the face-up security clause with
 /// `OnSecurity` timing.
 #[test]
-fn bt3_103_security_clause_is_inherited_with_on_security_timing() {
+fn bt3_103_security_clause_is_face_up_with_on_security_timing() {
     let r = runner();
     let card = r
         .compiled_card("BT3-103")
@@ -242,8 +242,8 @@ fn bt3_103_security_clause_is_inherited_with_on_security_timing() {
 
     assert_eq!(
         clause.scope,
-        CompiledScope::Inherited,
-        "security clause must have Inherited scope"
+        CompiledScope::FaceUp,
+        "security clause must have the default FaceUp scope"
     );
 }
 

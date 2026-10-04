@@ -138,7 +138,7 @@ fn st20_14_has_printed_metadata() {
 }
 
 /// Three compiled clauses: Main (triggered), All-Turns (declarative
-/// replacement), Security (triggered, inherited scope). The color-bypass is a
+/// replacement), Security (triggered, default face-up scope). The color-bypass is a
 /// top-level `use_requirement`, NOT a separate clause.
 #[test]
 fn st20_14_has_three_clauses() {
@@ -204,7 +204,7 @@ fn st20_14_has_when_would_leave_replacement_clause() {
 
 /// Clause C: inherited [Security] that places self.
 #[test]
-fn st20_14_security_clause_places_self_inherited() {
+fn st20_14_security_clause_places_self_face_up() {
     let r = runner();
     let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
     let sec = card
@@ -218,8 +218,8 @@ fn st20_14_security_clause_places_self_inherited() {
         .expect("Security clause with OnSecurity timing must exist");
     assert_eq!(
         sec.scope,
-        CompiledScope::Inherited,
-        "Security clause must be inherited-scope"
+        CompiledScope::FaceUp,
+        "Security clause must be the default FaceUp scope"
     );
     assert!(
         sec.process

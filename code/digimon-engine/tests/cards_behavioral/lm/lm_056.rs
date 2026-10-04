@@ -208,7 +208,7 @@ fn lm_056_action_mask_allows_color_bypass_only_without_battle_area_copy() {
 }
 
 #[test]
-fn lm_056_has_main_delay_and_inherited_security_clauses() {
+fn lm_056_has_main_delay_and_security_clauses() {
     let runner = lm_056_runner();
     let compiled = runner
         .compiled_card("LM-056")
@@ -252,7 +252,7 @@ fn lm_056_has_main_delay_and_inherited_security_clauses() {
 
     match &compiled.effects[2] {
         CompiledClause::Triggered(triggered) => {
-            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert_eq!(triggered.scope, CompiledScope::FaceUp);
             assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
             assert!(triggered
                 .process
@@ -274,7 +274,7 @@ fn lm_056_has_main_delay_and_inherited_security_clauses() {
                 .iter()
                 .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)));
         }
-        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+        other => panic!("clause 2 must be a face-up on_security clause; got {other:?}"),
     }
 }
 

@@ -115,7 +115,7 @@ fn lm_032_is_purple_option_cost_2() {
 }
 
 /// LM-032 has 3 compiled clauses: Main (main_from_hand), Delay
-/// (start_of_your_turn), and Security (on_security inherited).
+/// (start_of_your_turn), and Security (on_security).
 #[test]
 fn lm_032_has_three_clauses_main_delay_and_security() {
     let runner = lm_032_runner();
@@ -192,9 +192,9 @@ fn lm_032_main_clause_contains_effect_initiated_digivolve_step() {
     );
 }
 
-/// Clause C (Security): on_security inherited, optional.
+/// Clause C (Security): on_security, optional, FaceUp scope.
 #[test]
-fn lm_032_security_clause_is_inherited_optional() {
+fn lm_032_security_clause_is_face_up_optional() {
     let runner = lm_032_runner();
     let compiled = runner.compiled_card("LM-032").expect("LM-032 compiled");
 
@@ -209,8 +209,8 @@ fn lm_032_security_clause_is_inherited_optional() {
 
     assert_eq!(
         sec.scope,
-        CompiledScope::Inherited,
-        "Security clause must have Inherited scope"
+        CompiledScope::FaceUp,
+        "Security clause must have the default FaceUp scope"
     );
     assert!(
         sec.optional,

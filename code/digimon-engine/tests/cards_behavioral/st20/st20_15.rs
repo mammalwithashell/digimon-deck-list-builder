@@ -159,7 +159,7 @@ fn st20_15_is_option_cost_2_with_adventure_trait() {
 ///   [0] flood_gate (declarative, IgnoreColorRequirement)
 ///   [1] aura (declarative, scope: Security, +2000 DP to own Lv3+ Digimon)
 ///   [2] main_from_hand (triggered, add top security then place self option)
-///   [3] inherited on_security (triggered, scope: Inherited)
+///   [3] on_security (triggered, default face-up scope)
 ///
 /// The [Security][All Turns] DP aura (G-SECURITY-ZONE-AURA-SOURCE) is now
 /// authored as clause 1 — the engine gap is CLOSED.
@@ -280,11 +280,11 @@ fn st20_15_clause_2_main_adds_top_security_then_places_self_option() {
     }
 }
 
-/// Clause 3: inherited scope, OnSecurity timing, optional (DCGO `canNoSelect:
+/// Clause 3: face-up scope, OnSecurity timing, optional (DCGO `canNoSelect:
 /// true` / printed "You may"). Body must contain a `select_hand` step (Tamer
 /// filter) followed by `play_from_hand_free`.
 #[test]
-fn st20_15_clause_3_inherited_security_optional_select_tamer_play_free() {
+fn st20_15_clause_3_security_optional_select_tamer_play_free() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -300,8 +300,8 @@ fn st20_15_clause_3_inherited_security_optional_select_tamer_play_free() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 3 must have Inherited scope (printed inherited [Security])"
+                CompiledScope::FaceUp,
+                "clause 3 must have the default FaceUp scope (a [Security] effect fires from the security check)"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),

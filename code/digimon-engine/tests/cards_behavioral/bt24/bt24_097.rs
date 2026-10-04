@@ -231,7 +231,7 @@ fn bt24_097_has_main_from_hand_clause_with_delete_then_optional_free_link() {
 }
 
 #[test]
-fn bt24_097_has_inherited_on_security_clause_activating_main() {
+fn bt24_097_has_on_security_clause_activating_main() {
     let runner = soul_fear_runner().start();
     let compiled = runner
         .compiled_card(CARD_ID)
@@ -239,7 +239,7 @@ fn bt24_097_has_inherited_on_security_clause_activating_main() {
 
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
-        CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited
+        CompiledClause::Triggered(t) if t.scope == CompiledScope::FaceUp
             && t.when == vec![CompiledTiming::OnSecurity]
     )));
 }

@@ -183,7 +183,7 @@ fn bt25_102_metadata_use_requirement_main_security_and_auras_compile() {
     assert!(card.effects.iter().any(|clause| matches!(
         clause,
         CompiledClause::Triggered(trigger)
-            if trigger.scope == digimon_dsl::compiled::CompiledScope::Inherited
+            if trigger.scope == digimon_dsl::compiled::CompiledScope::FaceUp
                 && trigger.when == vec![CompiledTiming::OnSecurity]
     )));
 }

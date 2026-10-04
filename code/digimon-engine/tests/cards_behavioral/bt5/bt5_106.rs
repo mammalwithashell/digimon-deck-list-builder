@@ -93,8 +93,8 @@ fn bt5_106_has_main_and_security_clauses() {
         .expect("[Security] clause present");
     assert_eq!(
         security.scope,
-        CompiledScope::Inherited,
-        "the Security clause rides on the option's inherited surface"
+        CompiledScope::FaceUp,
+        "the Security clause fires from the security check (default FaceUp scope)"
     );
     assert!(
         security.optional,

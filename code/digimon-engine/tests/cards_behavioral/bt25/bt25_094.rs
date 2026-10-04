@@ -176,15 +176,15 @@ fn bt25_094_metadata_floodgate_auras_main_and_security_compile() {
         "main must play a reduced-cost TS Digimon from hand"
     );
 
-    // Inherited [Security] clause.
+    // [Security] clause.
     assert!(
         card.effects.iter().any(|clause| matches!(
             clause,
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when == vec![CompiledTiming::OnSecurity]
         )),
-        "inherited [Security] play clause must compile"
+        "[Security] play clause must compile"
     );
 }
 

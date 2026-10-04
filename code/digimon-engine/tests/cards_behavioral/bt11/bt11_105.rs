@@ -270,21 +270,20 @@ fn bt11_105_main_has_effect_initiated_digivolve_with_printed_cost() {
     }
 }
 
-/// Clause 2 — an inherited, optional `on_security` clause exists.
+/// Clause 2 — an optional, face-up `on_security` clause exists.
 #[test]
-fn bt11_105_has_inherited_optional_security_clause() {
+fn bt11_105_has_optional_security_clause() {
     let runner = fusionize();
     let card = runner.compiled_card("BT11-105").expect("BT11-105 present");
     let sec = card.effects.iter().find_map(|c| match c {
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity) =>
+            if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnSecurity) =>
         {
             Some(t)
         }
         _ => None,
     });
-    let sec = sec.expect("BT11-105 must have an inherited SecuritySkill clause");
+    let sec = sec.expect("BT11-105 must have a face-up SecuritySkill clause");
     assert!(
         sec.optional,
         "the security clause must be optional ('you may reveal')"
@@ -301,14 +300,14 @@ fn bt11_105_security_reveals_top_3() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when.contains(&CompiledTiming::OnSecurity) =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("inherited SecuritySkill clause must exist");
+        .expect("face-up SecuritySkill clause must exist");
     assert!(
         sec.process
             .iter()
@@ -328,14 +327,14 @@ fn bt11_105_security_has_vemmon_bucket() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when.contains(&CompiledTiming::OnSecurity) =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("inherited SecuritySkill clause must exist");
+        .expect("face-up SecuritySkill clause must exist");
     let bucket_step = sec.process.iter().find(|s| {
         matches!(s, CompiledStep::SelectRevealBuckets { buckets, .. }
             if buckets.len() == 1 && buckets[0].min == 0 && buckets[0].max == 1)
@@ -357,14 +356,14 @@ fn bt11_105_security_plays_selected_bucket_free() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when.contains(&CompiledTiming::OnSecurity) =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("inherited SecuritySkill clause must exist");
+        .expect("face-up SecuritySkill clause must exist");
     assert!(
         sec.process
             .iter()
@@ -384,14 +383,14 @@ fn bt11_105_security_trashes_remainder() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when.contains(&CompiledTiming::OnSecurity) =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("inherited SecuritySkill clause must exist");
+        .expect("face-up SecuritySkill clause must exist");
     let has_trash_loop = sec.process.iter().any(|s| match s {
         CompiledStep::PerSelected { body, .. } => body
             .iter()

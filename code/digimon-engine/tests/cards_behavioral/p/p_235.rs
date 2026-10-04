@@ -240,7 +240,7 @@ fn p_235_has_delay_declarative() {
 
 /// Clause 3 fires at on_security with Inherited scope and places self.
 #[test]
-fn p_235_security_clause_inherited_places_self() {
+fn p_235_security_clause_face_up_places_self() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -261,7 +261,7 @@ fn p_235_security_clause_inherited_places_self() {
         .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
         .expect("must have an on_security clause");
 
-    assert_eq!(sec.scope, CompiledScope::Inherited);
+    assert_eq!(sec.scope, CompiledScope::FaceUp);
     assert!(
         process_contains_place_self_as_delay_option(&sec.process),
         "Security clause must place self in battle area"

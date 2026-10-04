@@ -36,7 +36,7 @@
 //!   candidates (DCGO's two separate `if (HasMatchConditionPermanent(...))`
 //!   blocks), and that `place_as_bottom_source { source: self }` actually
 //!   relocates EX7-070 from hand to the target's stack bottom.
-//! - Clause 4 (inherited security): same lowest-play-cost delete selector,
+//! - Clause 4 ([Security]): same lowest-play-cost delete selector,
 //!   no placement tail, no add-to-hand (non-Tamer security disposition).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
@@ -253,9 +253,9 @@ fn ex7_070_clause3_is_main_from_hand() {
     assert!(found, "Clause 3 must be a face-up MainFromHand clause");
 }
 
-/// Clause 4 is inherited on_security.
+/// Clause 4 is a face-up (default-scope) on_security clause.
 #[test]
-fn ex7_070_clause4_is_inherited_security() {
+fn ex7_070_clause4_is_security() {
     let runner = base_builder().start();
     let compiled = runner
         .compiled_card(CARD_ID)
@@ -265,11 +265,11 @@ fn ex7_070_clause4_is_inherited_security() {
         matches!(
             c,
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited
+                if t.scope == CompiledScope::FaceUp
                     && t.when == vec![CompiledTiming::OnSecurity]
         )
     });
-    assert!(found, "Clause 4 must be inherited on_security");
+    assert!(found, "Clause 4 must be a face-up on_security clause");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -728,41 +728,38 @@ fn ex7_070_main_no_selection_when_neither_condition_met() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 — Clause 4: inherited [Security] delete lowest-cost
+// SECTION 5 — Clause 4: [Security] delete lowest-cost
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// POSITIVE: firing the security clause with opponent Digimon at varying
-/// costs deletes only the lowest-play-cost one. EX7-070's [Security] clause
-/// is `scope: inherited`, so it fires from a digivolution-source position —
-/// mirrored on the AD1-017 `ex7_070_security_*` sibling idiom: seat EX7-070
-/// as a buried source under a host the security owner (player 0) controls,
-/// then fire `EffectTiming::SecuritySkill` via `TriggerSource::Permanent(host)`.
+/// costs deletes only the lowest-play-cost one. Driven through the real
+/// security check: EX7-070 is the top card of P1's security and P0 attacks
+/// P1, flipping it. The security owner (P1)'s opponent is P0, whose board is
+/// the attacker (cost 8), a cost-3 Digimon and a cost-8 Digimon.
 #[test]
 fn ex7_070_security_deletes_lowest_cost_opp_digimon() {
-    let host = plain_digimon("HOST-SEC", 5, 6000);
+    let attacker = opp_digimon_cost("OPP-SEC-ATK", 8, 20000);
     let opp_cheap = opp_digimon_cost("OPP-SEC-CHEAP", 3, 4000);
     let opp_expensive = opp_digimon_cost("OPP-SEC-EXP", 8, 10000);
 
     let mut runner = base_builder()
-        .add_card(host)
+        .add_card(attacker)
         .add_card(opp_cheap)
         .add_card(opp_expensive)
-        .build();
+        .security(1, &[CARD_ID])
+        .start();
 
-    let host_handle = runner.place_on_field(0, "HOST-SEC", None);
-    runner.push_source(host_handle, CARD_ID);
-    runner.place_on_field(1, "OPP-SEC-CHEAP", Some(0));
-    runner.place_on_field(1, "OPP-SEC-EXP", Some(0));
+    let attacker_handle = runner.place_on_field(0, "OPP-SEC-ATK", Some(0));
+    runner.place_on_field(0, "OPP-SEC-CHEAP", Some(0));
+    runner.place_on_field(0, "OPP-SEC-EXP", Some(0));
+    let opp_before = runner.battle_area_size(0);
 
-    runner.game.enqueue_triggered(
-        digimon_engine::enums::EffectTiming::SecuritySkill,
-        digimon_engine::selection::TriggerSource::Permanent(host_handle),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker_handle, 1, false);
 
     let view = runner
         .pending_selection_view()
-        .expect("the inherited [Security] clause must offer a delete-target selection");
+        .expect("the [Security] clause must offer a delete-target selection");
+    assert_eq!(view.selecting_player, 1, "the security owner chooses");
     let candidate_count = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(
         candidate_count, 1,
@@ -771,9 +768,18 @@ fn ex7_070_security_deletes_lowest_cost_opp_digimon() {
     runner.auto_resolve().expect("resolve security delete pick");
 
     assert_eq!(
-        runner.battle_area_size(1),
-        1,
+        runner.battle_area_size(0),
+        opp_before - 1,
         "only the lowest-play-cost opponent Digimon must be deleted"
+    );
+    let remaining: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        !remaining.iter().any(|id| id == "OPP-SEC-CHEAP"),
+        "the cost-3 Digimon is the one deleted; remaining: {remaining:?}"
     );
 }
 

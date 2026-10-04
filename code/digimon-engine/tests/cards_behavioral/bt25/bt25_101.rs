@@ -141,12 +141,12 @@ fn bt25_101_structure_use_req_main_security_inherited_ess_and_link_req() {
         "[Main] selects a [TS] hand card to trash as the cost"
     );
 
-    // [Security] activates the same [Main] (inherited OnSecurity).
+    // [Security] activates the same [Main] (face-up OnSecurity).
     assert!(
         compiled.effects.iter().any(|c| matches!(
             c,
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited && t.when == vec![CompiledTiming::OnSecurity]
+                if t.scope == CompiledScope::FaceUp && t.when == vec![CompiledTiming::OnSecurity]
         )),
         "[Security] activates [Main]"
     );

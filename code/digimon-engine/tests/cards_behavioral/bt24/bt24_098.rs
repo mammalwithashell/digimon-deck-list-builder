@@ -179,7 +179,7 @@ fn bt24_098_structure() {
             _ => None,
         })
         .expect("[Security]");
-    assert_eq!(sec.scope, CompiledScope::Inherited);
+    assert_eq!(sec.scope, CompiledScope::FaceUp);
     assert_eq!(sec.process.last(), Some(&CompiledStep::AddThisOptionToHand));
 }
 

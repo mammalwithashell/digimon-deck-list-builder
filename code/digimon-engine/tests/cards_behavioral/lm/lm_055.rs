@@ -258,7 +258,7 @@ fn lm_055_delay_clause_structure_matches_effect_digivolve_cost_reduce_2() {
 fn lm_055_security_clause_has_reveal_add_remainder_and_place_steps() {
     let security = triggered_clause(CompiledTiming::OnSecurity);
 
-    assert_eq!(security.scope, CompiledScope::Inherited);
+    assert_eq!(security.scope, CompiledScope::FaceUp);
     assert_eq!(security.process.len(), 5, "security process shape drifted");
     assert!(matches!(
         security.process[0],

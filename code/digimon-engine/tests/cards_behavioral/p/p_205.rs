@@ -303,7 +303,7 @@ fn p_205_is_option_cost_3_purple_with_dm_trait() {
 ///   [0] flood_gate (declarative, IgnoreColorRequirement, conditional on DM)
 ///   [1] main_from_hand (triggered, mandatory draw-2/trash-2/place-self)
 ///   [2] delay (declarative, player-activated Delay)
-///   [3] inherited on_security (triggered, mandatory mirror of clause 1)
+///   [3] on_security (triggered, mandatory mirror of clause 1)
 #[test]
 fn p_205_has_four_clauses_in_expected_order() {
     let runner = runner();
@@ -460,7 +460,7 @@ fn p_205_clause_2_process_deletes_then_may_play_from_trash_cost_minus_3() {
 }
 
 #[test]
-fn p_205_clause_3_inherited_security_mirrors_draw_trash_place_self() {
+fn p_205_clause_3_security_mirrors_draw_trash_place_self() {
     let runner = runner();
     let card = runner.compiled_card(CARD_ID).expect("P-205 compiled");
 
@@ -468,8 +468,8 @@ fn p_205_clause_3_inherited_security_mirrors_draw_trash_place_self() {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
-                CompiledScope::Inherited,
-                "clause 3 must have Inherited scope"
+                CompiledScope::FaceUp,
+                "clause 3 must have the default FaceUp scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),

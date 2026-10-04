@@ -68,11 +68,11 @@ fn bt25_093_structure_use_req_main_security_when_attacking_and_link_requirement(
         }
     )));
 
-    // [Security] inherited activation.
+    // [Security] activation (default face-up scope).
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
         CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited && t.when == vec![CompiledTiming::OnSecurity]
+            if t.scope == CompiledScope::FaceUp && t.when == vec![CompiledTiming::OnSecurity]
     )));
 
     // Inherited [When Attacking] [OPT] — MANDATORY: the printed text has no

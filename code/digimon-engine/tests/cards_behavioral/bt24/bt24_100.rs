@@ -121,7 +121,7 @@ fn bt24_100_yaml_metadata_and_clauses_match_printed_card() {
     assert!(matches!(
         &compiled.effects[3],
         CompiledClause::Triggered(security)
-            if security.scope == CompiledScope::Inherited
+            if security.scope == CompiledScope::FaceUp
                 && security.when == vec![CompiledTiming::OnSecurity]
                 && security.process == vec![CompiledStep::PlaceSelfAsDelayOption]
     ));

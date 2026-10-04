@@ -78,7 +78,7 @@ fn lm_035_is_yellow_option_cost_3_with_purple_use_requirement() {
 }
 
 #[test]
-fn lm_035_has_main_delay_and_inherited_security_clauses() {
+fn lm_035_has_main_delay_and_security_clauses() {
     let runner = lm_035_runner();
     let compiled = runner.compiled_card("LM-035").expect("LM-035 compiled");
 
@@ -103,13 +103,13 @@ fn lm_035_has_main_delay_and_inherited_security_clauses() {
         .find_map(|clause| match clause {
             CompiledClause::Triggered(t)
                 if t.when.contains(&CompiledTiming::OnSecurity)
-                    && t.scope == digimon_dsl::compiled::CompiledScope::Inherited =>
+                    && t.scope == digimon_dsl::compiled::CompiledScope::FaceUp =>
             {
                 Some(t)
             }
             _ => None,
         })
-        .expect("Security placement must be represented as inherited on_security");
+        .expect("Security placement must be represented as a face-up on_security clause");
 
     assert_eq!(
         security.process,

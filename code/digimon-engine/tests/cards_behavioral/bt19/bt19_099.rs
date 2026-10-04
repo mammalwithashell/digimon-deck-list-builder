@@ -242,7 +242,7 @@ fn bt19_099_yaml_parses_without_error() {
 }
 
 /// Three compiled clauses: Main (triggered), All-Turns (declarative
-/// replacement), Security (triggered, inherited scope).
+/// replacement), Security (triggered, default face-up scope).
 #[test]
 fn bt19_099_has_three_clauses() {
     let runner = bt19_099_runner();
@@ -330,10 +330,10 @@ fn bt19_099_replacement_clause_matches_recognised_union_flow_shape() {
     );
 }
 
-/// Clause C: triggered with `on_security` timing, NOT optional, INHERITED
-/// scope (printed Security effect has no "may").
+/// Clause C: triggered with `on_security` timing, NOT optional, default
+/// FaceUp scope (printed Security effect has no "may").
 #[test]
-fn bt19_099_security_clause_is_mandatory_inherited() {
+fn bt19_099_security_clause_is_mandatory_face_up() {
     let runner = bt19_099_runner();
     let compiled = runner
         .compiled_card("BT19-099")
@@ -355,8 +355,8 @@ fn bt19_099_security_clause_is_mandatory_inherited() {
     );
     assert_eq!(
         sec_clause.scope,
-        CompiledScope::Inherited,
-        "BT19-099 Security clause must have Inherited scope (rides on the option's inherited surface)"
+        CompiledScope::FaceUp,
+        "BT19-099 Security clause must have the default FaceUp scope (fires from the security check)"
     );
 }
 

@@ -208,7 +208,7 @@ fn bt17_097_yaml_parses_without_error() {
 }
 
 /// Three compiled clauses: Main (triggered), All-Turns (declarative
-/// replacement), Security (triggered, inherited scope).
+/// replacement), Security (triggered, default face-up scope).
 #[test]
 fn bt17_097_has_three_compiled_clauses() {
     let runner = bt17_097_runner();
@@ -278,9 +278,9 @@ fn bt17_097_has_replacement_clause_for_when_would_be_deleted() {
     );
 }
 
-/// Clause C: triggered with `on_security` timing, optional, INHERITED scope.
+/// Clause C: triggered with `on_security` timing, optional, default FaceUp scope.
 #[test]
-fn bt17_097_security_clause_is_optional_inherited() {
+fn bt17_097_security_clause_is_optional_face_up() {
     let runner = bt17_097_runner();
     let compiled = runner
         .compiled_card("BT17-097")
@@ -302,8 +302,8 @@ fn bt17_097_security_clause_is_optional_inherited() {
     );
     assert_eq!(
         sec_clause.scope,
-        CompiledScope::Inherited,
-        "BT17-097 Security clause must have Inherited scope"
+        CompiledScope::FaceUp,
+        "BT17-097 Security clause must have the default FaceUp scope"
     );
 }
 

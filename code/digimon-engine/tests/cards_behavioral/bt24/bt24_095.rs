@@ -63,7 +63,7 @@ fn bt24_095_has_color_bypass_main_security_and_link_requirement() {
 
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
-        CompiledClause::Triggered(t) if t.scope == digimon_dsl::compiled::CompiledScope::Inherited
+        CompiledClause::Triggered(t) if t.scope == digimon_dsl::compiled::CompiledScope::FaceUp
             && t.when == vec![CompiledTiming::OnSecurity]
     )));
     assert!(compiled.effects.iter().any(|clause| matches!(
