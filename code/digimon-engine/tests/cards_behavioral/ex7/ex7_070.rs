@@ -784,24 +784,38 @@ fn ex7_070_security_deletes_lowest_cost_opp_digimon() {
 }
 
 /// NEGATIVE: no opponent Digimon → the security clause is a silent no-op.
+///
+/// Unreachable through a real security check (the attacker is always an
+/// opponent Digimon), so the clause is fired directly from EX7-070 as a
+/// face-up battle-area card. A control fire after staging one opponent
+/// Digimon proves the clause is reachable from this source, so the no-op
+/// assertion is not vacuous.
 #[test]
 fn ex7_070_security_no_op_when_no_opp_digimon() {
-    let host = plain_digimon("HOST-SEC-N", 5, 6000);
+    let opp = plain_digimon("OPP-SEC-N", 3, 3000);
+    let mut runner = base_builder().add_card(opp).build();
 
-    let mut runner = base_builder().add_card(host).build();
+    let option = runner.place_on_field(0, CARD_ID, None);
+    let fire = |runner: &mut DebugRunner| {
+        runner.game.enqueue_triggered(
+            digimon_engine::enums::EffectTiming::SecuritySkill,
+            digimon_engine::selection::TriggerSource::Permanent(option),
+        );
+        runner.game.drain_effect_queue();
+    };
 
-    let host_handle = runner.place_on_field(0, "HOST-SEC-N", None);
-    runner.push_source(host_handle, CARD_ID);
-
-    runner.game.enqueue_triggered(
-        digimon_engine::enums::EffectTiming::SecuritySkill,
-        digimon_engine::selection::TriggerSource::Permanent(host_handle),
-    );
-    runner.game.drain_effect_queue();
-
+    fire(&mut runner);
     assert!(
         runner.pending_selection().is_none(),
         "no opponent Digimon → the security clause must be a silent no-op"
     );
     assert_eq!(runner.battle_area_size(1), 0);
+
+    // Control: the same fire with one opponent Digimon offers the delete.
+    runner.place_on_field(1, "OPP-SEC-N", None);
+    fire(&mut runner);
+    assert!(
+        runner.pending_selection().is_some(),
+        "control: with an opponent Digimon the [Security] clause must prompt"
+    );
 }

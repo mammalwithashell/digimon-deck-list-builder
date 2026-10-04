@@ -740,175 +740,118 @@ fn lm_027_delay_body_play_from_trash_only_when_no_field_digimon() {
 // Section 4 — Clause C: [Security] play small red Digimon from trash
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Positive: security clause fires without panic when the engine triggers it.
-/// Places LM-027 on field, then fires SecuritySkill timing on that permanent.
+/// Runner where LM-027 is the defender's (P1's) only security card, P1's
+/// trash is seeded with `trash`, and P0 has an attacker ready. Returns the
+/// runner plus the attacker handle.
+fn lm_027_security_check_runner(
+    trash: &[CardData],
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut attacker = make_filler("LM027-SEC-ATK");
+    attacker.dp = Some(6000);
+    let ids: Vec<&str> = trash.iter().map(|c| c.card_id.as_str()).collect();
+
+    let mut builder = DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .expect("LM-027 YAML parses")
+        .add_card(attacker)
+        .memory(10)
+        .deck(1, &ids)
+        .security(1, &["LM-027"]);
+    for card in trash {
+        builder = builder.add_card(card.clone());
+    }
+    let mut runner = builder.start();
+
+    for _ in 0..trash.len() {
+        let cs = runner.game.players[1].deck.pop().expect("trash seed in deck");
+        runner.game.players[1].trash.push(cs);
+    }
+    assert_eq!(runner.trash_size(1), trash.len(), "precondition: trash seeded");
+    let attacker = runner.place_on_field(0, "LM027-SEC-ATK", Some(0));
+    (runner, attacker)
+}
+
+/// Resolve every pending selection (first offered action) and return the
+/// kinds of the prompts that were installed along the way.
+fn resolve_all_recording_kinds(runner: &mut DebugRunner) -> Vec<SelectionKind> {
+    let mut kinds = Vec::new();
+    while let Some(view) = runner.pending_selection_view() {
+        kinds.push(view.kind);
+        let action = view
+            .valid_action_ids
+            .first()
+            .copied()
+            .unwrap_or(digimon_engine::action::space::PASS);
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("selection resolves");
+        assert!(kinds.len() < 20, "selection loop did not terminate");
+    }
+    kinds
+}
+
+/// Empty trash: the real security check resolves LM-027's [Security] clause
+/// with nothing to play, and the trailing "Then, add this card to the hand"
+/// still moves LM-027 out of security into the defender's hand.
 #[test]
 fn lm_027_security_clause_no_panic_with_empty_trash() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_027_YAML)
-        .expect("LM-027 YAML parses")
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
-        .start();
+    let (mut runner, attacker) = lm_027_security_check_runner(&[]);
+    let _ = runner.attack_player(attacker, 1, false);
+    resolve_all_recording_kinds(&mut runner);
 
-    // Place LM-027 on P0's field as an option permanent (as it would be after
-    // the Delay clause lands it there).
-    let field_handle = runner.place_on_field(0, "LM-027", Some(0));
-
-    // Fire SecuritySkill timing for this permanent.
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
-
-    // Drain any pending selections (optional clause — engine may install a
-    // "do you want to?" prompt or no-op if trash is empty).
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // No panic is the primary assertion.
+    assert_eq!(runner.security_count(1), 0, "LM-027 left security");
+    assert_eq!(runner.hand_size(1), 1, "LM-027 added to the defender's hand");
+    assert_eq!(runner.battle_area_size(1), 0, "nothing was played");
+    assert_eq!(runner.trash_size(1), 0, "LM-027 was not trashed");
 }
 
-/// Positive: when P0's trash has a small red Digimon, the Security clause
-/// installs a trash selection prompt (or completes cleanly without panic).
+/// An eligible small red Digimon in trash: the real security check offers a
+/// trash selection for it.
 #[test]
 fn lm_027_security_installs_trash_selection_when_eligible_card_in_trash() {
-    let small = make_small_red_digimon("LM027-SMALL-RED");
+    let (mut runner, attacker) =
+        lm_027_security_check_runner(&[make_small_red_digimon("LM027-SMALL-RED")]);
+    let _ = runner.attack_player(attacker, 1, false);
+    let kinds = resolve_all_recording_kinds(&mut runner);
 
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_027_YAML)
-        .expect("LM-027 YAML parses")
-        .add_card(small.clone())
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .deck(0, &["LM027-SMALL-RED"; 5])
-        .deck(1, &["FILL"; 5])
-        .start();
-
-    // Seed P0's trash with a small red Digimon by popping from deck.
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
-
-    // Place LM-027 on P0's field as an option permanent.
-    let field_handle = runner.place_on_field(0, "LM-027", Some(0));
-
-    // Fire SecuritySkill timing.
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    assert!(
+        kinds.contains(&SelectionKind::Trash),
+        "the [Security] clause must offer the eligible trash Digimon; prompts: {kinds:?}"
     );
-    runner.game.drain_effect_queue();
-
-    // A selection for the trash card should install (optional).
-    // We don't assert exact SelectionKind here since that depends on lowering
-    // implementation; we just confirm the effect dispatched without panic.
-    // Drain any pending selections.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
 }
 
-/// Negative: when trash has NO eligible card (empty), the Security clause
-/// should produce no pending selection after drain.
+/// Negative: empty trash → the [Security] clause runs (LM-027 reaches hand)
+/// but never installs a trash selection.
 #[test]
 fn lm_027_security_no_selection_when_trash_is_empty() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_027_YAML)
-        .expect("LM-027 YAML parses")
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
-        .start();
-
-    // P0's trash is empty — place LM-027 on field and fire Security.
-    let field_handle = runner.place_on_field(0, "LM-027", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
+    let (mut runner, attacker) = lm_027_security_check_runner(&[]);
+    let _ = runner.attack_player(attacker, 1, false);
+    let kinds = resolve_all_recording_kinds(&mut runner);
 
     assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-027 Security must not install selection when P0 trash is empty"
+        !kinds.contains(&SelectionKind::Trash),
+        "LM-027 Security must not install a trash selection when trash is empty; prompts: {kinds:?}"
     );
+    assert_eq!(runner.hand_size(1), 1, "the clause still ran: LM-027 in hand");
 }
 
-/// Negative DP-filter test: when trash contains ONLY a large red Digimon
-/// (>2000 DP), the Security clause's `dp_lte: 2000` filter rules it out, so
-/// the optional select_trash has no eligible candidate and installs no
-/// pending selection.
-///
-/// G-PRED-DP-LTE was resolved 2026-05-17 (qa/resolved-gaps.md): `dp_lte`
-/// now evaluates against `CardData.dp` for trash card subjects. The Security
-/// clause filter authors `dp_lte: 2000`, so this is now an active assertion.
+/// Negative DP-filter test: trash holds ONLY a large (>2000 DP) red Digimon.
+/// The clause runs (LM-027 reaches hand) but the `dp_lte: 2000` filter leaves
+/// no candidate, so no trash selection installs and the large card stays.
 #[test]
 fn lm_027_security_no_selection_when_only_large_red_digimon_in_trash() {
-    let large = make_large_red_digimon("LM027-LARGE-RED");
-
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_027_YAML)
-        .expect("LM-027 YAML parses")
-        .add_card(large.clone())
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .deck(0, &["LM027-LARGE-RED"; 5])
-        .deck(1, &["FILL"; 5])
-        .start();
-
-    // Seed trash with a large (ineligible) red Digimon.
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
-
-    let field_handle = runner.place_on_field(0, "LM-027", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
+    let (mut runner, attacker) =
+        lm_027_security_check_runner(&[make_large_red_digimon("LM027-LARGE-RED")]);
+    let _ = runner.attack_player(attacker, 1, false);
+    let kinds = resolve_all_recording_kinds(&mut runner);
 
     assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-027 Security must not offer >2000 DP Digimon as targets (dp_lte: 2000)"
+        !kinds.contains(&SelectionKind::Trash),
+        "LM-027 Security must not offer >2000 DP Digimon (dp_lte: 2000); prompts: {kinds:?}"
     );
+    assert_eq!(runner.hand_size(1), 1, "the clause still ran: LM-027 in hand");
+    assert_eq!(runner.battle_area_size(1), 0, "the large Digimon was not played");
+    assert_eq!(runner.trash_size(1), 1, "the large Digimon stays in trash");
 }
 
 /// Positive DP-filter test: when trash holds BOTH a small (≤2000 DP) and a
@@ -970,60 +913,21 @@ fn lm_027_security_offers_only_small_red_digimon_when_trash_mixed() {
     );
 }
 
-/// After the Security clause resolves and a small red Digimon is played from
-/// trash, the card moves from trash to battle area (field count may increase).
-///
-/// The dedicated add-self-to-hand assertion below checks the final hand move;
-/// this test stays focused on the play-from-trash + no-panic outcome.
+/// The real security check plays the small red Digimon from trash: it moves
+/// from the defender's trash to the defender's battle area.
 #[test]
 fn lm_027_security_plays_small_red_digimon_from_trash_no_panic() {
-    let small = make_small_red_digimon("LM027-SMALL-SEC");
+    let (mut runner, attacker) =
+        lm_027_security_check_runner(&[make_small_red_digimon("LM027-SMALL-SEC")]);
+    let _ = runner.attack_player(attacker, 1, false);
+    resolve_all_recording_kinds(&mut runner);
 
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_027_YAML)
-        .expect("LM-027 YAML parses")
-        .add_card(small.clone())
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
-        .start();
-
-    // Seed P0 trash with the small Digimon by popping from deck.
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
-
-    // Place LM-027 on P0's field.
-    let field_handle = runner.place_on_field(0, "LM-027", Some(0));
-
-    // Fire Security.
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
-
-    // Drain all selections, accepting the first available action.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // Primary assertion: no panic during the full resolution flow.
+    assert_eq!(runner.battle_area_size(1), 1, "the small red Digimon was played");
+    let played_id = runner.game.players[1].battle_area[0].card_sources[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(played_id, "LM027-SMALL-SEC");
+    assert_eq!(runner.trash_size(1), 0, "it left the trash");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

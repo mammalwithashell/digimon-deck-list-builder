@@ -1039,28 +1039,51 @@ fn ex8_070_security_tie_exposes_player_choice() {
     );
 }
 
-/// Security effect: no crash when opponent has no Digimon.
+/// Security effect: no-op when the opponent has no Digimon.
+///
+/// Unreachable through a real security check (the attacker is always an
+/// opponent Digimon), so the clause is fired directly from EX8-070 as a
+/// face-up battle-area card. A control fire after staging one opponent
+/// Digimon proves the clause is reachable from this source, so the no-op
+/// assertion is not vacuous.
 #[test]
 fn ex8_070_security_no_crash_when_opponent_has_no_digimon() {
     use digimon_engine::enums::EffectTiming;
     use digimon_engine::selection::TriggerSource;
 
+    let mut ctrl = make_test_card("CTRL-S", "Control Security Target");
+    ctrl.play_cost = 3;
+    ctrl.level = Some(4);
+
     let mut runner = DebugRunner::builder()
         .dsl_card("EX8-070")
         .expect("EX8-070 YAML parses and compiles")
+        .add_card(ctrl)
         .memory(10)
         .start();
 
     let security_handle = runner.place_on_field(0, "EX8-070", None);
+    let fire = |runner: &mut DebugRunner| {
+        runner.game.enqueue_triggered(
+            EffectTiming::SecuritySkill,
+            TriggerSource::Permanent(security_handle),
+        );
+        runner.game.drain_effect_queue();
+    };
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
-    );
-    runner.game.drain_effect_queue();
-
+    fire(&mut runner);
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.battle_area_size(1), 0);
+
+    // Control: the same fire with one opponent Digimon acts on it.
+    runner.place_on_field(1, "CTRL-S", Some(0));
+    fire(&mut runner);
+    runner.auto_resolve().expect("resolve the control delete");
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "control: with an opponent Digimon the [Security] clause must delete it"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
