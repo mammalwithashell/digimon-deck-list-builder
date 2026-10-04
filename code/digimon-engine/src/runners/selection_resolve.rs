@@ -450,6 +450,44 @@ fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, Strin
     (!pairs.is_empty()).then_some(pairs)
 }
 
+/// Whose battle area a one-side (`OwnField` / `OppField`) field prompt is
+/// over. Read from the parked data frame when it records the side — the DSL
+/// battle-area multi-pick carries its candidates' handles, the single
+/// `select_own/opponent_permanent` pick its `of_player` — because the frame is
+/// authoritative even when an `as_selecting_player` override makes the kind
+/// relative to the effect controller rather than the selecting player.
+/// Otherwise the kind is read relative to the selecting player, which is how
+/// every frameless installer (blockers, attack redirects, link / digivolve /
+/// DNA material picks, `per_color_delete`) sets it.
+fn one_side_field_owner(
+    game: &Game,
+    pending: &crate::selection::PendingSelection,
+) -> Option<crate::enums::PlayerId> {
+    use crate::resume::{ResumeFrame, ResumeSelectKind};
+    let from_frame = game
+        .pending_selection_resume
+        .as_ref()
+        .and_then(|s| s.frames.last())
+        .and_then(|f| match f {
+            ResumeFrame::CountCappedPermanentsStep(s) => {
+                s.candidates.first().map(|(_, h)| h.player)
+            }
+            ResumeFrame::RunTail {
+                select_kind: ResumeSelectKind::FieldPermanent { of_player, .. },
+                ..
+            } => Some(*of_player),
+            _ => None,
+        });
+    if from_frame.is_some() {
+        return from_frame;
+    }
+    match pending.kind {
+        SelectionKind::OwnField => Some(pending.selecting_player),
+        SelectionKind::OppField => Some(game.next_clockwise(pending.selecting_player)),
+        _ => None,
+    }
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -514,17 +552,32 @@ pub fn resolve_next(
         // is the SAME prompt
         // awaiting its stop (DCGO `canEndNotMax: true` recorded as one row
         // with fewer than max targets — BT8-084's "up to 4" picking 1).
+        //
+        // The frame must hold picks of its OWN (`accum` non-empty). The
+        // installers re-park the same frame after every pick with the picked
+        // permanent appended, so the row's own prompt always has >= 1. A frame
+        // with an EMPTY `accum` is a FRESH prompt that the row's last answer
+        // caused — resolving one effect lets the next queued trigger activate
+        // and park its own optional "up to N" pick — and spending the trailing
+        // PASS there silently declines a choice the row never answered.
+        // Driver: `qa/dcgo-exams/BT25/BT25-039-effect1.yaml` — Sirenmon's
+        // placement answer (a `yes`) let the played Ceresmon's [On Play]
+        // "suspend up to 2" (`AnyField`, `CountCappedPermanentsStep` with an
+        // empty `accum`) park, and the trailing PASS declined it.
+        // `G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK`; the
+        // kind-level sibling is `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`.
+        // The innermost frame (`last`) is the one the parked prompt belongs to.
         let open_field_multi_pick = picks_done > 0
-            && game.pending_selection_resume.as_ref().is_some_and(|stack| {
-                stack.frames.iter().rev().any(|f| {
-                    matches!(
-                        f,
-                        crate::resume::ResumeFrame::MultiPickStep(_)
-                            | crate::resume::ResumeFrame::NonDslCountCappedStep(_)
-                            | crate::resume::ResumeFrame::CountCappedPermanentsStep(_)
-                    )
-                })
-            });
+            && game
+                .pending_selection_resume
+                .as_ref()
+                .and_then(|stack| stack.frames.last())
+                .is_some_and(|f| match f {
+                    crate::resume::ResumeFrame::MultiPickStep(s) => !s.accum.is_empty(),
+                    crate::resume::ResumeFrame::NonDslCountCappedStep(s) => !s.accum.is_empty(),
+                    crate::resume::ResumeFrame::CountCappedPermanentsStep(s) => !s.accum.is_empty(),
+                    _ => false,
+                });
         let multiselectish = open_field_multi_pick
             || match pending.kind {
                 // A `SourceMulti` that has accepted NO pick yet is NOT this
@@ -622,11 +675,48 @@ pub fn resolve_next(
                 t.player, t.frame, pending.kind, valid
             ));
         };
-        // Candidate encodings, most-specific first:
+        // Candidate encodings:
         //   OwnField/OppField: 100 + slot (side implicit in kind)
-        //   AnyField:          100 + player*15 + slot
+        //   AnyField:          100 + player*15 + slot (absolute ONLY)
+        //   anything else:     side-implicit first, then absolute
         let side_implicit = ATTACK_START + slot;
         let absolute = ATTACK_START + (t.player as u16) * TARGETS_PER_ATTACKER + slot;
+        match pending.kind {
+            // An `AnyField` prompt spans BOTH battle areas and encodes every
+            // candidate as `encode_attack(player, index)`, so the target's
+            // player is part of the id. Trying `100 + slot` first read a
+            // player-1 frame as player 0's slot N whenever that slot was also a
+            // candidate (BT26-032-effect3: `opp.field.0` suspended our own
+            // Ceresmon while the DCGO wire named ST1-02).
+            // `G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST`.
+            SelectionKind::AnyField => {
+                return if accepts(absolute) {
+                    Ok(Some(absolute))
+                } else {
+                    Err(format!(
+                        "frame target (player {}, slot {}) is not a candidate of this \
+                         both-sides prompt (absolute id {absolute}; kind {:?}, valid {:?})",
+                        t.player, slot, pending.kind, valid
+                    ))
+                };
+            }
+            // A one-side prompt carries its side in the kind, not the id, so a
+            // reference to the OTHER side would silently resolve to the same
+            // slot on this one. Refuse it as an honest divergence instead.
+            SelectionKind::OwnField | SelectionKind::OppField if t.frame >= 0 => {
+                if let Some(side) = one_side_field_owner(game, pending) {
+                    if t.player != side {
+                        return Err(format!(
+                            "frame target (player {}, slot {}) names the other side of a \
+                             {:?} prompt over player {side}'s battle area (selecting player \
+                             {}, valid {:?})",
+                            t.player, slot, pending.kind, pending.selecting_player, valid
+                        ));
+                    }
+                }
+            }
+            _ => {}
+        }
         // DNA digivolution's two material picks are the one battle-area prompt
         // whose ids are RAW field indices rather than the `ATTACK_START` band:
         // `initiate_dna_digivolve` fills `valid_action_ids` straight from
@@ -2078,6 +2168,19 @@ mod tests {
             Ok(Some(TRASH_EFFECT_START)),
             "pick 0 resolves by identity"
         );
+        // After that pick the installer re-parks the SAME frame with the pick
+        // in `accum` (that is what makes it this row's own prompt awaiting its
+        // stop, rather than a fresh one — see the trailing-PASS frame check).
+        let picked = runner.game.player(0).trash[0].handle();
+        let Some(ResumeFrame::NonDslCountCappedStep(s)) = runner
+            .game
+            .pending_selection_resume
+            .as_mut()
+            .and_then(|s| s.frames.last_mut())
+        else {
+            panic!("the count-capped frame is parked");
+        };
+        s.accum.push(picked);
         assert_eq!(
             resolve_next(&runner.game, &row, 1),
             Ok(Some(PASS)),
@@ -2097,5 +2200,239 @@ mod tests {
         let result = resolve_next(&runner.game, &payload, 0);
 
         assert_eq!(result, Ok(Some(absolute)));
+    }
+
+    // ── Battle-area side resolution + fresh field multi-pick ─────────────
+    //
+    // G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST and
+    // G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK.
+
+    use crate::resume::CountCappedPermanentsState;
+
+    /// Park a battle-area field prompt of `kind`, selected by `selecting_player`.
+    fn park_field_prompt(
+        game: &mut Game,
+        kind: SelectionKind,
+        selecting_player: crate::enums::PlayerId,
+        valid_action_ids: Vec<u16>,
+        frame: Option<ResumeFrame>,
+    ) {
+        game.pending_selection = Some(PendingSelection {
+            kind,
+            selecting_player,
+            previous_phase: GamePhase::Main,
+            valid_action_ids,
+            is_optional: true,
+            prompt: "You may suspend up to 2 Digimon.".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+        game.pending_selection_resume = frame.map(|f| ResumeStack { frames: vec![f] });
+    }
+
+    /// The frame the DSL battle-area `count_capped` family parks
+    /// (`install_count_capped_permanent_resume_step`).
+    fn count_capped_permanents_frame(
+        selecting_player: crate::enums::PlayerId,
+        field_kind: SelectionKind,
+        candidates: Vec<(u16, PermanentHandle)>,
+        accum: Vec<PermanentHandle>,
+    ) -> ResumeFrame {
+        ResumeFrame::CountCappedPermanentsStep(CountCappedPermanentsState {
+            prov: test_provenance(),
+            selecting_player,
+            previous_phase: GamePhase::Main,
+            field_kind,
+            min: 0,
+            max: 2,
+            optional_zero: true,
+            candidates,
+            accum,
+            prompt: "You may suspend up to 2 Digimon.".to_string(),
+            bind_as: None,
+            inner_tail: Arc::new(vec![CompiledStep::GainMemory(0)]),
+            bindings: Bindings::new(),
+            runtime: StepRuntime::default(),
+            trigger_context: None,
+            outer_conts: Vec::new(),
+        })
+    }
+
+    fn bool_row(answer: bool) -> SelectionRow {
+        SelectionRow {
+            targets: None,
+            bool_value: Some(answer),
+            ..attack_target_row(0, 0)
+        }
+    }
+
+    fn handle(player: crate::enums::PlayerId, index: u8) -> PermanentHandle {
+        PermanentHandle { player, index }
+    }
+
+    #[test]
+    fn any_field_resolves_the_absolute_id_not_the_same_slot_on_player_0() {
+        // BT26-032-effect3: both players' slot 0 are candidates; the row
+        // names the OPPONENT's slot 0. Before the fix the side-implicit id
+        // 100 (= player 0's slot 0) was tried first and accepted.
+        let mut runner = DebugRunner::new();
+        let p1_slot0 = ATTACK_START + TARGETS_PER_ATTACKER;
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::AnyField,
+            0,
+            vec![ATTACK_START, p1_slot0],
+            None,
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(1, 0), 0),
+            Ok(Some(p1_slot0))
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(0, 0), 0),
+            Ok(Some(ATTACK_START))
+        );
+    }
+
+    #[test]
+    fn any_field_target_that_is_not_a_candidate_is_an_err_not_the_other_side() {
+        let mut runner = DebugRunner::new();
+        // Only player 0's slot 0 is a candidate; player 1's slot 0 is not.
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::AnyField,
+            0,
+            vec![ATTACK_START],
+            None,
+        );
+        assert!(resolve_next(&runner.game, &attack_target_row(1, 0), 0).is_err());
+    }
+
+    #[test]
+    fn one_side_prompt_rejects_a_reference_to_the_other_side() {
+        let mut runner = DebugRunner::new();
+        // OwnField selected by player 0 = player 0's battle area.
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::OwnField,
+            0,
+            vec![ATTACK_START],
+            None,
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(0, 0), 0),
+            Ok(Some(ATTACK_START))
+        );
+        let err = resolve_next(&runner.game, &attack_target_row(1, 0), 0)
+            .expect_err("`opp.field.0` must not resolve on an OwnField prompt");
+        assert!(err.contains("other side"), "{err}");
+
+        // OppField selected by player 0 = player 1's battle area.
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::OppField,
+            0,
+            vec![ATTACK_START],
+            None,
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(1, 0), 0),
+            Ok(Some(ATTACK_START))
+        );
+        assert!(resolve_next(&runner.game, &attack_target_row(0, 0), 0).is_err());
+    }
+
+    #[test]
+    fn one_side_prompt_reads_its_side_from_the_parked_frame_first() {
+        // An `as_selecting_player` override: player 1 picks from player 0's
+        // field under an `OwnField` kind (the kind is relative to the effect
+        // controller there, not the selecting player). The parked frame
+        // records the real owner, so player 0's slot is the right side.
+        let mut runner = DebugRunner::new();
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::OwnField,
+            1,
+            vec![ATTACK_START],
+            Some(count_capped_permanents_frame(
+                1,
+                SelectionKind::OwnField,
+                vec![(ATTACK_START, handle(0, 0))],
+                Vec::new(),
+            )),
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(0, 0), 0),
+            Ok(Some(ATTACK_START))
+        );
+        assert!(resolve_next(&runner.game, &attack_target_row(1, 0), 0).is_err());
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_freshly_parked_field_multi_pick() {
+        // BT25-039-effect1: the row's `yes` (one decision) lets the played
+        // Ceresmon's [On Play] "suspend up to 2" park — an AnyField
+        // count-capped frame with NO picks of its own. The trailing PASS must
+        // leave it for the row written to answer it.
+        let mut runner = DebugRunner::new();
+        let valid = vec![ATTACK_START, ATTACK_START + TARGETS_PER_ATTACKER];
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::AnyField,
+            0,
+            valid.clone(),
+            Some(count_capped_permanents_frame(
+                0,
+                SelectionKind::AnyField,
+                vec![(valid[0], handle(0, 0)), (valid[1], handle(1, 0))],
+                Vec::new(),
+            )),
+        );
+        assert_eq!(resolve_next(&runner.game, &bool_row(true), 1), Ok(None));
+    }
+
+    #[test]
+    fn trailing_pass_still_stops_a_field_multi_pick_that_took_a_pick() {
+        // BT8-084's "up to 4" picking 1: after the pick the frame is re-parked
+        // with that pick in `accum`, so it IS the row's own prompt awaiting its
+        // stop and the trailing PASS is spent.
+        let mut runner = DebugRunner::new();
+        park_field_prompt(
+            &mut runner.game,
+            SelectionKind::OppField,
+            0,
+            vec![ATTACK_START + 1],
+            Some(count_capped_permanents_frame(
+                0,
+                SelectionKind::OppField,
+                vec![(ATTACK_START + 1, handle(1, 1))],
+                vec![handle(1, 0)],
+            )),
+        );
+        assert_eq!(
+            resolve_next(&runner.game, &attack_target_row(1, 0), 1),
+            Ok(Some(PASS))
+        );
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_fresh_zone_multi_pick_frame() {
+        // The `MultiPickStep` / `NonDslCountCappedStep` arms follow the same
+        // rule: an empty `accum` is a fresh prompt, not this row's.
+        let mut runner = runner_with_cards(&["CC-A"]);
+        seed_trash(&mut runner, 0, &["CC-A"]);
+        let valid = vec![TRASH_EFFECT_START];
+        for frame in [
+            non_dsl_frame(0, CountCappedZone::Trash, valid.clone()),
+            multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0]),
+        ] {
+            park_count_capped_prompt(&mut runner.game, 0, valid.clone(), Some(frame));
+            assert_eq!(resolve_next(&runner.game, &bool_row(true), 1), Ok(None));
+        }
     }
 }
