@@ -4431,7 +4431,7 @@ batch path ~L3031) inline-drains "intentionally" so that
 test that encodes the rules-wrong order. Reach: every Rocks/Mineral Digimon's inherited clause
 (the archetype's shared "trashed from sources → delete/De-Digivolve" line) diverges on order until
 this is fixed. Fix direction: route source-trash observers through the normal pending queue
-(§15-8-3-2), re-derive Proganomon EX10-036's chained-pickup clause from its DCGO C# and the
+(§15-8-3-2), re-derive Magneticdramon EX10-036's clause interaction from its DCGO C# and the
 oracle instead of the sim test, and drop the `G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION`
 park in `dsl_cards/step/mod.rs` once nothing drains inline.
 

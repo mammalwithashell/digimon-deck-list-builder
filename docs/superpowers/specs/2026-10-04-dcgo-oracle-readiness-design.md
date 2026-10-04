@@ -202,9 +202,20 @@ today.
 top blocking cards (card, name, decklists blocked) instead of training on nothing. This
 will happen for the starter curriculum until ST-1..6 are examined; that is accepted.
 
-**Applies to:** `pilot_training`, `MetaGauntlet`, `DeckPoolWrapper`, the starter
-curriculum driver, and anchored-eval deck snapshots built from the pool. The desktop
-deck builder and hosted API keep using `data/tested_cards.json`; they are not training.
+**Applies to:** every library load (`MetaGauntlet.load`, and through it
+`load_generalist_deck_pool`, which `pilot_training`, the starter curriculum's phase 1,
+`run_training_job`, the specialist league, and the eval CLIs all use) and every pool
+snapshot load (`GeneralistDeckPool.from_snapshot`, used by `--curriculum-pool` and the
+anchored-eval/Elo/exploiter CLIs), so a snapshot taken before the gate cannot smuggle
+non-ready decks back in. `DeckPoolWrapper` builds variants from explicit decks and never
+reads the library, so it is out of scope. The desktop deck builder and hosted API keep
+using `data/tested_cards.json`; they are not training.
+
+**Determinism:** the generator runs clause extraction with DCGO disabled
+(`DIGIMON_DCGO_ROOT=""`) so the artifact is identical on a machine with the base-repo DCGO
+checkout and in CI without it. A card with neither official text sections nor an image
+cache entry therefore carries an `image-required` clause and stays `not_ready` — the
+conservative outcome.
 
 ### 4.8 Readiness plan and the dispatch unit
 
@@ -238,11 +249,15 @@ ledger entry so the effect of each tool is measured, not assumed.
 ### 4.11 Engine fix that unblocks Rocks
 
 Fix `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS` as the first engine work under the fix gate:
-route source-trash observers through the normal pending queue (§15-8-3-2), re-derive
-Proganomon EX10-036's chained-pickup clause from its DCGO C# and the oracle instead of the
-sim test, and remove the `G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION` park once nothing
-drains inline. Re-run `EX10-025#inherited#0` and `EX10-028#inherited#0` against the oracle
-as the acceptance check.
+route source-trash observers through the deferring drain (§15-8-3-2), mirroring the
+`G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT` fix (`drain_effect_queue` →
+`maybe_drain_effect_queue` at the source-trash fire sites in `game_actions/mod.rs`). The
+EX10-036 test that motivated the inline drain pins Magneticdramon EX10-036's sibling
+When Digivolving clause running in the middle of the first clause; rewrite it to the
+rules order and confirm against the oracle. Remove the
+`G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION` park once nothing drains inline from inside
+an effect. Re-run `EX10-025#inherited#0` and `EX10-028#inherited#0` against the oracle as
+the acceptance check.
 
 ## 5. Order of work
 
@@ -274,8 +289,9 @@ The gate turns on in step 2. The pool shrinks immediately; that is the accepted 
 - Job timeout, quarantine, or failure: returned as a terminal result with the job id; the
   clause stays `unmeasured` with the reason; no retry loop beyond the skill's budget
   (3 oracle round-trips per clause).
-- Readiness artifact missing or stale: training fails at startup with the regeneration
-  command (no silent fallback to the old gate). CI `--check` catches drift on PRs.
+- Readiness artifact missing: training fails at startup with the regeneration command
+  (no silent fallback to the old gate). Readiness artifact stale: CI `--check` fails the PR
+  (recomputing at every training start would mean re-extracting the whole pool).
 - Clause text drift: existing `text_sha256` invalidation returns the card to `not_ready`.
 - Concurrent nodes: existing advisory claims; duplicate verdicts are detectable at merge.
 
