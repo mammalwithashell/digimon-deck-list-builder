@@ -5,31 +5,25 @@
 # Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
 # `tm-quiet-red`). No variant.
 #
-# EXPECTED DIVERGENCE. "there are 3 or more Digimon" counts BOTH players'
-# Digimon (no "of yours"; cf. the BT25-059 Ceresmon spec, which writes
-# `owner: any` for the same wording). BT24-051.yaml's condition is
-# `count_gte { filter: { zone: [battle_area], kind: digimon }, n: 3 }` with
-# NO owner, and `count_matching` (dsl_cards/predicate.rs) defaults the owner
-# to `You` -- so our engine counts only P0's own Digimon. This line has ONE
-# own Digimon + TWO opponent Digimon = 3: printed text (and DCGO, expected)
-# reduce to 7; OUR engine charges the full 12. (Probe, not committed: with 3
-# OWN Digimon our engine does reduce to 7 -- the reduction machinery works,
-# only the owner scope is wrong.)
+# "there are 3 or more Digimon" counts BOTH players' Digimon (no "of yours";
+# cf. the BT25-059 Ceresmon spec, which writes `owner: any` for the same
+# wording). This line has ONE own Digimon + TWO opponent Digimon = 3, so the
+# printed text (and DCGO, expected) reduce the cost to 7. Fixed 2026-10-04:
+# BT24-051.yaml's `count_gte` filter had NO owner and `count_matching`
+# defaults it to `You`, so our engine counted only P0's own Digimon and
+# charged the full 12 (memory -5, turn over); it now writes `owner: any`.
 #
 # THE LINE:
 #   T1 (P0, 0): pass -> P1 3.
 #   T2 (P1, 3): Agumon ST1-03 (3) -> 0; Phoenixmon ST1-10 (10) -> -10 -> P0 10.
 #   T3 (P0, 10): Coronamon BT25-008 (3) -> 7 (its [On Play] declined). Board:
 #       3 Digimon (1 own, 2 opponent). THE CLAUSE: hard-play Merukimon.
-#       OURS: 12 -> memory -5 (turn ends after the [On Play]). PRINTED/DCGO:
-#       7 -> memory 0 (turn continues).
+#       7 -> memory 0 (turn continues; P0 then passes).
 #       [On Play] (#effect#2): suspend both opponent Digimon (two picks);
 #       the optional "+5000 DP and attack" pick is declined.
 #
-# WITNESS: at 8 memory 7 with 3 Digimon on the board; at 12 (P1's T4
-# breeding on ours) memory -5 = a 12-cost play (reduction NOT applied).
-# Expected DCGO: memory 0 at the same row and still P0's turn -- the oracle
-# will diverge at step 12.
+# WITNESS: at 8 memory 7 with 3 Digimon on the board; at 12 memory 0 and still
+# P0's turn 3 = a 7-cost play (reduction applied). P0 then passes.
 #
 # PROMPT SHAPE: the reduction itself asks nothing on either side. The suspend
 # is ours = two single OppField picks (SelectPermanentEffect); DCGO likely
@@ -86,6 +80,9 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -101,8 +98,8 @@ assert:
         - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
   - at: 12
     that:
-      turn: 4
-      p0.memory: -5
+      turn: 3
+      p0.memory: 0
       p0.field:
         - { card_id: BT24-051, dp: 12000, suspended: false, sources: [] }
         - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
