@@ -8779,7 +8779,14 @@ pins that the turn scan does not trash such a marker.
 
 ## TS Jupitermon exam-authoring findings (2026-10-04) — OPEN, logged not fixed
 
-### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG]
+### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG] — **RESOLVED 2026-10-04**
+- **RESOLVED (2026-10-04):** `lower_triggered` sets `Effect::counter` for every `counter` timing; the field-Counter
+  candidate scan also skips a spent [Once Per Turn] ability or one whose activation `condition` fails (no phantom
+  offer; e.g. BT25-085 with no Option in any own stack). Also enables the `[Counter]` arms of
+  EX12-017/-057/-077, BT25-085, BT26-055, EX13-015/-016/-036 in real combat. Tests:
+  `cards_behavioral::bt26::bt26_103::bt26_103_counter_arm_offered_in_real_combat_digimon_target`,
+  `...::bt26_103_counter_arm_not_offered_once_opt_is_spent`.
+  `cards_behavioral::bt25::bt25_085::bt25_085_counter_window_respects_activation_condition`.
 - **Card:** BT26-103 Jupitermon: Wrath Mode `[When Digivolving] [Counter] [Once Per Turn] Trash your top security card and <Recovery +2>`.
 - **Symptom:** `when: [when_digivolving, counter]` lowers to the counter timing but nothing under
   `code/digimon-engine/src/dsl_cards/` calls `Effect::counter()` (only grant_keyword's

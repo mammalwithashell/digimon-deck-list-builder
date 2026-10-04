@@ -20,14 +20,15 @@
 # PROMPT SHAPE / EXPECTED ORACLE TRIAGE:
 #   * The block offer is our declinable OwnField pick -> DCGO's blocker
 #     SelectPermanentEffect; answered with Wrath Mode (own.field.0).
-#   * KNOWN SIM-SIDE GAP (see report): our engine opens NO Counter window here
-#     -- `try_enter_counter` returns early for a player-targeted attack, and
-#     the DSL never marks Wrath Mode's `when: counter` effect `.counter()`, so
-#     it is never a FieldAbility candidate either. DCGO is expected to run
-#     Wrath Mode's [Counter] arm (trash top security + <Recovery +2>) and then
-#     effect#6 (-15000 pick over P1's Digimon) BEFORE the block prompt. If the
-#     oracle shows that, the divergence is the Counter bug, NOT a Blocker
-#     finding.
+#   * COUNTER WINDOW (fixed 2026-10-04: G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK
+#     + G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG). Before the block, our engine
+#     now opens the Counter window for this player-targeted attack and offers
+#     Wrath Mode's [Counter] arm as a field Counter ability (it used to open
+#     none). The line DECLINES it so the clause under test stays the block;
+#     authored as the OptionalSkill fold marker (decline -> OptionalSkill
+#     "no"). The DCGO prompt shape for a field [Counter] activation is
+#     inferred, not read from C# -- if the oracle auto-runs the arm instead,
+#     that is a Counter-shape divergence, NOT a Blocker finding.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -77,6 +78,10 @@ steps:
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
+  # Counter window (P0 is the defender): decline Wrath Mode's [Counter] arm.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # THE CLAUSE: block with Wrath Mode.
   - actor: 0
     do: { select: { targets: [own.field.0] } }
@@ -90,7 +95,7 @@ steps:
     expect: { prompt: breeding_action }
 assert:
   # At the block prompt: Biyomon attacking (suspended), Wrath Mode untapped.
-  - at: 9
+  - at: 10
     that:
       turn: 4
       p0.security: 5
@@ -100,7 +105,7 @@ assert:
         - { card_id: ST1-02, dp: 3000, suspended: true, sources: [] }
         - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
   # After the block resolves (P1's pass): Biyomon deleted, security intact.
-  - at: 10
+  - at: 11
     that:
       turn: 4
       p0.security: 5

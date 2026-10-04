@@ -4555,7 +4555,10 @@ wrong, the scenario asserts what our engine does and is expected to diverge at t
 "Confirmed in code" means the cited line was read; "suspected" means observed in a probe
 with the root cause inferred and not traced.
 
-### End-of-turn attack window never opens for a DUAL card on top  [G-ENGINE-DUAL-END-OF-TURN-WINDOW] — confirmed in code
+### End-of-turn attack window never opens for a DUAL card on top  [G-ENGINE-DUAL-END-OF-TURN-WINDOW] — confirmed in code — **RESOLVED 2026-10-04**
+- **RESOLVED (2026-10-04):** `has_end_of_turn_keywords` and `activate_overclock` now gate on `Permanent::is_digimon`
+  (Digimon | Dual) instead of `CardSource::is_digimon`. Test:
+  `cards_behavioral::bt26::bt26_033::bt26_033_engage_parks_end_of_turn_attack_window_for_dual_card`.
 - **Card:** BT26-033 Jupitermon (DUAL) `<Engage>` "(At the end of your turn, this Digimon may attack.)".
 - **Cause:** `Game::has_end_of_turn_keywords` (`code/digimon-engine/src/game_phases.rs:596`) skips any
   permanent where `!perm.top_card().is_digimon(&self.card_data)`; `CardSource::is_digimon`
@@ -4579,14 +4582,24 @@ with the root cause inferred and not traced.
 - **Pinned by:** `qa/dcgo-exams/P/P-213-effect1.yaml`, `qa/dcgo-exams/BT24/BT24-041-effect3.yaml`
   (each answers the phantom prompt with a `sim_only` decline row for actor 1).
 
-### No Counter window when the attack targets the player  [G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK] — confirmed in code, impact unverified
+### No Counter window when the attack targets the player  [G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK] — confirmed in code, impact unverified — **RESOLVED 2026-10-04**
+- **RESOLVED (2026-10-04):** the only stated basis was parity with the retired Python engine (`combat.py:139`);
+  rules 11-1-3 put Counter timing in every attack. `try_enter_counter` now uses the attacked player as the
+  defender for `AttackTarget::Player`, so Blast Digivolve / hand Counter Options / field `[Counter]` abilities are
+  offered on player attacks too. Tests: `combat::counter_interrupt::player_target_attack_opens_counter` (was
+  `player_target_attack_skips_counter`), `cards_behavioral::bt26::bt26_103::bt26_103_counter_arm_offered_when_the_player_is_attacked`.
+  Not verified against DCGO C# (absent in the fixing container).
 - `try_enter_counter` (`code/digimon-engine/src/combat/mod.rs:1499`) returns `false` for
   `AttackTarget::Player(_)`. `general_rule.pdf` §11-1-3 places Counter timing in every attack
   (declaration → Counter → Block → …), and `<Blast Digivolve>` is commonly used against attacks on the
   player. Verify against DCGO (`OnCounterTiming`) before fixing; it may be intentional for a reason not
   documented at the site. Related: G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG in `qa/dsl-vocab-gaps.md`.
 
-### Aura-granted `<Reboot>` does not unsuspend in the opponent's unsuspend phase  [G-ENGINE-AURA-REBOOT-NOT-APPLIED] — suspected
+### Aura-granted `<Reboot>` does not unsuspend in the opponent's unsuspend phase  [G-ENGINE-AURA-REBOOT-NOT-APPLIED] — suspected — **RESOLVED 2026-10-04**
+- **RESOLVED (2026-10-04):** cause confirmed — nothing re-materialized declarative auras between the turn-player
+  change and the Reboot scan. `continue_begin_turn_after_start_delays` now calls `tick_declarative_effects()` on
+  entering the Unsuspend phase. Test:
+  `cards_behavioral::bt24::bt24_041::bt24_041_aura_granted_reboot_unsuspends_in_opponents_unsuspend_phase`.
 - **Card:** BT24-041 Minervamon `[Opponent's Turn] All of your [Iliad] trait Digimon gain <Reboot> and <Blocker>`.
 - **Symptom:** the granted `<Blocker>` works on the opponent's turn; the granted `<Reboot>` does not —
   the [Iliad] Digimon stays suspended through the opponent's T6 main phase.
