@@ -233,7 +233,9 @@ fn ex10_033_clause_a_placing_one_card_grows_sources_by_one() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            // Clause A is ONE up-to-3 trash multi-pick (DCGO SelectCardEffect
+            // maxCount 3, canEndNotMax): pick one, then PASS ends it.
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 if !picked_one {
                     runner
                         .execute_action(0, TRASH_EFFECT_START)
@@ -242,7 +244,7 @@ fn ex10_033_clause_a_placing_one_card_grows_sources_by_one() {
                 } else {
                     runner
                         .execute_action(0, PASS)
-                        .expect("PASS on 2nd trash pick");
+                        .expect("PASS ends the multi-pick");
                 }
             }
             Some(SelectionKind::SourceMulti { .. }) => {
@@ -314,11 +316,19 @@ fn ex10_033_clause_a_placing_three_cards_grows_sources_by_three() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            // One up-to-3 trash multi-pick; picked cards stay in trash until
+            // the pick finishes, so take the first still-offered card.
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 if trash_picks < 3 {
-                    runner
-                        .execute_action(0, TRASH_EFFECT_START)
-                        .expect("pick trash card");
+                    let next = runner
+                        .pending_selection()
+                        .unwrap()
+                        .valid_action_ids
+                        .iter()
+                        .copied()
+                        .find(|&a| a != PASS)
+                        .expect("an unpicked trash card is offered");
+                    runner.execute_action(0, next).expect("pick trash card");
                     trash_picks += 1;
                 } else {
                     runner.execute_action(0, PASS).expect("PASS after 3 picks");
@@ -391,17 +401,14 @@ fn ex10_033_clause_a_opt_blocks_second_when_attacking_same_turn() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 // Take first pick.
                 runner
                     .execute_action(0, TRASH_EFFECT_START)
                     .expect("pick first trash");
-                // PASS subsequent picks.
-                if let Some(SelectionKind::Trash) = runner.pending_kind() {
-                    runner.execute_action(0, PASS).expect("pass second pick");
-                }
-                if let Some(SelectionKind::Trash) = runner.pending_kind() {
-                    runner.execute_action(0, PASS).expect("pass third pick");
+                // PASS ends the up-to-3 multi-pick (no further pick is asked).
+                if let Some(SelectionKind::CountCappedMultiSelect { .. }) = runner.pending_kind() {
+                    runner.execute_action(0, PASS).expect("stop after one pick");
                 }
             }
             Some(SelectionKind::SourceMulti { .. }) => {
@@ -439,7 +446,7 @@ fn ex10_033_clause_a_opt_blocks_second_when_attacking_same_turn() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 saw_clause_a_trash = true;
                 runner.execute_action(0, PASS).expect("pass trash");
             }
@@ -512,7 +519,7 @@ fn ex10_033_clause_b_when_digivolving_prompts_source_multi_when_mineral_source_p
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 // Clause A trash pick — no Mineral/Rock in trash → optional, PASS
                 runner.execute_action(0, PASS).expect("pass Clause A pick");
             }
@@ -577,7 +584,7 @@ fn ex10_033_clause_b_trash_one_source_reduces_play_cost_by_two() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 // Clause A — no Mineral/Rock trash, pass
                 runner.execute_action(0, PASS).expect("pass Clause A pick");
             }
@@ -670,7 +677,7 @@ fn ex10_033_clause_b_trash_three_sources_reduces_play_cost_by_six() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 runner.execute_action(0, PASS).expect("pass Clause A pick");
             }
             Some(SelectionKind::SourceMulti { picked, max, .. }) => {
@@ -752,7 +759,7 @@ fn ex10_033_clause_b_play_cost_modifier_expires_after_opponents_turn() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 runner.execute_action(0, PASS).expect("pass Clause A pick");
             }
             Some(SelectionKind::SourceMulti { picked, max, .. }) => {
@@ -846,7 +853,7 @@ fn ex10_033_clause_b_passing_with_zero_sources_applies_no_modifier() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 runner.execute_action(0, PASS).expect("pass Clause A");
             }
             Some(SelectionKind::SourceMulti { .. }) => {
@@ -918,7 +925,7 @@ fn ex10_033_clause_b_when_attacking_reduces_play_cost() {
             continue;
         }
         match runner.pending_kind() {
-            Some(SelectionKind::Trash) => {
+            Some(SelectionKind::CountCappedMultiSelect { .. }) => {
                 runner.execute_action(0, PASS).expect("pass Clause A pick");
             }
             Some(SelectionKind::SourceMulti { picked, max, .. }) => {

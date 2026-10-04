@@ -50,11 +50,11 @@ alt_paths:
 #
 # Timing: `when: end_of_your_turn`, `once_per_turn: true`, `optional: true`.
 #
-# Three sequential optional `select_trash` + `place_as_bottom_source` pairs.
-# Pick 1 is optional; if the player passes, no cards are placed and the
-# remaining picks are skipped. If they pick 1, they are offered pick 2
-# (also optional), and so on up to pick 3. This correctly models "up to 3"
-# without extra machinery — the same pattern as EX10-033 Clause A.
+# One `select_count_capped_multi` (trash, max 3, optional_zero) + one batched
+# `place_cards_as_bottom_sources` — DCGO's single SelectCardEffect (maxCount 3,
+# canEndNotMax) + one AddDigivolutionCardsBottom. (Formerly three sequential
+# optional picks, which re-asked after a PASS — found by invariant_fuzz seed
+# 20260708003; same fix as EX10-033 Clause A.)
 #
 # ─── Implementation status ───────────────────────────────────────────────────
 #
@@ -107,49 +107,26 @@ effects:
   # "You may place up to 3 [Mineral] or [Rock] trait cards from your trash as
   #  this Digimon's bottom digivolution cards."
   #
-  # Three sequential optional trash picks + placements. Each pick is optional
-  # so the player may stop at 0, 1, 2, or 3 placements.
+  # One `select_count_capped_multi` (max 3, optional_zero) + one batched
+  # `place_cards_as_bottom_sources`: the player may stop at 0, 1, 2 or 3.
   - when: end_of_your_turn
     once_per_turn: true
     optional: true
     summary: "[EOT][OPT] Place up to 3 Mineral/Rock cards from trash as this Digimon's bottom sources"
     process:
-      # Pick 1 (optional — PASS means 0 placements).
-      - select_trash:
+      # "up to 3" is ONE multi-pick (DCGO SelectCardEffect maxCount 3,
+      # canEndNotMax, canNoSelect) placed by ONE AddDigivolutionCardsBottom.
+      # Three sequential optional picks re-asked after a PASS (a phantom
+      # decision, rule 17) and split the placement into three events.
+      - select_count_capped_multi:
           of: you
-          bind_as: src1
-          optional: true
+          zone: trash
+          max: 3
           filter:
             any_of:
               - trait_has: Mineral
               - trait_has: Rock
-          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (1/3)"
-      - place_as_bottom_source:
-          source: src1
-          target: source
-      # Pick 2 (optional — PASS means stop at 1 placement).
-      - select_trash:
-          of: you
-          bind_as: src2
-          optional: true
-          filter:
-            any_of:
-              - trait_has: Mineral
-              - trait_has: Rock
-          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (2/3)"
-      - place_as_bottom_source:
-          source: src2
-          target: source
-      # Pick 3 (optional — PASS means stop at 2 placements).
-      - select_trash:
-          of: you
-          bind_as: src3
-          optional: true
-          filter:
-            any_of:
-              - trait_has: Mineral
-              - trait_has: Rock
-          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (3/3)"
-      - place_as_bottom_source:
-          source: src3
-          target: source
+          bind_as: placed
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources"
+          optional_zero: true
+      - place_cards_as_bottom_sources: { cards: placed, target: source }
